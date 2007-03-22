@@ -49,7 +49,7 @@
 #include "svn_private_config.h"
 
 
-/* Helper for report_revisions().
+/* Helper for report_revisions_and_depths().
    
    Perform an atomic restoration of the file FILE_PATH; that is, copy
    the file's text-base to the administrative tmp area, and then move
@@ -130,8 +130,12 @@ restore_file(const char *file_path,
    Look at each entry and check if its revision is different than
    DIR_REV.  If so, report this fact to REPORTER.  If an entry is
    missing from disk, report its absence to REPORTER.  If an entry has
-   a different URL than expected, report that to REPORTER.  Finally,
-   if REPORT_EVERYTHING is set, then report all children unconditionally.
+   a different URL than expected, report that to REPORTER.  If an
+   entry has a different depth than its parent, report that to
+   REPORTER.  
+
+   Alternatively, if REPORT_EVERYTHING is set, then report all
+   children unconditionally.
 
    If TRAVERSAL_INFO is non-null, record this directory's
    value of svn:externals in both TRAVERSAL_INFO->externals_old and
@@ -147,19 +151,19 @@ restore_file(const char *file_path,
    will be called to report the restoration.  USE_COMMIT_TIMES is
    passed to restore_file() helper. */
 static svn_error_t *
-report_revisions(svn_wc_adm_access_t *adm_access,
-                 const char *dir_path,
-                 svn_revnum_t dir_rev,
-                 const svn_ra_reporter2_t *reporter,
-                 void *report_baton,
-                 svn_wc_notify_func2_t notify_func,
-                 void *notify_baton,
-                 svn_boolean_t restore_files,
-                 svn_boolean_t recurse,
-                 svn_boolean_t report_everything,
-                 svn_boolean_t use_commit_times,
-                 svn_wc_traversal_info_t *traversal_info,
-                 apr_pool_t *pool)
+report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
+                            const char *dir_path,
+                            svn_revnum_t dir_rev,
+                            const svn_ra_reporter3_t *reporter,
+                            void *report_baton,
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            svn_boolean_t restore_files,
+                            svn_depth_t depth,
+                            svn_boolean_t report_everything,
+                            svn_boolean_t use_commit_times,
+                            svn_wc_traversal_info_t *traversal_info,
+                            apr_pool_t *pool)
 {
   apr_hash_t *entries, *dirents;
   apr_hash_index_t *hi;
@@ -296,11 +300,13 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                 SVN_ERR(reporter->link_path(report_baton, this_path,
                                             current_entry->url,
                                             current_entry->revision,
+                                            current_entry->depth,
                                             FALSE, current_entry->lock_token,
                                             iterpool));
               else
                 SVN_ERR(reporter->set_path(report_baton, this_path,
                                            current_entry->revision,
+                                           current_entry->depth,
                                            FALSE, current_entry->lock_token,
                                            iterpool));              
             }
@@ -313,23 +319,35 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                                         this_path,
                                         current_entry->url,
                                         current_entry->revision,
+                                        current_entry->depth,
                                         FALSE,
                                         current_entry->lock_token,
                                         iterpool));
-          /* ... or perhaps just a differing revision or lock token. */
+          /* ... or perhaps just a differing revision or depth or
+             lock token. */
           else if (current_entry->revision !=  dir_rev
+                   || current_entry->depth != depth
                    || current_entry->lock_token)
             SVN_ERR(reporter->set_path(report_baton,
                                        this_path,
                                        current_entry->revision,
+                                       current_entry->depth,
                                        FALSE,
                                        current_entry->lock_token,
                                        iterpool));
         } /* end file case */
       
       /*** Directories (in recursive mode) ***/
-      else if (current_entry->kind == svn_node_dir && recurse)
+      else if (current_entry->kind == svn_node_dir
+               && depth == svn_depth_infinity)
         {
+          /* ### TODO(sd): I think it's correct to check whether
+             ### 'depth == svn_depth_infinity' above.  If the
+             ### specified depth is not infinity, then we don't want
+             ### to recurse at all.  If it is, then we want recursion
+             ### to be dependent on the subdirs' entries, right?
+             ### That's what the code below does. */ 
+
           svn_wc_adm_access_t *subdir_access;
           const svn_wc_entry_t *subdir_entry;
 
@@ -359,12 +377,14 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                 SVN_ERR(reporter->link_path(report_baton, this_path,
                                             subdir_entry->url,
                                             subdir_entry->revision,
+                                            subdir_entry->depth,
                                             subdir_entry->incomplete,
                                             subdir_entry->lock_token,
                                             iterpool));
               else
                 SVN_ERR(reporter->set_path(report_baton, this_path,
                                            subdir_entry->revision,
+                                           subdir_entry->depth,
                                            subdir_entry->incomplete,
                                            subdir_entry->lock_token,
                                            iterpool));              
@@ -376,6 +396,7 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                                         this_path,
                                         subdir_entry->url,
                                         subdir_entry->revision,
+                                        subdir_entry->depth,
                                         subdir_entry->incomplete,
                                         subdir_entry->lock_token,
                                         iterpool));
@@ -387,20 +408,23 @@ report_revisions(svn_wc_adm_access_t *adm_access,
             SVN_ERR(reporter->set_path(report_baton,
                                        this_path,
                                        subdir_entry->revision,
+                                       subdir_entry->depth,
                                        subdir_entry->incomplete,
                                        subdir_entry->lock_token,
                                        iterpool));
 
-          /* Recurse. */
-          SVN_ERR(report_revisions(adm_access, this_path,
-                                   subdir_entry->revision,
-                                   reporter, report_baton,
-                                   notify_func, notify_baton,
-                                   restore_files, recurse,
-                                   subdir_entry->incomplete,
-                                   use_commit_times,
-                                   traversal_info,
-                                   iterpool));
+          /* ### TODO(sd): See TODO comment in svn_wc_crawl_revisions3()
+             ### about depth treatment here. */ 
+          if (depth == svn_depth_infinity)
+            SVN_ERR(report_revisions_and_depths(adm_access, this_path,
+                                                subdir_entry->revision,
+                                                reporter, report_baton,
+                                                notify_func, notify_baton,
+                                                restore_files, depth,
+                                                subdir_entry->incomplete,
+                                                use_commit_times,
+                                                traversal_info,
+                                                iterpool));
         } /* end directory case */
     } /* end main entries loop */
 
@@ -415,15 +439,13 @@ report_revisions(svn_wc_adm_access_t *adm_access,
 /*** Public Interfaces ***/
 
 
-/* This is the main driver of the working copy state "reporter", used
-   for updates. */
 svn_error_t *
-svn_wc_crawl_revisions2(const char *path,
+svn_wc_crawl_revisions3(const char *path,
                         svn_wc_adm_access_t *adm_access,
-                        const svn_ra_reporter2_t *reporter,
+                        const svn_ra_reporter3_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
-                        svn_boolean_t recurse,
+                        svn_depth_t depth,
                         svn_boolean_t use_commit_times,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
@@ -452,7 +474,9 @@ svn_wc_crawl_revisions2(const char *path,
                                       adm_access, FALSE, pool));
 
       base_rev = parent_entry->revision;
-      SVN_ERR(reporter->set_path(report_baton, "", base_rev,
+      if (depth == svn_depth_unknown)
+        depth = parent_entry->depth;
+      SVN_ERR(reporter->set_path(report_baton, "", base_rev, depth,
                                  entry ? entry->incomplete : TRUE, 
                                  NULL, pool));
       SVN_ERR(reporter->delete_path(report_baton, "", pool)); 
@@ -473,10 +497,13 @@ svn_wc_crawl_revisions2(const char *path,
       base_rev = parent_entry->revision;
     }
 
+  if (depth == svn_depth_unknown)
+    depth = entry->depth;
+
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
-  SVN_ERR(reporter->set_path(report_baton, "", base_rev,
+  SVN_ERR(reporter->set_path(report_baton, "", base_rev, depth,
                              entry->incomplete , /* start_empty ? */
                              NULL, pool));
 
@@ -503,20 +530,28 @@ svn_wc_crawl_revisions2(const char *path,
           if (err)
             goto abort_report;
         }
-      else 
+      else
         {
+          /* ### TODO(sd): Just passing depth here is not enough.  There
+             ### can be circumstances where the root is depth 0 or 1,
+             ### but some child directories are present at depth
+             ### infinity.  We need to detect them and recurse into
+             ### them *unless* there is a passed-in depth that is not
+             ### infinity.  I think.
+           */
+
           /* Recursively crawl ROOT_DIRECTORY and report differing
              revisions. */
-          err = report_revisions(adm_access,
-                                 "",
-                                 base_rev,
-                                 reporter, report_baton,
-                                 notify_func, notify_baton,
-                                 restore_files, recurse,
-                                 entry->incomplete,
-                                 use_commit_times,
-                                 traversal_info,
-                                 pool);
+          err = report_revisions_and_depths(adm_access,
+                                            "",
+                                            base_rev,
+                                            reporter, report_baton,
+                                            notify_func, notify_baton,
+                                            restore_files, depth,
+                                            entry->incomplete,
+                                            use_commit_times,
+                                            traversal_info,
+                                            pool);
           if (err)
             goto abort_report;
         }
@@ -568,6 +603,7 @@ svn_wc_crawl_revisions2(const char *path,
                                     "",
                                     entry->url,
                                     entry->revision,
+                                    entry->depth,
                                     FALSE,
                                     entry->lock_token,
                                     pool);
@@ -581,7 +617,8 @@ svn_wc_crawl_revisions2(const char *path,
              of the report (not some file in a subdirectory of a target
              directory), and that target is a file, we need to pass an
              empty string to set_path. */
-          err = reporter->set_path(report_baton, "", base_rev, FALSE,
+          err = reporter->set_path(report_baton, "", base_rev, entry->depth,
+                                   FALSE,
                                    entry->lock_token, pool);
           if (err)
             goto abort_report;
@@ -601,71 +638,181 @@ svn_wc_crawl_revisions2(const char *path,
   return err;
 }
 
+
+/*** Compatibility wrapper: turns an svn_ra_reporter2_t into an
+     svn_ra_reporter3_t. 
+
+     This code looks like it duplicates code in libsvn_ra/ra_loader.c,
+     but it does not.  That code makes an new thing look like an old
+     thing; this code makes an old thing look like a new thing. ***/
+
+struct wrap_3to2_report_baton {
+  const svn_ra_reporter2_t *reporter;
+  void *baton;
+};
+
+static svn_error_t *wrap_3to2_set_path(void *report_baton,
+                                       const char *path,
+                                       svn_revnum_t revision,
+                                       svn_depth_t depth,
+                                       svn_boolean_t start_empty,
+                                       const char *lock_token,
+                                       apr_pool_t *pool)
+{
+  struct wrap_3to2_report_baton *wrb = report_baton;
+
+  return wrb->reporter->set_path(wrb->baton, path, revision, start_empty,
+                                 lock_token, pool);
+}
+
+static svn_error_t *wrap_3to2_delete_path(void *report_baton,
+                                          const char *path,
+                                          apr_pool_t *pool)
+{
+  struct wrap_3to2_report_baton *wrb = report_baton;
+
+  return wrb->reporter->delete_path(wrb->baton, path, pool);
+}
+    
+static svn_error_t *wrap_3to2_link_path(void *report_baton,
+                                        const char *path,
+                                        const char *url,
+                                        svn_revnum_t revision,
+                                        svn_depth_t depth,
+                                        svn_boolean_t start_empty,
+                                        const char *lock_token,
+                                        apr_pool_t *pool)
+{
+  struct wrap_3to2_report_baton *wrb = report_baton;
+
+  return wrb->reporter->link_path(wrb->baton, path, url, revision,
+                                  start_empty, lock_token, pool);
+}
+
+static svn_error_t *wrap_3to2_finish_report(void *report_baton,
+                                            apr_pool_t *pool)
+{
+  struct wrap_3to2_report_baton *wrb = report_baton;
+
+  return wrb->reporter->finish_report(wrb->baton, pool);
+}
+
+static svn_error_t *wrap_3to2_abort_report(void *report_baton,
+                                           apr_pool_t *pool)
+{
+  struct wrap_3to2_report_baton *wrb = report_baton;
+
+  return wrb->reporter->abort_report(wrb->baton, pool);
+}
+
+static const svn_ra_reporter3_t wrap_3to2_reporter = {
+  wrap_3to2_set_path,
+  wrap_3to2_delete_path,
+  wrap_3to2_link_path,
+  wrap_3to2_finish_report,
+  wrap_3to2_abort_report
+};
+
+svn_error_t *
+svn_wc_crawl_revisions2(const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter2_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_boolean_t recurse,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool)
+{
+  struct wrap_3to2_report_baton wrb;
+  wrb.reporter = reporter;
+  wrb.baton = report_baton;
+
+  return svn_wc_crawl_revisions3(path,
+                                 adm_access,
+                                 &wrap_3to2_reporter, &wrb,
+                                 restore_files,
+                                 SVN_DEPTH_FROM_RECURSE(recurse),
+                                 use_commit_times,
+                                 notify_func,
+                                 notify_baton,
+                                 traversal_info,
+                                 pool);
+}
+
+
 /*** Compatibility wrapper: turns an svn_ra_reporter_t into an
-     svn_ra_reporter2_t. ***/
-struct wrap_report_baton {
+     svn_ra_reporter2_t. 
+
+     This code looks like it duplicates code in libsvn_ra/ra_loader.c,
+     but it does not.  That code makes an new thing look like an old
+     thing; this code makes an old thing look like a new thing. ***/
+
+struct wrap_2to1_report_baton {
   const svn_ra_reporter_t *reporter;
   void *baton;
 };
 
-static svn_error_t *wrap_set_path(void *report_baton,
-                                  const char *path,
-                                  svn_revnum_t revision,
-                                  svn_boolean_t start_empty,
-                                  const char *lock_token,
-                                  apr_pool_t *pool)
+static svn_error_t *wrap_2to1_set_path(void *report_baton,
+                                       const char *path,
+                                       svn_revnum_t revision,
+                                       svn_boolean_t start_empty,
+                                       const char *lock_token,
+                                       apr_pool_t *pool)
 {
-  struct wrap_report_baton *wrb = report_baton;
+  struct wrap_2to1_report_baton *wrb = report_baton;
 
   return wrb->reporter->set_path(wrb->baton, path, revision, start_empty,
                                  pool);
 }
 
-static svn_error_t *wrap_delete_path(void *report_baton,
-                                     const char *path,
-                                     apr_pool_t *pool)
+static svn_error_t *wrap_2to1_delete_path(void *report_baton,
+                                          const char *path,
+                                          apr_pool_t *pool)
 {
-  struct wrap_report_baton *wrb = report_baton;
+  struct wrap_2to1_report_baton *wrb = report_baton;
 
   return wrb->reporter->delete_path(wrb->baton, path, pool);
 }
     
-static svn_error_t *wrap_link_path(void *report_baton,
-                                   const char *path,
-                                   const char *url,
-                                   svn_revnum_t revision,
-                                   svn_boolean_t start_empty,
-                                   const char *lock_token,
-                                   apr_pool_t *pool)
+static svn_error_t *wrap_2to1_link_path(void *report_baton,
+                                        const char *path,
+                                        const char *url,
+                                        svn_revnum_t revision,
+                                        svn_boolean_t start_empty,
+                                        const char *lock_token,
+                                        apr_pool_t *pool)
 {
-  struct wrap_report_baton *wrb = report_baton;
+  struct wrap_2to1_report_baton *wrb = report_baton;
 
   return wrb->reporter->link_path(wrb->baton, path, url, revision,
                                   start_empty, pool);
 }
 
-static svn_error_t *wrap_finish_report(void *report_baton,
-                                       apr_pool_t *pool)
+static svn_error_t *wrap_2to1_finish_report(void *report_baton,
+                                            apr_pool_t *pool)
 {
-  struct wrap_report_baton *wrb = report_baton;
+  struct wrap_2to1_report_baton *wrb = report_baton;
 
   return wrb->reporter->finish_report(wrb->baton, pool);
 }
 
-static svn_error_t *wrap_abort_report(void *report_baton,
-                                      apr_pool_t *pool)
+static svn_error_t *wrap_2to1_abort_report(void *report_baton,
+                                           apr_pool_t *pool)
 {
-  struct wrap_report_baton *wrb = report_baton;
+  struct wrap_2to1_report_baton *wrb = report_baton;
 
   return wrb->reporter->abort_report(wrb->baton, pool);
 }
 
-static const svn_ra_reporter2_t wrap_reporter = {
-  wrap_set_path,
-  wrap_delete_path,
-  wrap_link_path,
-  wrap_finish_report,
-  wrap_abort_report
+static const svn_ra_reporter2_t wrap_2to1_reporter = {
+  wrap_2to1_set_path,
+  wrap_2to1_delete_path,
+  wrap_2to1_link_path,
+  wrap_2to1_finish_report,
+  wrap_2to1_abort_report
 };
 
 svn_error_t *
@@ -681,7 +828,7 @@ svn_wc_crawl_revisions(const char *path,
                        svn_wc_traversal_info_t *traversal_info,
                        apr_pool_t *pool)
 {
-  struct wrap_report_baton wrb;
+  struct wrap_2to1_report_baton wrb;
   svn_wc__compat_notify_baton_t nb;
   
   wrb.reporter = reporter;
@@ -690,7 +837,11 @@ svn_wc_crawl_revisions(const char *path,
   nb.func = notify_func;
   nb.baton = notify_baton;
 
-  return svn_wc_crawl_revisions2(path, adm_access, &wrap_reporter, &wrb,
+  /* ### TODO(sd): Ideally, this would call svn_wc_crawl_revisions3() (or
+     ### whatever the latest interface is) directly.  However, I'm
+     ### too distracted to untangle the layers of compat wrappers
+     ### going on here right now, so I'm just going to leave it. */
+  return svn_wc_crawl_revisions2(path, adm_access, &wrap_2to1_reporter, &wrb,
                                  restore_files, recurse, use_commit_times,
                                  svn_wc__compat_call_notify_func, &nb,
                                  traversal_info,

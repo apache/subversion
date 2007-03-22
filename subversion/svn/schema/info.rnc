@@ -78,3 +78,5 @@ cur-base-file = element cur-base-file { string }
 ## Current properties file.
 prop-file = element prop-file { string }
 
+## Depth of this directory, always "infinity" for non-directories
+depth = element depth { "infinity" | "immediates" | "files" | "empty" }

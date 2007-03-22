@@ -1,3 +1,0 @@
-This feature is now under development as "sparse directories".  See 
-http://svn.collab.net/repos/svn/branches/sparse-directories/README.branch
-for up-to-date information.

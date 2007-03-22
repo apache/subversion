@@ -65,6 +65,7 @@ alloc_entry(apr_pool_t *pool)
   entry->cmt_rev = SVN_INVALID_REVNUM;
   entry->kind = svn_node_none;
   entry->working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
+  entry->depth = svn_depth_infinity;
   return entry;
 }
 
@@ -467,6 +468,17 @@ read_entry(svn_wc_entry_t **new_entry,
     SVN_ERR(read_val(&val, buf, end));
     if (val)
       entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
+  }
+  MAYBE_DONE;
+
+  /* Depth. */
+  {
+    const char *result;
+    SVN_ERR(read_val(&result, buf, end));
+    if (result[0] == '\0')
+      entry->depth = svn_depth_infinity;
+    else
+      entry->depth = svn_depth_from_word(result);
   }
   MAYBE_DONE;
 
@@ -1625,6 +1637,17 @@ write_entry(svn_stringbuf_t *buf,
     write_val(buf, val, strlen(val));
   }
 
+  /* Depth. */
+  if (is_subdir || entry->depth == svn_depth_infinity)
+    {
+      write_val(buf, NULL, 0);
+    }
+  else
+    {
+      const char *val = svn_depth_to_word(entry->depth);
+      write_val(buf, val, strlen(val));
+    }
+
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -2237,6 +2260,9 @@ fold_entry(apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
     cur_entry->keep_local = entry->keep_local;
 
+  /* Note that we don't bother to fold entry->depth, because it is
+     only meaningful on the this-dir entry anyway. */
+
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
   if (cur_entry->kind != svn_node_dir)
@@ -2754,6 +2780,7 @@ svn_wc__entries_init(const char *path,
                      const char *url,
                      const char *repos,
                      svn_revnum_t initial_rev,
+                     svn_depth_t depth,
                      apr_pool_t *pool)
 {
   apr_file_t *f = NULL;
@@ -2761,8 +2788,12 @@ svn_wc__entries_init(const char *path,
                                                  SVN_WC__VERSION);
   svn_wc_entry_t *entry = alloc_entry(pool);
 
-  /* Sanity check. */
+  /* Sanity checks. */
   assert(! repos || svn_path_is_ancestor(repos, url));
+  assert(depth == svn_depth_empty
+         || depth == svn_depth_files
+         || depth == svn_depth_immediates
+         || depth == svn_depth_infinity);
 
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR(svn_wc__open_adm_file(&f, path, SVN_WC__ADM_ENTRIES,
@@ -2778,6 +2809,7 @@ svn_wc__entries_init(const char *path,
   entry->revision = initial_rev;
   entry->uuid = uuid;
   entry->repos = repos;
+  entry->depth = depth;
   if (initial_rev > 0)
     entry->incomplete = TRUE;
   /* Add cachable-props here so that it can be inherited by other entries.

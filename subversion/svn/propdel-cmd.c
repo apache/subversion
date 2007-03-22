@@ -90,6 +90,9 @@ svn_cl__propdel(apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
+      if (opt_state->depth == svn_depth_unknown)
+        opt_state->depth = svn_depth_empty;
+
       /* For each target, remove the property PNAME. */
       for (i = 0; i < targets->nelts; i++)
         {
@@ -102,11 +105,12 @@ svn_cl__propdel(apr_getopt_t *os,
 
           /* Pass FALSE for 'skip_checks' because it doesn't matter here,
              and opt_state->force doesn't apply to this command anyway. */
-          SVN_ERR(svn_cl__try(svn_client_propset3(&commit_info, pname_utf8,
-                                                  NULL, target,
-                                                  opt_state->recursive,
-                                                  FALSE, SVN_INVALID_REVNUM,
-                                                  ctx, subpool),
+          SVN_ERR(svn_cl__try(svn_client_propset3
+                              (&commit_info, pname_utf8,
+                               NULL, target,
+                               SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                               FALSE, SVN_INVALID_REVNUM,
+                               ctx, subpool),
                               &success, opt_state->quiet,
                               SVN_ERR_UNVERSIONED_RESOURCE,
                               SVN_ERR_ENTRY_NOT_FOUND,
@@ -115,7 +119,8 @@ svn_cl__propdel(apr_getopt_t *os,
           if (success && (! opt_state->quiet))
             {
               SVN_ERR(svn_cmdline_printf
-                      (subpool, opt_state->recursive
+                      (subpool, 
+                       SVN_DEPTH_TO_RECURSE(opt_state->depth)
                        ? _("property '%s' deleted (recursively) from '%s'.\n")
                        : _("property '%s' deleted from '%s'.\n"),
                        pname_utf8, svn_path_local_style(target, subpool)));

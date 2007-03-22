@@ -106,7 +106,7 @@ authz_read(svn_boolean_t *allowed,
 
   if (svn_fs_is_txn_root(root))
     {
-      /* This means svn_repos_dir_delta is comparing two txn trees,
+      /* This means svn_repos_dir_delta2 is comparing two txn trees,
          rather than a txn and revision.  It's probably updating a
          working copy that contains 'disjoint urls'.  
 

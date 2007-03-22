@@ -230,6 +230,15 @@ svn_cl__diff(apr_getopt_t *os,
 
     }
 
+  /* ### TODO(sd): Will this behave correctly in working copies with
+   * ### complex depth mixtures?  It should, because they'll just
+   * ### report their state as for an update, and the editor drive
+   * ### that results will take depth into account.  But this needs
+   * ### to be tested.
+   */
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = svn_depth_infinity;
+
   svn_opt_push_implicit_dot_target(targets, pool);
 
   iterpool = svn_pool_create(pool);
@@ -245,25 +254,25 @@ svn_cl__diff(apr_getopt_t *os,
           target2 = svn_path_join(new_target, path, iterpool);
 
           if (opt_state->summarize)
-            SVN_ERR(svn_client_diff_summarize
+            SVN_ERR(svn_client_diff_summarize2
                     (target1,
                      &opt_state->start_revision,
                      target2,
                      &opt_state->end_revision,
-                     opt_state->nonrecursive ? FALSE : TRUE,
+                     opt_state->depth,
                      opt_state->notice_ancestry ? FALSE : TRUE,
                      summarize_func,
                      (void *) target1,
                      ((svn_cl__cmd_baton_t *)baton)->ctx,
                      iterpool));
           else          
-            SVN_ERR(svn_client_diff3
+            SVN_ERR(svn_client_diff4
                     (options,
                      target1,
                      &(opt_state->start_revision),
                      target2,
                      &(opt_state->end_revision),
-                     opt_state->nonrecursive ? FALSE : TRUE,
+                     opt_state->depth,
                      opt_state->notice_ancestry ? FALSE : TRUE,
                      opt_state->no_diff_deleted,
                      opt_state->force,
@@ -288,25 +297,25 @@ svn_cl__diff(apr_getopt_t *os,
               ? svn_opt_revision_head : svn_opt_revision_working;
 
           if (opt_state->summarize)
-            SVN_ERR(svn_client_diff_summarize_peg
+            SVN_ERR(svn_client_diff_summarize_peg2
                     (truepath,
                      &peg_revision,
                      &opt_state->start_revision,
                      &opt_state->end_revision,
-                     opt_state->nonrecursive ? FALSE : TRUE,
+                     opt_state->depth,
                      opt_state->notice_ancestry ? FALSE : TRUE,
                      summarize_func,
                      (void *) truepath,
                      ((svn_cl__cmd_baton_t *)baton)->ctx,
                      iterpool));
           else
-            SVN_ERR(svn_client_diff_peg3
+            SVN_ERR(svn_client_diff_peg4
                     (options,
                      truepath,
                      &peg_revision,
                      &opt_state->start_revision,
                      &opt_state->end_revision,
-                     opt_state->nonrecursive ? FALSE : TRUE,
+                     opt_state->depth,
                      opt_state->notice_ancestry ? FALSE : TRUE,
                      opt_state->no_diff_deleted,
                      opt_state->force,

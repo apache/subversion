@@ -137,6 +137,10 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * to the set containing @a associated.  @a associated can be @c NULL, in 
  * which case @a adm_access is the start of a new set.
  *
+ * ### TODO(sd): We should change the name of the @a depth parameter here,
+ * ### so as not to confuse it with all the @c svn_depth_t depths
+ * ### elsewhere in the code.  Maybe @a levels_to_lock or something.
+ *
  * @a depth specifies how much to lock.  Zero means just the specified
  * directory.  Any negative value means to lock the entire working copy
  * directory hierarchy under @a path.  A positive value indicates the number of
@@ -1267,8 +1271,9 @@ typedef enum svn_wc_schedule_t
  */
 typedef struct svn_wc_entry_t
 {
-  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
-     if you need to extend that as well. */
+  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup()
+     and alloc_entry() in libsvn_wc/entries.c, to see if you need to
+     extend one or both of them as well. */
 
   /* General Attributes */
 
@@ -1418,8 +1423,19 @@ typedef struct svn_wc_entry_t
    * @since New in 1.5. */
   svn_boolean_t keep_local;
 
-  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
-     if you need to extend that as well. */
+  /** The depth of this entry.
+   *
+   * ### It's a bit annoying that we only use this on this_dir
+   * ### entries, yet it will exist (with value svn_depth_infinity) on
+   * ### all entries.  Maybe some future extensibility would make this
+   * ### field meaningful on entries besides this_dir.
+   *
+   * @since New in 1.5. */
+  svn_depth_t depth;
+
+  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup()
+     and alloc_entry() in libsvn_wc/entries.c, to see if you need to
+     extend one or both of them as well. */
 } svn_wc_entry_t;
 
 
@@ -1636,12 +1652,14 @@ svn_error_t *svn_wc_mark_missing_deleted(const char *path,
                                          apr_pool_t *pool);
                        
 
-
 /** Ensure that an administrative area exists for @a path, so that @a
- * path is a working copy subdir based on @a url at @a revision, and
- * with repository UUID @a uuid and repository root URL @a repos.
- * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must be a
- * prefix of @a url.
+ * path is a working copy subdir based on @a url at @a revision, with
+ * depth @a depth, and with repository UUID @a uuid and repository
+ * root URL @a repos.  
+ *
+ * @a depth must be a definite depth, it cannot be @c svn_depth_unknown
+ * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must
+ * be a prefix of @a url.
  *
  * If the administrative area does not exist, then create it and
  * initialize it to an unlocked state.
@@ -1655,6 +1673,23 @@ svn_error_t *svn_wc_mark_missing_deleted(const char *path,
  * Do not ensure existence of @a path itself; if @a path does not
  * exist, return error.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_ensure_adm3(const char *path,
+                                const char *uuid,
+                                const char *url,
+                                const char *repos,
+                                svn_revnum_t revision,
+                                svn_depth_t depth,
+                                apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_wc_ensure_adm3(), but with @a depth set to
+ * @c svn_depth_infinity.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
+ *
  * @since New in 1.3.
  */
 svn_error_t *svn_wc_ensure_adm2(const char *path,
@@ -1665,7 +1700,9 @@ svn_error_t *svn_wc_ensure_adm2(const char *path,
                                 apr_pool_t *pool);
 
 
-/** Similar to svn_wc_ensure_adm2(), but with @a repos set to @c NULL.
+/**
+ * Similar to svn_wc_ensure_adm3(), but with @a depth set to
+ * @c svn_depth_infinity and @a repos set to @c NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
@@ -1706,14 +1743,10 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
  * for getting the status of exactly one thing, and another for
  * getting the statuses of (potentially) multiple things.
  * 
- * The WebDAV concept of "depth" may be useful in understanding the
- * motivation behind this.  Suppose we're getting the status of
- * directory D.  The three depth levels would mean
- * 
- *    depth 0:         D itself (just the named directory)
- *    depth 1:         D and its immediate children (D + its entries)
- *    depth Infinity:  D and all its descendants (full recursion)
- * 
+ * The concept of depth, as explained in the documentation for
+ * svn_depth_t, may be useful in understanding this.  Suppose we're
+ * getting the status of directory D:
+ *
  * To offer all three levels, we could have one unified function,
  * taking a `depth' parameter.  Unfortunately, because this function
  * would have to handle multiple return values as well as the single
@@ -1721,9 +1754,9 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
  * become cumbersome: you'd have to roll through a hash to find one
  * lone status.
  * 
- * So we have svn_wc_status() for depth 0, and 
- * svn_wc_get_status_editor() for depths 1 and 2, since the latter
- * two involve multiple return values.
+ * So we have svn_wc_status() for depth-empty (just D itself), and
+ * svn_wc_get_status_editor() for depth-immediates and depth-infinity,
+ * since the latter two involve multiple return values.
  *
  * @note The status structures may contain a @c NULL ->entry field.
  * This indicates an item that is not versioned in the working copy.
@@ -2620,9 +2653,11 @@ svn_error_t *svn_wc_process_committed(const char *path,
 /**
  * Do a depth-first crawl in a working copy, beginning at @a path.
  *
- * Communicate the `state' of the working copy's revisions to
- * @a reporter/@a report_baton.  Obviously, if @a path is a file instead 
- * of a directory, this depth-first crawl will be a short one.
+ * Communicate the `state' of the working copy's revisions and depths
+ * to @a reporter/@a report_baton.  Obviously, if @a path is a file
+ * instead of a directory, this depth-first crawl will be a short one.
+ *
+ * ### TODO(sd): document @a depth parameter.
  *
  * No locks are or logs are created, nor are any animals harmed in the
  * process.  No cleanup is necessary.  @a adm_access must be an access 
@@ -2645,7 +2680,27 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * state in it.  (Caller should obtain @a traversal_info from
  * svn_wc_init_traversal_info().)
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_crawl_revisions3(const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_crawl_revisions3, but taking svn_ra_reporter2_t
+ * instead of svn_ra_reporter3_t, and therefore only able to report
+ * @c svn_depth_infinity for depths.
+ *
+ * @deprecated Provided for compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_wc_crawl_revisions2(const char *path,
@@ -2661,7 +2716,7 @@ svn_wc_crawl_revisions2(const char *path,
                         apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_crawl_revisions2(), but takes an svn_wc_notify_func_t
+ * Similar to svn_wc_crawl_revisions3(), but takes an svn_wc_notify_func_t
  * and a @c svn_reporter_t instead.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
@@ -2752,13 +2807,29 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * If @a allow_unver_obstructions is true, then allow unversioned
  * obstructions when adding a path.
  *
+ * If @a depth is @c svn_depth_infinity, update fully recursively.
+ * Else if it is @c svn_depth_files, update the uppermost directory and
+ * its immediate entries, but not subdirectories.  Else if it is
+ * @c svn_depth_immediates, update the uppermost directory, its file
+ * entries, and the presence or absence of subdirectories (but do not
+ * descend into the subdirectories).  Else if it is @c
+ * svn_depth_empty, update exactly the uppermost target, and don't
+ * touch its entries.
+ *
+ * ### TODO(sd): Are those extravagent claims of sophisticated depth
+ * ### behavior above really true?
+ *
+ * @note @a depth overrides whatever depth is already set in @a anchor
+ * or @a target.  To use those depths, the caller should detect them
+ * and set @a depth accordingly.
+ *
  * @since New in 1.5.
  */
 svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
                                        const char *target,
                                        svn_boolean_t use_commit_times,
-                                       svn_boolean_t recurse,
+                                       svn_depth_t depth,
                                        svn_boolean_t allow_unver_obstructions,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
@@ -3083,9 +3154,16 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
  *
- * @a recurse determines whether to descend into subdirectories when @a target
- * is a directory.  If @a recurse is @c TRUE then @a anchor should be part of 
- * an access baton set for the @a target hierarchy.
+ * If @a depth is @c svn_depth_empty, just diff exactly @a target or
+ * @a anchor if @a target is empty.  If @c svn_depth_files or
+ * @c svn_depth_immediates, then do the same and for top-level file
+ * entries as well (if any).  If @c svn_depth_infinity, then diff
+ * fully recursively.  In the latter case, @a anchor should be part of
+ * an access baton set for the @a target hierarchy. 
+ * ### TODO(sd): I'm not sure what the last part of that last sentence means.
+ *
+ * ### TODO(sd): Also, is same behavior for svn_depth_files and
+ * ### svn_depth_immediates the correct thing here?
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -3101,6 +3179,28 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * If @a cancel_func is non-null, it will be used along with @a cancel_baton 
  * to periodically check if the client has canceled the operation.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
+                                     const char *target,
+                                     const svn_wc_diff_callbacks2_t *callbacks,
+                                     void *callback_baton,
+                                     svn_depth_t depth,
+                                     svn_boolean_t ignore_ancestry,
+                                     svn_boolean_t use_text_base,
+                                     svn_boolean_t reverse_order,
+                                     svn_cancel_func_t cancel_func,
+                                     void *cancel_baton,
+                                     const svn_delta_editor_t **editor,
+                                     void **edit_baton,
+                                     apr_pool_t *pool);
+/**
+ * Similar to svn_wc_get_diff_editor4(), but with @a depth set to
+ * @c svn_depth_infinity if @a recurse is true, or @a svn_depth_files
+ * if @a recurse is false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+
  * @since New in 1.2.
  */
 svn_error_t *svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,

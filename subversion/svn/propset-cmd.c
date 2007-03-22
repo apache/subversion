@@ -123,6 +123,9 @@ svn_cl__propset(apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
+      if (opt_state->depth == svn_depth_unknown)
+        opt_state->depth = svn_depth_empty;
+
       /* The customary implicit dot rule has been prone to user error
        * here.  People would do intuitive things like
        * 
@@ -167,13 +170,14 @@ svn_cl__propset(apr_getopt_t *os,
 
           svn_pool_clear(subpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-          SVN_ERR(svn_cl__try(svn_client_propset3(&commit_info,
-                                                  pname_utf8,
-                                                  propval, target,
-                                                  opt_state->recursive,
-                                                  opt_state->force,
-                                                  SVN_INVALID_REVNUM,
-                                                  ctx, subpool),
+          SVN_ERR(svn_cl__try(svn_client_propset3
+                              (&commit_info,
+                               pname_utf8,
+                               propval, target,
+                               SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                               opt_state->force,
+                               SVN_INVALID_REVNUM,
+                               ctx, subpool),
                               &success, opt_state->quiet,
                               SVN_ERR_UNVERSIONED_RESOURCE,
                               SVN_ERR_ENTRY_NOT_FOUND,
@@ -183,7 +187,7 @@ svn_cl__propset(apr_getopt_t *os,
             {
               SVN_ERR
                 (svn_cmdline_printf
-                 (pool, opt_state->recursive
+                 (pool, SVN_DEPTH_TO_RECURSE(opt_state->depth)
                   ? _("property '%s' set (recursively) on '%s'\n")
                   : _("property '%s' set on '%s'\n"),
                   pname, svn_path_local_style(target, pool)));

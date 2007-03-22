@@ -213,7 +213,7 @@ copy_versioned_files(const char *from,
                      const char *to,
                      svn_opt_revision_t *revision,
                      svn_boolean_t force,
-                     svn_boolean_t recurse,
+                     svn_depth_t depth,
                      const char *native_eol,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
@@ -294,14 +294,14 @@ copy_versioned_files(const char *from,
                 }
               else
                 {
-                  if (recurse)
+                  if (depth == svn_depth_infinity)
                     {
                       const char *new_from = svn_path_join(from, item, 
                                                            iterpool);
                       const char *new_to = svn_path_join(to, item, iterpool);
                   
                       SVN_ERR(copy_versioned_files(new_from, new_to, 
-                                                   revision, force, recurse,
+                                                   revision, force, depth,
                                                    native_eol, ctx,
                                                    iterpool));
                     }
@@ -734,14 +734,14 @@ close_file(void *file_baton,
 /*** Public Interfaces ***/
 
 svn_error_t *
-svn_client_export3(svn_revnum_t *result_rev,
+svn_client_export4(svn_revnum_t *result_rev,
                    const char *from,
                    const char *to,
                    const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t overwrite, 
                    svn_boolean_t ignore_externals,
-                   svn_boolean_t recurse,
+                   svn_depth_t depth,
                    const char *native_eol,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -821,7 +821,7 @@ svn_client_export3(svn_revnum_t *result_rev,
         {
           void *edit_baton;
           const svn_delta_editor_t *export_editor;
-          const svn_ra_reporter2_t *reporter;
+          const svn_ra_reporter3_t *reporter;
           void *report_baton;
           svn_delta_editor_t *editor = svn_delta_default_editor(pool);
           svn_boolean_t use_sleep = FALSE;
@@ -845,14 +845,16 @@ svn_client_export3(svn_revnum_t *result_rev,
       
       
           /* Manufacture a basic 'report' to the update reporter. */
-          SVN_ERR(svn_ra_do_update(ra_session,
-                                   &reporter, &report_baton,
-                                   revnum,
-                                   "", /* no sub-target */
-                                   recurse,
-                                   export_editor, edit_baton, pool));
+          SVN_ERR(svn_ra_do_update2(ra_session,
+                                    &reporter, &report_baton,
+                                    revnum,
+                                    "", /* no sub-target */
+                                    depth,
+                                    export_editor, edit_baton, pool));
 
           SVN_ERR(reporter->set_path(report_baton, "", revnum,
+                                     /* ### TODO(sd): dynamic depth here */
+                                     svn_depth_infinity,
                                      TRUE, /* "help, my dir is empty!" */
                                      NULL, pool));
 
@@ -874,7 +876,7 @@ svn_client_export3(svn_revnum_t *result_rev,
                     (to, overwrite, ctx->notify_func2, 
                      ctx->notify_baton2, pool));
 
-          if (! ignore_externals && recurse)
+          if (! ignore_externals && depth == svn_depth_infinity)
             SVN_ERR(svn_client__fetch_externals(eb->externals, TRUE, 
                                                 &use_sleep, ctx, pool));
         }
@@ -898,7 +900,7 @@ svn_client_export3(svn_revnum_t *result_rev,
       
       /* just copy the contents of the working copy into the target path. */
       SVN_ERR(copy_versioned_files(from, to, &working_revision, overwrite, 
-                                   recurse, native_eol, ctx, pool));
+                                   depth, native_eol, ctx, pool));
     }
   
 
@@ -917,6 +919,24 @@ svn_client_export3(svn_revnum_t *result_rev,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_export3(svn_revnum_t *result_rev,
+                   const char *from,
+                   const char *to,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t overwrite, 
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t recurse,
+                   const char *native_eol,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_export4(result_rev, from, to, peg_revision, revision,
+                            overwrite, ignore_externals,
+                            SVN_DEPTH_FROM_RECURSE(recurse),
+                            native_eol, ctx, pool);
+}
 
 svn_error_t *
 svn_client_export2(svn_revnum_t *result_rev,

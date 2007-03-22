@@ -224,6 +224,118 @@ check_ra_version(const svn_version_t *ra_version, const char *scheme)
 
 /* -------------------------------------------------------------- */
 
+/*** Compatibility Wrappers ***/
+
+/* Wrap @c svn_ra_reporter3_t in an interface that looks like 
+   @c svn_ra_reporter2_t, for compatibility with functions that take
+   the latter.  This shields the ra-specific implementations from
+   worrying about what kind of reporter they're dealing with.
+
+   This code does not live in wrapper_template.h because that file is
+   about the big changeover from a vtable-style to function-style
+   interface, and does not contain the post-changeover interfaces
+   that we are compatiblizing here.
+
+   This code looks like it duplicates code in libsvn_wc/adm_crawler.c,
+   but in fact it does not.  That code makes old things look like new
+   things; this code makes a new thing look like an old thing. */
+
+/* Baton for abovementioned wrapping. */
+struct reporter_3in2_baton {
+  const svn_ra_reporter3_t *reporter3;
+  void *reporter3_baton;
+};
+
+/* Wrap the corresponding svn_ra_reporter3_t field in an
+   svn_ra_reporter2_t interface.  @a report_baton is a
+   @c reporter_3in2_baton_t *. */
+static svn_error_t *
+set_path(void *report_baton,
+         const char *path,
+         svn_revnum_t revision,
+         svn_boolean_t start_empty,
+         const char *lock_token,
+         apr_pool_t *pool)
+{
+  struct reporter_3in2_baton *b = report_baton;
+  return b->reporter3->set_path(b->reporter3_baton,
+                                path, revision, svn_depth_infinity,
+                                start_empty, lock_token, pool);
+}
+
+/* Wrap the corresponding svn_ra_reporter3_t field in an
+   svn_ra_reporter2_t interface.  @a report_baton is a
+   @c reporter_3in2_baton_t *. */
+static svn_error_t *
+delete_path(void *report_baton,
+            const char *path,
+            apr_pool_t *pool)
+{
+  struct reporter_3in2_baton *b = report_baton;
+  return b->reporter3->delete_path(b->reporter3_baton, path, pool);
+}
+    
+/* Wrap the corresponding svn_ra_reporter3_t field in an
+   svn_ra_reporter2_t interface.  @a report_baton is a
+   @c reporter_3in2_baton_t *. */
+static svn_error_t *
+link_path(void *report_baton,
+          const char *path,
+          const char *url,
+          svn_revnum_t revision,
+          svn_boolean_t start_empty,
+          const char *lock_token,
+          apr_pool_t *pool)
+{
+  struct reporter_3in2_baton *b = report_baton;
+  return b->reporter3->link_path(b->reporter3_baton,
+                                 path, url, revision, svn_depth_infinity,
+                                 start_empty, lock_token, pool);
+
+}
+
+/* Wrap the corresponding svn_ra_reporter3_t field in an
+   svn_ra_reporter2_t interface.  @a report_baton is a
+   @c reporter_3in2_baton_t *. */
+static svn_error_t *
+finish_report(void *report_baton,
+              apr_pool_t *pool)
+{
+  struct reporter_3in2_baton *b = report_baton;
+  return b->reporter3->finish_report(b->reporter3_baton, pool);
+}
+
+/* Wrap the corresponding svn_ra_reporter3_t field in an
+   svn_ra_reporter2_t interface.  @a report_baton is a
+   @c reporter_3in2_baton_t *. */
+static svn_error_t *
+abort_report(void *report_baton,
+             apr_pool_t *pool)
+{
+  struct reporter_3in2_baton *b = report_baton;
+  return b->reporter3->abort_report(b->reporter3_baton, pool);
+}
+
+/* Wrap svn_ra_reporter3_t calls in an svn_ra_reporter2_t interface.
+
+   Note: For calls where the prototypes are exactly the same, we could
+   avoid the pass-through overhead by using the function in the
+   reporter returned from session->vtable->do_foo.  But the code would
+   get a lot less readable, and the only benefit would be to shave a
+   few instructions in a network-bound operation anyway.  So in
+   delete_path(), finish_report(), and abort_report(), we cheerfully
+   pass through to identical functions. */
+static svn_ra_reporter2_t reporter_3in2_wrapper = {
+  set_path,
+  delete_path,
+  link_path,
+  finish_report,
+  abort_report
+};
+
+
+/* -------------------------------------------------------------- */
+
 /*** Public Interfaces ***/
 
 svn_error_t *svn_ra_initialize(apr_pool_t *pool)
@@ -474,6 +586,23 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                                   path, revision, dirent_fields, pool);
 }
 
+svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
+                               const svn_ra_reporter3_t **reporter,
+                               void **report_baton,
+                               svn_revnum_t revision_to_update_to,
+                               const char *update_target,
+                               svn_depth_t depth,
+                               const svn_delta_editor_t *update_editor,
+                               void *update_baton,
+                               apr_pool_t *pool)
+{
+  return session->vtable->do_update(session,
+                                    reporter, report_baton,
+                                    revision_to_update_to, update_target,
+                                    depth, update_editor, update_baton,
+                                    pool);
+}
+
 svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
                               const svn_ra_reporter2_t **reporter,
                               void **report_baton,
@@ -484,10 +613,34 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
                               void *update_baton,
                               apr_pool_t *pool)
 {
-  return session->vtable->do_update(session, reporter, report_baton,
+  struct reporter_3in2_baton *b = apr_palloc(pool, sizeof(*b));
+  *reporter = &reporter_3in2_wrapper;
+  *report_baton = b;
+
+  return session->vtable->do_update(session,
+                                    &(b->reporter3), &(b->reporter3_baton),
                                     revision_to_update_to, update_target,
-                                    recurse, update_editor, update_baton,
+                                    SVN_DEPTH_FROM_RECURSE(recurse),
+                                    update_editor, update_baton,
                                     pool);
+}
+
+svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
+                               const svn_ra_reporter3_t **reporter,
+                               void **report_baton,
+                               svn_revnum_t revision_to_switch_to,
+                               const char *switch_target,
+                               svn_depth_t depth,
+                               const char *switch_url,
+                               const svn_delta_editor_t *switch_editor,
+                               void *switch_baton,
+                               apr_pool_t *pool)
+{
+  return session->vtable->do_switch(session,
+                                    reporter, report_baton,
+                                    revision_to_switch_to, switch_target,
+                                    depth, switch_url, switch_editor,
+                                    switch_baton, pool);
 }
 
 svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
@@ -501,10 +654,32 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
                               void *switch_baton,
                               apr_pool_t *pool)
 {
-  return session->vtable->do_switch(session, reporter, report_baton,
+  struct reporter_3in2_baton *b = apr_palloc(pool, sizeof(*b));
+  *reporter = &reporter_3in2_wrapper;
+  *report_baton = b;
+
+  return session->vtable->do_switch(session,
+                                    &(b->reporter3), &(b->reporter3_baton),
                                     revision_to_switch_to, switch_target,
-                                    recurse, switch_url, switch_editor,
-                                    switch_baton, pool);
+                                    SVN_DEPTH_FROM_RECURSE(recurse),
+                                    switch_url, switch_editor, switch_baton,
+                                    pool);
+}
+
+svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
+                               const svn_ra_reporter3_t **reporter,
+                               void **report_baton,
+                               const char *status_target,
+                               svn_revnum_t revision,
+                               svn_depth_t depth,
+                               const svn_delta_editor_t *status_editor,
+                               void *status_baton,
+                               apr_pool_t *pool)
+{
+  return session->vtable->do_status(session,
+                                    reporter, report_baton,
+                                    status_target, revision, depth,
+                                    status_editor, status_baton, pool);
 }
 
 svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
@@ -517,9 +692,36 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
                               void *status_baton,
                               apr_pool_t *pool)
 {
-  return session->vtable->do_status(session, reporter, report_baton,
-                                    status_target, revision, recurse,
+  struct reporter_3in2_baton *b = apr_palloc(pool, sizeof(*b));
+  *reporter = &reporter_3in2_wrapper;
+  *report_baton = b;
+
+  return session->vtable->do_status(session,
+                                    &(b->reporter3), &(b->reporter3_baton),
+                                    status_target, revision,
+                                    SVN_DEPTH_FROM_RECURSE(recurse),
                                     status_editor, status_baton, pool);
+}
+
+svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
+                             const svn_ra_reporter3_t **reporter,
+                             void **report_baton,
+                             svn_revnum_t revision,
+                             const char *diff_target,
+                             svn_depth_t depth,
+                             svn_boolean_t ignore_ancestry,
+                             svn_boolean_t text_deltas,
+                             const char *versus_url,
+                             const svn_delta_editor_t *diff_editor,
+                             void *diff_baton,
+                             apr_pool_t *pool)
+{
+  return session->vtable->do_diff(session,
+                                  reporter, report_baton,
+                                  revision, diff_target,
+                                  depth, ignore_ancestry,
+                                  text_deltas, versus_url, diff_editor,
+                                  diff_baton, pool);
 }
 
 svn_error_t *svn_ra_do_diff2(svn_ra_session_t *session,
@@ -535,10 +737,16 @@ svn_error_t *svn_ra_do_diff2(svn_ra_session_t *session,
                              void *diff_baton,
                              apr_pool_t *pool)
 {
-  return session->vtable->do_diff(session, reporter, report_baton, revision,
-                                  diff_target, recurse, ignore_ancestry,
-                                  text_deltas, versus_url, diff_editor,
-                                  diff_baton, pool);
+  struct reporter_3in2_baton *b = apr_palloc(pool, sizeof(*b));
+  *reporter = &reporter_3in2_wrapper;
+  *report_baton = b;
+
+  return session->vtable->do_diff(session,
+                                  &(b->reporter3), &(b->reporter3_baton),
+                                  revision, diff_target,
+                                  SVN_DEPTH_FROM_RECURSE(recurse),
+                                  ignore_ancestry, text_deltas, versus_url,
+                                  diff_editor, diff_baton, pool);
 }
 
 svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
@@ -553,9 +761,16 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
                             void *diff_baton,
                             apr_pool_t *pool)
 {
-  return svn_ra_do_diff2(session, reporter, report_baton, revision,
-                         diff_target, recurse, ignore_ancestry, TRUE,
-                         versus_url, diff_editor, diff_baton, pool);
+  struct reporter_3in2_baton *b = apr_palloc(pool, sizeof(*b));
+  *reporter = &reporter_3in2_wrapper;
+  *report_baton = b;
+
+  return session->vtable->do_diff(session,
+                                  &(b->reporter3), &(b->reporter3_baton),
+                                  revision, diff_target,
+                                  SVN_DEPTH_FROM_RECURSE(recurse),
+                                  ignore_ancestry, TRUE, versus_url,
+                                  diff_editor, diff_baton, pool);
 }
 
 svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
