@@ -1034,7 +1034,6 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
                          bool recurse, bool ignoreAncestry,
                          DiffSummaryReceiver &receiver)
 {
-    svn_error_t *err;
     Pool requestPool;
 
     SVN_JNI_NULL_PTR_EX(target1, "target1", );
@@ -1064,7 +1063,6 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                          bool recurse, bool ignoreAncestry,
                          DiffSummaryReceiver &receiver)
 {
-    svn_error_t *err;
     Pool requestPool;
 
     SVN_JNI_NULL_PTR_EX(target, "target", );
