@@ -92,8 +92,8 @@ history index).
   * Handle all 'copy'/'move' operation types.  (dlr)
     http://subversion.tigris.org/merge-tracking/func-spec.html#copy-move
 
-* Update design.html with the latest content from the design spec
-  in the notes/ dir.
+* Update design.html with the latest content from the "BASIC DESIGN"
+  section below.
 
 
 
