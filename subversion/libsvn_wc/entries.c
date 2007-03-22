@@ -1775,10 +1775,6 @@ write_entry_xml(svn_stringbuf_t **output,
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
                (entry->incomplete ? "true" : NULL));
 
-  /* Keep in wc flag  */
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, APR_HASH_KEY_STRING,
-               (entry->keep_local ? "true" : NULL));
-
   /* Timestamps */
   if (entry->text_time)
     {
@@ -1835,11 +1831,6 @@ write_entry_xml(svn_stringbuf_t **output,
     apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE, 
                  APR_HASH_KEY_STRING,
                  svn_time_to_cstring(entry->lock_creation_date, pool));
-
-  /* Changelist */
-  if (entry->changelist)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CHANGELIST, APR_HASH_KEY_STRING,
-                 entry->changelist);
 
   /* Has-props flag. */
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, APR_HASH_KEY_STRING,
