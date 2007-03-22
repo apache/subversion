@@ -841,7 +841,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
                              intUrl.c_str(),
                              revision.revision (),
                              SVN_DEPTH_FROM_RECURSE(recurse),
-			     allowUnverObstructions,
+                             allowUnverObstructions,
                              ctx,
                              apr_pool);
 
