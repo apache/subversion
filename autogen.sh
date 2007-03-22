@@ -33,17 +33,6 @@ done
 # ### sees an empty arg rather than missing one.
 ./build/buildcheck.sh "$RELEASE_MODE" || exit 1
 
-# Handle pkgconfig's m4 macros
-#
-pkgfile=${PKGCONFIG_M4-/usr/share/aclocal/pkg.m4}
-if [ ! -f $pkgfile ]; then
-    echo "$pkgfile not found (try setting the PKGCONFIG_M4 environment variable)"
-    exit 1
-fi
-
-echo "Copying pkg-config helper: $pkgfile"
-cp $pkgfile build/pkg.m4
-
 # Handle some libtool helper files
 #
 # ### eventually, we can/should toss this in favor of simply using
