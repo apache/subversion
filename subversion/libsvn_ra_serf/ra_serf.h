@@ -32,6 +32,8 @@
 #include "svn_dav.h"
 
 
+typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
+
 /* A serf connection and optionally associated SSL context.  */
 typedef struct {
   /* Our connection to a server. */
@@ -63,6 +65,10 @@ typedef struct {
 
   /* Optional SSL context for this connection. */
   serf_ssl_context_t *ssl_context;
+  svn_auth_iterstate_t *ssl_client_auth_state;
+  svn_auth_iterstate_t *ssl_client_pw_auth_state;
+
+  svn_ra_serf__session_t *session;
 } svn_ra_serf__connection_t;
 
 /*
@@ -70,7 +76,7 @@ typedef struct {
  *
  * This is stored in the ra session ->priv field.
  */
-typedef struct {
+struct svn_ra_serf__session_t {
   /* Pool for allocations during this session */
   apr_pool_t *pool;
 
@@ -118,7 +124,7 @@ typedef struct {
 
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
-} svn_ra_serf__session_t;
+};
 
 /*
  * Structure which represents a DAV element with a NAMESPACE and NAME.
@@ -233,6 +239,17 @@ svn_ra_serf__is_conn_closing(serf_bucket_t *response);
 
 apr_status_t
 svn_ra_serf__cleanup_serf_session(void *data);
+
+/* Helper function to provide SSL client certificates. */
+apr_status_t
+svn_ra_serf__handle_client_cert(void *data,
+                                const char **cert_path);
+
+/* Helper function to provide SSL client certificate passwords. */
+apr_status_t
+svn_ra_serf__handle_client_cert_pw(void *data,
+                                   const char *cert_path,
+                                   const char **password);
 
 /*
  * Create a REQUEST with an associated REQ_BKT in the SESSION.
