@@ -1976,11 +1976,9 @@ get_wc_and_repos_merge_info(apr_hash_t **target_mergeinfo,
       SVN_ERR(svn_wc__props_modified(target_wcpath, &which_props,
                                      adm_access, pool));
 
-      if(!apr_hash_get(which_props, SVN_PROP_MERGE_INFO,
-                       APR_HASH_KEY_STRING))
+      if (!apr_hash_get(which_props, SVN_PROP_MERGE_INFO, APR_HASH_KEY_STRING))
         {
-          SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, repos_mergeinfo,
-                                      pool));
+          SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, repos_mergeinfo,                                      pool));
         }
     }
   return SVN_NO_ERROR;
