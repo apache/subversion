@@ -85,6 +85,9 @@ load_config(svn_ra_serf__session_t *session,
                               SVN_CONFIG_SECTION_GLOBAL,
                               SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
 
+  svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG, config);
+
   server_group = svn_config_find_group(config,
                                        session->repos_url.hostname,
                                        SVN_CONFIG_SECTION_GROUPS, pool);
@@ -95,6 +98,8 @@ load_config(svn_ra_serf__session_t *session,
                                   server_group,
                                   SVN_CONFIG_OPTION_HTTP_COMPRESSION,
                                   session->using_compression));
+      svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                             SVN_AUTH_PARAM_SERVER_GROUP, server_group);
     }
 
   return SVN_NO_ERROR;
@@ -145,6 +150,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0] = apr_pcalloc(pool, sizeof(*serf_sess->conns[0]));
   serf_sess->conns[0]->bkt_alloc =
           serf_bucket_allocator_create(serf_sess->pool, NULL, NULL);
+  serf_sess->conns[0]->session = serf_sess;
 
   /* fetch the DNS record for this host */
   status = apr_sockaddr_info_get(&serf_sess->conns[0]->address, url.hostname,

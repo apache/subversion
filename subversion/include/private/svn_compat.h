@@ -49,6 +49,26 @@ extern "C" {
      (patch) <= APR_PATCH_VERSION))
 #endif /* APR_VERSION_AT_LEAST */
 
+/**
+ * Check at compile time if the Serf version is at least a certain
+ * level.
+ * @param major The major version component of the version checked
+ * for (e.g., the "1" of "1.3.0").
+ * @param minor The minor version component of the version checked
+ * for (e.g., the "3" of "1.3.0").
+ * @param patch The patch level component of the version checked
+ * for (e.g., the "0" of "1.3.0").
+ *
+ * @since New in 1.5.0
+ */
+#ifndef SERF_VERSION_AT_LEAST /* Introduced in Serf 0.1.1 */
+#define SERF_VERSION_AT_LEAST(major,minor,patch)                       \
+(((major) < SERF_MAJOR_VERSION)                                        \
+ || ((major) == SERF_MAJOR_VERSION && (minor) < SERF_MINOR_VERSION)    \
+ || ((major) == SERF_MAJOR_VERSION && (minor) == SERF_MINOR_VERSION && \
+     (patch) <= SERF_PATCH_VERSION))
+#endif /* SERF_VERSION_AT_LEAST */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
