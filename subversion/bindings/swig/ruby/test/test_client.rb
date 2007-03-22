@@ -1657,7 +1657,7 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
   end
 
-  def test_simple_provider
+  def assert_simple_provider(method)
     log = "sample log"
     src = "source\n"
     file = "sample.txt"
@@ -1690,49 +1690,24 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = Svn::Client::Context.new
     setup_auth_baton(ctx.auth_baton)
-    ctx.add_simple_provider
+    ctx.send(method)
     assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
+  end
+
+  def test_simple_provider
+    assert_simple_provider(:add_simple_provider)
   end
 
   def test_windows_simple_provider
     return unless Svn::Core.respond_to?(:auth_get_windows_simple_provider)
-
-    log = "sample log"
-    src = normalize_line_break("source\n")
-    file = "sample.txt"
-    path = File.join(@wc_path, file)
-    svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
-    
-    File.open(path, "w") {|f| f.print(src)}
-
-    ctx = make_context(log)
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add(path)
-    ctx.commit(@wc_path)
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add_windows_simple_provider
-    assert_raises(Svn::Error::RaNotAuthorized) do
-      assert_equal(src, ctx.cat(svnserve_uri))
-    end
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add_simple_provider
-    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
-      cred.username = @author
-      cred.password = @password
-      cred.may_save = true
-    end
-    assert_equal(src, ctx.cat(svnserve_uri))
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add_windows_simple_provider
-    assert_equal(src, ctx.cat(svnserve_uri))
+    assert_simple_provider(:add_windows_simple_provider)
   end
-  
+
+  def test_keychain_simple_provider
+    return unless Svn::Core.respond_to?(:auth_get_keychain_simple_provider)
+    assert_simple_provider(:add_keychain_simple_provider)
+  end
+
   def test_username_provider
     log = "sample log"
     new_log = "sample new log"
