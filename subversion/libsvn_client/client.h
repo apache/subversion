@@ -232,7 +232,7 @@ svn_client__parse_merge_info(apr_hash_t **mergeinfo,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
-/* Set MERGEINFO on in the WC for WCPATH. */
+/* Write MERGEINFO into the WC for WCPATH. */
 svn_error_t *
 svn_client__record_wc_merge_info(const char *wcpath,
                                  apr_hash_t *mergeinfo,

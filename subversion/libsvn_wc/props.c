@@ -529,8 +529,7 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
                                const svn_string_t *to_prop_val,
                                apr_pool_t *pool)
 {
-  apr_hash_t *from_mergeinfo,
-    *l_deleted, *l_added, *r_deleted, *r_added;
+  apr_hash_t *from_mergeinfo, *l_deleted, *l_added, *r_deleted, *r_added;
 
   /* ### OPTIMIZE: Use from_mergeinfo when diff'ing. */
   SVN_ERR(diff_mergeinfo_props(&l_deleted, &l_added, from_prop_val,
