@@ -160,7 +160,7 @@ EOC
         lines = File.read(gen_make_opts).to_a if File.exists?(gen_make_opts)
         config = {}
         lines.each do |line|
-          name, value = line.split(/\s*=\s*/, 2)
+          name, value = line.chomp.split(/\s*=\s*/, 2)
           config[name] = value if value
         end
 
