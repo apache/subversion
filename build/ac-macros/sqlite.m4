@@ -23,7 +23,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
 [
   SQLITE_ALLOWED_LIST="$1"
   SQLITE_RECOMMENDED_VER="$2"
-  SQLITE_URL="$2"
+  SQLITE_URL="$3"
   SQLITE_PKGNAME="sqlite3"
 
   AC_MSG_NOTICE([checking sqlite library])
@@ -50,8 +50,8 @@ AC_DEFUN(SVN_LIB_SQLITE,
         $SQLITE_ALLOWED_LIST)
           AC_MSG_RESULT([$sqlite_version])
           svn_lib_sqlite="yes"
-          SVN_SQLITE_INCLUDES="$pkg_config $SQLITE_PKGNAME --cflags"
-          SVN_SQLITE_LIBS="$pkg_config $SQLITE_PKGNAME --libs"
+          SVN_SQLITE_INCLUDES="`$pkg_config $SQLITE_PKGNAME --cflags`"
+          SVN_SQLITE_LIBS="`$pkg_config $SQLITE_PKGNAME --libs`"
           ;;
         *)
           AC_MSG_RESULT([none or unsupported $sqlite_version])
