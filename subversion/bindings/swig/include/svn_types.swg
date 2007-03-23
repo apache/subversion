@@ -16,7 +16,7 @@
  * svn_types.swg: This is the main file of the Subversion typemap
  *   library.  Certain categories of typemaps are removed into child
  *   files that are then %included into this one, solely to promote
- *   understandability of the code by grouping related parts.
+ *   code comprehensibility by grouping related parts.
  */
 
 %include apr.swg
