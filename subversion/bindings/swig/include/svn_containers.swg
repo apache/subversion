@@ -437,3 +437,44 @@
 }
 #endif
 
+/* -----------------------------------------------------------------------
+   Input of apr_array_header_t * <svn_merge_range_t *>
+*/
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *RANGELIST {
+  $1 = svn_swig_py_rangelist_to_array($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Input of
+   apr_hash_t * <const char *, apr_array_header_t * <svn_merge_range_t *>>
+*/
+#ifdef SWIGPYTHON
+%typemap(in) apr_hash_t *MERGEINFO {
+  $1 = svn_swig_py_mergeinfo_from_dict($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Output of
+   apr_hash_t * <const char *, apr_array_header_t * <svn_merge_range_t *>>
+*/
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **MERGEHASH
+{
+  %append_output
+    (svn_swig_py_mergeinfo_to_dict(*$1, $descriptor(svn_merge_range_t *),
+                                    _global_py_pool));
+
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
