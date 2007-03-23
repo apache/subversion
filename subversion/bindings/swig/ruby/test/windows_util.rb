@@ -50,7 +50,7 @@ module SvnTestUtil
           end
           targets = %w(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
                        libsvn_fs-1.dll libsvn_delta-1.dll
-                       libaprutil.dll libapr.dll)
+                       libaprutil.dll libapr.dll sqlite3.dll)
           ENV["PATH"].split(";").each do |path|
             found_targets = []
             targets.each do |target|
