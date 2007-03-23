@@ -34,6 +34,10 @@
 
 #include "svn_wc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /** Internal function used by the svn_wc_entry_versioned() macro.
  *
  * @since New in 1.5.
@@ -79,5 +83,9 @@ svn_error_t *svn_wc__props_modified(const char *path,
                                     apr_hash_t **which_props,
                                     svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* SVN_WC_PRIVATE_H */
