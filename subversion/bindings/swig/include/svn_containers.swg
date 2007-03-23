@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,9 +14,9 @@
  * ====================================================================
  *
  * svn_containers.swg: This is a child file of svn_types.swg, and
- *   should not be included directly.  This file should contain
- *   typemaps that deal container types
- *   - i.e. apr_hash_t, apr_array_header_t .
+ *   should not be included directly.  This file contains typemaps
+ *   that deal with "container" data types (e.g. apr_hash_t,
+ *   apr_array_header_t, etc.).
  */
 
 /* =======================================================================
