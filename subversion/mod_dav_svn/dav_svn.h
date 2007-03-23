@@ -2,7 +2,7 @@
  * dav_svn.h: types, functions, macros for the DAV/SVN Apache module
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -30,6 +30,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_path.h"
+#include "svn_xml.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -474,6 +475,21 @@ dav_svn__merge_response(ap_filter_t *output,
 
 
 /*** reports/ ***/
+
+/* The list of Subversion's custom REPORTs. */
+/* ### should move these report names to a public header to share with
+   ### the client (and third parties). */
+static const dav_report_elem dav_svn__reports_list[] = {
+  { SVN_XML_NAMESPACE, "update-report" },
+  { SVN_XML_NAMESPACE, "log-report" },
+  { SVN_XML_NAMESPACE, "dated-rev-report" },
+  { SVN_XML_NAMESPACE, "get-locations" },
+  { SVN_XML_NAMESPACE, "file-revs-report" },
+  { SVN_XML_NAMESPACE, "get-locks-report" },
+  { SVN_XML_NAMESPACE, "replay-report" },
+  { NULL, NULL },
+};
+
 
 /* The various report handlers, defined in reports/, and used by version.c.  */
 dav_error *
