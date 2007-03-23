@@ -148,8 +148,8 @@ path_uuid(svn_fs_t *fs, apr_pool_t *pool)
   return svn_path_join(fs->path, PATH_UUID, pool);
 }
 
-static const char *
-path_current(svn_fs_t *fs, apr_pool_t *pool)
+const char *
+svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_CURRENT, pool);
 }
@@ -3771,7 +3771,7 @@ get_next_revision_ids(const char **node_id,
   apr_size_t len;
   char *str, *last_str;
 
-  SVN_ERR(svn_io_file_open(&revision_file, path_current(fs, pool),
+  SVN_ERR(svn_io_file_open(&revision_file, svn_fs_fs__path_current(fs, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   len = sizeof(buf);
@@ -4153,7 +4153,7 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
   /* Now we can just write out this line. */
   buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
-  name = path_current(fs, pool);
+  name = svn_fs_fs__path_current(fs, pool);
   SVN_ERR(svn_io_open_unique_file2(&file, &tmp_name, name, ".tmp",
                                    svn_io_file_del_none, pool));
 
@@ -4560,7 +4560,8 @@ svn_fs_fs__create(svn_fs_t *fs,
                                                     pool),
                                       pool));
 
-  SVN_ERR(svn_io_file_create(path_current(fs, pool), "0 1 1\n", pool));
+  SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(fs, pool), "0 1 1\n",
+                             pool));
   SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, svn_uuid_generate(pool), pool));
 
@@ -4871,30 +4872,11 @@ recover_body(void *baton, apr_pool_t *pool)
 
 /* This implements the fs_library_vtable_t.recover() API. */
 svn_error_t *
-svn_fs_fs__recover(const char *path,
+svn_fs_fs__recover(svn_fs_t *fs,
                    svn_cancel_func_t cancel_func, void *cancel_baton,
                    apr_pool_t *pool)
 {
   struct recover_baton b;
-  svn_fs_t *fs;
-  /* Recovery for FSFS is currently limited to recreating the current
-     file from the latest revision. */
-
-  /* Things are much easier if we can just use a regular fs pointer.
-     The only thing we have to watch out for is that the current file
-     might not exist.  So we'll try to create it here unconditionally,
-     and just ignore any errors that might indicate that it's already
-     present. (We'll need it to exist later anyway as a source for the
-     new file's permissions). */
-
-  /* Create a dummy fs pointer first to create current.  This will fail
-     if it already exists, but we don't care about that. */
-  fs = svn_fs_new(NULL, pool);
-  fs->path = (char *)path;
-  svn_error_clear(svn_io_file_create(path_current(fs, pool), "0 1 1\n", pool));
-
-  /* We should now be able to reopen the filesystem properly. */
-  SVN_ERR(svn_fs_open(&fs, path, NULL, pool));
 
   /* We have no way to take out an exclusive lock in FSFS, so we're
      restricted as to the types of recovery we can do.  Luckily,
@@ -4939,7 +4921,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
   SVN_ERR(svn_fs_fs__move_into_place(tmp_path, uuid_path,
-                                     path_current(fs, pool), pool));
+                                     svn_fs_fs__path_current(fs, pool), pool));
 
   ffd->uuid = apr_pstrdup(fs->pool, uuid);
 

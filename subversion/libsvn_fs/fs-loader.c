@@ -404,9 +404,13 @@ svn_fs_recover(const char *path,
                apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
+  svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  return vtable->recover(path, cancel_func, cancel_baton, pool);
+  fs = svn_fs_new(NULL, pool);
+  SVN_ERR(vtable->open_for_recovery(fs, path, pool));
+  SVN_ERR(serialized_init(fs, pool));
+  return vtable->recover(fs, cancel_func, cancel_baton, pool);
 }
 
 
