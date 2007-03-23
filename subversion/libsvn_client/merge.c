@@ -1077,7 +1077,7 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
   /* Create a rangelist representing the requested merge. */
   if (is_revert)
     /* As we monkey with this data, make a copy of it. */
-    range = svn_range_dup(range, pool);
+    range = svn_merge_range_dup(range, pool);
   requested_merge = apr_array_make(pool, 1, sizeof(range));
   APR_ARRAY_PUSH(requested_merge, svn_merge_range_t *) = range;
 

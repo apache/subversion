@@ -718,7 +718,7 @@ typedef struct svn_merge_range_t
  * @since New in 1.5.
  */
 svn_merge_range_t *
-svn_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
+svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

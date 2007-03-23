@@ -103,7 +103,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
   if (!(*lastrange) || !combine_ranges(lastrange, *lastrange, mrange))
     {
       if (dup_mrange)
-        pushed_mrange = svn_range_dup(mrange, pool);
+        pushed_mrange = svn_merge_range_dup(mrange, pool);
       APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = pushed_mrange;
       *lastrange = pushed_mrange;
     }
@@ -450,7 +450,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                 {
                   if (do_remove)
                     {
-                      lastrange = svn_range_dup(elt1, pool);
+                      lastrange = svn_merge_range_dup(elt1, pool);
                       APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
                     }
                 }
@@ -814,7 +814,7 @@ svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool)
 }
 
 svn_merge_range_t *
-svn_range_dup(svn_merge_range_t *range, apr_pool_t *pool)
+svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool)
 {
   svn_merge_range_t *new_range = apr_palloc(pool, sizeof(*new_range));
   memcpy(new_range, range, sizeof(*new_range));
