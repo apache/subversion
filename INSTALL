@@ -289,7 +289,7 @@ I.    INTRODUCTION
             http://www.zlib.net
 
 
-      3. SQLite 3.x newer  (REQUIRED for server)
+      3. SQLite 3.x or newer  (REQUIRED for server)
 
          SQLite is a lightweight, embeddable SQL library necessary to
          build any repository-related code.
