@@ -966,25 +966,25 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
   return SVN_NO_ERROR;
 }
 
-/* Retrieve any inherited or direct merge info for the target from
-   both the repos and the WC's merge info prop (or that of its nearest
-   ancestor if the target has no info of its own).  Combine these two
-   sets of merge info to determine what's already been merged into the
-   target (reflected by *ENTRY), and store them in *TARGET_MERGEINFO.
-   If the target inherited any merge info from a WC ancestor set
-   *INHERITED to TRUE, set it to FALSE otherwise. */
+/* Retrieve the direct merge info for the TARGET_WCPATH from the WC's
+   merge info prop, or that inherited from its nearest ancestor if the
+   target has no info of its own.  If no merge info can be obtained
+   from the WC get if from repository.  Store any merge info obtained
+   for the target (reflected by *ENTRY) in *TARGET_MERGEINFO, if no merge
+   info is found *TARGET_MERGEINFO is an empty hash.  If the target
+   inherited any merge info from a WC ancestor set *INHERITED to TRUE,
+   set it to FALSE otherwise. */
 static svn_error_t *
-get_wc_and_repos_merge_info(apr_hash_t **target_mergeinfo,
-                            const svn_wc_entry_t **entry,
-                            svn_boolean_t *inherited,
-                            svn_ra_session_t *ra_session,
-                            const char *target_wcpath,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool)
+get_wc_or_repos_merge_info(apr_hash_t **target_mergeinfo,
+                           const svn_wc_entry_t **entry,
+                           svn_boolean_t *inherited,
+                           svn_ra_session_t *ra_session,
+                           const char *target_wcpath,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool)
 {
   const char *repos_rel_path;
-  apr_hash_t *repos_mergeinfo;
   svn_revnum_t target_rev;
 
   SVN_ERR(svn_wc__entry_versioned(entry, target_wcpath, adm_access, FALSE,
@@ -1019,37 +1019,20 @@ get_wc_and_repos_merge_info(apr_hash_t **target_mergeinfo,
      ### differs from that of TARGET_WCPATH, and if those paths are
      ### directories, their children as well. */
 
-  SVN_ERR(svn_client__get_merge_info_for_path(ra_session, &repos_mergeinfo,
-                                              repos_rel_path, target_rev,
-                                              pool));
-
   SVN_ERR(get_wc_merge_info(target_mergeinfo, inherited, *entry,
                             target_wcpath, adm_access, ctx, pool));
 
-  if (repos_mergeinfo != NULL)
+  /* If there in no WC merge info check the repository. */
+  if (!apr_hash_count(*target_mergeinfo))
     {
-      apr_hash_t *which_props;
-      /* If pre-existing local changes reverted some of the merge info
-         on TARGET_WCPATH, this should be recorded in the WC's merge
-         info as TARGET_WCPATH's complete set of merge info minus
-         whatever revisions were reverted.
+      apr_hash_t *repos_mergeinfo;
+      SVN_ERR(svn_client__get_merge_info_for_path(ra_session,
+                                                  &repos_mergeinfo,
+                                                  repos_rel_path, target_rev,
+                                                  pool));
 
-         If TARGET_WCPATH had no previous merge info, we currently
-         make no record of reverts (meaning that merge history isn't
-         considered).  In the future, we might want to handle this
-         using a separate, negative set of merge source -> revision
-         range mappings. */
-
-      /* Avoid combining local merge info with repos merge info for
-         TARGET_WCPATH when its merge info has been locally modified. */
-      SVN_ERR(svn_wc__props_modified(target_wcpath, &which_props,
-                                     adm_access, pool));
-
-      if (!apr_hash_get(which_props, SVN_PROP_MERGE_INFO, APR_HASH_KEY_STRING))
-        {
-          SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, repos_mergeinfo,
-                                      pool));
-        }
+      if (repos_mergeinfo)
+        *target_mergeinfo = repos_mergeinfo;
     }
   return SVN_NO_ERROR;
 }
@@ -1485,10 +1468,10 @@ do_merge(const char *initial_URL1,
 
   if (notify_b.same_urls)
     {
-      SVN_ERR(get_wc_and_repos_merge_info(&target_mergeinfo, &entry,
-                                          &inherited, ra_session,
-                                          target_wcpath, adm_access,
-                                          ctx, pool));
+      SVN_ERR(get_wc_or_repos_merge_info(&target_mergeinfo, &entry,
+                                         &inherited, ra_session,
+                                         target_wcpath, adm_access,
+                                         ctx, pool));
 
       is_revert = (merge_type == merge_type_revert);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
@@ -1788,10 +1771,10 @@ do_single_file_merge(const char *initial_URL1,
       if (merge_type == merge_type_no_op)
         return SVN_NO_ERROR;
 
-      SVN_ERR(get_wc_and_repos_merge_info(&target_mergeinfo, &entry,
-                                          &inherited, ra_session1,
-                                          target_wcpath, adm_access,
-                                          ctx, pool));
+      SVN_ERR(get_wc_or_repos_merge_info(&target_mergeinfo, &entry,
+                                         &inherited, ra_session1,
+                                         target_wcpath, adm_access,
+                                         ctx, pool));
 
       is_revert = (merge_type == merge_type_revert);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
