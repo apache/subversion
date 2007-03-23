@@ -197,8 +197,8 @@ I.    INTRODUCTION
 
 
         ****************************************************************
-        **       IMPORTANT ISSUE ABOUT APR VERSIONS:  READ THIS.      **     
-        **                                                            ** 
+        **       IMPORTANT ISSUE ABOUT APR VERSIONS:  READ THIS.      **
+        **                                                            **
         ****************************************************************
         |                                                              |
         | APR 0.9.X and 1.X are binary-incompatible.                   |
@@ -228,7 +228,7 @@ I.    INTRODUCTION
         | 0.9.x, it's still possible to move to APR 1.X safely.  Just  |
         | be sure to recompile Subversion after upgrading APR!         |
         |______________________________________________________________|
-      
+
 
       If you are not building from a tarball with the dependency
       package, you will need to get these yourself:
@@ -288,8 +288,8 @@ I.    INTRODUCTION
 
             http://www.zlib.net
 
-      
-      3. SQLite 3.3.13 or newer  (REQUIRED)
+
+      3. SQLite 3.x newer  (REQUIRED for server)
 
          SQLite is a lightweight, embeddable SQL library necessary to
          build any repository-related code.
@@ -300,7 +300,7 @@ I.    INTRODUCTION
 
          You can get sqlite 3.3.13 from:
 
-               http://www.sqlite.org/sqlite-3.3.13.tar.gz 
+               http://www.sqlite.org/sqlite-3.3.13.tar.gz
 
          You can build and install sqlite however you wish.  However,
          you also have the option of unpacking the archive into the
@@ -327,7 +327,7 @@ I.    INTRODUCTION
 
       6.  An HTTP client libary:  either neon or serf.  (OPTIONAL)
 
-        libneon and libserf are competing implementations of HTTP
+        neon and serf are competing implementations of HTTP
         client libraries.  If you want your client to be able to speak
         to an Apache server, you must link against one of these
         libraries.  Though optional, we strongly recommend this.
@@ -380,7 +380,7 @@ I.    INTRODUCTION
            then there should be a file
            "/usr/local/myneon/bin/neon-config".
 
-       b.  Serf library 0.1.0 
+       b.  Serf library 0.1.0 (http://code.google.com/p/serf/)
 
            serf is a library for HTTP and WebDAV which is an
            alternative to Neon for accessing Subversion repositories
@@ -397,9 +397,9 @@ I.    INTRODUCTION
            arguments --with-serf and --without-neon. (The latter isn't
            required if you don't actually have Neon.)  If serf is
            installed in a non-standard place, you should use
-      
+
                --with-serf=/path/to/serf/install
-      
+
            instead.
 
            For more information on serf and Subversion's ra_serf, see
@@ -409,7 +409,7 @@ I.    INTRODUCTION
       7. OpenSSL  (OPTIONAL)
 
       The Neon and Serf libraries has support for SSL encryption by
-      relying on the OpenSSL library.  
+      relying on the OpenSSL library.
 
       When Neon is created with this dependency, then the Subversion
       client inherits the ability to support SSL connections.  Neon
@@ -525,7 +525,7 @@ I.    INTRODUCTION
       is done: See section III for details.
 
 
-      11.  Python 2.0 (http://www.python.org/)  (OPTIONAL)
+      11.  Python 2.0 or newer (http://www.python.org/)  (OPTIONAL)
 
       If you want to run "make check" or build from the latest source
       under Unix as described in section II.B and III.D, install
@@ -563,7 +563,7 @@ I.    INTRODUCTION
       The primary documentation for Subversion is the free book
       "Version Control with Subversion", a.k.a. "The Subversion Book",
       obtainable from http://svnbook.red-bean.com/.
-      
+
       Various additional documentation exists in the doc/ subdirectory of
       the Subversion source.  See the file doc/README for more information.
 
