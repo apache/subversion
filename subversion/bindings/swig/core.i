@@ -443,30 +443,6 @@
 }
 
 /* -----------------------------------------------------------------------
-   svn_config_read_auth_data()
-*/
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **hash
-{
-  if (*$1) {
-    %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
-  } else {
-    %append_output(Qnil);
-  }
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   svn_config_write_auth_data()
-*/
-#ifdef SWIGRUBY
-%typemap(in) apr_hash_t *hash
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
 */
 #ifdef SWIGPYTHON
