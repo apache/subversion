@@ -68,11 +68,17 @@ typedef struct fs_library_vtable_t
 
   svn_error_t *(*create)(svn_fs_t *fs, const char *path, apr_pool_t *pool);
   svn_error_t *(*open)(svn_fs_t *fs, const char *path, apr_pool_t *pool);
+  /* open_for_recovery() is like open(), but used to fill in an fs pointer
+     that will be passed to recover() after the filesystem's serialized_init()
+     is called.  We assume that the open() method might not be immediately
+     appropriate for recovery. */
+  svn_error_t *(*open_for_recovery)(svn_fs_t *fs, const char *path,
+                                    apr_pool_t *pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
   svn_error_t *(*hotcopy)(const char *src_path, const char *dest_path,
                           svn_boolean_t clean, apr_pool_t *pool);
   const char *(*get_description)(void);
-  svn_error_t *(*recover)(const char *path,
+  svn_error_t *(*recover)(svn_fs_t *fs,
                           svn_cancel_func_t cancel_func, void *cancel_baton,
                           apr_pool_t *pool);
 

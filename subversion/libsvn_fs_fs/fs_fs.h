@@ -32,10 +32,10 @@ svn_error_t *svn_fs_fs__hotcopy(const char *src_path,
                                 const char *dst_path,
                                 apr_pool_t *pool);
 
-/* Recover the fsfs filesystem at PATH.
+/* Recover the fsfs associated with filesystem FS.
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
    Use POOL for temporary allocations. */
-svn_error_t *svn_fs_fs__recover(const char *path,
+svn_error_t *svn_fs_fs__recover(svn_fs_t *fs,
                                 svn_cancel_func_t cancel_func,
                                 void *cancel_baton,
                                 apr_pool_t *pool);
@@ -380,6 +380,11 @@ svn_error_t *svn_fs_fs__dup_perms(const char *filename,
 const char *svn_fs_fs__path_rev(svn_fs_t *fs, 
                                 svn_revnum_t rev, 
                                 apr_pool_t *pool);
+
+/* Return the path to the 'current' file in FS.
+   Perform allocation in POOL. */
+const char *
+svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool);
 
 /* Obtain a write lock on the filesystem FS in a subpool of POOL, call
    BODY with BATON and that subpool, destroy the subpool (releasing the write

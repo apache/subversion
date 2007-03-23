@@ -750,11 +750,22 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
 }
 
 static svn_error_t *
-base_bdb_recover(const char *path,
+base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+{
+  /* Just stash the path in the fs pointer - it's all we really need. */
+  fs->path = apr_pstrdup(fs->pool, path);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+base_bdb_recover(svn_fs_t *fs,
                  svn_cancel_func_t cancel_func, void *cancel_baton,
                  apr_pool_t *pool)
 {
-  return bdb_recover(path, FALSE, pool);
+  /* The fs pointer is a fake created in base_open_for_recovery above.
+     We only care about the path. */
+  return bdb_recover(fs->path, FALSE, pool);
 }
 
 
@@ -1236,6 +1247,7 @@ static fs_library_vtable_t library_vtable = {
   base_version,
   base_create,
   base_open,
+  base_open_for_recovery,
   base_delete_fs,
   base_hotcopy,
   base_get_description,
