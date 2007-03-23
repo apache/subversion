@@ -36,21 +36,6 @@
 #include "dav_svn.h"
 
 
-/* ### should move these report names to a public header to share with
-   ### the client (and third parties). */
-static const dav_report_elem reports_list[] = {
-  { SVN_XML_NAMESPACE, "update-report" },
-  { SVN_XML_NAMESPACE, "log-report" },
-  { SVN_XML_NAMESPACE, "dated-rev-report" },
-  { SVN_XML_NAMESPACE, "get-locations" },
-  { SVN_XML_NAMESPACE, "file-revs-report" },
-  { SVN_XML_NAMESPACE, "get-locks-report" },
-  { SVN_XML_NAMESPACE, "replay-report" },
-  { SVN_XML_NAMESPACE, "merge-info-report" },
-  { NULL },
-};
-
-
 svn_error_t *
 dav_svn__attach_auto_revprops(svn_fs_txn_t *txn,
                               const char *fs_path,
@@ -941,7 +926,7 @@ avail_reports(const dav_resource *resource, const dav_report_elem **reports)
     return NULL;
   }
 
-  *reports = reports_list;
+  *reports = dav_svn__reports_list;
   return NULL;
 }
 
@@ -999,7 +984,7 @@ deliver_report(request_rec *r,
         }
 
       /* NOTE: if you add a report, don't forget to add it to the
-       *       reports_list[] array at the top of this file.
+       *       dav_svn__reports_list[] array.
        */
     }
 
