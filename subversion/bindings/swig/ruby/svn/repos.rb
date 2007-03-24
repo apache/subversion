@@ -120,6 +120,17 @@ module Svn
         editor
       end
 
+      def commit_editor3(repos_url, base_path, txn=nil, rev_props=nil,
+                         commit_callback=nil, authz_callback=nil)
+        rev_props ||= {}
+        editor, baton = Repos.get_commit_editor5(self, txn, repos_url,
+                                                 base_path, rev_props,
+                                                 commit_callback,
+                                                 authz_callback)
+        editor.baton = baton
+        editor
+      end
+
       def youngest_rev
         fs.youngest_rev
       end
@@ -226,13 +237,22 @@ module Svn
       def prop(name, rev=nil, authz_read_func=nil)
         authz_read_func ||= @authz_read_func
         rev ||= youngest_rev
-        Repos.fs_revision_prop(self, rev, name, authz_read_func)
+        value = Repos.fs_revision_prop(self, rev, name, authz_read_func)
+        if name == Svn::Core::PROP_REVISION_DATE
+          value = Time.from_svn_format(value)
+        end
+        value
       end
 
       def proplist(rev=nil, authz_read_func=nil)
         authz_read_func ||= @authz_read_func
         rev ||= youngest_rev
-        Repos.fs_revision_proplist(self, rev, authz_read_func)
+        props = Repos.fs_revision_proplist(self, rev, authz_read_func)
+        if props.has_key?(Svn::Core::PROP_REVISION_DATE)
+          props[Svn::Core::PROP_REVISION_DATE] =
+            Time.from_svn_format(props[Svn::Core::PROP_REVISION_DATE])
+        end
+        props
       end
 
       def node_editor(base_root, root)

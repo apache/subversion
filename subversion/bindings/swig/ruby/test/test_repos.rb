@@ -287,12 +287,14 @@ class SvnReposTest < Test::Unit::TestCase
                  editor.sequence.collect{|meth, *args| meth})
   end
 
-  def test_commit_editor
+  def assert_commit_editor
     trunk = "trunk"
     tags = "tags"
     tags_sub = "sub"
     file = "file"
     source = "sample source"
+    user = "user"
+    log_message = "log"
     trunk_dir_path = File.join(@wc_path, trunk)
     tags_dir_path = File.join(@wc_path, tags)
     tags_sub_dir_path = File.join(tags_dir_path, tags_sub)
@@ -301,23 +303,38 @@ class SvnReposTest < Test::Unit::TestCase
     tags_sub_path = File.join(tags_sub_dir_path, file)
     trunk_repos_uri = "#{@repos_uri}/#{trunk}"
     rev1 = @repos.youngest_rev
-    
-    editor = @repos.commit_editor(@repos_uri, "/")
+
+    commit_callback_result = {}
+    args = {
+      :repos_url => @repos_uri,
+      :base_path => "/",
+      :user => user,
+      :log_message => log_message,
+     }
+
+    editor = yield(@repos, commit_callback_result, args)
     root_baton = editor.open_root(rev1)
     dir_baton = editor.add_directory(trunk, root_baton, nil, rev1)
     file_baton = editor.add_file("#{trunk}/#{file}", dir_baton, nil, -1)
     ret = editor.apply_textdelta(file_baton, nil)
     ret.send(source)
     editor.close_edit
-    
+
     assert_equal(rev1 + 1, @repos.youngest_rev)
+    assert_equal({
+                   :revision => @repos.youngest_rev,
+                   :date => @repos.prop(Svn::Core::PROP_REVISION_DATE),
+                   :author => user,
+                 },
+                 commit_callback_result)
     rev2 = @repos.youngest_rev
-    
+
     ctx = make_context("")
     ctx.up(@wc_path)
     assert_equal(source, File.open(trunk_path) {|f| f.read})
 
-    editor = @repos.commit_editor(@repos_uri, "/")
+    commit_callback_result = {}
+    editor = yield(@repos, commit_callback_result, args)
     root_baton = editor.open_root(rev2)
     dir_baton = editor.add_directory(tags, root_baton, nil, rev2)
     subdir_baton = editor.add_directory("#{tags}/#{tags_sub}",
@@ -325,10 +342,16 @@ class SvnReposTest < Test::Unit::TestCase
                                         trunk_repos_uri,
                                         rev2)
     editor.close_edit
-    
+
     assert_equal(rev2 + 1, @repos.youngest_rev)
+    assert_equal({
+                   :revision => @repos.youngest_rev,
+                   :date => @repos.prop(Svn::Core::PROP_REVISION_DATE),
+                   :author => user,
+                 },
+                 commit_callback_result)
     rev3 = @repos.youngest_rev
-    
+
     ctx.up(@wc_path)
     assert_equal([
                    ["/#{tags}/#{tags_sub}/#{file}", rev3],
@@ -337,13 +360,61 @@ class SvnReposTest < Test::Unit::TestCase
                  @repos.fs.history("#{tags}/#{tags_sub}/#{file}",
                                    rev1, rev3, rev2))
 
-    editor = @repos.commit_editor(@repos_uri, "/")
+    commit_callback_result = {}
+    editor = yield(@repos, commit_callback_result, args)
     root_baton = editor.open_root(rev3)
     dir_baton = editor.delete_entry(tags, rev3, root_baton)
     editor.close_edit
 
+    assert_equal({
+                   :revision => @repos.youngest_rev,
+                   :date => @repos.prop(Svn::Core::PROP_REVISION_DATE),
+                   :author => user,
+                 },
+                 commit_callback_result)
+
     ctx.up(@wc_path)
     assert(!File.exist?(tags_path))
+  end
+
+  def test_commit_editor
+    assert_commit_editor do |receiver, commit_callback_result, args|
+      commit_callback = Proc.new do |revision, date, author|
+        commit_callback_result[:revision] = revision
+        commit_callback_result[:date] = date
+        commit_callback_result[:author] = author
+      end
+      receiver.commit_editor(args[:repos_url], args[:base_path], args[:txn],
+                             args[:user], args[:log_message], commit_callback)
+    end
+  end
+
+  def test_commit_editor2
+    assert_commit_editor do |receiver, commit_callback_result, args|
+      commit_callback = Proc.new do |info|
+        commit_callback_result[:revision] = info.revision
+        commit_callback_result[:date] = info.date
+        commit_callback_result[:author] = info.author
+      end
+      receiver.commit_editor2(args[:repos_url], args[:base_path], args[:txn],
+                              args[:user], args[:log_message], commit_callback)
+    end
+  end
+
+  def test_commit_editor3
+    assert_commit_editor do |receiver, commit_callback_result, args|
+      props = {
+        Svn::Core::PROP_REVISION_AUTHOR => args[:user],
+        Svn::Core::PROP_REVISION_LOG => args[:log_message],
+      }
+      commit_callback = Proc.new do |info|
+        commit_callback_result[:revision] = info.revision
+        commit_callback_result[:date] = info.date
+        commit_callback_result[:author] = info.author
+      end
+      receiver.commit_editor3(args[:repos_url], args[:base_path], args[:txn],
+                              props, commit_callback)
+    end
   end
 
   def test_prop

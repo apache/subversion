@@ -567,7 +567,7 @@ svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool)
   if (NIL_P(target)) {
     return;
   }
-    
+
   if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
     target = rb_ary_new3(1, target);
   }

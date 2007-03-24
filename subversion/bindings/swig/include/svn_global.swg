@@ -152,6 +152,7 @@ static PyObject * _global_py_pool = NULL;
 
 %{
 static VALUE _global_svn_swig_rb_pool = Qnil;
+static apr_pool_t *_global_pool = NULL;
 %}
 #endif
 
