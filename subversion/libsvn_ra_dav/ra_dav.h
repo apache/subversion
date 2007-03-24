@@ -263,7 +263,7 @@ svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
                                     void **report_baton,
                                     const char *status_target,
                                     svn_revnum_t revision,
-                                    svn_boolean_t recurse,
+                                    svn_depth_t depth,
                                     const svn_delta_editor_t *wc_status,
                                     void *wc_status_baton,
                                     apr_pool_t *pool);
