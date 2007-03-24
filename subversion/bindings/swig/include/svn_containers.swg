@@ -166,7 +166,21 @@
 #ifdef SWIGRUBY
 %typemap(in) apr_hash_t *PROPHASH
 {
+  VALUE rb_pool = Qnil;
+  if (!_global_pool) {
+    svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &_global_pool);
+    svn_swig_rb_push_pool(rb_pool);
+  }
   $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
+  if (!NIL_P(rb_pool)) {
+    _global_pool = NULL;
+    if (NIL_P($1)) {
+      svn_swig_rb_destroy_pool(rb_pool);
+    } else {
+      svn_swig_rb_set_pool_for_no_swig_type($input, rb_pool);
+    }
+    svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
+  }
 }
 #endif
 
@@ -176,6 +190,12 @@
   apr_hash_t *source_props,
   apr_hash_t *hash
 };
+#endif
+
+#if defined(SWIGRUBY)
+%apply apr_hash_t *PROPHASH {
+  apr_hash_t *revprop_table
+}
 #endif
 
 /* -----------------------------------------------------------------------
