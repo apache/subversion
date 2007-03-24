@@ -848,6 +848,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge(branch, rev3, branch, rev4, trunk)
     assert(!File.exist?(trunk_path))
 
+    ctx.propdel("svn:mergeinfo", trunk)
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
     ctx.merge(branch, rev3, branch, rev4, trunk)
@@ -895,6 +896,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge_peg(branch, rev3, rev4, trunk)
     assert(!File.exist?(trunk_path))
 
+    ctx.propdel("svn:mergeinfo", trunk)
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
     ctx.merge_peg(branch, rev3, rev4, trunk)
