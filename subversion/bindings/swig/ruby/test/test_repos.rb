@@ -613,6 +613,37 @@ EOF
     assert(started)
   end
 
+  def test_merge_info
+    log = "sample log"
+    file = "sample.txt"
+    src = "sample\n"
+    trunk = File.join(@wc_path, "trunk")
+    branch = File.join(@wc_path, "branch")
+    trunk_path = File.join(trunk, file)
+    branch_path = File.join(branch, file)
+    trunk_path_in_repos = "/trunk/#{file}"
+    branch_path_in_repos = "/branch/#{file}"
+
+    ctx = make_context(log)
+    ctx.mkdir(trunk, branch)
+    File.open(trunk_path, "w") {}
+    File.open(branch_path, "w") {}
+    ctx.add(trunk_path)
+    ctx.add(branch_path)
+    original_rev = ctx.commit(@wc_path).revision
+
+    File.open(branch_path, "w") {|f| f.print(src)}
+    merged_rev = ctx.commit(@wc_path).revision
+
+    ctx.merge(branch, original_rev, branch, merged_rev, trunk)
+    ctx.commit(@wc_path)
+
+    merge_info = "#{branch_path_in_repos}:#{merged_rev}"
+    assert_equal({trunk_path_in_repos => merge_info},
+                 @repos.merge_info([trunk_path_in_repos]))
+    assert_equal(merge_info, @repos.merge_info(trunk_path_in_repos))
+  end
+
   private
   def warning_func
     Proc.new do |err|
