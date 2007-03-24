@@ -4590,7 +4590,7 @@ unordered_txn_dirprops(const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-root-revisions",
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-unordered-txn-dirprops",
                               opts->fs_type, pool));
 
   /* Create and commit the greek tree. */
