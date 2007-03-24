@@ -401,13 +401,11 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   apr_array_header_t *wcprop_changes svn_wc_process_committed2()
-   apr_array_header_t *propchanges svn_wc_merge_props()
+   An array of svn_prop_t *.
 */
 
 #ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *wcprop_changes,
-             apr_array_header_t *propchanges
+%typemap(in) apr_array_header_t *PROP_LIST
 {
   VALUE rb_pool;
   apr_pool_t *pool;
@@ -416,14 +414,13 @@
 
   $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
 }
-#endif
 
-/* -----------------------------------------------------------------------
-   apr_array_header_t *merge_options
-   svn_wc_merge2()
-*/
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *merge_options
+%typemap(out) apr_array_header_t *PROP_LIST
+{
+  %append_output(svn_swig_rb_apr_array_to_array_prop($1));
+}
+
+%typemap(in) apr_array_header_t *PROP_LIST_MAY_BE_NULL
 {
   if (NIL_P($input)) {
     $1 = NULL;
@@ -435,6 +432,23 @@
     $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
   }
 }
+
+%typemap(out) apr_array_header_t *PROP_LIST_MAY_BE_NULL
+{
+  %append_output($1 ? svn_swig_rb_apr_array_to_array_prop($1) : Qnil);
+}
+
+%apply apr_array_header_t *PROP_LIST {
+  apr_array_header_t *wcprop_changes,
+  apr_array_header_t *propchanges
+};
+
+%apply apr_array_header_t *PROP_LIST_MAY_BE_NULL {
+  apr_array_header_t *incoming_prop_changes,
+  apr_array_header_t *outgoing_prop_changes,
+  apr_array_header_t *merge_options
+};
+
 #endif
 
 /* -----------------------------------------------------------------------
