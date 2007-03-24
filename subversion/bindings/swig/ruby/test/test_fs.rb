@@ -380,4 +380,22 @@ class SvnFsTest < Test::Unit::TestCase
                  @fs.proplist.keys.sort)
   end
 
+  def test_recover
+    path = File.join(@tmp_path, "fs")
+    fs_type = Svn::Fs::TYPE_FSFS
+    config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
+
+    Svn::Fs::FileSystem.create(path, config)
+
+    assert_raises(Svn::Error::Cancelled) do
+      Svn::Fs::FileSystem.recover(path) do
+        raise Svn::Error::Cancelled
+      end
+    end
+
+    assert_nothing_raised do
+      Svn::Fs::FileSystem.recover(path) do
+      end
+    end
+  end
 end
