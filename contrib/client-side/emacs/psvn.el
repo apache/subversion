@@ -495,6 +495,9 @@ It is used in the following functions: `svn-prop-edit-do-it', `svn-log-edit-done
   :type 'boolean
   :group 'psvn)
 
+(defvar svn-status-completing-read-function
+  (if svn-status-use-ido-completion 'ido-completing-read 'completing-read))
+
 ;;; experimental features
 (defvar svn-status-track-user-input nil "Track user/password queries.
 This feature is implemented via a process filter.
@@ -859,6 +862,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "v") 'svn-status-version)
   (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
   (define-key svn-global-keymap (kbd "b") 'svn-status-via-bookmark)
+  (define-key svn-global-keymap (kbd "h") 'svn-status-use-history)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
@@ -938,9 +942,6 @@ inside loops."
   (loop for item in list
         if (listp item) nconc (svn-status-flatten-list item)
         else collect item))
-
-(defun svn-status-completion-function ()
-  (if svn-status-use-ido-completion 'ido-completing-read 'completing-read))
 
 (defun svn-status-window-line-position (w)
   "Return the window line at point for window W, or nil if W is nil."
@@ -1040,10 +1041,13 @@ If there is no .svn directory, examine if there is CVS and run
 (defun svn-status-use-history ()
   "Interactively select a different directory from `svn-status-directory-history'."
   (interactive)
-  (let* ((hist (cdr svn-status-directory-history))
-         (dir (funcall (svn-status-completion-function) "svn-status on directory: " hist)))
+  (let* ((in-status-buffer (eq major-mode 'svn-status-mode))
+         (hist (if in-status-buffer (cdr svn-status-directory-history) svn-status-directory-history))
+         (dir (funcall svn-status-completing-read-function "svn-status on directory: " hist))
+         (svn-buffer-available (with-current-buffer (get-buffer svn-status-buffer-name) (string= default-directory dir))))
     (if (file-directory-p dir)
-        (progn
+        (if svn-buffer-available
+            (svn-status-switch-to-status-buffer)
           (unless svn-status-refresh-info
             (setq svn-status-refresh-info 'once))
           (svn-status dir))
@@ -3771,7 +3775,7 @@ Run `svn-status' on the selected bookmark."
   (interactive
    (list
     (let ((completion-ignore-case t))
-      (funcall (svn-status-completion-function) "SVN status bookmark: " svn-bookmark-list))))
+      (funcall svn-status-completing-read-function "SVN status bookmark: " svn-bookmark-list))))
   (unless bookmark
     (error "No bookmark specified"))
   (let ((directory (cdr (assoc bookmark svn-bookmark-list))))
@@ -4309,7 +4313,7 @@ When called with a prefix argument, it is possible to enter a new property."
                       (mailcap-mime-types))))
     (svn-status-property-set-property
      (svn-status-marked-files) "svn:mime-type"
-     (funcall (svn-status-completion-function) "Set svn:mime-type for the marked files: "
+     (funcall svn-status-completing-read-function "Set svn:mime-type for the marked files: "
               (mapcar (lambda (x) (cons x x)) ; for Emacs 21
                       (sort mime-types 'string<))))))
 
@@ -5003,7 +5007,7 @@ removed again, when a faster parsing and display routine for
   "Interactively set `svn-status-changelog-style'."
   (interactive)
   (setq svn-status-changelog-style
-        (intern (funcall (svn-status-completion-function) "svn-status on directory: " '("changelog" "svn-dev" "other"))))
+        (intern (funcall svn-status-completing-read-function "svn-status on directory: " '("changelog" "svn-dev" "other"))))
   (when (string= svn-status-changelog-style 'other)
       (setq svn-status-changelog-style (car (find-function-read))))
   (when (yes-or-no-p "Save the new setting for svn-status-changelog-style to disk? ")
@@ -5186,7 +5190,7 @@ The conflicts must be marked with rcsmerge conflict markers."
   (interactive)
   (unless prompt
     (setq prompt "Select branch: "))
-  (let* ((branch (funcall (svn-status-completion-function) prompt svn-status-branch-list))
+  (let* ((branch (funcall svn-status-completing-read-function prompt svn-status-branch-list))
          (directory)
          (base-url))
     (when (string-match "#\\(1#\\)?\\(.+\\)" branch)
