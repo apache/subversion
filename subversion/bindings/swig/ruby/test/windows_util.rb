@@ -124,7 +124,7 @@ exit 1
         build_conf = File.join(top_dir, "build.conf")
         File.open(File.join(ext_dir, "#{util_name}.rb" ), 'w') do |util|
           setup_dll_wrapper_util(dll_dir, util)
-          add_apr_dll_path_to_dll_wrapper_util(top_dir, build_type, util)
+          add_depended_dll_path_to_dll_wrapper_util(top_dir, build_type, util)
           add_svn_dll_path_to_dll_wrapper_util(build_conf, subversion_dir, util)
           setup_dll_wrappers(build_conf, ext_dir, dll_dir, util_name) do |lib|
             svn_lib_dir = File.join(subversion_dir, "libsvn_#{lib}")
@@ -154,7 +154,7 @@ add_path.call(#{libsvn_swig_ruby_dll_dir.dump})
 EOC
       end
 
-      def add_apr_dll_path_to_dll_wrapper_util(top_dir, build_type, util)
+      def add_depended_dll_path_to_dll_wrapper_util(top_dir, build_type, util)
         lines = []
         gen_make_opts = File.join(top_dir, "gen-make.opts")
         lines = File.read(gen_make_opts).to_a if File.exists?(gen_make_opts)
@@ -164,9 +164,16 @@ EOC
           config[name] = value if value
         end
 
-        ["apr", "apr-util", "apr-iconv"].each do |lib|
+        [
+         ["apr", build_type],
+         ["apr-util", build_type],
+         ["apr-iconv", build_type],
+         ["berkeley-db", "bin"],
+         ["sqlite", nil],
+        ].each do |lib, sub_dir|
           lib_dir = config["--with-#{lib}"] || lib
-          dll_dir = File.expand_path(File.join(top_dir, lib_dir, build_type))
+          dirs = [top_dir, lib_dir, sub_dir].compact
+          dll_dir = File.expand_path(File.join(*dirs))
           util.puts("add_path.call(#{dll_dir.dump})")
         end
       end
