@@ -266,6 +266,10 @@ module Svn
         Fs.is_file(self, path)
       end
       
+      def base_revision
+        Fs.txn_root_base_revision(self)
+      end
+
       def revision
         Fs.revision_root_revision(self)
       end

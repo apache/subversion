@@ -87,6 +87,7 @@ class SvnFsTest < Test::Unit::TestCase
     path = File.join(@wc_path, file)
     
     assert_nil(@fs.root.name)
+    assert_equal(Svn::Core::INVALID_REVNUM, @fs.root.base_revision)
     
     ctx = make_context(log)
     FileUtils.touch(path)
@@ -177,7 +178,8 @@ class SvnFsTest < Test::Unit::TestCase
     assert(txn1.root.txn_root?)
     assert(!txn1.root.revision_root?)
     assert_equal(txn1.name, txn1.root.name)
-    
+    assert_equal(txn1.base_revision, txn1.root.base_revision)
+
     @fs.transaction do |txn|
       assert_nothing_raised do
         @fs.open_txn(txn.name)
