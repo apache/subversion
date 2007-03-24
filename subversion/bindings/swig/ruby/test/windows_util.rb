@@ -42,7 +42,7 @@ module SvnTestUtil
         grant_everyone_full_access(@full_repos_path)
 
         unless service_exists?
-          svnserve_dir = File.expand_path(File.join("test", "svnserve"))
+          svnserve_dir = File.expand_path(File.join(@base_dir, "svnserve"))
           FileUtils.mkdir_p(svnserve_dir)
           at_exit do
             service_control('delete') if service_exists?
