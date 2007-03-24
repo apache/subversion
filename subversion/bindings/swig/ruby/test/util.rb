@@ -1,4 +1,5 @@
 require "fileutils"
+require "pathname"
 
 require "my-assertions"
 
@@ -10,20 +11,23 @@ end
 
 module SvnTestUtil
   def setup_basic(need_svnserve=false)
+    test_dir = Pathname.new(File.dirname(__FILE__))
+    pwd = Pathname.new(Dir.pwd)
+    @base_dir = test_dir.relative_path_from(pwd).to_s
     @need_svnserve = need_svnserve
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
-    @repos_path = File.join("test", "repos")
+    @repos_path = File.join(@base_dir, "repos")
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_base_dir = File.join("test", "wc-tmp")
+    @wc_base_dir = File.join(@base_dir, "wc-tmp")
     @wc_path = File.join(@wc_base_dir, "wc")
     @full_wc_path = File.expand_path(@wc_path)
-    @tmp_path = File.join("test", "tmp")
-    @config_path = File.join("test", "config")
+    @tmp_path = File.join(@base_dir, "tmp")
+    @config_path = File.join(@base_dir, "config")
     setup_tmp
     setup_repository
     add_hooks
@@ -100,7 +104,7 @@ module SvnTestUtil
   def teardown_repository(path=@repos_path)
     @fs.close unless @fs.nil?
     @repos.close unless @repos.nil?
-    Svn::Repos.delete(path)
+    Svn::Repos.delete(path) if File.exists?(path)
     @repos = nil
     @fs = nil
   end
