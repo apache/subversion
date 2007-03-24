@@ -39,6 +39,10 @@ module Svn
         def hotcopy(src, dest, clean=false)
           Fs.hotcopy(src, dest, clean)
         end
+
+        def recover(path, &cancel_func)
+          Fs.recover(path, cancel_func)
+        end
       end
 
       def set_warning_func(&func)
