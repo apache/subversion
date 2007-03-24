@@ -4571,6 +4571,67 @@ root_revisions(const char **msg,
 }
 
 
+static svn_error_t *
+unordered_txn_dirprops(const char **msg,
+                       svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn, *txn2;
+  svn_fs_root_t *txn_root, *txn_root2, *rev_root;
+  svn_string_t pval, *fetched_val;
+  svn_revnum_t new_rev;
+
+  /* This is a regression test for issue #2751. */
+  *msg = "test dir prop preservation in unordered txns";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-root-revisions",
+                              opts->fs_type, pool));
+
+  /* Create and commit the greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  /* Open two transactions */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn2, fs, new_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root2, txn2, pool));
+
+  /* Change a child file in one. */
+  SVN_ERR(svn_test__set_file_contents(txn_root, "/A/B/E/alpha", 
+                                      "New contents", pool));
+
+  /* Change dir props in the other. */
+  SET_STR(&pval, "value");
+  SVN_ERR(svn_fs_change_node_prop(txn_root2, "/A/B", "name", &pval, pool));
+
+  /* Commit the second one first. */
+  SVN_ERR(test_commit_txn(&new_rev, txn2, NULL, pool));
+  
+  /* Then commit the first. */
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  /* Did our dir props survive? */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, new_rev, pool));
+  SVN_ERR(svn_fs_node_prop(&fetched_val, rev_root, "/A/B", "name", pool));
+  if (! fetched_val)
+    return svn_error_create
+      (SVN_ERR_TEST_FAILED, NULL, "missing expected property");
+  if (strcmp(fetched_val->data, "value") != 0)
+    return svn_error_create
+      (SVN_ERR_TEST_FAILED, NULL, "unexpected property value");
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4610,5 +4671,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(verify_checksum),
     SVN_TEST_PASS(closest_copy_test),
     SVN_TEST_PASS(root_revisions),
+    SVN_TEST_XFAIL(unordered_txn_dirprops),
     SVN_TEST_NULL
   };
