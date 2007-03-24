@@ -512,6 +512,37 @@ EOF
     assert(!authz.can_access?(name, "/", "FOO", Svn::Repos::AUTHZ_READ))
   end
 
+  def test_recover
+    started = false
+    Svn::Repos.recover(@repos_path, false) do
+      started = true
+    end
+    assert(started)
+
+    started = false
+    cancel_called = false
+    cancel_proc = Proc.new do
+      cancel_called = true
+    end
+    Svn::Repos.recover(@repos_path, false, cancel_proc) do
+      started = true
+    end
+    assert(started)
+    assert(cancel_called)
+
+    started = false
+    cancel_proc = Proc.new do
+      raise Svn::Error::Cancelled
+    end
+    assert_raises(Svn::Error::Cancelled) do
+      Svn::Repos.recover(@repos_path, false, cancel_proc) do
+        started = true
+      end
+    end
+    assert(started)
+  end
+
+  private
   def warning_func
     Proc.new do |err|
       STDERR.puts err if $DEBUG
