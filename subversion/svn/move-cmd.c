@@ -73,7 +73,7 @@ svn_cl__move(apr_getopt_t *os,
       if (opt_state->message || opt_state->filedata || opt_state->revprop_table)
         return svn_error_create
           (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE, NULL,
-           _("Local, non-commit operations do not take a log message"
+           _("Local, non-commit operations do not take a log message "
              "or revision properties"));
     }
 
