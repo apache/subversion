@@ -64,7 +64,6 @@
 
 #ifdef SWIGRUBY
 %hash_argout_typemap(MERGEHASH, svn_merge_range_t *)
-%hash_argout_typemap(MERGEHASHHASH, svn_merge_range_t *)
 #endif
 
 /* -----------------------------------------------------------------------
@@ -105,6 +104,17 @@
   /* svn_config_read_auth_data() */
   apr_hash_t **hash
 };
+
+
+/* -----------------------------------------------------------------------
+   Output of apr_hash_t * <const char *, const char *>
+*/
+
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **HASH_CSTRING {
+  %append_output(svn_swig_rb_apr_hash_to_hash_string(*$1));
+}
+#endif
 
 
 /* -----------------------------------------------------------------------

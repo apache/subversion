@@ -315,7 +315,20 @@ module Svn
         root.replay(editor)
         editor.baton.node
       end
-      
+
+      def merge_info(paths, revision=nil, include_parents=true, &authz_read_func)
+        path = nil
+        unless paths.is_a?(Array)
+          path = paths
+          paths = [path]
+        end
+        revision ||= Svn::Core::INVALID_REVNUM
+        results = Repos.fs_get_merge_info(self, paths, revision,
+                                          include_parents, authz_read_func)
+        results = results[path] if path
+        results
+      end
+
       private
       def setup_report_baton(baton)
         baton.instance_variable_set("@aborted", false)
