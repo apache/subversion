@@ -3,7 +3,6 @@ require "util"
 
 require "svn/core"
 require "svn/client"
-require "svn/ra"
 
 class SvnClientTest < Test::Unit::TestCase
   include SvnTestUtil

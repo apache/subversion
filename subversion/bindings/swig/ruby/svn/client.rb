@@ -4,6 +4,7 @@ require "svn/error"
 require "svn/util"
 require "svn/core"
 require "svn/wc"
+require "svn/ra"
 require "svn/ext/client"
 
 module Svn
