@@ -437,11 +437,20 @@ svn_repos_begin_report2(void **report_baton,
 
 /**
  * The same as svn_repos_begin_report2(), but taking a boolean
- * @a recurse flag instead of an @c svn_depth_t depth.
+ * @a recurse flag.
  *
- * If @a recurse is true, the editor drive will behave as it would for
- * a depth of @c svn_depth_infinity; if @a recurse is false, then as
- * for @c svn_depth_files.
+ * If @a recurse is true, the editor driver will drive the editor with
+ * a depth of @c svn_depth_infinity; if false, then with a depth of
+ * @c svn_depth_files.
+ *
+ * @note In svn_repos_begin_report2(), @a depth is not passed as an
+ * explicit parameter; instead, the reporting code's initial call to
+ * svn_repos_set_path3() sets the default depth for the report; the
+ * @a depth passed there serves an equivalent function to the
+ * @a recurse passed here.
+ *
+ * ### TODO(sd): The depth behavior described above may not be
+ * ### implemented yet, since r23967.  Investigate.
  *
  * @note @a username is ignored, and has been removed in a revised
  * version of this API.
