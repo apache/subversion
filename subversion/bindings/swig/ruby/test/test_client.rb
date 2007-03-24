@@ -1788,6 +1788,36 @@ class SvnClientTest < Test::Unit::TestCase
     assert_kind_of(Svn::Client::CommitItem3, Svn::Client::CommitItem3.new)
   end
 
+  def test_log_msg_func_commit_items
+    log = "sample log"
+    file = "file"
+    file2 = "file2"
+    src = "source"
+    path = File.join(@wc_path, file)
+    repos_uri2 = "#{@repos_uri}/#{file2}"
+
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    items = nil
+    ctx.set_log_msg_func do |items|
+      [true, log]
+    end
+
+    ctx.add(path)
+    ctx.prop_set(Svn::Core::PROP_MIME_TYPE, "text/plain", path)
+    ctx.commit(@wc_path)
+    assert_equal([[]], items.collect {|item| item.wcprop_changes})
+    assert_equal([[]], items.collect {|item| item.incoming_prop_changes})
+    assert_equal([nil], items.collect {|item| item.outgoing_prop_changes})
+
+    items = nil
+    ctx.cp(path, repos_uri2)
+    assert_equal([nil], items.collect {|item| item.wcprop_changes})
+    assert_equal([nil], items.collect {|item| item.incoming_prop_changes})
+    assert_equal([nil], items.collect {|item| item.outgoing_prop_changes})
+  end
+
   def test_log_msg_func_cancel
     log = "sample log"
     dir = "dir"

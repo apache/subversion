@@ -32,6 +32,9 @@ module Svn
           item
         end
       end
+
+      alias_method :wcprop_changes, :incoming_prop_changes
+      alias_method :wcprop_changes=, :incoming_prop_changes=
     end
 
     class Info
