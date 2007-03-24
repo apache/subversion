@@ -32,11 +32,8 @@ module Svn
       _hotcopy(src, dest, clean_logs)
     end
 
-    def recover(path,	nonblocking=false)
-      start_callback = Proc.new do
-        yield
-      end
-      recover2(path, nonblocking, start_callback)
+    def recover(path, nonblocking=false, cancel_func=nil, &start_callback)
+      recover3(path, nonblocking, start_callback, cancel_func)
     end
 
     def db_logfiles(path, only_unused=true)
