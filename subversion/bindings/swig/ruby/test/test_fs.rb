@@ -400,4 +400,35 @@ class SvnFsTest < Test::Unit::TestCase
       end
     end
   end
+
+  def test_deleted_revision
+    file = "file"
+    log = "sample log"
+    path = File.join(@wc_path, file)
+    path_in_repos = "/#{file}"
+    ctx = make_context(log)
+
+    FileUtils.touch(path)
+    ctx.add(path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    ctx.rm_f(path)
+    rev2 = ctx.ci(@wc_path).revision
+
+    FileUtils.touch(path)
+    ctx.add(path)
+    rev3 = ctx.ci(@wc_path).revision
+
+    ctx.rm_f(path)
+    rev4 = ctx.ci(@wc_path).revision
+
+    assert_equal(Svn::Core::INVALID_REVNUM,
+                 @fs.deleted_revision(path_in_repos, 0, rev4))
+    assert_equal(rev2, @fs.deleted_revision(path_in_repos, rev1, rev4))
+    assert_equal(Svn::Core::INVALID_REVNUM,
+                 @fs.deleted_revision(path_in_repos, rev2, rev4))
+    assert_equal(rev4, @fs.deleted_revision(path_in_repos, rev3, rev4))
+    assert_equal(Svn::Core::INVALID_REVNUM,
+                 @fs.deleted_revision(path_in_repos, rev4, rev4))
+  end
 end

@@ -72,9 +72,15 @@ module Svn
         end
       end
       
-      def youngest_rev
+      def youngest_revision
         Fs.youngest_rev(self)
       end
+      alias_method :youngest_rev, :youngest_revision
+
+      def deleted_revision(path, start_rev, end_rev)
+        Repos.deleted_rev(self, path, start_rev, end_rev)
+      end
+      alias_method :deleted_rev, :deleted_revision
 
       def prop(name, rev=nil)
         value = Fs.revision_prop(self, rev || youngest_rev, name)
