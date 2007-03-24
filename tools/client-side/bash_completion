@@ -620,7 +620,7 @@ _svn()
 	COMPREPLY=( $( compgen -W "$cmdOpts" -- $cur ) )
 	return 0
 }
-complete -F _svn -o default svn
+complete -F _svn -f -X '@(*/.svn|.svn)' svn
 
 _svnadmin ()
 {
