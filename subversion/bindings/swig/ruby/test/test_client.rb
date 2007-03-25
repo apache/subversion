@@ -1776,7 +1776,7 @@ class SvnClientTest < Test::Unit::TestCase
     end
   end
 
-  def test_not_new
+  def test_commit_item
     assert_raise(NoMethodError) do
       Svn::Client::CommitItem.new
     end
@@ -1784,10 +1784,13 @@ class SvnClientTest < Test::Unit::TestCase
     assert_raise(NoMethodError) do
       Svn::Client::CommitItem2.new
     end
-  end
 
-  def test_new_commit_item
-    assert_kind_of(Svn::Client::CommitItem3, Svn::Client::CommitItem3.new)
+    item = Svn::Client::CommitItem3.new
+    assert_kind_of(Svn::Client::CommitItem3, item)
+
+    url = "xxx"
+    item.url = url
+    assert_equal(url, item.dup.url)
   end
 
   def test_log_msg_func_commit_items

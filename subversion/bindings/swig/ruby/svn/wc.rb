@@ -74,22 +74,7 @@ module Svn
 
     class ExternalItem
       class << self
-        undef :new
-      end
-    end
-
-    class ExternalItem2
-      class << self
-        undef :new
-        def new
-          item = Wc.external_item_create
-          item.__send!("initialize")
-          item
-        end
-      end
-
-      def dup
-        Wc.external_item2_dup(self)
+        undef new
       end
     end
 
@@ -525,11 +510,9 @@ module Svn
     end
 
     class RevisionStatus
-      class << self
-        undef new
-        def new(wc_path, trail_url, committed, cancel_func=nil)
-          Wc.revision_status(wc_path, trail_url, committed, cancel_func)
-        end
+      alias _initialize initialize
+      def initialize(wc_path, trail_url, committed, cancel_func=nil)
+        _initialize(wc_path, trail_url, committed, cancel_func)
       end
     end
   end

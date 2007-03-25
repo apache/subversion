@@ -282,6 +282,10 @@
 #include <apr_xlate.h>
 %}
 %ignore svn_client_ctx_t::config;
+%ignore svn_client_create_context;
+%ignore svn_client_commit_item_create;
+%ignore svn_client_commit_item2_dup;
+%ignore svn_client_commit_item3_dup;
 #endif
 
 %include svn_client_h.swg
@@ -296,6 +300,40 @@
 #endif
 
 #ifdef SWIGRUBY
+%extend svn_client_ctx_t
+{
+  svn_client_ctx_t(apr_pool_t *pool) {
+    svn_error_t *err;
+    svn_client_ctx_t *self;
+    err = svn_client_create_context(&self, pool);
+    if (err)
+      svn_swig_rb_handle_svn_error(err);
+    return self;
+  };
+
+  ~svn_client_ctx_t() {
+  };
+}
+
+%extend svn_client_commit_item3_t
+{
+  svn_client_commit_item3_t(apr_pool_t *pool) {
+    svn_error_t *err;
+    const svn_client_commit_item3_t *self;
+    err = svn_client_commit_item_create(&self, pool);
+    if (err)
+      svn_swig_rb_handle_svn_error(err);
+    return (svn_client_commit_item3_t *)self;
+  };
+
+  ~svn_client_commit_item3_t() {
+  };
+
+  svn_client_commit_item3_t *dup(apr_pool_t *pool) {
+    return svn_client_commit_item3_dup(self, pool);
+  };
+}
+
 %inline %{
 static VALUE
 svn_client_set_log_msg_func3(svn_client_ctx_t *ctx,

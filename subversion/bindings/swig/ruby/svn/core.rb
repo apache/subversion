@@ -143,18 +143,12 @@ module Svn
     end
 
 
-    AuthBaton = SWIG::TYPE_p_svn_auth_baton_t
     class AuthBaton
-      class << self
-        def new(providers=[], *rest)
-          baton = Core.auth_open(providers)
-          baton.__send!("initialize", providers, *rest)
-          baton
-        end
-      end
-
       attr_reader :parameters
-      def initialize(providers, parameters={})
+
+      alias _initialize initialize
+      def initialize(providers=[], parameters={})
+        _initialize(providers)
         @providers = providers
         self.parameters = parameters
       end
@@ -175,7 +169,7 @@ module Svn
         end
       end
     end
-    
+
 
     class AuthProviderObject
       class << self
@@ -269,13 +263,6 @@ module Svn
 
     class DiffFileOptions
       class << self
-        undef new
-        def new(*args)
-          options = Svn::Core.diff_file_options_create(*args)
-          options.__send!("initialize", *args)
-          options
-        end
-
         def parse(*args)
           options = new
           options.parse(*args)
@@ -551,19 +538,9 @@ module Svn
     end
 
     class CommitInfo
-      class << self
-        undef new
-        def new
-          info = Core.create_commit_info
-          info.__send!("initialize")
-          info
-        end
-      end
-      
       alias _date date
       def date
-        __date = _date
-        __date && Time.from_svn_format(__date)
+        Time.from_svn_format(_date)
       end
     end
 

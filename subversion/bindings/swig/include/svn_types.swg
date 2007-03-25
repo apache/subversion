@@ -557,7 +557,9 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 %typemap(argout) apr_pool_t *pool
 {
-  if (!svn_swig_rb_set_pool($result, _global_svn_swig_rb_pool))
+  VALUE target;
+  target = _global_vresult_address == &$result ? self : $result;
+  if (!svn_swig_rb_set_pool(target, _global_svn_swig_rb_pool))
     svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
   svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
 }
