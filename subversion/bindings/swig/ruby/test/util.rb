@@ -10,11 +10,10 @@ class Time
 end
 
 module SvnTestUtil
-  def setup_basic(need_svnserve=false)
+  def setup_default_variables
     test_dir = Pathname.new(File.dirname(__FILE__))
     pwd = Pathname.new(Dir.pwd)
     @base_dir = test_dir.relative_path_from(pwd).to_s
-    @need_svnserve = need_svnserve
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
@@ -28,6 +27,11 @@ module SvnTestUtil
     @full_wc_path = File.expand_path(@wc_path)
     @tmp_path = File.join(@base_dir, "tmp")
     @config_path = File.join(@base_dir, "config")
+  end
+
+  def setup_basic(need_svnserve=false)
+    @need_svnserve = need_svnserve
+    setup_default_variables
     setup_tmp
     setup_repository
     add_hooks

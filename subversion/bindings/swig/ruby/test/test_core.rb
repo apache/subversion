@@ -8,21 +8,22 @@ require "svn/repos"
 
 class SvnCoreTest < Test::Unit::TestCase
   include SvnTestUtil
-  
+
   def setup
-    @repos_path = File.join("test", "repos")
-    @config_path = File.join("test", "config")
+    setup_default_variables
     @config_file = File.join(@config_path, Svn::Core::CONFIG_CATEGORY_CONFIG)
     @servers_file = File.join(@config_path, Svn::Core::CONFIG_CATEGORY_SERVERS)
     setup_repository(@repos_path)
     setup_config
+    setup_tmp
   end
 
   def teardown
     teardown_repository(@repos_path)
     teardown_config
+    teardown_tmp
   end
-  
+
   def test_binary_mime_type?
     assert(Svn::Core.binary_mime_type?("image/png"))
     assert(!Svn::Core.binary_mime_type?("text/plain"))
@@ -589,6 +590,73 @@ EOM
 
     assert_equal(type_map, Svn::Core::MimeType.parse_file(mime_types.path))
     assert_equal(type_map, Svn::Core::MimeType.parse(mime_types_source))
+  end
+
+  def test_mime_type_detect
+    empty_file = Tempfile.new("svn-ruby-mime-type")
+    assert_equal(nil, Svn::Core::MimeType.detect(empty_file.path))
+
+    binary_file = Tempfile.new("svn-ruby-mime-type")
+    binary_file.print("\0\1\2")
+    binary_file.close
+    assert_equal("application/octet-stream",
+                 Svn::Core::MimeType.detect(binary_file.path))
+
+    text_file = Tempfile.new("svn-ruby-mime-type")
+    text_file.print("abcde")
+    text_file.close
+    assert_equal(nil, Svn::Core::MimeType.detect(text_file.path))
+  end
+
+  def test_mime_type_detect_with_type_map
+    type_map = {
+      "html" => "text/html",
+      "htm" => "text/html",
+      "png" => "image/png",
+    }
+
+    nonexistent_html_file = File.join(@tmp_path, "nonexistent.html")
+    assert_raises(Svn::Error::BadFilename) do
+      Svn::Core::MimeType.detect(nonexistent_html_file)
+    end
+    assert_raises(Svn::Error::BadFilename) do
+      Svn::Core::MimeType.detect(nonexistent_html_file, type_map)
+    end
+
+    empty_html_file = File.join(@tmp_path, "empty.html")
+    FileUtils.touch(empty_html_file)
+    assert_equal(nil, Svn::Core::MimeType.detect(empty_html_file))
+    assert_equal("text/html",
+                 Svn::Core::MimeType.detect(empty_html_file, type_map))
+
+    empty_htm_file = File.join(@tmp_path, "empty.htm")
+    FileUtils.touch(empty_htm_file)
+    assert_equal(nil, Svn::Core::MimeType.detect(empty_htm_file))
+    assert_equal("text/html",
+                 Svn::Core::MimeType.detect(empty_htm_file, type_map))
+
+
+    dummy_png_file = File.join(@tmp_path, "dummy.png")
+    File.open(dummy_png_file, "wb") do |png|
+      png.print("\211PNG\r\n\032\n")
+    end
+    assert_equal(nil, Svn::Core::MimeType.detect(dummy_png_file))
+    assert_equal("image/png",
+                 Svn::Core::MimeType.detect(dummy_png_file, type_map))
+
+    empty_png_file = File.join(@tmp_path, "empty.png")
+    FileUtils.touch(empty_png_file)
+    assert_equal(nil, Svn::Core::MimeType.detect(empty_png_file))
+    assert_equal("image/png",
+                 Svn::Core::MimeType.detect(empty_png_file, type_map))
+
+    invalid_png_file = File.join(@tmp_path, "invalid.png")
+    File.open(invalid_png_file, "w") do |png|
+      png.puts("text")
+    end
+    assert_equal(nil, Svn::Core::MimeType.detect(invalid_png_file))
+    assert_equal("image/png",
+                 Svn::Core::MimeType.detect(invalid_png_file, type_map))
   end
 
   private
