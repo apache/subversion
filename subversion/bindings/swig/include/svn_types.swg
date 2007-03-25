@@ -145,6 +145,7 @@
   void **node_baton,
   /* svn_wc */
   svn_wc_adm_access_t **,
+  svn_wc_external_item2_t **,
   svn_wc_entry_t **,
   svn_wc_revision_status_t **,
   svn_wc_status_t **,
