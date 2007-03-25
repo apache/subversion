@@ -521,6 +521,18 @@ module Svn
       end
     end
 
+    module Depth
+      module_function
+      def from_string(str)
+        return nil if str.nil?
+        Core.depth_from_word(str)
+      end
+
+      def to_string(depth)
+        Core.depth_to_word(depth)
+      end
+    end
+
     class CommitInfo
       class << self
         undef new
