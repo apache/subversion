@@ -32,8 +32,9 @@ module Svn
       Wc.ensure_adm2(path, uuid, url, repos, revision)
     end
 
-    def parse_externals_description(parent_dir, desc)
-      Wc.parse_externals_description2(parent_dir, desc)
+    # For backward compatibility
+    def parse_externals_description(*args)
+      ExternalsDescription.parse(*args)
     end
 
     def actual_target(path)
@@ -62,6 +63,13 @@ module Svn
     
     def cleanup(path, diff3_cmd=nil, cancel_func=nil)
       Wc.cleanup2(path, diff3_cmd, cancel_func)
+    end
+
+    module ExternalsDescription
+      module_function
+      def parse(parent_dir, desc)
+        Wc.parse_externals_description3(parent_dir, desc)
+      end
     end
 
     class ExternalItem

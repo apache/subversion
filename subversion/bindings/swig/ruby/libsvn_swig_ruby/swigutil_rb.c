@@ -823,7 +823,7 @@ DEFINE_DUP2(dirent)
 DEFINE_DUP_NO_CONVENIENCE2(prop)
 DEFINE_DUP_NO_CONVENIENCE2(client_commit_item3)
 DEFINE_DUP_NO_CONVENIENCE2(client_proplist_item)
-DEFINE_DUP_NO_CONVENIENCE2(wc_external_item)
+DEFINE_DUP_NO_CONVENIENCE2(wc_external_item2)
 DEFINE_DUP_NO_CONVENIENCE2(log_changed_path)
 DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
 
@@ -925,9 +925,9 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_rev,
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_proplist_item,
                           c2r_client_proplist_item_dup, EMPTY_CPP_ARGUMENT,
                           svn_client_proplist_item_t *, NULL)
-DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_external_item,
-                          c2r_wc_external_item_dup, EMPTY_CPP_ARGUMENT,
-                          svn_wc_external_item_t *, NULL)
+DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_external_item2,
+                          c2r_wc_external_item2_dup, EMPTY_CPP_ARGUMENT,
+                          svn_wc_external_item2_t *, NULL)
 
 
 /* Ruby Array -> apr_array_t */
