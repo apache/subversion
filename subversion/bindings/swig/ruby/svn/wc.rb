@@ -229,8 +229,8 @@ module Svn
         Wc.copy2(src, self, dst_basename, cancel_func, notify_func)
       end
 
-      def delete(path, cancel_func=nil, notify_func=nil)
-        Wc.delete2(path, self, cancel_func, notify_func)
+      def delete(path, cancel_func=nil, notify_func=nil, keep_local=false)
+        Wc.delete3(path, self, cancel_func, notify_func, keep_local)
       end
 
       def add(path, copyfrom_url=nil, copyfrom_rev=0,
