@@ -23,14 +23,14 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal(Svn::Core.subr_version, Svn::Fs.version)
   end
 
-  def test_create
+  def assert_create
     path = File.join(@tmp_path, "fs")
     fs_type = Svn::Fs::TYPE_FSFS
     config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
 
     assert(!File.exist?(path))
     fs = nil
-    Svn::Fs::FileSystem.create(path, config) do |fs|
+    callback = Proc.new do |fs|
       assert(File.exist?(path))
       assert_equal(fs_type, Svn::Fs.type(path))
       fs.set_warning_func do |err|
@@ -39,17 +39,30 @@ class SvnFsTest < Test::Unit::TestCase
       end
       assert_equal(path, fs.path)
     end
+    yield(:create, [path, config], callback)
 
     assert(fs.closed?)
     assert_raises(Svn::Error::FsAlreadyClose) do
       fs.path
     end
 
-    Svn::Fs::FileSystem.delete(path)
+    yield(:delete, [path])
     assert(!File.exist?(path))
   end
 
-  def test_hotcopy
+  def test_create
+    assert_create do |method, args, callback|
+      Svn::Fs.__send__(method, *args, &callback)
+    end
+  end
+
+  def test_create_for_backward_compatibility
+    assert_create do |method, args, callback|
+      Svn::Fs::FileSystem.__send__(method, *args, &callback)
+    end
+  end
+
+  def assert_hotcopy
     log = "sample log"
     file = "hello.txt"
     path = File.join(@wc_path, file)
@@ -66,7 +79,7 @@ class SvnFsTest < Test::Unit::TestCase
     backup_path = File.join(@tmp_path, "back")
     config = {}
 
-    dest_fs = Svn::Fs::FileSystem.create(dest_path, config)
+    dest_fs = yield(:create, [dest_path, config])
 
     FileUtils.mv(@fs.path, backup_path)
     FileUtils.mv(dest_fs.path, @fs.path)
@@ -75,8 +88,20 @@ class SvnFsTest < Test::Unit::TestCase
       assert_equal(log, ctx.log_message(path, rev))
     end
 
-    Svn::Fs::FileSystem.hotcopy(backup_path, @fs.path)
+    yield(:hotcopy, [backup_path, @fs.path])
     assert_equal(log, ctx.log_message(path, rev))
+  end
+
+  def test_hotcopy
+    assert_hotcopy do |method, args, block|
+      Svn::Fs.__send__(method, *args, &block)
+    end
+  end
+
+  def test_hotcopy_for_backward_compatibility
+    assert_hotcopy do |method, args, block|
+      Svn::Fs::FileSystem.__send__(method, *args, &block)
+    end
   end
 
   def test_root
@@ -382,22 +407,31 @@ class SvnFsTest < Test::Unit::TestCase
                  @fs.proplist.keys.sort)
   end
 
-  def test_recover
+  def assert_recover
     path = File.join(@tmp_path, "fs")
     fs_type = Svn::Fs::TYPE_FSFS
     config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
 
-    Svn::Fs::FileSystem.create(path, config)
+    yield(:create, [path, config])
 
     assert_raises(Svn::Error::Cancelled) do
-      Svn::Fs::FileSystem.recover(path) do
-        raise Svn::Error::Cancelled
-      end
+      yield(:recover, [path], Proc.new{raise Svn::Error::Cancelled})
     end
 
     assert_nothing_raised do
-      Svn::Fs::FileSystem.recover(path) do
-      end
+      yield(:recover, [path], Proc.new{})
+    end
+  end
+
+  def test_recover_for_backward_compatibility
+    assert_recover do |method, args, block|
+      Svn::Fs::FileSystem.__send__(method, *args, &block)
+    end
+  end
+
+  def test_recover
+    assert_recover do |method, args, block|
+      Svn::Fs.__send__(method, *args, &block)
     end
   end
 
