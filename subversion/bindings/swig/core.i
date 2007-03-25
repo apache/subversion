@@ -453,6 +453,14 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   svn_io_detect_mimetype2()
+*/
+
+%apply apr_hash_t *HASH_CSTRING {
+    apr_hash_t *mimetype_map
+}
+
+/* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
 */
 #ifdef SWIGPYTHON

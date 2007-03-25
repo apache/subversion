@@ -544,6 +544,10 @@ module Svn
       def parse_file(path)
         Core.io_parse_mimetypes_file(path)
       end
+
+      def detect(path, type_map={})
+        Core.io_detect_mimetype2(path, type_map)
+      end
     end
 
     class CommitInfo
