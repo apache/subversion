@@ -1,6 +1,7 @@
 require "English"
 require "time"
 require "stringio"
+require "tempfile"
 require "svn/util"
 require "svn/error"
 require "svn/ext/core"
@@ -528,6 +529,20 @@ module Svn
 
       def to_string(depth)
         Core.depth_to_word(depth)
+      end
+    end
+
+    module MimeType
+      module_function
+      def parse(source)
+        file = Tempfile.new("svn-ruby-mime-type")
+        file.print(source)
+        file.close
+        Core.io_parse_mimetypes_file(file.path)
+      end
+
+      def parse_file(path)
+        Core.io_parse_mimetypes_file(path)
       end
     end
 
