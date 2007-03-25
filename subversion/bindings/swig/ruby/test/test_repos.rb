@@ -257,7 +257,7 @@ class SvnReposTest < Test::Unit::TestCase
                                                 [rev1, rev2, rev3]))
   end
 
-  def test_report
+  def assert_report
     file = "file"
     file2 = "file2"
     fs_base = "base"
@@ -274,10 +274,22 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(Svn::Core::NODE_FILE, @repos.fs.root.stat(file).kind)
 
     editor = TestEditor.new
-    @repos.report(rev, @author, fs_base, "/", nil, editor) do |baton|
+    args = {
+      :revision => rev,
+      :user_name => @author,
+      :fs_base => fs_base,
+      :target => "/",
+      :target_path => nil,
+      :editor => editor,
+      :text_deltas => true,
+      :recurse => true,
+      :ignore_ancestry => false,
+    }
+    callback = Proc.new do |baton|
       baton.link_path(file, file2, rev)
       baton.delete_path(file)
     end
+    yield(@repos, args, callback)
     assert_equal([
                    :set_target_revision,
                    :open_root,
@@ -285,6 +297,28 @@ class SvnReposTest < Test::Unit::TestCase
                    :close_edit,
                  ],
                  editor.sequence.collect{|meth, *args| meth})
+  end
+
+  def test_report
+    assert_report do |repos, args, callback|
+      @repos.report(args[:revision], args[:user_name], args[:fs_base],
+                    args[:target], args[:target_path], args[:editor],
+                    args[:text_deltas], args[:recurse], args[:ignore_ancestry],
+                    &callback)
+    end
+  end
+
+  def test_report2
+    assert_report do |repos, args, callback|
+      if args[:recurse]
+        depth = Svn::Core::DEPTH_INFINITY
+      else
+        depth = Svn::Core::DEPTH_FILES
+      end
+      @repos.report2(args[:revision], args[:fs_base], args[:target],
+                     args[:target_path], args[:editor], args[:text_deltas],
+                     args[:ignore_ancestry], depth, &callback)
+    end
   end
 
   def assert_commit_editor
