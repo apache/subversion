@@ -515,6 +515,10 @@ module Svn
       end
       alias_method :have_svn_prop?, :has_svn_prop?
       module_function :have_svn_prop?
+
+      def valid_name?(name)
+        Core.prop_name_is_valid(name)
+      end
     end
 
     class CommitInfo

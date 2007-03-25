@@ -516,6 +516,12 @@ EOD
     assert(!Svn::Core::Property.have_svn_prop?({"my-mime-type" => "text/plain"}))
   end
 
+  def test_valid_prop_name
+    assert(Svn::Core::Property.valid_name?("svn:mime-type"))
+    assert(Svn::Core::Property.valid_name?("my-mime-type"))
+    assert(!Svn::Core::Property.valid_name?("プロパティ"))
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new
