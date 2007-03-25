@@ -811,6 +811,18 @@ test_is_root(const char **msg,
     { "/foo",          FALSE },
     { "/",             TRUE },
     { "",              FALSE },
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "X:/foo",        FALSE },
+    { "X:/",           TRUE },
+    { "X:foo",         FALSE },
+    { "X:",            TRUE },
+    { "//srv/shr",     TRUE },
+    { "//srv",         TRUE },
+    { "//srv/shr/fld", FALSE },
+#else /* WIN32 or Cygwin */
+    { "/X:foo",        FALSE },
+    { "/X:",           FALSE },
+#endif /* non-WIN32 */
   };
 
   *msg = "test svn_dirent_is_root";
