@@ -329,20 +329,17 @@ I.    INTRODUCTION
 
       6.  An HTTP client libary:  either neon or serf.  (OPTIONAL)
 
-        neon and serf are competing implementations of HTTP
-        client libraries.  If you want your client to be able to speak
-        to an Apache server, you must link against one of these
-        libraries.  Though optional, we strongly recommend this.
+        neon and serf are competing implementations of HTTP client
+        libraries.  If you want your client to be able to speak to an
+        Apache server (via a http:// or https:// URL), you must link
+        against one of these libraries.  Though optional, we strongly
+        recommend this.
 
         a.  Neon library 0.25 or 0.26 (http://www.webdav.org/neon/)
 
             The Neon library allows a Subversion client to interact
             with remote repositories over the Internet via a WebDAV
-            based protocol.  If you want to use Subversion to connect
-            to a server over ra_dav (via a http:// or https:// url),
-            you will require Neon.  (See also section I.11 for
-            information about "serf", an experimental alternative to
-            Neon for accessing servers over WebDAV.)
+            based protocol.
 
             The source code is included with the Subversion
             dependencies package, and it can also be obtained from:
