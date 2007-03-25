@@ -509,6 +509,12 @@ module Svn
       def prop_diffs(target_props, source_props)
         Core.prop_diffs(target_props, source_props)
       end
+
+      def has_svn_prop?(props)
+        Core.prop_has_svn_prop(props)
+      end
+      alias_method :have_svn_prop?, :has_svn_prop?
+      module_function :have_svn_prop?
     end
 
     class CommitInfo

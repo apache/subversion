@@ -198,7 +198,8 @@
 %apply apr_hash_t *PROPHASH {
   apr_hash_t *target_props,
   apr_hash_t *source_props,
-  apr_hash_t *hash
+  apr_hash_t *hash,
+  apr_hash_t *props
 };
 #endif
 

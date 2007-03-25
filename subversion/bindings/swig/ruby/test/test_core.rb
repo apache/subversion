@@ -504,7 +504,18 @@ EOD
     info.date = date_str
     assert_equal(now, info.date)
   end
-  
+
+  def test_svn_prop
+    assert(Svn::Core::Property.svn_prop?("svn:mime-type"))
+    assert(!Svn::Core::Property.svn_prop?("my-mime-type"))
+
+    assert(Svn::Core::Property.has_svn_prop?({"svn:mime-type" => "text/plain"}))
+    assert(!Svn::Core::Property.has_svn_prop?({"my-mime-type" => "text/plain"}))
+
+    assert(Svn::Core::Property.have_svn_prop?({"svn:mime-type" => "text/plain"}))
+    assert(!Svn::Core::Property.have_svn_prop?({"my-mime-type" => "text/plain"}))
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new
