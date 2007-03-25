@@ -60,6 +60,10 @@ my $opt_verbose;
 # Path to already checked-out working copy.
 my $opt_existing_wc_dir;
 
+# List of filename patterns to ignore (as in .subversion/config's
+# "global-ignores" option).
+my $opt_glob_ignores;
+
 # This is the character used to separate regular expressions occuring
 # in the tag directory path from the path itself.
 my $REGEX_SEP_CHAR = '@';
@@ -75,7 +79,8 @@ GetOptions('no_user_input'           => \$opt_no_user_input,
            'svn_username=s'          => \$opt_svn_username,
            'tag_location=s'          => \$opt_import_tag_location,
            'verbose+'                => \$opt_verbose,
-           'wc=s'                    => \$opt_existing_wc_dir)
+           'wc=s'                    => \$opt_existing_wc_dir,
+           'glob_ignores=s'          => \$opt_glob_ignores)
   or &usage;
 &usage("$0: too few arguments") if @ARGV < 2;
 
@@ -159,6 +164,34 @@ if (defined $opt_existing_wc_dir)
 
     $opt_existing_wc_dir = Cwd::abs_path($opt_existing_wc_dir)
   }
+
+# If no glob_ignores specified, try to deduce from config file,
+# or use the default below.
+my $ignores_str =
+    '*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#* .DS_Store';
+
+if ( defined $opt_glob_ignores)
+  {
+    $ignores_str = $opt_glob_ignores;
+  }
+elsif ( -f "$ENV{HOME}/.subversion/config" )
+  {
+    open my $conf, "$ENV{HOME}/.subversion/config";
+    while (<$conf>)
+      {
+        if ( /^global-ignores\s*=\s*(.*?)\s*$/ )
+          {
+	    $ignores_str = $1;
+            last;
+          }
+      }
+  }
+
+my @glob_ignores = map
+                     {
+                       s/\./\\\./g; s/\*/\.\*/g; "^$_\$";
+                     } split(/\s+/, $ignores_str);
+unshift @glob_ignores, '\.svn$';
 
 # Convert the string URL into a URI object.
 $repos_base_url    =~ s|/*$||;
@@ -1294,7 +1327,9 @@ sub usage
       "  -t tag_dir     create a tag copy in tag_dir, relative to svn_url\n",
       "  -v             increase program verbosity, multiple -v's allowed\n",
       "  -wc path       use the already checked-out working copy at path\n",
-      "                 instead of checkout out a fresh working copy\n";
+      "                 instead of checkout out a fresh working copy\n",
+      "  -glob_ignores  List of filename patterns to ignore (as in svn's\n",
+      "                 global-ignores config option)\n";
 }
 
 # Get the next directory to load, either from the command line or from
@@ -1601,7 +1636,18 @@ sub recursive_ls_and_hash
                     digest => $file_digest};
     };
   find({no_chdir   => 1,
-        preprocess => sub { grep { $_ !~ /^[._]svn$/ } @_ },
+        preprocess => sub
+	  {
+            grep
+              {
+                my $ok=1;
+                foreach my $x (@glob_ignores)
+                  {
+                    if ( $_ =~ /$x/ ) {$ok=0;last;}
+                  }
+                $ok
+              } @_
+          },
         wanted     => $wanted
        }, '.');
 
