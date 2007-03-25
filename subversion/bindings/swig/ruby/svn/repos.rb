@@ -98,6 +98,25 @@ module Svn
         end
       end
 
+      def report2(rev, fs_base, target, tgt_path, editor, text_deltas=true,
+                  ignore_ancestry=false, depth=nil, authz_read_func=nil)
+        authz_read_func ||= @authz_read_func
+        args = [
+          rev, self, fs_base, target, tgt_path, text_deltas,
+          ignore_ancestry, editor, authz_read_func,
+        ]
+        report_baton = Repos.begin_report2(*args)
+        setup_report_baton(report_baton)
+        if block_given?
+          report_baton.set_path("", rev, false, nil, depth)
+          result = yield(report_baton)
+          report_baton.finish_report unless report_baton.aborted?
+          result
+        else
+          report_baton
+        end
+      end
+
       def commit_editor(repos_url, base_path, txn=nil, user=nil,
                         log_msg=nil, commit_callback=nil,
                         authz_callback=nil)
