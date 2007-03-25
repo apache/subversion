@@ -187,7 +187,7 @@ module Svn
       end
 
       def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil)
-        Wc.walk_entries2(path, self, callbacks, show_hidden, cancel_func)
+        Wc.walk_entries3(path, self, callbacks, show_hidden, cancel_func)
       end
 
       def mark_missing_deleted(path)

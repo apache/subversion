@@ -111,6 +111,7 @@ DEFINE_ID(__batons__, "__batons__")
 DEFINE_ID(destroy, "destroy")
 DEFINE_ID(filename_to_temp_file, "filename_to_temp_file")
 DEFINE_ID(inspect, "inspect")
+DEFINE_ID(handle_error, "handle_error")
 
 typedef void *(*r2c_func)(VALUE value, void *ctx, apr_pool_t *pool);
 typedef VALUE (*c2r_func)(void *value, void *ctx);
@@ -2826,12 +2827,12 @@ svn_swig_rb_client_blame_receiver_func(void *baton,
 
 
 
-/* svn_wc_entry_callbacks_t */
+/* svn_wc_entry_callbacks2_t */
 static svn_error_t *
-wc_entry_callbacks_found_entry(const char *path,
-                               const svn_wc_entry_t *entry,
-                               void *walk_baton,
-                               apr_pool_t *pool)
+wc_entry_callbacks2_found_entry(const char *path,
+                                const svn_wc_entry_t *entry,
+                                void *walk_baton,
+                                apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE callbacks, rb_pool;
@@ -2852,11 +2853,44 @@ wc_entry_callbacks_found_entry(const char *path,
   return err;
 }
 
-svn_wc_entry_callbacks_t *
-svn_swig_rb_wc_entry_callbacks(void)
+static svn_error_t *
+wc_entry_callbacks2_handle_error(const char *path,
+                                 svn_error_t *err,
+                                 void *walk_baton,
+                                 apr_pool_t *pool)
 {
-  static svn_wc_entry_callbacks_t wc_entry_callbacks = {
-    wc_entry_callbacks_found_entry
+  VALUE callbacks, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)walk_baton, &callbacks, &rb_pool);;
+
+  if (!NIL_P(callbacks)) {
+    callback_baton_t cbb;
+    ID message;
+
+    message = rb_id_handle_error();
+    if (rb_obj_respond_to(callbacks, message, FALSE)) {
+      VALUE rb_err;
+
+      cbb.receiver = callbacks;
+      cbb.message = rb_id_handle_error();
+      rb_err = err ? svn_swig_rb_svn_error_to_rb_error(err) : Qnil;
+      if (err)
+        svn_error_clear(err);
+      err = NULL;
+      cbb.args = rb_ary_new3(2, c2r_string2(path), rb_err);
+      invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+    }
+  }
+
+  return err;
+}
+
+svn_wc_entry_callbacks2_t *
+svn_swig_rb_wc_entry_callbacks2(void)
+{
+  static svn_wc_entry_callbacks2_t wc_entry_callbacks = {
+    wc_entry_callbacks2_found_entry,
+    wc_entry_callbacks2_handle_error,
   };
 
   return &wc_entry_callbacks;

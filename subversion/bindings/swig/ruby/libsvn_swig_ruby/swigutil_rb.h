@@ -367,7 +367,7 @@ svn_error_t *svn_swig_rb_client_blame_receiver_func(void *baton,
 
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-svn_wc_entry_callbacks_t *svn_swig_rb_wc_entry_callbacks(void);
+svn_wc_entry_callbacks2_t *svn_swig_rb_wc_entry_callbacks2(void);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_wc_diff_callbacks2_t *svn_swig_rb_wc_diff_callbacks2(void);
 

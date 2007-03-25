@@ -250,6 +250,32 @@ class SvnWcTest < Test::Unit::TestCase
                    result.collect{|path, entry| path}.sort)
       entry = result.assoc(path2)[1]
       assert_equal(file2, entry.name)
+
+      callbacks = Proc.new do |path, entry|
+        raise Svn::Error::Cancelled
+      end
+      def callbacks.found_entry(path, entry)
+        call(path, entry)
+      end
+      assert_raises(Svn::Error::Cancelled) do
+        access.walk_entries(@wc_path, callbacks)
+      end
+
+      def callbacks.ignored_errors=(value)
+        @ignored_errors = value
+      end
+      def callbacks.handle_error(path, err)
+        @ignored_errors << [path, err] if err
+      end
+      ignored_errors = []
+      callbacks.ignored_errors = ignored_errors
+      access.walk_entries(@wc_path, callbacks)
+      assert_equal([
+                    [@wc_path, Svn::Error::Cancelled],
+                    [path1, Svn::Error::Cancelled],
+                    [path2, Svn::Error::Cancelled],
+                   ],
+                   ignored_errors.collect {|path, err| [path, err.class]})
     end
 
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
