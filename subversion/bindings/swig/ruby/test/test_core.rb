@@ -1,6 +1,8 @@
 require "my-assertions"
 require "util"
 
+require "stringio"
+
 require "svn/core"
 require "svn/repos"
 
@@ -538,6 +540,34 @@ EOD
     assert_raises(ArgumentError) do
       Svn::Core::Depth.to_string([])
     end
+  end
+
+  def test_stream_copy
+    source = "content"
+    original = StringIO.new(source)
+    copied = StringIO.new("")
+    original_stream = Svn::Core::Stream.new(original)
+    copied_stream = Svn::Core::Stream.new(copied)
+
+
+    original_stream.copy(copied_stream)
+
+    copied.rewind
+    assert_equal("", original.read)
+    assert_equal(source, copied.read)
+
+
+    original.rewind
+    copied.string = ""
+    assert_raises(Svn::Error::Cancelled) do
+      original_stream.copy(copied_stream) do
+        raise Svn::Error::Cancelled
+      end
+    end
+
+    copied.rewind
+    assert_equal(source, original.read)
+    assert_equal("", copied.read)
   end
 
   private

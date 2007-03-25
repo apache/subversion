@@ -788,6 +788,20 @@ apr_pool_wrapper_remove_from_parent(apr_pool_wrapper_t *self)
 }
 %}
 
+/* Dummy declaration */
+struct svn_stream_t
+{
+};
+
+%extend svn_stream_t
+{
+  svn_stream_t(VALUE io) {
+    return svn_swig_rb_make_stream(io);
+  };
+
+  ~svn_stream_t() {
+  };
+}
 
 %include svn_diff_h.swg
 
