@@ -114,9 +114,11 @@ I.    INTRODUCTION
 
       * OpenSSL (OPTIONAL for client and server)
 
-         If your client is speaking HTTP via libneon or libserf,
-         OpenSSL enables it to do SSL-encrypted requests to Apache.
-         Apache would need to be compiled with OpenSSL as well.
+         OpenSSL enables your client to access SSL-encrypted https://
+         URLs (using either libneon or libserf) in addition to
+         unencrypted http:// URLs.  To use SSL with Subversion's
+         WebDAV server, Apache needs to be compiled with OpenSSL as
+         well.
 
       * Berkeley DB (OPTIONAL for client and server)
 
