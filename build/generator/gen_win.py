@@ -23,17 +23,14 @@ import ezt
 
 class GeneratorBase(gen_base.GeneratorBase):
   """This intermediate base class exists to be instantiated by win-tests.py,
-  in order to obtain information from build.conf without actually doing
-  any generation."""
+  in order to obtain information from build.conf and library paths without
+  actually doing any generation."""
   _extension_map = {
     ('exe', 'target'): '.exe',
     ('exe', 'object'): '.obj',
     ('lib', 'target'): '.dll',
     ('lib', 'object'): '.obj',
     }
-
-class WinGeneratorBase(GeneratorBase):
-  "Base class for all Windows project files generators"
 
   def parse_options(self, options):
     self.apr_path = 'apr'
@@ -121,23 +118,39 @@ class WinGeneratorBase(GeneratorBase):
         if val == '2002' or re.match('7(\.\d+)?', val):
           self.vsnet_version = '7.00'
           self.vsnet_proj_ver = '7.00'
-          sys.stderr.write('Generating for VS.NET 2002\n')
         elif val == '2003' or re.match('8(\.\d+)?', val):
           self.vsnet_version = '8.00'
           self.vsnet_proj_ver = '7.10'
-          sys.stderr.write('Generating for VS.NET 2003\n')
         elif val == '2005' or re.match('9(\.\d+)?', val):
           self.vsnet_version = '9.00'
           self.vsnet_proj_ver = '8.00'
-          sys.stderr.write('Generating for VS.NET 2005\n')
         else:
-          sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
-                           ' assumimg "%s"\n' % (val, self.vsnet_version))
-    if self.sqlite_path == None:
-      sys.stderr.write('ERROR: Sqlite path not specifed. ' + \
-                       'Use --with-sqlite option.')
-      sys.exit(1)
-	
+          self.vsnet_version = val
+
+  def __init__(self, fname, verfname, options):
+
+    # Initialize parent
+    gen_base.GeneratorBase.__init__(self, fname, verfname, options)
+    
+    # parse (and save) the options that were passed to us
+    self.parse_options(options)
+
+    # Find Berkeley DB
+    self._find_bdb()
+
+  def _find_bdb(self):
+    "Find the Berkley DB library and version"
+    for ver in ("45", "44", "43", "42", "41", "40"):
+      lib = "libdb" + ver
+      path = os.path.join(self.bdb_path, "lib")
+      if os.path.exists(os.path.join(path, lib + ".lib")):
+        self.bdb_lib = lib
+        break
+    else:
+      self.bdb_lib = None
+
+class WinGeneratorBase(GeneratorBase):
+  "Base class for all Windows project files generators"	
 
   def __init__(self, fname, verfname, options, subdir):
     """
@@ -147,12 +160,32 @@ class WinGeneratorBase(GeneratorBase):
     create the necessary paths
     """
 
-    # parse (and save) the options that were passed to us
-    self.parse_options(options)
+    # Initialize parent
+    GeneratorBase.__init__(self, fname, verfname, options)
+    
+    if self.sqlite_path == None:
+      sys.stderr.write('ERROR: Sqlite path not specifed. ' + \
+                       'Use --with-sqlite option.')
+      sys.exit(1)
 
-    # Find db-4.0.x or db-4.1.x
-    self._find_bdb()
+    if self.bdb_lib is not None:
+      sys.stderr.write("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
+    else:
+      sys.stderr.write("BDB not found, BDB fs will not be built\n")
 
+    if subdir == 'vcnet-vcproj':
+      if self.vsnet_version == '7.00':
+        sys.stderr.write('Generating for VS.NET 2002\n')
+      elif self.vsnet_version == '8.00':
+        sys.stderr.write('Generating for VS.NET 2003\n')
+      elif self.vsnet_version == '9.00':
+        sys.stderr.write('Generating for VS.NET 2005\n')
+      else:
+        sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
+                         ' assumimg "%s"\n' % (self.vsnet_version, '7.00'))
+        self.vsnet_version = '7.00'
+        self.vsnet_proj_ver = '7.00'
+    
     # Find the right Ruby include and libraries dirs and
     # library name to link SWIG bindings with
     self._find_ruby()
@@ -218,9 +251,6 @@ class WinGeneratorBase(GeneratorBase):
     data = {'pofiles': pofiles}
     self.write_with_template(os.path.join('build', 'win32', 'build_locale.bat'),
                              'build_locale.ezt', data)
-
-    #Initialize parent
-    GeneratorBase.__init__(self, fname, verfname, options)
 
     #Make the project files directory if it doesn't exist
     #TODO win32 might not be the best path as win64 stuff will go here too
@@ -1019,19 +1049,6 @@ class WinGeneratorBase(GeneratorBase):
     "Override me when creating a new project type"
 
     raise NotImplementedError
-
-  def _find_bdb(self):
-    "Find the Berkley DB library and version"
-    for ver in ("45", "44", "43", "42", "41", "40"):
-      lib = "libdb" + ver
-      path = os.path.join(self.bdb_path, "lib")
-      if os.path.exists(os.path.join(path, lib + ".lib")):
-        sys.stderr.write("Found %s.lib in %s\n" % (lib, path))
-        self.bdb_lib = lib
-        break
-    else:
-      sys.stderr.write("BDB not found, BDB fs will not be built\n")
-      self.bdb_lib = None
 
   def _find_perl(self):
     "Find the right perl library name to link swig bindings with"

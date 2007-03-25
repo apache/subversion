@@ -51,7 +51,10 @@ sys.path.insert(1, 'build')
 
 import gen_win
 version_header = os.path.join('subversion', 'include', 'svn_version.h')
-gen_obj = gen_win.GeneratorBase('build.conf', version_header, [])
+cp = ConfigParser.ConfigParser()
+cp.read('gen-make.opts')
+gen_obj = gen_win.GeneratorBase('build.conf', version_header,
+                                cp.items('options'))
 all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
           + gen_obj.scripts + gen_obj.bdb_scripts
 client_tests = filter(lambda x: x.startswith(CMDLINE_TEST_SCRIPT_PATH),
@@ -154,7 +157,9 @@ def create_target_dir(dirname):
     os.makedirs(tgt_dir)
 
 def copy_changed_file(src, tgt):
-  assert os.path.isfile(src)
+  if not os.path.isfile(src):
+    print 'Could not find ' + src
+    sys.exit(1)
   if os.path.isdir(tgt):
     tgt = os.path.join(tgt, os.path.basename(src))
   if os.path.exists(tgt):
@@ -184,37 +189,39 @@ def copy_execs(baton, dirname, names):
 
 def locate_libs():
   "Move DLLs to a known location and set env vars"
-  def get(cp, section, option, default):
-    if cp.has_option(section, option):
-      return cp.get(section, option)
-    else:
-      return default
 
-  cp = ConfigParser.ConfigParser()
-  cp.read('gen-make.opts')
-  apr_path = get(cp, 'options', '--with-apr', 'apr')
-  aprutil_path = get(cp, 'options', '--with-apr-util', 'apr-util')
-  apriconv_path = get(cp, 'options', '--with-apr-iconv', 'apr-iconv')
-  apriconv_so_path = os.path.join(apriconv_path, objdir, 'iconv')
+  dlls = []
+  
   # look for APR 1.x dll's and use those if found
-  apr_dll_path = os.path.join(apr_path, objdir, 'libapr-1.dll')
-  if os.path.exists(apr_dll_path):
-    aprutil_dll_path = os.path.join(aprutil_path, objdir, 'libaprutil-1.dll')
-    apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv-1.dll')
+  apr_test_path = os.path.join(gen_obj.apr_path, objdir, 'libapr-1.dll')
+  if os.path.exists(apr_test_path):
+    suffix = "-1"
   else:
-    apr_dll_path = os.path.join(apr_path, objdir, 'libapr.dll')
-    aprutil_dll_path = os.path.join(aprutil_path, objdir, 'libaprutil.dll')
-    apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv.dll')
-    
+    suffix = ""
+  dlls.append(os.path.join(gen_obj.apr_path, objdir,
+                           'libapr%s.dll' % (suffix)))
+  dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
+                             'libaprutil%s.dll' % (suffix)))
+  dlls.append(os.path.join(gen_obj.apr_iconv_path, objdir,
+                           'libapriconv%s.dll' % (suffix)))
 
-  copy_changed_file(apr_dll_path, abs_objdir)
-  copy_changed_file(aprutil_dll_path, abs_objdir)
-  copy_changed_file(apriconv_dll_path, abs_objdir)
+  if gen_obj.libintl_path is not None:
+    dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
 
-  libintl_path = get(cp, 'options', '--with-libintl', None)
-  if libintl_path is not None:
-    libintl_dll_path = os.path.join(libintl_path, 'bin', 'intl3_svn.dll')
-    copy_changed_file(libintl_dll_path, abs_objdir)
+  dlls.append(os.path.join(gen_obj.sqlite_path, 'bin', 'sqlite3.dll'))
+
+  if gen_obj.bdb_path is not None:
+    partial_path = os.path.join(gen_obj.bdb_path, 'bin', gen_obj.bdb_lib)
+    if objdir == 'Debug':
+      dlls.append(partial_path + 'd.dll')
+    else:
+      dlls.append(partial_path + '.dll')
+
+  if gen_obj.sasl_path is not None:
+    dlls.append(os.path.join(gen_obj.sasl_path, 'lib', 'libsasl.dll'))
+
+  for dll in dlls:
+    copy_changed_file(dll, abs_objdir)
 
   # Copy the Subversion library DLLs
   if not cp.has_option('options', '--disable-shared'):
@@ -230,6 +237,7 @@ def locate_libs():
     copy_changed_file(mod_dav_svn_path, abs_objdir)
     copy_changed_file(mod_authz_svn_path, abs_objdir)
 
+  apriconv_so_path = os.path.join(gen_obj.apr_iconv_path, objdir, 'iconv')
   os.environ['APR_ICONV_PATH'] = os.path.abspath(apriconv_so_path)
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
   
