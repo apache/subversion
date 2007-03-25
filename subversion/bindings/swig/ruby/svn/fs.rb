@@ -19,7 +19,7 @@ module Svn
       end
     end
 
-    @@alias_targets = %w(create open hotcopy recover)
+    @@alias_targets = %w(create delete open hotcopy recover)
     class << self
       @@alias_targets.each do |target|
         alias_method "_#{target}", target
@@ -439,7 +439,7 @@ module Svn
       end
 
       def delete(path)
-        Fs.delete(self, path)
+        Fs._delete(self, path)
       end
       
       def copy(to_path, from_root, from_path)
