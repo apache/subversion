@@ -588,4 +588,9 @@ EOE
     duped_item = item.dup
     assert_equal(item.target_dir, duped_item.target_dir)
   end
+
+  def test_committed_queue_new
+    queue = Svn::Wc::CommittedQueue.new
+    assert_kind_of(Svn::Wc::CommittedQueue, queue)
+  end
 end

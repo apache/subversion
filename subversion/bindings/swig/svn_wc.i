@@ -43,6 +43,7 @@
 %ignore svn_wc_external_item_dup;
 %ignore svn_wc_external_item2_dup;
 %ignore svn_wc_revision_status;
+%ignore svn_wc_committed_queue_create;
 #endif
 
 /* -----------------------------------------------------------------------
@@ -194,6 +195,21 @@ svn_wc_swig_init_asp_dot_net_hack (apr_pool_t *pool)
   };
 
   ~svn_wc_revision_status_t() {
+  };
+}
+
+/* Dummy declaration */
+struct svn_wc_committed_queue_t
+{
+};
+
+%extend svn_wc_committed_queue_t
+{
+  svn_wc_committed_queue_t(apr_pool_t *pool) {
+    return svn_wc_committed_queue_create(pool);
+  };
+
+  ~svn_wc_committed_queue_t() {
   };
 }
 #endif
