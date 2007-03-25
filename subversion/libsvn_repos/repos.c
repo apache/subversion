@@ -1877,7 +1877,7 @@ svn_repos_find_root_path(const char *path,
       svn_error_clear(err);
 
       if (candidate[0] == '\0' ||
-          svn_path_is_root(candidate, strlen(candidate)))
+          svn_dirent_is_root(candidate, strlen(candidate)))
         return NULL;
 
       candidate = svn_path_dirname(candidate, pool);

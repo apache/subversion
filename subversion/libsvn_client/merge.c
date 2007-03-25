@@ -899,7 +899,7 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
         }
 
       if (apr_hash_count(wc_mergeinfo) == 0 &&
-          !svn_path_is_root(wcpath, strlen(wcpath)))
+          !svn_dirent_is_root(wcpath, strlen(wcpath)))
         {
           svn_error_t *err;
 

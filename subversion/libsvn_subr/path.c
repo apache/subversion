@@ -98,7 +98,7 @@ is_canonical(const char *path,
              apr_size_t len)
 {
   return (! SVN_PATH_IS_PLATFORM_EMPTY(path, len)
-          && (svn_path_is_root(path, len) ||
+          && (svn_dirent_is_root(path, len) ||
               (len <= 1 || path[len-1] != '/')));
 }
 #endif
@@ -422,30 +422,32 @@ svn_path_is_empty(const char *path)
 /* We decided against using apr_filepath_root here because of the negative 
    performance impact (creating a pool and converting strings ). */
 svn_boolean_t
-svn_path_is_root(const char *path, apr_size_t len)
+svn_dirent_is_root(const char *dirent, apr_size_t len)
 {
-  /* path is root if it's equal to '/' */
-  if (len == 1 && path[0] == '/')
+  /* directory is root if it's equal to '/' */
+  if (len == 1 && dirent[0] == '/')
     return TRUE;
  
 #if defined(WIN32) || defined(__CYGWIN__)
   /* On Windows and Cygwin, 'H:' or 'H:/' (where 'H' is any letter)  
-     are also root paths */
+     are also root directories */
   if ((len == 2 || len == 3) && 
-      (path[1] == ':') &&
-      ((path[0] >= 'A' && path[0] <= 'Z') || 
-       (path[0] >= 'a' && path[0] <= 'z')) &&
-      (len == 2 || (path[2] == '/' && len == 3)))
+      (dirent[1] == ':') &&
+      ((dirent[0] >= 'A' && dirent[0] <= 'Z') || 
+       (dirent[0] >= 'a' && dirent[0] <= 'z')) &&
+      (len == 2 || (dirent[2] == '/' && len == 3)))
     return TRUE;   
  
-  /* On Windows and Cygwin, both //drive and //drive//share are root paths */
-  if (len >= 2 && path[0] == '/' && path[1] == '/' && path[len - 1] != '/')
+  /* On Windows and Cygwin, both //drive and //drive//share are root
+     directories */
+  if (len >= 2 && dirent[0] == '/' && dirent[1] == '/' 
+      && dirent[len - 1] != '/')
     {
       int segments = 0;
       int i;
       for (i = len; i >= 2; i--)
         {
-          if (path[i] == '/')
+          if (dirent[i] == '/')
             {
               segments ++;
               if (segments > 1)
