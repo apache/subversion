@@ -498,4 +498,22 @@ EOE
     assert_equal(rev, status.min_rev)
     assert_equal(rev, status.max_rev)
   end
+
+  def test_external_item_new
+    assert_raises(NoMethodError) do
+      Svn::Wc::ExternalItem.new
+    end
+
+    item = Svn::Wc::ExternalItem2.new
+    assert_kind_of(Svn::Wc::ExternalItem2, item)
+  end
+
+  def test_external_item_dup
+    item = Svn::Wc::ExternalItem2.new
+    assert_kind_of(Svn::Wc::ExternalItem2, item)
+
+    item.target_dir = "xxx"
+    duped_item = item.dup
+    assert_equal(item.target_dir, duped_item.target_dir)
+  end
 end

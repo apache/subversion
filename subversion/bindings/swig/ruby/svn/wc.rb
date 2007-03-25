@@ -64,6 +64,27 @@ module Svn
       Wc.cleanup2(path, diff3_cmd, cancel_func)
     end
 
+    class ExternalItem
+      class << self
+        undef :new
+      end
+    end
+
+    class ExternalItem2
+      class << self
+        undef :new
+        def new
+          item = Wc.external_item_create
+          item.__send!("initialize")
+          item
+        end
+      end
+
+      def dup
+        Wc.external_item2_dup(self)
+      end
+    end
+
     AdmAccess = SWIG::TYPE_p_svn_wc_adm_access_t
     class AdmAccess
       class << self
