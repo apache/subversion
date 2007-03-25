@@ -15,6 +15,7 @@ class Time
     end
 
     def from_svn_format(str)
+      return nil if str.nil?
       from_apr_time(Svn::Core.time_from_cstring(str))
     end
 

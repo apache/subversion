@@ -251,11 +251,15 @@ module Svn
         Repos.fs_get_locks(self, path, authz_read_func)
       end
 
-      def set_prop(author, name, new_value, rev=nil, authz_read_func=nil)
+      def set_prop(author, name, new_value, rev=nil, authz_read_func=nil,
+                   use_pre_revprop_change_hook=true,
+                   use_post_revprop_change_hook=true)
         authz_read_func ||= @authz_read_func
         rev ||= youngest_rev
-        Repos.fs_change_rev_prop2(self, rev, author, name,
-                                  new_value, authz_read_func)
+        Repos.fs_change_rev_prop3(self, rev, author, name, new_value,
+                                  use_pre_revprop_change_hook,
+                                  use_post_revprop_change_hook,
+                                  authz_read_func)
       end
 
       def prop(name, rev=nil, authz_read_func=nil)
