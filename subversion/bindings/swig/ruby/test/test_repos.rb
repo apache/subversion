@@ -544,6 +544,21 @@ class SvnReposTest < Test::Unit::TestCase
                    Svn::Core::PROP_REVISION_DATE,
                  ].sort,
                  @repos.proplist.keys.sort)
+
+    assert_raises(Svn::Error::ReposHookFailure) do
+      @repos.set_prop(@author, Svn::Core::PROP_REVISION_DATE, nil)
+    end
+    assert_not_nil(@repos.prop(Svn::Core::PROP_REVISION_DATE))
+
+    assert_nothing_raised do
+      @repos.set_prop(@author, Svn::Core::PROP_REVISION_DATE, nil, nil, nil,
+                      false)
+    end
+    assert_nil(@repos.prop(Svn::Core::PROP_REVISION_DATE))
+    assert_equal([
+                   Svn::Core::PROP_REVISION_AUTHOR,
+                 ].sort,
+                 @repos.proplist.keys.sort)
   end
 
   def test_dump
