@@ -123,6 +123,7 @@ typedef struct hash_to_apr_hash_data_t
 } hash_to_apr_hash_data_t;
 
 static void r2c_swig_type2(VALUE value, const char *type_name, void **result);
+static const char *r2c_inspect(VALUE object);
 
 
 
@@ -696,6 +697,21 @@ svn_swig_rb_from_swig_type(void *value, void *ctx)
   }
 }
 #define c2r_swig_type svn_swig_rb_from_swig_type
+
+svn_depth_t
+svn_swig_rb_to_depth(VALUE value)
+{
+  if (RTEST(rb_obj_is_kind_of(value, rb_cString))) {
+    return svn_depth_from_word(StringValueCStr(value));
+  } else if (RTEST(rb_obj_is_kind_of(value, rb_cInteger))) {
+    return NUM2INT(value);
+  } else {
+    rb_raise(rb_eArgError,
+             "'%s' must be DEPTH_STRING (e.g. \"infinity\") " \
+             "or Svn::Core::DEPTH_*",
+             r2c_inspect(value));
+  }
+}
 
 static VALUE
 c2r_string(void *value, void *ctx)

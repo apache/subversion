@@ -530,6 +530,16 @@ EOD
     end
   end
 
+  def test_depth_input
+    depth_infinity = Svn::Core::DEPTH_INFINITY
+    assert_equal("infinity", Svn::Core::Depth.to_string(depth_infinity))
+    assert_equal("infinity", Svn::Core::Depth.to_string("infinity"))
+    assert_equal("unknown", Svn::Core::Depth.to_string("XXX"))
+    assert_raises(ArgumentError) do
+      Svn::Core::Depth.to_string([])
+    end
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new

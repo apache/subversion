@@ -1124,6 +1124,17 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 /* -----------------------------------------------------------------------
+   useful convertors for svn_depth_t
+*/
+
+#ifdef SWIGRUBY
+%typemap(in) svn_depth_t {
+  $1 = svn_swig_rb_to_depth($input);
+}
+#endif
+
+
+/* -----------------------------------------------------------------------
    Special boolean mapping for ruby.
 */
 
