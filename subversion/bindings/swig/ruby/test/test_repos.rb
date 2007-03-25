@@ -201,7 +201,7 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(log, ctx.log_message(path, rev))
   end
   
-  def test_transaction
+  def assert_transaction
     log = "sample log"
     ctx = make_context(log)
     ctx.checkout(@repos_uri, @wc_path)
@@ -209,9 +209,15 @@ class SvnReposTest < Test::Unit::TestCase
     
     prev_rev = @repos.youngest_rev
     past_date = Time.now
-    @repos.transaction_for_commit(@author, log) do |txn|
+    args = {
+      :author => @author,
+      :log => log,
+      :revision => prev_rev,
+    }
+    callback = Proc.new do |txn|
       txn.abort
     end
+    yield(:commit, @repos, args, callback)
     assert_equal(prev_rev, @repos.youngest_rev)
     assert_equal(prev_rev, @repos.dated_revision(past_date))
     
@@ -223,9 +229,71 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(prev_rev + 1, @repos.dated_revision(Time.now))
 
     prev_rev = @repos.youngest_rev
-    @repos.transaction_for_update(@author) do |txn|
+    args = {
+      :author => @author,
+      :revision => prev_rev,
+    }
+    callback = Proc.new do |txn|
     end
+    yield(:update, @repos, args, callback)
     assert_equal(prev_rev, @repos.youngest_rev)
+  end
+
+  def test_transaction
+    assert_transaction do |type, repos, args, callback|
+      case type
+      when :commit
+        repos.transaction_for_commit(args[:author], args[:log], &callback)
+      when :update
+        repos.transaction_for_update(args[:author], &callback)
+      end
+    end
+  end
+
+  def test_transaction_with_revision
+    assert_transaction do |type, repos, args, callback|
+      case type
+      when :commit
+        repos.transaction_for_commit(args[:author], args[:log],
+                                     args[:revision], &callback)
+      when :update
+        repos.transaction_for_update(args[:author], args[:revision], &callback)
+      end
+    end
+  end
+
+  def test_transaction2
+    assert_transaction do |type, repos, args, callback|
+      case type
+      when :commit
+        props = {
+          Svn::Core::PROP_REVISION_AUTHOR => args[:author],
+          Svn::Core::PROP_REVISION_LOG => args[:log],
+        }
+        repos.transaction_for_commit(props, &callback)
+      when :update
+        repos.transaction_for_update(args[:author], &callback)
+      end
+    end
+  end
+
+  def test_transaction2_with_revision
+    assert_transaction do |type, repos, args, callback|
+      case type
+      when :commit
+        props = {
+          Svn::Core::PROP_REVISION_AUTHOR => args[:author],
+          Svn::Core::PROP_REVISION_LOG => args[:log],
+        }
+        repos.transaction_for_commit(props,
+                                     args[:revision],
+                                     &callback)
+      when :update
+        repos.transaction_for_update(args[:author],
+                                     args[:revision],
+                                     &callback)
+      end
+    end
   end
 
   def test_trace_node_locations
