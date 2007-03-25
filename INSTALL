@@ -124,7 +124,7 @@ I.    INTRODUCTION
 
          There are two different repository 'back-end'
          implementations.  One implementation stores data in a flat
-         filesystem (known as FSFS), the other implementation stores
+         filesystem (known as FSFS); the other implementation stores
          data in a Berkeley DB database (known as BDB).  When you
          create a repository, you have the option of specifying a
          storage back-end.  The Berkeley DB back-end will only be
