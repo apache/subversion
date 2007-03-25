@@ -1217,17 +1217,22 @@ def status_nonrecursive_update(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   A_path = os.path.join(wc_dir, 'A')
+  D_path = os.path.join(A_path, 'D')
   mu_path = os.path.join(A_path, 'mu')
+  gamma_path = os.path.join(D_path, 'gamma')
 
-  # Change file in A and commit
+  # Change files in A and D and commit
   svntest.main.file_append(mu_path, "new line of text")
+  svntest.main.file_append(gamma_path, "new line of text")
 
   # Create expected trees for commit
   expected_output = svntest.wc.State(wc_dir, {
-    'A/mu' : Item(verb='Sending')
+    'A/mu' : Item(verb='Sending'),
+    'A/D/gamma' : Item(verb='Sending')
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2, status='  ')
+  expected_status.tweak('A/D/gamma', wc_rev=2, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
@@ -1237,6 +1242,7 @@ def status_nonrecursive_update(sbox):
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(status='U '),
+    'A/D/gamma' : Item(status='U '),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1356,7 +1362,7 @@ test_list = [ None,
               inconsistent_eol,
               status_update_with_incoming_props,
               status_update_verbose_with_incoming_props,
-              XFail(status_nonrecursive_update),
+              status_nonrecursive_update,
               status_dash_u_deleted_directories,
              ]
 
