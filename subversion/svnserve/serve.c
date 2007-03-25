@@ -2240,7 +2240,6 @@ static svn_error_t *find_repos(const char *url, const char *root,
 {
   const char *path, *full_path, *repos_root;
   svn_stringbuf_t *url_buf;
-  svn_error_t *err;
 
   /* Skip past the scheme and authority part. */
   path = skip_scheme_part(url);
