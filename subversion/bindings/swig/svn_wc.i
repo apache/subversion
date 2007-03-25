@@ -85,11 +85,11 @@
 #endif
 
 #ifdef SWIGRUBY
-%callback_typemap(const svn_wc_entry_callbacks_t *walk_callbacks,
+%callback_typemap(const svn_wc_entry_callbacks2_t *walk_callbacks,
                   void *walk_baton,
                   ,
                   ,
-                  svn_swig_rb_wc_entry_callbacks())
+                  svn_swig_rb_wc_entry_callbacks2())
 #endif
 
 #ifndef SWIGRUBY
