@@ -94,8 +94,6 @@ module Svn
       private :_destroy
     end
 
-    Stream = SWIG::TYPE_p_svn_stream_t
-
     class Stream
       if Core.const_defined?(:STREAM_CHUNK_SIZE)
         CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
@@ -125,8 +123,8 @@ module Svn
         Core.stream_close(self)
       end
 
-      def copy(other)
-        Core.stream_copy(self, other)
+      def copy(other, &cancel_proc)
+        Core.stream_copy2(self, other, cancel_proc)
       end
       
       private
