@@ -194,11 +194,18 @@ module Svn
         Repos.fs_commit_txn(self, txn)
       end
 
-      def transaction_for_commit(author, log, rev=nil)
-        txn = nil
-        args = [self, rev || youngest_rev, author, log]
-        txn = Repos.fs_begin_txn_for_commit(*args)
-        
+      def transaction_for_commit(*args)
+        if args.first.is_a?(Hash)
+          props, rev = args
+        else
+          author, log, rev = args
+          props = {
+            Svn::Core::PROP_REVISION_AUTHOR => author,
+            Svn::Core::PROP_REVISION_LOG => log,
+          }
+        end
+        txn = Repos.fs_begin_txn_for_commit2(self, rev || youngest_rev, props)
+
         if block_given?
           yield(txn)
           commit(txn) if fs.transactions.include?(txn.name)
@@ -208,10 +215,8 @@ module Svn
       end
 
       def transaction_for_update(author, rev=nil)
-        txn = nil
-        args = [self, rev || youngest_rev, author]
-        txn = Repos.fs_begin_txn_for_update(*args)
-        
+        txn = Repos.fs_begin_txn_for_update(self, rev || youngest_rev, author)
+
         if block_given?
           yield(txn)
           txn.abort if fs.transactions.include?(txn.name)
