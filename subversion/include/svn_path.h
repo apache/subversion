@@ -189,13 +189,13 @@ void svn_path_split(const char *path,
  */
 int svn_path_is_empty(const char *path);
 
-/** Return TRUE if @a path is considered a root path on the platform at 
- * hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/', 
+/** Return TRUE if @a directory is considered a root directory on the platform
+ * at hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/', 
  * '\\\\.\\..', '\\\\server\\share' on Windows.
  *
  * @since New in 1.5.
  */
-svn_boolean_t svn_path_is_root(const char *path, apr_size_t len);
+svn_boolean_t svn_dirent_is_root(const char *dirent, apr_size_t len);
 
 
 /** Return a new path (or URL) like @a path, but transformed such that

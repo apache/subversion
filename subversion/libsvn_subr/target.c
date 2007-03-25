@@ -175,7 +175,7 @@ svn_path_condense_targets(const char **pcommon,
                  */
               rel_item += basedir_len;
               if (rel_item[0] && 
-                  ! svn_path_is_root(*pcommon, basedir_len))
+                  ! svn_dirent_is_root(*pcommon, basedir_len))
                 rel_item++;
             }
           

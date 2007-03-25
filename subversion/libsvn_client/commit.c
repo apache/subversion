@@ -1294,7 +1294,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
               while (strcmp(target, base_dir) != 0)
                 {
                   if ((target[0] == '\0') || 
-                      svn_path_is_root(target, strlen(target))
+                      svn_dirent_is_root(target, strlen(target))
                      )
                     abort();
 
