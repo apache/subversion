@@ -570,6 +570,27 @@ EOD
     assert_equal("", copied.read)
   end
 
+  def test_mime_type_parse
+    type_map = {
+      "html" => "text/html",
+      "htm" => "text/html",
+      "png" => "image/png",
+    }
+    mime_types_source = <<-EOM
+text/html html htm
+application/octet-stream
+
+image/png png
+EOM
+
+    mime_types = Tempfile.new("svn-ruby-mime-type")
+    mime_types.puts(mime_types_source)
+    mime_types.close
+
+    assert_equal(type_map, Svn::Core::MimeType.parse_file(mime_types.path))
+    assert_equal(type_map, Svn::Core::MimeType.parse(mime_types_source))
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new

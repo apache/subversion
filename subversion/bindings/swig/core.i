@@ -443,6 +443,16 @@
 }
 
 /* -----------------------------------------------------------------------
+   svn_io_parse_mimetypes_file()
+*/
+
+#ifdef SWIGRUBY
+%apply apr_hash_t **HASH_CSTRING {
+    apr_hash_t **type_map
+}
+#endif
+
+/* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
 */
 #ifdef SWIGPYTHON
