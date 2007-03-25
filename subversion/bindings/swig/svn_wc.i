@@ -38,6 +38,13 @@
 /* ### ignore this structure because the accessors will need a pool */
 %ignore svn_wc_keywords_t;
 
+#ifdef SWIGRUBY
+%ignore svn_wc_external_item_create;
+%ignore svn_wc_external_item_dup;
+%ignore svn_wc_external_item2_dup;
+%ignore svn_wc_revision_status;
+#endif
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
@@ -147,4 +154,46 @@ svn_wc_swig_init_asp_dot_net_hack (apr_pool_t *pool)
 
 #if defined(SWIGPYTHON)
 %pythoncode %{ svn_wc_swig_init_asp_dot_net_hack() %}
+#endif
+
+#ifdef SWIGRUBY
+%extend svn_wc_external_item2_t
+{
+  svn_wc_external_item2_t(apr_pool_t *pool) {
+    svn_error_t *err;
+    const svn_wc_external_item2_t *self;
+    err = svn_wc_external_item_create(&self, pool);
+    if (err)
+      svn_swig_rb_handle_svn_error(err);
+    return (svn_wc_external_item2_t *)self;
+  };
+
+  ~svn_wc_external_item2_t() {
+  };
+
+  svn_wc_external_item2_t *dup(apr_pool_t *pool) {
+    return svn_wc_external_item2_dup(self, pool);
+  };
+}
+
+%extend svn_wc_revision_status_t
+{
+  svn_wc_revision_status_t(const char *wc_path,
+                           const char *trail_url,
+                           svn_boolean_t committed,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *pool) {
+    svn_error_t *err;
+    svn_wc_revision_status_t *self;
+    err = svn_wc_revision_status(&self, wc_path, trail_url, committed,
+                                 cancel_func, cancel_baton, pool);
+    if (err)
+      svn_swig_rb_handle_svn_error(err);
+    return self;
+  };
+
+  ~svn_wc_revision_status_t() {
+  };
+}
 #endif

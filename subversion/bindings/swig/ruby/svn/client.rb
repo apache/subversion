@@ -25,15 +25,6 @@ module Svn
     end
 
     class CommitItem3
-      class << self
-        undef new
-        def new
-          item = Client.commit_item_create
-          item.__send!("initialize")
-          item
-        end
-      end
-
       alias_method :wcprop_changes, :incoming_prop_changes
       alias_method :wcprop_changes=, :incoming_prop_changes=
     end
@@ -67,20 +58,12 @@ module Svn
     
     Context = Ctx
     class Context
-      class << self
-        undef new
-        def new
-          obj = Client.create_context
-          obj.__send!("initialize")
-          obj
-        end
-      end
-
       alias _auth_baton auth_baton
       attr_reader :auth_baton
-      
+
       alias _initialize initialize
       def initialize
+        _initialize
         @prompts = []
         @batons = []
         @providers = []
@@ -88,7 +71,6 @@ module Svn
         self.auth_baton = @auth_baton
         init_callbacks
       end
-      undef _initialize
 
       def checkout(url, path, revision=nil, peg_rev=nil,
                    recurse=true, ignore_externals=false)

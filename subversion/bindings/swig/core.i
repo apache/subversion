@@ -646,6 +646,15 @@ PyObject *svn_swig_py_exception_type(void);
 };
 #endif
 
+
+/* ----------------------------------------------------------------------- */
+#ifdef SWIGRUBY
+%ignore svn_auth_open;
+%ignore svn_diff_file_options_create;
+%ignore svn_create_commit_info;
+%ignore svn_commit_info_dup;
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_error_codes_h.swg
@@ -818,6 +827,47 @@ struct svn_stream_t
   };
 
   ~svn_stream_t() {
+  };
+}
+
+/* Dummy declaration */
+struct svn_auth_baton_t
+{
+};
+
+%extend svn_auth_baton_t
+{
+  svn_auth_baton_t(apr_array_header_t *providers, apr_pool_t *pool) {
+    svn_auth_baton_t *self;
+    svn_auth_open(&self, providers, pool);
+    return self;
+  };
+
+  ~svn_auth_baton_t() {
+  };
+}
+
+%extend svn_diff_file_options_t
+{
+  svn_diff_file_options_t(apr_pool_t *pool) {
+    return svn_diff_file_options_create(pool);
+  };
+
+  ~svn_diff_file_options_t() {
+  };
+}
+
+%extend svn_commit_info_t
+{
+  svn_commit_info_t(apr_pool_t *pool) {
+    return svn_create_commit_info(pool);
+  };
+
+  ~svn_commit_info_t() {
+  };
+
+  svn_commit_info_t *dup(apr_pool_t *pool) {
+    return svn_commit_info_dup(self, pool);
   };
 }
 
