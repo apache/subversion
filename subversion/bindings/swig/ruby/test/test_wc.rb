@@ -286,8 +286,15 @@ class SvnWcTest < Test::Unit::TestCase
       access.mark_missing_deleted(path1)
       access.maybe_set_repos_root(path2, @repos_uri)
     end
+  end
 
+  def test_adm_ensure
+    adm_dir = Dir.glob(File.join(@wc_path, "{.,_}svn")).first
+    assert(File.exists?(adm_dir))
+    FileUtils.rm_rf(adm_dir)
+    assert(!File.exists?(adm_dir))
     Svn::Wc.ensure_adm(@wc_path, nil, @repos_uri, nil, 0)
+    assert(File.exists?(adm_dir))
   end
 
   def test_merge

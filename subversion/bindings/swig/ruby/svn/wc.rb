@@ -28,8 +28,8 @@ module Svn
       Wc.locked(path)
     end
 
-    def ensure_adm(path, uuid, url, repos, revision)
-      Wc.ensure_adm2(path, uuid, url, repos, revision)
+    def ensure_adm(*args)
+      AdmAccess.ensure(*args)
     end
 
     # For backward compatibility
@@ -96,6 +96,11 @@ module Svn
     AdmAccess = SWIG::TYPE_p_svn_wc_adm_access_t
     class AdmAccess
       class << self
+        def ensure(path, uuid, url, repos, revision, depth=nil)
+          depth ||= Svn::Core::DEPTH_INFINITY
+          Wc.ensure_adm3(path, uuid, url, repos, revision, depth)
+        end
+
         def open(associated, path, write_lock,
                  depth, cancel_func=nil, &block)
           _open(:adm_open3, associated, path, write_lock,
