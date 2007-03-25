@@ -4660,6 +4660,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(verify_checksum),
     SVN_TEST_PASS(closest_copy_test),
     SVN_TEST_PASS(root_revisions),
-    SVN_TEST_XFAIL(unordered_txn_dirprops),
+    SVN_TEST_PASS(unordered_txn_dirprops),
     SVN_TEST_NULL
   };
