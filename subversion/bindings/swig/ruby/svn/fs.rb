@@ -19,29 +19,61 @@ module Svn
       end
     end
 
+    @@alias_targets = %w(create open hotcopy recover)
+    class << self
+      @@alias_targets.each do |target|
+        alias_method "_#{target}", target
+      end
+    end
+    @@alias_targets.each do |target|
+      alias_method "_#{target}", target
+    end
+    @@alias_targets = nil
+
+    module_function
+    def create(path, config={}, &block)
+      _create(path, config, &block)
+    end
+
+    def delete(path)
+      Fs.delete_fs(path)
+    end
+
+    def open(path, config={}, &block)
+      _open(path, config, &block)
+    end
+
+    def hotcopy(src, dest, clean=false)
+      _hotcopy(src, dest, clean)
+    end
+
+    def recover(path, &cancel_func)
+      _recover(path, cancel_func)
+    end
+
     FileSystem = SWIG::TYPE_p_svn_fs_t
     class FileSystem
-
       class << self
-        def create(path, config={}, &block)
-          Fs.create(path, config, &block)
+        # For backward compatibility
+        def create(*args, &block)
+          Fs.create(*args, &block)
         end
 
-        def delete(path)
-          Fs.delete_fs(path)
+        def delete(*args, &block)
+          Fs.delete(*args, &block)
         end
 
-        def open(path, config={}, &block)
-          Fs.open(path, config, &block)
+        def open(*args, &block)
+          Fs.open(*args, &block)
         end
         alias new open
 
-        def hotcopy(src, dest, clean=false)
-          Fs.hotcopy(src, dest, clean)
+        def hotcopy(*args, &block)
+          Fs.hotcopy(*args, &block)
         end
 
-        def recover(path, &cancel_func)
-          Fs.recover(path, cancel_func)
+        def recover(*args, &block)
+          Fs.recover(*args, &block)
         end
       end
 
