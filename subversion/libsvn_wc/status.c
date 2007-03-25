@@ -1226,8 +1226,7 @@ make_dir_baton(void **dir_baton,
       && (status_in_parent->text_status != svn_wc_status_obstructed)
       && (status_in_parent->text_status != svn_wc_status_external)
       && (status_in_parent->text_status != svn_wc_status_ignored)
-      && (status_in_parent->entry->kind == svn_node_dir)
-      && (eb->descend || (! pb)))
+      && (status_in_parent->entry->kind == svn_node_dir))
     {
       svn_wc_adm_access_t *dir_access;
       apr_array_header_t *ignores = eb->ignores;
@@ -1668,7 +1667,7 @@ close_directory(void *dir_baton,
 
   /* Handle this directory's statuses, and then note in the parent
      that this has been done. */
-  if (pb && eb->descend)
+  if (pb)
     {
       svn_boolean_t was_deleted = FALSE;
 
@@ -1681,12 +1680,12 @@ close_directory(void *dir_baton,
 
       /* Now do the status reporting. */
       SVN_ERR(handle_statii(eb, dir_status ? dir_status->entry : NULL, 
-                            db->path, db->statii, was_deleted, TRUE, pool));
+                            db->path, db->statii, was_deleted, eb->descend, pool));
       if (dir_status && is_sendable_status(dir_status, eb))
         (eb->status_func)(eb->status_baton, db->path, dir_status);
       apr_hash_set(pb->statii, db->path, APR_HASH_KEY_STRING, NULL);
     }
-  else if (! pb)
+  else
     {
       /* If this is the top-most directory, and the operation had a
          target, we should only report the target. */
