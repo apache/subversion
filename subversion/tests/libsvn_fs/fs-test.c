@@ -4579,8 +4579,8 @@ unordered_txn_dirprops(const char **msg,
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn, *txn2;
-  svn_fs_root_t *txn_root, *txn_root2, *rev_root;
-  svn_string_t pval, *fetched_val;
+  svn_fs_root_t *txn_root, *txn_root2;
+  svn_string_t pval;
   svn_revnum_t new_rev;
 
   /* This is a regression test for issue #2751. */
@@ -4616,20 +4616,9 @@ unordered_txn_dirprops(const char **msg,
   /* Commit the second one first. */
   SVN_ERR(test_commit_txn(&new_rev, txn2, NULL, pool));
   
-  /* Then commit the first. */
-  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
-
-  /* Did our dir props survive? */
-  SVN_ERR(svn_fs_revision_root(&rev_root, fs, new_rev, pool));
-  SVN_ERR(svn_fs_node_prop(&fetched_val, rev_root, "/A/B", "name", pool));
-  if (! fetched_val)
-    return svn_error_create
-      (SVN_ERR_TEST_FAILED, NULL, "missing expected property");
-  if (strcmp(fetched_val->data, "value") != 0)
-    return svn_error_create
-      (SVN_ERR_TEST_FAILED, NULL, "unexpected property value");
-
-  return SVN_NO_ERROR;
+  /* Then commit the first -- but expect an conflict due to the
+     propchanges made by the other txn. */
+  return test_commit_txn(&new_rev, txn, "/A/B", pool);
 }
 
 /* ------------------------------------------------------------------------ */
