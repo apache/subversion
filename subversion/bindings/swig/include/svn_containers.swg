@@ -325,12 +325,12 @@
 
 /* -----------------------------------------------------------------------
    apr_array_header_t **externals_p
-   svn_wc_parse_externals_description2()
+   svn_wc_parse_externals_description3()
 */
 
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **externals_p {
-  %append_output(svn_swig_rb_apr_array_to_array_external_item(*$1));
+  %append_output(svn_swig_rb_apr_array_to_array_external_item2(*$1));
 }
 #endif
 

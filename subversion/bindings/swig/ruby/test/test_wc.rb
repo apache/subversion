@@ -139,13 +139,26 @@ class SvnWcTest < Test::Unit::TestCase
     assert_equal([{}, {}], info.edited_externals)
   end
 
-  def test_externals
+  def assert_externals_description
     dir = "dir"
     url = "http://svn.example.com/trunk"
     description = "#{dir} #{url}"
-    items = Svn::Wc.parse_externals_description(@wc_path, description)
+    items = yield([@wc_path, description])
     assert_equal([[dir, url]],
                  items.collect {|item| [item.target_dir, item.url]})
+    assert_kind_of(Svn::Wc::ExternalItem2, items.first)
+  end
+
+  def test_externals_description
+    assert_externals_description do |args|
+      Svn::Wc::ExternalsDescription.parse(*args)
+    end
+  end
+
+  def test_externals_description_for_backward_compatibility
+    assert_externals_description do |args|
+      Svn::Wc.parse_externals_description(*args)
+    end
   end
 
   def test_notify
