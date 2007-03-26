@@ -23,6 +23,16 @@ Status of 1.4.4:
 
 Candidate changes:
 
+  * r22311
+    Make svn_ra_do_{update,switch,status} work with the SWIG/Perl bindings.
+    Notes:
+      Backport was originally attempted in r22694, but merge was botched.
+      Probably needs a backport branch.
+    Justification:
+      Would be nice to fix something we already said we'd fixed in 1.4.3.
+    Votes:
+      +0: malcolm
+
   * r23115,r23117-23118
     Fix issue 2700: commit of locked file fails when no write access on root
     Justification:
