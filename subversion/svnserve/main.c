@@ -134,6 +134,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_VERSION     260
 #define SVNSERVE_OPT_PID_FILE    261
 #define SVNSERVE_OPT_SERVICE     262
+#define SVNSERVE_OPT_CONFIG_FILE 263
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -158,6 +159,8 @@ static const apr_getopt_option_t svnserve__options[] =
     {"threads",          'T', 0, N_("use threads instead of fork")},
 #endif
     {"listen-once",      'X', 0, N_("listen once (useful for debugging)")},
+    {"config-file",      SVNSERVE_OPT_CONFIG_FILE, 1,
+     N_("read configuration from file ARG")},
     {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
      N_("write server process ID to file arg")},
 #ifdef WIN32
@@ -323,6 +326,7 @@ int main(int argc, const char *argv[])
   const char *host = NULL;
   int family = APR_INET;
   int mode_opt_count = 0;
+  const char *config_filename = NULL;
   const char *pid_filename = NULL;
 
   /* Initialize the app. */
@@ -360,6 +364,10 @@ int main(int argc, const char *argv[])
   params.tunnel = FALSE;
   params.tunnel_user = NULL;
   params.read_only = FALSE;
+  params.cfg = NULL;
+  params.pwdb = NULL;
+  params.authzdb = NULL;
+
   while (1)
     {
       status = apr_getopt_long(os, svnserve__options, &opt, &arg);
@@ -435,6 +443,13 @@ int main(int argc, const char *argv[])
           break;
 #endif
 
+        case SVNSERVE_OPT_CONFIG_FILE:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&config_filename, arg, pool));
+          config_filename = svn_path_internal_style(config_filename, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&config_filename, config_filename,
+                                            pool));
+          break;
+
         case SVNSERVE_OPT_PID_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
           pid_filename = svn_path_internal_style(pid_filename, pool);
@@ -454,6 +469,14 @@ int main(int argc, const char *argv[])
                        stderr, pool));
       usage(argv[0], pool);
     }
+
+  /* If a configuration file is specified, load it and any referenced
+   * password and authorization files. */
+  if (config_filename)
+      SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
+                               config_filename, TRUE,
+                               svn_path_dirname(config_filename, pool),
+                               pool));
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {

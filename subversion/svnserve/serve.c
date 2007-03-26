@@ -88,6 +88,55 @@ typedef struct {
 enum authn_type { UNAUTHENTICATED, AUTHENTICATED };
 enum access_type { NO_ACCESS, READ_ACCESS, WRITE_ACCESS };
 
+svn_error_t *load_configs(svn_config_t **cfg,
+                          svn_config_t **pwdb,
+                          svn_authz_t **authzdb,
+                          const char *filename,
+                          svn_boolean_t must_exist,
+                          const char *base,
+                          apr_pool_t *pool)
+{
+  const char *pwdb_path, *authzdb_path;
+  svn_error_t *err;
+
+  SVN_ERR(svn_config_read(cfg, filename, must_exist, pool));
+
+  svn_config_get(*cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
+                 SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
+  
+  *pwdb = NULL;
+  if (pwdb_path)
+    {
+      pwdb_path = svn_path_join(base, pwdb_path, pool);
+
+      /* Because it may be possible to read the pwdb file with some
+       * access methods and not others, ignore errors reading the pwdb
+       * file and just don't present password authentication as an
+       * option.  TODO: Log a warning in this case, when we have a way
+       * of doing logging. */
+      err = svn_config_read(pwdb, pwdb_path, TRUE, pool);
+      if (err && err->apr_err == SVN_ERR_BAD_FILENAME)
+        svn_error_clear(err);
+      else if (err)
+        return err;
+    }
+
+  /* Read authz configuration. */
+  svn_config_get(*cfg, &authzdb_path, SVN_CONFIG_SECTION_GENERAL,
+                 SVN_CONFIG_OPTION_AUTHZ_DB, NULL);
+  if (authzdb_path)
+    {
+      authzdb_path = svn_path_join(base, authzdb_path, pool);
+      SVN_ERR(svn_repos_authz_read(authzdb, authzdb_path, TRUE, pool));
+    }
+  else
+    {
+      *authzdb = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Verify that URL is inside REPOS_URL and get its fs path. Assume that 
    REPOS_URL and URL are already URI-decoded. */
 static svn_error_t *get_fs_path(const char *repos_url, const char *url,
@@ -2077,9 +2126,8 @@ repos_path_valid(const char *path)
 static svn_error_t *find_repos(const char *url, const char *root,
                                server_baton_t *b, apr_pool_t *pool)
 {
-  const char *path, *full_path, *repos_root, *pwdb_path, *authz_path;
+  const char *path, *full_path, *repos_root;
   svn_stringbuf_t *url_buf;
-  svn_error_t *err;
 
   /* Skip past the scheme and authority part. */
   path = skip_scheme_part(url);
@@ -2121,52 +2169,18 @@ static svn_error_t *find_repos(const char *url, const char *root,
   b->repos_url = url_buf->data;
   b->authz_repos_name = svn_path_is_child(root, repos_root, pool);
 
-  /* Read repository configuration. */
-  SVN_ERR(svn_config_read(&b->cfg, svn_repos_svnserve_conf(b->repos, pool),
-                          FALSE, pool));
-  svn_config_get(b->cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
-                 SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
-  
-  b->pwdb = NULL;
-  b->realm = "";
-  if (pwdb_path)
-    {
-      pwdb_path = svn_path_join(svn_repos_conf_dir(b->repos, pool),
-                                pwdb_path, pool);
+  /* If the svnserve configuration files have not been loaded then
+     load them from the repository. */
+  if (NULL == b->cfg)
+    SVN_ERR(load_configs(&b->cfg, &b->pwdb, &b->authzdb,
+                         svn_repos_svnserve_conf(b->repos, pool), FALSE,
+                         svn_repos_conf_dir(b->repos, pool),
+                         pool));
 
-      /* Because it may be possible to read the pwdb file with some
-       * access methods and not others, ignore errors reading the
-       * pwdb file and just don't present password authentication as
-       * an option.  TODO: Log a warning in this case, when we have a
-       * way of doing logging. */
-      err = svn_config_read(&b->pwdb, pwdb_path, TRUE, pool);
-      if (err && err->apr_err == SVN_ERR_BAD_FILENAME)
-        svn_error_clear(err);
-      else if (err)
-        return err;
-      else
-        {
-          /* Use the repository UUID as the default realm. */
-          SVN_ERR(svn_fs_get_uuid(b->fs, &b->realm, pool));
-          svn_config_get(b->cfg, &b->realm, SVN_CONFIG_SECTION_GENERAL,
-                         SVN_CONFIG_OPTION_REALM, b->realm);
-        }
-    }
-
-  /* Read authz configuration. */
-  svn_config_get(b->cfg, &authz_path, SVN_CONFIG_SECTION_GENERAL,
-                 SVN_CONFIG_OPTION_AUTHZ_DB, NULL);
-  if (authz_path)
-    {
-      authz_path = svn_path_join(svn_repos_conf_dir(b->repos, pool),
-                                 authz_path, pool);
-      SVN_ERR(svn_repos_authz_read(&b->authzdb, authz_path,
-                                   TRUE, pool));
-    }
-  else
-    {
-      b->authzdb = NULL;
-    }
+  /* Use the repository UUID as the default realm. */
+  SVN_ERR(svn_fs_get_uuid(b->fs, &b->realm, pool));
+  svn_config_get(b->cfg, &b->realm, SVN_CONFIG_SECTION_GENERAL,
+                 SVN_CONFIG_OPTION_REALM, b->realm);
 
   /* Make sure it's possible for the client to authenticate.  Note
      that this doesn't take into account any authz configuration read
@@ -2209,8 +2223,10 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.tunnel_user = get_tunnel_user(params, pool);
   b.read_only = params->read_only;
   b.user = NULL;
-  b.cfg = NULL;  /* Ugly; can drop when we remove v1 support. */
-  b.pwdb = NULL; /* Likewise */
+  b.cfg = params->cfg;   /* Ugly; can drop when we remove v1 support. */
+  b.pwdb = params->pwdb; /* Likewise. */
+  b.authzdb = params->authzdb;
+  b.realm = NULL;
   b.pool = pool;
 
   /* Send greeting.   When we drop support for version 1, we can
