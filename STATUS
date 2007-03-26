@@ -113,13 +113,6 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r23846
-    ra_serf: Allow clients to checkout repositories when the root is forbidden.
-    Justification:
-      Low-impact fix and regression against ra_dav.
-    Votes:
-      +1: jerenkrantz, dlr, cmpilato
-
   * r23959
     Fix issue #1743: Inconsistent expansion of keyword
     Justification:
