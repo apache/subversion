@@ -1923,18 +1923,18 @@ public class BasicTests extends SVNTests
         // build the test setup
         OneTest thisTest = new OneTest();
         
-        // create branches directory in the repository
+        // create branches directory in the repository (r2)
         addExpectedCommitItem(null, thisTest.getUrl(), "branches",
                               NodeKind.none, CommitItemStateFlags.Add);
         client.mkdir(new String[]{thisTest.getUrl() + "/branches"}, "log_msg");
 
-        // copy A to branches
+        // copy A to branches (r3)
         addExpectedCommitItem(null, thisTest.getUrl(), "branches/A",
                               NodeKind.none, CommitItemStateFlags.Add);
         client.copy(thisTest.getUrl() + "/A", thisTest.getUrl() +
                     "/branches/A", "create A branch", Revision.HEAD);
 
-        // update the WC so that it has the branches folder
+        // update the WC (to r3) so that it has the branches folder
         client.update(thisTest.getWCPath(), Revision.HEAD, true);
 
         // modify file A/mu
@@ -1961,7 +1961,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/D/G/rho", NodeKind.file,
                               CommitItemStateFlags.TextMods);
-        // commit the changes
+        // commit the changes (r4)
         assertEquals("wrong revision number from commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true), 4);
@@ -1978,6 +1978,9 @@ public class BasicTests extends SVNTests
                      branchPath, false, true, false, false);
 
         // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "branches/A/mu", NodeKind.file,
                               CommitItemStateFlags.TextMods);
