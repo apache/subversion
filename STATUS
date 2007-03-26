@@ -113,17 +113,6 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r23491, r23492
-    Fix a hang during character translation (r23492).
-    Theoretically improve memory usage in an edge case (r23491).
-    Justification:
-      Hangs are bad - this example was reporting by a user.
-    Note:
-      r23492 depends upon -91, or something very like it, even though
-      -91 is an unrelated change, strictly speaking.
-    Votes:
-      +1: malcolm, dlr, cmpilato
-
   * r23846
     ra_serf: Allow clients to checkout repositories when the root is forbidden.
     Justification:
