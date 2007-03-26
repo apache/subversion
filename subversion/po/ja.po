@@ -174,8 +174,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-03-26 11:11+0900\n"
-"PO-Revision-Date: 2007-03-26 11:46+0900\n"
+"POT-Creation-Date: 2007-03-26 21:18+0900\n"
+"PO-Revision-Date: 2007-03-26 21:22+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1420,7 +1420,7 @@ msgstr "'%s' は存在します。そしてディレクトリではありませ�
 msgid "'%s' already exists"
 msgstr "'%s' は既に存在します"
 
-#: libsvn_client/export.c:676 libsvn_wc/adm_crawler.c:1052
+#: libsvn_client/export.c:676 libsvn_wc/adm_crawler.c:1048
 #: libsvn_wc/update_editor.c:1873 libsvn_wc/update_editor.c:2463
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
@@ -1462,7 +1462,7 @@ msgid "'%s' is not locked"
 msgstr "'%s' はロックされていません"
 
 #: libsvn_client/locking_commands.c:406 libsvn_fs/fs-loader.c:932
-#: libsvn_ra/ra_loader.c:870
+#: libsvn_ra/ra_loader.c:863
 msgid "Lock comment contains illegal characters"
 msgstr "ロックについてのコメントに不正な文字が含まれています"
 
@@ -2804,12 +2804,12 @@ msgstr "'%s' 用の URL スキームを認識できません"
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr "'%s' は '%s' と同じリポジトリにありません"
 
-#: libsvn_ra/ra_loader.c:952
+#: libsvn_ra/ra_loader.c:945
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - '%s' スキームを操作します\n"
 
-#: libsvn_ra/ra_loader.c:1038
+#: libsvn_ra/ra_loader.c:1031
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "URL スキーム '%s' を認識できません"
@@ -3979,33 +3979,33 @@ msgstr "'%s' はファイルシステムに見つかりません"
 msgid "Filesystem path '%s' is neither a file nor a directory"
 msgstr "ファイルシステムのパス '%s' はファイルでもディレクトリでもありません"
 
-# FIXME: This string is wrongly extracted; source code should be corrected.
 #: libsvn_repos/reporter.c:218
-msgid "Invalid depth (%"
-msgstr "深さが不正です (%"
+#, c-format
+msgid "Invalid depth (%s) for path '%s'"
+msgstr "深さの指定 (%s) が不正です (パス: '%s')"
 
-#: libsvn_repos/reporter.c:650
+#: libsvn_repos/reporter.c:649
 #, c-format
 msgid "Working copy path '%s' does not exist in repository"
 msgstr "作業コピーパス '%s' がリポジトリに存在しません"
 
-#: libsvn_repos/reporter.c:945
+#: libsvn_repos/reporter.c:944
 msgid "Not authorized to open root of edit operation"
 msgstr "編集用ルートパスを開く操作が認証されていません"
 
-#: libsvn_repos/reporter.c:964
+#: libsvn_repos/reporter.c:963
 msgid "Target path does not exist"
 msgstr "対象パスは存在しません"
 
-#: libsvn_repos/reporter.c:971
+#: libsvn_repos/reporter.c:970
 msgid "Cannot replace a directory from within"
 msgstr "ディレクトリを内側から置換することはできません"
 
-#: libsvn_repos/reporter.c:1014
+#: libsvn_repos/reporter.c:1013
 msgid "Invalid report for top level of working copy"
 msgstr "作業コピーのトップレベルについての報告が不正です"
 
-#: libsvn_repos/reporter.c:1029
+#: libsvn_repos/reporter.c:1028
 msgid "Two top-level reports with no target"
 msgstr "対象がないのにトップレベルの報告が 2 つあります"
 
@@ -4893,7 +4893,7 @@ msgstr "異常な XML です: %s (行 %d)"
 msgid "Error aborting report"
 msgstr "報告を中断する際にエラーが発生しました"
 
-#: libsvn_wc/adm_crawler.c:1063
+#: libsvn_wc/adm_crawler.c:1059
 #, c-format
 msgid "While preparing '%s' for commit"
 msgstr "'%s' のコミットを準備する際に"
@@ -10230,6 +10230,10 @@ msgstr "エクスポートされたものです%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
+
+# * This string is wrongly extracted.
+#~ msgid "Invalid depth (%"
+#~ msgstr "深さが不正です (%"
 
 # * Description for 'svn --depth'.
 # * 29 half-size characters are displayed on the left.
