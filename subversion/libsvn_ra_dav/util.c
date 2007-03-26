@@ -604,15 +604,10 @@ parsed_request(ne_session *sess,
   /* create/prep the request */
   req = ne_request_create(sess, method, url);
 
-  if (body_file != NULL)
-    {
-      if ((err = svn_ra_dav__set_neon_body_provider(req, body_file)))
-        goto cleanup;
-    }
-  else
-    {
-      ne_set_request_body_buffer(req, body ? body : "", strlen(body ? body : ""));
-    }
+  if (body != NULL)
+    ne_set_request_body_buffer(req, body, strlen(body));
+  else if ((err = svn_ra_dav__set_neon_body_provider(req, body_file)))
+    goto cleanup;
 
   /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req, "Content-Type", "text/xml");
