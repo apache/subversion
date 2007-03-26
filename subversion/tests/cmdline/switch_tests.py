@@ -1411,9 +1411,9 @@ def mergeinfo_switch_elision(sbox):
   "mergeinfo elides to closest ancestor w/ same info"
 
   # When a switch would add mergeinfo on a node which is identical to
-  # (or is a superset of) the *local*  mergeinfo on one of the node's
-  # descendents, then the mergeinfo on the descendent node is "elided" in
-  # favor of the ancestor's mergeinfo.
+  # the *local*  mergeinfo on one of the node's descendents, then the
+  # mergeinfo on the descendent node is "elided" in favor of the ancestor's
+  # mergeinfo.
 
   # Search for the comment entitled "The Merge Kluge" in merge_tests.py
   # to understand why we shorten, and subsequently chdir() after calling
@@ -1563,26 +1563,27 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
 
-  # Merge r3 into A/B_COPY_2/E
+  # Merge r2:4 into A/B_COPY_2/E
   short_E_COPY_2_path = shorten_path_kludge(E_COPY_2_path)
   expected_output = svntest.wc.State(short_E_COPY_2_path, {
+    'alpha' : Item(status='U '),
     'beta'  : Item(status='U '),
     })
   expected_merge_status = svntest.wc.State(short_E_COPY_2_path, {
     ''      : Item(status=' M', wc_rev=2),
-    'alpha' : Item(status='  ', wc_rev=2),
+    'alpha' : Item(status='M ', wc_rev=2),
     'beta'  : Item(status='M ', wc_rev=2),
     })
   expected_merge_disk = svntest.wc.State('', {
-    ''        : Item(props={"svn:mergeinfo" : '/A/B/E:3'}),
-    'alpha' : Item("This is the file 'alpha'.\n"),
+    ''        : Item(props={"svn:mergeinfo" : '/A/B/E:1,3-4'}),
+    'alpha' : Item("New content"),
     'beta'  : Item("New content"),
     })
   expected_skip = svntest.wc.State(short_E_COPY_2_path, { })
   saved_cwd = os.getcwd()
   try:
     os.chdir(svntest.main.work_dir)
-    svntest.actions.run_and_verify_merge(short_E_COPY_2_path, '2', '3',
+    svntest.actions.run_and_verify_merge(short_E_COPY_2_path, '2', '4',
                                          sbox.repo_url + \
                                          '/A/B/E',
                                          expected_output,
@@ -1594,15 +1595,14 @@ def mergeinfo_switch_elision(sbox):
   finally:
     os.chdir(saved_cwd)
 
-  # Switch A/B_COPY_2 to URL of A/B_COPY_1
-  # The local mergeinfo '/A/B/E:3' on A/B_COPY_2/E is a subset
-  # of the mergeinfo added to A/B_COPY_2 as a result of the switch,
-  # so the former should be elided.
+  # Switch A/B_COPY_2 to URL of A/B_COPY_1.  The local mergeinfo for r1,3-4
+  # on A/B_COPY_2/E is identical to the mergeinfo added to A/B_COPY_2 as a
+  # result of the switch, so the former should be elided to the latter.
 
   # Setup expected results of switch.
   expected_output = svntest.wc.State(sbox.wc_dir, {
     "A/B_COPY_2"         : Item(status=' U'),
-    "A/B_COPY_2/E/alpha" : Item(status='U '),
+    "A/B_COPY_2/E/alpha" : Item(status='G '),
     "A/B_COPY_2/E/beta"  : Item(status='G '),
     })
 
