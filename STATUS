@@ -103,24 +103,23 @@ Candidate changes:
     Votes:
       +1: jerenkrantz, dlr
 
-  * r21989,r22884,r23347,r23348,r23349,r23357,r23359,r23363,r23364,r23384,
-    r23385,r23387,r23395,r23763,r23764,r23794,r23795,r23799,r23807
+  * r21989, r22884, r23347-23349, r23357, r23359, r23363, r23364, r23384,
+    r23385, r23387, r23395, r23763, r23764, r23794, r23795, r23799, r23807
     Bring mucc and mucc-test.py up to date with respect to trunk,
-      except for r23427, which uses svn_stringbuf_from_file2() in 1.5.
+    except for r23427, which uses svn_stringbuf_from_file2() in 1.5.
     Justification:
       This is becoming a very useful tool for making restructuring
-        commits that would otherwise require extremely large working
-        copies.
+      commits that would otherwise require extremely large working
+      copies.
     Notes:
       Blair ran mucc-test.py against this merge and it passed the
-        test.
-      The person doing the merge should ensure that mucc-test.sh is
-        deleted, as svnmerge.py skips that for some reason.  Also, if
-        a test merge run is done with without commiting and then
-        reverting, then also delete the new mucc-test.py, since the
-        next svnmerge.py will ignore it the second time around.
+      test.  The person doing the merge should ensure that mucc-test.sh is
+      deleted, as svnmerge.py skips that for some reason.  Also, if
+      a test merge run is done with without committing and then
+      reverting, then also delete the new mucc-test.py, since the
+      next svnmerge.py will ignore it the second time around.
     Votes:
-      +1: blair
+      +1: blair, cmpilato
 
  * r23959
    Fix issue #1745: Inconsistent expansion of keyword
