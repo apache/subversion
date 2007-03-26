@@ -2779,9 +2779,9 @@ def mergeinfo_update_elision(sbox):
   "mergeinfo elides to closest ancestor w/ same info"
 
   # When an update would result in mergeinfo on a node which is identical
-  # to (or is a superset of) the *local*  mergeinfo on one of the node's
-  # descendents, then the mergeinfo on the descendent node is "elided" in
-  # favor of the ancestor's mergeinfo.
+  # to the *local*  mergeinfo on one of the node's descendents, then the
+  # mergeinfo on the descendent node is "elided" in favor of the ancestor's
+  # mergeinfo.
 
   # Search for the comment entitled "The Merge Kluge" in merge_tests.py
   # to understand why we shorten, and subsequently chdir() after calling
@@ -2798,8 +2798,6 @@ def mergeinfo_update_elision(sbox):
   alpha_path  = os.path.join(wc_dir, "A", "B", "E", "alpha")
   B_COPY_path = os.path.join(wc_dir, "A", "B_COPY")
   beta_path   = os.path.join(wc_dir, "A", "B", "E", "beta")
-  beta_COPY_path = os.path.join(wc_dir, "A", "B_COPY", "E", "beta")
-  E_COPY_path = os.path.join(wc_dir, "A", "B_COPY", "E")
   lambda_path = os.path.join(wc_dir, "A", "B", "lambda")
 
   # Make a branch A/B_COPY
@@ -2942,7 +2940,7 @@ def mergeinfo_update_elision(sbox):
                                         None, None, 1,
                                         '-r', '5', wc_dir)
 
-  # Merge r5 to A/B_COPY/E/alpha
+  # Merge r2:5 to A/B_COPY/E/alpha
   short_alpha_COPY_path = shorten_path_kludge(alpha_COPY_path)
   expected_output = wc.State(short_alpha_COPY_path, {
     'alpha' : Item(status='U '),
@@ -2956,7 +2954,7 @@ def mergeinfo_update_elision(sbox):
     svntest.actions.run_and_verify_svn(None,
                                        ['U    ' + \
                                         short_alpha_COPY_path + '\n'],
-                                       [], 'merge', '-c5',
+                                       [], 'merge', '-r2:5',
                                        sbox.repo_url + '/A/B/E/alpha',
                                        short_alpha_COPY_path)
   finally:
@@ -2968,58 +2966,23 @@ def mergeinfo_update_elision(sbox):
   svntest.actions.run_and_verify_status(alpha_COPY_path,
                                         expected_alpha_status)
 
-  # Merge r3 to A/B_COPY/E
-  short_E_COPY_path = shorten_path_kludge(E_COPY_path)
-  expected_output = wc.State(short_E_COPY_path, {
-    'beta' : Item(status='U '),
-    })
-  expected_merge_status = wc.State(short_E_COPY_path, {
-    ''      : Item(status=' M', wc_rev=5),
-    'alpha' : Item(status='MM', wc_rev=5),
-    'beta'  : Item(status='M ', wc_rev=5),
-    })
-  expected_merge_disk = wc.State('', {
-    ''      : Item(props={"svn:mergeinfo" : '/A/B/E:3'}),
-    'alpha' : Item("New content",
-                   props={"svn:mergeinfo" : '/A/B/E/alpha:3,5'}),
-    'beta'  : Item("New content"),
-    })
-  expected_skip = wc.State(short_E_COPY_path, { })
-  saved_cwd = os.getcwd()
-  try:
-    os.chdir(svntest.main.work_dir)
-    svntest.actions.run_and_verify_merge(short_E_COPY_path, '2', '3',
-                                         sbox.repo_url + \
-                                         '/A/B/E',
-                                         expected_output,
-                                         expected_merge_disk,
-                                         expected_merge_status,
-                                         expected_skip,
-                                         None, None, None, None,
-                                         None, 1)
-  finally:
-    os.chdir(saved_cwd)
+  svntest.actions.run_and_verify_svn(None, ["/A/B/E/alpha:1,3-5\n"], [],
+                                     'propget', "svn:mergeinfo",
+                                     alpha_COPY_path)
 
-  # Update WC
+  # Update WC.  The local mergeinfo (r1,3-5) on A/B_COPY/E/alpha is
+  # identical to that on added to A/B_COPY by the update, so should
+  # elide to the latter, leaving no mereginfo on alpha.
   expected_output = wc.State(wc_dir, {
     'A/B_COPY/lambda'  : Item(status='U '),
     'A/B_COPY/E/alpha' : Item(status='G '),
-    'A/B_COPY/E/beta'  : Item(status='G '),
+    'A/B_COPY/E/beta'  : Item(status='U '),
     'A/B_COPY'         : Item(status=' U'),
     })
-
-  # The local mergeinfo 'A/B/E:5' on A/B_COPY/E and
-  # 'A/B/E/alpha:3,5' on A/B_COPY/E/alpha should both
-  # elide to A/B_COPY, so don't expect either.
-  #
-  #   expected_disk.tweak('A/B_COPY/E',
-  #                       props={'svn:mergeinfo' : '/A/B/E:3'})
-  #   expected_disk.tweak('A/B_COPY/E/alpha', contents="New content",
-  #                       props={'svn:mergeinfo' : '/A/B/E/alpha:3,5'})
-
   expected_disk.tweak('A/B_COPY', props={'svn:mergeinfo' : '/A/B:1,3-5'})
   expected_disk.tweak('A/B_COPY/lambda', contents="New content")
   expected_disk.tweak('A/B_COPY/E/beta', contents="New content")
+  expected_disk.tweak('A/B_COPY/E/alpha', contents="New content")
   expected_status.tweak(wc_rev=6, status='  ')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
