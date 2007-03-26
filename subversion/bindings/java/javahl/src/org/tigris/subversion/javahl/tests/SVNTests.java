@@ -38,61 +38,75 @@ class SVNTests extends TestCase
      * repositories
      */
     protected SVNAdmin admin;
+
     /**
      * the subversion client, what we want to test.
      */
     protected SVNClientInterface client;
+
     /**
      * The root directory for the test data. All other files and
      * directories will created under here.
      */
     protected final File rootDir;
+
     /**
      * the base name of the test. Together with the testCounter this will make
      * up the directory name of the test.
      */
     protected String testBaseName;
+
     /**
-     * this counter will be incremented for every test in one suite (test class)
+     * this counter will be incremented for every test in one suite
+     * (test class)
      */
     protected static int testCounter;
+
     /**
      * the file in which the sample repository has been dumped.
      */
     protected File greekDump;
+
     /**
      * the directory of the sample repository.
      */
     protected File greekRepos;
+
     /**
      * the initial working copy of the sample repository.
      */
     protected WC greekWC;
+
     /**
      * the directory "local_tmp" in the rootDir.  This will be used
      * for the sample repository and its dumpfile and for the config
      * directory.
      */
     protected final File localTmp;
+
     /**
      * the directory "repositories" in the rootDir. All test repositories will
      * be created here.
      */
     protected final File repositories;
+
     /**
      * the directory "working_copies" in the rootDir. All test working copies
      * will be created here.
      */
     protected final File workingCopies;
+
     /**
      * the directory "config" in the localTmp. It will be used as the
      * configuration directory for all the tests.
      */
     protected final File conf;
+
     /**
      * standard log message. Used for all commits.
      */
     protected String logMessage = "Log Message";
+
     /**
      * the map of all items expected to be received by the callback for the
      * log message. After each commit, this will be cleared
@@ -168,13 +182,13 @@ class SVNTests extends TestCase
         greekRepos = new File(localTmp, "repos");
         greekDump = new File(localTmp, "greek_dump");
         admin.create(greekRepos.getAbsolutePath(), true,false, null,
-                SVNAdmin.BDB);
+                     SVNAdmin.BDB);
         addExpectedCommitItem(greekFiles.getAbsolutePath(), null, null,
-                NodeKind.none, CommitItemStateFlags.Add);
+                              NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
-                null, true );
+                        null, true );
         admin.dump(greekRepos.getAbsolutePath(), new FileOutputer(greekDump),
-                new IgnoreOutputer(), null, null, false);
+                   new IgnoreOutputer(), null, null, false);
     }
 
     /**
@@ -303,7 +317,8 @@ class SVNTests extends TestCase
     }
 
     /**
-     * add another commit item expected during the callback for the log message.
+     * add another commit item expected during the callback for the
+     * log message.
      * @param workingCopyPath   the path of the of the working
      * @param baseUrl           the url for the repository
      * @param itemPath          the path of the item relative the working copy
@@ -311,8 +326,10 @@ class SVNTests extends TestCase
      * @param stateFlags        expected commit state flags
      *                          (see CommitItemStateFlags)
      */
-    protected void addExpectedCommitItem(String workingCopyPath, String baseUrl,
-                                         String itemPath, int nodeKind,
+    protected void addExpectedCommitItem(String workingCopyPath,
+                                         String baseUrl,
+                                         String itemPath,
+                                         int nodeKind,
                                          int stateFlags)
     {
         //determine the full working copy path and the full url of the item.
@@ -337,7 +354,7 @@ class SVNTests extends TestCase
         else
             key = path;
         expectedCommitItems.put(key, new MyCommitItem(path, nodeKind,
-                stateFlags, url));
+                                                      stateFlags, url));
     }
 
     /**
@@ -476,14 +493,17 @@ class SVNTests extends TestCase
          * the file name of repository (used by SVNAdmin)
          */
         protected File repository;
+
         /**
          * the file name of the working copy directory
          */
         protected File workingCopy;
+
         /**
          * the url of the repository (used by SVNClient)
          */
         protected String url;
+
         /**
          * the expected layout of the working copy after the next subversion
          * command
@@ -573,6 +593,7 @@ class SVNTests extends TestCase
         {
             return repository;
         }
+
         /**
          * Return the name of the directory of the repository
          * @return the name of repository directory
@@ -581,6 +602,7 @@ class SVNTests extends TestCase
         {
             return repository.getAbsolutePath();
         }
+
         /**
          * Return the working copy directory
          * @return the working copy directory
@@ -589,6 +611,7 @@ class SVNTests extends TestCase
         {
             return workingCopy;
         }
+
         /**
          * Return the working copy directory name
          * @return the name of the working copy directory
@@ -597,6 +620,7 @@ class SVNTests extends TestCase
         {
             return workingCopy.getAbsolutePath();
         }
+
         /**
          * Returns the url of repository
          * @return  the url
@@ -605,6 +629,7 @@ class SVNTests extends TestCase
         {
             return url;
         }
+
         /**
          * Returns the expected working copy content
          * @return the expected working copy content
@@ -613,6 +638,7 @@ class SVNTests extends TestCase
         {
             return wc;
         }
+
         /**
          * Create the repository for the beginning of the test.
          * Assumes that {@link #testName} has been set.
@@ -631,9 +657,9 @@ class SVNTests extends TestCase
             removeDirOrFile(repos);
             // create and load the repository from the default repository dump
             admin.create(repos.getAbsolutePath(), true, false,
-                    conf.getAbsolutePath(), SVNAdmin.BDB);
+                         conf.getAbsolutePath(), SVNAdmin.BDB);
             admin.load(repos.getAbsolutePath(), new FileInputer(greekDump),
-                    new IgnoreOutputer(), false, false, null);
+                       new IgnoreOutputer(), false, false, null);
             return repos;
         }
 
@@ -709,7 +735,8 @@ class SVNTests extends TestCase
     class MyCommitMessage implements CommitMessage
     {
         /**
-         * Retrieve a commit message from the user based on the items to be commited
+         * Retrieve a commit message from the user based on the items
+         * to be commited
          * @param elementsToBeCommited  Array of elements to be commited
          * @return  the log message of the commit.
          */
