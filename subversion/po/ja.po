@@ -174,8 +174,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-03-26 10:56+0900\n"
-"PO-Revision-Date: 2007-03-26 10:56+0900\n"
+"POT-Creation-Date: 2007-03-26 11:11+0900\n"
+"PO-Revision-Date: 2007-03-26 11:46+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1440,8 +1440,8 @@ msgstr "URL '%s' は、そのリビジョンには存在しません"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "共通の親が見つかりません。互いに無関係の引数に対する操作はできません"
 
-#: libsvn_client/locking_commands.c:260 libsvn_client/merge.c:2071
-#: libsvn_client/merge.c:2077 libsvn_client/merge.c:2255
+#: libsvn_client/locking_commands.c:260 libsvn_client/merge.c:2054
+#: libsvn_client/merge.c:2060 libsvn_client/merge.c:2238
 #: libsvn_client/ra.c:375 libsvn_client/ra.c:741 libsvn_client/ra.c:878
 #, c-format
 msgid "'%s' has no URL"
@@ -1512,7 +1512,7 @@ msgstr ".merge-left.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/merge.c:1173
+#: libsvn_client/merge.c:1156
 #, c-format
 msgid ""
 "Path '%s' is in conflict, and must be resolved before the remainder of the "
@@ -1521,7 +1521,7 @@ msgstr ""
 "パス '%s' が衝突しています。指定されたマージのうちまだ適用されていないものを"
 "適用する前に、この衝突を解決しなければなりません"
 
-#: libsvn_client/merge.c:1466 libsvn_client/merge.c:1779
+#: libsvn_client/merge.c:1449 libsvn_client/merge.c:1762
 msgid "Use of two URLs is not compatible with merge info modification"
 msgstr "マージ情報の修正とともに 2 つの URL を使用することはできません"
 
@@ -2414,8 +2414,8 @@ msgstr "'%s' に予想外の変更できないノードがあります"
 msgid "Conflict at '%s'"
 msgstr "'%s' で競合が生じています"
 
-#: libsvn_fs_base/tree.c:1924 libsvn_fs_base/tree.c:2629
-#: libsvn_fs_fs/tree.c:1311 libsvn_fs_fs/tree.c:1798
+#: libsvn_fs_base/tree.c:1924 libsvn_fs_base/tree.c:2636
+#: libsvn_fs_fs/tree.c:1311 libsvn_fs_fs/tree.c:1803
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr ""
 "不正なマージです。祖先・マージ元・対象のどれかが同じファイルシステムにありま"
@@ -2426,25 +2426,25 @@ msgstr ""
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr "不正なマージです。対象 '%s' が祖先と同じ ID '%s' をもっています"
 
-#: libsvn_fs_base/tree.c:2436
+#: libsvn_fs_base/tree.c:2443
 #, c-format
 msgid "Transaction '%s' out of date with respect to revision '%s'"
 msgstr "トランザクション '%s' はリビジョン '%s' に対して古くなっています"
 
-#: libsvn_fs_base/tree.c:2812 libsvn_fs_fs/tree.c:1937
+#: libsvn_fs_base/tree.c:2819 libsvn_fs_fs/tree.c:1942
 msgid "The root directory cannot be deleted"
 msgstr "ルートディレクトリは削除できません"
 
-#: libsvn_fs_base/tree.c:2992 libsvn_fs_fs/tree.c:2009
+#: libsvn_fs_base/tree.c:2999 libsvn_fs_fs/tree.c:2014
 #, c-format
 msgid "Cannot copy between two different filesystems ('%s' and '%s')"
 msgstr "二つの異なるファイルシステム ('%s' と '%s') の間でコピーはできません"
 
-#: libsvn_fs_base/tree.c:3001 libsvn_fs_fs/tree.c:2015
+#: libsvn_fs_base/tree.c:3008 libsvn_fs_fs/tree.c:2020
 msgid "Copy from mutable tree not currently supported"
 msgstr "変更可能なツリーからのコピーは今のところサポートされていません"
 
-#: libsvn_fs_base/tree.c:3496 libsvn_fs_fs/tree.c:2439
+#: libsvn_fs_base/tree.c:3503 libsvn_fs_fs/tree.c:2444
 #, c-format
 msgid ""
 "Base checksum mismatch on '%s':\n"
@@ -2455,12 +2455,12 @@ msgstr ""
 "   期待:  %s\n"
 "   実際:  %s\n"
 
-#: libsvn_fs_base/tree.c:3749 libsvn_fs_fs/tree.c:2675
+#: libsvn_fs_base/tree.c:3756 libsvn_fs_fs/tree.c:2680
 msgid "Cannot compare file contents between two different filesystems"
 msgstr "二つの異なるファイルシステムの間でファイルの内容の比較はできません"
 
-#: libsvn_fs_base/tree.c:3758 libsvn_fs_base/tree.c:3763
-#: libsvn_fs_fs/tree.c:2684 libsvn_fs_fs/tree.c:2689
+#: libsvn_fs_base/tree.c:3765 libsvn_fs_base/tree.c:3770
+#: libsvn_fs_fs/tree.c:2689 libsvn_fs_fs/tree.c:2694
 #: libsvn_repos/rev_hunt.c:804
 #, c-format
 msgid "'%s' is not a file"
@@ -4325,7 +4325,7 @@ msgstr "ストリームをフラッシュできません"
 msgid "Can't flush file to disk"
 msgstr "ファイルをディスクにフラッシュできません"
 
-#: libsvn_subr/io.c:1595 libsvn_subr/prompt.c:97 svnserve/main.c:514
+#: libsvn_subr/io.c:1595 libsvn_subr/prompt.c:97 svnserve/main.c:537
 #, c-format
 msgid "Can't open stdin"
 msgstr "標準入力を開けません"
@@ -4678,22 +4678,22 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "使用方法を知りたいときは '%s help' と打ってください。\n"
 
-#: libsvn_subr/path.c:1105
+#: libsvn_subr/path.c:1107
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "'%s' の絶対パスを決定できませんでした"
 
-#: libsvn_subr/path.c:1143
+#: libsvn_subr/path.c:1145
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "'%s' はファイル名でもディレクトリ名でもありません"
 
-#: libsvn_subr/path.c:1249
+#: libsvn_subr/path.c:1251
 #, c-format
 msgid "Can't determine the native path encoding"
 msgstr "ネイティブのパスエンコーディングを決定できません"
 
-#: libsvn_subr/path.c:1303
+#: libsvn_subr/path.c:1305
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "不正な制御文字 '0x%02x' がパス '%s' にあります"
@@ -5732,7 +5732,7 @@ msgstr "そのような変更リストはありません: '%s'"
 msgid "'%s' does not appear to be a URL"
 msgstr "'%s' は URL ではないようです"
 
-#: svn/copy-cmd.c:124 svn/delete-cmd.c:64 svn/mkdir-cmd.c:66
+#: svn/copy-cmd.c:124 svn/delete-cmd.c:64 svn/mkdir-cmd.c:66 svn/move-cmd.c:76
 #: svn/propedit-cmd.c:201
 msgid ""
 "Local, non-commit operations do not take a log message or revision properties"
@@ -5740,7 +5740,7 @@ msgstr ""
 "ローカルの、コミットを伴わない操作にログメッセージやリビジョン属性はつけられ"
 "ません"
 
-#: svn/diff-cmd.c:117 svnserve/main.c:523
+#: svn/diff-cmd.c:117 svnserve/main.c:546
 #, c-format
 msgid "Can't open stdout"
 msgstr "標準出力を開けません"
@@ -6189,7 +6189,7 @@ msgstr ""
 # * Description for 'svn{,admin,dumpfilter,look,serve,sync,version} --version'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:92 svnadmin/main.c:236 svndumpfilter/main.c:786
-#: svnlook/main.c:129 svnserve/main.c:150 svnsync/main.c:133
+#: svnlook/main.c:129 svnserve/main.c:151 svnsync/main.c:133
 #: svnversion/main.c:125
 msgid "show program version information"
 msgstr "プログラムのバージョン情報を表示します"
@@ -6273,7 +6273,7 @@ msgstr ""
 #: svn/main.c:132
 msgid ""
 "pass depth ('empty', 'files', 'immediates', or\n"
-"                            'infinity') as arg"
+"                            'infinity') as ARG"
 msgstr ""
 "深さ ('empty'、'files'、'immediates'、'infinity'\n"
 "                             のいずれか) として <ARG> を渡します"
@@ -7927,13 +7927,6 @@ msgid "Try 'svn add' or 'svn add --non-recursive' instead?"
 msgstr ""
 "代わりに 'svn add' または 'svn add --non-recursive' を試してみてください"
 
-#: svn/move-cmd.c:76
-msgid ""
-"Local, non-commit operations do not take a log messageor revision properties"
-msgstr ""
-"ローカルの、コミットを伴わない操作にログメッセージやリビジョン属性はつけられ"
-"ません"
-
 #: svn/notify.c:72
 #, c-format
 msgid "Skipped missing target: '%s'\n"
@@ -8849,7 +8842,7 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svnadmin/main.c:698 svnlook/main.c:1687 svnserve/main.c:204
+#: svnadmin/main.c:698 svnlook/main.c:1687 svnserve/main.c:207
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -9654,13 +9647,13 @@ msgstr "認証済みのユーザ名を取得できませんでした"
 
 # * Description for 'svnserve --daemon'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:141
+#: svnserve/main.c:142
 msgid "daemon mode"
 msgstr "デーモンモード"
 
 # * Description for 'svnserve --listen-port'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:143
+#: svnserve/main.c:144
 msgid "listen port (for daemon mode)"
 msgstr ""
 "指定されたポート番号で待ち受けます (デーモンモー\n"
@@ -9668,7 +9661,7 @@ msgstr ""
 
 # * Description for 'svnserve --listen-host'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:145
+#: svnserve/main.c:146
 msgid "listen hostname or IP address (for daemon mode)"
 msgstr ""
 "指定されたホスト名または IP アドレスで待ち受けま\n"
@@ -9676,31 +9669,31 @@ msgstr ""
 
 # * Description for 'svnserve --foreground'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:147
+#: svnserve/main.c:148
 msgid "run in foreground (useful for debugging)"
 msgstr "フォアグラウンドで実行します (デバッグに便利です)"
 
 # * Description for 'svn{serve,version} --help'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:148 svnversion/main.c:123
+#: svnserve/main.c:149 svnversion/main.c:123
 msgid "display this help"
 msgstr "このヘルプを表示します"
 
 # * Description for 'svnserve --inetd'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:151
+#: svnserve/main.c:152
 msgid "inetd mode"
 msgstr "inetd モード"
 
 # * Description for 'svnserve --root'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:152
+#: svnserve/main.c:153
 msgid "root of directory to serve"
 msgstr "サービスを提供するディレクトリのルート"
 
 # * Description for 'svnserve --read-only'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:154
+#: svnserve/main.c:155
 msgid "force read only, overriding repository config file"
 msgstr ""
 "リポジトリの設定ファイルを無効にし、強制的に読み\n"
@@ -9708,13 +9701,13 @@ msgstr ""
 
 # * Description for 'svnserve --tunnel'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:155
+#: svnserve/main.c:156
 msgid "tunnel mode"
 msgstr "トンネルモード"
 
 # * Description for 'svnserve --tunnel-user'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:157
+#: svnserve/main.c:158
 msgid "tunnel username (default is current uid's name)"
 msgstr ""
 "トンネルモードでのユーザ名 (デフォルトは現在の\n"
@@ -9722,19 +9715,25 @@ msgstr ""
 
 # * Description for 'svnserve --threads'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:159
+#: svnserve/main.c:160
 msgid "use threads instead of fork"
 msgstr "fork の代わりにスレッドを用います"
 
 # * Description for 'svnserve --listen-once'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:161
+#: svnserve/main.c:162
 msgid "listen once (useful for debugging)"
 msgstr "一度だけ待ち受けます (デバッグに便利です)"
 
+# * Description for 'svnserve --config-file'.
+# * 29 half-size characters are displayed on the left.
+#: svnserve/main.c:164
+msgid "read configuration from file ARG"
+msgstr "ファイル <ARG> にある設定ファイルを読み込みます"
+
 # * Description for 'svnserve --pid-file'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:163
+#: svnserve/main.c:166
 msgid "write server process ID to file ARG"
 msgstr ""
 "サーバのプロセス ID をファイル <ARG> に書き込み\n"
@@ -9742,17 +9741,17 @@ msgstr ""
 
 # * Description for 'svnserve --service'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:166
+#: svnserve/main.c:169
 msgid "run as a windows service (SCM only)"
 msgstr "Windows サービスとして実行します (SCM のみ)"
 
-#: svnserve/main.c:178
+#: svnserve/main.c:181
 #, c-format
 msgid "Type '%s --help' for usage.\n"
 msgstr "使用方法を知りたいときは '%s --help' と打ってください。\n"
 
 # * Description for svnserve.
-#: svnserve/main.c:187
+#: svnserve/main.c:190
 msgid ""
 "usage: svnserve [options]\n"
 "\n"
@@ -9763,21 +9762,21 @@ msgstr ""
 "有効なオプション:\n"
 
 # FIXME: Remove a trailing period and a trailing newline.
-#: svnserve/main.c:450
+#: svnserve/main.c:458
 #, c-format
 msgid "svnserve: Root path '%s' does not exist or is not a directory.\n"
 msgstr "svnserve: ルートパス '%s' が存在しないかディレクトリではありません。\n"
 
-#: svnserve/main.c:492
+#: svnserve/main.c:507
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
 msgstr "-d, -i, -t, -X のいずれかを一つだけ指定しなければいけません。\n"
 
-#: svnserve/main.c:502
+#: svnserve/main.c:525
 #, c-format
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "オプション --tunnel-user はトンネルモードでのみ有効です。\n"
 
-#: svnserve/main.c:571
+#: svnserve/main.c:594
 #, c-format
 msgid ""
 "svnserve: The --service flag is only valid if the process is started by the "
@@ -9786,42 +9785,42 @@ msgstr ""
 "svnserve: --service フラグは、プロセスが Service Control Manager によって開始"
 "されている場合にのみ有効です。\n"
 
-#: svnserve/main.c:607
+#: svnserve/main.c:630
 #, c-format
 msgid "Can't get address info"
 msgstr "アドレス情報を取得できません"
 
-#: svnserve/main.c:623
+#: svnserve/main.c:646
 #, c-format
 msgid "Can't create server socket"
 msgstr "サーバソケットを作成できません"
 
-#: svnserve/main.c:636
+#: svnserve/main.c:659
 #, c-format
 msgid "Can't bind server socket"
 msgstr "サーバソケットをバインドできません"
 
-#: svnserve/main.c:704
+#: svnserve/main.c:727
 #, c-format
 msgid "Can't accept client connection"
 msgstr "クライアントの接続を受け入れることができません"
 
-#: svnserve/main.c:758
+#: svnserve/main.c:781
 #, c-format
 msgid "Can't create threadattr"
 msgstr "スレッド属性を作成できません"
 
-#: svnserve/main.c:766
+#: svnserve/main.c:789
 #, c-format
 msgid "Can't set detached state"
 msgstr "独立した状態を設定できません"
 
-#: svnserve/main.c:779
+#: svnserve/main.c:802
 #, c-format
 msgid "Can't create thread"
 msgstr "スレッドを作成できません"
 
-#: svnserve/serve.c:1414
+#: svnserve/serve.c:1463
 msgid "Path is not a string"
 msgstr "パスが文字列でありません"
 
@@ -10231,6 +10230,22 @@ msgstr "エクスポートされたものです%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
+
+# * Description for 'svn --depth'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "pass depth ('empty', 'files', 'immediates', or\n"
+#~ "                            'infinity') as arg"
+#~ msgstr ""
+#~ "深さ ('empty'、'files'、'immediates'、'infinity'\n"
+#~ "                             のいずれか) として <ARG> を渡します"
+
+#~ msgid ""
+#~ "Local, non-commit operations do not take a log messageor revision "
+#~ "properties"
+#~ msgstr ""
+#~ "ローカルの、コミットを伴わない操作にログメッセージやリビジョン属性はつけら"
+#~ "れません"
 
 #~ msgid "Invalid depth (%d) for path '%s'"
 #~ msgstr "深さの指定 (%d) が不正です (パス: '%s')"
