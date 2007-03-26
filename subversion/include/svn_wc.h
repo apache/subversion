@@ -2508,6 +2508,8 @@ typedef struct svn_wc_committed_queue_t svn_wc_committed_queue_t;
  * The returned queue and all further
  * allocations required for queueing new items will also be done
  * from @a pool.
+ *
+ * @since New in 1.5.
  */
 svn_wc_committed_queue_t *
 svn_wc_committed_queue_create(apr_pool_t *pool);
