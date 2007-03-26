@@ -155,6 +155,18 @@ class SVNTests extends TestCase
                 rootUrl = rootUrl.replaceFirst("file://", "file:///");
             else if (rootUrl.startsWith("file:/"))
                 rootUrl = rootUrl.replaceFirst("file:/", "file:///");
+
+            // According to
+            // http://java.sun.com/j2se/1.5.0/docs/api/java/io/File.html#toURL()
+            // the URL from rootDir.toURI() may end with a trailing /
+            // if rootDir exists and is a directory, so depending if
+            // the test suite has been previously run and rootDir
+            // exists, then the trailing / may or may not be there.
+            // The makeReposUrl() method assumes that the rootUrl ends
+            // in a trailing /, so add it now.
+            if (!rootUrl.endsWith("/")) {
+                rootUrl = rootUrl + "/";
+            }
         }
 
         this.localTmp = new File(this.rootDir, "local_tmp");
