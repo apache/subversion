@@ -169,7 +169,7 @@ EOC
          ["apr-util", build_type],
          ["apr-iconv", build_type],
          ["berkeley-db", "bin"],
-         ["sqlite", nil],
+         ["sqlite", "bin"],
         ].each do |lib, sub_dir|
           lib_dir = config["--with-#{lib}"] || lib
           dirs = [top_dir, lib_dir, sub_dir].compact
