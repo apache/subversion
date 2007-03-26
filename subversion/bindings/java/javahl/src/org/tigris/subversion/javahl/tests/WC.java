@@ -456,21 +456,23 @@ public class WC
                 path = "";
 
             Item item = (Item) items.get(path);
-            Assert.assertNotNull("status not found in working copy", item);
-            Assert.assertEquals("wrong text status in working copy",
+            Assert.assertNotNull("status not found in working copy: " + path,
+                    item);
+            Assert.assertEquals("wrong text status in working copy: " + path,
                     item.textStatus, tested[i].getTextStatus());
             if (item.workingCopyRev != -1)
-                Assert.assertEquals("wrong revision number in working copy",
+                Assert.assertEquals("wrong revision number in working copy: "
+                            + path,
                         item.workingCopyRev, tested[i].getRevisionNumber());
-            Assert.assertEquals("lock status wrong",
+            Assert.assertEquals("lock status wrong: " + path,
                     item.isLocked, tested[i].isLocked());
-            Assert.assertEquals("switch status wrong",
+            Assert.assertEquals("switch status wrong: " + path,
                     item.isSwitched, tested[i].isSwitched());
-            Assert.assertEquals("wrong prop status in working copy",
+            Assert.assertEquals("wrong prop status in working copy: " + path,
                     item.propStatus, tested[i].getPropStatus());
             if (item.myContent != null)
             {
-                Assert.assertEquals("state says file, working copy not",
+                Assert.assertEquals("state says file, working copy not: " + path,
                         tested[i].getNodeKind(),
                         item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
                 if (tested[i].getTextStatus() == Status.Kind.normal ||
@@ -486,13 +488,13 @@ public class WC
                         buffer.append((char) ch);
                     }
                     rd.close();
-                    Assert.assertEquals("content mismatch", buffer.toString(),
-                            item.myContent);
+                    Assert.assertEquals("content mismatch: " + path,
+                            buffer.toString(), item.myContent);
                 }
             }
             else
             {
-                Assert.assertEquals("state says dir, working copy not",
+                Assert.assertEquals("state says dir, working copy not: " + path,
                         tested[i].getNodeKind(),
                         item.nodeKind == -1 ? NodeKind.dir : item.nodeKind);
             }
