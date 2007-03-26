@@ -164,9 +164,8 @@ class SVNTests extends TestCase
             // exists, then the trailing / may or may not be there.
             // The makeReposUrl() method assumes that the rootUrl ends
             // in a trailing /, so add it now.
-            if (!rootUrl.endsWith("/")) {
-                rootUrl = rootUrl + "/";
-            }
+            if (!rootUrl.endsWith("/"))
+                rootUrl = rootUrl + '/';
         }
 
         this.localTmp = new File(this.rootDir, "local_tmp");
