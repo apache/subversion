@@ -1958,13 +1958,13 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemContent("A/D/G/rho",
                 thisTest.getWc().getItemContent("A/D/G/rho")
                 + "new appended text for rho");
-        addExpectedCommitItem(thisTest.getWCPath(),
-                thisTest.getUrl(), "A/D/G/rho",NodeKind.file,
-                CommitItemStateFlags.TextMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/G/rho", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
         // commit the changes
         assertEquals("wrong revision number from commit",
-              client.commit(new String[]{thisTest.getWCPath()}, "log msg",
-                      true), 4);
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true), 4);
 
         // merge changes in A to branches/A
         String branchPath = thisTest.getWCPath() + "/branches/A";
@@ -1978,12 +1978,12 @@ public class BasicTests extends SVNTests
                      branchPath, false, true, false, false);
 
         // commit the changes so that we can verify merge
-        addExpectedCommitItem(thisTest.getWCPath(),
-                thisTest.getUrl(), "branches/A/mu",NodeKind.file,
-                CommitItemStateFlags.TextMods);
-        addExpectedCommitItem(thisTest.getWCPath(),
-                thisTest.getUrl(), "branches/A/D/G/rho",NodeKind.file,
-                CommitItemStateFlags.TextMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A/D/G/rho", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
         assertEquals("wrong revision number from commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true), 5);
