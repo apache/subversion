@@ -215,10 +215,9 @@ read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
              default and should never be sent. */ 
         default:
           return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-                                   _("Invalid depth (%"
-                                     APR_UINT64_T_FMT
-                                     ") for path '%s'"),
-                                   num, (*pi)->path);
+                                   _("Invalid depth (%s) for path '%s'"),
+                                   apr_psprintf(pool, "%" APR_UINT64_T_FMT,
+                                                num), (*pi)->path);
         }
     }
   else
