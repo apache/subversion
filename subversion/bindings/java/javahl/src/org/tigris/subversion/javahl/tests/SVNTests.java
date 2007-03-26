@@ -788,11 +788,11 @@ class SVNTests extends TestCase
          */
         private void test(CommitItem ci, String key)
         {
-            assertEquals("commit item path", ci.getPath(), myPath);
-            assertEquals("commit item node kind", ci.getNodeKind(), myNodeKind);
-            assertEquals("commit item state flags", ci.getStateFlags(),
-                    myStateFlags);
-            assertEquals("commit item url", ci.getUrl(), myUrl);
+            assertEquals("commit item path", myPath, ci.getPath());
+            assertEquals("commit item node kind", myNodeKind, ci.getNodeKind());
+            assertEquals("commit item state flags", myStateFlags,
+                    ci.getStateFlags());
+            assertEquals("commit item url", myUrl, ci.getUrl());
             // after the test, remove the item from the expected map
             expectedCommitItems.remove(key);
         }
