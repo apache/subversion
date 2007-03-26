@@ -524,8 +524,7 @@ svn_error_t *svn_repos_set_path2(void *report_baton,
                                  apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_set_path3(), but with @a lock_token set to
- * @c NULL and @a depth set to @c svn_depth_infinity.
+ * Similar to svn_repos_set_path2(), but with @a lock_token set to @c NULL.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -580,8 +579,7 @@ svn_error_t *svn_repos_link_path2(void *report_baton,
                                   apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_link_path3(), but with @a lock_token set to
- * @c NULL and @a depth set to @c svn_depth_infinity.
+ * Similar to svn_repos_link_path2(), but with @a lock_token set to @c NULL.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */

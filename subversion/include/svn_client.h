@@ -989,12 +989,9 @@ svn_client_checkout2(svn_revnum_t *result_rev,
 
 
 /**
- * Similar to svn_client_checkout3(), but with @a allow_unver_obstructions
- * always set to false, @a peg_revision always set to
- * @c svn_opt_revision_unspecified, @a ignore_externals always set to
- * false, and @a depth set according to @a recurse: if @a recurse is
- * true, @a depth is @c svn_depth_infinity, if @a recurse is false,
- * @a depth is @c svn_depth_files.
+ * Similar to svn_client_checkout2(), but with @a peg_revision
+ * always set to @c svn_opt_revision_unspecified and
+ * @a ignore_externals always set to false.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -1096,13 +1093,9 @@ svn_client_update2(apr_array_header_t **result_revs,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_client_update3() except @a allow_unver_obstructions
- * is always set to false, accepts only a single target in @a path,
- * returns a single revision if @a result_rev is not NULL,
- * @a ignore_externals is always set to false, and @a depth set
- * according to @a recurse: if @a recurse is true, set @a depth to @c
- * svn_depth_infinity, if @a recurse is false, set @a depth to
- * @c svn_depth_files.
+ * Similar to svn_client_update2() except that it accepts only a single
+ * target in @a path, returns a single revision if @a result_rev is
+ * not NULL, and @c ignore_externals is always set to false.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -1254,8 +1247,7 @@ svn_client_add2(const char *path,
                 apr_pool_t *pool);
 
 /**
- * Similar to svn_client_add3(), but with @a no_ignore always set to
- * false, and @a force always set to false.
+ * Similar to svn_client_add2(), but with @a force always set to false.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
@@ -1547,9 +1539,8 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_client_commit4(), but always with NULL for
- * @a changelist_name and false for @a keep_changelist, and
- * uses the @c svn_client_commit_info_t type for @a commit_info_p.
+ * Similar to svn_client_commit3(), but uses @c svn_client_commit_info_t
+ * for @a commit_info_p.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  *
@@ -1564,11 +1555,8 @@ svn_client_commit2(svn_client_commit_info_t **commit_info_p,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_client_commit4(), but always with NULL for
- * @a changelist_name, false for @a keep_changelist, true for
- * @a keep_locks, a @a nonrecursive argument instead of @a recurse,
- * and using the @c svn_client_commit_info_t type for
- * @a commit_info_p.
+ * Similar to svn_client_commit2(), but with @a keep_locks set to
+ * true and @a nonrecursive instead of @a recurse.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -1757,9 +1745,8 @@ svn_client_log2(const apr_array_header_t *targets,
 
 
 /**
- * Similar to svn_client_log3(), but with the @c kind field of
- * @a peg_revision set to @c svn_opt_revision_unspecified,
- * @a limit set to 0, and the following special case:
+ * Similar to svn_client_log2(), but with @a limit set to 0, and the
+ * following special case:
  *
  * Special case for repositories at revision 0:
  *
@@ -1853,9 +1840,7 @@ svn_client_blame2(const char *path_or_url,
                   apr_pool_t *pool);
 
 /**
- * Similar to svn_client_blame3(), but with @a diff_options set to
- * default options as returned by svn_diff_file_options_parse(),
- * @a ignore_mime_type set to false, and @a peg_revision always
+ * Similar to svn_client_blame2() except that @a peg_revision is always
  * the same as @a end.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
@@ -1969,10 +1954,8 @@ svn_error_t *svn_client_diff3(const apr_array_header_t *diff_options,
 
 
 /**
- * Similar to svn_client_diff4(), but with @a header_encoding set to
- * @c APR_LOCALE_CHARSET, and @a depth set according to @a recurse:
- * if @a recurse is true, set @a depth to @c svn_depth_infinity, if
- * @a recurse is false, set @a depth to @c svn_depth_files.
+ * Similar to svn_client_diff3(), but with @a header_encoding set to
+ * @c APR_LOCALE_CHARSET.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  *
@@ -1993,11 +1976,8 @@ svn_error_t *svn_client_diff2(const apr_array_header_t *diff_options,
                               apr_pool_t *pool);
 
 /**
- * Similar to svn_client_diff4(), but with @a header_encoding set to
- * @c APR_LOCALE_CHARSET, @a ignore_content_type always set to false,
- * and @a depth set according to @a recurse: if @a recurse is true,
- * set @a depth to @c svn_depth_infinity, if @a recurse is false, set
- * @a depth to @c svn_depth_files.
+ * Similar to svn_client_diff2(), but with @a ignore_content_type
+ * always set to false.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
@@ -2069,11 +2049,8 @@ svn_error_t *svn_client_diff_peg3(const apr_array_header_t *diff_options,
                                   apr_pool_t *pool);
 
 /**
- * Similar to svn_client_diff_peg4(), but with @a header_encoding set
- * to @c APR_LOCALE_CHARSET, and with @a depth set according to
- * @a recurse: if @a recurse is true, set @a depth to
- * @c svn_depth_infinity, if @a recurse is false, set @a depth to
- * @c svn_depth_files.
+ * Similar to svn_client_diff_peg3(), but with @a header_encoding set to
+ * @c APR_LOCALE_CHARSET.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  *
@@ -2094,11 +2071,8 @@ svn_error_t *svn_client_diff_peg2(const apr_array_header_t *diff_options,
                                   apr_pool_t *pool);
 
 /**
- * Similar to svn_client_diff_peg4(), but with @a header_encoding set to
- * @c APR_LOCALE_CHARSET, @a ignore_content_type always set to false,
- * and with @a depth set according to @a recurse: if @a recurse is
- * true, set @a depth to @c svn_depth_infinity, if @a recurse is
- * false, set @a depth to @c svn_depth_files.
+ * Similar to svn_client_diff_peg2(), but with @a ignore_content_type
+ * always set to false.
  *
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
@@ -2331,10 +2305,7 @@ svn_client_merge2(const char *source1,
 
 
 /**
- * Similar to svn_client_merge3(), but with @a merge_options set to @c NULL,
- * and @a depth set according to @a recurse: if @a recurse is true,
- * set @a depth to @c svn_depth_infinity, if @a recurse is false, set
- * @a depth to @c svn_depth_files.
+ * Similar to svn_client_merge2(), but with @a merge_options set to NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
@@ -2401,10 +2372,8 @@ svn_client_merge_peg2(const char *source,
                       apr_pool_t *pool);
 
 /**
- * Similar to svn_client_merge_peg3(), but with @a merge_options set to
- * @c NULL, and @a depth set according to @a recurse: if @a recurse is
- * true, set @a depth to @c svn_depth_infinity, if @a recurse is false,
- * set @a depth to @c svn_depth_files.
+ * Similar to svn_client_merge_peg2(), but with @a merge_options set to
+ * NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  *
@@ -2659,11 +2628,9 @@ svn_client_copy2(svn_commit_info_t **commit_info_p,
                  apr_pool_t *pool);
 
 
-/** 
- * Similar to svn_client_copy3(), but with the difference that if
- * @a dst_path already exists and is a directory, copy the item into
- * that directory, keeping its name (the last component of @a src_path);
- * and using the @c svn_client_commit_info_t type for @a commit_info_p.
+/**
+ * Similar to svn_client_copy2(), but uses @c svn_client_commit_info_t
+ * for @a commit_info_p.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
@@ -2793,12 +2760,9 @@ svn_client_move3(svn_commit_info_t **commit_info_p,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
-/** 
- * Similar to svn_client_move4(), with the difference that if
- * @a dst_path already exists and is a directory, move the item
- * into that directory, keeping its name (the last component of
- * @a src_path); and with the @c svn_client_commit_info_t type for
- * @a commit_info_p.
+/**
+ * Similar to svn_client_move3(), but uses @c svn_client_commit_info_t
+ * for @a commit_info_p.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  *
@@ -2813,12 +2777,8 @@ svn_client_move2(svn_client_commit_info_t **commit_info_p,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_move4(), with the difference that if
- * @a dst_path already exists and is a directory, move the item
- * into that directory, keeping its name (the last component of
- * @a src_path); and with the @c svn_client_commit_info_t type for
- * @a commit_info_p; and with an extra argument @a src_revision.
- * The extra argument has no effect, but must be of kind
+ * Similar to svn_client_move2(), but an extra argument @a src_revision
+ * must be passed.  This has no effect, but must be of kind
  * @c svn_opt_revision_unspecified or @c svn_opt_revision_head,
  * otherwise error @c SVN_ERR_UNSUPPORTED_FEATURE is returned.
  *
@@ -3254,10 +3214,10 @@ svn_client_export3(svn_revnum_t *result_rev,
 
 
 /**
- * Similar to svn_client_export4(), but with @a peg_revision always
- * set to @c svn_opt_revision_unspecified, @a overwrite set to the
- * value of @a force, @a ignore_externals always false, and @a depth
- * always @c svn_depth_infinity.
+ * Similar to svn_client_export3(), but with @a peg_revision
+ * always set to @c svn_opt_revision_unspecified, @a overwrite set to
+ * the value of @a force, @a ignore_externals always false, and
+ * @a recurse always true.
  *
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
@@ -3274,10 +3234,8 @@ svn_client_export2(svn_revnum_t *result_rev,
 
 
 /**
- * Similar to svn_client_export4(), but with @a peg_revision always
- * set to @c svn_opt_revision_unspecified, @a overwrite set to the
- * value of @a force, @a ignore_externals always false, @a depth
- * always @c svn_depth_infinity, and @a native_eol always @c NULL.
+ * Similar to svn_client_export2(), but with @a native_eol always set
+ * to NULL.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
@@ -3401,8 +3359,8 @@ svn_client_ls2(apr_hash_t **dirents,
                apr_pool_t *pool);
 
 /**
- * Similar to svn_client_ls3(), but without the ability to get locks,
- * and with @a peg_revision always the same as @a revision.
+ * Similar to svn_client_ls2() except that @a peg_revision is always
+ * the same as @a revision.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
