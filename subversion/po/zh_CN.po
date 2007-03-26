@@ -7,8 +7,8 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-03-26 11:53+0800\n"
-"PO-Revision-Date: 2007-03-26 12:27+0800\n"
-"Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
+"PO-Revision-Date: 2007-03-26 16:53+0800\n"
+"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -412,9 +412,8 @@ msgid "Item is out of date"
 msgstr "条目过时"
 
 #: include/svn_error_codes.h:586
-#, fuzzy
 msgid "SQLite error"
-msgstr "写入错误"
+msgstr "SQLite 错误"
 
 #: include/svn_error_codes.h:598
 msgid "Unsupported FS format"
@@ -796,7 +795,7 @@ msgstr "未提供auth文件路径"
 
 #: include/svn_error_codes.h:1035
 msgid "Merge info parse error"
-msgstr ""
+msgstr "分析合并信息出错"
 
 #: include/svn_error_codes.h:1040
 msgid "Incompatible library version"
@@ -1150,14 +1149,14 @@ msgid "'%s' has local modifications"
 msgstr "“%s”已有本地修改"
 
 #: libsvn_client/diff.c:136
-#, fuzzy, c-format
+#, c-format
 msgid "   Reverted %s:r%s%s"
-msgstr "已恢复“%s”\n"
+msgstr "   已恢复 %s:r%s%s"
 
 #: libsvn_client/diff.c:154
 #, c-format
 msgid "   Merged %s:r%s%s"
-msgstr ""
+msgstr "   已合并 %s:r%s%s"
 
 #: libsvn_client/diff.c:176
 #, c-format
@@ -1203,9 +1202,8 @@ msgid "'%s' was not found in the repository at revision %ld"
 msgstr "在仓库的版本 %2$ld 中找不到“%1$s”"
 
 #: libsvn_client/diff.c:1026
-#, fuzzy
 msgid "Sorry, svn_client_diff4 was called in a way that is not yet supported"
-msgstr "抱歉，svn_client_diff3不支持这种调用方式"
+msgstr "抱歉，svn_client_diff4 尚不支持这种调用方式"
 
 #: libsvn_client/diff.c:1068
 msgid "Only diffs between a path's text-base and its working files are supported at this time"
@@ -1348,12 +1346,12 @@ msgstr ".merge-right.r%ld"
 #: libsvn_client/merge.c:1156
 #, c-format
 msgid "Path '%s' is in conflict, and must be resolved before the remainder of the requested merge can be applied"
-msgstr ""
+msgstr "路径 “%s” 冲突，必须在应用剩余的合并请求之前解决"
 
 #: libsvn_client/merge.c:1449
 #: libsvn_client/merge.c:1762
 msgid "Use of two URLs is not compatible with merge info modification"
-msgstr ""
+msgstr "使用两个 URL 不与合并信息修改兼容"
 
 #: libsvn_client/prop_commands.c:73
 #, c-format
@@ -1459,9 +1457,9 @@ msgid "'%s' is not a working copy directory"
 msgstr "“%s”不是工作副本目录"
 
 #: libsvn_client/update.c:146
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is neither a file nor a directory"
-msgstr "“%s”不是文件名也不是目录名"
+msgstr "“%s” 既不是文件也不是目录"
 
 #: libsvn_delta/svndiff.c:144
 msgid "Compression of svndiff data failed"
@@ -2605,12 +2603,12 @@ msgstr "加锁失败: “%s”的新版本已经存在"
 
 #: libsvn_fs_util/merge-info-sqlite-index.c:102
 msgid "Merge Tracking schema format not set"
-msgstr ""
+msgstr "没有设置合并跟踪方案格式"
 
 #: libsvn_fs_util/merge-info-sqlite-index.c:107
 #, c-format
 msgid "Merge Tracking schema format %d not recognized"
-msgstr ""
+msgstr "不能识别合并跟踪方案格式 %d"
 
 #: libsvn_ra/ra_loader.c:213
 #, c-format
@@ -3241,9 +3239,8 @@ msgid "Dirlist element not a list"
 msgstr "目录列表元素不是列表"
 
 #: libsvn_ra_svn/client.c:1060
-#, fuzzy
 msgid "Merge info element is not a list"
-msgstr "Prop diffs 元素不是一个列表"
+msgstr "合并信息元素不是列表"
 
 #: libsvn_ra_svn/client.c:1219
 msgid "Log entry not a list"
@@ -3752,9 +3749,8 @@ msgid "Filesystem path '%s' is neither a file nor a directory"
 msgstr "文件系统中路径“%s”既不是文件也不是目录"
 
 #: libsvn_repos/reporter.c:218
-#, fuzzy
 msgid "Invalid depth (%llu) for path '%s'"
-msgstr "复制源路径“%s”无效"
+msgstr "路径 “%2$s” 深度 (%1$llu) 非法"
 
 #: libsvn_repos/reporter.c:650
 #, c-format
@@ -4356,34 +4352,29 @@ msgid "First line of '%s' contains non-digit"
 msgstr "“%s”的第一行包含了非数字"
 
 #: libsvn_subr/mergeinfo.c:67
-#, fuzzy
 msgid "Invalid revision number"
-msgstr "无效的版本号 (%ld)"
+msgstr "无效版本号"
 
 #: libsvn_subr/mergeinfo.c:125
-#, fuzzy
 msgid "No revision list found "
-msgstr "没有版本 %ld"
+msgstr "没有发现版本列表"
 
 #: libsvn_subr/mergeinfo.c:135
 #: libsvn_subr/mergeinfo.c:163
-#, fuzzy
 msgid "Invalid character found in revision list"
-msgstr "无效结束版本 %ld"
+msgstr "在版本列表中发现无效字符"
 
 #: libsvn_subr/mergeinfo.c:169
-#, fuzzy
 msgid "Revision list parsing ended before hitting newline"
-msgstr "版本文件缺少结尾换行"
+msgstr "在遇到新行之前版本列表分析结束"
 
 #: libsvn_subr/mergeinfo.c:187
 msgid "Pathname not terminated by ':'"
-msgstr ""
+msgstr "路径名称没有以 “:” 结束"
 
 #: libsvn_subr/mergeinfo.c:195
-#, fuzzy
 msgid "Could not find end of line in revision line"
-msgstr "无法找到版本 %ld 的时间"
+msgstr "在版本行无法找到行结束符"
 
 #: libsvn_subr/nls.c:79
 #, c-format
@@ -5610,23 +5601,23 @@ msgstr "调度: 替换\n"
 #: svn/info-cmd.c:326
 #, c-format
 msgid "Depth: empty\n"
-msgstr ""
+msgstr "深度: 空\n"
 
 #: svn/info-cmd.c:330
 #, c-format
 msgid "Depth: files\n"
-msgstr ""
+msgstr "深度: 文件\n"
 
 #: svn/info-cmd.c:334
 #, c-format
 msgid "Depth: immediates\n"
-msgstr ""
+msgstr "深度: 直接\n"
 
 #. Other depths should never happen here.
 #: svn/info-cmd.c:345
 #, c-format
 msgid "Depth: INVALID\n"
-msgstr ""
+msgstr "深度: 非法\n"
 
 #: svn/info-cmd.c:349
 #, c-format
@@ -5805,11 +5796,11 @@ msgstr "尽可能少打印"
 
 #: svn/main.c:67
 msgid "descend recursively, same as --depth=infinity"
-msgstr ""
+msgstr "向下递归，与 --depth=infinity 相同"
 
 #: svn/main.c:68
 msgid "obsolete; try --depth=files or --depth=immediates"
-msgstr ""
+msgstr "过时；尝试 --depth=files 或 --depth=immediates"
 
 #: svn/main.c:70
 msgid ""
@@ -5915,6 +5906,8 @@ msgid ""
 "pass depth ('empty', 'files', 'immediates', or\n"
 "                            'infinity') as ARG"
 msgstr ""
+"传递深度参数 (“empty”，“files”，“immediates”，或 \n"
+"                            “infinity”) ARG"
 
 #: svn/main.c:135
 msgid "output in XML"
@@ -5976,9 +5969,8 @@ msgid "use ARG as external editor"
 msgstr "使用 ARG 作为外部编辑器"
 
 #: svn/main.c:164
-#, fuzzy
 msgid "mark revisions as merged (use with -r)"
-msgstr "在版本属性上操作(使用-r参数)"
+msgstr "标记版本为已合并(使用 -r 参数)"
 
 #: svn/main.c:166
 msgid "use ARG as the older target"
@@ -7078,12 +7070,12 @@ msgstr "版本参数“%s”中有语法错误"
 #: svn/main.c:1194
 #, c-format
 msgid "Error converting depth from locale to UTF8"
-msgstr ""
+msgstr "深度从本地编码转换到 UTF8 失败"
 
 #: svn/main.c:1214
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid depth; try 0, 1, or 2"
-msgstr "“%s”不是有效的版本范围"
+msgstr "“%s”不是有效的深度；尝试 0，1，或 2"
 
 #: svn/main.c:1306
 #: svn/main.c:1316
@@ -7490,7 +7482,7 @@ msgstr ""
 
 #: svn/util.c:145
 msgid "The EDITOR, SVN_EDITOR or VISUAL environment variable or 'editor-cmd' run-time configuration option is empty or consists solely of whitespace. Expected a shell command."
-msgstr ""
+msgstr "环境变量 EDITOR，SVN_EDITOR，或 VISUAL；或者运行时配置选项 “editor-cmd” 为空或取值包含了不加引号的空格。期望外壳命令。"
 
 #: svn/util.c:152
 msgid "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is set, and no 'editor-cmd' run-time configuration option was found"
@@ -8666,9 +8658,8 @@ msgid "listen once (useful for debugging)"
 msgstr "监听一次（调试用）"
 
 #: svnserve/main.c:164
-#, fuzzy
 msgid "read configuration from file ARG"
-msgstr "从目录 ARG 读取用户配置文件"
+msgstr "从文件 ARG 读取配置"
 
 #: svnserve/main.c:166
 msgid "write server process ID to file ARG"
@@ -8748,9 +8739,8 @@ msgid "Can't create thread"
 msgstr "无法创建线程"
 
 #: svnserve/serve.c:1463
-#, fuzzy
 msgid "Path is not a string"
-msgstr "路径不是工作副本文件"
+msgstr "路径不是字符串"
 
 #: svnserve/winservice.c:341
 #, c-format
