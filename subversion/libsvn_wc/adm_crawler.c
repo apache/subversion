@@ -837,10 +837,6 @@ svn_wc_crawl_revisions(const char *path,
   nb.func = notify_func;
   nb.baton = notify_baton;
 
-  /* ### TODO(sd): Ideally, this would call svn_wc_crawl_revisions3() (or
-     ### whatever the latest interface is) directly.  However, I'm
-     ### too distracted to untangle the layers of compat wrappers
-     ### going on here right now, so I'm just going to leave it. */
   return svn_wc_crawl_revisions2(path, adm_access, &wrap_2to1_reporter, &wrb,
                                  restore_files, recurse, use_commit_times,
                                  svn_wc__compat_call_notify_func, &nb,

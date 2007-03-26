@@ -321,30 +321,27 @@ typedef struct svn_ra_reporter2_t
 } svn_ra_reporter2_t;
 
 /**
- * Similar to @c svn_ra_reporter3_t, but without support for lock
- * tokens or depths.
+ * Similar to @c svn_ra_reporter2_t, but without support for lock tokens.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 typedef struct svn_ra_reporter_t
 {
-  /** Similar to the corresponding field in @c svn_ra_reporter3_t, but
-   * with @a lock_token always set to NULL and @a depth always set to
-   * @c svn_depth_infinity. */
+  /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
+   * with @a lock_token always set to NULL. */
   svn_error_t *(*set_path)(void *report_baton,
                            const char *path,
                            svn_revnum_t revision,
                            svn_boolean_t start_empty,
                            apr_pool_t *pool);
 
-  /** Same as the corresponding field in @c svn_ra_reporter3_t. */
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
   svn_error_t *(*delete_path)(void *report_baton,
                               const char *path,
                               apr_pool_t *pool);
     
-  /** Similar to the corresponding field in @c svn_ra_reporter3_t, but
-   * with @a lock_token always set to NULL and @a depth always set to
-   * @c svn_depth_infinity. */
+  /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
+   * with @a lock_token always set to NULL. */
   svn_error_t *(*link_path)(void *report_baton,
                             const char *path,
                             const char *url,
@@ -352,11 +349,11 @@ typedef struct svn_ra_reporter_t
                             svn_boolean_t start_empty,
                             apr_pool_t *pool);
 
-  /** Same as the corresponding field in @c svn_ra_reporter3_t. */
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
   svn_error_t *(*finish_report)(void *report_baton,
                                 apr_pool_t *pool);
 
-  /** Same as the corresponding field in @c svn_ra_reporter3_t. */
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
   svn_error_t *(*abort_report)(void *report_baton,
                                apr_pool_t *pool);
 } svn_ra_reporter_t;
@@ -1098,9 +1095,7 @@ svn_error_t *svn_ra_do_diff2(svn_ra_session_t *session,
 
 
 /**
- * Similar to svn_ra_do_diff3(), but with @a text_deltas set to @c
- * TRUE, and taking svn_ra_reporter2_t instead of svn_ra_reporter3_t
- * (thus only able to report svn_depth_infinity for depths).
+ * Similar to svn_ra_do_diff2(), but with @a text_deltas set to @c TRUE.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */

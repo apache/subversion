@@ -772,16 +772,9 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
                             void *diff_baton,
                             apr_pool_t *pool)
 {
-  struct reporter_3in2_baton *b = apr_palloc(pool, sizeof(*b));
-  *reporter = &reporter_3in2_wrapper;
-  *report_baton = b;
-
-  return session->vtable->do_diff(session,
-                                  &(b->reporter3), &(b->reporter3_baton),
-                                  revision, diff_target,
-                                  SVN_DEPTH_FROM_RECURSE(recurse),
-                                  ignore_ancestry, TRUE, versus_url,
-                                  diff_editor, diff_baton, pool);
+  return svn_ra_do_diff2(session, reporter, report_baton, revision,
+                         diff_target, recurse, ignore_ancestry, TRUE,
+                         versus_url, diff_editor, diff_baton, pool);
 }
 
 svn_error_t *svn_ra_get_log(svn_ra_session_t *session,

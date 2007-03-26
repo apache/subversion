@@ -1701,8 +1701,7 @@ svn_error_t *svn_wc_ensure_adm2(const char *path,
 
 
 /**
- * Similar to svn_wc_ensure_adm3(), but with @a depth set to
- * @c svn_depth_infinity and @a repos set to @c NULL.
+ * Similar to svn_wc_ensure_adm2(), but with @a repos set to @c NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
@@ -2718,7 +2717,7 @@ svn_wc_crawl_revisions2(const char *path,
                         apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_crawl_revisions3(), but takes an svn_wc_notify_func_t
+ * Similar to svn_wc_crawl_revisions2(), but takes an svn_wc_notify_func_t
  * and a @c svn_reporter_t instead.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.

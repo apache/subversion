@@ -1200,8 +1200,7 @@ svn_wc_ensure_adm(const char *path,
                   svn_revnum_t revision,
                   apr_pool_t *pool)
 {
-  return svn_wc_ensure_adm3(path, uuid, url, NULL, revision,
-                            svn_depth_infinity, pool);
+  return svn_wc_ensure_adm2(path, uuid, url, NULL, revision, pool);
 }
 
 svn_error_t *

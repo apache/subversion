@@ -1101,8 +1101,7 @@ svn_error_t *
 svn_repos_set_path(void *baton, const char *path, svn_revnum_t rev,
                    svn_boolean_t start_empty, apr_pool_t *pool)
 {
-  return svn_repos_set_path3(baton, path, rev, svn_depth_infinity,
-                             start_empty, NULL, pool);
+  return svn_repos_set_path2(baton, path, rev, start_empty, NULL, pool);
 }
 
 svn_error_t *
@@ -1130,8 +1129,7 @@ svn_repos_link_path(void *baton, const char *path, const char *link_path,
                     svn_revnum_t rev, svn_boolean_t start_empty,
                     apr_pool_t *pool)
 {
-  return svn_repos_link_path3(baton, path, link_path, rev,
-                              svn_depth_infinity, start_empty,
+  return svn_repos_link_path2(baton, path, link_path, rev, start_empty,
                               NULL, pool);
 }
 

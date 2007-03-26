@@ -434,10 +434,9 @@ svn_client_status(svn_revnum_t *result_rev,
   b->original_func = status_func;
   b->original_baton = status_baton;
 
-  return svn_client_status3(result_rev, path, revision, 
+  return svn_client_status2(result_rev, path, revision, 
                             old_status_func_cb, b,
-                            SVN_DEPTH_FROM_RECURSE(recurse),
-                            get_all, update, no_ignore, FALSE,
+                            recurse, get_all, update, no_ignore, FALSE,
                             ctx, pool);
 }
 
