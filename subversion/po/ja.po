@@ -108,6 +108,7 @@
 # open-directory element  open-directory 要素
 # open-file element       open-file 要素
 # open-root element       open-root 要素
+# operate on              〜に対して操作を実行する
 # out of date             リポジトリ側と比べて古くなった
 # overflow                溢れる
 # parent pool             親メモリプール
@@ -175,7 +176,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-03-26 21:18+0900\n"
-"PO-Revision-Date: 2007-03-26 21:22+0900\n"
+"PO-Revision-Date: 2007-03-27 02:05+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -6389,8 +6390,8 @@ msgstr "二者のうち新しい方として <ARG> を用います"
 #: svn/main.c:170
 msgid "operate on a revision property (use with -r)"
 msgstr ""
-"リビジョン属性に対して操作します (-r と共に用い\n"
-"                             ます)"
+"リビジョン属性に対して操作を実行します (-r と共\n"
+"                             に用います)"
 
 # * Description for 'svn --relocate'.
 # * 29 half-size characters are displayed on the left.
@@ -9198,7 +9199,9 @@ msgstr "追加されたファイルに関しては差分を表示しません"
 # * 29 half-size characters are displayed on the left.
 #: svnlook/main.c:111
 msgid "operate on single directory only"
-msgstr "単一のディレクトリのみに (非再帰的に) 作用します"
+msgstr ""
+"単一のディレクトリのみに対して (非再帰的に) 操作\n"
+"                             を実行します"
 
 # * Description for 'svnlook --revision'.
 # * 29 half-size characters are displayed on the left.
@@ -9211,8 +9214,8 @@ msgstr "リビジョン番号を <ARG> と指定します"
 #: svnlook/main.c:117
 msgid "operate on a revision property (use with -r or -t)"
 msgstr ""
-"リビジョン属性に作用します (-r または -t と共に\n"
-"                             用います)"
+"リビジョン属性に対して操作を実行します (-r また\n"
+"                             は -t と共に用います)"
 
 # * Description for 'svnlook --show-ids'.
 # * 29 half-size characters are displayed on the left.
