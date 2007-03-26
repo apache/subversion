@@ -69,9 +69,9 @@ class SVNTests extends TestCase
      */
     protected WC greekWC;
     /**
-     * the directory "svn-test-work/local_tmp" in the rootDir. This
-     * will be used for the sample repository and its dumpfile and for
-     * the config directory
+     * the directory "local_tmp" in the rootDir.  This will be used
+     * for the sample repository and its dumpfile and for the config
+     * directory.
      */
     protected final File localTmp;
     /**
