@@ -23,42 +23,6 @@ Status of 1.4.4:
 
 Candidate changes:
 
-  * r21531, r21848, r21934
-    Allow HTTP auth protocols to be configurable by way of a
-    "http-auth-types" parameter.
-    Justification:
-      Allow GSSAPI/SSPI auth to be enabled/disabled on Windows with
-      Neon 0.26.1+, addressesing numerous bug reports from
-      TortoiseSVN, Subversion, Subclipse, etc.
-    Votes:
-      +1: dlr, djh, jerenkrantz
-      -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
-
-  * r21885, r22076
-    Add a new RPM package for the AuroraLinux 2.0 SPARC distribution.
-    Justification:
-      It is a combination of RHEL3 and RHEL4 distributions with
-      characteristics matching both, so we need a new directory.
-    Branch: 1.4.x-r22076 (-r22079:HEAD)
-    Votes:
-      +1: dws
-      -1: maxb (It appears that the auroralinux-2 directory has been based
-                on an old version of the rhel-3 directory, pre-dating some
-                of the difference-reduction work I did to try to minimize the
-                unnecessary inconsistencies between the various distro
-                flavours. Its introduction therefore represents a regression
-                in the maintainability of the RPM packaging area as a whole.)
-
-  * r19808-19810, r22853
-    Synchronise license text and then bump copyright dates to 2007.
-    Justification:
-      It's 2007.
-    Notes: We might want to wait until we actually merge something we
-      originally committed in 2007, possibly hold until 1.4.4?
-    Votes:
-      +1: malcolm, dlr, hwright
-      -1: jerenkrantz (This is an unnecessary change to backport.)
-
   * r23115,r23117-23118
     Fix issue 2700: commit of locked file fails when no write access on root
     Justification:
@@ -132,6 +96,44 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+Veto-blocked changes:
+
+  * r21531, r21848, r21934
+    Allow HTTP auth protocols to be configurable by way of a
+    "http-auth-types" parameter.
+    Justification:
+      Allow GSSAPI/SSPI auth to be enabled/disabled on Windows with
+      Neon 0.26.1+, addressesing numerous bug reports from
+      TortoiseSVN, Subversion, Subclipse, etc.
+    Votes:
+      +1: dlr, djh, jerenkrantz
+      -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
+
+  * r21885, r22076
+    Add a new RPM package for the AuroraLinux 2.0 SPARC distribution.
+    Justification:
+      It is a combination of RHEL3 and RHEL4 distributions with
+      characteristics matching both, so we need a new directory.
+    Branch: 1.4.x-r22076 (-r22079:HEAD)
+    Votes:
+      +1: dws
+      -1: maxb (It appears that the auroralinux-2 directory has been based
+                on an old version of the rhel-3 directory, pre-dating some
+                of the difference-reduction work I did to try to minimize the
+                unnecessary inconsistencies between the various distro
+                flavours. Its introduction therefore represents a regression
+                in the maintainability of the RPM packaging area as a whole.)
+
+  * r19808-19810, r22853
+    Synchronise license text and then bump copyright dates to 2007.
+    Justification:
+      It's 2007.
+    Notes: We might want to wait until we actually merge something we
+      originally committed in 2007, possibly hold until 1.4.4?
+    Votes:
+      +1: malcolm, dlr, hwright
+      -1: jerenkrantz (This is an unnecessary change to backport.)
+
 Approved changes:
 
   * r23556
@@ -142,4 +144,3 @@ Approved changes:
       of the implementation already supported it.
     Votes:
       +1: dlr, jerenkrantz, hwright
-
