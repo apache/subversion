@@ -9,32 +9,6 @@ Status of 1.3.3:
 
 Candidate changes:
 
-  * r17333 and associated test case (copied from trunk)
-    Fix issue #2306: modification of "svn:needs-lock" should adjust
-    the native file system's read-only attribute within a WC.
-    Branch: 1.3.x-r17333
-    Justification:
-      Backport of a change to trunk which resolves buggy behavior on
-      Windows, behavior which is inconsistent with Linux.
-    Notes:
-      dlr does not have a Windows development environment, and thus
-      cannot adequately test this change.  Additional testing is
-      especially important given the heavy amount of modification
-      which was necessary when backporting the change from trunk.
-    Votes:
-      +0: dlr
-      -1: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
-
-  * r18144, r18164, r18170, r18171, r18184, r18434, r18882
-    and r18037, r18127 (only tools/dev/stress.pl)
-    Add support for BDB-4.4 and automatic recovery of wedged databases.
-    Justification:
-      See above about automatic recovery of wedged databases.
-    Votes:
-      +1: brane
-      -1: djames (This list of revisions isn't complete. See
-                  http://svn.haxx.se/dev/archive-2006-07/0227.shtml)
-
  * r19915
    Require APR 0.9.7
    Justification:
@@ -87,6 +61,34 @@ Candidate changes:
      chain.  In case you're wondering, that's oh-so-bad.
    Votes:
      +1: cmpilato
+
+Veto-blocked changes:
+
+  * r17333 and associated test case (copied from trunk)
+    Fix issue #2306: modification of "svn:needs-lock" should adjust
+    the native file system's read-only attribute within a WC.
+    Branch: 1.3.x-r17333
+    Justification:
+      Backport of a change to trunk which resolves buggy behavior on
+      Windows, behavior which is inconsistent with Linux.
+    Notes:
+      dlr does not have a Windows development environment, and thus
+      cannot adequately test this change.  Additional testing is
+      especially important given the heavy amount of modification
+      which was necessary when backporting the change from trunk.
+    Votes:
+      +0: dlr
+      -1: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
+
+  * r18144, r18164, r18170, r18171, r18184, r18434, r18882
+    and r18037, r18127 (only tools/dev/stress.pl)
+    Add support for BDB-4.4 and automatic recovery of wedged databases.
+    Justification:
+      See above about automatic recovery of wedged databases.
+    Votes:
+      +1: brane
+      -1: djames (This list of revisions isn't complete. See
+                  http://svn.haxx.se/dev/archive-2006-07/0227.shtml)
 
 Approved changes:
 
