@@ -854,7 +854,7 @@ make_path_mutable(svn_fs_root_t *root,
                   trail_t *trail,
                   apr_pool_t *pool)
 {
-  dag_node_t *clone;
+  dag_node_t *cloned_node;
   const char *txn_id = root->txn;
   svn_fs_t *fs = root->fs;
 
@@ -900,7 +900,7 @@ make_path_mutable(svn_fs_root_t *root,
 
       /* Now make this node mutable.  */
       clone_path = parent_path_path(parent_path->parent, pool);
-      SVN_ERR(svn_fs_base__dag_clone_child(&clone,
+      SVN_ERR(svn_fs_base__dag_clone_child(&cloned_node,
                                            parent_path->parent->node,
                                            clone_path,
                                            parent_path->entry,
@@ -913,7 +913,8 @@ make_path_mutable(svn_fs_root_t *root,
          new copy needs to be removed. */
       if (inherit == copy_id_inherit_new)
         {
-          const svn_fs_id_t *new_node_id = svn_fs_base__dag_get_id(clone);
+          const svn_fs_id_t *new_node_id =
+            svn_fs_base__dag_get_id(cloned_node);
           SVN_ERR(svn_fs_bdb__create_copy(fs, copy_id, copy_src_path,
                                           svn_fs_base__id_txn_id(node_id),
                                           new_node_id,
@@ -925,11 +926,11 @@ make_path_mutable(svn_fs_root_t *root,
   else
     {
       /* We're trying to clone the root directory.  */
-      SVN_ERR(mutable_root_node(&clone, root, error_path, trail, pool));
+      SVN_ERR(mutable_root_node(&cloned_node, root, error_path, trail, pool));
     }
 
   /* Update the PARENT_PATH link to refer to the clone.  */
-  parent_path->node = clone;
+  parent_path->node = cloned_node;
 
   return SVN_NO_ERROR;
 }
