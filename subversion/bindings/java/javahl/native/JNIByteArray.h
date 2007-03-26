@@ -48,7 +48,7 @@ private:
     bool m_deleteByteArray;
 public:
     bool isNull();
-    const signed char * getBytes();
+    const signed char *getBytes();
     int getLength();
     JNIByteArray(jbyteArray jba, bool deleteByteArray = false);
     ~JNIByteArray();

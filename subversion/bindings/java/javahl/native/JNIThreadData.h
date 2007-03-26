@@ -36,7 +36,7 @@ class JNIThreadData
 {
 public:
     static void del(void *);
-    static JNIThreadData * getThreadData();
+    static JNIThreadData *getThreadData();
     static bool initThreadData();
     static void pushNewThreadData();
     static void popThreadData();
@@ -66,7 +66,7 @@ private:
     /**
      * the key to address this thread local storage
      */
-    static apr_threadkey_t * g_key;
+    static apr_threadkey_t *g_key;
 };
 // !defined(AFX_JNITHREADDATA_H__2BF37407_7EA8_4F74_9080_C86696617F7F__INCLUDED_)
 #endif 

@@ -50,7 +50,7 @@ void Targets::add(const char *path)
     m_targets.push_back (path);
 }
 
-const apr_array_header_t *Targets::array(const Pool & pool)
+const apr_array_header_t *Targets::array(const Pool &pool)
 {
     if (m_targetArray != NULL)
     {
@@ -113,7 +113,7 @@ const apr_array_header_t *Targets::array(const Pool & pool)
     for (it = m_targets.begin (); it != m_targets.end (); it++)
     {
       const Path &path = *it;
-      const char * target =
+      const char *target =
         apr_pstrdup (apr_pool, path.c_str());
       (*((const char **) apr_array_push (apr_targets))) = target;
     }

@@ -50,10 +50,10 @@ public:
     void unlock(Targets &targets, bool force);
     void lock(Targets &targets, const char *comment, bool force);
     jobjectArray revProperties(jobject jthis, const char *path, 
-                                Revision &revision);
+                               Revision &revision);
     void cancelOperation();
     void commitMessageHandler(CommitMessage *commitMessage);
-    const char * getConfigDirectory();
+    const char *getConfigDirectory();
 
     /**
      * Set the configuration directory, taking the usual steps to
@@ -63,36 +63,36 @@ public:
     void setConfigDirectory(const char *configDir);
 
     void blame(const char *path, Revision &pegRevision, 
-                   Revision &revisionStart, Revision &revisionEnd,
-                   bool ignoreMimeType, BlameCallback *callback);
+               Revision &revisionStart, Revision &revisionEnd,
+               bool ignoreMimeType, BlameCallback *callback);
     void relocate(const char *from, const char *to, const char *path,
-                      bool recurse);
+                  bool recurse);
     jbyteArray fileContent(const char *path, Revision &revision,  
                            Revision &pegRevision);
     void streamFileContent(const char *path, Revision &revision,
                            Revision &pegRevision, jobject outputStream,
                            size_t bufSize);
     void propertyCreate(const char *path, const char *name,
-                            const char *value, bool recurse, bool force);
+                        const char *value, bool recurse, bool force);
     void propertyRemove(const char *path, const char *name, bool recurse);
     void propertySet(const char *path, const char *name, const char *value,
-                         bool recurse, bool force);
+                     bool recurse, bool force);
     jobjectArray properties(jobject jthis, const char *path,
                             Revision &revision, Revision &pegRevision);
     void merge(const char *path1, Revision &revision1, const char *path2,
-                   Revision &revision2, const char *localPath, bool force,
-                   bool recurse, bool ignoreAncestry, bool dryRun);
+               Revision &revision2, const char *localPath, bool force,
+               bool recurse, bool ignoreAncestry, bool dryRun);
     void merge(const char *path, Revision &pegRevision, Revision &revision1,
-                   Revision &revision2, const char *localPath, bool force,
-                   bool recurse, bool ignoreAncestry, bool dryRun);
+               Revision &revision2, const char *localPath, bool force,
+               bool recurse, bool ignoreAncestry, bool dryRun);
     void doImport(const char *path, const char *url, const char *message,
-                      bool recurse);
+                  bool recurse);
     jlong doSwitch(const char *path, const char *url, Revision &revision,
                    bool recurse, bool allowUnverObstructions);
     jlong doExport(const char *srcPath, const char *destPath, 
-                       Revision &revision, Revision &pegRevision, bool force,
-                       bool ignoreExternals, bool recurse, 
-                       const char *nativeEOL);
+                   Revision &revision, Revision &pegRevision, bool force,
+                   bool ignoreExternals, bool recurse, 
+                   const char *nativeEOL);
     void resolved(const char *path, bool recurse);
     void cleanup(const char *path);
     void mkdir(Targets &targets, const char *message);
@@ -116,9 +116,9 @@ public:
                    Revision &revision, Revision &pegRevsion, bool recurse,
                    bool ignoreExternals, bool allowUnverObstructions);
     jobjectArray logMessages(const char *path, Revision &pegRevision, 
-                                 Revision &revisionStart,
-                                 Revision &revisionEnd, bool stopOnCopy,
-                                 bool discoverPaths, long limit);
+                             Revision &revisionStart,
+                             Revision &revisionEnd, bool stopOnCopy,
+                             bool discoverPaths, long limit);
     void setPrompt(Prompter *prompter);
     void password(const char *pi_password);
     void username(const char *pi_username);
@@ -129,25 +129,25 @@ public:
     void removeFromChangelist(Targets &srcPaths, const char *changelist);
     jobjectArray getChangelist(const char *changelist, const char *rootPath);
     jobjectArray status(const char *path, bool descend, bool onServer,
-                            bool getAll, bool noIgnore, bool ignoreExternals);
+                        bool getAll, bool noIgnore, bool ignoreExternals);
     jobjectArray list(const char *url, Revision &revision, 
                       Revision &pegRevision, bool recurse);
     jobject revProperty(jobject jthis, const char *path, const char *name,
-                            Revision &rev);
+                        Revision &rev);
     void setRevProperty(jobject jthis, const char *path, const char *name,
-                            Revision &rev, const char *value, bool force);
+                        Revision &rev, const char *value, bool force);
     jstring getVersionInfo(const char *path, const char *trailUrl,
-                            bool lastChanged);
+                           bool lastChanged);
     jobject propertyGet(jobject jthis, const char *path, const char *name,
-                            Revision &revision, Revision &pegRevision);
+                        Revision &revision, Revision &pegRevision);
     void diff(const char *target1, Revision &revision1,
-                  const char *target2, Revision &revision2,
-                  const char *outfileName,bool recurse, bool ignoreAncestry,
-                  bool noDiffDelete, bool force);
+              const char *target2, Revision &revision2,
+              const char *outfileName,bool recurse, bool ignoreAncestry,
+              bool noDiffDelete, bool force);
     void diff(const char *target, Revision &pegevision,
-                  Revision &startRevision, Revision &endRevision,
-                  const char *outfileName,bool recurse, bool ignoreAncestry,
-                  bool noDiffDelete, bool force);
+              Revision &startRevision, Revision &endRevision,
+              const char *outfileName,bool recurse, bool ignoreAncestry,
+              bool noDiffDelete, bool force);
     void diffSummarize(const char *target1, Revision &revision1,
                        const char *target2, Revision &revision2,
                        bool recurse, bool ignoreAncestry,
@@ -157,25 +157,25 @@ public:
                        bool recurse, bool ignoreAncestry,
                        DiffSummaryReceiver &receiver);
 
-    const char * getLastPath();
+    const char *getLastPath();
     void dispose(jobject jthis);
-    static SVNClient * getCppObject(jobject jthis);
+    static SVNClient *getCppObject(jobject jthis);
     SVNClient();
     virtual ~SVNClient();
     static jobject createJavaLock(const svn_lock_t *lock);
 private:
-    static svn_error_t * checkCancel(void *cancelBaton);
+    static svn_error_t *checkCancel(void *cancelBaton);
     void propertySet(const char *path, const char *name,
                      svn_string_t *value, bool recurse, bool force,
                      svn_revnum_t baseRevisionForURL);
     jobject createJavaProperty(jobject jthis, const char *path,
-                                   const char *name, svn_string_t *value);
+                               const char *name, svn_string_t *value);
     jobject createJavaDirEntry(const char *path, svn_dirent_t *dirent);
     jobject createJavaInfo(const svn_wc_entry_t *entry);
-    svn_client_ctx_t * getContext(const char *message);
-    svn_stream_t * createReadStream(apr_pool_t* pool, const char *path,
-                                    Revision &revision, Revision &pegRevision,
-                                    size_t& size);
+    svn_client_ctx_t *getContext(const char *message);
+    svn_stream_t *createReadStream(apr_pool_t* pool, const char *path,
+                                   Revision &revision, Revision &pegRevision,
+                                   size_t& size);
     /**
      * Shared implementation for diff() APIs. When pegRevision is
      * provided, revision1 and revision2 equate to startRevision and
@@ -213,16 +213,16 @@ private:
     std::string m_passWord;
     std::string m_configDir;
     static jobject createJavaStatus(const char *path,
-                                        svn_wc_status2_t *status);
+                                    svn_wc_status2_t *status);
     static svn_error_t *messageReceiver(void *baton,
-                                            apr_hash_t * changed_paths,
-                                            svn_revnum_t rev,
-                                            const char *author,
-                                            const char *date,
-                                            const char *msg,
-                                            apr_pool_t * pool);
+                                        apr_hash_t *changed_paths,
+                                        svn_revnum_t rev,
+                                        const char *author,
+                                        const char *date,
+                                        const char *msg,
+                                        apr_pool_t *pool);
     static void statusReceiver(void *baton,
-                                   const char *path, svn_wc_status2_t *status);
+                               const char *path, svn_wc_status2_t *status);
     static svn_error_t *infoReceiver(void *baton, 
                                      const char *path,
                                      const svn_info_t *info,

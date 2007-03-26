@@ -41,7 +41,7 @@ CommitMessage::~CommitMessage()
     }
 }
 
-CommitMessage * CommitMessage::makeCCommitMessage(jobject jcommitMessage)
+CommitMessage *CommitMessage::makeCCommitMessage(jobject jcommitMessage)
 {
     // if there is no object passed into this method, there is no need for a 
     // C++ holding object

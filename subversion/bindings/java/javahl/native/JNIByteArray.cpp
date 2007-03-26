@@ -74,7 +74,7 @@ int JNIByteArray::getLength()
  * returns the bytes of the byte array
  * @return the bytes
  */
-const signed char * JNIByteArray::getBytes()
+const signed char *JNIByteArray::getBytes()
 {
     return m_data;
 }

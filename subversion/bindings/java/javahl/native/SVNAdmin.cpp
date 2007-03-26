@@ -43,7 +43,7 @@ SVNAdmin::~SVNAdmin()
 
 }
 
-SVNAdmin * SVNAdmin::getCppObject(jobject jthis)
+SVNAdmin *SVNAdmin::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
     jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
