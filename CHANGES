@@ -1,3 +1,28 @@
+Version 1.4.4
+(?? April 2007, from /branches/1.4.x)
+http://svn.collab.net/repos/svn/tags/1.4.4
+
+ User-visible changes:
+  - Client:
+    * fixed: 'svn up' of replaced file without history fails (issue #2618)
+    * fixed: ra_dav litters empty transactions if initial setup fails (r23594)
+
+  - Server:
+    * fixed: 'svnadmin load' invents svn:date if none exists (issue #2729)
+
+  - Client and Server:
+    * translation updates for Simplified Chinese, Japanese, and Norwegian
+
+ Developer-visible changes:
+ * new "make svnserveautocheck" testing target (r23558)
+ * javahl bindings:
+     - fixed: potential segfault in initialisation (r23383)
+ * SWIG/python bindings:
+     - fixed: memory leak whenever C APIs returned errors (r21453, r23468)
+ * SWIG/ruby bindings:
+     - fixed: typos in method Svn::Wc#merge_prop_diffs and docs (r23405, -6)
+
+
 Version 1.4.3
 (18 January 2007, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.3
