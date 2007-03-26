@@ -108,6 +108,7 @@
 # open-directory element  open-directory 要素
 # open-file element       open-file 要素
 # open-root element       open-root 要素
+# operate on              〜に対して操作を実行する
 # out of date             リポジトリ側と比べて古くなった
 # overflow                溢れる
 # parent pool             親メモリプール
@@ -174,8 +175,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-02-01 21:57+0900\n"
-"PO-Revision-Date: 2007-01-31 18:39+0900\n"
+"POT-Creation-Date: 2007-03-27 02:22+0900\n"
+"PO-Revision-Date: 2007-03-27 02:05+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -331,7 +332,7 @@ msgstr "パスは作業コピーのディレクトリではありません"
 
 #: include/svn_error_codes.h:321
 msgid "Path is not a working copy file"
-msgstr "パスは作業コピーのファイルではありません"
+msgstr "パスが作業コピーのファイルでありません"
 
 #: include/svn_error_codes.h:325
 msgid "Problem running log"
@@ -1007,7 +1008,7 @@ msgstr "作業中のリビジョン (WORKING) についての blame はサポー
 msgid "Start revision must precede end revision"
 msgstr "開始リビジョンは終了リビジョンよりも前でなくてはなりません"
 
-#: libsvn_client/blame.c:725 libsvn_client/cat.c:208
+#: libsvn_client/blame.c:725 libsvn_client/cat.c:210
 #, c-format
 msgid "URL '%s' refers to a directory"
 msgstr "URL '%s' はディレクトリを指しています"
@@ -1034,7 +1035,7 @@ msgstr "'%s' はディレクトリを指しています"
 msgid "(local)"
 msgstr "(ローカル)"
 
-#: libsvn_client/checkout.c:91
+#: libsvn_client/checkout.c:91 libsvn_client/export.c:895
 #, c-format
 msgid "URL '%s' doesn't exist"
 msgstr "URL '%s' は存在しません"
@@ -1168,7 +1169,7 @@ msgstr ""
 #: libsvn_wc/entries.c:2780 libsvn_wc/props.c:479 libsvn_wc/props.c:1088
 #: libsvn_wc/props.c:1506 libsvn_wc/questions.c:182 libsvn_wc/questions.c:291
 #: libsvn_wc/status.c:726 libsvn_wc/translate.c:199
-#: libsvn_wc/update_editor.c:2093 libsvn_wc/update_editor.c:2869
+#: libsvn_wc/update_editor.c:2099 libsvn_wc/update_editor.c:2875
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' はバージョン管理下におかれていません"
@@ -1303,7 +1304,6 @@ msgstr "'%s' は、現実にバージョン管理下にあるリソースを妨�
 msgid "'%s' has local modifications"
 msgstr "'%s' にはローカルで修正が加えられています"
 
-# 引数順番： APR_EOL_STR, path, APR_EOL_STR
 #: libsvn_client/diff.c:99
 #, c-format
 msgid "%sProperty changes on: %s%s"
@@ -1428,8 +1428,8 @@ msgstr "'%s' は存在します。そしてディレクトリではありませ�
 msgid "'%s' already exists"
 msgstr "'%s' は既に存在します"
 
-#: libsvn_client/export.c:687 libsvn_wc/update_editor.c:1607
-#: libsvn_wc/update_editor.c:2222
+#: libsvn_client/export.c:687 libsvn_wc/update_editor.c:1609
+#: libsvn_wc/update_editor.c:2228
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "'%s' のチェックサムが一致しませんでした。期待: '%s', 実際: '%s'"
@@ -3128,13 +3128,13 @@ msgstr "サーバからの応答を待っているうちにタイムアウトし
 msgid "Can't calculate the request body size"
 msgstr "リクエストのボディのサイズを計算できません"
 
-#: libsvn_ra_dav/util.c:726
+#: libsvn_ra_dav/util.c:731
 #, c-format
 msgid "Error spooling the %s request response to disk"
 msgstr ""
 "%s リクエストレスポンスをディスクにスプールする際にエラーが発生しました"
 
-#: libsvn_ra_dav/util.c:774
+#: libsvn_ra_dav/util.c:779
 #, c-format
 msgid "'%s' path not found"
 msgstr "パス '%s' が見つかりません"
@@ -3142,30 +3142,30 @@ msgstr "パス '%s' が見つかりません"
 # * Arguments are (1) method and (2) url.
 #. We either have a neon error, or some other error
 #. that we didn't expect.
-#: libsvn_ra_dav/util.c:779 libsvn_ra_dav/util.c:1014
+#: libsvn_ra_dav/util.c:784 libsvn_ra_dav/util.c:1019
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s (URL: '%s')"
 
-#: libsvn_ra_dav/util.c:797
+#: libsvn_ra_dav/util.c:802
 #, c-format
 msgid "Error reading spooled %s request response"
 msgstr ""
 "スプールされた %s リクエストレスポンスを読み込む際にエラーが発生しました"
 
-#: libsvn_ra_dav/util.c:808
+#: libsvn_ra_dav/util.c:813
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr ""
 "%s リクエストに対するレスポンスとして不正な XML が返されました: %s (%s)"
 
-#: libsvn_ra_dav/util.c:828
+#: libsvn_ra_dav/util.c:833
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "%s リクエスト (相手: '%s') が失敗しました"
 
 #: libsvn_ra_local/ra_plugin.c:103 libsvn_ra_local/ra_plugin.c:587
-#: libsvn_wc/update_editor.c:2383
+#: libsvn_wc/update_editor.c:2389
 #, c-format
 msgid ""
 "'%s'\n"
@@ -3825,7 +3825,7 @@ msgstr "ノード '%s' におけるノードアクションを認識できませ
 msgid " done.\n"
 msgstr " 完了しました。\n"
 
-#: libsvn_repos/load.c:1229
+#: libsvn_repos/load.c:1231
 #, c-format
 msgid ""
 "\n"
@@ -3836,7 +3836,7 @@ msgstr ""
 "------- リビジョン %ld をコミットしました >>>\n"
 "\n"
 
-#: libsvn_repos/load.c:1235
+#: libsvn_repos/load.c:1237
 #, c-format
 msgid ""
 "\n"
@@ -5210,7 +5210,7 @@ msgstr "'%s' には 'timestamp' 属性がありません"
 #: libsvn_wc/log.c:775 libsvn_wc/log.c:815
 #, c-format
 msgid "Error getting 'affected time' on '%s'"
-msgstr "'%s' の 'affected time' を取得している際にエラーが発生しました"
+msgstr "'%s' の 'affected time' を取得中にエラーが発生しました"
 
 #: libsvn_wc/log.c:826
 #, c-format
@@ -5519,17 +5519,17 @@ msgstr ""
 "ファイル '%s' (ディレクトリ '%s' 内のもの) はバージョン管理されていないリソー"
 "スです"
 
-#: libsvn_wc/update_editor.c:1615
+#: libsvn_wc/update_editor.c:1618
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "'%s' のチェックサムが一致しませんでした。記録: '%s', 実際: '%s'"
 
-#: libsvn_wc/update_editor.c:2714
+#: libsvn_wc/update_editor.c:2720
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "'%s' には系統情報がありません"
 
-#: libsvn_wc/update_editor.c:2877
+#: libsvn_wc/update_editor.c:2883
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "コピー元の URL '%s' のリポジトリルートが、'%s' と異なっています"
@@ -5907,11 +5907,13 @@ msgstr "最小限の情報だけを表示します"
 msgid "descend recursively"
 msgstr "子ノードを再帰的に辿ります"
 
-# * Description for 'svn --non-recursive'.
+# * Description for 'svnlook --non-recursive'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:68
 msgid "operate on single directory only"
-msgstr "単一のディレクトリのみに (非再帰的に) 作用します"
+msgstr ""
+"単一のディレクトリのみに対して (非再帰的に) 操作\n"
+"                             を実行します"
 
 # * Description for 'svn --change'.
 # * 29 half-size characters are displayed on the left.
@@ -5997,13 +5999,13 @@ msgstr "付加的な情報を表示します"
 msgid "display update information"
 msgstr "更新情報を表示します"
 
-# * Description for 'svn{,sync} --username'.
+# * Description for 'svn --username'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:96 svnsync/main.c:96
 msgid "specify a username ARG"
 msgstr "ユーザ名を <ARG> と指定します"
 
-# * Description for 'svn{,sync} --password'.
+# * Description for 'svn --password'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:98 svnsync/main.c:98
 msgid "specify a password ARG"
@@ -6161,7 +6163,9 @@ msgstr "二者のうち新しい方として <ARG> を用います"
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:164
 msgid "operate on a revision property (use with -r)"
-msgstr "リビジョン属性に作用します (-r と共に用います)"
+msgstr ""
+"リビジョン属性に対して操作を実行します (-r と共\n"
+"                             に用います)"
 
 # * Description for 'svn --relocate'.
 # * 29 half-size characters are displayed on the left.
@@ -7825,7 +7829,7 @@ msgid ""
 "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is set, and "
 "no 'editor-cmd' run-time configuration option was found"
 msgstr ""
-"環境変数 SVN_EDITOR, VISUAL, EDITOR のどれも設定されていなく、実行時の設定オ"
+"環境変数 SVN_EDITOR、VISUAL、EDITOR のどれも設定されていなく、実行時の設定オ"
 "プション 'editor-cmd' も見つかりません"
 
 #: svn/util.c:162
@@ -8231,9 +8235,9 @@ msgid ""
 msgstr ""
 "使用方法: svnadmin recover <リポジトリパス>\n"
 "\n"
-"Berkeley DB の復旧手続きをリポジトリ上で実行します。復旧実行の必要性を知ら"
+"Berkeley DB リポジトリの復旧手続きを実行します。復旧を実行する必要性を知ら"
 "せ\n"
-"るエラーが見られたときにこれを実行してください。復旧には排他的なアクセスが"
+"るエラーが見られる場合にこれを実行してください。復旧には排他的なアクセスが"
 "必\n"
 "要なので、リポジトリが他のプロセスで利用されている場合は終了します。\n"
 
@@ -8702,8 +8706,8 @@ msgstr "コピー元に対する差分を表示します"
 #: svnlook/main.c:120
 msgid "operate on a revision property (use with -r or -t)"
 msgstr ""
-"リビジョン属性に作用します (-r または -t と共に\n"
-"                             用います)"
+"リビジョン属性に対して操作を実行します (-r また\n"
+"                             は -t と共に用います)"
 
 # * Description for 'svnlook --full-paths'.
 # * 29 half-size characters are displayed on the left.
@@ -9341,8 +9345,8 @@ msgstr ""
 "\n"
 "同期元から同期先へ、未同期のリビジョンを転送します。\n"
 
-# * Description for 'svnsync synchronize'.
-# * "synchronize (sync): " is displayed at the head of the first line.
+# * Description for 'svnsync copy-revprops'.
+# * "copy-revprops: " is displayed at the head of the first line.
 #: svnsync/main.c:76
 msgid ""
 "usage: svnsync copy-revprops DEST_URL REV\n"
@@ -9591,6 +9595,12 @@ msgstr "エクスポートされたものです%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
 
+#~ msgid "Changelist doesn't match"
+#~ msgstr "変更リストが一致しません"
+
+#~ msgid "SQLite error"
+#~ msgstr "SQLite のエラーです"
+
 #~ msgid "Representation is being written"
 #~ msgstr "表現は書き込み中です"
 
@@ -9600,11 +9610,17 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "Operation does not support multiple sources"
 #~ msgstr "複数のコピー元 (または移動元) が操作でサポートされていません"
 
+#~ msgid "Merge info parse error"
+#~ msgstr "マージ情報のパースエラーです"
+
 #~ msgid "Error parsing arguments"
 #~ msgstr "引数をパースしているときにエラーが生じました"
 
 #~ msgid "Not enough arguments provided"
 #~ msgstr "十分な引数が与えられていません"
+
+#~ msgid "Standard properties can't be set explicitly as revision properties"
+#~ msgstr "標準の属性については、リビジョン属性の明示的な設定はできません"
 
 #~ msgid "Cannot mix repository and working copy sources"
 #~ msgstr "コピー元 (または移動元) にリポジトリと作業コピーは混在できません"
@@ -9612,11 +9628,33 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "Moves between the working copy and the repository are not supported"
 #~ msgstr "作業コピー・リポジトリ間の移動はサポートされていません"
 
+#~ msgid "   Reverted %s:r%s%s"
+#~ msgstr "   %s:r%s を元に戻しました%s"
+
+#~ msgid "   Merged %s:r%s%s"
+#~ msgstr "   %s:r%s をマージしました%s"
+
+#~ msgid ""
+#~ "Sorry, svn_client_diff4 was called in a way that is not yet supported"
+#~ msgstr ""
+#~ "すみません。まだサポートされていないやり方で svn_client_diff4 が呼び出され"
+#~ "ました"
+
 #~ msgid "URL '%s' non-existent in revision %ld"
 #~ msgstr "URL '%s' は、リビジョン %ld には存在しません"
 
 #~ msgid "Lock comment contains illegal characters"
 #~ msgstr "ロックについてのコメントに不正な文字が含まれています"
+
+#~ msgid ""
+#~ "Path '%s' is in conflict, and must be resolved before the remainder of "
+#~ "the requested merge can be applied"
+#~ msgstr ""
+#~ "パス '%s' が衝突しています。指定されたマージのうちまだ適用されていないもの"
+#~ "を適用する前に、この衝突を解決しなければなりません"
+
+#~ msgid "Use of two URLs is not compatible with merge info modification"
+#~ msgstr "マージ情報の修正とともに 2 つの URL を使用することはできません"
 
 #~ msgid "Property '%s' is not a regular property"
 #~ msgstr "属性 '%s' はまともな属性ではありません"
@@ -9636,6 +9674,21 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 
 #~ msgid "Path '%s' doesn't exist in revision %ld"
 #~ msgstr "パス '%s' はリビジョン %ld に存在しません"
+
+#~ msgid "'%s' is neither a file nor a directory"
+#~ msgstr "'%s' はファイルでもディレクトリでもありません"
+
+#~ msgid "Recovery encountered a non-directory node"
+#~ msgstr "復旧時にディレクトリでないノードが見つかりました"
+
+#~ msgid "Recovery encountered a deltified directory representation"
+#~ msgstr "復旧時に差分化されたディレクトリ表現が見つかりました"
+
+#~ msgid "Merge Tracking schema format not set"
+#~ msgstr "マージ追跡スキーマの形式が設定されていません"
+
+#~ msgid "Merge Tracking schema format %d not recognized"
+#~ msgstr "マージ追跡スキーマの形式 %d が認識できません"
 
 #~ msgid "Expected a valid revnum and path"
 #~ msgstr "正しいリビジョン番号やパスを期待しました"
@@ -9681,14 +9734,19 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "Adding a directory failed: %s on %s (%d)"
 #~ msgstr "ディレクトリの追加が失敗しました: %s (対象: %s) (%d)"
 
+#~ msgid ""
+#~ "Server doesn't support setting arbitrary revision properties during commit"
+#~ msgstr ""
+#~ "コミット時に任意のリビジョン属性を設定するのをサーバがサポートしていません"
+
+#~ msgid "Merge info element is not a list"
+#~ msgstr "merge info 要素がリストではありません"
+
 #~ msgid "Could not initialize the SASL library"
 #~ msgstr "SASL ライブラリを初期化できませんでした"
 
-#~ msgid "Can't get user name"
-#~ msgstr "ユーザ名を取得できません"
-
-#~ msgid "Unhandled SASL interaction"
-#~ msgstr "SASL 相互作用の扱いをやめました"
+#~ msgid "Can't get username or password"
+#~ msgstr "ユーザ名もパスワードも取得できません"
 
 #~ msgid "Can't get socket timeout"
 #~ msgstr "ソケットのタイムアウト時間を取得できません"
@@ -9721,6 +9779,30 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "No error output was produced by the hook."
 #~ msgstr "フックはエラー出力を生成しませんでした。"
 
+#~ msgid "Invalid depth (%s) for path '%s'"
+#~ msgstr "深さの指定 (%s) が不正です (パス: '%s')"
+
+#~ msgid "Can't create symbolic link '%s'"
+#~ msgstr "シンボリックリンク '%s' を作成できません"
+
+#~ msgid "Reading from stdin is disallowed"
+#~ msgstr "標準入力からの読み込みが許可されていません"
+
+#~ msgid "No revision list found "
+#~ msgstr "リビジョンリストが見つかりません"
+
+#~ msgid "Invalid character found in revision list"
+#~ msgstr "リビジョンリストに不正な文字が見つかりました"
+
+#~ msgid "Revision list parsing ended before hitting newline"
+#~ msgstr "改行文字に達する前にリビジョンリストのパースが終了しました"
+
+#~ msgid "Pathname not terminated by ':'"
+#~ msgstr "パス名の末端に ':' がついていません"
+
+#~ msgid "Could not find end of line in revision line"
+#~ msgstr "リビジョン行に行末文字が見つかりませんでした"
+
 #~ msgid " ARG"
 #~ msgstr " <ARG>"
 
@@ -9742,8 +9824,14 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "While preparing '%s' for commit"
 #~ msgstr "'%s' のコミットを準備する際に"
 
+#~ msgid "'%s' is not currently a member of changelist '%s'."
+#~ msgstr "パス '%s' は変更リスト '%s' に属していません。"
+
 #~ msgid "Error during recursive copy of '%s'"
 #~ msgstr "'%s' を再帰的にコピーする際にエラーが発生しました"
+
+#~ msgid "Error getting file size on '%s'"
+#~ msgstr "'%s' のファイルサイズを取得中にエラーが発生しました"
 
 #~ msgid "Error removing changelist from entry '%s'"
 #~ msgstr "エントリ '%s' からの変更リストの削除中にエラーが発生しました"
@@ -9782,13 +9870,62 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "ファイル '%s' を追加できませんでした: ファイル以外の同名のオブジェクトが既"
 #~ "に存在します"
 
-#~ msgid "Changelist: %s\n"
-#~ msgstr "変更リスト:%s\n"
-
 #~ msgid "no such changelist '%s'"
 #~ msgstr "そのような変更リストはありません: '%s'"
 
-# * Description for 'svn --clear'.
+#~ msgid ""
+#~ "Local, non-commit operations do not take a log message or revision "
+#~ "properties"
+#~ msgstr ""
+#~ "ローカルの、コミットを伴わない操作にログメッセージやリビジョン属性はつけら"
+#~ "れません"
+
+#~ msgid "Depth: empty\n"
+#~ msgstr "深さ: 空 (empty)\n"
+
+#~ msgid "Depth: files\n"
+#~ msgstr "深さ: ファイルのみ (files)\n"
+
+#~ msgid "Depth: immediates\n"
+#~ msgstr "深さ: 直下まで (immediates)\n"
+
+#~ msgid "Depth: INVALID\n"
+#~ msgstr "深さ: *不正*\n"
+
+#~ msgid "Changelist: %s\n"
+#~ msgstr "変更リスト:%s\n"
+
+# * Description for 'svn --recursive'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "descend recursively, same as --depth=infinity"
+#~ msgstr ""
+#~ "子ノードを再帰的に辿ります。--depth=infinity に\n"
+#~ "                             相当します"
+
+# * Description for 'svn --non-recursive'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "obsolete; try --depth=files or --depth=immediates"
+#~ msgstr ""
+#~ "廃止予定です。--depth=files または\n"
+#~ "                             --depth=immediates を使用してください"
+
+# * Description for 'svn --depth'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "pass depth ('empty', 'files', 'immediates', or\n"
+#~ "                            'infinity') as ARG"
+#~ msgstr ""
+#~ "深さ ('empty'、'files'、'immediates'、'infinity'\n"
+#~ "                             のいずれか) として <ARG> を渡します"
+
+# * Description for 'svn --record-only'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "mark revisions as merged (use with -r)"
+#~ msgstr ""
+#~ "マージ済みの印をリビジョンにつけます (-r と共に\n"
+#~ "                             用います)"
+
+# * Description for 'svn --remove'.
 # * 29 half-size characters are displayed on the left.
 #~ msgid "remove changelist association"
 #~ msgstr "変更リストの関連づけを削除します"
@@ -9810,17 +9947,26 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "keep path in working copy"
 #~ msgstr "作業コピー内にパスを残します"
 
+# * Description for 'svn --with-revprop'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "set revision property ARG in new revision\n"
+#~ "                             using the name=value format"
+#~ msgstr ""
+#~ "「名前=値」の形式で指定されたリビジョン属性 <ARG>\n"
+#~ "                             を新しいリビジョンに設定します"
+
 # * Description for 'svn changelist'.
 # * "changelist (cl): " is displayed at the head of the first line.
 #~ msgid ""
 #~ "Associate (or deassociate) local paths with changelist CLNAME.\n"
 #~ "usage: 1. changelist CLNAME TARGET...\n"
-#~ "       2. changelist --clear TARGET...\n"
+#~ "       2. changelist --remove TARGET...\n"
 #~ msgstr ""
 #~ "ローカルパスを変更リスト <CLNAME> と関連づけます (または関連\n"
 #~ "づけを削除します)。\n"
 #~ "使用方法: 1. changelist <CLNAME> <対象>...\n"
-#~ "          2. changelist --clear <対象>...\n"
+#~ "          2. changelist --remove <対象>...\n"
 
 # * Description for 'svn checkout'.
 # * "checkout (co): " is displayed at the head of the first line.
@@ -10160,14 +10306,25 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "なっ\n"
 #~ "  たパスは 1 列目でコード 'E' を用いて報告されます。\n"
 
+#~ msgid "Revision property pair is empty"
+#~ msgstr "リビジョン属性のペアが空です"
+
+#~ msgid "Error converting depth from locale to UTF8"
+#~ msgstr "深さをロケールから UTF-8 に変換する際にエラーが発生しました"
+
+#~ msgid "'%s' is not a valid depth; try 0, 1, or 2"
+#~ msgstr ""
+#~ "'%s' は深さとして有効ではありません。0、1、2 のいずれかを与えてみてくださ"
+#~ "い"
+
 #~ msgid "Try 'svn help' for more info"
 #~ msgstr "より詳しく知りたいときは 'svn help' を試してみてください"
 
-#~ msgid "Path '%s' is now part of changelist '%s'.\n"
-#~ msgstr "パス '%s' は変更リスト '%s' の一部になりました。\n"
+#~ msgid "Path '%s' is now a member of changelist '%s'.\n"
+#~ msgstr "パス '%s' は変更リスト '%s' に属しています。\n"
 
-#~ msgid "Path '%s' is no longer associated with a changelist.\n"
-#~ msgstr "パス '%s' の変更リストとの関連づけは解消されました。\n"
+#~ msgid "Path '%s' is no longer a member of a changelist.\n"
+#~ msgstr "パス '%s' はもう変更リストに属していません。\n"
 
 #~ msgid "'%s' is not a valid Subversion property name"
 #~ msgstr "'%s' は、Subversion の属性名として有効ではありません"
@@ -10178,6 +10335,15 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "\n"
 #~ "--- 変更リスト '%s':\n"
+
+#~ msgid ""
+#~ "The EDITOR, SVN_EDITOR or VISUAL environment variable or 'editor-cmd' run-"
+#~ "time configuration option is empty or consists solely of whitespace. "
+#~ "Expected a shell command."
+#~ msgstr ""
+#~ "環境変数 SVN_EDITOR、VISUAL、EDITOR や実行時の設定オプション 'editor-cmd' "
+#~ "の値が空か、または空白文字だけから成っています。値として期待されているのは"
+#~ "シェルコマンドです。"
 
 #~ msgid "Error normalizing edited contents to internal format"
 #~ msgstr "編集内容を内部形式に正規化する際にエラーが発生しました"
@@ -10194,6 +10360,24 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 # * 29 half-size characters are displayed on the left.
 #~ msgid "call hook after changing revision property"
 #~ msgstr "リビジョン属性を変更した後にフックを呼び出します"
+
+# * Description for 'svnadmin recover'.
+# * "recover: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "usage: svnadmin recover REPOS_PATH\n"
+#~ "\n"
+#~ "Run the recovery procedure on a repository.  Do this if you've\n"
+#~ "been getting errors indicating that recovery ought to be run.\n"
+#~ "Berkeley DB recovery requires exclusive access and will\n"
+#~ "exit if the repository is in use by another process.\n"
+#~ msgstr ""
+#~ "使用方法: svnadmin recover <リポジトリパス>\n"
+#~ "\n"
+#~ "リポジトリの復旧手続きを実行します。復旧を実行する必要性を知らせるエラーが"
+#~ "見\n"
+#~ "られる場合にこれを実行してください。Berkeley DB の復旧には排他的なアクセス"
+#~ "が\n"
+#~ "必要なので、リポジトリが他のプロセスで利用されている場合は終了します。\n"
 
 # * Description for 'svnadmin setlog'.
 # * "setlog: " is displayed at the head of the first line.
@@ -10293,6 +10477,20 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "Try 'svnlook help' for more info"
 #~ msgstr "より詳しく知りたいときは 'svnlook help' を試してみてください"
 
+#~ msgid "Can't get hostname"
+#~ msgstr "ホスト名を取得できません"
+
+#~ msgid "Could not obtain the list of SASL mechanisms"
+#~ msgstr "SASL 機構の一覧を取得できませんでした"
+
+#~ msgid "Couldn't obtain the authenticated username"
+#~ msgstr "認証済みのユーザ名を取得できませんでした"
+
+# * Description for 'svnserve --config-file'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "read configuration from file ARG"
+#~ msgstr "ファイル <ARG> にある設定ファイルを読み込みます"
+
 # * Description for 'svnserve --pid-file'.
 # * 29 half-size characters are displayed on the left.
 #~ msgid "write server process ID to file ARG"
@@ -10305,14 +10503,119 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "svnserve: ルートパス '%s' が存在しないかディレクトリではありません。\n"
 
-#~ msgid "Can't get hostname"
-#~ msgstr "ホスト名を取得できません"
+#~ msgid "Path is not a string"
+#~ msgstr "パスが文字列でありません"
 
-#~ msgid "Could not obtain the list of SASL mechanisms"
-#~ msgstr "SASL 機構の一覧を取得できませんでした"
+# * Description for 'svnsync synchronize'.
+# * "synchronize (sync): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "usage: svnsync synchronize DEST_URL\n"
+#~ "\n"
+#~ "Transfer all pending revisions to the destination from the source\n"
+#~ "with which it was initialized.\n"
+#~ msgstr ""
+#~ "使用方法: svnsync synchronize <同期先 URL>\n"
+#~ "\n"
+#~ "初期化に用いた同期元から同期先へ、未同期のリビジョンを転送します。\n"
 
-#~ msgid "Couldn't obtain the authenticated username"
-#~ msgstr "認証済みのユーザ名を取得できませんでした"
+# * Description for 'svnsync copy-revprops'.
+# * "copy-revprops: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "usage: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
+#~ "\n"
+#~ "Copy the revision properties in a given range of revisions to the\n"
+#~ "destination from the source with which it was initialized.\n"
+#~ "\n"
+#~ "If REV and REV2 are provided, copy properties for the revisions\n"
+#~ "specified by that range, inclusively.  If only REV is provided,\n"
+#~ "copy properties for that revision alone.  If REV is not provided,\n"
+#~ "copy properties for all revisions previously transferred to the\n"
+#~ "destination.\n"
+#~ "\n"
+#~ "REV and REV2 must be revisions which were previously transferred\n"
+#~ "to the destination.  You may use \"HEAD\" for either revision to\n"
+#~ "mean \"the last revision transferred\".\n"
+#~ msgstr ""
+#~ "使用方法: svnsync copy-revprops <同期先 URL> [<REV>[:<REV2>]]\n"
+#~ "\n"
+#~ "初期化に用いた同期元から同期先へ、指定されたリビジョン範囲のリビジョン属性"
+#~ "を\n"
+#~ "コピーします。\n"
+#~ "\n"
+#~ "<REV> と <REV2> がともに指定されている場合、その範囲で指定されたリビジョン"
+#~ "の\n"
+#~ "属性をまとめてコピーします。<REV> のみが指定されている場合、そのリビジョン"
+#~ "の\n"
+#~ "属性のみをコピーします。<REV> が指定されていない場合、これまでに同期先に転"
+#~ "送\n"
+#~ "されたリビジョンすべての属性をコピーします。\n"
+#~ "\n"
+#~ "<REV> と <REV2> は、これまでに同期先に転送されたリビジョンでなければなりま"
+#~ "せ\n"
+#~ "ん。どちらかのリビジョンに「転送された中で最新のリビジョン」を指定するの"
+#~ "に\n"
+#~ "\"HEAD\" を使用してもかまいません。\n"
+
+# * Description for 'svnsync --username'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "specify a username ARG (deprecated;\n"
+#~ "                             see --source-username and --sync-username)"
+#~ msgstr ""
+#~ "ユーザ名を <ARG> と指定します (廃止予定です。\n"
+#~ "                             --source-username と --sync-username の説明を"
+#~ "参\n"
+#~ "                             照してください)"
+
+# * Description for 'svnsync --password'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "specify a password ARG (deprecated;\n"
+#~ "                             see --source-password and --sync-password)"
+#~ msgstr ""
+#~ "パスワードを <ARG> と指定します (廃止予定です。\n"
+#~ "                             --source-password と --sync-password の説明を"
+#~ "参\n"
+#~ "                             照してください)"
+
+# * Description for 'svnsync --source-username'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "connect to source repository with username ARG"
+#~ msgstr "ユーザ名 <ARG> で同期元リポジトリに接続します"
+
+# * Description for 'svnsync --source-password'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "connect to source repository with password ARG"
+#~ msgstr "パスワード <ARG> で同期元リポジトリに接続します"
+
+# * Description for 'svnsync --sync-username'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "connect to sync repository with username ARG"
+#~ msgstr "ユーザ名 <ARG> で同期リポジトリに接続します"
+
+# * Description for 'svnsync --sync-password'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "connect to sync repository with password ARG"
+#~ msgstr "パスワード <ARG> で同期リポジトリに接続します"
+
+#~ msgid ""
+#~ "Cannot copy revprops for a revision (%ld) that has not been synchronized "
+#~ "yet"
+#~ msgstr ""
+#~ "まだ同期されていないリビジョン (%ld) のリビジョン属性はコピーできません"
+
+#~ msgid "'%s' is not a valid revision range"
+#~ msgstr "'%s' はリビジョン範囲として有効ではありません"
+
+#~ msgid "Invalid revision number (%ld)"
+#~ msgstr "リビジョン番号が不正です (%ld)"
+
+#~ msgid ""
+#~ "Cannot use --username or --password with any of --source-username, --"
+#~ "source-password, --sync-username, or --sync-password.\n"
+#~ msgstr ""
+#~ "--username や --password は、--source-username、--source-assword、--sync-"
+#~ "username、--sync-password のいずれとも使用できません。\n"
 
 #~ msgid ""
 #~ "Subcommand '%s' doesn't accept option '%s'\n"
@@ -10323,6 +10626,63 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 
 #~ msgid "Try 'svnsync help' for more info"
 #~ msgstr "より詳しく知りたいときは 'svnsync help' を試してみてください"
+
+# * This string is wrongly extracted.
+#~ msgid "Invalid depth (%"
+#~ msgstr "深さが不正です (%"
+
+# * Description for 'svn --depth'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "pass depth ('empty', 'files', 'immediates', or\n"
+#~ "                            'infinity') as arg"
+#~ msgstr ""
+#~ "深さ ('empty'、'files'、'immediates'、'infinity'\n"
+#~ "                             のいずれか) として <ARG> を渡します"
+
+#~ msgid ""
+#~ "Local, non-commit operations do not take a log messageor revision "
+#~ "properties"
+#~ msgstr ""
+#~ "ローカルの、コミットを伴わない操作にログメッセージやリビジョン属性はつけら"
+#~ "れません"
+
+#~ msgid "Invalid depth (%d) for path '%s'"
+#~ msgstr "深さの指定 (%d) が不正です (パス: '%s')"
+
+#~ msgid "Entry '%s' has invalid or missing working-size"
+#~ msgstr ""
+#~ "エントリ '%s' の working-size が不正か、エントリに working-size が存在しま"
+#~ "せん"
+
+#~ msgid "This directory's entry has invalid or missing working-size"
+#~ msgstr ""
+#~ "このディレクトリのエントリの working-size が不正か、エントリに working-"
+#~ "size が存在しません"
+
+# * Description for 'svn changelist'.
+# * "changelist (cl): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Associate (or deassociate) local paths with changelist CLNAME.\n"
+#~ "usage: 1. changelist CLNAME TARGET...\n"
+#~ "       2. changelist --clear TARGET...\n"
+#~ msgstr ""
+#~ "ローカルパスを変更リスト <CLNAME> と関連づけます (または関連\n"
+#~ "づけを削除します)。\n"
+#~ "使用方法: 1. changelist <CLNAME> <対象>...\n"
+#~ "          2. changelist --clear <対象>...\n"
+
+#~ msgid "Path '%s' is now part of changelist '%s'.\n"
+#~ msgstr "パス '%s' は変更リスト '%s' の一部になりました。\n"
+
+#~ msgid "Path '%s' is no longer associated with a changelist.\n"
+#~ msgstr "パス '%s' の変更リストとの関連づけは解消されました。\n"
+
+#~ msgid "Can't get user name"
+#~ msgstr "ユーザ名を取得できません"
+
+#~ msgid "Unhandled SASL interaction"
+#~ msgstr "SASL 相互作用の扱いをやめました"
 
 # * Description for svnsync.
 #~ msgid ""
@@ -13867,8 +14227,8 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "\n"
 #~ "このプログラムやそのサブコマンドの使用方法を説明します。\n"
 
-# * Description for 'svnsync synchronize'.
-# * "synchronize (sync): " is displayed at the head of the first line.
+# * Description for 'svnsync copy-revprops'.
+# * "copy-revprops: " is displayed at the head of the first line.
 #~ msgid ""
 #~ "usage: svnsync copy-revprops DEST_URL --revision REV\n"
 #~ "Copy all revision properties for revision REV from source to\n"
