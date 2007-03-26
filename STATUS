@@ -77,7 +77,7 @@ Candidate changes:
       +1: blair, cmpilato
 
  * r23959
-   Fix issue #1745: Inconsistent expansion of keyword
+   Fix issue #1743: Inconsistent expansion of keyword
    Justification:
      Inconsistencies are never good. Small change.
    Branch: 1.4.x-r23959
