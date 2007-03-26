@@ -150,9 +150,10 @@ module Svn
         editor
       end
 
-      def youngest_rev
+      def youngest_revision
         fs.youngest_rev
       end
+      alias_method :youngest_rev, :youngest_revision
 
       def dated_revision(date)
         Repos.dated_revision(self, date.to_apr_time)

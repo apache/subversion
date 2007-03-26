@@ -128,6 +128,10 @@ apr_array_header_t *svn_swig_rb_array_to_apr_array_merge_range(VALUE array,
                                                                apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_array_header_t *svn_swig_rb_to_apr_array_prop(VALUE array_or_hash,
+                                                  apr_pool_t *pool);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self, VALUE *rb_pool, apr_pool_t **pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_boolean_t svn_swig_rb_set_pool(VALUE target, VALUE pool);

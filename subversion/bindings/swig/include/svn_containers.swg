@@ -457,7 +457,7 @@
 
   svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
 
-  $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
+  $1 = svn_swig_rb_to_apr_array_prop($input, pool);
 }
 
 %typemap(out) apr_array_header_t *PROP_LIST
@@ -474,7 +474,7 @@
     apr_pool_t *pool;
 
     svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
-    $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
+    $1 = svn_swig_rb_to_apr_array_prop($input, pool);
   }
 }
 
