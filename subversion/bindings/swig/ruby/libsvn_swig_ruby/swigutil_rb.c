@@ -13,6 +13,14 @@
 #  endif
 #endif
 
+#ifndef RSTRING_LEN
+#  define RSTRING_LEN(str) (RSTRING(str)->len)
+#endif
+
+#ifndef RSTRING_PTR
+#  define RSTRING_PTR(str) (RSTRING(str)->ptr)
+#endif
+
 #include <locale.h>
 
 #include "svn_nls.h"
@@ -762,6 +770,47 @@ c2r_svn_string(void *value, void *ctx)
   const svn_string_t *s = (svn_string_t *)value;
 
   return c2r_string2(s->data);
+}
+
+typedef struct {
+  apr_array_header_t *array;
+  apr_pool_t *pool;
+} prop_hash_each_arg_t;
+
+static int
+svn_swig_rb_to_apr_array_prop_callback(VALUE key, VALUE value,
+                                       prop_hash_each_arg_t *arg)
+{
+  svn_prop_t *prop;
+
+  prop = apr_palloc(arg->pool, sizeof(svn_prop_t));
+  prop->name = apr_pstrdup(arg->pool, StringValueCStr(key));
+  prop->value = svn_string_ncreate(RSTRING_PTR(value), RSTRING_LEN(value),
+                                   arg->pool);
+  APR_ARRAY_PUSH(arg->array, svn_prop_t *) = prop;
+  return ST_CONTINUE;
+}
+
+apr_array_header_t *
+svn_swig_rb_to_apr_array_prop(VALUE array_or_hash, apr_pool_t *pool)
+{
+  if (RTEST(rb_obj_is_kind_of(array_or_hash, rb_cArray))) {
+    return svn_swig_rb_array_to_apr_array_prop(array_or_hash, pool);
+  } else if (RTEST(rb_obj_is_kind_of(array_or_hash, rb_cHash))) {
+    apr_array_header_t *result;
+    prop_hash_each_arg_t arg;
+
+    result = apr_array_make(pool, 0, sizeof(svn_prop_t));
+    arg.array = result;
+    arg.pool = pool;
+    rb_hash_foreach(array_or_hash, svn_swig_rb_to_apr_array_prop_callback,
+                    (VALUE)&arg);
+    return result;
+  } else {
+    rb_raise(rb_eArgError,
+             "'%s' must be [Svn::Core::Prop, ...] or {'name' => 'value', ...}",
+             r2c_inspect(array_or_hash));
+  }
 }
 
 

@@ -220,6 +220,30 @@ class SvnWcTest < Test::Unit::TestCase
     end
   end
 
+  def test_committed_queue
+    log = "sample log"
+    source1 = "source"
+    source2 = "SOURCE"
+    file1 = "file1"
+    file2 = "file2"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+    ctx = make_context(log)
+
+    File.open(path1, "w") {|f| f.print(source1)}
+    File.open(path2, "w") {|f| f.print(source2)}
+    ctx.add(path1)
+    ctx.add(path2)
+    rev1 = ctx.ci(@wc_path).revision
+    next_rev = rev1 + 1
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+      queue = Svn::Wc::CommittedQueue.new
+      queue.push(access, path1, true, {"my-prop" => "value"})
+      queue.process(access, next_rev)
+    end
+  end
+
   def test_ancestry
     file1 = "file1"
     file2 = "file2"

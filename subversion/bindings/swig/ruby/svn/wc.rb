@@ -515,5 +515,19 @@ module Svn
         _initialize(wc_path, trail_url, committed, cancel_func)
       end
     end
+
+    class CommittedQueue
+      def push(access, path, recurse=true, wcprop_changes={}, remove_lock=true,
+               remove_change_list=false, digest=nil)
+        Wc.queue_committed(self, path, access, recurse, wcprop_changes,
+                           remove_lock, remove_change_list, digest)
+        self
+      end
+
+      def process(access, new_rev, rev_date=nil, rev_author=nil)
+        rev_date = rev_date.to_svn_format if rev_date.is_a?(Time)
+        Wc.process_committed_queue(self, access, new_rev, rev_date, rev_author)
+      end
+    end
   end
 end

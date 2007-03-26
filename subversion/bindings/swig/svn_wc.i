@@ -133,6 +133,19 @@
     const char **xlated_path
 };
 #endif
+
+/* svn_wc_queue_committed() */
+#ifdef SWIGRUBY
+%typemap(in) svn_wc_committed_queue_t **queue (void *tempp=NULL) {
+  SWIG_ConvertPtr($input, &tempp, $*1_descriptor, 0);
+  $1 = ($1_ltype)&tempp;
+};
+
+%typemap(argout) svn_wc_committed_queue_t **queue {
+  %append_output(argv[0]);
+};
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %{
