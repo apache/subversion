@@ -50,7 +50,7 @@ Notify::~Notify()
  * Create a C++ peer object for the java object
  * @param notify    a local reference to the java object
  */
-Notify * Notify::makeCNotify(jobject notify)
+Notify *Notify::makeCNotify(jobject notify)
 {
     // if the java object is null -> no C++ peer needed
     if (notify == NULL)
@@ -109,7 +109,7 @@ Notify::notify (
     svn_revnum_t revision)
 {
     // an Notify object is used as the baton
-    Notify * notify = (Notify *) baton;
+    Notify *notify = (Notify *) baton;
     if (notify) // sanity check
     {
         // call our method

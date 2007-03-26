@@ -38,12 +38,12 @@ class Pool
 public:
     Pool();
     ~Pool();
-    apr_pool_t * pool() const;
+    apr_pool_t *pool() const;
 private:
     /**
      * the apr pool request pool
      */
-    apr_pool_t * m_pool;
+    apr_pool_t *m_pool;
 
 };
 // !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)

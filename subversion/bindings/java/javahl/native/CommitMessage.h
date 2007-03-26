@@ -49,7 +49,7 @@ public:
      * org.tigris.subversion.javahl.CommitMessage Java commit message
      * object.
      */
-    static CommitMessage * makeCCommitMessage(jobject jcommitMessage);
+    static CommitMessage *makeCCommitMessage(jobject jcommitMessage);
 
 private:
     /**

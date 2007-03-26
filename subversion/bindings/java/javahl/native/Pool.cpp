@@ -53,7 +53,7 @@ Pool::~Pool()
  * Returns the apr pool.
  * @return the apr pool
  */
-apr_pool_t * Pool::pool () const
+apr_pool_t *Pool::pool () const
 {
     return m_pool;
 }

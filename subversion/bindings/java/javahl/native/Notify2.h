@@ -42,7 +42,7 @@ private:
     Notify2(jobject p_notify);
 
 public:
-    static Notify2 * makeCNotify(jobject notify);
+    static Notify2 *makeCNotify(jobject notify);
     ~Notify2();
 
     /**

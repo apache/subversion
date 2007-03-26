@@ -39,7 +39,7 @@ public:
     void rmlocks(const char *path, Targets &locks);
     jobjectArray lslocks(const char *path);
     void verify(const char *path, Outputer &messageOut,
-                    Revision &revisionStart, Revision &revisionEnd);
+                Revision &revisionStart, Revision &revisionEnd);
     void setRevProp(const char *path, Revision &revision,
                     const char *propName, const char *propValue,
                     bool usePreRevPropChangeHook,
@@ -62,7 +62,7 @@ public:
     SVNAdmin();
     virtual ~SVNAdmin();
     void dispose(jobject jthis);
-    static SVNAdmin * getCppObject(jobject jthis);
+    static SVNAdmin *getCppObject(jobject jthis);
 
 };
 // !defined(AFX_SVNADMIN_H__9AD95B26_47BF_4430_8217_20B87ACCE87B__INCLUDED_)

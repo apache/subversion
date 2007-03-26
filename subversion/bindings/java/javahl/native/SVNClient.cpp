@@ -76,7 +76,7 @@ SVNClient::~SVNClient()
     delete m_prompter;
 }
 
-SVNClient * SVNClient::getCppObject(jobject jthis)
+SVNClient *SVNClient::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
     jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
@@ -107,7 +107,7 @@ jboolean SVNClient::isAdminDirectory(const char *name)
     return svn_wc_is_adm_dir(name, requestPool.pool()) ? JNI_TRUE : JNI_FALSE;
 }
 
-const char * SVNClient::getLastPath()
+const char *SVNClient::getLastPath()
 {
     return m_lastPath.c_str();
 }
@@ -812,7 +812,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
 jobjectArray SVNClient::properties(jobject jthis, const char *path, 
                                    Revision & revision, Revision &pegRevision)
 {
-    apr_array_header_t * props;
+    apr_array_header_t *props;
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
     Path intPath(path);
@@ -1086,7 +1086,7 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                               requestPool.pool()), );
 }
 
-svn_client_ctx_t * SVNClient::getContext(const char *message)
+svn_client_ctx_t *SVNClient::getContext(const char *message)
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
     svn_auth_baton_t *ab;
@@ -1304,7 +1304,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
             return NULL;
         }
 
-        svn_wc_entry_t * entry = status->entry;
+        svn_wc_entry_t *entry = status->entry;
         if (entry != NULL)
         {
             jNodeKind = EnumMapper::mapNodeKind(entry->kind);
@@ -1439,7 +1439,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
 svn_error_t *SVNClient::messageReceiver(void *baton, apr_hash_t *changed_paths,
                                         svn_revnum_t rev, const char *author, 
                                         const char *date,
-                                        const char *msg, apr_pool_t * pool)
+                                        const char *msg, apr_pool_t *pool)
 {
     if (JNIUtil::isJavaExceptionThrown())
     {
@@ -1494,7 +1494,7 @@ svn_error_t *SVNClient::messageReceiver(void *baton, apr_hash_t *changed_paths,
     {
         apr_time_t timeTemp;
         
-        svn_error_t * err = svn_time_from_cstring (&timeTemp, date, pool);
+        svn_error_t *err = svn_time_from_cstring (&timeTemp, date, pool);
         if (err != SVN_NO_ERROR)
             return err;
 
@@ -1843,7 +1843,7 @@ svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
     }
     else
     {
-        svn_client_ctx_t * ctx = getContext(NULL);
+        svn_client_ctx_t *ctx = getContext(NULL);
         if (ctx == NULL)
         {
             return NULL;
@@ -2030,7 +2030,7 @@ void SVNClient::setConfigDirectory(const char *configDir)
     m_configDir = (configDir == NULL ? "" : configDir);
 }
 
-const char * SVNClient::getConfigDirectory()
+const char *SVNClient::getConfigDirectory()
 {
     return m_configDir.c_str();
 }
@@ -2046,7 +2046,7 @@ void SVNClient::cancelOperation()
     m_cancelOperation = true;
 }
 
-svn_error_t * SVNClient::checkCancel(void *cancelBaton)
+svn_error_t *SVNClient::checkCancel(void *cancelBaton)
 {
     SVNClient *that = (SVNClient*)cancelBaton;
     if (that->m_cancelOperation)
@@ -2614,7 +2614,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
 jobjectArray SVNClient::revProperties(jobject jthis, const char *path, 
                                       Revision &revision)
 {
-    apr_hash_t * props;
+    apr_hash_t *props;
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
     Path intPath(path);

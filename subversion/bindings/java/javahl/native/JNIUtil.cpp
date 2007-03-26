@@ -280,7 +280,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
  * returns the global (not request specific) pool
  * @return global pool
  */
-apr_pool_t * JNIUtil::getPool()
+apr_pool_t *JNIUtil::getPool()
 {
     return g_pool;
 }
@@ -440,7 +440,7 @@ void JNIUtil::setEnv(JNIEnv *env)
  * Return the JNI environment to use
  * @return the JNI environment
  */
-JNIEnv * JNIUtil::getEnv()
+JNIEnv *JNIUtil::getEnv()
 {
     // during init -> look into the global variable
     if (g_inInit)
@@ -534,7 +534,7 @@ void JNIUtil::initLogFile(int level, jstring path)
  * Returns a buffer to format error messages
  * @return a buffer for formating error messages
  */
-char * JNIUtil::getFormatBuffer()
+char *JNIUtil::getFormatBuffer()
 {
     if (g_inInit) // during init -> use the global buffer
     {
@@ -607,7 +607,7 @@ jobject JNIUtil::createDate(apr_time_t time)
  * request (call) 
  * @return the pool to be used for this request
  */
-Pool * JNIUtil::getRequestPool()
+Pool *JNIUtil::getRequestPool()
 {
     return JNIThreadData::getThreadData()->m_requestPool;
 }
@@ -721,7 +721,7 @@ void JNIUtil::throwNullPointerException(const char *message)
     setExceptionThrown();
     env->DeleteLocalRef(clazz);
 }
-svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t * pool)
+svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
 {
   /* URLs and wc-paths get treated differently. */
   if (svn_path_is_url (path))

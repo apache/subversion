@@ -45,7 +45,7 @@ struct svn_error_t;
 class JNIUtil
 {
 public:
-    static svn_error_t *preprocessPath(const char *&path, apr_pool_t * pool);
+    static svn_error_t *preprocessPath(const char *&path, apr_pool_t *pool);
 
     /**
      * Throw the NativeException instance named by exceptionClassName.
@@ -60,15 +60,15 @@ public:
     static void throwNullPointerException(const char *message);
     static jbyteArray makeJByteArray(const signed char *data, int length);
     static void setRequestPool(Pool *pool);
-    static Pool * getRequestPool();
+    static Pool *getRequestPool();
     static jobject createDate(apr_time_t time);
     static void logMessage(const char *message);
     static int getLogLevel();
-    static char * getFormatBuffer();
+    static char *getFormatBuffer();
     static void initLogFile(int level, jstring path);
     static jstring makeJString(const char *txt);
     static bool isJavaExceptionThrown();
-    static JNIEnv * getEnv();
+    static JNIEnv *getEnv();
     static void setEnv(JNIEnv *);
 
     /**
@@ -118,7 +118,7 @@ public:
     static void throwError(const char *message)
     { raiseThrowable(JAVA_PACKAGE"/JNIError", message); }
 
-    static apr_pool_t * getPool();
+    static apr_pool_t *getPool();
     static bool JNIGlobalInit(JNIEnv *env);
     static bool JNIInit(JNIEnv *env);
     static JNIMutex *getGlobalPoolMutex();

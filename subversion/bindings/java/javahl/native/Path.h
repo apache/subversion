@@ -44,7 +44,7 @@ private:
      *
      * @param pi_path Path string
      */
-    void init(const char * pi_path);
+    void init(const char *pi_path);
 
 public:
     /**
@@ -54,7 +54,7 @@ public:
      *
      * @param pi_path Path string
      */
-    Path(const std::string & pi_path = "");
+    Path(const std::string &pi_path = "");
     
     /**
      * Constructor
@@ -62,14 +62,14 @@ public:
      * @see Path::Path (const std::string &)
      * @param pi_path Path string
      */
-    Path(const char * pi_path);
+    Path(const char *pi_path);
 
     /**
      * Copy constructor
      *
      * @param pi_path Path to be copied
      */
-    Path(const Path & pi_path);
+    Path(const Path &pi_path);
 
     /**
      * Assignment operator
@@ -79,17 +79,14 @@ public:
     /**
      * @return Path string
      */
-    const std::string &
-      path() const;
+    const std::string &path() const;
 
     /**
      * @return Path string as c string
      */
-    const char * 
-    c_str() const;
+    const char *c_str() const;
 
-    svn_error_t * 
-    error_occured() const;
+    svn_error_t *error_occured() const;
 
     /**
      * Returns whether @a path is non-NULL and passes the @c

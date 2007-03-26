@@ -74,7 +74,7 @@ bool JNIThreadData::initThreadData()
  * Get the thread local storage for this thread
  * @return thread local storage
  */
-JNIThreadData * JNIThreadData::getThreadData()
+JNIThreadData *JNIThreadData::getThreadData()
 {
     // we should never be called before initThreadData
     if (g_key == NULL)

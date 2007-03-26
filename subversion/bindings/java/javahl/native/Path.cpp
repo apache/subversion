@@ -31,7 +31,7 @@
  * @see Path::Path (const std::string &)
  * @param path Path string
  */
-Path::Path (const char * pi_path)
+Path::Path (const char *pi_path)
 {
     init (pi_path);
 }
@@ -43,7 +43,7 @@ Path::Path (const char * pi_path)
  *
  * @param path Path string
  */
-Path::Path (const std::string & pi_path)
+Path::Path (const std::string &pi_path)
 {
     init (pi_path.c_str ());
 }
@@ -53,7 +53,7 @@ Path::Path (const std::string & pi_path)
  *
  * @param path Path to be copied
  */
-Path::Path (const Path & pi_path)
+Path::Path (const Path &pi_path)
 {
     init (pi_path.c_str ());
 }
@@ -64,7 +64,7 @@ Path::Path (const Path & pi_path)
  * @param path Path string
  */
 void
-Path::init (const char * pi_path)
+Path::init (const char *pi_path)
 {
     if (*pi_path == 0)
     {
@@ -102,7 +102,7 @@ Path::c_str() const
  * Assignment operator
  */
 Path&
-Path::operator=(const Path & pi_path)
+Path::operator=(const Path &pi_path)
 {
     init (pi_path.c_str ());
     return *this;
