@@ -76,6 +76,19 @@ Candidate changes:
       +1: cmpilato
       +0: dlr
 
+  * r24179 from the 1.4.x-r24119,r24121 branch
+    Allow svnserve to use a global set of configuration files that is
+      cached for the lifetime of the process, resulting in a slight
+      performance improvement.
+    Justification:
+      Useful functionality for sites with large numbers of
+      repositories that they want to manage them with one
+      configuration file, instead of having each repository have a
+      symlink back to a common set of files.  Not re-parsing
+      configuration files on every request is nice.
+    Votes:
+      +1: blair
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
