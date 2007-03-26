@@ -113,14 +113,6 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r23191, r23193, r23195, r23200
-    Fix attempts to export a nonexistent URL to return an error,
-    instead of reporting a successful export.
-    Justification:
-      Apparently a common user error.
-    Votes:
-      +1: dlr, hwright, cmpilato
-
   * r23491, r23492
     Fix a hang during character translation (r23492).
     Theoretically improve memory usage in an edge case (r23491).
