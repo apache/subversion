@@ -116,11 +116,3 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r23959
-    Fix issue #1743: Inconsistent expansion of keyword
-    Justification:
-      Inconsistencies are never good. Small change.
-    Branch: 1.4.x-r23959
-    Votes:
-      +1: dionisos, dlr, cmpilato
-
