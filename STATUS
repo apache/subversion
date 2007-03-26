@@ -87,15 +87,6 @@ Candidate changes:
     Votes:
       +1: malcolm, dlr
 
-  * r23556
-    Allow svn_opt_revision_working as svn_opt_revision_t parameter
-    values to svn_client_cat2().
-    Justification:
-      There's no reason to disallow this value, and the nuts and bolts
-      of the implementation already supported it.
-    Votes:
-      +1: dlr, jerenkrantz
-
   * r23846
     ra_serf: Allow clients to checkout repositories when the root is forbidden.
     Justification:
@@ -142,4 +133,13 @@ Candidate changes:
      +1: cmpilato
 
 Approved changes:
+
+  * r23556
+    Allow svn_opt_revision_working as svn_opt_revision_t parameter
+    values to svn_client_cat2().
+    Justification:
+      There's no reason to disallow this value, and the nuts and bolts
+      of the implementation already supported it.
+    Votes:
+      +1: dlr, jerenkrantz, hwright
 
