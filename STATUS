@@ -29,34 +29,8 @@ Candidate changes:
       Fix for bug reported a few times on dev&users, includes test.
     Branch: 1.4.x-issue-2700 (-r23124:HEAD)
     Votes:
-      +1: lgo
+      +1: lgo, cmpilato
       +0: dlr
-
-  * r23191, r23193, r23195, r23200
-    Fix attempts to export a nonexistent URL to return an error,
-    instead of reporting a successful export.
-    Justification:
-      Apparently a common user error.
-    Votes:
-      +1: dlr, hwright
-
-  * r23491, r23492
-    Fix a hang during character translation (r23492).
-    Theoretically improve memory usage in an edge case (r23491).
-    Justification:
-      Hangs are bad - this example was reporting by a user.
-    Note:
-      r23492 depends upon -91, or something very like it, even though
-      -91 is an unrelated change, strictly speaking.
-    Votes:
-      +1: malcolm, dlr
-
-  * r23846
-    ra_serf: Allow clients to checkout repositories when the root is forbidden.
-    Justification:
-      Low-impact fix and regression against ra_dav.
-    Votes:
-      +1: jerenkrantz, dlr
 
   * r21989, r22884, r23347-23349, r23357, r23359, r23363, r23364, r23384,
     r23385, r23387, r23395, r23763, r23764, r23794, r23795, r23799, r23807
@@ -75,14 +49,6 @@ Candidate changes:
       next svnmerge.py will ignore it the second time around.
     Votes:
       +1: blair, cmpilato
-
- * r23959
-   Fix issue #1743: Inconsistent expansion of keyword
-   Justification:
-     Inconsistencies are never good. Small change.
-   Branch: 1.4.x-r23959
-   Votes:
-     +1: dionisos, dlr
 
  * r24073, r24126, r24128
    Fix issue #2751: Directory prop mods reverted in overlapping
@@ -136,6 +102,25 @@ Veto-blocked changes:
 
 Approved changes:
 
+  * r23191, r23193, r23195, r23200
+    Fix attempts to export a nonexistent URL to return an error,
+    instead of reporting a successful export.
+    Justification:
+      Apparently a common user error.
+    Votes:
+      +1: dlr, hwright, cmpilato
+
+  * r23491, r23492
+    Fix a hang during character translation (r23492).
+    Theoretically improve memory usage in an edge case (r23491).
+    Justification:
+      Hangs are bad - this example was reporting by a user.
+    Note:
+      r23492 depends upon -91, or something very like it, even though
+      -91 is an unrelated change, strictly speaking.
+    Votes:
+      +1: malcolm, dlr, cmpilato
+
   * r23556
     Allow svn_opt_revision_working as svn_opt_revision_t parameter
     values to svn_client_cat2().
@@ -144,3 +129,19 @@ Approved changes:
       of the implementation already supported it.
     Votes:
       +1: dlr, jerenkrantz, hwright
+
+  * r23846
+    ra_serf: Allow clients to checkout repositories when the root is forbidden.
+    Justification:
+      Low-impact fix and regression against ra_dav.
+    Votes:
+      +1: jerenkrantz, dlr, cmpilato
+
+  * r23959
+    Fix issue #1743: Inconsistent expansion of keyword
+    Justification:
+      Inconsistencies are never good. Small change.
+    Branch: 1.4.x-r23959
+    Votes:
+      +1: dionisos, dlr, cmpilato
+
