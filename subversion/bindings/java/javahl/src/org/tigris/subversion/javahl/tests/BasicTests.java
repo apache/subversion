@@ -571,6 +571,30 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * test the basic property setting/getting functionality
+     * @throws Throwable
+     */
+    public void testBasicProperties() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        String itemPath = thisTest.getWCPath() + "/iota";
+        Revision rev = Revision.getInstance(RevisionKind.head);
+
+        client.propertySet(itemPath, "abc", "def", false);
+        PropertyData[] properties = 
+            client.properties(itemPath);
+
+        PropertyData prop = properties[0];
+        assertEquals("abc", prop.getName());
+        assertEquals("def", prop.getValue());
+
+        wc.setItemPropStatus("iota", Status.Kind.modified);
+        thisTest.checkStatus();
+    }
+
+    /**
      * test the basic SVNClient.update functionality
      * @throws Throwable
      */
