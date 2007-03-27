@@ -395,6 +395,22 @@ def default_singleton_handler_b(b, baton):
   b.pprint()
   raise SVNTreeUnequal
 
+# A test helper function implementing the singleton_handler_a API.
+def detect_conflict_files(node, extra_files):
+  """NODE has been discovered, an extra file on disk.  Verify that it
+  matches one of the regular expressions in the EXTRA_FILES list.  If
+  it matches, remove the match from the list.  If it doesn't match,
+  raise an exception."""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
+      break
+  else:
+    print "Found unexpected disk object:", node.name
+    node.pprint()
+    raise svntest.tree.SVNTreeUnequal
 
 ###########################################################################
 ###########################################################################

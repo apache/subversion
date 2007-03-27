@@ -18,6 +18,7 @@ package org.tigris.subversion.javahl;
  * @endcopyright
  */
 
+import java.io.File;
 import java.io.OutputStream;
 
 /**
@@ -45,17 +46,98 @@ public class SVNClient implements SVNClientInterface
         // Ensure that Subversion's config file area and templates exist.
         try
         {
-            // Passing an empty string instead of null (which would be
-            // more appropriate) prevents earlier versions of the
-            // native library (mismatched from the Java bytecode
-            // version) from crashing.
-            setConfigDirectory("");
+            setConfigDirectory(determineInitialConfigDir());
         }
         catch (ClientException suppressed)
         {
             // Not an exception-worthy problem, continue on.
         }
     }
+
+    /**
+     * Attempt to determine an initial configuration directory,
+     * <code>%APPDATA%\Subversion</code> on Windows and
+     * <code>~/.subversion</code> on other operating systems.
+     *
+     * @return The initial configuration directory, or
+     * <code>null</code> to use the library default.  Note that native
+     * library versions older than 1.4 may segfault if we return
+     * <code>null</code>.
+     */
+    protected String determineInitialConfigDir()
+    {
+        String path;
+        if (isOSWindows())
+        {
+            // On Windows, use the %APPDATA%\Subversion directory.
+            path = getEnv("APPDATA");
+            if (path == null)
+            {
+                path = getUserHomeDirectory();
+                if (path != null)
+                {
+                    path = new File(path, "Application Data").getPath();
+                }
+            }
+
+            if (path != null)
+            {
+                path = new File(path, "Subversion").getAbsolutePath();
+            }
+        }
+        else
+        {
+            // Everywhere else, use the ~/.subversion directory.
+            path = getUserHomeDirectory();
+            if (path != null)
+            {
+                path = new File(path, ".subversion").getAbsolutePath();
+            }
+        }
+        return path;
+    }
+
+    /**
+     * @return The absolute path to the current user's home directory,
+     * or <code>null</code> if it cannot be determined.
+     */
+    private static String getUserHomeDirectory()
+    {
+        // ### LATER: Wrap the svn_user_get_homedir() API and try it
+        // ### first.
+        String path = System.getProperty("user.home");
+        return (path != null ? path : getEnv("HOME"));
+    }
+
+    /**
+     * @param envVar The name of the environment variable to retrieve.
+     * @return The named environment variable, or <code>null</code> if
+     * it cannot be retrieved.
+     */
+    private static final String getEnv(String envVar)
+    {
+        try
+        {
+            return System.getenv(envVar);
+        }
+        catch (Throwable jreComplaint)
+        {
+            // As an example, Sun JRE 1.4.2_12-b03 throws
+            // java.lang.Error, with the message "getenv no longer
+            // supported, use properties and -D instead: HOME".
+            return null;
+        }
+    }
+
+    /**
+     * @return Whether the current operating system is Windows.
+     */
+    private static final boolean isOSWindows()
+    {
+        String opSys = System.getProperty("os.name");
+        return (opSys.toLowerCase().indexOf("windows") >= 0);
+    }
+
     /**
      * Build the native peer
      * @return the adress of the peer

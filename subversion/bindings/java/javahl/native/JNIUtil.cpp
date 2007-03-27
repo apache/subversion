@@ -506,14 +506,20 @@ jstring JNIUtil::makeJString(const char *txt)
  */
 void JNIUtil::setExceptionThrown()
 {
-    // during init -> store in global variable
-    if(g_inInit)
+    if (g_inInit)
     {
+        // During global initialization, store any errors that occur
+        // in in a global variable (since thread-local storage may not
+        // yet be available).
         g_initException = true;
     }
-    // store in thread local storage
-    JNIThreadData *data = JNIThreadData::getThreadData();
-    data->m_exceptionThrown = true;
+    else
+    {
+        // When global initialization is complete, thread-local
+        // storage should be available, so store the error there.
+        JNIThreadData *data = JNIThreadData::getThreadData();
+        data->m_exceptionThrown = true;
+    }
 }
 /** 
  * initialite the log file

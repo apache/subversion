@@ -346,7 +346,13 @@ static svn_error_t *close_file(void *file_baton,
 
   SVN_ERR(maybe_close_textdelta(eb));
 
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:close-file/>" DEBUG_CR));
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:close-file"));
+  
+  if (text_checksum)
+    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, " checksum=\"%s\"/>" DEBUG_CR,
+                              text_checksum));
+  else
+    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "/>" DEBUG_CR));
 
   return SVN_NO_ERROR;
 }

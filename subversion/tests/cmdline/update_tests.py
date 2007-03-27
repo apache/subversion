@@ -506,22 +506,6 @@ def receive_overlapping_same_change(sbox):
 
 #----------------------------------------------------------------------
 
-# Helper for update_to_resolve_text_conflicts() test -- a singleton handler.
-def detect_conflict_files(node, extra_files):
-  """NODE has been discovered an extra file on disk.  Verify that it
-  matches one of the regular expressions in the EXTRA_FILES list.  If
-  it matches, remove the match from the list.  If it doesn't match,
-  raise an exception."""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
-      break
-  else:
-    print "Found unexpected object:", node.name
-    raise svntest.main.SVNTreeUnequal
-
 def update_to_resolve_text_conflicts(sbox):
   "delete files and update to resolve text conflicts"
   
@@ -606,7 +590,7 @@ Original appended text for rho
                                         expected_disk,
                                         expected_status,
                                         None,
-                                        detect_conflict_files,
+                                        svntest.tree.detect_conflict_files,
                                         extra_files)
 
   
@@ -1795,7 +1779,7 @@ def conflict_markers_matching_eol(sbox):
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
     svntest.main.run_svn(None, 'update', wc_dir)
 
-# Issue #2618: update a working copy with replacedwith-history file.
+# Issue #2618: update a working copy with a replaced file.
 def update_wc_with_replaced_file(sbox):
   "update wc containing a replaced-with-history file"
 
@@ -1813,7 +1797,55 @@ def update_wc_with_replaced_file(sbox):
   svntest.main.file_append(iota_bu_path, "New line in 'iota'\n")
   svntest.main.run_svn(None, 'ci', wc_backup, '-m', 'changed file')
 
+  # First, a replacement without history.
+  svntest.main.run_svn(None, 'rm', iota_path)
+  svntest.main.file_append(iota_path, "")
+  svntest.main.run_svn(None, 'add', iota_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='R ', wc_rev='1')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Now update the wc
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='C '),
+    })    
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'iota' : Item(status='C ', wc_rev='2'),
+    })
+  expected_disk = svntest.main.greek_state.copy()    
+  expected_disk.tweak('iota', contents = 
+    """<<<<<<< .mine
+=======
+This is the file 'iota'.
+New line in 'iota'
+>>>>>>> .r2
+""")
+  conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        conflict_files)
+
   # Make us a working copy with a 'replace-with-history' file.
+  svntest.main.run_svn(None, 'revert', iota_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='U '),
+    })    
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk = svntest.main.greek_state.copy()    
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None, 0,
+                                        wc_dir, '-r1')
+
   svntest.main.run_svn(None, 'rm', iota_path)
   svntest.main.run_svn(None, 'cp', mu_path, iota_path)
 
@@ -1844,7 +1876,7 @@ New line in 'iota'
                                         expected_disk,
                                         expected_status,
                                         None,
-                                        detect_conflict_files,
+                                        svntest.tree.detect_conflict_files,
                                         conflict_files)
 
 ########################################################################

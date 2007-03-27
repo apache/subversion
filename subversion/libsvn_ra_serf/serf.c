@@ -251,15 +251,6 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_dated_revision(svn_ra_session_t *session,
-                                svn_revnum_t *revision,
-                                apr_time_t tm,
-                                apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
 svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                           svn_revnum_t rev,
                           apr_hash_t **ret_props,
@@ -666,16 +657,14 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  const char *root_url;
 
   props = apr_hash_make(pool);
 
-  svn_ra_serf__get_repos_root(ra_session, &root_url, pool);
-
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      root_url, SVN_INVALID_REVNUM, "0",
+                                      session->repos_url.path,
+                                      SVN_INVALID_REVNUM, "0",
                                       uuid_props, pool));
-  *uuid = svn_ra_serf__get_prop(props, root_url,
+  *uuid = svn_ra_serf__get_prop(props, session->repos_url.path,
                                 SVN_DAV_PROP_NS_DAV, "repository-uuid");
 
   if (!*uuid)

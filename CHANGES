@@ -1,3 +1,41 @@
+Version 1.4.3
+(18 January 2007, from /branches/1.4.x)
+http://svn.collab.net/repos/svn/tags/1.4.3
+
+ User-visible-changes:
+  - Client:
+    * fixed: crash using automatic auth protocols with Neon 0.26 (r22440, -61)
+    * fixed: svn_load_dirs.pl cannot import file names containing '@' (r22203)
+    * fixed: error when committing replaced directories (r22991, -8)
+    * fixed: inability to change file perms due to existing file perms (r23018)
+    * include newest version of svn-graph.pl (r22969)
+
+  - Server:
+    * fixed: incorrectly reporting authz circular dependencies (issue #2684)
+    * fixed: potential filesystem memory leak in commit finalisation (r22729)
+
+  - Client and Server:
+    * fixed: crash in character translation, particularly on Windows (r22417)
+    * fixed: potential string corruption when resizing string buffers (r22689)
+    * translation updates for Korean, Spanish, Italian, Simplified Chinese,
+          and Japanese (fixing issues #2649 and #2681)
+
+Developer-visible-changes:
+* support Neon 0.26.2 (issue #2666)
+* update (experimental) ra_serf repository access module for DAV (r22872)
+* Windows installer improvements (r21516, r22155, r22224)
+* fixed: svn_{ra,repos}_replay() doesn't send checksums (r22346, -51, -52)
+* fixed: error when calling svn_repos_replay2() with a txn root (r22609)
+* fixed: Solaris packaging script broken (issue #2669)
+* javahl bindings:
+    - fixed: auth cache is created in the current directory (r22780)
+    - fixed: SVNAdmin's setLog() method always fails (r22387)
+    - fixed: target dependency order in generated build scripts (r22209)
+* SWIG/perl bindings:
+    - fixed: ra_do_{update,switch,status} work with Perl delta editors (r22311)
+    - fixed: memory leak when calling methods on a Perl commit editor (r22332)
+
+
 Version 1.4.2
 (2 November 2006, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.2

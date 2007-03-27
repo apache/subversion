@@ -376,7 +376,11 @@ davautocheck:
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
 svncheck: 
-	@$(MAKE) check BASE_URL=svn://localhost
+	@$(MAKE) check BASE_URL=svn://127.0.0.1
+
+# 'make svnserveautocheck' runs svnserve for you and kills it.
+svnserveautocheck: svnserve
+	bash $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/cmdline
@@ -400,6 +404,7 @@ check-clean:
                subversion/tests/libsvn_ra_local/test-repo-*    \
                subversion/tests/libsvn_repos/test-repo-*       \
                subversion/tests/libsvn_subr/z                  \
+               subversion/tests/svnserveautocheck.pid          \
                tests.log
 
 mkdir-init:

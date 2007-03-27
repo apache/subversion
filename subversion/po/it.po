@@ -7127,7 +7127,7 @@ msgstr "Ripristinato '%s'\n"
 #: svn/notify.c:100
 #, c-format
 msgid "Reverted '%s'\n"
-msgstr "Ripristinato a versione precendente '%s'\n"
+msgstr "Ripristinato a versione precedente '%s'\n"
 
 #: svn/notify.c:106
 #, c-format

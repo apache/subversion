@@ -418,6 +418,7 @@ svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
 	SvREFCNT_inc(*result);
     }
 
+    PUTBACK;
     FREETMPS ;
     LEAVE ;
 

@@ -18,18 +18,78 @@ Do not run svnmerge.py N separate times for each revision to merge
 over, since svnmerge.py will not merge into a WC with uncommitted
 changes.
 
-Status of 1.4.3:
+Status of 1.4.4:
 ================
 
 Candidate changes:
 
-  * r21516, r22155, r22224
-    Fixes for the Windows installer script: add license files of the
-    libraries, typos and copyright year.
+  * r22311
+    Make svn_ra_do_{update,switch,status} work with the SWIG/Perl bindings.
+    Notes:
+      Backport was originally attempted in r22694, but merge was
+      botched due to an incomplete listing in STATUS (r22311 itself
+      backported, but there is additional supporting code required to
+      make this change functional).  Probably needs a backport branch.
     Justification:
-     Preparing to release 1.4.2 windows installer.
+      Would be nice to fix something we already said we'd fixed in 1.4.3.
     Votes:
-     +1: lgo, dlr
+      +1: cmpilato
+      +0: malcolm, dlr
+
+  * r23115,r23117-23118
+    Fix issue 2700: commit of locked file fails when no write access on root
+    Justification:
+      Fix for bug reported a few times on dev&users, includes test.
+    Branch: 1.4.x-issue-2700 (-r23124:HEAD)
+    Votes:
+      +1: lgo, cmpilato
+      +0: dlr
+
+  * r21989, r22884, r23347-23349, r23357, r23359, r23363, r23364, r23384,
+    r23385, r23387, r23395, r23763, r23764, r23794, r23795, r23799, r23807
+    Bring mucc and mucc-test.py up to date with respect to trunk,
+    except for r23427, which uses svn_stringbuf_from_file2() in 1.5.
+    Justification:
+      This is becoming a very useful tool for making restructuring
+      commits that would otherwise require extremely large working
+      copies.
+    Notes:
+      Blair ran mucc-test.py against this merge and it passed the
+      test.  The person doing the merge should ensure that mucc-test.sh is
+      deleted, as svnmerge.py skips that for some reason.  Also, if
+      a test merge run is done with without committing and then
+      reverting, then also delete the new mucc-test.py, since the
+      next svnmerge.py will ignore it the second time around.
+    Votes:
+      +1: blair, cmpilato
+
+  * r24073, r24126, r24128
+    Fix issue #2751: Directory prop mods reverted in overlapping
+      commits scenario.
+    Justification:
+      At the root of it, its very unexpected behavior that allows a commit
+      to undo property changes without the committer being aware of it.
+      But in the BDB case (at least), it has the horrific side-effect of
+      setting the stage for a cycle in the representations table delta
+      chain.  In case you're wondering, that's oh-so-bad.
+    Votes:
+      +1: cmpilato
+      +0: dlr
+
+  * r24179 from the 1.4.x-r24119,r24121 branch
+    Allow svnserve to use a global set of configuration files that is
+      cached for the lifetime of the process, resulting in a slight
+      performance improvement.
+    Justification:
+      Useful functionality for sites with large numbers of
+      repositories that they want to manage them with one
+      configuration file, instead of having each repository have a
+      symlink back to a common set of files.  Not re-parsing
+      configuration files on every request is nice.
+    Votes:
+      +1: blair
+
+Veto-blocked changes:
 
   * r21531, r21848, r21934
     Allow HTTP auth protocols to be configurable by way of a
@@ -57,54 +117,15 @@ Candidate changes:
                 flavours. Its introduction therefore represents a regression
                 in the maintainability of the RPM packaging area as a whole.)
 
-  * r22253 through r22286
-    svn-graph.pl: Update invocation of $ra->get_log() to account for
-    the Perl API's $limit parameter.  Drastically improve UI and
-    implementation.
+  * r19808-19810, r22853
+    Synchronise license text and then bump copyright dates to 2007.
     Justification:
-      Incorrect API usage results in a completely broken script.  Old
-      algorithm wasn't quite right, either.
-    Notes: Copy r22286 from trunk to the 1.4.x branch.
+      It's 2007.
+    Notes: We might want to wait until we actually merge something we
+      originally committed in 2007, possibly hold until 1.4.4?
     Votes:
-      +1: dlr
-
-  * r22332
-    Fix leak of space on the Perl argument stack when calling methods
-    in a Perl class acting as a commit editor.
-    Justification:
-      Memory leaks are bad.
-    Votes:
-      +1: dlr
-
-  * r22346, r22351, r22352
-    Calculate checksums in ra_replay and repos_replay.
-    Justification:
-      Integrity checks for svnsync and SVK are good, and this
-      is fixing things marked as "###".  While it's arguably
-      a feature, is fully compatible and is more a matter of
-      filling in unfinished work.
-    Votes:
-      +1: glasser
-
-  * r22466
-    Fix issue #2666, allowing Neon 0.26.2 without complaint.
-    Justification:
-       Otherwise, --disable-neon-version-check is required.
-    Votes:
-      +1: dlr, maxb
-
-  * r22501
-    Fix script used to build our Solaris package.
-    Justification:
-      Simple fix, with the script completely broken as-is.
-    Votes:
-      +1: dlr
+      +1: malcolm, dlr, hwright
+      -1: jerenkrantz (This is an unnecessary change to backport.)
 
 Approved changes:
 
-  * r22311
-    Perl bindings: make svn_ra_do_{update,switch,status} work.
-    Justification:
-      Binding completeness.
-    Votes:
-      +1: clkao, dlr
