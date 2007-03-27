@@ -104,6 +104,14 @@ Candidate changes:
     Votes:
       +1: glasser
 
+ * r23910
+   Fix issue 1789: large 'svn diff' on Win32 fails
+   Justification:
+     'svn diff' is a rather common use-case, change only
+     does a fallback for one specific (Windows) error code
+   Votes:
+     +1: dionisos
+
 
 Veto-blocked changes:
 
