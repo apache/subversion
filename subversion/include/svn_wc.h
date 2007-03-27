@@ -2547,6 +2547,8 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
 /**
  * Like svn_wc_process_committed4(), but batch processes
  * items queued with svn_wc_queue_committed().
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
