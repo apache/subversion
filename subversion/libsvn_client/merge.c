@@ -950,7 +950,6 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
       *inherited = apr_hash_count(wc_mergeinfo) > 0;
       *mergeinfo = apr_hash_make(pool);
 
-      /* ### What about copied paths? */
       for (hi = apr_hash_first(pool, wc_mergeinfo); hi; hi = apr_hash_next(hi))
         {
           /* Copy inherited merge info into our output hash, adjusting
