@@ -398,12 +398,10 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
           /* A locally-added but uncommitted versioned resource won't
              exist in the repository. */
           svn_error_clear(err);
-          return SVN_NO_ERROR;
+          err = SVN_NO_ERROR;
         }
-      else
-        {
-          return err;
-        }
+
+      return err;
     }
 
   range = apr_palloc(pool, sizeof(*range));
