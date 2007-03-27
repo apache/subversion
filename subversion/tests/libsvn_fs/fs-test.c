@@ -4581,7 +4581,7 @@ unordered_txn_dirprops(const char **msg,
   svn_fs_txn_t *txn, *txn2;
   svn_fs_root_t *txn_root, *txn_root2;
   svn_string_t pval;
-  svn_revnum_t new_rev;
+  svn_revnum_t new_rev, not_rev;
 
   /* This is a regression test for issue #2751. */
   *msg = "test dir prop preservation in unordered txns";
@@ -4618,7 +4618,32 @@ unordered_txn_dirprops(const char **msg,
   
   /* Then commit the first -- but expect an conflict due to the
      propchanges made by the other txn. */
-  return test_commit_txn(&new_rev, txn, "/A/B", pool);
+  SVN_ERR(test_commit_txn(&not_rev, txn, "/A/B", pool));
+  SVN_ERR(svn_fs_abort_txn(txn, pool));
+
+  /* Now, let's try those in reverse.  Open two transactions */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn2, fs, new_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root2, txn2, pool));
+
+  /* Change a child file in one. */
+  SVN_ERR(svn_test__set_file_contents(txn_root, "/A/B/E/alpha", 
+                                      "New contents", pool));
+
+  /* Change dir props in the other. */
+  SET_STR(&pval, "value");
+  SVN_ERR(svn_fs_change_node_prop(txn_root2, "/A/B", "name", &pval, pool));
+
+  /* Commit the first one first. */
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  /* Then commit the second -- but expect an conflict because the
+     directory wasn't up-to-date, which is required for propchanges. */
+  SVN_ERR(test_commit_txn(&not_rev, txn2, "/A/B", pool));
+  SVN_ERR(svn_fs_abort_txn(txn2, pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* ------------------------------------------------------------------------ */
