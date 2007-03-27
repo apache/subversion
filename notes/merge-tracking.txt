@@ -89,7 +89,7 @@ history index).
 
   * Update func and/or design spec.
 
-  * Handle WC -> WC 'copy'/'move' operation types.  (dlr)
+  * Handle WC -> WC 'copy'/'move' operations.  (dlr)
     http://subversion.tigris.org/merge-tracking/func-spec.html#wc-wc-copy-move
 
 * Update design.html with the latest content from the "BASIC DESIGN"
