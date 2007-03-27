@@ -547,9 +547,6 @@ The same thing that happens if the info is not there now.
 What happens if a user edits merge info incorrectly?
 They get the results specified by their merge info.
 
-How does the revprop stay up to date?
-We copy it from revision to revision.
-
 What happens if a user manually edits a file and unmerges a revision (IE
 not using a "reverse merge" command), but doesn't update the merge info
 to match?
