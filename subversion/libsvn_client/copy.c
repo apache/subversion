@@ -390,9 +390,6 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
      was created (copied or added). */
   err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
                        revnum_receiver, &oldest_rev, pool);
-  /* ### FIXME: ra_dav may fail with SVN_ERR_RA_DAV_PATH_NOT_FOUND.
-     ### This is possibly related to path construction mentioned in
-     ### calculate_target_merge_info()... */
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
@@ -441,10 +438,6 @@ calculate_target_merge_info(svn_ra_session_t *ra_session,
                                             pool));
 
   /* Obtain any implied and/or existing (explicit) merge info. */
-  /* ### FIXME: May fail with SVN_ERR_RA_DAV_PATH_NOT_FOUND over
-     ### ra_dav, because we're providing a path relative to the
-     ### repository root instead of the ra_session (which may've been
-     ### opened to a path somewhere under the root). */
   SVN_ERR(get_implied_merge_info(ra_session, target_mergeinfo,
                                  src_rel_path, src_path, src_revnum, pool));
   SVN_ERR(svn_client__get_merge_info_for_path(ra_session, &src_mergeinfo,
@@ -960,7 +953,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 {
   const char *message;
   apr_hash_t *revprop_table;
-  const char *top_src_path, *top_dst_url;
+  const char *top_src_path, *top_dst_url, *repos_root;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -1017,8 +1010,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
 
-      /* ### FIXME: I want the path relative to the ra_session
-         ### instead. */
       SVN_ERR(svn_client__path_relative_to_root(&pair->src_rel, pair->src,
                                                 NULL, ra_session, adm_access,
                                                 pool));
@@ -1091,6 +1082,11 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                      SVN_CLIENT__SINGLE_REPOS_NAME, 
                                      APR_HASH_KEY_STRING)))
     goto cleanup;
+
+  /* Reparent the ra_session to repos_root. So that 'svn_ra_get_log'
+     on paths relative to repos_root would work fine. */
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 
   /* ### TODO: This extra loop would be unnecessary if this code lived
      ### in svn_client__get_copy_committables(), which is incidentally

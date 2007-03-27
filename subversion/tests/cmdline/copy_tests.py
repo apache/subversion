@@ -856,10 +856,6 @@ def copy_preserve_executable_bit(sbox):
 def wc_to_repos(sbox):
   "working-copy to repository copy"
 
-  ### FIXME: This test is currently failing over ra_dav.
-  if svntest.main.is_ra_type_dav():
-    raise svntest.Skip
-
   sbox.build()
   wc_dir = sbox.wc_dir
 
