@@ -1417,7 +1417,9 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### database file.  Unless you specify a path starting with a /,"
       APR_EOL_STR
-      "### the file's location is relative to the conf directory."
+      "### the file's location is relative to the directory containing"
+      APR_EOL_STR
+      "### this configuration file."
       APR_EOL_STR
 #ifdef SVN_HAVE_SASL
       "### If use-sasl is set to \"true\" below, this file will NOT be used."
@@ -1431,11 +1433,11 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### rules for path-based access control.  Unless you specify a path"
       APR_EOL_STR
-      "### starting with a /, the file's location is relative to the conf"
+      "### starting with a /, the file's location is relative to the"
       APR_EOL_STR
-      "### directory.  If you don't specify an authz-db, no path-based access"
+      "### directory containing this file.  If you don't specify an"
       APR_EOL_STR
-      "### control is done."
+      "### authz-db, no path-based access control is done."
       APR_EOL_STR
       "### Uncomment the line below to use the default authorization file."
       APR_EOL_STR
