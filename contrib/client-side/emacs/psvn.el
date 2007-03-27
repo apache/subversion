@@ -320,7 +320,9 @@ Each element is either a string \"VARIABLE=VALUE\" which will be added to
 the environment when svn is run, or just \"VARIABLE\" which causes that
 variable to be entirely removed from the environment.
 
-You could set this for example to '(\"LANG=C\")"
+You could set this for example to '(\"LANG=C\")
+
+Please report, if you have good experiences with the setting '(\LC_MESSAGES=C\")"
   :type '(repeat string)
   :group 'psvn)
 (put 'svn-status-svn-environment-var-list 'risky-local-variable t)
