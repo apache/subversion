@@ -829,40 +829,50 @@ def hook_test(sbox):
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
-  # Setup the hook configs to echo data back
+  # Create a hook that appends its name to a log file.
+  hook_format = """import sys
+fp = open(sys.argv[1] + '/hooks.log', 'a')
+fp.write("%s\\n")
+fp.close()"""
+
+  # Setup the hook configs to log data to a file
   start_commit_hook = svntest.main.get_start_commit_hook_path(repo_dir)
-  svntest.main.file_append(start_commit_hook,
-                           """#!/bin/sh
-                           echo $1""")
-  os.chmod(start_commit_hook, 0755)
+  svntest.main.create_python_hook_script(start_commit_hook, 
+                                         hook_format % "start_commit_hook")
 
   pre_commit_hook = svntest.main.get_pre_commit_hook_path(repo_dir)
-  svntest.main.file_append(pre_commit_hook,
-                           """#!/bin/sh
-                           echo $1 $2 """)
-  os.chmod(pre_commit_hook, 0755)
+  svntest.main.create_python_hook_script(pre_commit_hook, 
+                                         hook_format % "pre_commit_hook")
 
   post_commit_hook = svntest.main.get_post_commit_hook_path(repo_dir)
-  svntest.main.file_append(post_commit_hook,
-                           """#!/bin/sh
-                           echo $1 $2 """)
-  os.chmod(post_commit_hook, 0755)
+  svntest.main.create_python_hook_script(post_commit_hook, 
+                                         hook_format % "post_commit_hook")
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join(wc_dir, "iota")
   svntest.main.file_append(iota_path, "More stuff in iota")
 
-  # Now, commit and examine the output (we happen to know that the
-  # filesystem will report an absolute path because that's the way the
-  # filesystem is created by this test suite.
-  abs_repo_dir = os.path.abspath(repo_dir)
-  expected_output = [abs_repo_dir + "\n",
-                     abs_repo_dir + " 1\n",
-                     abs_repo_dir + " 2\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  # Commit, no output expected.
+  svntest.actions.run_and_verify_svn(None, [], [],
                                      'ci', '--quiet',
                                      '-m', 'log msg', wc_dir)
 
+  # Now check the logfile
+  expected_data = [ 'start_commit_hook\n', 'pre_commit_hook\n', 'post_commit_hook\n' ]
+
+  logfilename = os.path.join(repo_dir, "hooks.log")
+  if os.path.exists(logfilename):
+    fp = open(logfilename)
+  else:
+    raise svntest.actions.SVNUnexpectedOutput("hook logfile %s not found")\
+                                             % logfilename
+
+  actual_data = fp.readlines()
+  fp.close()
+  os.unlink(logfilename)
+  svntest.actions.compare_and_display_lines('wrong hook logfile content',  
+                                            'STDERR',
+                                            expected_data, actual_data)
 
 #----------------------------------------------------------------------
 
@@ -2299,7 +2309,7 @@ test_list = [ None,
               hudson_part_1_variation_2,
               hudson_part_2,
               hudson_part_2_1,
-              XFail(hook_test),
+              hook_test,
               merge_mixed_revisions,
               commit_uri_unsafe,
               commit_deleted_edited,

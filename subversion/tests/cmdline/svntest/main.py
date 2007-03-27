@@ -541,7 +541,7 @@ def create_python_hook_script (hook_path, hook_script_code):
     file_append ("%s.py" % hook_path, hook_script_code)
     # Fill the batch wrapper file.
     file_append ("%s.bat" % hook_path,
-                 "@\"%s\" %s.py\n" % (sys.executable, hook_path))
+                 "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
   else:
     # For all other platforms
     file_append (hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
