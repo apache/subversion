@@ -4720,7 +4720,35 @@ def setup_branch(sbox):
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
 
-  return expected_status
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/E/beta',  contents="New content")
+  expected_disk.tweak('A/D/G/rho',   contents="New content")
+  expected_disk.tweak('A/D/H/omega', contents="New content")
+  expected_disk.tweak('A/D/H/psi',   contents="New content")
+  expected_disk.add({
+    'A_COPY'           : Item(props={SVN_PROP_MERGE_INFO : '/A:1'}),
+    'A_COPY/B'         : Item(),
+    'A_COPY/B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'A_COPY/B/E'       : Item(),
+    'A_COPY/B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'A_COPY/B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'A_COPY/B/F'       : Item(),
+    'A_COPY/mu'        : Item("This is the file 'mu'.\n"),
+    'A_COPY/C'         : Item(),
+    'A_COPY/D'         : Item(),
+    'A_COPY/D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'A_COPY/D/G'       : Item(),
+    'A_COPY/D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'A_COPY/D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'A_COPY/D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'A_COPY/D/H'       : Item(),
+    'A_COPY/D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'A_COPY/D/H/omega' : Item("This is the file 'omega'.\n"),
+    'A_COPY/D/H/psi'   : Item("This is the file 'psi'.\n"),
+    })
+
+  return expected_disk, expected_status
+
 
 def mergeinfo_inheritance(sbox):
   "target inherits mergeinfo from nearest ancestor"
@@ -4999,7 +5027,7 @@ def mergeinfo_elision(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_status = setup_branch(sbox)
+  wc_disk, wc_status = setup_branch(sbox)
 
   # Some paths we'll care about
   A_COPY_path      = os.path.join(wc_dir, "A_COPY")
@@ -5279,6 +5307,83 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   finally:
     os.chdir(saved_cwd)
 
+
+def merge_to_target_with_copied_children(sbox):
+  "merge works when target has copied children"
+
+  # Test for Issue #2754 Can't merge to target with copied/moved children
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = setup_branch(sbox)
+
+  # Some paths we'll care about
+  D_COPY_path = os.path.join(wc_dir, "A_COPY", "D")
+  G_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G")
+
+  # URL to URL copy A_COPY/D/G/rho to A_COPY/D/G/rho_copy
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     sbox.repo_url + '/A_COPY/D/G/rho',
+                                     sbox.repo_url + '/A_COPY/D/G/rho_copy',
+                                     '-m', 'copy')
+
+  # Update WC.
+  expected_output = wc.State(wc_dir,
+                             {'A_COPY/D/G/rho_copy' : Item(status='A ')})
+  expected_disk.add({
+    'A_COPY/D/G/rho_copy' : Item("This is the file 'rho'.\n",
+                                 props={SVN_PROP_MERGE_INFO :
+                                        '/A/D/G/rho:1\n/A_COPY/D/G/rho:2-6\n'})
+    })
+  expected_status.tweak(wc_rev=7)
+  expected_status.add({'A_COPY/D/G/rho_copy' : Item(status='  ', wc_rev=7)})
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+  # Merge r4 into A_COPY/D/G.
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_G_COPY_path = shorten_path_kludge(G_COPY_path)
+  expected_output = wc.State(short_G_COPY_path, {
+    'rho' : Item(status='U ')
+    })
+  expected_status = wc.State(short_G_COPY_path, {
+    ''         : Item(status=' M', wc_rev=7),
+    'pi'       : Item(status='  ', wc_rev=7),
+    'rho'      : Item(status='M ', wc_rev=7),
+    'rho_copy' : Item(status=' M', wc_rev=7),
+    'tau'      : Item(status='  ', wc_rev=7),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4'}),
+    'pi'       : Item("This is the file 'pi'.\n"),
+    'rho'      : Item("New content"),
+    'rho_copy' : Item("This is the file 'rho'.\n",
+                      props={SVN_PROP_MERGE_INFO :
+                             '/A/D/G/rho:1,4\n/A_COPY/D/G/rho:2-6\n'}),
+    'tau'      : Item("This is the file 'tau'.\n"),
+    })
+  expected_skip = wc.State(short_G_COPY_path, { })
+  saved_cwd = os.getcwd()
+
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_G_COPY_path, '3', '4',
+                                         sbox.repo_url + \
+                                         '/A/D/G',
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -5330,6 +5435,7 @@ test_list = [ None,
               mergeinfo_inheritance,
               XFail(mergeinfo_elision),
               mergeinfo_inheritance_and_discontinuous_ranges,
+              XFail(merge_to_target_with_copied_children),
              ]
 
 if __name__ == '__main__':
