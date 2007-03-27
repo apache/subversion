@@ -683,6 +683,23 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
+     * Merge set of revisions into a new local path.
+     * @param path          path or url
+     * @param pegRevision   revision to interpret path
+     * @param revisions     revisions to merge
+     * @param localPath     target local path
+     * @param force         overwrite local changes
+     * @param recurse       traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param dryRun        do not change anything
+     * @exception ClientException
+     * @since 1.5
+     */
+    void merge(String path, Revision pegRevision, RevisionRange[] revisions,
+               String localPath, boolean force, boolean recurse,
+               boolean ignoreAncestry, boolean dryRun) throws ClientException;
+
+    /**
      * Display the differences between two paths
      * @param target1       first path or url
      * @param revision1     first revision
@@ -1212,4 +1229,23 @@ public interface SVNClientInterface
      */
     String getVersionInfo(String path, String trailUrl, boolean lastChanged)
             throws ClientException;
+
+    /**
+     *  Return the URL a given path or URL was copied from
+     * @param path  path of the item
+     * @return      URL item was copied from or null
+     * @throws ClientException
+     * @since 1.5
+     */
+    String getCopySource(String path) throws ClientException;
+
+    /**
+     * Retrieve the svn:mergeinfo property of an item
+     * @param path      path of the item
+     * @return the Property
+     * @throws ClientException
+     * @since 1.5
+     */
+    PropertyData getMergeInfoProperty(String path) throws ClientException;
+    
 }
