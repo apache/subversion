@@ -232,7 +232,6 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
-  svn_boolean_t has_local_mods;
   svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;
 
@@ -288,6 +287,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
   if (older)
     {
+      svn_boolean_t has_local_mods;
       SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, FALSE,
                                      adm_access, subpool));
 
