@@ -24,7 +24,7 @@
 ;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux,
 ;; freebsd5, red hat el4, ubuntu edgy with svn 1.4.0
 
-;; psvn.el needs at least svn 1.2
+;; psvn.el needs at least svn 1.1.0
 ;; if you upgrade to a higher version, you need to do a fresh checkout
 
 ;; psvn.el is an interface for the revision control tool subversion
@@ -627,6 +627,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-admin-last-repository-dir nil "The last repository url for various operations.")
 (defvar svn-last-cmd-ring (make-ring 30) "Ring that holds the last executed svn commands (for debugging purposes)")
 (defvar svn-status-cached-version-string nil)
+(defvar svn-client-version nil "The version number of the used svn client")
 (defvar svn-status-get-line-information-for-file nil)
 (defvar svn-status-base-dir-cache (make-hash-table :test 'equal :weakness nil))
 
@@ -3292,7 +3293,8 @@ See `svn-status-marked-files' for what counts as selected."
     (svn-log-view-mode)))
 
 (defun svn-status-version ()
-  "Show the version numbers for psvn.el and the svn command line client"
+  "Show the version numbers for psvn.el and the svn command line client.
+The version number of the client is cached in `svn-client-version'."
   (interactive)
   (let ((window-conf (current-window-configuration))
         (version-string))
@@ -3301,6 +3303,10 @@ See `svn-status-marked-files' for what counts as selected."
           (svn-run nil t 'version "--version")
           (svn-status-show-process-output 'info t)
           (with-current-buffer svn-status-last-output-buffer-name
+            (goto-char (point-min))
+            (setq svn-client-version
+                  (when (re-search-forward "svn, version \\([0-9\.]+\\) " nil t)
+                    (mapcar 'string-to-number (split-string (match-string 1) "\\."))))
             (let ((buffer-read-only nil))
               (goto-char (point-min))
               (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision)))
@@ -4898,24 +4904,46 @@ Return nil, if not in a svn working copy."
     (if (not (eq base-dir 'not-found))
         base-dir
       ;; (message "calculating base-dir for %s" start-dir)
+      (unless svn-client-version
+        (svn-status-version))
       (let* ((base-dir start-dir)
              (repository-root (svn-status-repo-for-path base-dir))
              (dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
              (in-tree (and repository-root (file-exists-p dot-svn-dir)))
              (dir-below (expand-file-name base-dir)))
-        (while (when (and dir-below (file-exists-p dot-svn-dir))
-                 (setq base-dir (file-name-directory dot-svn-dir))
-                 (string-match "\\(.+/\\).+/" dir-below)
-                 (setq dir-below
-                       (and (string-match "\\(.*/\\)[^/]+/" dir-below)
-                            (match-string 1 dir-below)))
-                 (when dir-below
-                   (if (string= (svn-status-repo-for-path dir-below) repository-root)
-                       (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))
-                     (setq dir-below nil)))))
-        (svn-puthash start-dir (and in-tree base-dir) svn-status-base-dir-cache)
-        (svn-status-message 7 "svn-status-base-dir %s => %s" start-dir (and in-tree base-dir))
-        (and in-tree base-dir)))))
+        (if (and (<= (car svn-client-version) 1) (< (cadr svn-client-version) 3))
+            (setq base-dir (svn-status-base-dir-for-ancient-svn-client start-dir)) ;; svn version < 1.3
+          (while (when (and dir-below (file-exists-p dot-svn-dir))
+                   (setq base-dir (file-name-directory dot-svn-dir))
+                   (string-match "\\(.+/\\).+/" dir-below)
+                   (setq dir-below
+                         (and (string-match "\\(.*/\\)[^/]+/" dir-below)
+                              (match-string 1 dir-below)))
+                   (when dir-below
+                     (if (string= (svn-status-repo-for-path dir-below) repository-root)
+                         (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))
+                       (setq dir-below nil)))))
+          (setq base-dir (and in-tree base-dir)))
+        (svn-puthash start-dir base-dir svn-status-base-dir-cache)
+        (svn-status-message 7 "svn-status-base-dir %s => %s" start-dir base-dir)
+        base-dir))))
+
+(defun svn-status-base-dir-for-ancient-svn-client (&optional start-directory)
+  "Find the svn root directory for the current working copy.
+Return nil, if not in a svn working copy.
+This function is used for svn clients version 1.2 and below."
+  (let* ((base-dir (expand-file-name (or start-directory default-directory)))
+         (dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
+         (in-tree (file-exists-p dot-svn-dir))
+         (dir-below (expand-file-name default-directory)))
+    (while (when (and dir-below (file-exists-p dot-svn-dir))
+             (setq base-dir (file-name-directory dot-svn-dir))
+             (string-match "\\(.+/\\).+/" dir-below)
+             (setq dir-below
+                   (and (string-match "\\(.*/\\)[^/]+/" dir-below)
+                        (match-string 1 dir-below)))
+             (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))))
+    (and in-tree base-dir)))
 
 (defun svn-status-save-state ()
   "Save psvn persistent options for this working copy to a file."
