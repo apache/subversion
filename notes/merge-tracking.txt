@@ -72,7 +72,7 @@ history index).
 * Handle merge info inheritance (and eliding, if any additional work
   is necessary).  (pburba/dlr)
 
-  * Fix inheritance bugs, issues #2733 and #2734.
+  * Fix inheritance bugs, issues #2733.
 
   * Improve merge algorithm used for target trees with child paths
     that contain differing merge info, per Peter Lundblad's
