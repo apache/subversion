@@ -20,11 +20,11 @@ backgrounds itself and accepts and serves TCP/IP connections on the
 svn port (3690, by default).
 .PP
 .TP 5
-\fB\-\-listen-port\fP=\fIport\fP
+\fB\-\-listen\-port\fP=\fIport\fP
 Causes \fBsvnserve\fP to listen on \fIport\fP when run in daemon mode.
 .PP
 .TP 5
-\fB\-\-listen-host\fP=\fIhost\fP
+\fB\-\-listen\-host\fP=\fIhost\fP
 Causes \fBsvnserve\fP to listen on the interface specified by \fIhost\fP,
 which may be either a hostname or an IP address.
 .PP
@@ -50,7 +50,7 @@ pathname in URLs provided by the client will be interpreted relative
 to this root, and will not be allowed to escape this root.
 .PP
 .TP 5
-\fB\-R\fP \fB\-\-read-only\fP
+\fB\-R\fP \fB\-\-read\-only\fP
 Force all write operations through this \fBsvnserve\fP instance to be
 forbidden, overriding all other access policy configuration.  Do not
 use this option to set general repository access policy - that is what
@@ -69,7 +69,7 @@ the username of the current uid.  This flag is selected by the client
 when running over a tunnel agent.
 .PP
 .TP 5
-\fB\-\-tunnel-user\fP=\fIusername\fP
+\fB\-\-tunnel\-user\fP=\fIusername\fP
 When combined with \fB\-\-tunnel\fP, overrides the pre-authenticated
 username with the supplied \fIusername\fP.  This is useful in
 combination with the ssh authorized_key file's "command" directive to
