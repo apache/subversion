@@ -82,6 +82,14 @@ public class Revision
         return super.toString();
     }
 
+    /* (non-Javadoc)
+     * @see java.lang.Object#hashCode()
+     */
+    public int hashCode()
+    {
+        return revKind * -1;
+    }
+
     /**
      * compare to revision objects
      * @param target
@@ -216,6 +224,14 @@ public class Revision
 
             return ((Revision.Number)target).revNumber == revNumber;        
         }
+
+        /* (non-Javadoc)
+         * @see org.tigris.subversion.javahl.Revision#hashCode()
+         */
+        public int hashCode()
+        {
+            return (int)(revNumber ^ (revNumber >>> 32));
+        }
     }
 
     /**
@@ -270,6 +286,13 @@ public class Revision
                 return false;
 
             return ((Revision.DateSpec)target).revDate.equals(revDate);        
+        }
+        /* (non-Javadoc)
+         * @see org.tigris.subversion.javahl.Revision#hashCode()
+         */
+        public int hashCode()
+        {
+            return revDate.hashCode();
         }
         
     }
