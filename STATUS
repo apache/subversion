@@ -89,6 +89,22 @@ Candidate changes:
     Votes:
       +1: glasser
 
+  * r23439, r23440
+    Fix race condition in changing revprops under FSFS by requiring
+      use of the FSFS write lock.  (r23440 is the fix itself; r23439
+      rearranges files so that the appropriate function can access
+      the write lock code in fs_fs.c)
+    Justification:
+      If two clients try to update *different* revprops on the same
+      revision at the same time, you can lose the first change.  Data
+      loss bad.
+    Notes:
+      glasser (nominating this) only tested that merge was clean and
+      did not run tests.
+    Votes:
+      +1: glasser
+
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
