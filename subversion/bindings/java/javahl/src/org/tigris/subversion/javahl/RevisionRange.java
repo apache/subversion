@@ -109,7 +109,7 @@ public class RevisionRange implements Comparable
     {
         if (this == obj) return 0;
         return RevisionRange.getRevisionAsLong(this.getFromRevision()).compareTo(
-                                              RevisionRange.getRevisionAsLong(((RevisionRange) obj)
+                                               RevisionRange.getRevisionAsLong(((RevisionRange) obj)
                                                       .getFromRevision()));
 
     }
