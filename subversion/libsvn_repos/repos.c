@@ -1457,19 +1457,19 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### This option specifies whether you want to use the Cyrus SASL"
       APR_EOL_STR
-      "### library for authentication. Default is false."
+      "### library for authentication.  The default is false."
       APR_EOL_STR
       "# use-sasl = true"
       APR_EOL_STR
       "### These options specify the desired strength of the security layer"
       APR_EOL_STR
-      "### that you want SASL to provide. 0 means no encryption, 1 means"
+      "### that you want SASL to provide.  0 means no encryption, 1 means"
       APR_EOL_STR
       "### integrity-checking only, values larger than 1 are correlated"
       APR_EOL_STR
       "### to the effective key length for encryption (e.g. 128 means 128-bit"
       APR_EOL_STR
-      "### encryption). The values below are the defaults."
+      "### encryption).  The values below are the defaults."
       APR_EOL_STR
       "# min-encryption = 0"
       APR_EOL_STR
