@@ -659,6 +659,30 @@ EOM
                  Svn::Core::MimeType.detect(invalid_png_file, type_map))
   end
 
+  def test_prop_categorize
+    name = "svn:mime-type"
+    value = "text/plain"
+    entry_name = "svn:entry:XXX"
+    entry_value = "XXX"
+
+    props = [Svn::Core::Prop.new(name, value),
+             Svn::Core::Prop.new(entry_name, entry_value)]
+    assert_equal([
+                  [Svn::Core::Prop.new(entry_name, entry_value)],
+                  [],
+                  [Svn::Core::Prop.new(name, value)],
+                 ],
+                 Svn::Core::Property.categorize(props))
+
+    props = {name => value, entry_name => entry_value}
+    assert_equal([
+                  {entry_name => entry_value },
+                  {},
+                  {name => value},
+                 ],
+                 Svn::Core::Property.categorize2(props))
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new

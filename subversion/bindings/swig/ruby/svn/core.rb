@@ -56,6 +56,11 @@ module Svn
 
     class << self
       alias binary_mime_type? mime_type_is_binary
+      alias prop_diffs2 prop_diffs
+
+      def prop_diffs(target_props, source_props)
+        Property.prop_diffs(target_props, source_props)
+      end
     end
 
 
@@ -488,12 +493,26 @@ module Svn
         Core.prop_needs_translation(name)
       end
 
-      def categorize_props(props)
+      def categorize(props)
+        categorize2(props).collect do |categorized_props|
+          Util.hash_to_prop_array(categorized_props)
+        end
+      end
+      alias_method :categorize_props, :categorize
+      module_function :categorize_props
+
+      def categorize2(props)
         Core.categorize_props(props)
       end
 
-      def prop_diffs(target_props, source_props)
-        Core.prop_diffs(target_props, source_props)
+      def diffs(target_props, source_props)
+        Util.hash_to_prop_array(diffs2(target_props, source_props))
+      end
+      alias_method :prop_diffs, :diffs
+      module_function :prop_diffs
+
+      def diffs2(target_props, source_props)
+        Core.prop_diffs2(target_props, source_props)
       end
 
       def has_svn_prop?(props)
