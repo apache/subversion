@@ -73,24 +73,6 @@ print_trail_debug(trail_t *trail,
 #endif /* defined(SVN_FS__TRAIL_DEBUG) */
 
 
-/* A single action to be undone.  Actions are chained so that later
-   actions point to earlier actions.  Thus, walking the chain and
-   applying the functions should undo actions in the reverse of the
-   order they were performed.  */
-struct undo {
-
-  /* A bitmask indicating when this action should be run.  */
-  enum {
-    undo_on_failure = 1,
-    undo_on_success = 2
-  } when;
-
-  void (*func)(void *baton);
-  void *baton;
-  struct undo *prev;
-};
-
-
 static svn_error_t *
 begin_trail(trail_t **trail_p,
             svn_fs_t *fs,
@@ -102,7 +84,6 @@ begin_trail(trail_t **trail_p,
 
   trail->pool = svn_pool_create(pool);
   trail->fs = fs;
-  trail->undo = 0;
   if (use_txn)
     {
       /* [*]
@@ -129,15 +110,8 @@ begin_trail(trail_t **trail_p,
 static svn_error_t *
 abort_trail(trail_t *trail)
 {
-  struct undo *undo;
   svn_fs_t *fs = trail->fs;
   base_fs_data_t *bfd = fs->fsap_data;
-
-  /* Undo those changes which should only persist when the transaction
-     succeeds.  */
-  for (undo = trail->undo; undo; undo = undo->prev)
-    if (undo->when & undo_on_failure)
-      undo->func(undo->baton);
 
   if (trail->db_txn)
     {
@@ -165,16 +139,9 @@ abort_trail(trail_t *trail)
 static svn_error_t *
 commit_trail(trail_t *trail)
 {
-  struct undo *undo;
   int db_err;
   svn_fs_t *fs = trail->fs;
   base_fs_data_t *bfd = fs->fsap_data;
-
-  /* Undo those changes which should persist only while the
-     transaction is active.  */
-  for (undo = trail->undo; undo; undo = undo->prev)
-    if (undo->when & undo_on_success)
-      undo->func(undo->baton);
 
   /* According to the example in the Berkeley DB manual, txn_commit
      doesn't return DB_LOCK_DEADLOCK --- all deadlocks are reported
@@ -309,39 +276,4 @@ svn_fs_base__retry(svn_fs_t *fs,
 {
   return do_retry(fs, txn_body, baton, FALSE, pool,
                   NULL, NULL, 0);
-}
-
-
-
-static void
-record_undo(trail_t *trail,
-            void (*func)(void *baton),
-            void *baton,
-            int when)
-{
-  struct undo *undo = apr_pcalloc(trail->pool, sizeof(*undo));
-
-  undo->when = when;
-  undo->func = func;
-  undo->baton = baton;
-  undo->prev = trail->undo;
-  trail->undo = undo;
-}
-
-
-void
-svn_fs_base__record_undo(trail_t *trail,
-                         void (*func)(void *baton),
-                         void *baton)
-{
-  record_undo(trail, func, baton, undo_on_failure);
-}
-
-
-void
-svn_fs_base__record_completion(trail_t *trail,
-                               void (*func)(void *baton),
-                               void *baton)
-{
-  record_undo(trail, func, baton, undo_on_success | undo_on_failure);
 }
