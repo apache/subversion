@@ -2608,6 +2608,93 @@ def copy_move_added_paths(sbox):
     if not os.path.exists(path):
       raise svntest.Failure("Unversioned path '%s' not found." % path)
 
+def copy_added_paths_with_props(sbox):
+  "copy added uncommitted paths with props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new file, schedule it for addition and set properties
+  upsilon_path = os.path.join(wc_dir, 'A', 'D', 'upsilon')
+  svntest.main.file_write(upsilon_path, "This is the file 'upsilon'\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', upsilon_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'foo', 'bar', upsilon_path)
+
+  # Create a dir and schedule it for addition and set properties
+  I_path = os.path.join(wc_dir, 'A', 'D', 'I')
+  os.mkdir(I_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', I_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'foo', 'bar', I_path)
+  
+  # Verify all the adds took place correctly.
+  expected_status_after_adds = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status_after_adds.add({
+    'A/D/upsilon'   : Item(status='A ', wc_rev='0'),
+    'A/D/I'         : Item(status='A ', wc_rev='0'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status_after_adds)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/D/upsilon' : Item(props={'foo' : 'bar'},
+                         contents="This is the file 'upsilon'\n"),
+    'A/D/I'       : Item(props={'foo' : 'bar'}),
+    })
+
+  # Read disk state with props
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+
+  # Compare actual vs. expected disk trees.
+  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+
+  # Copy added dir K to dir A/C
+  I_copy_path = os.path.join(wc_dir, 'A', 'C', 'I')
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     I_path, I_copy_path)
+
+  # Copy added file A/upsilon into dir A/C
+  upsilon_copy_path = os.path.join(wc_dir, 'A', 'C', 'upsilon')
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     upsilon_path, upsilon_copy_path)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/upsilon'     : Item(verb='Adding'),
+    'A/D/I'           : Item(verb='Adding'),
+    'A/C/upsilon'     : Item(verb='Adding'),
+    'A/C/I'           : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/upsilon'     : Item(status='  ', wc_rev=2),
+    'A/D/I'           : Item(status='  ', wc_rev=2),
+    'A/C/upsilon'     : Item(status='  ', wc_rev=2),
+    'A/C/I'           : Item(status='  ', wc_rev=2),
+    })
+
+  # Tweak expected disk tree
+  expected_disk.add({
+    'A/C/upsilon' : Item(props={'foo' : 'bar'},
+                         contents="This is the file 'upsilon'\n"),
+    'A/C/I'       : Item(props={'foo' : 'bar'}),
+    })
+  
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+  # Read disk state with props
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+
+  # Compare actual vs. expected disk trees.
+  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
 
 def copy_added_paths_to_URL(sbox):
   "copy added path to URL"
@@ -3428,6 +3515,7 @@ test_list = [ None,
               move_file_back_and_forth,
               move_dir_back_and_forth,
               copy_move_added_paths,
+              XFail(copy_added_paths_with_props),
               copy_added_paths_to_URL,
               XFail(move_to_relative_paths, svntest.main.is_os_windows),
               move_from_relative_paths,
