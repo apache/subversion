@@ -2290,6 +2290,96 @@ def set_invalid_revprops(sbox):
 				     '--with-revprop', '',
                                      remote_dir)
 
+#----------------------------------------------------------------------
+
+def start_commit_hook_test(sbox):
+  "start-commit hook failure case testing"
+
+  sbox.build()
+
+  # Get paths to the working copy and repository
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # Create a hook that outputs a message to stderr and returns exit code 1
+  hook_code = """import sys
+sys.stderr.write("Start-commit hook failed")
+sys.exit(1)"""
+
+  # Setup the hook configs to log data to a file
+  start_commit_hook = svntest.main.get_start_commit_hook_path(repo_dir)
+  svntest.main.create_python_hook_script(start_commit_hook, hook_code)
+
+  # Modify iota just so there is something to commit.
+  iota_path = os.path.join(wc_dir, "iota")
+  svntest.main.file_append(iota_path, "More stuff in iota")
+
+  # Commit, expect error code 1
+  actual_stdout, actual_stderr = svntest.main.run_svn(1, 'ci', '--quiet',
+                                                      '-m', 'log msg', wc_dir)
+
+  # No stdout expected
+  svntest.actions.compare_and_display_lines('Start-commit hook test',  
+                                            'STDOUT', [], actual_stdout)
+
+  # Compare only the last two lines of stderr since the preceding ones
+  # contain source code file and line numbers.
+  if len(actual_stderr) > 2:
+    actual_stderr = actual_stderr[-2:]
+  expected_stderr = [ "svn: 'start-commit' hook failed "
+                      "(exited with a non-zero exitcode of 1).  "
+                      "The following error output was produced by the hook:\n",
+                      "Start-commit hook failed\n"
+                    ]
+  svntest.actions.compare_and_display_lines('Start-commit hook test',  
+                                            'STDERR', 
+                                            expected_stderr, actual_stderr)
+
+#----------------------------------------------------------------------
+
+def pre_commit_hook_test(sbox):
+  "pre-commit hook failure case testing"
+
+  sbox.build()
+
+  # Get paths to the working copy and repository
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # Create a hook that outputs a message to stderr and returns exit code 1
+  hook_code = """import sys
+sys.stderr.write("Pre-commit hook failed")
+sys.exit(1)"""
+
+  # Setup the hook configs to log data to a file
+  pre_commit_hook = svntest.main.get_pre_commit_hook_path(repo_dir)
+  svntest.main.create_python_hook_script(pre_commit_hook, hook_code)
+
+  # Modify iota just so there is something to commit.
+  iota_path = os.path.join(wc_dir, "iota")
+  svntest.main.file_append(iota_path, "More stuff in iota")
+
+  # Commit, expect error code 1
+  actual_stdout, actual_stderr = svntest.main.run_svn(1, 'ci', '--quiet',
+                                                      '-m', 'log msg', wc_dir)
+
+  # No stdout expected
+  svntest.actions.compare_and_display_lines('Pre-commit hook test',  
+                                            'STDOUT', [], actual_stdout)
+
+  # Compare only the last two lines of stderr since the preceding ones
+  # contain source code file and line numbers.
+  if len(actual_stderr) > 2:
+    actual_stderr = actual_stderr[-2:]
+  expected_stderr = [ "svn: 'pre-commit' hook failed "
+                      "(exited with a non-zero exitcode of 1).  "
+                      "The following error output was produced by the hook:\n",
+                      "Pre-commit hook failed\n"
+                    ]
+  svntest.actions.compare_and_display_lines('Pre-commit hook test',  
+                                            'STDERR', 
+                                            expected_stderr, actual_stderr)
+
 ########################################################################
 # Run the tests
 
@@ -2343,6 +2433,8 @@ test_list = [ None,
               use_empty_value_in_revprop_pair,
               no_equals_in_revprop_pair,
               set_invalid_revprops,
+              start_commit_hook_test,
+              pre_commit_hook_test,
              ]
 
 if __name__ == '__main__':
