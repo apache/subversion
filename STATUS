@@ -110,7 +110,7 @@ Candidate changes:
      'svn diff' is a rather common use-case, change only
      does a fallback for one specific (Windows) error code
    Votes:
-     +1: dionisos
+     +1: dionisos, dlr
 
  * r24219
    Fix error reporting for JavaHL's info2() API.
