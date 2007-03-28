@@ -98,6 +98,7 @@ DEFINE_ID(abort_edit, "abort_edit")
 DEFINE_ID(__pool__, "__pool__")
 DEFINE_ID(__pools__, "__pools__")
 DEFINE_ID(name, "name")
+DEFINE_ID(value, "value")
 DEFINE_ID(swig_type_regex, "swig_type_regex")
 DEFINE_ID(open_tmp_file, "open_tmp_file")
 DEFINE_ID(get_wc_prop, "get_wc_prop")
@@ -778,6 +779,59 @@ typedef struct {
 } prop_hash_each_arg_t;
 
 static int
+svn_swig_rb_to_apr_array_row_prop_callback(VALUE key, VALUE value,
+                                           prop_hash_each_arg_t *arg)
+{
+  svn_prop_t *prop;
+
+  prop = apr_array_push(arg->array);
+  prop->name = apr_pstrdup(arg->pool, StringValueCStr(key));
+  prop->value = svn_string_ncreate(RSTRING_PTR(value), RSTRING_LEN(value),
+                                   arg->pool);
+  return ST_CONTINUE;
+}
+
+apr_array_header_t *
+svn_swig_rb_to_apr_array_row_prop(VALUE array_or_hash, apr_pool_t *pool)
+{
+  if (RTEST(rb_obj_is_kind_of(array_or_hash, rb_cArray))) {
+    int i, len;
+    apr_array_header_t *result;
+
+    len = RARRAY(array_or_hash)->len;
+    result = apr_array_make(pool, len, sizeof(svn_prop_t));
+    result->nelts = len;
+    for (i = 0; i < len; i++) {
+      VALUE name, value, item;
+      svn_prop_t *prop;
+
+      item = rb_ary_entry(array_or_hash, i);
+      name = rb_funcall(item, rb_id_name(), 0);
+      value = rb_funcall(item, rb_id_value(), 0);
+      prop = &APR_ARRAY_IDX(result, i, svn_prop_t);
+      prop->name = apr_pstrdup(pool, StringValueCStr(name));
+      prop->value = svn_string_ncreate(RSTRING_PTR(value), RSTRING_LEN(value),
+                                       pool);
+    }
+    return result;
+  } else if (RTEST(rb_obj_is_kind_of(array_or_hash, rb_cHash))) {
+    apr_array_header_t *result;
+    prop_hash_each_arg_t arg;
+
+    result = apr_array_make(pool, 0, sizeof(svn_prop_t));
+    arg.array = result;
+    arg.pool = pool;
+    rb_hash_foreach(array_or_hash, svn_swig_rb_to_apr_array_row_prop_callback,
+                    (VALUE)&arg);
+    return result;
+  } else {
+    rb_raise(rb_eArgError,
+             "'%s' must be [Svn::Core::Prop, ...] or {'name' => 'value', ...}",
+             r2c_inspect(array_or_hash));
+  }
+}
+
+static int
 svn_swig_rb_to_apr_array_prop_callback(VALUE key, VALUE value,
                                        prop_hash_each_arg_t *arg)
 {
@@ -795,12 +849,31 @@ apr_array_header_t *
 svn_swig_rb_to_apr_array_prop(VALUE array_or_hash, apr_pool_t *pool)
 {
   if (RTEST(rb_obj_is_kind_of(array_or_hash, rb_cArray))) {
-    return svn_swig_rb_array_to_apr_array_prop(array_or_hash, pool);
+    int i, len;
+    apr_array_header_t *result;
+
+    len = RARRAY(array_or_hash)->len;
+    result = apr_array_make(pool, len, sizeof(svn_prop_t *));
+    result->nelts = len;
+    for (i = 0; i < len; i++) {
+      VALUE name, value, item;
+      svn_prop_t *prop;
+
+      item = rb_ary_entry(array_or_hash, i);
+      name = rb_funcall(item, rb_id_name(), 0);
+      value = rb_funcall(item, rb_id_value(), 0);
+      prop = apr_palloc(pool, sizeof(svn_prop_t));
+      prop->name = apr_pstrdup(pool, StringValueCStr(name));
+      prop->value = svn_string_ncreate(RSTRING_PTR(value), RSTRING_LEN(value),
+                                       pool);
+      APR_ARRAY_IDX(result, i, svn_prop_t *) = prop;
+    }
+    return result;
   } else if (RTEST(rb_obj_is_kind_of(array_or_hash, rb_cHash))) {
     apr_array_header_t *result;
     prop_hash_each_arg_t arg;
 
-    result = apr_array_make(pool, 0, sizeof(svn_prop_t));
+    result = apr_array_make(pool, 0, sizeof(svn_prop_t *));
     arg.array = result;
     arg.pool = pool;
     rb_hash_foreach(array_or_hash, svn_swig_rb_to_apr_array_prop_callback,
@@ -1024,9 +1097,6 @@ DEFINE_ARRAY_TO_APR_ARRAY(const char *, svn_swig_rb_strings_to_apr_array,
 DEFINE_ARRAY_TO_APR_ARRAY(svn_auth_provider_object_t *,
                           svn_swig_rb_array_to_auth_provider_object_apr_array,
                           r2c_swig_type, (void *)"svn_auth_provider_object_t *")
-DEFINE_ARRAY_TO_APR_ARRAY(svn_prop_t *,
-                          svn_swig_rb_array_to_apr_array_prop,
-                          r2c_swig_type, (void *)"svn_prop_t *")
 DEFINE_ARRAY_TO_APR_ARRAY(svn_revnum_t,
                           svn_swig_rb_array_to_apr_array_revnum,
                           r2c_long, NULL)

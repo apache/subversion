@@ -243,6 +243,12 @@ class SvnWcTest < Test::Unit::TestCase
       queue.push(access, path1, true, {"my-prop" => "value"})
       queue.process(access, next_rev)
     end
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+      queue = Svn::Wc::CommittedQueue.new
+      queue.push(access, path1, true, [Svn::Core::Prop.new("my-prop", "value")])
+      queue.process(access, next_rev)
+    end
   end
 
   def test_ancestry

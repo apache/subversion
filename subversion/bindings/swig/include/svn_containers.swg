@@ -286,7 +286,7 @@
 */
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
-  %append_output(svn_swig_rb_apr_array_to_array_prop(*$1));
+  %append_output(svn_swig_rb_prop_apr_array_to_hash_prop(*$1));
 }
 
 %apply apr_array_header_t **OUTPUT_OF_PROP {
@@ -438,11 +438,19 @@
 }
 #endif
 
+/* -----------------------------------------------------------------------
+   An array of svn_prop_t.
+*/
+
 #ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *proplist
+%typemap(in) apr_array_header_t *ROW_PROP_LIST
 {
-  $1 = svn_swig_rb_array_to_apr_array_prop($input, _global_pool);
+  $1 = svn_swig_rb_to_apr_array_row_prop($input, _global_pool);
 }
+
+%apply apr_array_header_t *ROW_PROP_LIST {
+  apr_array_header_t *proplist
+};
 #endif
 
 /* -----------------------------------------------------------------------

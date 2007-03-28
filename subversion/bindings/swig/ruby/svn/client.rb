@@ -29,6 +29,25 @@ module Svn
       alias_method :wcprop_changes=, :incoming_prop_changes=
     end
 
+    class CommitItemWrapper
+      def initialize(item)
+        @item = item
+      end
+
+      def incoming_prop_changes
+        if @item.incoming_prop_changes
+          Util.hash_to_prop_array(@item.incoming_prop_changes)
+        else
+          nil
+        end
+      end
+      alias_method :wcprop_changes, :incoming_prop_changes
+
+      def method_missing(method, *args, &block)
+        @item.__send__(method, *args, &block)
+      end
+    end
+
     class Info
       alias url URL
       alias repos_root_url repos_root_URL
@@ -524,9 +543,19 @@ module Svn
       end
 
       def set_log_msg_func(callback=Proc.new)
+        callback_wrapper = Proc.new do |items|
+          items = items.collect do |item|
+            item_wrapper = CommitItemWrapper.new(item)
+          end
+          callback.call(items)
+        end
+        set_log_msg_func2(callback_wrapper)
+      end
+
+      def set_log_msg_func2(callback=Proc.new)
         @log_msg_baton = Client.set_log_msg_func3(self, callback)
       end
-      
+
       def set_notify_func(callback=Proc.new)
         @notify_baton = Client.set_notify_func2(self, callback)
       end
