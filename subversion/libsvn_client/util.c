@@ -190,10 +190,11 @@ svn_client__path_relative_to_root(const char **rel_path,
  cleanup:
   if (need_wc_cleanup)
     {
-      if (err == SVN_NO_ERROR)
-        err = svn_wc_adm_close(adm_access);
+      svn_error_t *err2 = svn_wc_adm_close(adm_access);
+      if (! err)
+        err = err2;
       else
-        svn_wc_adm_close(adm_access);
+        svn_error_clear(err2);
     }
   return err;
 }
