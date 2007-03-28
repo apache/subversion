@@ -29,7 +29,6 @@ Blanket commit access:
          naked   Nuutti Kotivuori <naked@iki.fi>
        dwhedon   David Kimdon <dwhedon@debian.org>
            dlr   Daniel Rall <dlr@collab.net>
-         kraai   Matt Kraai <kraai@alumni.cmu.edu>
            mbk   Mark Benedetto King <mbk@lowlatency.com>
            epg   Eric Gillespie <epg@pretzelnet.org>
            jaa   Jani Averbach <jaa@iki.fi>
@@ -161,6 +160,7 @@ Committers who have asked to be listed as dormant:
 
         bdenny   Brian Estlin <brian@implementality.com>
       rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
+         kraai   Matt Kraai <kraai@alumni.cmu.edu>
 
 ## Local Variables:
 ## coding:utf-8
