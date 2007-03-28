@@ -850,7 +850,7 @@ public interface SVNClientInterface
      * @since 1.5
      */
     void properties(String path, Revision revision, Revision pegRevision,
-                        boolean recurse, ProplistCallback callback)
+                    boolean recurse, ProplistCallback callback)
             throws ClientException;
 
     /**

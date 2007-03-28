@@ -1079,8 +1079,7 @@ public class SVNClient implements SVNClientInterface
         while(it.hasNext())
         {
             String key = (String) it.next();
-            props[i] = new PropertyData(path, key,
-                    (String) propMap.get(key));
+            props[i] = new PropertyData(path, key, (String) propMap.get(key));
             i++;
         }
 

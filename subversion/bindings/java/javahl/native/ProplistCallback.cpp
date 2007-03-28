@@ -22,6 +22,7 @@
 #include "ProplistCallback.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
+
 /**
  * Create a ProplistCallback object
  * @param jcallback the java callback object.
@@ -30,6 +31,7 @@ ProplistCallback::ProplistCallback(jobject jcallback)
 {
     m_callback = jcallback;
 }
+
 /**
  * Destroy a ProplistCallback object
  */
@@ -38,6 +40,7 @@ ProplistCallback::~ProplistCallback()
     // the m_callback does not need to be destroyed, because it is the passed 
     // in parameter to the java SVNClient.blame method.
 }
+
 /**
  * Callback called for a single path
  * @param path      the path name
