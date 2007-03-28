@@ -462,7 +462,7 @@
 
 %typemap(out) apr_array_header_t *PROP_LIST
 {
-  %append_output(svn_swig_rb_apr_array_to_array_prop($1));
+  %append_output(svn_swig_rb_prop_apr_array_to_hash_prop($1));
 }
 
 %typemap(in) apr_array_header_t *PROP_LIST_MAY_BE_NULL
@@ -480,7 +480,7 @@
 
 %typemap(out) apr_array_header_t *PROP_LIST_MAY_BE_NULL
 {
-  %append_output($1 ? svn_swig_rb_apr_array_to_array_prop($1) : Qnil);
+  %append_output($1 ? svn_swig_rb_prop_apr_array_to_hash_prop($1) : Qnil);
 }
 
 %apply apr_array_header_t *PROP_LIST {

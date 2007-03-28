@@ -315,7 +315,16 @@ module Svn
       def diff_editor(target, callbacks, recurse=true,
                       ignore_ancestry=true, use_text_base=false,
                       reverse_order=false, cancel_func=nil)
-        editor, editor_baton = Wc.get_diff_editor3(target, self, callbacks,
+        callbacks_wrapper = DiffCallbacksWrapper.new(callbacks)
+        args = [target, callbacks_wrapper, recurse, ignore_ancestry,
+                use_text_base, reverse_order, cancel_func]
+        diff_editor2(*args)
+      end
+
+      def diff_editor2(target, callbacks, recurse=true,
+                       ignore_ancestry=true, use_text_base=false,
+                       reverse_order=false, cancel_func=nil)
+        editor, editor_baton = Wc.get_diff_editor3(self, target, callbacks,
                                                    recurse, ignore_ancestry,
                                                    use_text_base, reverse_order,
                                                    cancel_func)
@@ -324,6 +333,12 @@ module Svn
       end
 
       def diff(target, callbacks, recurse=true, ignore_ancestry=true)
+        callbacks_wrapper = DiffCallbacksWrapper.new(callbacks)
+        args = [target, callbacks_wrapper, recurse, ignore_ancestry]
+        diff2(*args)
+      end
+
+      def diff2(target, callbacks, recurse=true, ignore_ancestry=true)
         Wc.diff3(self, target, callbacks, recurse, ignore_ancestry)
       end
 
@@ -397,6 +412,39 @@ module Svn
 
       def remove_lock(path)
         Wc.remove_lock(path, self)
+      end
+    end
+
+    class DiffCallbacksWrapper
+      def initialize(original)
+        @original = original
+      end
+
+      def file_changed(access, path, tmpfile1, tmpfile2, rev1,
+                       rev2, mimetype1, mimetype2,
+                       prop_changes, original_props)
+        prop_changes = Util.hash_to_prop_array(prop_changes)
+        @original.file_changed(access, path, tmpfile1, tmpfile2, rev1,
+                               rev2, mimetype1, mimetype2,
+                               prop_changes, original_props)
+      end
+
+      def file_added(access, path, tmpfile1, tmpfile2, rev1,
+                     rev2, mimetype1, mimetype2,
+                     prop_changes, original_props)
+        prop_changes = Util.hash_to_prop_array(prop_changes)
+        @original.file_added(access, path, tmpfile1, tmpfile2, rev1,
+                             rev2, mimetype1, mimetype2,
+                             prop_changes, original_props)
+      end
+
+      def dir_props_changed(access, path, prop_changes, original_props)
+        prop_changes = Util.hash_to_prop_array(prop_changes)
+        @original.dir_props_changed(access, path, prop_changes, original_props)
+      end
+
+      def method_missing(method, *args, &block)
+        @original.__send__(method, *args, &block)
       end
     end
 

@@ -26,6 +26,7 @@ class SvnRaTest < Test::Unit::TestCase
     path_in_repos = "/#{file}"
     ctx = make_context(log)
     config = {}
+    path_props = {"my-prop" => "value"}
     callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
     session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
 
@@ -66,6 +67,9 @@ class SvnRaTest < Test::Unit::TestCase
 
     ctx = make_context(log2)
     File.open(path, "w") {|f| f.print(src * 2)}
+    path_props.each do |key, value|
+      ctx.prop_set(key, value, path)
+    end
     info = ctx.ci(@wc_path)
     rev2 = info.revision
 
@@ -91,11 +95,25 @@ class SvnRaTest < Test::Unit::TestCase
 
     infos = []
     session.file_revs(file, rev1, rev2) do |_path, rev, rev_props, prop_diffs|
-      infos << [rev, _path]
+      hashed_prop_diffs = {}
+      prop_diffs.each do |prop|
+        hashed_prop_diffs[prop.name] = prop.value
+      end
+      infos << [rev, _path, hashed_prop_diffs]
     end
     assert_equal([
-                   [rev1, path_in_repos],
-                   [rev2, path_in_repos],
+                   [rev1, path_in_repos, {}],
+                   [rev2, path_in_repos, path_props],
+                 ],
+                 infos)
+
+    infos = []
+    session.file_revs2(file, rev1, rev2) do |_path, rev, rev_props, prop_diffs|
+      infos << [rev, _path, prop_diffs]
+    end
+    assert_equal([
+                   [rev1, path_in_repos, {}],
+                   [rev2, path_in_repos, path_props],
                  ],
                  infos)
 

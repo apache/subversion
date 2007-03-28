@@ -870,7 +870,6 @@ DEFINE_DUP2(auth_ssl_server_cert_info)
 DEFINE_DUP2(wc_entry)
 DEFINE_DUP2(client_diff_summarize)
 DEFINE_DUP2(dirent)
-DEFINE_DUP_NO_CONVENIENCE2(prop)
 DEFINE_DUP_NO_CONVENIENCE2(client_commit_item3)
 DEFINE_DUP_NO_CONVENIENCE2(client_proplist_item)
 DEFINE_DUP_NO_CONVENIENCE2(wc_external_item2)
@@ -968,8 +967,6 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_string,
 DEFINE_APR_ARRAY_TO_ARRAY(static VALUE, c2r_commit_item3_array,
                           c2r_client_commit_item3_dup, EMPTY_CPP_ARGUMENT,
                           svn_client_commit_item3_t *, NULL)
-DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_prop,
-                          c2r_prop_dup, &, svn_prop_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_rev,
                           c2r_long, &, svn_revnum_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_proplist_item,
@@ -978,6 +975,26 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_proplist_item,
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_external_item2,
                           c2r_wc_external_item2_dup, EMPTY_CPP_ARGUMENT,
                           svn_wc_external_item2_t *, NULL)
+
+VALUE
+svn_swig_rb_prop_apr_array_to_hash_prop(const apr_array_header_t *apr_ary)
+{
+  VALUE hash;
+  int i;
+
+  hash = rb_hash_new();
+  for (i = 0; i < apr_ary->nelts; i++) {
+    svn_prop_t prop;
+    prop = APR_ARRAY_IDX(apr_ary, i, svn_prop_t);
+    rb_hash_aset(hash,
+                 prop.name ? rb_str_new2(prop.name) : Qnil,
+                 prop.value && prop.value->data ?
+                   rb_str_new2(prop.value->data) : Qnil);
+  }
+
+  return hash;
+}
+
 
 
 /* Ruby Array -> apr_array_t */
@@ -2357,7 +2374,7 @@ svn_swig_rb_ra_file_rev_handler(void *baton,
                            c2r_string2(path),
                            c2r_long(&rev, NULL),
                            svn_swig_rb_apr_hash_to_hash_svn_string(rev_props),
-                           svn_swig_rb_apr_array_to_array_prop(prop_diffs));
+                           svn_swig_rb_prop_apr_array_to_hash_prop(prop_diffs));
     invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
   }
   
@@ -2418,7 +2435,7 @@ svn_swig_rb_repos_file_rev_handler(void *baton,
                            c2r_string2(path),
                            c2r_long(&rev, NULL),
                            svn_swig_rb_apr_hash_to_hash_svn_string(rev_props),
-                           svn_swig_rb_apr_array_to_array_prop(prop_diffs));
+                           svn_swig_rb_prop_apr_array_to_hash_prop(prop_diffs));
     invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
   }
   
@@ -2963,9 +2980,10 @@ wc_diff_callbacks_file_changed(svn_wc_adm_access_t *adm_access,
                                apr_hash_t *originalprops,
                                void *diff_baton)
 {
-  VALUE callbacks = (VALUE)diff_baton;
+  VALUE callbacks, rb_pool;
   svn_error_t *err = SVN_NO_ERROR;
 
+  svn_swig_rb_from_baton((VALUE)diff_baton, &callbacks, &rb_pool);
   if (!NIL_P(callbacks)) {
     callback_baton_t cbb;
     VALUE result = Qnil;
@@ -2982,7 +3000,7 @@ wc_diff_callbacks_file_changed(svn_wc_adm_access_t *adm_access,
                            INT2NUM(rev2),
                            c2r_string2(mimetype1),
                            c2r_string2(mimetype2),
-                           svn_swig_rb_apr_array_to_array_prop(propchanges),
+                           svn_swig_rb_prop_apr_array_to_hash_prop(propchanges),
                            svn_swig_rb_prop_hash_to_hash(originalprops));
     result = invoke_callback_handle_error((VALUE)(&cbb), Qnil, &err);
 
@@ -3010,9 +3028,10 @@ wc_diff_callbacks_file_added(svn_wc_adm_access_t *adm_access,
                              apr_hash_t *originalprops,
                              void *diff_baton)
 {
-  VALUE callbacks = (VALUE)diff_baton;
+  VALUE callbacks, rb_pool;
   svn_error_t *err = SVN_NO_ERROR;
 
+  svn_swig_rb_from_baton((VALUE)diff_baton, &callbacks, &rb_pool);
   if (!NIL_P(callbacks)) {
     callback_baton_t cbb;
     VALUE result = Qnil;
@@ -3029,7 +3048,7 @@ wc_diff_callbacks_file_added(svn_wc_adm_access_t *adm_access,
                            INT2NUM(rev2),
                            c2r_string2(mimetype1),
                            c2r_string2(mimetype2),
-                           svn_swig_rb_apr_array_to_array_prop(propchanges),
+                           svn_swig_rb_prop_apr_array_to_hash_prop(propchanges),
                            svn_swig_rb_prop_hash_to_hash(originalprops));
     result = invoke_callback_handle_error((VALUE)(&cbb), Qnil, &err);
 
@@ -3053,9 +3072,10 @@ wc_diff_callbacks_file_deleted(svn_wc_adm_access_t *adm_access,
                                apr_hash_t *originalprops,
                                void *diff_baton)
 {
-  VALUE callbacks = (VALUE)diff_baton;
+  VALUE callbacks, rb_pool;
   svn_error_t *err = SVN_NO_ERROR;
 
+  svn_swig_rb_from_baton((VALUE)diff_baton, &callbacks, &rb_pool);
   if (!NIL_P(callbacks)) {
     callback_baton_t cbb;
     VALUE result = Qnil;
@@ -3086,9 +3106,10 @@ wc_diff_callbacks_dir_added(svn_wc_adm_access_t *adm_access,
                             svn_revnum_t rev,
                             void *diff_baton)
 {
-  VALUE callbacks = (VALUE)diff_baton;
+  VALUE callbacks, rb_pool;
   svn_error_t *err = SVN_NO_ERROR;
 
+  svn_swig_rb_from_baton((VALUE)diff_baton, &callbacks, &rb_pool);
   if (!NIL_P(callbacks)) {
     callback_baton_t cbb;
     VALUE result = Qnil;
@@ -3114,9 +3135,10 @@ wc_diff_callbacks_dir_deleted(svn_wc_adm_access_t *adm_access,
                               const char *path,
                               void *diff_baton)
 {
-  VALUE callbacks = (VALUE)diff_baton;
+  VALUE callbacks, rb_pool;
   svn_error_t *err = SVN_NO_ERROR;
 
+  svn_swig_rb_from_baton((VALUE)diff_baton, &callbacks, &rb_pool);
   if (!NIL_P(callbacks)) {
     callback_baton_t cbb;
     VALUE result = Qnil;
@@ -3143,9 +3165,10 @@ wc_diff_callbacks_dir_props_changed(svn_wc_adm_access_t *adm_access,
                                     apr_hash_t *originalprops,
                                     void *diff_baton)
 {
-  VALUE callbacks = (VALUE)diff_baton;
+  VALUE callbacks, rb_pool;
   svn_error_t *err = SVN_NO_ERROR;
 
+  svn_swig_rb_from_baton((VALUE)diff_baton, &callbacks, &rb_pool);
   if (!NIL_P(callbacks)) {
     callback_baton_t cbb;
     VALUE result = Qnil;
@@ -3156,7 +3179,7 @@ wc_diff_callbacks_dir_props_changed(svn_wc_adm_access_t *adm_access,
                            c2r_swig_type((void *)adm_access,
                                          (void *)"svn_wc_adm_access_t *"),
                            c2r_string2(path),
-                           svn_swig_rb_apr_array_to_array_prop(propchanges),
+                           svn_swig_rb_prop_apr_array_to_hash_prop(propchanges),
                            svn_swig_rb_prop_hash_to_hash(originalprops));
     result = invoke_callback_handle_error((VALUE)(&cbb), Qnil, &err);
 
