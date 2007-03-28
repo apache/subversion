@@ -1154,9 +1154,12 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    public native void propertySet(String path, String name, byte[] value,
+    public void propertySet(String path, String name, byte[] value,
                                    boolean recurse, boolean force)
-            throws ClientException;
+            throws ClientException
+    {
+        propertySet(path, name, new String(value), recurse, force);
+    }
 
     /**
      * Remove one property of an item.
