@@ -61,7 +61,7 @@ function query() {
   echo -n "$SCRIPT: $1 (y/n)? [$2] "
   read -n 1 -t 32
   echo
-  [ "${REPLY:-$2}" == 'y' ]
+  [ "${REPLY:-$2}" = 'y' ]
 }
 
 function get_loadmodule_config() {
@@ -308,7 +308,7 @@ rm "$HTTPD_CFG-copy"
 
 say "HTTPD is good, starting the tests..."
 
-if [ $# == 0 ]; then
+if [ $# = 0 ]; then
   time make check "BASE_URL=$BASE_URL"
   r=$?
 else
