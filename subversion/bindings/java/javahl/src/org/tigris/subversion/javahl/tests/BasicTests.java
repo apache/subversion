@@ -95,6 +95,26 @@ public class BasicTests extends SVNTests
                     "' (which contains control characters) should fail",
                     Path.isValid(path));
     }
+    /**
+     * Tests MergeInfo and RevisionRange classes.
+     */
+    public void testMergeInfoParser() throws Throwable
+    {
+        String mergeInfoPropertyValue = 
+            "/trunk:1-300,305,307,400-405\n/branches/branch:308-400";
+        MergeInfo info = new MergeInfo(mergeInfoPropertyValue);
+        String[] paths = info.getPaths();
+        assertEquals(2, paths.length);
+        RevisionRange[] trunkRange = info.getRevisionRange("/trunk");
+        assertEquals(4, trunkRange.length);
+        assertEquals("1-300", trunkRange[0].toString());
+        assertEquals("305", trunkRange[1].toString());
+        assertEquals("307", trunkRange[2].toString());
+        assertEquals("400-405", trunkRange[3].toString());
+        RevisionRange[] branchRange = info.getRevisionRange("/branches/branch");
+        assertEquals(1, branchRange.length);
+        
+    }
 
     /**
      * test the basic SVNClient.status functionality
