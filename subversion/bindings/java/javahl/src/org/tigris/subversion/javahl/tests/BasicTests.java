@@ -27,6 +27,8 @@ import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
@@ -579,8 +581,8 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
         WC wc = thisTest.getWc();
 
+        // Check getting properties the non-callback way
         String itemPath = thisTest.getWCPath() + "/iota";
-        Revision rev = Revision.getInstance(RevisionKind.head);
 
         client.propertySet(itemPath, "abc", "def", false);
         PropertyData[] properties = 
@@ -591,6 +593,25 @@ public class BasicTests extends SVNTests
         assertEquals("def", prop.getValue());
 
         wc.setItemPropStatus("iota", Status.Kind.modified);
+        thisTest.checkStatus();
+
+        // Check getting properties the callback way
+        itemPath = thisTest.getWCPath() + "/A/B/E/alpha";
+        client.propertySet(itemPath, "cqcq", "qrz", false);
+        ProplistCallbackImpl callback = new ProplistCallbackImpl();
+
+        client.properties(itemPath, null, null, false, callback);
+        Map propMap = callback.getProperties(itemPath);
+        Iterator it = propMap.keySet().iterator();
+
+        while (it.hasNext())
+        {
+            String key = (String) it.next();
+            assertEquals("cqcq", key);
+            assertEquals("qrz", (String) propMap.get(key));
+        }
+
+        wc.setItemPropStatus("A/B/E/alpha", Status.Kind.modified);
         thisTest.checkStatus();
     }
 

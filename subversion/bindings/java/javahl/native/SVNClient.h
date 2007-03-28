@@ -38,6 +38,7 @@ class Prompter;
 class CopySources;
 class DiffSummaryReceiver;
 class BlameCallback;
+class ProplistCallback;
 class CommitMessage;
 #include "svn_client.h"
 #include "SVNBase.h"
@@ -77,8 +78,9 @@ public:
     void propertyRemove(const char *path, const char *name, bool recurse);
     void propertySet(const char *path, const char *name, const char *value,
                      bool recurse, bool force);
-    jobjectArray properties(jobject jthis, const char *path,
-                            Revision &revision, Revision &pegRevision);
+    void properties(const char *path, Revision &revision,
+                    Revision &pegRevision, bool recurse,
+                    ProplistCallback *callback);
     void merge(const char *path1, Revision &revision1, const char *path2,
                Revision &revision2, const char *localPath, bool force,
                bool recurse, bool ignoreAncestry, bool dryRun);

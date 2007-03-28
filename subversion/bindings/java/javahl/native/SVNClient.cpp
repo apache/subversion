@@ -31,6 +31,7 @@
 #include "Targets.h"
 #include "Revision.h"
 #include "BlameCallback.h"
+#include "ProplistCallback.h"
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
 #include "EnumMapper.h"
@@ -809,80 +810,36 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     return createJavaProperty(jthis, path, name, propval);
 }
 
-jobjectArray SVNClient::properties(jobject jthis, const char *path, 
-                                   Revision & revision, Revision &pegRevision)
+svn_error_t *
+proplist_receiver(void *baton,
+                  svn_stringbuf_t *path,
+                  apr_hash_t *prop_hash,
+                  apr_pool_t *pool)
 {
-    apr_array_header_t *props;
+    return ((ProplistCallback *)baton)->callback(path, prop_hash, pool);
+}
+
+void SVNClient::properties(const char *path, Revision & revision,
+                           Revision &pegRevision, bool recurse,
+                           ProplistCallback *callback)
+{
     Pool requestPool;
-    SVN_JNI_NULL_PTR_EX(path, "path", NULL);
+    SVN_JNI_NULL_PTR_EX(path, "path", );
     Path intPath(path);
-    SVN_JNI_ERR(intPath.error_occured(), NULL);
+    SVN_JNI_ERR(intPath.error_occured(), );
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
     {
-        return NULL;
+        return;
     }
 
-    SVN_JNI_ERR(svn_client_proplist2(&props, intPath.c_str(),
-                                     pegRevision.revision(),
-                                     revision.revision(),
-                                     FALSE, ctx, requestPool.pool()),
-                NULL);
-
-    // since we disabled recurse, props->nelts should be 1
-    for (int j = 0; j < props->nelts; ++j)
-    {
-        svn_client_proplist_item_t *item =
-            ((svn_client_proplist_item_t **)props->elts)[j];
-
-        apr_hash_index_t *hi;
-
-        int count = apr_hash_count (item->prop_hash);
-
-        JNIEnv *env = JNIUtil::getEnv();
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/PropertyData");
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        jobjectArray ret = env->NewObjectArray(count, clazz, NULL);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        env->DeleteLocalRef(clazz);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-
-        int i = 0;
-        for (hi = apr_hash_first (requestPool.pool(), item->prop_hash); hi;
-             hi = apr_hash_next (hi), i++)
-        {
-            const char *key;
-            svn_string_t *val;
-
-            apr_hash_this (hi, (const void **)&key, NULL, (void**)&val);
-
-            jobject object = createJavaProperty(jthis, item->node_name->data, 
-                                                key, val);
-
-            env->SetObjectArrayElement(ret, i, object);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-            env->DeleteLocalRef(object);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-        }
-        return ret;
-    }
-    return NULL;
+    SVN_JNI_ERR(svn_client_proplist3(intPath.c_str(), pegRevision.revision(),
+                                     revision.revision(), recurse,
+                                     proplist_receiver, callback,
+                                     ctx, requestPool.pool()), );
+    
+    return;
 }
 
 void SVNClient::propertySet(const char *path, const char *name, 

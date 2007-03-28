@@ -35,6 +35,7 @@
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
 #include "BlameCallback.h"
+#include "ProplistCallback.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -816,34 +817,36 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
         jignoreAncestry ? true:false, jdryRun ? true:false);
 }
 
-JNIEXPORT jobjectArray JNICALL
+JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_properties
   (JNIEnv* env, jobject jthis, jstring jpath, jobject jrevision, 
-   jobject jpegRevision)
+   jobject jpegRevision, jboolean jrecurse, jobject jproplistCallback)
 {
     JNIEntry(SVNClient, properties);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
-        return NULL;
+        return;
     }
     JNIStringHolder path(jpath);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
     Revision revision(jrevision);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
     Revision pegRevision(jpegRevision);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
-    return cl->properties(jthis, path, revision, pegRevision);
+    ProplistCallback callback(jproplistCallback);
+    cl->properties(path, revision, pegRevision, jrecurse ? true : false,
+        &callback);
 }
 
 JNIEXPORT void JNICALL
