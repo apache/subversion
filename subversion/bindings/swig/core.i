@@ -44,13 +44,7 @@
 #endif
 
 /* ### for now, let's ignore this thing. */
-#ifndef SWIGRUBY
 %ignore svn_prop_t;
-#endif
-#ifdef SWIGRUBY
-%immutable svn_prop_t::name;
-%immutable svn_prop_t::value;
-#endif
 
 /* -----------------------------------------------------------------------
    The following struct members have to be read-only because otherwise

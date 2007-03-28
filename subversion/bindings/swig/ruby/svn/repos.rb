@@ -180,6 +180,20 @@ module Svn
       end
 
       def file_revs(path, start_rev, end_rev, authz_read_func=nil)
+        args = [path, start_rev, end_rev, authz_read_func]
+        if block_given?
+          revs = file_revs2(*args) do |path, rev, rev_props, prop_diffs|
+            yield(path, rev, rev_props, Util.hash_to_prop_array(prop_diffs))
+          end
+        else
+          revs = file_revs2(*args)
+        end
+        revs.collect do |path, rev, rev_props, prop_diffs|
+          [path, rev, rev_props, Util.hash_to_prop_array(prop_diffs)]
+        end
+      end
+
+      def file_revs2(path, start_rev, end_rev, authz_read_func=nil)
         authz_read_func ||= @authz_read_func
         revs = []
         handler = Proc.new do |path, rev, rev_props, prop_diffs|

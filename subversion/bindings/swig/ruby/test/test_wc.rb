@@ -4,6 +4,7 @@ require "util"
 require "svn/core"
 require "svn/wc"
 require "svn/repos"
+require "svn/ra"
 
 class SvnWcTest < Test::Unit::TestCase
   include SvnTestUtil
@@ -616,5 +617,108 @@ EOE
   def test_committed_queue_new
     queue = Svn::Wc::CommittedQueue.new
     assert_kind_of(Svn::Wc::CommittedQueue, queue)
+  end
+
+  def assert_diff_callbacks(method_name)
+    log = "sample log"
+    file1 = "hello.txt"
+    file2 = "hello2.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path1 = File.join(dir_path, file1)
+    path2 = File.join(dir_path, file2)
+    prop_name = "my-prop"
+    prop_value = "value"
+
+    ctx = make_context(log)
+    config = {}
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
+
+    FileUtils.mkdir(dir_path)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(dir_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    File.open(path1, "w") {|f| f.print(src * 2)}
+    File.open(path2, "w") {|f| f.print(src)}
+    ctx.add(path2)
+    ctx.prop_set(prop_name, prop_value, path1)
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |adm|
+      callbacks = Object.new
+      def callbacks.result
+        @result
+      end
+      def callbacks.result=(result)
+        @result = result
+      end
+      def callbacks.file_added(access, path, tmpfile1, tmpfile2, rev1,
+                               rev2, mimetype1, mimetype2,
+                               prop_changes, original_props)
+        @result << [:file_added, path, prop_changes]
+        [Svn::Wc::NOTIFY_STATE_UNCHANGED, Svn::Wc::NOTIFY_STATE_UNCHANGED]
+      end
+      def callbacks.file_changed(access, path, tmpfile1, tmpfile2, rev1,
+                                 rev2, mimetype1, mimetype2,
+                                 prop_changes, original_props)
+        @result << [:file_changed, path, prop_changes]
+        [Svn::Wc::NOTIFY_STATE_UNCHANGED, Svn::Wc::NOTIFY_STATE_UNCHANGED]
+      end
+      def callbacks.dir_props_changed(access, path, prop_changes, original_props)
+        @result << [:dir_props_changed, path, prop_changes]
+        Svn::Wc::NOTIFY_STATE_UNCHANGED
+      end
+      callbacks.result = []
+      editor = adm.__send__(method_name, dir, callbacks)
+      reporter = session.diff(rev1, "", @repos_uri, editor)
+      adm.crawl_revisions(dir_path, reporter)
+
+      args = {
+        :dir_changed_prop_names => [
+                                    "svn:entry:committed-date",
+                                    "svn:entry:uuid",
+                                    "svn:entry:last-author",
+                                    "svn:entry:committed-rev"
+                                   ],
+        :file_changed_prop_name => prop_name,
+        :file_changed_prop_value => prop_value,
+      }
+      dir_changed_props, file_changed_props, empty_changed_props = yield(args)
+      assert_equal([
+                    [:dir_props_changed, @wc_path, dir_changed_props],
+                    [:file_changed, path1, file_changed_props],
+                    [:file_added, path2, empty_changed_props],
+                   ],
+                   callbacks.result)
+    end
+  end
+
+  def test_diff_callbacks_for_backward_compatibility
+    assert_diff_callbacks(:diff_editor) do |args|
+      dir_changed_props = args[:dir_changed_prop_names].collect do |name|
+        Svn::Core::Prop.new(name, nil)
+      end
+      prop_name = args[:file_changed_prop_name]
+      prop_value = args[:file_changed_prop_value]
+      file_changed_props = [Svn::Core::Prop.new(prop_name, prop_value)]
+      empty_changed_props = []
+      [dir_changed_props, file_changed_props, empty_changed_props]
+    end
+  end
+
+  def test_diff_callbacks
+    assert_diff_callbacks(:diff_editor2) do |args|
+      dir_changed_props = {}
+      args[:dir_changed_prop_names].each do |name|
+        dir_changed_props[name] = nil
+      end
+      prop_name = args[:file_changed_prop_name]
+      prop_value = args[:file_changed_prop_value]
+      file_changed_props = {prop_name => prop_value}
+      empty_changed_props = {}
+      [dir_changed_props, file_changed_props, empty_changed_props]
+    end
   end
 end

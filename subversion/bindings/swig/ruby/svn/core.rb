@@ -562,5 +562,19 @@ module Svn
         Util.copy?(copyfrom_path, copyfrom_rev)
       end
     end
+
+    # For backward compatibility
+    class Prop
+      attr_accessor :name, :value
+      def initialize(name, value)
+        @name = name
+        @value = value
+      end
+
+      def ==(other)
+        other.is_a?(self.class) and
+          [@name, @value] == [other.name, other.value]
+      end
+    end
   end
 end

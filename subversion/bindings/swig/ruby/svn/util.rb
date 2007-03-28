@@ -40,7 +40,13 @@ module Svn
     def copy?(copyfrom_path, copyfrom_rev)
       Util.valid_rev?(copyfrom_rev) && !copyfrom_path.nil?
     end
-    
+
+    def hash_to_prop_array(hash)
+      hash.collect do |key, value|
+        Svn::Core::Prop.new(key, value)
+      end
+    end
+
     def set_constants(ext_mod, target_mod=self)
       target_name = nil
       ext_mod.constants.each do |const|
