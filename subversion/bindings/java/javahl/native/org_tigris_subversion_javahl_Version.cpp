@@ -22,48 +22,32 @@
 #include "JNIStackElement.h"
 #include "svn_version.h"
 
-/*
- * Class:     org_tigris_subversion_javahl_Version
- * Method:    getMajor
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_org_tigris_subversion_javahl_Version_getMajor
+JNIEXPORT jint JNICALL
+Java_org_tigris_subversion_javahl_Version_getMajor
   (JNIEnv* env, jobject jthis)
 {
     JNIEntry(Version, getMajor);
     return SVN_VER_MAJOR;
 }
 
-/*
- * Class:     org_tigris_subversion_javahl_Version
- * Method:    getMinor
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_org_tigris_subversion_javahl_Version_getMinor
+JNIEXPORT jint JNICALL
+Java_org_tigris_subversion_javahl_Version_getMinor
   (JNIEnv* env, jobject jthis)
 {
     JNIEntry(Version, getMinor);
     return SVN_VER_MINOR;
 }
 
-/*
- * Class:     org_tigris_subversion_javahl_Version
- * Method:    getPatch
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_org_tigris_subversion_javahl_Version_getPatch
+JNIEXPORT jint JNICALL
+Java_org_tigris_subversion_javahl_Version_getPatch
   (JNIEnv* env, jobject jthis)
 {
     JNIEntry(Version, getPatch);
     return SVN_VER_PATCH;
 }
 
-/*
- * Class:     org_tigris_subversion_javahl_Version
- * Method:    getTag
- * Signature: ()Ljava/lang/String;
- */
-JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_Version_getTag
+JNIEXPORT jstring JNICALL
+Java_org_tigris_subversion_javahl_Version_getTag
   (JNIEnv* env, jobject jthis)
 {
     JNIEntry(Version, getTag);
@@ -76,12 +60,8 @@ JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_Version_getTag
     return tag;
 }
 
-/*
- * Class:     org_tigris_subversion_javahl_Version
- * Method:    getNumberTag
- * Signature: ()Ljava/lang/String;
- */
-JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_Version_getNumberTag
+JNIEXPORT jstring JNICALL
+Java_org_tigris_subversion_javahl_Version_getNumberTag
   (JNIEnv* env, jobject jthis)
 {
     JNIEntry(Version, getNumberTag);
