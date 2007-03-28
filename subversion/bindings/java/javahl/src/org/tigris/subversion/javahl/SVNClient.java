@@ -1567,31 +1567,18 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
     
     /**
-     *  Return the URL a given path or URL was copied from
-     * @param path  path of the item
-     * @return      URL item was copied from or null
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String)
      * @since 1.5
      */
-    public String getCopySource(String path) throws ClientException
-    {
-        // TODO Auto-generated method stub
-        return null;
-    }
+    public native CopySource getCopySource(String path)
+        throws SubversionException;
 
     /**
-     * Retrieve the svn:mergeinfo property of an item
-     * @param path      path of the item
-     * @return the Property
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface#getMergeInfoProperty(String)
      * @since 1.5
      */
-    public PropertyData getMergeInfoProperty(String path)
-            throws ClientException
-    {
-        // TODO Auto-generated method stub
-        return null;
-    }
+    public native PropertyData getMergeInfoProperty(String path)
+        throws ClientException;
 
     /**
      * Internal method to initialize the native layer. Only to be called by
