@@ -1972,6 +1972,22 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_info2
     }
     return cl->info2(path, revision, pegRevision, jrecurse ? true : false);
 }
+
+JNIEXPORT jobject JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_getCopySource
+  (JNIEnv *env, jobject jthis, jstring path)
+{
+    JNIEntry(SVNClient, getCopySource);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError("bad c++ this");
+        return NULL;
+    }
+    // ### TODO: Implement me!
+    return NULL;
+}
+
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    initNative
