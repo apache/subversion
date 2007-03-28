@@ -2,7 +2,7 @@
  * entries.c :  manipulating the administrative `entries' file.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,6 +37,7 @@
 #include "lock.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /** Overview **/
@@ -63,6 +64,8 @@ alloc_entry(apr_pool_t *pool)
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->cmt_rev = SVN_INVALID_REVNUM;
   entry->kind = svn_node_none;
+  entry->working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
+  entry->depth = svn_depth_infinity;
   return entry;
 }
 
@@ -454,6 +457,30 @@ read_entry(svn_wc_entry_t **new_entry,
   /* Keep entry in working copy after deletion? */
   SVN_ERR(read_bool(&entry->keep_local, SVN_WC__ENTRY_ATTR_KEEP_LOCAL,
                     buf, end));
+  MAYBE_DONE;
+
+  /* Translated size */
+  {
+    const char *val;
+
+    /* read_val() returns NULL on an empty (e.g. default) entry line,
+       and entry has already been initialized accordingly already */
+    SVN_ERR(read_val(&val, buf, end));
+    if (val)
+      entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
+  }
+  MAYBE_DONE;
+
+  /* Depth. */
+  {
+    const char *result;
+    SVN_ERR(read_val(&result, buf, end));
+    if (result[0] == '\0')
+      entry->depth = svn_depth_infinity;
+    else
+      entry->depth = svn_depth_from_word(result);
+  }
+  MAYBE_DONE;
 
  done:
   *new_entry = entry;
@@ -847,6 +874,27 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       entry->present_props = apr_pstrdup(pool, entry->present_props);
     }
 
+  /* Translated size */
+  {
+    const char *val
+      = apr_hash_get(atts,
+                     SVN_WC__ENTRY_ATTR_WORKING_SIZE,
+                     APR_HASH_KEY_STRING);
+    if (val)
+      {
+        if (! strcmp(val, SVN_WC__WORKING_SIZE_WC))
+          {
+            /* Special case (same as the timestamps); ignore here
+               these will be handled elsewhere */
+          }
+        else
+          /* Cast to off_t; it's safe: we put in an off_t to start with... */
+          entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
+      }
+  }
+
   *new_entry = entry;
   return SVN_NO_ERROR;
 }
@@ -1185,6 +1233,33 @@ svn_wc_entry(const svn_wc_entry_t **entry,
     }
   else
     *entry = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
+                                 const char *path,
+                                 svn_wc_adm_access_t *adm_access,
+                                 svn_boolean_t show_hidden,
+                                 const char *caller_filename,
+                                 int caller_lineno,
+                                 apr_pool_t *pool)
+{
+  SVN_ERR(svn_wc_entry(entry, path, adm_access, show_hidden, pool));
+
+  if (! *entry)
+    {
+      svn_error_t *err
+        = svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                            _("'%s' is not under version control"),
+                            svn_path_local_style(path, pool));
+
+      err->file = caller_filename;
+      err->line = caller_lineno;
+      return err;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1554,6 +1629,25 @@ write_entry(svn_stringbuf_t *buf,
   /* Keep in working copy flag. */
   write_bool(buf, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, entry->keep_local);
 
+  /* Translated size */
+  {
+    const char *val
+      = (entry->working_size != SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN)
+      ? apr_off_t_toa(pool, entry->working_size) : "";
+    write_val(buf, val, strlen(val));
+  }
+
+  /* Depth. */
+  if (is_subdir || entry->depth == svn_depth_infinity)
+    {
+      write_val(buf, NULL, 0);
+    }
+  else
+    {
+      const char *val = svn_depth_to_word(entry->depth);
+      write_val(buf, val, strlen(val));
+    }
+
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -1681,10 +1775,6 @@ write_entry_xml(svn_stringbuf_t **output,
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
                (entry->incomplete ? "true" : NULL));
 
-  /* Keep in wc flag  */
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, APR_HASH_KEY_STRING,
-               (entry->keep_local ? "true" : NULL));
-
   /* Timestamps */
   if (entry->text_time)
     {
@@ -1741,11 +1831,6 @@ write_entry_xml(svn_stringbuf_t **output,
     apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE, 
                  APR_HASH_KEY_STRING,
                  svn_time_to_cstring(entry->lock_creation_date, pool));
-
-  /* Changelist */
-  if (entry->changelist)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CHANGELIST, APR_HASH_KEY_STRING,
-                 entry->changelist);
 
   /* Has-props flag. */
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, APR_HASH_KEY_STRING,
@@ -2166,6 +2251,9 @@ fold_entry(apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
     cur_entry->keep_local = entry->keep_local;
 
+  /* Note that we don't bother to fold entry->depth, because it is
+     only meaningful on the this-dir entry anyway. */
+
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
   if (cur_entry->kind != svn_node_dir)
@@ -2196,6 +2284,9 @@ fold_entry(apr_hash_t *entries,
       cur_entry->copyfrom_rev = SVN_INVALID_REVNUM;
       cur_entry->copyfrom_url = NULL;
     }
+
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_WORKING_SIZE)
+    cur_entry->working_size = entry->working_size;
 
   /* keep_local makes sense only when we are going to delete directory. */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE
@@ -2680,6 +2771,7 @@ svn_wc__entries_init(const char *path,
                      const char *url,
                      const char *repos,
                      svn_revnum_t initial_rev,
+                     svn_depth_t depth,
                      apr_pool_t *pool)
 {
   apr_file_t *f = NULL;
@@ -2687,8 +2779,12 @@ svn_wc__entries_init(const char *path,
                                                  SVN_WC__VERSION);
   svn_wc_entry_t *entry = alloc_entry(pool);
 
-  /* Sanity check. */
+  /* Sanity checks. */
   assert(! repos || svn_path_is_ancestor(repos, url));
+  assert(depth == svn_depth_empty
+         || depth == svn_depth_files
+         || depth == svn_depth_immediates
+         || depth == svn_depth_infinity);
 
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR(svn_wc__open_adm_file(&f, path, SVN_WC__ADM_ENTRIES,
@@ -2704,6 +2800,7 @@ svn_wc__entries_init(const char *path,
   entry->revision = initial_rev;
   entry->uuid = uuid;
   entry->repos = repos;
+  entry->depth = depth;
   if (initial_rev > 0)
     entry->incomplete = TRUE;
   /* Add cachable-props here so that it can be inherited by other entries.

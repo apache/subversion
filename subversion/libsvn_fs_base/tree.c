@@ -38,6 +38,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_md5.h"
+#include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "svn_sorts.h"
 #include "fs.h"
@@ -56,6 +57,7 @@
 #include "bdb/changes-table.h"
 #include "bdb/copies-table.h"
 #include "../libsvn_fs/fs-loader.h"
+#include "private/svn_fs_merge_info.h"
 
 
 /* ### I believe this constant will become internal to reps-strings.c.
@@ -852,7 +854,7 @@ make_path_mutable(svn_fs_root_t *root,
                   trail_t *trail,
                   apr_pool_t *pool)
 {
-  dag_node_t *clone;
+  dag_node_t *cloned_node;
   const char *txn_id = root->txn;
   svn_fs_t *fs = root->fs;
 
@@ -898,7 +900,7 @@ make_path_mutable(svn_fs_root_t *root,
 
       /* Now make this node mutable.  */
       clone_path = parent_path_path(parent_path->parent, pool);
-      SVN_ERR(svn_fs_base__dag_clone_child(&clone,
+      SVN_ERR(svn_fs_base__dag_clone_child(&cloned_node,
                                            parent_path->parent->node,
                                            clone_path,
                                            parent_path->entry,
@@ -911,7 +913,8 @@ make_path_mutable(svn_fs_root_t *root,
          new copy needs to be removed. */
       if (inherit == copy_id_inherit_new)
         {
-          const svn_fs_id_t *new_node_id = svn_fs_base__dag_get_id(clone);
+          const svn_fs_id_t *new_node_id =
+            svn_fs_base__dag_get_id(cloned_node);
           SVN_ERR(svn_fs_bdb__create_copy(fs, copy_id, copy_src_path,
                                           svn_fs_base__id_txn_id(node_id),
                                           new_node_id,
@@ -923,11 +926,11 @@ make_path_mutable(svn_fs_root_t *root,
   else
     {
       /* We're trying to clone the root directory.  */
-      SVN_ERR(mutable_root_node(&clone, root, error_path, trail, pool));
+      SVN_ERR(mutable_root_node(&cloned_node, root, error_path, trail, pool));
     }
 
   /* Update the PARENT_PATH link to refer to the clone.  */
-  parent_path->node = clone;
+  parent_path->node = cloned_node;
 
   return SVN_NO_ERROR;
 }
@@ -1281,6 +1284,46 @@ base_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+/* The input for txn_body_change_merge_info(). */
+struct change_merge_info_args
+{
+  svn_fs_root_t *root;
+  const char *path;
+  const svn_string_t *value;
+};
+
+/* Set the merge info on the transaction in BATON (expected to be of
+   type "struct change_merge_info_args").  Conforms to the callback
+   API used by svn_fs_base__retry_txn(). */
+static svn_error_t *
+txn_body_change_merge_info(void *baton,
+                           trail_t *trail)
+{
+  struct change_merge_info_args *args = baton;
+  SVN_ERR(svn_fs_base__set_txn_merge_info(args->root->fs, args->root->txn, 
+                                          args->path, args->value,
+                                          trail, trail->pool));
+  return SVN_NO_ERROR;
+}
+
+/* Change the merge info for the specified PATH to MERGE_INFO.  */
+static svn_error_t *
+base_change_merge_info(svn_fs_root_t *root,
+                       const char *path,
+                       apr_hash_t *merge_info,
+                       apr_pool_t *pool)
+{
+  struct change_merge_info_args args;
+
+  if (! root->is_txn_root)
+    return NOT_TXN(root);
+  args.root = root;
+  args.path = path;
+  SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &args.value, merge_info,
+                                   pool));
+  return svn_fs_base__retry_txn(root->fs, txn_body_change_merge_info, &args,
+                                pool);
+}
 
 struct change_node_prop_args {
   svn_fs_root_t *root;
@@ -1288,6 +1331,24 @@ struct change_node_prop_args {
   const char *name;
   const svn_string_t *value;
 };
+
+
+static svn_error_t *
+change_txn_merge_info(struct change_node_prop_args *args, trail_t *trail)
+{
+  const char *txn_id = args->root->txn;
+
+  /* At least for single file merges, nodes which are direct
+     children of the root are received without a leading slash
+     (e.g. "/file.txt" is received as "file.txt"), so must be made
+     absolute. */
+  const char *canon_path = svn_fs_base__canonicalize_abspath(args->path, 
+                                                             trail->pool);
+  SVN_ERR(svn_fs_base__set_txn_merge_info(args->root->fs, txn_id, canon_path,
+                                          args->value, trail, trail->pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 static svn_error_t *
@@ -1320,6 +1381,9 @@ txn_body_change_node_prop(void *baton,
   /* Now, if there's no proplist, we know we need to make one. */
   if (! proplist)
     proplist = apr_hash_make(trail->pool);
+
+  if (strcmp(args->name, SVN_PROP_MERGE_INFO) == 0)
+    SVN_ERR(change_txn_merge_info(args, trail));
 
   /* Set the property. */
   apr_hash_set(proplist, args->name, APR_HASH_KEY_STRING, args->value);
@@ -1963,15 +2027,22 @@ merge(svn_stringbuf_t *conflict_p,
   /* Possible early merge failure: if target and ancestor have
      different property lists, then the merge should fail.
      Propchanges can *only* be committed on an up-to-date directory.
+     ### TODO: see issue #418 about the inelegance of this. 
 
-     ### TODO: Please see issue #418 about the inelegance of this. */
+     Another possible, similar, early merge failure: if source and
+     ancestor have different property lists (meaning someone else
+     changed directory properties while our commit transaction was
+     happening), the merge should fail.  See issue #2751.
+  */
   {
-    node_revision_t *tgt_nr, *anc_nr;
+    node_revision_t *tgt_nr, *anc_nr, *src_nr;
 
     /* Get node revisions for our id's. */
     SVN_ERR(svn_fs_bdb__get_node_revision(&tgt_nr, fs, target_id, 
                                           trail, pool));
     SVN_ERR(svn_fs_bdb__get_node_revision(&anc_nr, fs, ancestor_id, 
+                                          trail, pool));
+    SVN_ERR(svn_fs_bdb__get_node_revision(&src_nr, fs, source_id, 
                                           trail, pool));
 
     /* Now compare the prop-keys of the skels.  Note that just because
@@ -1981,9 +2052,9 @@ merge(svn_stringbuf_t *conflict_p,
        it won't do that here either.  Checking to see if the propkey
        atoms are `equal' is enough. */
     if (! svn_fs_base__same_keys(tgt_nr->prop_key, anc_nr->prop_key))
-      {
-        return conflict_err(conflict_p, target_path);
-      }
+      return conflict_err(conflict_p, target_path);
+    if (! svn_fs_base__same_keys(src_nr->prop_key, anc_nr->prop_key))
+      return conflict_err(conflict_p, target_path);
   }
 
   /* ### todo: it would be more efficient to simply check for a NULL
@@ -2381,8 +2452,8 @@ txn_body_commit(void *baton, trail_t *trail)
   SVN_ERR(verify_locks(txn_name, trail, trail->pool));
 
   /* Else, commit the txn. */
-  SVN_ERR(svn_fs_base__dag_commit_txn(&(args->new_rev), fs, txn_name,
-                                      trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_commit_txn(&(args->new_rev), txn, trail,
+                                      trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -4372,7 +4443,9 @@ static root_vtable_t root_vtable = {
   base_apply_text,
   base_contents_changed,
   base_get_file_delta_stream,
-  base_merge
+  base_merge,
+  base_change_merge_info,
+  svn_fs_merge_info__get_merge_info
 };
 
 

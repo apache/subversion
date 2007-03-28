@@ -2,7 +2,7 @@
  * io.c:   shared file reading, writing, and probing code.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -211,7 +211,7 @@ file_open(apr_file_t **f,
   apr_status_t apr_err;
   if (flag & APR_CREATE)
     {
-      /* If we are trying to create a file on OS400 ensure it's CCSID is
+      /* If we are trying to create a file on OS400 ensure its CCSID is
        * 1208. */  
       apr_err = apr_file_open(f, fname, flag & ~APR_BINARY, perm, pool);
 
@@ -487,7 +487,7 @@ svn_io_create_unique_link(const char **unique_name_p,
         continue;
       else if (rv == -1 && apr_err)
         {
-          /* On Win32, CreateFile failswith an "Access Denied" error
+          /* On Win32, CreateFile fails with an "Access Denied" error
              code, rather than "File Already Exists", if the colliding
              name belongs to a directory. */
           if (APR_STATUS_IS_EACCES(apr_err))
@@ -505,7 +505,8 @@ svn_io_create_unique_link(const char **unique_name_p,
             }
 
           *unique_name_p = NULL;
-          return svn_error_wrap_apr(apr_err, _("Can't open '%s'"),
+          return svn_error_wrap_apr(apr_err,
+                                    _("Can't create symbolic link '%s'"),
                                     svn_path_local_style(unique_name, pool));
         }
       else
@@ -629,96 +630,57 @@ svn_io_temp_dir(const char **dir,
 
 /*** Creating, copying and appending files. ***/
 
-#ifdef AS400
-/* CCSID insensitive replacement for apr_file_copy() on OS400.
+/* Transfer the contents of FROM_FILE to TO_FILE, using POOL for temporary
+ * allocations.
  * 
+ * NOTE: We don't use apr_copy_file() for this, since it takes filenames
+ * as parameters.  Since we want to copy to a temporary file
+ * and rename for atomicity (see below), this would require an extra
+ * close/open pair, which can be expensive, especially on
+ * remote file systems.
+ * 
+ * 
+ * Also, On OS400 apr_file_copy() attempts to convert the contents of
+ * the source file from its CCSID to the CCSID of the destination
+ * file.  This may corrupt the destination file's contents if the
+ * files' CCSIDs differ from each other and/or the system CCSID.
  * (See comments for file_open() for more info on CCSIDs.)
- * 
- * On OS400 apr_file_copy() attempts to convert the contents of the source
- * file from its CCSID to the CCSID of the destination file.  This may
- * corrupt the destination file's contents if the files' CCSIDs differ from
- * each other and/or the system CCSID.
- * 
- * This new function prevents this by forcing a binary copy.  It is
- * stripped down copy of the private function apr_file_transfer_contents in
- * srclib/apr/file_io/unix/copy.c of version 2.0.54 of the Apache HTTP
- * Server (http://httpd.apache.org/) excepting that APR_LARGEFILE is not
- * used, from_path is always opened with APR_BINARY, and
- * APR_FILE_SOURCE_PERMS is not supported. 
  */ 
 static apr_status_t
-os400_file_copy(const char *from_path,
-                const char *to_path,
-                apr_fileperms_t perms,
-                apr_pool_t *pool)
+copy_contents(apr_file_t *from_file,
+              apr_file_t *to_file,
+              apr_pool_t *pool)
 {
-  apr_file_t *s, *d;
-  apr_status_t status;
-
-  /* Open source file. */
-  status = apr_file_open(&s, from_path, APR_READ | APR_BINARY,
-                         APR_OS_DEFAULT, pool);
-  if (status)
-    return status;
-
-  /* Open dest file.
-   * 
-   * apr_file_copy() does not require the destination file to exist and will
-   * overwrite it if it does.  Since this is a replacement for
-   * apr_file_copy() we enforce similar behavior.
-   */
-  status = apr_file_open(&d, to_path,
-                         APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
-                         perms,
-                         pool);
-  if (status)
-    {
-      apr_file_close(s);  /* toss any error */
-      return status;
-    }
-
   /* Copy bytes till the cows come home. */
   while (1)
     {
-      char buf[BUFSIZ];
+      char buf[SVN__STREAM_CHUNK_SIZE];
       apr_size_t bytes_this_time = sizeof(buf);
       apr_status_t read_err;
       apr_status_t write_err;
 
       /* Read 'em. */
-      read_err = apr_file_read(s, buf, &bytes_this_time);
+      read_err = apr_file_read(from_file, buf, &bytes_this_time);
       if (read_err && !APR_STATUS_IS_EOF(read_err))
         {
-          apr_file_close(s);  /* toss any error */
-          apr_file_close(d);  /* toss any error */
           return read_err;
         }
 
       /* Write 'em. */
-      write_err = apr_file_write_full(d, buf, bytes_this_time, NULL);
+      write_err = apr_file_write_full(to_file, buf, bytes_this_time, NULL);
       if (write_err)
         {
-          apr_file_close(s);  /* toss any error */
-          apr_file_close(d);  /* toss any error */
           return write_err;
         }
 
       if (read_err && APR_STATUS_IS_EOF(read_err))
         {
-          status = apr_file_close(s);
-          if (status)
-            {
-              apr_file_close(d);  /* toss any error */
-              return status;
-            }
-
-          /* return the results of this close: an error, or success */
-          return apr_file_close(d);
+          /* Return the results of this close: an error, or success. */
+          return APR_SUCCESS;
         }
     }
   /* NOTREACHED */
 }
-#endif /* AS400 */
 
 
 svn_error_t *
@@ -727,32 +689,50 @@ svn_io_copy_file(const char *src,
                  svn_boolean_t copy_perms,
                  apr_pool_t *pool)
 {
+  apr_file_t *from_file, *to_file;
   apr_status_t apr_err;
   const char *src_apr, *dst_tmp_apr;
   const char *dst_tmp;
+  svn_error_t *err, *err2;
 
   SVN_ERR(svn_path_cstring_from_utf8(&src_apr, src, pool));
 
-  /* For atomicity, we translate to a tmp file and then rename the tmp
+  SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
+                         APR_OS_DEFAULT, pool));
+
+  /* For atomicity, we copy to a tmp file and then rename the tmp
      file over the real destination. */
 
-  SVN_ERR(svn_io_open_unique_file2(NULL, &dst_tmp, dst, ".tmp",
+  SVN_ERR(svn_io_open_unique_file2(&to_file, &dst_tmp, dst, ".tmp",
                                    svn_io_file_del_none, pool));
   SVN_ERR(svn_path_cstring_from_utf8(&dst_tmp_apr, dst_tmp, pool));
 
-#ifndef AS400
-  apr_err = apr_file_copy(src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
-#else
-  apr_err = os400_file_copy(src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
-#endif
+  apr_err = copy_contents(from_file, to_file, pool);
 
   if (apr_err)
     {
+      err = svn_error_wrap_apr
+            (apr_err, _("Can't copy '%s' to '%s'"),
+             svn_path_local_style(src, pool),
+             svn_path_local_style(dst_tmp, pool));
+    }
+   else
+     err = NULL;
+          
+  err2 = svn_io_file_close(from_file, pool);
+  if (! err)
+    err = err2;
+  else
+    svn_error_clear(err2);
+  err2 = svn_io_file_close(to_file, pool);
+  if (! err)
+    err = err2;
+  else
+    svn_error_clear(err2);
+  if (err)
+    {
       apr_file_remove(dst_tmp_apr, pool);
-      return svn_error_wrap_apr
-        (apr_err, _("Can't copy '%s' to '%s'"),
-         svn_path_local_style(src, pool),
-         svn_path_local_style(dst_tmp, pool));
+      return err;
     }
 
   /* If copying perms, set the perms on dst_tmp now, so they will be
@@ -1602,24 +1582,39 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 /* TODO write test for these two functions, then refactor. */
 
 svn_error_t *
-svn_stringbuf_from_file(svn_stringbuf_t **result,
-                        const char *filename,
-                        apr_pool_t *pool)
+svn_stringbuf_from_file2(svn_stringbuf_t **result,
+                         const char *filename,
+                         apr_pool_t *pool)
 {
   apr_file_t *f = NULL;
 
   if (filename[0] == '-' && filename[1] == '\0')
-    return svn_error_create
-        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("Reading from stdin is currently broken, so disabled"));
-
-  SVN_ERR(svn_io_file_open(&f, filename, APR_READ, APR_OS_DEFAULT, pool));
+    {
+      apr_status_t apr_err;
+      if ((apr_err = apr_file_open_stdin(&f, pool)))
+        return svn_error_wrap_apr(apr_err, _("Can't open stdin"));
+    }
+  else
+    {
+      SVN_ERR(svn_io_file_open(&f, filename, APR_READ, APR_OS_DEFAULT, pool));
+    }
 
   SVN_ERR(svn_stringbuf_from_aprfile(result, f, pool));
-
   SVN_ERR(svn_io_file_close(f, pool));
-
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_stringbuf_from_file(svn_stringbuf_t **result,
+                        const char *filename,
+                        apr_pool_t *pool)
+{
+  if (filename[0] == '-' && filename[1] == '\0')
+    return svn_error_create
+        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+         _("Reading from stdin is disallowed"));
+  return svn_stringbuf_from_file2(result, filename, pool);
 }
 
 
@@ -1707,6 +1702,12 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
 }
 
 
+svn_error_t *
+svn_io_remove_dir(const char *path, apr_pool_t *pool)
+{
+  return svn_io_remove_dir2(path, FALSE, pool);
+}
+
 /*
  Mac OS X has a bug where if you're readding the contents of a
  directory via readdir in a loop, and you remove one of the entries in
@@ -1732,7 +1733,8 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
 
    This is a function to perform the equivalent of 'rm -rf'. */
 svn_error_t *
-svn_io_remove_dir(const char *path, apr_pool_t *pool)
+svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
+                   apr_pool_t *pool)
 {
   apr_status_t status;
   apr_dir_t *this_dir;
@@ -1753,9 +1755,16 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
 
   status = apr_dir_open(&this_dir, path_apr, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't open directory '%s'"),
-                              svn_path_local_style(path, pool));
+  if (status) 
+    {
+      /* if the directory doesn't exist, our mission is accomplished */
+      if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
+        return SVN_NO_ERROR;
+      else 
+        return svn_error_wrap_apr(status, 
+                                  _("Can't open directory '%s'"),
+                                  svn_path_local_style(path, pool));
+    }
 
   subpool = svn_pool_create(pool);
 
@@ -1789,7 +1798,7 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
 
               if (this_entry.filetype == APR_DIR)
                 {
-                  SVN_ERR(svn_io_remove_dir(fullpath, subpool));
+                  SVN_ERR(svn_io_remove_dir2(fullpath, FALSE, subpool));
                 }
               else if (this_entry.filetype == APR_REG)
                 {
@@ -2388,10 +2397,84 @@ svn_io_run_diff3(const char *dir,
                             merged, diff3_cmd, NULL, pool);
 }
 
+
 svn_error_t *
-svn_io_detect_mimetype(const char **mimetype,
-                       const char *file,
-                       apr_pool_t *pool)
+svn_io_parse_mimetypes_file(apr_hash_t **type_map,
+                            const char *mimetypes_file,
+                            apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_hash_t *types = apr_hash_make(pool);
+  svn_boolean_t eof = FALSE;
+  svn_stringbuf_t *buf;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_file_t *types_file;
+  svn_stream_t *mimetypes_stream;
+
+  SVN_ERR(svn_io_file_open(&types_file, mimetypes_file, 
+                           APR_READ, APR_OS_DEFAULT, pool));
+  mimetypes_stream = svn_stream_from_aprfile2(types_file, FALSE, pool);
+
+  while (1)
+    {
+      apr_array_header_t *tokens;
+      const char *type;
+      int i;
+
+      svn_pool_clear(subpool);
+
+      /* Read a line. */
+      if ((err = svn_stream_readline(mimetypes_stream, &buf,
+                                     APR_EOL_STR, &eof, subpool)))
+        break;
+
+      /* Only pay attention to non-empty, non-comment lines. */
+      if (buf->len)
+        {
+          if (buf->data[0] == '#')
+            continue;
+
+          /* Tokenize (into our return pool). */
+          tokens = svn_cstring_split(buf->data, " \t", TRUE, pool);
+          if (tokens->nelts < 2)
+            continue;
+          
+          /* The first token in a multi-token line is the media type.
+             Subsequent tokens are filename extensions associated with
+             that media type. */
+          type = APR_ARRAY_IDX(tokens, 0, const char *);
+          for (i = 1; i < tokens->nelts; i++)
+            {
+              const char *ext = APR_ARRAY_IDX(tokens, i, const char *);
+              apr_hash_set(types, ext, APR_HASH_KEY_STRING, type);
+            }
+        }
+      if (eof)
+        break;
+    }
+  svn_pool_destroy(subpool);
+
+  /* If there was an error above, close the file (ignoring any error
+     from *that*) and return the originally error. */
+  if (err)
+    {
+      svn_error_clear(svn_stream_close(mimetypes_stream));
+      return err;
+    }
+
+  /* Close the stream (which closes the underlying file, too). */
+  SVN_ERR(svn_stream_close(mimetypes_stream));
+
+  *type_map = types;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_detect_mimetype2(const char **mimetype,
+                        const char *file,
+                        apr_hash_t *mimetype_map,
+                        apr_pool_t *pool)
 {
   static const char * const generic_binary = "application/octet-stream";
 
@@ -2410,6 +2493,21 @@ svn_io_detect_mimetype(const char **mimetype,
     return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                              _("Can't detect MIME type of non-file '%s'"),
                              svn_path_local_style(file, pool));
+
+  /* If there is a mimetype_map provided, we'll first try to look up
+     our file's extension in the map.  Failing that, we'll run the
+     heuristic. */
+  if (mimetype_map)
+    {
+      const char *type_from_map, *path_ext;
+      svn_path_splitext(NULL, &path_ext, file, pool);
+      if ((type_from_map = apr_hash_get(mimetype_map, path_ext, 
+                                        APR_HASH_KEY_STRING)))
+        {
+          *mimetype = type_from_map;
+          return SVN_NO_ERROR;
+        }
+    }
 
   SVN_ERR(svn_io_file_open(&fh, file, APR_READ, 0, pool));
 
@@ -2462,6 +2560,14 @@ svn_io_detect_mimetype(const char **mimetype,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_io_detect_mimetype(const char **mimetype,
+                       const char *file,
+                       apr_pool_t *pool)
+{
+  return svn_io_detect_mimetype2(mimetype, file, NULL, pool);
+}
 
 svn_error_t *
 svn_io_file_open(apr_file_t **new_file, const char *fname,
@@ -2594,8 +2700,29 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
                        apr_size_t nbytes, apr_size_t *bytes_written,
                        apr_pool_t *pool)
 {
+  apr_status_t rv = apr_file_write_full(file, buf, nbytes, bytes_written);
+
+#ifdef WIN32
+#define MAXBUFSIZE 30*1024
+  if (rv == APR_FROM_OS_ERROR(ERROR_NOT_ENOUGH_MEMORY)
+      && nbytes > MAXBUFSIZE)
+    {
+      apr_size_t bw = 0;
+      *bytes_written = 0;
+
+      do {
+        rv = apr_file_write_full(file, buf,
+                                 nbytes > MAXBUFSIZE ? MAXBUFSIZE : nbytes, &bw);
+        *bytes_written += bw;
+        buf = (char *)buf + bw;
+        nbytes -= bw;
+      } while (rv == APR_SUCCESS && nbytes > 0);
+    }
+#undef MAXBUFSIZE
+#endif
+
   return do_io_file_wrapper_cleanup
-    (file, apr_file_write_full(file, buf, nbytes, bytes_written),
+    (file, rv,
      N_("Can't write to file '%s'"),
      N_("Can't write to stream"),
      pool);

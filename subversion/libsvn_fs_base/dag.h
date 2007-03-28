@@ -1,7 +1,7 @@
 /* dag.h : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -199,23 +199,22 @@ svn_error_t *svn_fs_base__dag_clone_root(dag_node_t **root_p,
                                          apr_pool_t *pool);
 
 
-/* Commit the transaction TXN_ID in FS, as part of TRAIL.  Store the
+/* Commit the transaction TXN->id in TXN->FS, as part of TRAIL.  Store the
    new revision number in *NEW_REV.  This entails:
-   - marking the tree of mutable nodes at TXN_ID's root as immutable,
+   - marking the tree of mutable nodes at TXN->id's root as immutable,
      and marking all their contents as stable
-   - creating a new revision, with TXN_ID's root as its root directory
-   - promoting TXN_ID to a "committed" transaction.
+   - creating a new revision, with TXN->id's root as its root directory
+   - promoting TXN->id to a "committed" transaction.
 
-   Beware!  This does not make sure that TXN_ID is based on the very
-   latest revision in FS.  If the caller doesn't take care of this,
+   Beware!  This does not make sure that TXN->id is based on the very
+   latest revision in TXN->FS.  If the caller doesn't take care of this,
    you may lose people's work!
 
    Do any necessary temporary allocation in a subpool of POOL.
    Consume temporary space at most proportional to the maximum depth
    of SVN_TXN's tree of mutable nodes.  */
 svn_error_t *svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
-                                         svn_fs_t *fs,
-                                         const char *txn_id,
+                                         svn_fs_txn_t *txn,
                                          trail_t *trail,
                                          apr_pool_t *pool);
 

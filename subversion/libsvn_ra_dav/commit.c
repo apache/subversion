@@ -88,9 +88,6 @@ typedef struct
   /* The (potential) author of this commit. */
   const char *user;
 
-  /* Log message for the commit. */
-  const char *log_msg;
-
   /* The commit callback and baton */
   svn_commit_callback2_t callback;
   void *callback_baton;
@@ -714,11 +711,11 @@ static svn_error_t * commit_delete_entry(const char *path,
      against the HEAD revision on-the-fly.  In such a universe, a
      failed deletion (because it's already missing) is OK;  deletion
      is an idempotent merge operation. */
-  serr =  svn_ra_dav__simple_request(&code, parent->cc->ras,
-                                     "DELETE", child,
-                                     extra_headers, NULL,
-                                     204 /* Created */,
-                                     404 /* Not Found */, pool);
+  serr = svn_ra_dav__simple_request(&code, parent->cc->ras,
+                                    "DELETE", child,
+                                    extra_headers, NULL,
+                                    204 /* Created */,
+                                    404 /* Not Found */, pool);
 
   /* A locking-related error most likely means we were deleting a
      directory rather than a file, and didn't send all of the
@@ -1276,9 +1273,9 @@ static svn_error_t * commit_abort_edit(void *edit_baton,
 }
 
 
-static svn_error_t * apply_log_message(commit_ctx_t *cc,
-                                       const char *log_msg,
-                                       apr_pool_t *pool)
+static svn_error_t * apply_revprops(commit_ctx_t *cc,
+                                    apr_hash_t *revprop_table,
+                                    apr_pool_t *pool)
 {
   const svn_string_t *vcc;
   const svn_string_t *baseline_url;
@@ -1308,7 +1305,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
     baseline_rsrc.pool = pool;
     baseline_rsrc.vsn_url = baseline_url->data;
     
-    /* To set the log message, we must checkout the latest baseline
+    /* To set the revision properties, we must checkout the latest baseline
        and get back a mutable "working" baseline.  */
     err = checkout_resource(cc, &baseline_rsrc, FALSE, NULL, pool);
 
@@ -1330,23 +1327,14 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   if (err)
     return err;
 
-  {
-    apr_hash_t *prop_changes = apr_hash_make(pool);
-    svn_string_t *log_str = svn_string_create(log_msg, pool);
-
-    apr_hash_set(prop_changes, SVN_PROP_PREFIX "log",
-                 APR_HASH_KEY_STRING, log_str);
-    SVN_ERR(svn_ra_dav__do_proppatch(cc->ras, baseline_rsrc.wr_url,
-                                     prop_changes, NULL, NULL, pool));
-  }
-
-  return SVN_NO_ERROR;
+  return svn_ra_dav__do_proppatch(cc->ras, baseline_rsrc.wr_url, revprop_table,
+                                  NULL, NULL, pool);
 }
 
 svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
                                             const svn_delta_editor_t **editor,
                                             void **edit_baton,
-                                            const char *log_msg,
+                                            apr_hash_t *revprop_table,
                                             svn_commit_callback2_t callback,
                                             void *callback_baton,
                                             apr_hash_t *lock_tokens,
@@ -1356,6 +1344,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
+  svn_error_t *err;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
@@ -1364,7 +1353,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   cc->get_func = ras->callbacks->get_wc_prop;
   cc->push_func = ras->callbacks->push_wc_prop;
   cc->cb_baton = ras->callback_baton;
-  cc->log_msg = log_msg;
   cc->callback = callback;
   cc->callback_baton = callback_baton;
   cc->tokens = lock_tokens;
@@ -1389,7 +1377,15 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   ** Find the latest baseline resource, check it out, and then apply the
   ** log message onto the thing.
   */
-  SVN_ERR(apply_log_message(cc, log_msg, pool));
+  err = apply_revprops(cc, revprop_table, pool);
+  /* If the caller gets an error during the editor drive, we rely on them
+     to call abort_edit() so that we can clear up the activity.  But if we
+     got an error here, we need to clear up the activity ourselves. */
+  if (err)
+    {
+      svn_error_clear(commit_abort_edit(cc, pool));
+      return err;
+    }
 
   /*
   ** Set up the editor.

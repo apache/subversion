@@ -44,6 +44,8 @@
 
 #include "svn_private_config.h"
 
+#include "win32_crashrpt.h"
+
 /* The stdin encoding. If null, it's the same as the native encoding. */
 static const char *input_encoding = NULL;
 
@@ -102,6 +104,12 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
     output_encoding = output_encoding_buffer;
   }
 #endif /* _MSC_VER < 1400 */
+
+#ifdef SVN_USE_WIN32_CRASHHANDLER
+  /* Attach (but don't load) the crash handler */
+  SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
+#endif
+
 #endif /* WIN32 */
 
   /* C programs default to the "C" locale. But because svn is supposed
@@ -368,6 +376,10 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
   /* The server-cert, client-cert, and client-cert-password providers. */
+#if defined(WIN32) && !defined(__MINGW32__)
+  svn_auth_get_windows_ssl_server_trust_provider(&provider, pool);
+  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+#endif
   svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
@@ -481,4 +493,6 @@ svn_cmdline__getopt_init(apr_getopt_t **os,
                               _("Error initializing command line arguments"));
   return SVN_NO_ERROR;
 }
+
+
 

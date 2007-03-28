@@ -2,7 +2,7 @@
  * translate.c :  wc-specific eol/keyword substitution
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -32,7 +32,6 @@
 #include "svn_subst.h"
 #include "svn_io.h"
 #include "svn_props.h"
-#include "svn_wc.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -40,6 +39,7 @@
 #include "props.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 
@@ -263,11 +263,7 @@ svn_wc__get_keywords(apr_hash_t **keywords,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   SVN_ERR(svn_subst_build_keywords2(keywords,
                                     list,

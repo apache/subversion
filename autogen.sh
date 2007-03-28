@@ -33,7 +33,6 @@ done
 # ### sees an empty arg rather than missing one.
 ./build/buildcheck.sh "$RELEASE_MODE" || exit 1
 
-#
 # Handle some libtool helper files
 #
 # ### eventually, we can/should toss this in favor of simply using

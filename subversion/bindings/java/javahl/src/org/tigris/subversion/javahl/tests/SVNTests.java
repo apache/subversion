@@ -38,61 +38,75 @@ class SVNTests extends TestCase
      * repositories
      */
     protected SVNAdmin admin;
+
     /**
      * the subversion client, what we want to test.
      */
     protected SVNClientInterface client;
+
     /**
      * The root directory for the test data. All other files and
      * directories will created under here.
      */
     protected final File rootDir;
+
     /**
      * the base name of the test. Together with the testCounter this will make
      * up the directory name of the test.
      */
     protected String testBaseName;
+
     /**
-     * this counter will be incremented for every test in one suite (test class)
+     * this counter will be incremented for every test in one suite
+     * (test class)
      */
     protected static int testCounter;
+
     /**
      * the file in which the sample repository has been dumped.
      */
     protected File greekDump;
+
     /**
      * the directory of the sample repository.
      */
     protected File greekRepos;
+
     /**
      * the initial working copy of the sample repository.
      */
     protected WC greekWC;
+
     /**
-     * the directory "svn-test-work/local_tmp" in the rootDir. This
-     * will be used for the sample repository and its dumpfile and for
-     * the config directory
+     * the directory "local_tmp" in the rootDir.  This will be used
+     * for the sample repository and its dumpfile and for the config
+     * directory.
      */
     protected final File localTmp;
+
     /**
      * the directory "repositories" in the rootDir. All test repositories will
      * be created here.
      */
     protected final File repositories;
+
     /**
      * the directory "working_copies" in the rootDir. All test working copies
      * will be created here.
      */
     protected final File workingCopies;
+
     /**
      * the directory "config" in the localTmp. It will be used as the
      * configuration directory for all the tests.
      */
     protected final File conf;
+
     /**
      * standard log message. Used for all commits.
      */
     protected String logMessage = "Log Message";
+
     /**
      * the map of all items expected to be received by the callback for the
      * log message. After each commit, this will be cleared
@@ -119,28 +133,39 @@ class SVNTests extends TestCase
     protected SVNTests()
     {
         // if not already set, get a usefull value for rootDir
-        if(rootDirectoryName == null)
+        if (rootDirectoryName == null)
             rootDirectoryName = System.getProperty("test.rootdir");
-        if(rootDirectoryName == null)
+        if (rootDirectoryName == null)
             rootDirectoryName = System.getProperty("user.dir");
         rootDir = new File(rootDirectoryName);
 
         // if not alread set, get a usefull value for root url
-        if(rootUrl == null)
+        if (rootUrl == null)
             rootUrl = System.getProperty("test.rooturl");
-        if(rootUrl == null)
+        if (rootUrl == null)
         {
             // if no root url, set build a file url
             rootUrl = rootDir.toURI().toString();
             // The JRE may have a different view about the number of
             // '/' characters to follow "file:" in a URL than
             // Subversion.  We convert to the Subversion view.
-            if(rootUrl.startsWith("file:///"))
+            if (rootUrl.startsWith("file:///"))
                 ; // this is the form subversion needs
-            else if(rootUrl.startsWith("file://"))
+            else if (rootUrl.startsWith("file://"))
                 rootUrl = rootUrl.replaceFirst("file://", "file:///");
-            else if(rootUrl.startsWith("file:/"))
+            else if (rootUrl.startsWith("file:/"))
                 rootUrl = rootUrl.replaceFirst("file:/", "file:///");
+
+            // According to
+            // http://java.sun.com/j2se/1.5.0/docs/api/java/io/File.html#toURL()
+            // the URL from rootDir.toURI() may end with a trailing /
+            // if rootDir exists and is a directory, so depending if
+            // the test suite has been previously run and rootDir
+            // exists, then the trailing / may or may not be there.
+            // The makeReposUrl() method assumes that the rootUrl ends
+            // in a trailing /, so add it now.
+            if (!rootUrl.endsWith("/"))
+                rootUrl = rootUrl + '/';
         }
 
         this.localTmp = new File(this.rootDir, "local_tmp");
@@ -168,13 +193,13 @@ class SVNTests extends TestCase
         greekRepos = new File(localTmp, "repos");
         greekDump = new File(localTmp, "greek_dump");
         admin.create(greekRepos.getAbsolutePath(), true,false, null,
-                SVNAdmin.BDB);
+                     SVNAdmin.BDB);
         addExpectedCommitItem(greekFiles.getAbsolutePath(), null, null,
-                NodeKind.none, CommitItemStateFlags.Add);
+                              NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
-                null, true );
+                        null, true );
         admin.dump(greekRepos.getAbsolutePath(), new FileOutputer(greekDump),
-                new IgnoreOutputer(), null, null, false);
+                   new IgnoreOutputer(), null, null, false);
     }
 
     /**
@@ -303,7 +328,8 @@ class SVNTests extends TestCase
     }
 
     /**
-     * add another commit item expected during the callback for the log message.
+     * add another commit item expected during the callback for the
+     * log message.
      * @param workingCopyPath   the path of the of the working
      * @param baseUrl           the url for the repository
      * @param itemPath          the path of the item relative the working copy
@@ -311,33 +337,35 @@ class SVNTests extends TestCase
      * @param stateFlags        expected commit state flags
      *                          (see CommitItemStateFlags)
      */
-    protected void addExpectedCommitItem(String workingCopyPath, String baseUrl,
-                                         String itemPath, int nodeKind,
+    protected void addExpectedCommitItem(String workingCopyPath,
+                                         String baseUrl,
+                                         String itemPath,
+                                         int nodeKind,
                                          int stateFlags)
     {
         //determine the full working copy path and the full url of the item.
         String path = null;
-        if(workingCopyPath != null)
-            if(itemPath != null)
+        if (workingCopyPath != null)
+            if (itemPath != null)
                 path = workingCopyPath.replace(File.separatorChar, '/') +
                         '/' + itemPath;
             else
                 path = workingCopyPath.replace(File.separatorChar, '/');
         String url = null;
-        if(baseUrl != null)
-            if(itemPath != null)
+        if (baseUrl != null)
+            if (itemPath != null)
                 url = baseUrl + '/' + itemPath;
             else
                 url = baseUrl;
 
         // the key of the item is either the url or the path (if no url)
         String key;
-        if(url != null)
+        if (url != null)
             key = url;
         else
             key = path;
         expectedCommitItems.put(key, new MyCommitItem(path, nodeKind,
-                stateFlags, url));
+                                                      stateFlags, url));
     }
 
     /**
@@ -476,19 +504,27 @@ class SVNTests extends TestCase
          * the file name of repository (used by SVNAdmin)
          */
         protected File repository;
+
         /**
          * the file name of the working copy directory
          */
         protected File workingCopy;
+
         /**
          * the url of the repository (used by SVNClient)
          */
         protected String url;
+
         /**
          * the expected layout of the working copy after the next subversion
          * command
          */
         protected WC wc;
+
+        /**
+         * The name of the test.
+         */
+        String testName;
 
         /**
          * Build a new test setup with a new repository.  If
@@ -506,14 +542,14 @@ class SVNTests extends TestCase
         protected OneTest(boolean createWC)
             throws SubversionException, IOException
         {
-            String testName = testBaseName + ++testCounter;
+            this.testName = testBaseName + ++testCounter;
             this.wc = greekWC.copy();
-            this.repository = createInitialRepository(testName);
+            this.repository = createInitialRepository();
             this.url = makeReposUrl(repository);
 
             if (createWC)
             {
-                workingCopy = createInitialWorkingCopy(repository, testName);
+                workingCopy = createInitialWorkingCopy(repository);
             }
         }
 
@@ -553,11 +589,11 @@ class SVNTests extends TestCase
         private OneTest(OneTest orig, String append)
             throws SubversionException, IOException
         {
-            String testName = testBaseName + testCounter +append;
+            this.testName = testBaseName + testCounter + append;
             repository = orig.getRepository();
             url = orig.getUrl();
             wc = orig.wc.copy();
-            workingCopy = createInitialWorkingCopy(repository, testName);
+            workingCopy = createInitialWorkingCopy(repository);
         }
 
         /**
@@ -568,6 +604,7 @@ class SVNTests extends TestCase
         {
             return repository;
         }
+
         /**
          * Return the name of the directory of the repository
          * @return the name of repository directory
@@ -576,6 +613,7 @@ class SVNTests extends TestCase
         {
             return repository.getAbsolutePath();
         }
+
         /**
          * Return the working copy directory
          * @return the working copy directory
@@ -584,6 +622,7 @@ class SVNTests extends TestCase
         {
             return workingCopy;
         }
+
         /**
          * Return the working copy directory name
          * @return the name of the working copy directory
@@ -592,6 +631,7 @@ class SVNTests extends TestCase
         {
             return workingCopy.getAbsolutePath();
         }
+
         /**
          * Returns the url of repository
          * @return  the url
@@ -600,6 +640,7 @@ class SVNTests extends TestCase
         {
             return url;
         }
+
         /**
          * Returns the expected working copy content
          * @return the expected working copy content
@@ -608,41 +649,45 @@ class SVNTests extends TestCase
         {
             return wc;
         }
+
         /**
-         * Create the repository for the beginning of the test
-         * @param testName      the name of the test
+         * Create the repository for the beginning of the test.
+         * Assumes that {@link #testName} has been set.
+         *
          * @return  the repository directory
          * @exception SubversionException If there is a problem
          * creating or loading the repository.
          * @exception IOException If there is a problem finding the
          * dump file.
          */
-        protected File createInitialRepository(String testName)
+        protected File createInitialRepository()
             throws SubversionException, IOException
         {
             // build a clean repository directory
-            File repos = new File(repositories, testName);
+            File repos = new File(repositories, this.testName);
             removeDirOrFile(repos);
             // create and load the repository from the default repository dump
             admin.create(repos.getAbsolutePath(), true, false,
-                    conf.getAbsolutePath(), SVNAdmin.BDB);
+                         conf.getAbsolutePath(), SVNAdmin.BDB);
             admin.load(repos.getAbsolutePath(), new FileInputer(greekDump),
-                    new IgnoreOutputer(), false, false, null);
+                       new IgnoreOutputer(), false, false, null);
             return repos;
         }
+
         /**
-         * Create the working copy for the beginning of the test
+         * Create the working copy for the beginning of the test.
+         * Assumes that {@link #testName} has been set.
+         *
          * @param repos     the repository directory
-         * @param testName  the name of the test
          * @return the directory of the working copy
          * @throws Exception
          */
-        protected File createInitialWorkingCopy(File repos, String testName)
+        protected File createInitialWorkingCopy(File repos)
             throws SubversionException, IOException
         {
             // build a clean working directory
             String uri = makeReposUrl(repos);
-            workingCopy = new File(workingCopies, testName);
+            workingCopy = new File(workingCopies, this.testName);
             removeDirOrFile(workingCopy);
             // checkout the repository
             client.checkout(uri, workingCopy.getAbsolutePath(), null, true);
@@ -684,6 +729,14 @@ class SVNTests extends TestCase
                                             true, checkRepos, true, true);
             wc.check(states, workingCopy.getAbsolutePath(), checkRepos);
         }
+
+        /**
+         * @return The name of this test.
+         */
+        public String toString()
+        {
+            return this.testName;
+        }
     }
 
     /**
@@ -693,7 +746,8 @@ class SVNTests extends TestCase
     class MyCommitMessage implements CommitMessage
     {
         /**
-         * Retrieve a commit message from the user based on the items to be commited
+         * Retrieve a commit message from the user based on the items
+         * to be commited
          * @param elementsToBeCommited  Array of elements to be commited
          * @return  the log message of the commit.
          */
@@ -706,7 +760,7 @@ class SVNTests extends TestCase
                 // since imports do not provide a url, the key is either url or
                 // path
                 String key;
-                if(commitItem.getUrl() != null)
+                if (commitItem.getUrl() != null)
                     key = commitItem.getUrl();
                 else
                     key = commitItem.getPath();
@@ -772,11 +826,11 @@ class SVNTests extends TestCase
          */
         private void test(CommitItem ci, String key)
         {
-            assertEquals("commit item path", ci.getPath(), myPath);
-            assertEquals("commit item node kind", ci.getNodeKind(), myNodeKind);
-            assertEquals("commit item state flags", ci.getStateFlags(),
-                    myStateFlags);
-            assertEquals("commit item url", ci.getUrl(), myUrl);
+            assertEquals("commit item path", myPath, ci.getPath());
+            assertEquals("commit item node kind", myNodeKind, ci.getNodeKind());
+            assertEquals("commit item state flags", myStateFlags,
+                    ci.getStateFlags());
+            assertEquals("commit item url", myUrl, ci.getUrl());
             // after the test, remove the item from the expected map
             expectedCommitItems.remove(key);
         }

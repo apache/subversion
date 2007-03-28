@@ -44,7 +44,7 @@ public:
     Targets(const char *path);
     void add(const char *path);
     ~Targets();
-    const apr_array_header_t *array(const Pool & pool);
+    const apr_array_header_t *array(const Pool &pool);
     svn_error_t *error_occured();
     void setDoesNotContainsPath();
 };

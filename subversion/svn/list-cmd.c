@@ -2,7 +2,7 @@
  * list-cmd.c -- list a URL
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -122,21 +122,6 @@ print_dirent(void *baton,
 }
 
 
-static svn_error_t *
-print_header_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-
-  /* <?xml version="1.0" encoding="utf-8"?> */
-  svn_xml_make_header(&sb, pool);
-  
-  /* "<lists>" */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lists", NULL);
-  
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
-
 /* This implements the svn_client_list_func_t API, printing a single dirent
    in XML format. */
 static svn_error_t *
@@ -213,16 +198,6 @@ print_dirent_xml(void *baton,
 }
 
 
-static svn_error_t *
-print_footer_xml(apr_pool_t *pool)
-{
-  /* "</lists>" */
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-  svn_xml_make_close_tag(&sb, pool, "lists");
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
-
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__list(apr_getopt_t *os,
@@ -255,7 +230,7 @@ svn_cl__list(apr_getopt_t *os,
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        SVN_ERR(print_header_xml(pool));
+        SVN_ERR(svn_cl__xml_print_header("lists", pool));
     }
   else
     {
@@ -272,6 +247,9 @@ svn_cl__list(apr_getopt_t *os,
 
   pb.ctx = ctx;
   pb.verbose = opt_state->verbose;
+
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = svn_depth_immediates;
 
   /* For each target, try to list it. */
   for (i = 0; i < targets->nelts; i++)
@@ -299,7 +277,8 @@ svn_cl__list(apr_getopt_t *os,
 
       SVN_ERR(svn_client_list(truepath, &peg_revision,
                               &(opt_state->start_revision),
-                              opt_state->recursive, dirent_fields,
+                              SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                              dirent_fields,
                               (opt_state->xml || opt_state->verbose),
                               opt_state->xml ? print_dirent_xml : print_dirent,
                               &pb, ctx, subpool));
@@ -315,7 +294,7 @@ svn_cl__list(apr_getopt_t *os,
   svn_pool_destroy(subpool);
   
   if (opt_state->xml && ! opt_state->incremental)
-    SVN_ERR(print_footer_xml(pool));
+    SVN_ERR(svn_cl__xml_print_footer("lists", pool));
 
   return SVN_NO_ERROR;
 }

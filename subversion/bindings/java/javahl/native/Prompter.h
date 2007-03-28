@@ -64,7 +64,7 @@ private:
     bool prompt(const char *realm, const char *pi_username, bool maySave);
     bool askYesNo(const char *realm, const char *question, bool yesIsDefault);
     const char *askQuestion(const char *realm, const char *question,
-                                bool showAnswer, bool maySave);
+                            bool showAnswer, bool maySave);
     int askTrust(const char *question, bool maySave);
     jstring password();
     jstring username();

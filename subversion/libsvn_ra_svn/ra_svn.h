@@ -2,7 +2,7 @@
  * ra_svn.h :  private declarations for the ra_svn module
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -68,6 +68,7 @@ struct svn_ra_svn_conn_st {
      interface, SASL still needs direct access to the underlying socket
      for stuff like IP addresses and port numbers. */
   apr_socket_t *sock;
+  svn_boolean_t encrypted;
 #endif
   char read_buf[SVN_RA_SVN__READBUF_SIZE];
   char *read_ptr;
@@ -174,12 +175,23 @@ void svn_ra_svn__stream_timeout(svn_ra_svn__stream_t *stream,
 /* Return whether or not there is data pending on STREAM. */
 svn_boolean_t svn_ra_svn__stream_pending(svn_ra_svn__stream_t *stream);
 
-/* Respond to an auth request and perform authentication.  REALM may
- * be NULL for the initial authentication exchange of protocol version
- * 1. */
-svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
-                              apr_array_header_t *mechlist,
-                              const char *realm, apr_pool_t *pool);
+/* Respond to an auth request and perform authentication.  Use the Cyrus
+ * SASL library for mechanism negotiation and for creating authentication
+ * tokens.  REALM may be NULL for the initial authentication exchange of
+ * protocol version 1. */
+svn_error_t *
+svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
+                          apr_array_header_t *mechlist,
+                          const char *realm, apr_pool_t *pool);
+
+/* Same as svn_ra_svn__do_sasl_auth, but uses the built-in implementation of
+ * the CRAM-MD5, ANONYMOUS and EXTERNAL mechanisms.  Return the error
+ * SVN_ERR_RA_SVN_NO_MECHANSIMS if we cannot negotiate an authentication
+ * mechanism with the server. */
+svn_error_t *
+svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
+                             apr_array_header_t *mechlist,
+                             const char *realm, apr_pool_t *pool);
 
 /* Having picked a mechanism, start authentication by writing out an
  * auth response.  If COMPAT is true, also write out a version number

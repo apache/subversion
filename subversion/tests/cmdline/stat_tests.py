@@ -926,6 +926,7 @@ def status_dash_u_missing_dir(sbox):
 def status_add_plus_conflict(sbox):
   "status on conflicted added file"
   sbox.build()
+  svntest.actions.do_sleep_for_timestamps()
 
   wc_dir = sbox.wc_dir
 
@@ -969,6 +970,7 @@ def status_add_plus_conflict(sbox):
     "?      " + os.path.join(wc_dir, "trunk", "file.merge-left.r4") + "\n",
     "?      " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
     "?      " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
+    " M     " + os.path.join(wc_dir, "trunk") + "\n",
     "C  +   " + os.path.join(wc_dir, "trunk", "file") + "\n",
   ]
 
@@ -1215,17 +1217,22 @@ def status_nonrecursive_update(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   A_path = os.path.join(wc_dir, 'A')
+  D_path = os.path.join(A_path, 'D')
   mu_path = os.path.join(A_path, 'mu')
+  gamma_path = os.path.join(D_path, 'gamma')
 
-  # Change file in A and commit
+  # Change files in A and D and commit
   svntest.main.file_append(mu_path, "new line of text")
+  svntest.main.file_append(gamma_path, "new line of text")
 
   # Create expected trees for commit
   expected_output = svntest.wc.State(wc_dir, {
-    'A/mu' : Item(verb='Sending')
+    'A/mu' : Item(verb='Sending'),
+    'A/D/gamma' : Item(verb='Sending')
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2, status='  ')
+  expected_status.tweak('A/D/gamma', wc_rev=2, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
@@ -1235,6 +1242,7 @@ def status_nonrecursive_update(sbox):
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(status='U '),
+    'A/D/gamma' : Item(status='U '),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1255,6 +1263,73 @@ def status_nonrecursive_update(sbox):
                                      xout,
                                      [],
                                      "status", "-uN", A_path)
+
+#----------------------------------------------------------------------
+# Test for issue #2420
+def status_dash_u_deleted_directories(sbox):
+  "run 'status -u' with locally deleted directories"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  B_path = os.path.join(A_path, 'B')
+  
+  # delete the B directory
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', B_path)
+
+  # now run status -u on B and its children
+  was_cwd = os.getcwd()
+  try:
+    os.chdir(A_path)
+  
+    # check status -u of B
+    xout = ["D               1   %s\n" % "B",
+            "D               1   %s\n" % os.path.join("B", "lambda"),
+            "D               1   %s\n" % os.path.join("B", "E"),
+            "D               1   %s\n" % os.path.join("B", "E", "alpha"),
+            "D               1   %s\n" % os.path.join("B", "E", "beta"),
+            "D               1   %s\n" % os.path.join("B", "F"),
+            "Status against revision:      1\n" ]
+    output, errput = svntest.actions.run_and_verify_svn(None,
+                                                        SVNAnyOutput,
+                                                        [],
+                                                        "status", "-u", "B")
+    svntest.main.compare_unordered_output(xout, output)
+
+    # again, but now from inside B, should give the same output
+    os.chdir("B")
+    xout = ["D               1   %s\n" % ".",
+            "D               1   %s\n" % "lambda",
+            "D               1   %s\n" % "E",
+            "D               1   %s\n" % os.path.join("E", "alpha"),
+            "D               1   %s\n" % os.path.join("E", "beta"),
+            "D               1   %s\n" % "F",
+            "Status against revision:      1\n" ]
+    output, errput = svntest.actions.run_and_verify_svn(None,
+                                                        SVNAnyOutput,
+                                                        [],
+                                                        "status", "-u", ".")
+    
+    svntest.main.compare_unordered_output(xout, output)
+
+    # check status -u of B/E
+    xout = ["D               1   %s\n" % os.path.join("B", "E"),
+            "D               1   %s\n" % os.path.join("B", "E", "alpha"),
+            "D               1   %s\n" % os.path.join("B", "E", "beta"),
+            "Status against revision:      1\n" ]
+    
+    os.chdir(was_cwd)
+    os.chdir(A_path)
+    output, errput = svntest.actions.run_and_verify_svn(None,
+                                                        SVNAnyOutput,
+                                                        [],
+                                                        "status", "-u",
+                                                        os.path.join("B", "E"))
+
+    svntest.main.compare_unordered_output(xout, output)
+  finally:
+    os.chdir(was_cwd)
 
 ########################################################################
 # Run the tests
@@ -1287,7 +1362,8 @@ test_list = [ None,
               inconsistent_eol,
               status_update_with_incoming_props,
               status_update_verbose_with_incoming_props,
-              XFail(status_nonrecursive_update),
+              status_nonrecursive_update,
+              status_dash_u_deleted_directories,
              ]
 
 if __name__ == '__main__':

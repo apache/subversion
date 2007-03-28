@@ -28,7 +28,6 @@
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_pools.h"
-#include "svn_wc.h"
 #include "svn_props.h"
 #include "svn_md5.h"
 
@@ -36,6 +35,7 @@
 #include <stdlib.h>  /* for qsort() */
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 /*** Uncomment this to turn on commit driver debugging. ***/
 /*
@@ -48,7 +48,8 @@
 
 
 /* Add a new commit candidate (described by all parameters except
-   `COMMITTABLES') to the COMMITABLES hash. */
+   `COMMITTABLES') to the COMMITTABLES hash.  All of the commit item's
+   members are allocated out of the COMMITTABLES hash pool. */
 static void
 add_committable(apr_hash_t *committables,
                 const char *path,
@@ -200,7 +201,10 @@ static svn_wc_entry_callbacks_t add_tokens_callbacks = {
    COMMITTABLES unless it's a member of the changelist.
 
    If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to see 
-   if the user has cancelled the operation.  */
+   if the user has cancelled the operation.
+   
+   Any items added to COMMITTABLES are allocated from the COMITTABLES hash pool,
+   not POOL.  POOL is used for temporary allocations. */
 static svn_error_t *
 harvest_committables(apr_hash_t *committables,
                      apr_hash_t *lock_tokens,
@@ -438,9 +442,9 @@ harvest_committables(apr_hash_t *committables,
              prop was changed, we might have to send new text to the
              server to match the new newline style.  */
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR(svn_wc_text_modified_p2(&text_mod, path,
-                                            eol_prop_changed, FALSE,
-                                            adm_access, pool));
+            SVN_ERR(svn_wc_text_modified_p(&text_mod, path,
+                                           eol_prop_changed,
+                                           adm_access, pool));
           else
             text_mod = TRUE;
         }
@@ -464,8 +468,8 @@ harvest_committables(apr_hash_t *committables,
          changed, we might have to send new text to the server to
          match the new newline style.  */
       if (entry->kind == svn_node_file)
-        SVN_ERR(svn_wc_text_modified_p2(&text_mod, path, eol_prop_changed,
-                                        FALSE, adm_access, pool));
+        SVN_ERR(svn_wc_text_modified_p(&text_mod, path, eol_prop_changed,
+                                       adm_access, pool));
     }
 
   /* Set text/prop modification flags accordingly. */
@@ -698,11 +702,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
       /* No entry?  This TARGET isn't even under version control! */
       SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_dir,
                                         target, subpool));
-      SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, subpool));
-      if (! entry)
-        return svn_error_createf
-          (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-           _("'%s' is not under version control"), target);
+      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
+                                     subpool));
       if (! entry->url)
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL, 
                                  _("Entry for '%s' has no URL"),
@@ -824,57 +825,43 @@ svn_client__get_copy_committables(apr_hash_t **committables,
                                   apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
-  apr_hash_t *tmp_committables;
-  apr_array_header_t *committables_list;
+  apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
-  committables_list = apr_array_make(pool, 0,
-                                     sizeof(svn_client_commit_item2_t *));
+  *committables = apr_hash_make(pool);
 
-  /* For each copy pair, create a temporary hash and harvest the commitables
-     for that pair into that hash.  When done harvesting, fetch the list of 
-     committables from the hash and append it to the list of committables which
-     we have already harvested.
-     ### There's got to be a more efficient way to do this... */
+  /* For each copy pair, harvest the committables for that pair into the 
+     committables hash. */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = 
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
-      apr_array_header_t *list;
       svn_wc_adm_access_t *dir_access;
 
-      tmp_committables = apr_hash_make(pool);
+      svn_pool_clear(iterpool);
 
       /* Read the entry for this SRC. */
-      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
-      if (! entry)
-        return svn_error_createf
-          (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-           _("'%s' is not under version control"),
-           svn_path_local_style(pair->src, pool));
-      
+      SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
+                                     iterpool));
+
       /* Get the right access baton for this SRC. */
       if (entry->kind == svn_node_dir)
-        SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, pair->src, pool));
+        SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, pair->src,
+                iterpool));
       else
         SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access,
-                                    svn_path_dirname(pair->src, pool), pool));
+                                    svn_path_dirname(pair->src, iterpool),
+                                    iterpool));
 
-      /* Handle this SRC. */
-      SVN_ERR(harvest_committables(tmp_committables, NULL, pair->src,
+      /* Handle this SRC.  Because add_committable() uses the hash pool to
+         allocate the new commit_item, we can safely use the iterpool here. */
+      SVN_ERR(harvest_committables(*committables, NULL, pair->src,
                                    dir_access, pair->dst, entry->url, entry,
                                    NULL, FALSE, TRUE, FALSE, FALSE,
-                                   NULL, ctx, pool));
-
-      list = apr_hash_get(tmp_committables, SVN_CLIENT__SINGLE_REPOS_NAME,
-                          APR_HASH_KEY_STRING);
-      committables_list = apr_array_append(pool, committables_list, list);
+                                   NULL, ctx, iterpool));
     }
 
-  /* Create and fill the COMMITTABLES hash. */
-  *committables = apr_hash_make(pool);
-  apr_hash_set(*committables, SVN_CLIENT__SINGLE_REPOS_NAME,
-               APR_HASH_KEY_STRING, committables_list);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1167,6 +1154,28 @@ do_item_commit(void **dir_baton,
                   (path, parent_baton, copyfrom_url,
                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
                    pool, dir_baton));
+        }
+
+      /* Set other prop-changes, if available in the baton */
+      if (item->outgoing_prop_changes)
+        {
+          svn_prop_t *prop;
+          apr_array_header_t *prop_changes = item->outgoing_prop_changes;
+          int ctr;
+          for (ctr = 0; ctr < prop_changes->nelts; ctr++)
+            {
+              prop = APR_ARRAY_IDX(prop_changes, ctr, svn_prop_t *);
+              if (kind == svn_node_file)
+                {
+                  editor->change_file_prop(file_baton, prop->name,
+                                           prop->value, pool);
+                }
+              else
+                {
+                  editor->change_dir_prop(*dir_baton, prop->name,
+                                          prop->value, pool);
+                }
+            }
         }
     }
     
@@ -1801,4 +1810,23 @@ svn_client__get_log_msg(const char **log_msg,
       *tmp_file = NULL;
       return SVN_NO_ERROR;
     }
+}
+
+svn_error_t *svn_client__get_revprop_table(apr_hash_t **revprop_table,
+                                           const char *log_msg,
+                                           svn_client_ctx_t *ctx,
+                                           apr_pool_t *pool)
+{
+  if (ctx->revprop_table && svn_prop_has_svn_prop(ctx->revprop_table, pool))
+    return svn_error_create(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                            _("Standard properties can't be set "
+                              "explicitly as revision properties"));
+  if (ctx->revprop_table)
+    *revprop_table = apr_hash_copy(pool, ctx->revprop_table);
+  else
+    *revprop_table = apr_hash_make(pool);
+  apr_hash_set(*revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+               svn_string_create(log_msg, pool));
+
+  return SVN_NO_ERROR;
 }

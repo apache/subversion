@@ -76,13 +76,21 @@ class SvnReposTest < Test::Unit::TestCase
 
   def test_create
     tmp_repos_path = File.join(@tmp_path, "repos")
-    fs_config = {Svn::Fs::CONFIG_FS_TYPE => Svn::Fs::TYPE_BDB}
-    repos = Svn::Repos.create(tmp_repos_path, {}, fs_config)
-    assert(File.exist?(tmp_repos_path))
-    fs_type_path = File.join(repos.fs.path, Svn::Fs::CONFIG_FS_TYPE)
-    assert_equal(Svn::Fs::TYPE_BDB,
-                 File.open(fs_type_path) {|f| f.read.chop})
-    repos.fs.set_warning_func(&warning_func)
+    fs_type = Svn::Fs::TYPE_FSFS
+    fs_config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
+    repos = nil
+    Svn::Repos.create(tmp_repos_path, {}, fs_config) do |repos|
+      assert(File.exist?(tmp_repos_path))
+      fs_type_path = File.join(repos.fs.path, Svn::Fs::CONFIG_FS_TYPE)
+      assert_equal(fs_type, File.open(fs_type_path) {|f| f.read.chop})
+      repos.fs.set_warning_func(&warning_func)
+    end
+
+    assert(repos.closed?)
+    assert_raises(Svn::Error::ReposAlreadyClose) do
+      repos.fs
+    end
+
     Svn::Repos.delete(tmp_repos_path)
     assert(!File.exist?(tmp_repos_path))
   end
@@ -193,7 +201,7 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(log, ctx.log_message(path, rev))
   end
   
-  def test_transaction
+  def assert_transaction
     log = "sample log"
     ctx = make_context(log)
     ctx.checkout(@repos_uri, @wc_path)
@@ -201,9 +209,15 @@ class SvnReposTest < Test::Unit::TestCase
     
     prev_rev = @repos.youngest_rev
     past_date = Time.now
-    @repos.transaction_for_commit(@author, log) do |txn|
+    args = {
+      :author => @author,
+      :log => log,
+      :revision => prev_rev,
+    }
+    callback = Proc.new do |txn|
       txn.abort
     end
+    yield(:commit, @repos, args, callback)
     assert_equal(prev_rev, @repos.youngest_rev)
     assert_equal(prev_rev, @repos.dated_revision(past_date))
     
@@ -215,9 +229,71 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(prev_rev + 1, @repos.dated_revision(Time.now))
 
     prev_rev = @repos.youngest_rev
-    @repos.transaction_for_update(@author) do |txn|
+    args = {
+      :author => @author,
+      :revision => prev_rev,
+    }
+    callback = Proc.new do |txn|
     end
+    yield(:update, @repos, args, callback)
     assert_equal(prev_rev, @repos.youngest_rev)
+  end
+
+  def test_transaction
+    assert_transaction do |type, repos, args, callback|
+      case type
+      when :commit
+        repos.transaction_for_commit(args[:author], args[:log], &callback)
+      when :update
+        repos.transaction_for_update(args[:author], &callback)
+      end
+    end
+  end
+
+  def test_transaction_with_revision
+    assert_transaction do |type, repos, args, callback|
+      case type
+      when :commit
+        repos.transaction_for_commit(args[:author], args[:log],
+                                     args[:revision], &callback)
+      when :update
+        repos.transaction_for_update(args[:author], args[:revision], &callback)
+      end
+    end
+  end
+
+  def test_transaction2
+    assert_transaction do |type, repos, args, callback|
+      case type
+      when :commit
+        props = {
+          Svn::Core::PROP_REVISION_AUTHOR => args[:author],
+          Svn::Core::PROP_REVISION_LOG => args[:log],
+        }
+        repos.transaction_for_commit(props, &callback)
+      when :update
+        repos.transaction_for_update(args[:author], &callback)
+      end
+    end
+  end
+
+  def test_transaction2_with_revision
+    assert_transaction do |type, repos, args, callback|
+      case type
+      when :commit
+        props = {
+          Svn::Core::PROP_REVISION_AUTHOR => args[:author],
+          Svn::Core::PROP_REVISION_LOG => args[:log],
+        }
+        repos.transaction_for_commit(props,
+                                     args[:revision],
+                                     &callback)
+      when :update
+        repos.transaction_for_update(args[:author],
+                                     args[:revision],
+                                     &callback)
+      end
+    end
   end
 
   def test_trace_node_locations
@@ -249,7 +325,7 @@ class SvnReposTest < Test::Unit::TestCase
                                                 [rev1, rev2, rev3]))
   end
 
-  def test_report
+  def assert_report
     file = "file"
     file2 = "file2"
     fs_base = "base"
@@ -266,10 +342,22 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(Svn::Core::NODE_FILE, @repos.fs.root.stat(file).kind)
 
     editor = TestEditor.new
-    @repos.report(rev, @author, fs_base, "/", nil, editor) do |baton|
+    args = {
+      :revision => rev,
+      :user_name => @author,
+      :fs_base => fs_base,
+      :target => "/",
+      :target_path => nil,
+      :editor => editor,
+      :text_deltas => true,
+      :recurse => true,
+      :ignore_ancestry => false,
+    }
+    callback = Proc.new do |baton|
       baton.link_path(file, file2, rev)
       baton.delete_path(file)
     end
+    yield(@repos, args, callback)
     assert_equal([
                    :set_target_revision,
                    :open_root,
@@ -279,12 +367,36 @@ class SvnReposTest < Test::Unit::TestCase
                  editor.sequence.collect{|meth, *args| meth})
   end
 
-  def test_commit_editor
+  def test_report
+    assert_report do |repos, args, callback|
+      @repos.report(args[:revision], args[:user_name], args[:fs_base],
+                    args[:target], args[:target_path], args[:editor],
+                    args[:text_deltas], args[:recurse], args[:ignore_ancestry],
+                    &callback)
+    end
+  end
+
+  def test_report2
+    assert_report do |repos, args, callback|
+      if args[:recurse]
+        depth = Svn::Core::DEPTH_INFINITY
+      else
+        depth = Svn::Core::DEPTH_FILES
+      end
+      @repos.report2(args[:revision], args[:fs_base], args[:target],
+                     args[:target_path], args[:editor], args[:text_deltas],
+                     args[:ignore_ancestry], depth, &callback)
+    end
+  end
+
+  def assert_commit_editor
     trunk = "trunk"
     tags = "tags"
     tags_sub = "sub"
     file = "file"
     source = "sample source"
+    user = "user"
+    log_message = "log"
     trunk_dir_path = File.join(@wc_path, trunk)
     tags_dir_path = File.join(@wc_path, tags)
     tags_sub_dir_path = File.join(tags_dir_path, tags_sub)
@@ -293,23 +405,38 @@ class SvnReposTest < Test::Unit::TestCase
     tags_sub_path = File.join(tags_sub_dir_path, file)
     trunk_repos_uri = "#{@repos_uri}/#{trunk}"
     rev1 = @repos.youngest_rev
-    
-    editor = @repos.commit_editor(@repos_uri, "/")
+
+    commit_callback_result = {}
+    args = {
+      :repos_url => @repos_uri,
+      :base_path => "/",
+      :user => user,
+      :log_message => log_message,
+     }
+
+    editor = yield(@repos, commit_callback_result, args)
     root_baton = editor.open_root(rev1)
     dir_baton = editor.add_directory(trunk, root_baton, nil, rev1)
     file_baton = editor.add_file("#{trunk}/#{file}", dir_baton, nil, -1)
     ret = editor.apply_textdelta(file_baton, nil)
     ret.send(source)
     editor.close_edit
-    
+
     assert_equal(rev1 + 1, @repos.youngest_rev)
+    assert_equal({
+                   :revision => @repos.youngest_rev,
+                   :date => @repos.prop(Svn::Core::PROP_REVISION_DATE),
+                   :author => user,
+                 },
+                 commit_callback_result)
     rev2 = @repos.youngest_rev
-    
+
     ctx = make_context("")
     ctx.up(@wc_path)
     assert_equal(source, File.open(trunk_path) {|f| f.read})
 
-    editor = @repos.commit_editor(@repos_uri, "/")
+    commit_callback_result = {}
+    editor = yield(@repos, commit_callback_result, args)
     root_baton = editor.open_root(rev2)
     dir_baton = editor.add_directory(tags, root_baton, nil, rev2)
     subdir_baton = editor.add_directory("#{tags}/#{tags_sub}",
@@ -317,10 +444,16 @@ class SvnReposTest < Test::Unit::TestCase
                                         trunk_repos_uri,
                                         rev2)
     editor.close_edit
-    
+
     assert_equal(rev2 + 1, @repos.youngest_rev)
+    assert_equal({
+                   :revision => @repos.youngest_rev,
+                   :date => @repos.prop(Svn::Core::PROP_REVISION_DATE),
+                   :author => user,
+                 },
+                 commit_callback_result)
     rev3 = @repos.youngest_rev
-    
+
     ctx.up(@wc_path)
     assert_equal([
                    ["/#{tags}/#{tags_sub}/#{file}", rev3],
@@ -329,13 +462,61 @@ class SvnReposTest < Test::Unit::TestCase
                  @repos.fs.history("#{tags}/#{tags_sub}/#{file}",
                                    rev1, rev3, rev2))
 
-    editor = @repos.commit_editor(@repos_uri, "/")
+    commit_callback_result = {}
+    editor = yield(@repos, commit_callback_result, args)
     root_baton = editor.open_root(rev3)
     dir_baton = editor.delete_entry(tags, rev3, root_baton)
     editor.close_edit
 
+    assert_equal({
+                   :revision => @repos.youngest_rev,
+                   :date => @repos.prop(Svn::Core::PROP_REVISION_DATE),
+                   :author => user,
+                 },
+                 commit_callback_result)
+
     ctx.up(@wc_path)
     assert(!File.exist?(tags_path))
+  end
+
+  def test_commit_editor
+    assert_commit_editor do |receiver, commit_callback_result, args|
+      commit_callback = Proc.new do |revision, date, author|
+        commit_callback_result[:revision] = revision
+        commit_callback_result[:date] = date
+        commit_callback_result[:author] = author
+      end
+      receiver.commit_editor(args[:repos_url], args[:base_path], args[:txn],
+                             args[:user], args[:log_message], commit_callback)
+    end
+  end
+
+  def test_commit_editor2
+    assert_commit_editor do |receiver, commit_callback_result, args|
+      commit_callback = Proc.new do |info|
+        commit_callback_result[:revision] = info.revision
+        commit_callback_result[:date] = info.date
+        commit_callback_result[:author] = info.author
+      end
+      receiver.commit_editor2(args[:repos_url], args[:base_path], args[:txn],
+                              args[:user], args[:log_message], commit_callback)
+    end
+  end
+
+  def test_commit_editor3
+    assert_commit_editor do |receiver, commit_callback_result, args|
+      props = {
+        Svn::Core::PROP_REVISION_AUTHOR => args[:user],
+        Svn::Core::PROP_REVISION_LOG => args[:log_message],
+      }
+      commit_callback = Proc.new do |info|
+        commit_callback_result[:revision] = info.revision
+        commit_callback_result[:date] = info.date
+        commit_callback_result[:author] = info.author
+      end
+      receiver.commit_editor3(args[:repos_url], args[:base_path], args[:txn],
+                              props, commit_callback)
+    end
   end
 
   def test_prop
@@ -361,6 +542,21 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal([
                    Svn::Core::PROP_REVISION_AUTHOR,
                    Svn::Core::PROP_REVISION_DATE,
+                 ].sort,
+                 @repos.proplist.keys.sort)
+
+    assert_raises(Svn::Error::ReposHookFailure) do
+      @repos.set_prop(@author, Svn::Core::PROP_REVISION_DATE, nil)
+    end
+    assert_not_nil(@repos.prop(Svn::Core::PROP_REVISION_DATE))
+
+    assert_nothing_raised do
+      @repos.set_prop(@author, Svn::Core::PROP_REVISION_DATE, nil, nil, nil,
+                      false)
+    end
+    assert_nil(@repos.prop(Svn::Core::PROP_REVISION_DATE))
+    assert_equal([
+                   Svn::Core::PROP_REVISION_AUTHOR,
                  ].sort,
                  @repos.proplist.keys.sort)
   end
@@ -504,6 +700,68 @@ EOF
     assert(!authz.can_access?(name, "/", "FOO", Svn::Repos::AUTHZ_READ))
   end
 
+  def test_recover
+    started = false
+    Svn::Repos.recover(@repos_path, false) do
+      started = true
+    end
+    assert(started)
+
+    started = false
+    cancel_called = false
+    cancel_proc = Proc.new do
+      cancel_called = true
+    end
+    Svn::Repos.recover(@repos_path, false, cancel_proc) do
+      started = true
+    end
+    assert(started)
+    assert(cancel_called)
+
+    started = false
+    cancel_proc = Proc.new do
+      raise Svn::Error::Cancelled
+    end
+    assert_raises(Svn::Error::Cancelled) do
+      Svn::Repos.recover(@repos_path, false, cancel_proc) do
+        started = true
+      end
+    end
+    assert(started)
+  end
+
+  def test_merge_info
+    log = "sample log"
+    file = "sample.txt"
+    src = "sample\n"
+    trunk = File.join(@wc_path, "trunk")
+    branch = File.join(@wc_path, "branch")
+    trunk_path = File.join(trunk, file)
+    branch_path = File.join(branch, file)
+    trunk_path_in_repos = "/trunk/#{file}"
+    branch_path_in_repos = "/branch/#{file}"
+
+    ctx = make_context(log)
+    ctx.mkdir(trunk, branch)
+    File.open(trunk_path, "w") {}
+    File.open(branch_path, "w") {}
+    ctx.add(trunk_path)
+    ctx.add(branch_path)
+    original_rev = ctx.commit(@wc_path).revision
+
+    File.open(branch_path, "w") {|f| f.print(src)}
+    merged_rev = ctx.commit(@wc_path).revision
+
+    ctx.merge(branch, original_rev, branch, merged_rev, trunk)
+    ctx.commit(@wc_path)
+
+    merge_info = "#{branch_path_in_repos}:#{merged_rev}"
+    assert_equal({trunk_path_in_repos => merge_info},
+                 @repos.merge_info([trunk_path_in_repos]))
+    assert_equal(merge_info, @repos.merge_info(trunk_path_in_repos))
+  end
+
+  private
   def warning_func
     Proc.new do |err|
       STDERR.puts err if $DEBUG

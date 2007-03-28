@@ -48,7 +48,7 @@ Outputer::~Outputer()
  * @param pool  the pool, from which the structure is allocated
  * @return the output stream
  */
-svn_stream_t *Outputer::getStream(const Pool & pool)
+svn_stream_t *Outputer::getStream(const Pool &pool)
 {
     // create a stream with this as the baton and set the write and close
     // functions
@@ -76,20 +76,20 @@ svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
     // the time this library is loaded, so
     // it can be cached.
    static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return SVN_NO_ERROR;
         }
         mid = env->GetMethodID(clazz, "write", "([B)I");
-        if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
             return SVN_NO_ERROR;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return SVN_NO_ERROR;
         }
@@ -97,14 +97,14 @@ svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
 
     // convert the data to a java byte array
     jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer, *len);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
 
     // write the data
     jint written = env->CallIntMethod(that->m_jthis, mid, data);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
@@ -129,20 +129,20 @@ svn_error_t *Outputer::close(void *baton)
     // the time this library is loaded, so
     // it can be cached.
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return SVN_NO_ERROR;
         }
         mid = env->GetMethodID(clazz, "close", "()V");
-        if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
             return SVN_NO_ERROR;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return SVN_NO_ERROR;
         }
@@ -150,7 +150,7 @@ svn_error_t *Outputer::close(void *baton)
 
     // call the java object, to close the stream
     env->CallVoidMethod(that->m_jthis, mid);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }

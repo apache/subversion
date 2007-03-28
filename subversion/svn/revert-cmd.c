@@ -2,7 +2,7 @@
  * revert-cmd.c -- Subversion revert command
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -48,12 +48,11 @@ svn_cl__revert(apr_getopt_t *os,
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
     {
-      SVN_ERR(svn_client_retrieve_changelist(&changelist_targets,
-                                             opt_state->changelist,
-                                             "", /* ### FIXME */
-                                             ctx->cancel_func,
-                                             ctx->cancel_baton,
-                                             pool));
+      SVN_ERR(svn_client_get_changelist(&changelist_targets,
+                                        opt_state->changelist,
+                                        "", /* ### FIXME */
+                                        ctx,
+                                        pool));
       if (apr_is_empty_array(changelist_targets))
         return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  _("no such changelist '%s'"),
@@ -78,9 +77,17 @@ svn_cl__revert(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
 
-  err = svn_client_revert(targets, opt_state->recursive, ctx, pool);
+  /* Revert is special, it defaults to nonrecursive. */
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = SVN_DEPTH_FROM_RECURSE(FALSE);
 
-  if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED) && ! opt_state->recursive)
+  /* ### TODO(sd): Wouldn't it be good to take real depth here? */
+  err = svn_client_revert(targets, SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                          ctx, pool);
+
+  if (err
+      && (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+      && (! SVN_DEPTH_TO_RECURSE(opt_state->depth)))
     {
       err = svn_error_quick_wrap
         (err, _("Try 'svn revert --recursive' instead?"));

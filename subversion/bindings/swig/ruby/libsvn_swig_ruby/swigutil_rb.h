@@ -50,6 +50,11 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+void svn_swig_rb_raise_svn_fs_already_close(void);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+void svn_swig_rb_raise_svn_repos_already_close(void);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message,
                                 VALUE file, VALUE line);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
@@ -59,6 +64,9 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 void *svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_from_swig_type(void *value, void *ctx);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_depth_t svn_swig_rb_to_depth(VALUE value);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_date_string_to_time(const char *date);
@@ -87,7 +95,7 @@ VALUE svn_swig_rb_apr_array_to_array_prop(const apr_array_header_t *ary);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_apr_array_to_array_proplist_item(const apr_array_header_t *ary);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-VALUE svn_swig_rb_apr_array_to_array_external_item(const apr_array_header_t *ary);
+VALUE svn_swig_rb_apr_array_to_array_external_item2(const apr_array_header_t *ary);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_hash_t *svn_swig_rb_hash_to_apr_hash_string(VALUE hash, apr_pool_t *pool);
@@ -115,17 +123,28 @@ apr_array_header_t *svn_swig_rb_array_to_apr_array_prop(VALUE array,
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_rb_array_to_apr_array_revnum(VALUE array,
                                                           apr_pool_t *pool);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_array_header_t *svn_swig_rb_array_to_apr_array_merge_range(VALUE array,
+                                                               apr_pool_t *pool);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_array_header_t *svn_swig_rb_to_apr_array_prop(VALUE array_or_hash,
+                                                  apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self, VALUE *rb_pool, apr_pool_t **pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-void svn_swig_rb_set_pool(VALUE target, VALUE pool);
+svn_boolean_t svn_swig_rb_set_pool(VALUE target, VALUE pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_push_pool(VALUE pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_pop_pool(VALUE pool);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+void svn_swig_rb_destroy_pool(VALUE pool);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+void svn_swig_rb_destroy_internal_pool(VALUE pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_make_delta_editor(svn_delta_editor_t **editor,
@@ -327,6 +346,9 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_stream_t *svn_swig_rb_make_stream(VALUE io);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+VALUE svn_swig_rb_filename_to_temp_file(const char *file_name);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_set_revision(svn_opt_revision_t *rev, VALUE value);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
@@ -349,7 +371,7 @@ svn_error_t *svn_swig_rb_client_blame_receiver_func(void *baton,
 
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-svn_wc_entry_callbacks_t *svn_swig_rb_wc_entry_callbacks(void);
+svn_wc_entry_callbacks2_t *svn_swig_rb_wc_entry_callbacks2(void);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_wc_diff_callbacks2_t *svn_swig_rb_wc_diff_callbacks2(void);
 

@@ -2,7 +2,7 @@
  * cl.h:  shared stuff in the command line program
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -50,7 +50,6 @@ typedef enum {
   svn_cl__autoprops_opt,
   svn_cl__changelist_opt,
   svn_cl__config_dir_opt,
-  svn_cl__clear_opt,
   svn_cl__diff_cmd_opt,
   svn_cl__dry_run_opt,
   svn_cl__editor_cmd_opt,
@@ -73,15 +72,19 @@ typedef enum {
   svn_cl__non_interactive_opt,
   svn_cl__notice_ancestry_opt,
   svn_cl__old_cmd_opt,
+  svn_cl__record_only_opt,
   svn_cl__relocate_opt,
+  svn_cl__remove_opt,
   svn_cl__revprop_opt,
   svn_cl__stop_on_copy_opt,
   svn_cl__strict_opt,
   svn_cl__summarize,
   svn_cl__targets_opt,
+  svn_cl__depth_opt,
   svn_cl__version_opt,
   svn_cl__xml_opt,
-  svn_cl__keep_local_opt
+  svn_cl__keep_local_opt,
+  svn_cl__with_revprop_opt
 } svn_cl__longopt_t;
 
 
@@ -100,10 +103,10 @@ typedef struct svn_cl__opt_state_t
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;
 
-  /* Note: these next two flags only reflect switches given on the
-     commandline.  For example, 'svn up' (with no options) will *not*
-     set either of these flags, but will be recursive anyway */
-  svn_boolean_t recursive, nonrecursive;
+  /* Note: after option processing is done, the depth flag will
+     reflect the switch actually given on the command line, or 
+     svn_depth_unknown if none. */
+  svn_depth_t depth;
 
   /* Was --no-unlock specified? */
   svn_boolean_t no_unlock;
@@ -139,6 +142,7 @@ typedef struct svn_cl__opt_state_t
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* external editor command. */
+  svn_boolean_t record_only;     /* whether to record merge info */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
@@ -147,10 +151,11 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_autoprops;    /* disable automatic properties */
   const char *native_eol;        /* override system standard eol marker */
   svn_boolean_t summarize;       /* create a summary of a diff */
-  svn_boolean_t clear;           /* deassociate a changelist */
+  svn_boolean_t remove;          /* deassociate a changelist */
   const char *changelist;        /* operate on this changelist */
   svn_boolean_t keep_changelist; /* don't remove changelist after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
+  apr_hash_t *revprop_table;     /* table with revision properties to set */
 
 } svn_cl__opt_state_t;
 
@@ -281,6 +286,24 @@ svn_error_t *
 svn_cl__print_prop_hash(apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
+
+/* Print a single xml property name-value pair to OUTSTR.  If OUTSTR is NULL,
+   allocate it first from pool, otherwise append the xml to it.  Escape
+   property values which are not xml safe, as determined by
+   svn_xml_is_xml_safe(). */
+void
+svn_cl__print_xml_prop(svn_stringbuf_t **outstr,
+                       const char* propname,
+                       svn_string_t *propval,
+                       apr_pool_t *pool);
+
+/* Same as svn_cl__print_prop_hash(), only output xml to OUTSTR.  If OUTSTR is
+   NULL, allocate it first from pool, otherwise append the xml to it. */
+svn_error_t *
+svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
+                            apr_hash_t *prop_hash,
+                            svn_boolean_t names_only,
+                            apr_pool_t *pool);
 
 /* Do the following things that are commonly required before accessing revision
    properties.  Ensure that REVISION is specified explicitly and is not
@@ -416,6 +439,16 @@ void svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
                               apr_pool_t *pool,
                               const char *tagname,
                               const char *string);
+
+/* Print the XML prolog and document root element start-tag to stdout, using
+   TAGNAME as the root element name.  Use pool for temporary allocations. */
+svn_error_t *svn_cl__xml_print_header(const char *tagname,
+                                      apr_pool_t *pool);
+
+/* Print the XML document root element end-tag to stdout, using TAGNAME as the 
+   root element name.  Use pool for temporary allocations. */
+svn_error_t *svn_cl__xml_print_footer(const char *tagname,
+                                      apr_pool_t *pool);
 
 /* Return a (non-localised) string representation of KIND, being "dir" or
    "file" or, in any other case, the empty string. */

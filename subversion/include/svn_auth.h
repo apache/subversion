@@ -69,7 +69,7 @@ extern "C" {
  * must document the run-time parameters that are made available to
  * its providers.
  *
- * @defgroup auth_fns authentication functions
+ * @defgroup auth_fns Authentication functions
  * @{
  */
 
@@ -729,6 +729,25 @@ void svn_auth_get_ssl_server_trust_file_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
 
+
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
+/**
+ * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
+ *
+ * This provider automatically validates ssl server certificates with
+ * the CryptoApi, like Internet Explorer and the Windows network API do.
+ * This allows the rollout of root certificates via Windows Domain
+ * policies, instead of Subversion specific configuration.
+ *
+ * @since New in 1.5.
+ * @note This function is only available on Windows.
+ */
+void
+svn_auth_get_windows_ssl_server_trust_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
+#endif /* WIN32 || DOXYGEN */
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.

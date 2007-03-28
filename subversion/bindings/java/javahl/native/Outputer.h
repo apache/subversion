@@ -40,12 +40,12 @@ class Outputer
      */
     jobject m_jthis;
     static svn_error_t *write(void *baton,
-                                  const char *buffer, apr_size_t *len);
+                              const char *buffer, apr_size_t *len);
     static svn_error_t *close(void *baton);
 public:
     Outputer(jobject jthis);
     ~Outputer();
-    svn_stream_t *getStream(const Pool & pool);
+    svn_stream_t *getStream(const Pool &pool);
 
 };
 

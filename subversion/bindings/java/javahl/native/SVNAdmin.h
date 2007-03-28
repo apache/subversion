@@ -39,7 +39,7 @@ public:
     void rmlocks(const char *path, Targets &locks);
     jobjectArray lslocks(const char *path);
     void verify(const char *path, Outputer &messageOut,
-                    Revision &revisionStart, Revision &revisionEnd);
+                Revision &revisionStart, Revision &revisionEnd);
     void setRevProp(const char *path, Revision &revision,
                     const char *propName, const char *propValue,
                     bool usePreRevPropChangeHook,
@@ -48,21 +48,21 @@ public:
     jlong recover(const char *path);
     void lstxns(const char *path, MessageReceiver &messageReceiver);
     void load(const char *path, Inputer &dataIn, Outputer &messageOut,
-                  bool ignoreUUID, bool forceUUID, const char *relativePath);
+              bool ignoreUUID, bool forceUUID, const char *relativePath);
     void listUnusedDBLogs(const char *path,
-                              MessageReceiver &messageReceiver);
+                          MessageReceiver &messageReceiver);
     void listDBLogs(const char *path, MessageReceiver &messageReceiver);
     void hotcopy(const char *path, const char *targetPath, bool cleanLogs);
     void dump(const char *path, Outputer &dataOut, Outputer &messageOut,
-                  Revision &revsionStart, Revision &RevisionEnd,
-                  bool incremental);
+              Revision &revsionStart, Revision &RevisionEnd,
+              bool incremental);
     void deltify(const char *path, Revision &start, Revision &end);
     void create(const char *path, bool ignoreUUID, bool forceUUID,
-                    const char *configPath, const char *fstype);
+                const char *configPath, const char *fstype);
     SVNAdmin();
     virtual ~SVNAdmin();
     void dispose(jobject jthis);
-    static SVNAdmin * getCppObject(jobject jthis);
+    static SVNAdmin *getCppObject(jobject jthis);
 
 };
 // !defined(AFX_SVNADMIN_H__9AD95B26_47BF_4430_8217_20B87ACCE87B__INCLUDED_)

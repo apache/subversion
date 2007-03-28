@@ -47,14 +47,13 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *path,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
-                              svn_boolean_t recurse,
+                              svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
                               svn_boolean_t *timestamp_sleep,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
 {
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   svn_error_t *err = NULL;
   svn_revnum_t revnum;
   svn_boolean_t sleep_here = FALSE;
@@ -114,14 +113,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
            entries file should only have an entry for THIS_DIR with a
            URL, revnum, and an 'incomplete' flag.  */
         SVN_ERR(svn_io_make_dir_recursively(path, pool));          
-        SVN_ERR(svn_wc_ensure_adm2(path, uuid, session_url,
-                                   repos, revnum, pool));
-        
-        /* Have update fix the incompleteness. */
-        err = svn_client__update_internal(result_rev, path, revision,
-                                          recurse, ignore_externals,
-                                          allow_unver_obstructions,
-                                          use_sleep, ctx, pool);
+        goto initialize_area;
       }
     else if (kind == svn_node_dir)
       {
@@ -132,11 +124,20 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         SVN_ERR(svn_wc_check_wc(path, &wc_format, pool));
         if (! wc_format)
           {
-            /* Make the unversioned directory into a versioned one. */
-            SVN_ERR(svn_wc_ensure_adm2(path, uuid, session_url,
-                                       repos, revnum, pool));
+          initialize_area:
+
+            if (depth == svn_depth_unknown)
+              depth = svn_depth_infinity;
+
+            /* Make the unversioned directory into a versioned one.  */
+            SVN_ERR(svn_wc_ensure_adm3(path, uuid, session_url,
+                                       repos, revnum, depth, pool));
+            /* Have update fix the incompleteness.  Pass svn_depth_unknown
+               because the newly-created admin area knows the correct
+               depth, and we might as well exercise the code that sniffs it. */
             err = svn_client__update_internal(result_rev, path, revision,
-                                              recurse, ignore_externals,
+                                              svn_depth_unknown,
+                                              ignore_externals,
                                               allow_unver_obstructions,
                                               use_sleep, ctx, pool);
             goto done;
@@ -155,7 +156,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         if (entry->url && (strcmp(entry->url, session_url) == 0))
           {
             err = svn_client__update_internal(result_rev, path, revision,
-                                              recurse, ignore_externals,
+                                              depth, ignore_externals,
                                               allow_unver_obstructions, use_sleep,
                                               ctx, pool);
           }
@@ -193,14 +194,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     *use_sleep = TRUE;
   }      
 
-  /* We handle externals after the initial checkout is complete, so
-     that fetching external items (and any errors therefrom) doesn't
-     delay the primary checkout.
-
-     ### Should we really do externals if recurse is false?
-  */
-  SVN_ERR(svn_client__handle_externals(traversal_info, FALSE, use_sleep,
-                                       ctx, pool));
   if (sleep_here)
     svn_sleep_for_timestamps();
 
@@ -213,14 +206,14 @@ svn_client_checkout3(svn_revnum_t *result_rev,
                      const char *path,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
+                     svn_depth_t depth,
                      svn_boolean_t ignore_externals,
                      svn_boolean_t allow_unver_obstructions,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
   return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
-                                       revision, recurse, ignore_externals,
+                                       revision, depth, ignore_externals,
                                        allow_unver_obstructions, NULL, ctx,
                                        pool);
 }
@@ -237,8 +230,10 @@ svn_client_checkout2(svn_revnum_t *result_rev,
                      apr_pool_t *pool)
 {
   return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
-                                       revision, recurse, ignore_externals,
-                                       FALSE, NULL, ctx, pool);
+                                       revision,
+                                       SVN_DEPTH_FROM_RECURSE(recurse),
+                                       ignore_externals, FALSE, NULL, ctx,
+                                       pool);
 }
 
 svn_error_t *
@@ -255,6 +250,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
   peg_revision.kind = svn_opt_revision_unspecified;
   
   return svn_client__checkout_internal(result_rev, URL, path, &peg_revision,
-                                       revision, recurse, FALSE, FALSE, NULL,
-                                       ctx, pool);
+                                       revision,
+                                       SVN_DEPTH_FROM_RECURSE(recurse),
+                                       FALSE, FALSE, NULL, ctx, pool);
 }

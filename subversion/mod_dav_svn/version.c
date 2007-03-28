@@ -2,7 +2,7 @@
  * version.c: mod_dav_svn versioning provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,20 +34,6 @@
 #include "svn_base64.h"
 
 #include "dav_svn.h"
-
-
-/* ### should move these report names to a public header to share with
-   ### the client (and third parties). */
-static const dav_report_elem reports_list[] = {
-  { SVN_XML_NAMESPACE, "update-report" },
-  { SVN_XML_NAMESPACE, "log-report" },
-  { SVN_XML_NAMESPACE, "dated-rev-report" },
-  { SVN_XML_NAMESPACE, "get-locations" },
-  { SVN_XML_NAMESPACE, "file-revs-report" },
-  { SVN_XML_NAMESPACE, "get-locks-report" },
-  { SVN_XML_NAMESPACE, "replay-report" },
-  { NULL },
-};
 
 
 svn_error_t *
@@ -940,7 +926,7 @@ avail_reports(const dav_resource *resource, const dav_report_elem **reports)
     return NULL;
   }
 
-  *reports = reports_list;
+  *reports = dav_svn__reports_list;
   return NULL;
 }
 
@@ -992,9 +978,13 @@ deliver_report(request_rec *r,
         {
           return dav_svn__replay_report(resource, doc, output);
         }
+      else if (strcmp(doc->root->name, "merge-info-report") == 0)
+        {
+          return dav_svn__get_merge_info_report(resource, doc, output);
+        }
 
       /* NOTE: if you add a report, don't forget to add it to the
-       *       reports_list[] array at the top of this file.
+       *       dav_svn__reports_list[] array.
        */
     }
 
@@ -1350,7 +1340,9 @@ merge(dav_resource *target,
   /* We've detected a 'high level' svn action to log. */
   apr_table_set(target->info->r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(target->info->r->pool,
-                             "commit r%" SVN_REVNUM_T_FMT, new_rev));
+                             "commit '%s' r%" SVN_REVNUM_T_FMT, 
+                             target->info->repos_path,
+                             new_rev));
 
   /* Since the commit was successful, the txn ID is no longer valid.
      Store an empty txn ID in the activity database so that when the

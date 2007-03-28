@@ -2,7 +2,7 @@
  * status.c: construct a status structure from an entry structure
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -30,7 +30,6 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_io.h"
-#include "svn_wc.h"
 #include "svn_config.h"
 #include "svn_time.h"
 #include "svn_private_config.h"
@@ -40,6 +39,7 @@
 #include "props.h"
 #include "translate.h"
 
+#include "private/svn_wc_private.h"
 
 
 /*** Editor batons ***/
@@ -374,8 +374,8 @@ assemble_status(svn_wc_status2_t **status,
           && (wc_special == path_special)
 #endif /* HAVE_SYMLINK */          
           )
-        SVN_ERR(svn_wc_text_modified_p2(&text_modified_p, path, FALSE,
-                                        FALSE, adm_access, pool));
+        SVN_ERR(svn_wc_text_modified_p(&text_modified_p, path, FALSE,
+                                       adm_access, pool));
 
       if (text_modified_p)
         final_text_status = svn_wc_status_modified;
@@ -720,15 +720,10 @@ handle_dir_entry(struct edit_baton *eb,
          as a *directory* on disk), we don't want to reach down into
          that subdir to try to flesh out a "complete entry".  */
       const svn_wc_entry_t *full_entry = entry;
-          
+
       if (entry->kind == kind)
-        {
-          SVN_ERR(svn_wc_entry(&full_entry, path, adm_access, FALSE, pool));
-          if (! full_entry)
-            return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                     _("'%s' is not under version control"),
-                                     svn_path_local_style(path, pool));
-        }
+        SVN_ERR(svn_wc__entry_versioned(&full_entry, path, adm_access, FALSE,
+                                       pool));
 
       /* Descend only if the subdirectory is a working copy directory
          (and DESCEND is non-zero ofcourse)  */
@@ -841,13 +836,13 @@ get_dir_status(struct edit_baton *eb,
 
           /* Now, parse the thing, and copy the parsed results into
              our "global" externals hash. */
-          SVN_ERR(svn_wc_parse_externals_description2(&ext_items, path,
+          SVN_ERR(svn_wc_parse_externals_description3(&ext_items, path,
                                                       prop_val->data, pool));
           for (i = 0; ext_items && i < ext_items->nelts; i++)
             {
-              svn_wc_external_item_t *item;
+              svn_wc_external_item2_t *item;
 
-              item = APR_ARRAY_IDX(ext_items, i, svn_wc_external_item_t *);
+              item = APR_ARRAY_IDX(ext_items, i, svn_wc_external_item2_t *);
               apr_hash_set(eb->externals, svn_path_join(path,
                                                         item->target_dir,
                                                         pool),
@@ -1021,7 +1016,7 @@ hash_stash(void *baton,
        SVN_INVALID_REVNUM and REPOS_TEXT_STATUS is svn_wc_status_deleted,
        then use DELETED_REV to set PATH's ood_last_cmt_rev field in BATON.
        If DELETED_REV is SVN_INVALID_REVNUM and REPOS_TEXT_STATUS is
-       svn_wc_status_deleted, set PATH's ood_last_cmt_rev to it's parent's
+       svn_wc_status_deleted, set PATH's ood_last_cmt_rev to its parent's
        ood_last_cmt_rev value - see comment below.
 
    If a new struct was added, set the repos_lock to REPOS_LOCK. */
@@ -1189,7 +1184,7 @@ make_dir_baton(void **dir_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d = apr_pcalloc(pool, sizeof(*d));
   const char *full_path; 
-  svn_wc_status2_t *parent_status;
+  svn_wc_status2_t *status_in_parent;
 
   /* Don't do this.  Just do NOT do this to me. */
   if (pb && (! path))
@@ -1217,29 +1212,27 @@ make_dir_baton(void **dir_baton,
   /* Get the status for this path's children.  Of course, we only want
      to do this if the path is versioned as a directory. */
   if (pb)
-    parent_status = apr_hash_get(pb->statii, d->path, APR_HASH_KEY_STRING);
+    status_in_parent = apr_hash_get(pb->statii, d->path, APR_HASH_KEY_STRING);
   else
-    parent_status = eb->anchor_status;
+    status_in_parent = eb->anchor_status;
 
-  /* Order is important here.  We can't depend on parent_status->entry
+  /* Order is important here.  We can't depend on status_in_parent->entry
      being non-NULL until after we've checked all the conditions that
      might indicate that the parent is unversioned ("unversioned" for
      our purposes includes being an external or ignored item). */
-  if (parent_status
-      && (parent_status->text_status != svn_wc_status_unversioned)
-      && (parent_status->text_status != svn_wc_status_deleted)
-      && (parent_status->text_status != svn_wc_status_missing)
-      && (parent_status->text_status != svn_wc_status_obstructed)
-      && (parent_status->text_status != svn_wc_status_external)
-      && (parent_status->text_status != svn_wc_status_ignored)
-      && (parent_status->entry->kind == svn_node_dir)
-      && (eb->descend || (! pb)))
+  if (status_in_parent
+      && (status_in_parent->text_status != svn_wc_status_unversioned)
+      && (status_in_parent->text_status != svn_wc_status_missing)
+      && (status_in_parent->text_status != svn_wc_status_obstructed)
+      && (status_in_parent->text_status != svn_wc_status_external)
+      && (status_in_parent->text_status != svn_wc_status_ignored)
+      && (status_in_parent->entry->kind == svn_node_dir))
     {
       svn_wc_adm_access_t *dir_access;
       apr_array_header_t *ignores = eb->ignores;
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access, 
                                   d->path, pool));
-      SVN_ERR(get_dir_status(eb, parent_status->entry, dir_access, NULL, 
+      SVN_ERR(get_dir_status(eb, status_in_parent->entry, dir_access, NULL, 
                              ignores, FALSE, TRUE, TRUE, TRUE, hash_stash, 
                              d->statii, NULL, NULL, pool));
     }
@@ -1674,7 +1667,7 @@ close_directory(void *dir_baton,
 
   /* Handle this directory's statuses, and then note in the parent
      that this has been done. */
-  if (pb && eb->descend)
+  if (pb)
     {
       svn_boolean_t was_deleted = FALSE;
 
@@ -1687,12 +1680,12 @@ close_directory(void *dir_baton,
 
       /* Now do the status reporting. */
       SVN_ERR(handle_statii(eb, dir_status ? dir_status->entry : NULL, 
-                            db->path, db->statii, was_deleted, TRUE, pool));
+                            db->path, db->statii, was_deleted, eb->descend, pool));
       if (dir_status && is_sendable_status(dir_status, eb))
         (eb->status_func)(eb->status_baton, db->path, dir_status);
       apr_hash_set(pb->statii, db->path, APR_HASH_KEY_STRING, NULL);
     }
-  else if (! pb)
+  else
     {
       /* If this is the top-most directory, and the operation had a
          target, we should only report the target. */

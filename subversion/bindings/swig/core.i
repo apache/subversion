@@ -232,6 +232,26 @@
 %constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
 
 /* -----------------------------------------------------------------------
+   input rangelist to svn_rangelist_to_stringbuf
+*/
+%apply apr_array_header_t *RANGELIST {
+   apr_array_header_t *rangeinput
+}
+
+/* -----------------------------------------------------------------------
+   input mergeinfo hash to svn_mergeinfo_to_stringbuf
+*/
+%apply apr_hash_t *MERGEINFO {
+   apr_hash_t *mergeinput,
+   apr_hash_t *mergefrom,
+   apr_hash_t *mergeto,
+   apr_hash_t *mergein1,
+   apr_hash_t *mergein2,
+   apr_hash_t *eraser,
+   apr_hash_t *whiteboard
+}
+
+/* -----------------------------------------------------------------------
    handle the default value of svn_config_get().and the
    config directory of svn_config_read_auth_data() and
    svn_config_write_auth_data().
@@ -412,6 +432,35 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   svn_mergeinfo_parse()
+*/
+
+%apply apr_hash_t **MERGEHASH {
+    apr_hash_t **mergehash,
+    apr_hash_t **deleted,
+    apr_hash_t **added,
+    apr_hash_t **mergeoutput
+}
+
+/* -----------------------------------------------------------------------
+   svn_io_parse_mimetypes_file()
+*/
+
+#ifdef SWIGRUBY
+%apply apr_hash_t **HASH_CSTRING {
+    apr_hash_t **type_map
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   svn_io_detect_mimetype2()
+*/
+
+%apply apr_hash_t *HASH_CSTRING {
+    apr_hash_t *mimetype_map
+}
+
+/* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
 */
 #ifdef SWIGPYTHON
@@ -449,7 +498,13 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 /* Not wrapped, use svn_strerror instead. */
 %ignore apr_strerror;
 /* Wrap the APR status and error codes. */
+/* Sigh, or not. This would mean actually having access to apr_errno.h at
+   wrapper generation time, which, when rolling tarballs, the include paths
+   are not currently set up to give us. FIXME. So, instead, we replicate
+   one important typedef here instead.
 %include apr_errno.h
+*/
+typedef int apr_status_t;
 
 /* -----------------------------------------------------------------------
    pool functions renaming since swig doesn't take care of the #define's
@@ -591,6 +646,15 @@ PyObject *svn_swig_py_exception_type(void);
 };
 #endif
 
+
+/* ----------------------------------------------------------------------- */
+#ifdef SWIGRUBY
+%ignore svn_auth_open;
+%ignore svn_diff_file_options_create;
+%ignore svn_create_commit_info;
+%ignore svn_commit_info_dup;
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_error_codes_h.swg
@@ -612,6 +676,7 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_utf_h.swg
 %include svn_nls_h.swg
 %include svn_path_h.swg
+%include svn_mergeinfo_h.swg
 %include svn_io_h.swg
 
 #ifdef SWIGPERL
@@ -697,6 +762,10 @@ struct apr_pool_wrapper_t
     apr_pool_wrapper_destroy(self);
     xfree(self);
   }
+
+  void _destroy(void) {
+    apr_pool_wrapper_destroy(self);
+  }
 };
 
 %ignore apr_pool_wrapper_destroy;
@@ -746,6 +815,61 @@ apr_pool_wrapper_remove_from_parent(apr_pool_wrapper_t *self)
 }
 %}
 
+/* Dummy declaration */
+struct svn_stream_t
+{
+};
+
+%extend svn_stream_t
+{
+  svn_stream_t(VALUE io) {
+    return svn_swig_rb_make_stream(io);
+  };
+
+  ~svn_stream_t() {
+  };
+}
+
+/* Dummy declaration */
+struct svn_auth_baton_t
+{
+};
+
+%extend svn_auth_baton_t
+{
+  svn_auth_baton_t(apr_array_header_t *providers, apr_pool_t *pool) {
+    svn_auth_baton_t *self;
+    svn_auth_open(&self, providers, pool);
+    return self;
+  };
+
+  ~svn_auth_baton_t() {
+  };
+}
+
+%extend svn_diff_file_options_t
+{
+  svn_diff_file_options_t(apr_pool_t *pool) {
+    return svn_diff_file_options_create(pool);
+  };
+
+  ~svn_diff_file_options_t() {
+  };
+}
+
+%extend svn_commit_info_t
+{
+  svn_commit_info_t(apr_pool_t *pool) {
+    return svn_create_commit_info(pool);
+  };
+
+  ~svn_commit_info_t() {
+  };
+
+  svn_commit_info_t *dup(apr_pool_t *pool) {
+    return svn_commit_info_dup(self, pool);
+  };
+}
 
 %include svn_diff_h.swg
 

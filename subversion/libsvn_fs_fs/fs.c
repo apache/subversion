@@ -1,7 +1,7 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -31,7 +31,6 @@
 #include "err.h"
 #include "dag.h"
 #include "fs_fs.h"
-#include "revs-txns.h"
 #include "tree.h"
 #include "lock.h"
 #include "svn_private_config.h"
@@ -208,6 +207,33 @@ fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
 
 
+/* This implements the fs_library_vtable_t.open_for_recovery() API. */
+static svn_error_t *
+fs_open_for_recovery(svn_fs_t *fs,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  /* Recovery for FSFS is currently limited to recreating the current
+     file from the latest revision. */
+
+  /* The only thing we have to watch out for is that the current file
+     might not exist.  So we'll try to create it here unconditionally,
+     and just ignore any errors that might indicate that it's already
+     present. (We'll need it to exist later anyway as a source for the
+     new file's permissions). */
+
+  /* Use a partly-filled fs pointer first to create current.  This will fail
+     if current already exists, but we don't care about that. */
+  fs->path = apr_pstrdup(fs->pool, path);
+  svn_error_clear(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
+                                     "0 1 1\n", pool));
+
+  /* Now open the filesystem properly by calling the vtable method directly. */
+  return fs_open(fs, path, pool);
+}
+
+
+
 /* This implements the fs_library_vtable_t.hotcopy() API.  Copy a
    possibly live Subversion filesystem from SRC_PATH to DEST_PATH.
    The CLEAN_LOGS argument is ignored and included for Subversion
@@ -218,25 +244,8 @@ fs_hotcopy(const char *src_path,
            svn_boolean_t clean_logs, 
            apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_fs__hotcopy(src_path, dest_path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__hotcopy(src_path, dest_path, pool);
 }
-
-
-
-/* This function is included for Subversion 1.0.x compatibility.  It has
-   no effect for fsfs backed Subversion filesystems.  It conforms to
-   the fs_library_vtable_t.bdb_recover() API. */
-static svn_error_t *
-fs_recover(const char *path,
-           apr_pool_t *pool)
-{
-  /* This is a no-op for FSFS. */
-
-  return SVN_NO_ERROR;
-}
-
 
 
 
@@ -266,9 +275,7 @@ fs_delete_fs(const char *path,
              apr_pool_t *pool)
 {
   /* Remove everything. */
-  SVN_ERR(svn_io_remove_dir(path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_remove_dir2(path, FALSE, pool);
 }
 
 
@@ -353,10 +360,11 @@ static fs_library_vtable_t library_vtable = {
   fs_version,
   fs_create,
   fs_open,
+  fs_open_for_recovery,
   fs_delete_fs,
   fs_hotcopy,
   fs_get_description,
-  fs_recover,
+  svn_fs_fs__recover,
   fs_logfiles
 };
 

@@ -50,6 +50,18 @@ class SVNIncorrectDatatype(SVNUnexpectedOutput):
   run_and_verify_* API"""
   pass
 
+class UnorderedOutput:
+  """Simple class to mark unorder output"""
+
+  def __init__(self, output):
+    self.output = output
+
+
+def no_sleep_for_timestamps():
+  os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'no'
+
+def do_sleep_for_timestamps():
+  os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'yes'
 
 def setup_pristine_repository():
   """Create the pristine repository, 'svn import' the greek tree and 
@@ -178,6 +190,10 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
      - If it is a single string, invoke match_or_fail() on MESSAGE,
        the expected output, and the actual output.
 
+     - If it is an instance of UnorderedOutput, invoke
+       compare_unordered_and_display_lines() on MESSAGE, the expected
+       output, and the actual output.
+
   If EXPECTED_STDOUT is None, do not check stdout.
   EXPECTED_STDERR may not be None.
 
@@ -200,6 +216,9 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
       compare_and_display_lines(message, output_type.upper(), expected, actual)
     elif type(expected) is type(''):
       match_or_fail(message, output_type.upper(), expected, actual)
+    elif isinstance(expected, UnorderedOutput):
+      compare_unordered_and_display_lines(message, output_type.upper(),
+                                          expected.output, actual)
     elif expected == SVNAnyOutput:
       if len(actual) == 0:
         if message is not None:
@@ -215,9 +234,9 @@ def run_and_verify_load(repo_dir, dump_file_content):
   "Runs 'svnadmin load' and reports any errors."
   expected_stderr = []
   output, errput = \
-          main.run_command_stdin(
-    "%s load --force-uuid --quiet %s" % (main.svnadmin_binary, repo_dir),
-    expected_stderr, 1, dump_file_content)
+          main.run_command_stdin(main.svnadmin_binary,
+    expected_stderr, 1, dump_file_content,
+    'load', '--force-uuid', '--quiet', repo_dir)
   if expected_stderr:
     actions.compare_and_display_lines(
       "Standard error output", "STDERR", expected_stderr, errput)
@@ -566,7 +585,7 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   tree.compare_trees(myskiptree, skip_tree,
                      extra_skip, None, missing_skip, None)
 
-  mytree = tree.build_tree_from_checkout(out)
+  mytree = tree.build_tree_from_checkout(out, 0)
   verify_update (mytree, dir,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
@@ -872,17 +891,21 @@ def display_trees(message, label, expected, actual):
     tree.dump_tree(actual)
 
 
-def display_lines(message, label, expected, actual, expected_is_regexp=None):
+def display_lines(message, label, expected, actual, expected_is_regexp=None,
+                  expected_is_unordered=None):
   """Print MESSAGE, unless it is None, then print EXPECTED (labeled
   with LABEL) followed by ACTUAL (also labeled with LABEL).
   Both EXPECTED and ACTUAL may be strings or lists of strings."""
   if message is not None:
     print message
   if expected is not None:
+    output = 'EXPECTED %s' % label
     if expected_is_regexp:
-      print 'EXPECTED', label + ' (regexp):'
-    else:
-      print 'EXPECTED', label + ':'
+      output += ' (regexp)'
+    if expected_is_unordered:
+      output += ' (unordered)'
+    output += ':'
+    print output
     map(sys.stdout.write, expected)
     if expected_is_regexp:
       map(sys.stdout.write, '\n')
@@ -901,6 +924,15 @@ def compare_and_display_lines(message, label, expected, actual):
 
   if exp != act:
     display_lines(message, label, expected, actual)
+    raise main.SVNLineUnequal
+
+def compare_unordered_and_display_lines(message, label, expected, actual):
+  """Compare two sets of output lines, and print them if they differ,
+  but disregard the order of the lines. MESSAGE is ignored if None."""
+  try:
+    main.compare_unordered_output(expected, actual)
+  except Failure:
+    display_lines(message, label, expected, actual, expected_is_unordered=True)
     raise main.SVNLineUnequal
 
 def match_or_fail(message, label, expected, actual):
@@ -976,6 +1008,15 @@ def get_virginal_state(wc_dir, rev):
 
   return state
 
+def remove_admin_tmp_dir(wc_dir):
+  "Remove the tmp directory within the administrative directory."
+
+  tmp_path = os.path.join(wc_dir, main.get_admin_name(), 'tmp')
+  ### Any reason not to use main.safe_rmtree()?
+  os.rmdir(os.path.join(tmp_path, 'prop-base'))
+  os.rmdir(os.path.join(tmp_path, 'props'))
+  os.rmdir(os.path.join(tmp_path, 'text-base'))
+  os.rmdir(tmp_path)
 
 # Cheap administrative directory locking
 def lock_admin_dir(wc_dir):

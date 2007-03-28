@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -35,19 +35,19 @@
 jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
 {
     jint jstateFlags = 0;
-    if(flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+    if (flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         jstateFlags |=
             org_tigris_subversion_javahl_CommitItemStateFlags_Add;
-    if(flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+    if (flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         jstateFlags |=
             org_tigris_subversion_javahl_CommitItemStateFlags_Delete;
-    if(flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
+    if (flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
         jstateFlags |=
             org_tigris_subversion_javahl_CommitItemStateFlags_TextMods;
-    if(flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
+    if (flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
         jstateFlags |=
             org_tigris_subversion_javahl_CommitItemStateFlags_PropMods;
-    if(flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+    if (flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
         jstateFlags |=
             org_tigris_subversion_javahl_CommitItemStateFlags_IsCopy;
     return jstateFlags;
@@ -203,6 +203,19 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
     case svn_wc_notify_exists:
         /* Tried adding a path that already exists. */
         jAction = org_tigris_subversion_javahl_NotifyAction_exists;
+        break;
+    case svn_wc_notify_changelist_set:
+        /* Changelist name set. */
+        jAction = org_tigris_subversion_javahl_NotifyAction_changelist_set;
+        break;
+    case svn_wc_notify_changelist_clear:
+        /* Changelist name cleared. */
+        jAction = org_tigris_subversion_javahl_NotifyAction_changelist_clear;
+        break;
+
+    case svn_wc_notify_changelist_failed:
+        /* Changelist operation failed. */
+        jAction = org_tigris_subversion_javahl_NotifyAction_changelist_failed;
         break;
     }
     return jAction;

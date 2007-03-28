@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import os, re
+import sys, os, re
 
 # Our testing module
 import svntest
@@ -400,6 +400,7 @@ def merge_symlink_into_file(sbox):
                        os.path.join(wc_dir, 'A', 'D'))
 
   expected_output = svntest.wc.State(wc_dir, {
+    'A/D'       : Item(verb='Sending'),
     'A/D/gamma' : Item(verb='Replacing'),
     })
 
@@ -460,6 +461,104 @@ def merge_file_into_symlink(sbox):
   svntest.main.run_svn(None, 'merge', '-r', '4:5', d_url,
                        os.path.join(wc_dir, 'A', 'Dprime'))
 
+# Issue 2701: Tests to see repository with symlinks can be checked out on all 
+# platforms.
+def checkout_repo_with_symlinks(sbox):
+  "checkout a repository containing symlinks"
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  # Load the dumpfile into the repos.
+  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                          'special_tests_data')
+  dump_str = file(os.path.join(data_dir,
+                               "symlink.dump"), "rb").read()
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'from': Item(status='A '),
+    'to': Item(status='A '),
+    })
+
+  if svntest.main.is_os_windows():
+    expected_link_contents = 'link to'
+  else:
+    expected_link_contents = ''
+
+  expected_wc = svntest.wc.State('', {
+    'from' : Item(contents=expected_link_contents),
+    'to'   : Item(contents=''),
+    })
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc)
+
+# Issue 2716: 'svn diff' against a symlink to a directory within the wc
+def diff_symlink_to_dir(sbox):
+  "diff a symlink to a directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a symlink to A/D/.
+  d_path = os.path.join('A', 'D')
+  link_path = os.path.join(wc_dir, 'link')
+  os.symlink(d_path, link_path)
+
+  # Add the symlink.
+  svntest.main.run_svn(None, 'add', link_path)
+
+  # Now diff the wc itself and check the results.
+  expected_output = [
+    "Index: svn-test-work/working_copies/special_tests-10/link\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/special_tests-10/link\t(revision 0)\n",
+    "+++ svn-test-work/working_copies/special_tests-10/link\t(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+link " + d_path + "\n",
+    "\ No newline at end of file\n",
+    "\n",
+    "Property changes on: svn-test-work/working_copies/special_tests-10/link\n",
+    "___________________________________________________________________\n",
+    "Name: svn:special\n",
+    "   + *\n",
+    "\n" ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     wc_dir)
+  # We should get the same output if we the diff the symlink itself.
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     link_path)
+
+# Issue 2692 (part of): Check that the client can check out a repository
+# that contains an unknown special file type.
+def checkout_repo_with_unknown_special_type(sbox):
+  "checkout repository with unknown special file type"
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  # Load the dumpfile into the repos.
+  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                          'special_tests_data')
+  dump_str = file(os.path.join(data_dir,
+                               "bad-special-type.dump"), "rb").read()
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'special': Item(status='A '),
+    })
+  expected_wc = svntest.wc.State('', {
+    'special' : Item(contents='gimble wabe'),
+    })
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc)
+
 
 ########################################################################
 # Run the tests
@@ -474,7 +573,10 @@ test_list = [ None,
               Skip(replace_symlink_with_file, (os.name != 'posix')),
               Skip(remove_symlink, (os.name != 'posix')),
               Skip(merge_symlink_into_file, (os.name != 'posix')),
-              XFail(Skip(merge_file_into_symlink, (os.name != 'posix'))),
+              Skip(merge_file_into_symlink, (os.name != 'posix')),
+              checkout_repo_with_symlinks,
+              XFail(Skip(diff_symlink_to_dir, (os.name != 'posix'))),
+              checkout_repo_with_unknown_special_type,
              ]
 
 if __name__ == '__main__':

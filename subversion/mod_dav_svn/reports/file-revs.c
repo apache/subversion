@@ -311,8 +311,10 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(resource->pool, "blame '%s'",
-                             svn_path_uri_encode(path, resource->pool)));
+                apr_psprintf(resource->pool, "blame '%s' r%" SVN_REVNUM_T_FMT \
+                                             ":%" SVN_REVNUM_T_FMT,
+                             svn_path_uri_encode(path, resource->pool),
+                             start, end));
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */

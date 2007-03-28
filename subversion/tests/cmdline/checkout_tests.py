@@ -25,8 +25,9 @@ import svntest
 from svntest import wc, SVNAnyOutput
 
 # (abbreviation)
-Item = wc.StateItem
+Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
+Item = wc.StateItem
 
 #----------------------------------------------------------------------
 # Helper function for testing stderr from co.
@@ -365,10 +366,7 @@ def checkout_broken_eol(sbox):
   URL = sbox.repo_url
 
   # Load the dumpfile into the repos.
-  output, errput = \
-    svntest.main.run_command_stdin(
-    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
-    None, 1, [dump_str])
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'file': Item(status='A '),

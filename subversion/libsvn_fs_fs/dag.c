@@ -29,7 +29,6 @@
 #include "err.h"
 #include "fs.h"
 #include "key-gen.h"
-#include "revs-txns.h"
 #include "fs_fs.h"
 #include "id.h"
 

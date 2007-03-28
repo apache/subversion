@@ -131,12 +131,15 @@ static svn_error_t *compat_get_commit_editor(void *session_baton,
 {
   svn_commit_callback2_t callback2;
   void *callback2_baton;
+  apr_hash_t *revprop_table = apr_hash_make(pool);
 
   svn_compat_wrap_commit_callback(&callback2, &callback2_baton,
                                   callback, callback_baton,
                                   pool);
-  return VTBL.get_commit_editor(session_baton, editor, edit_baton, log_msg,
-                                callback2, callback2_baton,
+  apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+               svn_string_create(log_msg, pool));
+  return VTBL.get_commit_editor(session_baton, editor, edit_baton,
+                                revprop_table, callback2, callback2_baton,
                                 NULL, TRUE, pool);
 }
 
@@ -164,8 +167,10 @@ static svn_error_t *compat_get_dir(void *session_baton,
                       path, revision, SVN_DIRENT_ALL, pool);
 }
 
+/** Reporter compat code. **/
+
 struct compat_report_baton {
-  const svn_ra_reporter2_t *reporter;
+  const svn_ra_reporter3_t *reporter;
   void *baton;
 };
 
@@ -177,7 +182,8 @@ static svn_error_t *compat_set_path(void *report_baton,
 {
   struct compat_report_baton *crb = report_baton;
 
-  return crb->reporter->set_path(crb->baton, path, revision, start_empty,
+  return crb->reporter->set_path(crb->baton, path, revision,
+                                 svn_depth_infinity, start_empty,
                                  NULL, pool);
 }
 
@@ -200,7 +206,8 @@ static svn_error_t *compat_link_path(void *report_baton,
   struct compat_report_baton *crb = report_baton;
 
   return crb->reporter->link_path(crb->baton, path, url, revision,
-                                  start_empty, NULL, pool);
+                                  svn_depth_infinity, start_empty,
+                                  NULL, pool);
 }
 
 static svn_error_t *compat_finish_report(void *report_baton,
@@ -229,7 +236,7 @@ static const svn_ra_reporter_t compat_reporter = {
 
 static void compat_wrap_reporter(const svn_ra_reporter_t **reporter,
                                  void **baton,
-                                 const svn_ra_reporter2_t *wrapped,
+                                 const svn_ra_reporter3_t *wrapped,
                                  void *wrapped_baton,
                                  apr_pool_t *pool)
 {
@@ -251,12 +258,14 @@ static svn_error_t *compat_do_update(void *session_baton,
                                      void *update_baton,
                                      apr_pool_t *pool)
 {
-  const svn_ra_reporter2_t *reporter2;
-  void *baton2;
-  SVN_ERR(VTBL.do_update(session_baton, &reporter2, &baton2,
-                         revision_to_update_to, update_target, recurse,
+  const svn_ra_reporter3_t *reporter3;
+  void *baton3;
+  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE(recurse);
+
+  SVN_ERR(VTBL.do_update(session_baton, &reporter3, &baton3,
+                         revision_to_update_to, update_target, depth,
                          editor, update_baton, pool));
-  compat_wrap_reporter(reporter, report_baton, reporter2, baton2, pool);
+  compat_wrap_reporter(reporter, report_baton, reporter3, baton3, pool);
 
   return SVN_NO_ERROR;
 }
@@ -272,13 +281,15 @@ static svn_error_t *compat_do_switch(void *session_baton,
                                      void *switch_baton,
                                      apr_pool_t *pool)
 {
-  const svn_ra_reporter2_t *reporter2;
-  void *baton2;
-  SVN_ERR(VTBL.do_switch(session_baton, &reporter2, &baton2,
-                         revision_to_switch_to, switch_target, recurse,
+  const svn_ra_reporter3_t *reporter3;
+  void *baton3;
+  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE(recurse);
+
+  SVN_ERR(VTBL.do_switch(session_baton, &reporter3, &baton3,
+                         revision_to_switch_to, switch_target, depth,
                          switch_url, editor, switch_baton, pool));
 
-  compat_wrap_reporter(reporter, report_baton, reporter2, baton2, pool);
+  compat_wrap_reporter(reporter, report_baton, reporter3, baton3, pool);
 
   return SVN_NO_ERROR;
 }
@@ -293,13 +304,14 @@ static svn_error_t *compat_do_status(void *session_baton,
                                      void *status_baton,
                                      apr_pool_t *pool)
 {
-  const svn_ra_reporter2_t *reporter2;
-  void *baton2;
+  const svn_ra_reporter3_t *reporter3;
+  void *baton3;
+  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE(recurse);
   
-  SVN_ERR(VTBL.do_status(session_baton, &reporter2, &baton2, status_target,
-                         revision, recurse, editor, status_baton, pool));
+  SVN_ERR(VTBL.do_status(session_baton, &reporter3, &baton3, status_target,
+                         revision, depth, editor, status_baton, pool));
 
-  compat_wrap_reporter(reporter, report_baton, reporter2, baton2, pool);
+  compat_wrap_reporter(reporter, report_baton, reporter3, baton3, pool);
 
   return SVN_NO_ERROR;
 }
@@ -316,14 +328,15 @@ static svn_error_t *compat_do_diff(void *session_baton,
                                    void *diff_baton,
                                    apr_pool_t *pool)
 {
-  const svn_ra_reporter2_t *reporter2;
-  void *baton2;
+  const svn_ra_reporter3_t *reporter3;
+  void *baton3;
+  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE(recurse);
   
-  SVN_ERR(VTBL.do_diff(session_baton, &reporter2, &baton2, revision,
-                       diff_target, recurse, ignore_ancestry, TRUE,
+  SVN_ERR(VTBL.do_diff(session_baton, &reporter3, &baton3, revision,
+                       diff_target, depth, ignore_ancestry, TRUE,
                        versus_url, diff_editor, diff_baton, pool));
 
-  compat_wrap_reporter(reporter, report_baton, reporter2, baton2, pool);
+  compat_wrap_reporter(reporter, report_baton, reporter3, baton3, pool);
 
   return SVN_NO_ERROR;
 }

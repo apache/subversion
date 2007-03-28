@@ -193,11 +193,13 @@ svn_cl__propedit(apr_getopt_t *os,
             }
           else
             {
-              if (opt_state->message || opt_state->filedata)
+              if (opt_state->message || opt_state->filedata || 
+                  opt_state->revprop_table)
                 {
                   return svn_error_create
                     (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE, NULL,
-                     _("Local, non-commit operations do not take a log message"));
+                     _("Local, non-commit operations do not take a log message "
+                       "or revision properties"));
                 }
               
               /* Split the path if it is a file path. */
@@ -244,6 +246,8 @@ svn_cl__propedit(apr_getopt_t *os,
                 SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
+
+              ctx->revprop_table = opt_state->revprop_table;
 
               err = svn_client_propset3(&commit_info,
                                         pname_utf8, edited_propval, target, 

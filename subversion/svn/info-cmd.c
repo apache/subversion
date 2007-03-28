@@ -2,7 +2,7 @@
  * info-cmd.c -- Display information about a resource
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -48,31 +48,6 @@ svn_cl__info_print_time(apr_time_t atime,
   return SVN_NO_ERROR;
 }
 
-/* Prints XML header */
-static svn_error_t *
-print_header_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-  /* <?xml version="1.0" encoding="utf-8"?> */
-  svn_xml_make_header(&sb, pool);
-
-  /* "<info>" */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "info", NULL);
-
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
-
-/* Prints XML footer */
-static svn_error_t *
-print_footer_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-  /* "</info>" */
-  svn_xml_make_close_tag(&sb, pool, "info");
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
 
 /* Return string representation of SCHEDULE */
 static const char *
@@ -94,9 +69,11 @@ schedule_str(svn_wc_schedule_t schedule)
 }
 
 
-/* prints svn info in xml mode to standard out */
+/* A callback of type svn_info_receiver_t.
+   Prints svn info in xml mode to standard out */
 static svn_error_t *
-print_info_xml(const char *target,
+print_info_xml(void *baton,
+               const char *target,
                const svn_info_t *info,
                apr_pool_t *pool)
 {
@@ -143,6 +120,10 @@ print_info_xml(const char *target,
       /* "<schedule> xx </schedule>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "schedule",
                                schedule_str(info->schedule));
+
+      /* "<depth> xx </depth>" */
+      svn_cl__xml_tagged_cdata(&sb, pool, "depth",
+                               svn_depth_to_word(info->depth));
 
       /* "<copy-from-url> xx </copy-from-url>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "copy-from-url",
@@ -259,8 +240,10 @@ print_info_xml(const char *target,
 }
 
 
+/* A callback of type svn_info_receiver_t. */
 static svn_error_t *
-print_info(const char *target,
+print_info(void *baton,
+           const char *target,
            const svn_info_t *info,
            apr_pool_t *pool)
 {
@@ -331,6 +314,37 @@ print_info(const char *target,
           break;
         }
       
+      switch (info->depth) 
+        {
+        case svn_depth_unknown:
+          /* Unknown depth is the norm for remote directories anyway
+             (although infinity would be equally appropriate).  Let's
+             not bother to print it. */
+          break;
+      
+        case svn_depth_empty:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: empty\n")));
+          break;
+      
+        case svn_depth_files:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: files\n")));
+          break;
+      
+        case svn_depth_immediates:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: immediates\n")));
+          break;
+      
+        case svn_depth_infinity:
+          /* Infinity is the default depth for working copy
+             directories.  Let's not print it, it's not special enough
+             to be worth mentioning.  */
+          break;
+
+        default:
+          /* Other depths should never happen here. */
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: INVALID\n")));
+        }
+
       if (info->copyfrom_url) 
         SVN_ERR(svn_cmdline_printf(pool, _("Copied From URL: %s\n"),
                                    info->copyfrom_url));
@@ -432,20 +446,6 @@ print_info(const char *target,
 }
 
 
-/* A callback of type svn_info_receiver_t. */
-static svn_error_t *
-info_receiver(void *baton,
-              const char *path,
-              const svn_info_t *info,
-              apr_pool_t *pool)
-{
-  if (((svn_cl__cmd_baton_t *) baton)->opt_state->xml)
-    return print_info_xml(path, info, pool);
-  else
-    return print_info(path, info, pool);
-}
-
-
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__info(apr_getopt_t *os,
@@ -460,18 +460,18 @@ svn_cl__info(apr_getopt_t *os,
   int i;
   svn_error_t *err;
   svn_opt_revision_t peg_revision;
+  svn_info_receiver_t receiver;
 
   /* Before allowing svn_opt_args_to_target_array() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
     {
-      SVN_ERR(svn_client_retrieve_changelist(&changelist_targets,
-                                             opt_state->changelist,
-                                             "", /* ### FIXME */
-                                             ctx->cancel_func,
-                                             ctx->cancel_baton,
-                                             pool));
+      SVN_ERR(svn_client_get_changelist(&changelist_targets,
+                                        opt_state->changelist,
+                                        "", /* ### FIXME */
+                                        ctx,
+                                        pool));
       if (apr_is_empty_array(changelist_targets))
         return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  _("no such changelist '%s'"),
@@ -494,20 +494,27 @@ svn_cl__info(apr_getopt_t *os,
 
   if (opt_state->xml)
     {
+      receiver = print_info_xml;
+
       /* If output is not incremental, output the XML header and wrap
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        SVN_ERR(print_header_xml(pool));
+        SVN_ERR(svn_cl__xml_print_header("info", pool));
     }
   else
     {
+      receiver = print_info;
+
       if (opt_state->incremental)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("'incremental' option only valid in XML "
                                   "mode"));
     }
   
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = svn_depth_immediates;
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *truepath;
@@ -526,8 +533,9 @@ svn_cl__info(apr_getopt_t *os,
 
       err = svn_client_info(truepath,
                             &peg_revision, &(opt_state->start_revision),
-                            info_receiver, baton,
-                            opt_state->recursive, ctx, subpool);
+                            receiver, NULL,
+                            SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                            ctx, subpool);
 
       /* If one of the targets is a non-existent URL or wc-entry,
          don't bail out.  Just warn and move on to the next target. */
@@ -556,7 +564,7 @@ svn_cl__info(apr_getopt_t *os,
   svn_pool_destroy(subpool);
 
   if (opt_state->xml && (! opt_state->incremental))
-    SVN_ERR(print_footer_xml(pool));
+    SVN_ERR(svn_cl__xml_print_footer("info", pool));
 
   return SVN_NO_ERROR;
 }

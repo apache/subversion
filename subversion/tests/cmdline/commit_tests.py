@@ -829,40 +829,50 @@ def hook_test(sbox):
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
-  # Setup the hook configs to echo data back
+  # Create a hook that appends its name to a log file.
+  hook_format = """import sys
+fp = open(sys.argv[1] + '/hooks.log', 'a')
+fp.write("%s\\n")
+fp.close()"""
+
+  # Setup the hook configs to log data to a file
   start_commit_hook = svntest.main.get_start_commit_hook_path(repo_dir)
-  svntest.main.file_append(start_commit_hook,
-                           """#!/bin/sh
-                           echo $1""")
-  os.chmod(start_commit_hook, 0755)
+  svntest.main.create_python_hook_script(start_commit_hook, 
+                                         hook_format % "start_commit_hook")
 
   pre_commit_hook = svntest.main.get_pre_commit_hook_path(repo_dir)
-  svntest.main.file_append(pre_commit_hook,
-                           """#!/bin/sh
-                           echo $1 $2 """)
-  os.chmod(pre_commit_hook, 0755)
+  svntest.main.create_python_hook_script(pre_commit_hook, 
+                                         hook_format % "pre_commit_hook")
 
   post_commit_hook = svntest.main.get_post_commit_hook_path(repo_dir)
-  svntest.main.file_append(post_commit_hook,
-                           """#!/bin/sh
-                           echo $1 $2 """)
-  os.chmod(post_commit_hook, 0755)
+  svntest.main.create_python_hook_script(post_commit_hook, 
+                                         hook_format % "post_commit_hook")
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join(wc_dir, "iota")
   svntest.main.file_append(iota_path, "More stuff in iota")
 
-  # Now, commit and examine the output (we happen to know that the
-  # filesystem will report an absolute path because that's the way the
-  # filesystem is created by this test suite.
-  abs_repo_dir = os.path.abspath(repo_dir)
-  expected_output = [abs_repo_dir + "\n",
-                     abs_repo_dir + " 1\n",
-                     abs_repo_dir + " 2\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  # Commit, no output expected.
+  svntest.actions.run_and_verify_svn(None, [], [],
                                      'ci', '--quiet',
                                      '-m', 'log msg', wc_dir)
 
+  # Now check the logfile
+  expected_data = [ 'start_commit_hook\n', 'pre_commit_hook\n', 'post_commit_hook\n' ]
+
+  logfilename = os.path.join(repo_dir, "hooks.log")
+  if os.path.exists(logfilename):
+    fp = open(logfilename)
+  else:
+    raise svntest.actions.SVNUnexpectedOutput("hook logfile %s not found")\
+                                             % logfilename
+
+  actual_data = fp.readlines()
+  fp.close()
+  os.unlink(logfilename)
+  svntest.actions.compare_and_display_lines('wrong hook logfile content',  
+                                            'STDERR',
+                                            expected_data, actual_data)
 
 #----------------------------------------------------------------------
 
@@ -1263,7 +1273,7 @@ def commit_from_long_dir(sbox):
     })
 
   # Any length name was enough to provoke the original bug, but
-  # keeping it's length less than that of the filename 'iota' avoided
+  # keeping its length less than that of the filename 'iota' avoided
   # random behaviour, but still caused the test to fail
   extra_name = 'xx'
 
@@ -2004,6 +2014,282 @@ def commit_inconsistent_eol(sbox):
                                      'commit', '-m', 'log message',
                                      wc_dir)
 
+
+def mkdir_with_revprop(sbox):
+  "set revision props during remote mkdir"
+
+  sbox.build()
+  remote_dir = sbox.repo_url + "/dir"
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--with-revprop', 'bug=42', remote_dir)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 2:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '42', [], 'propget', 'bug',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+
+
+def delete_with_revprop(sbox):
+  "set revision props during remote delete"
+
+  sbox.build()
+  remote_dir = sbox.repo_url + "/dir"
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     remote_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', '-m', 'msg',
+                                     '--with-revprop', 'bug=52', remote_dir)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 3:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 3, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '52', [], 'propget', 'bug',
+                                     '--revprop', '-r', 3, sbox.repo_url)
+
+
+def commit_with_revprop(sbox):
+  "set revision props during commit"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  make_standard_slew_of_changes(wc_dir)
+
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega') 
+  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/omega' : Item(verb='Sending'),
+    'A/D/H/gloo' : Item(verb='Adding'),
+    })
+
+  expected_status = get_standard_state(wc_dir)
+  expected_status.tweak('A/D/H/omega', wc_rev=2, status='  ')
+  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        '-m', 'msg',
+                                        '--with-revprop', 'bug=62',
+                                        omega_path, gloo_path)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 2:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '62', [], 'propget', 'bug',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+
+
+def import_with_revprop(sbox):
+  "set revision props during import"
+
+  sbox.build()
+  local_dir = os.path.join(sbox.wc_dir, 'folder')
+  local_file = os.path.join(sbox.wc_dir, 'folder', 'file')
+  os.mkdir(local_dir)
+  svntest.main.file_write(local_file, "xxxx")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'import', '-m', 'msg',
+                                     '--with-revprop', 'bug=72', local_dir,
+                                     sbox.repo_url)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 2:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '72', [], 'propget', 'bug',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+
+
+def copy_R2R_with_revprop(sbox):
+  "set revision props during repos-to-repos copy"
+
+  sbox.build()
+  remote_dir1 = sbox.repo_url + "/dir1"
+  remote_dir2 = sbox.repo_url + "/dir2"
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     remote_dir1)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', '-m', 'msg',
+                                     '--with-revprop', 'bug=82', remote_dir1,
+                                     remote_dir2)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 3:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 3, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '82', [], 'propget', 'bug',
+                                     '--revprop', '-r', 3, sbox.repo_url)
+
+
+def copy_WC2R_with_revprop(sbox):
+  "set revision props during wc-to-repos copy"
+
+  sbox.build()
+  remote_dir = sbox.repo_url + "/dir"
+  local_dir = os.path.join(sbox.wc_dir, 'folder')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', local_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', '-m', 'msg',
+                                     '--with-revprop', 'bug=92', local_dir,
+                                     remote_dir)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 2:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '92', [], 'propget', 'bug',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+
+
+def move_R2R_with_revprop(sbox):
+  "set revision props during repos-to-repos move"
+
+  sbox.build()
+  remote_dir1 = sbox.repo_url + "/dir1"
+  remote_dir2 = sbox.repo_url + "/dir2"
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     remote_dir1)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'move', '-m', 'msg',
+                                     '--with-revprop', 'bug=102', remote_dir1,
+                                     remote_dir2)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 3:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 3, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '102', [], 'propget', 'bug',
+                                     '--revprop', '-r', 3, sbox.repo_url)
+
+
+def propedit_with_revprop(sbox):
+  "set revision props during remote property edit"
+
+  sbox.build()
+  svntest.main.use_editor('append_foo')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'propedit', '-m', 'msg',
+                                     '--with-revprop', 'bug=112', 'prop',
+                                     sbox.repo_url)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 2:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '112', [], 'propget', 'bug',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+
+
+def set_multiple_props_with_revprop(sbox):
+  "set multiple revision props during remote mkdir"
+
+  sbox.build()
+  remote_dir = sbox.repo_url + "/dir"
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--with-revprop', 'bug=32',
+                                     '--with-revprop', 'ref=22', remote_dir)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 2:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n', '  ref\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '32', [], 'propget', 'bug',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '22', [], 'propget', 'ref',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+
+
+def use_empty_value_in_revprop_pair(sbox):
+  "set revprop without value ('') during remote mkdir"
+
+  sbox.build()
+  remote_dir = sbox.repo_url + "/dir"
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--with-revprop', 'bug=',
+                                     '--with-revprop', 'ref=', remote_dir)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 2:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n', '  ref\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '', [], 'propget', 'bug',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '', [], 'propget', 'ref',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+
+
+def no_equals_in_revprop_pair(sbox):
+  "set revprop without '=' during remote mkdir"
+
+  sbox.build()
+  remote_dir = sbox.repo_url + "/dir"
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--with-revprop', 'bug',
+                                     '--with-revprop', 'ref', remote_dir)
+
+  expected = svntest.actions.UnorderedOutput(
+                  ['Unversioned properties on revision 2:\n',
+                   '  svn:author\n','  svn:date\n',  '  svn:log\n',
+                   '  bug\n', '  ref\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '', [], 'propget', 'bug',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, '', [], 'propget', 'ref',
+                                     '--revprop', '-r', 2, sbox.repo_url)
+
+
+def set_invalid_revprops(sbox):
+  "set invalid revision props during remote mkdir"
+
+  sbox.build()
+  remote_dir = sbox.repo_url + "/dir"
+  # Try to set svn: revprops.
+  expected = '.*Standard properties can\'t.*'
+  svntest.actions.run_and_verify_svn(None, [], expected, 'mkdir', '-m', 'msg',
+                                     '--with-revprop', 'svn:author=42', remote_dir)
+  svntest.actions.run_and_verify_svn(None, [], expected, 'mkdir', '-m', 'msg',
+                                     '--with-revprop', 'svn:log=42', remote_dir)
+  svntest.actions.run_and_verify_svn(None, [], expected, 'mkdir', '-m', 'msg',
+                                     '--with-revprop', 'svn:date=42', remote_dir)
+  svntest.actions.run_and_verify_svn(None, [], expected, 'mkdir', '-m', 'msg',
+                                     '--with-revprop', 'svn:foo=bar', remote_dir)
+
+  # Empty revprop pair.
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'svn: Revision property pair is empty',
+                                     'mkdir', '-m', 'msg',
+				     '--with-revprop', '',
+                                     remote_dir)
+
 ########################################################################
 # Run the tests
 
@@ -2023,7 +2309,7 @@ test_list = [ None,
               hudson_part_1_variation_2,
               hudson_part_2,
               hudson_part_2_1,
-              XFail(hook_test),
+              hook_test,
               merge_mixed_revisions,
               commit_uri_unsafe,
               commit_deleted_edited,
@@ -2044,7 +2330,19 @@ test_list = [ None,
               local_mods_are_not_commits,
               post_commit_hook_test,
               commit_same_folder_in_targets,
-              commit_inconsistent_eol
+              commit_inconsistent_eol,
+              mkdir_with_revprop,
+              delete_with_revprop,
+              commit_with_revprop,
+              import_with_revprop,
+              copy_R2R_with_revprop,
+              copy_WC2R_with_revprop,
+              move_R2R_with_revprop,
+              propedit_with_revprop,
+              set_multiple_props_with_revprop,
+              use_empty_value_in_revprop_pair,
+              no_equals_in_revprop_pair,
+              set_invalid_revprops,
              ]
 
 if __name__ == '__main__':

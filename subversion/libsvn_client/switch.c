@@ -2,7 +2,7 @@
  * switch.c:  implement 'switch' feature via WC & RA interfaces.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -24,7 +24,6 @@
 
 #include <assert.h>
 
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_time.h"
@@ -33,6 +32,7 @@
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -55,13 +55,13 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const char *switch_url,
                             const svn_opt_revision_t *revision,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t allow_unver_obstructions,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
-  const svn_ra_reporter2_t *reporter;
+  const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *URL, *anchor, *target;
@@ -101,11 +101,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                  ctx->cancel_baton, pool));
   anchor = svn_wc_adm_access_path(adm_access);
 
-  SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL, 
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(anchor, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, anchor, adm_access, FALSE, pool));
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
@@ -130,7 +126,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
   SVN_ERR(svn_wc_get_switch_editor3(&revnum, adm_access, target,
-                                    switch_url, use_commit_times, recurse,
+                                    switch_url, use_commit_times, depth,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
@@ -140,19 +136,19 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
-  SVN_ERR(svn_ra_do_switch(ra_session, &reporter, &report_baton, revnum,
-                           target, recurse, switch_url,
-                           switch_editor, switch_edit_baton, pool));
+  SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
+                            target, depth, switch_url,
+                            switch_editor, switch_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
-     will be driven by svn_repos_dir_delta.
+     will be driven by svn_repos_dir_delta2.
 
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */ 
-  err = svn_wc_crawl_revisions2(path, dir_access, reporter, report_baton,
-                                TRUE, recurse, use_commit_times,
+  err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
+                                TRUE, depth, use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 NULL, /* no traversal info */
                                 pool);
@@ -208,13 +204,13 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    const char *path,
                    const char *switch_url,
                    const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
+                   svn_depth_t depth,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   return svn_client__switch_internal(result_rev, path, switch_url, revision,
-                                     recurse, NULL,
+                                     depth, NULL,
                                      allow_unver_obstructions, ctx, pool);
 }
 
@@ -228,5 +224,6 @@ svn_client_switch(svn_revnum_t *result_rev,
                   apr_pool_t *pool)
 {
   return svn_client__switch_internal(result_rev, path, switch_url, revision,
-                                     recurse, NULL, FALSE, ctx, pool);
+                                     SVN_DEPTH_FROM_RECURSE(recurse),
+                                     NULL, FALSE, ctx, pool);
 }

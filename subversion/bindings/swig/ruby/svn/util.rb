@@ -1,14 +1,27 @@
-unless respond_to?(:funcall)
+if /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+  $LOAD_PATH.each do |load_path|
+    svn_ext_path = File.join(load_path, "svn", "ext")
+    if File.exists?(svn_ext_path)
+      svn_ext_path_win = File.expand_path(svn_ext_path)
+      svn_ext_path_win = svn_ext_path.gsub(File::SEPARATOR, File::ALT_SEPARATOR)
+      unless ENV["PATH"].split(";").find {|path| path == svn_ext_path_win}
+        ENV["PATH"] = "#{svn_ext_path_win};#{ENV['PATH']}"
+      end
+    end
+  end
+end
+
+require 'tempfile'
+
+unless respond_to?(:__send!)
   module Kernel
-    alias funcall __send__
+    alias __send! __send__
   end
 end
 
 module Svn
   module Util
 
-    @@wrapper_procs = []
-    
     module_function
     def to_ruby_class_name(name)
       name.split("_").collect do |x|
@@ -63,14 +76,24 @@ module Svn
           target_name = meth
         end
         unless target_name.nil?
-          target_id = target_name.intern
-          target_method = ext_mod.method(meth)
-          target_proc = Proc.new{|*args| target_method.call(*args)}
-          target_mod.funcall(:define_method, target_id, target_proc)
-          target_mod.funcall(:module_function, target_id)
-          @@wrapper_procs << target_proc
+          target_mod.module_eval(<<-EOC, __FILE__, __LINE__ + 1)
+            def #{target_name}(*args, &block)
+              #{ext_mod.name}.#{meth}(*args, &block)
+            end
+            module_function :#{target_name}
+EOC
         end
       end
+    end
+
+    def filename_to_temp_file(filename)
+      file = Tempfile.new("svn-ruby")
+      file.binmode
+      file.print(File.read(filename))
+      file.close
+      file.open
+      file.binmode
+      file
     end
   end
 end

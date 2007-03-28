@@ -11,33 +11,69 @@ module Svn
     Util.set_methods(Ext::Fs, self)
 
     @@fs_pool = Svn::Core::Pool.new
-    Fs.initialize(@@fs_pool)
+    initialize(@@fs_pool)
 
     class << self
       def modules
         print_modules("")
       end
     end
-    
+
+    @@alias_targets = %w(create delete open hotcopy recover)
+    class << self
+      @@alias_targets.each do |target|
+        alias_method "_#{target}", target
+      end
+    end
+    @@alias_targets.each do |target|
+      alias_method "_#{target}", target
+    end
+    @@alias_targets = nil
+
+    module_function
+    def create(path, config={}, &block)
+      _create(path, config, &block)
+    end
+
+    def delete(path)
+      Fs.delete_fs(path)
+    end
+
+    def open(path, config={}, &block)
+      _open(path, config, &block)
+    end
+
+    def hotcopy(src, dest, clean=false)
+      _hotcopy(src, dest, clean)
+    end
+
+    def recover(path, &cancel_func)
+      _recover(path, cancel_func)
+    end
+
     FileSystem = SWIG::TYPE_p_svn_fs_t
     class FileSystem
-
       class << self
-        def create(path, config={})
-          Fs.create(path, config)
+        # For backward compatibility
+        def create(*args, &block)
+          Fs.create(*args, &block)
         end
 
-        def delete(path)
-          Fs.delete_fs(path)
+        def delete(*args, &block)
+          Fs.delete(*args, &block)
         end
 
-        def open(path, config={})
-          Fs.open(path, config)
+        def open(*args, &block)
+          Fs.open(*args, &block)
         end
         alias new open
 
-        def hotcopy(src, dest, clean=false)
-          Fs.hotcopy(src, dest, clean)
+        def hotcopy(*args, &block)
+          Fs.hotcopy(*args, &block)
+        end
+
+        def recover(*args, &block)
+          Fs.recover(*args, &block)
         end
       end
 
@@ -68,9 +104,15 @@ module Svn
         end
       end
       
-      def youngest_rev
+      def youngest_revision
         Fs.youngest_rev(self)
       end
+      alias_method :youngest_rev, :youngest_revision
+
+      def deleted_revision(path, start_rev, end_rev)
+        Repos.deleted_rev(self, path, start_rev, end_rev)
+      end
+      alias_method :deleted_rev, :deleted_revision
 
       def prop(name, rev=nil)
         value = Fs.revision_prop(self, rev || youngest_rev, name)
@@ -262,6 +304,10 @@ module Svn
         Fs.is_file(self, path)
       end
       
+      def base_revision
+        Fs.txn_root_base_revision(self)
+      end
+
       def revision
         Fs.revision_root_revision(self)
       end
@@ -393,7 +439,7 @@ module Svn
       end
 
       def delete(path)
-        Fs.delete(self, path)
+        Fs._delete(self, path)
       end
       
       def copy(to_path, from_root, from_path)
@@ -424,9 +470,18 @@ module Svn
         Fs.contents_changed(self, path1, root2, path2)
       end
 
-      def file_delta_stream(source_root, source_path, target_path)
+      def file_delta_stream(arg1, arg2, target_path)
+        if arg1.is_a?(self.class)
+          source_root = arg1
+          source_path = arg2
+          target_root = self
+        else
+          source_root = self
+          source_path = arg1
+          target_root = arg2
+        end
         Fs.get_file_delta_stream(source_root, source_path,
-                                 self, target_path)
+                                 target_root, target_path)
       end
 
       def stat(path)

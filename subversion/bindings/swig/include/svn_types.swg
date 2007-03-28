@@ -16,7 +16,7 @@
  * svn_types.swg: This is the main file of the Subversion typemap
  *   library.  Certain categories of typemaps are removed into child
  *   files that are then %included into this one, solely to promote
- *   understandability of the code by grouping related parts.
+ *   code comprehensibility by grouping related parts.
  */
 
 %include apr.swg
@@ -102,6 +102,7 @@
   /* svn_client */
   svn_client_commit_info_t **,
   svn_client_ctx_t **,
+  const svn_client_commit_item3_t **,
   /* svn_delta */
   const svn_delta_editor_t **,
   svn_txdelta_stream_t **,
@@ -144,12 +145,89 @@
   void **node_baton,
   /* svn_wc */
   svn_wc_adm_access_t **,
+  svn_wc_external_item2_t **,
   svn_wc_entry_t **,
   svn_wc_revision_status_t **,
   svn_wc_status_t **,
   svn_wc_status2_t **,
   void **set_locks_baton
 };
+
+#ifdef SWIGRUBY
+%typemap(argout) SWIGTYPE **OUTPARAM_WITH_BLOCK {
+  VALUE tmp;
+  tmp = SWIG_NewPointerObj(*$1, $*1_descriptor, 0);
+  if (rb_block_given_p()) {
+    rb_yield(tmp);
+    svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
+    DATA_PTR(tmp) = NULL;
+  } else {
+    %append_output(tmp);
+  }
+}
+
+%apply SWIGTYPE **OUTPARAM_WITH_BLOCK {
+  /* svn_fs */
+  svn_fs_t **,
+  /* svn_repos */
+  svn_repos_t **
+};
+#endif
+
+
+/* -----------------------------------------------------------------------
+   Check whether fs/repos was closed or not.
+*/
+#ifdef SWIGRUBY
+%define %raise_if_null(TYPE)
+%typemap(check) svn_ ## TYPE ## _t *
+{
+  if (!$1) {
+    svn_swig_rb_raise_svn_ ## TYPE ## _already_close();
+  }
+}
+%enddef
+
+%raise_if_null(fs);
+%raise_if_null(repos);
+
+%define %define_close_related_methods(TYPE)
+%ignore svn_ ## TYPE ## _swig_rb_close;
+%ignore svn_ ## TYPE ## _swig_rb_closed;
+
+%inline %{
+static VALUE
+svn_ ## TYPE ## _swig_rb_close(VALUE self)
+{
+  if (!DATA_PTR(self)) {
+    svn_swig_rb_raise_svn_ ## TYPE ## _already_close();
+  }
+
+  svn_swig_rb_destroy_internal_pool(self);
+  DATA_PTR(self) = NULL;
+
+  return Qnil;
+}
+
+static VALUE
+svn_ ## TYPE ## _swig_rb_closed(VALUE self)
+{
+  return DATA_PTR(self) ? Qfalse : Qtrue;
+}
+%}
+
+%init %{
+  {
+    VALUE cSvn ## TYPE;
+    cSvn ## TYPE = rb_const_get(_mSWIG, rb_intern("TYPE_p_svn_" #TYPE "_t"));
+    rb_define_method(cSvn ## TYPE, "close",
+                     svn_ ## TYPE ## _swig_rb_close, 0);
+    rb_define_method(cSvn ## TYPE, "closed?",
+                     svn_ ## TYPE ## _swig_rb_closed, 0);
+  }
+%}
+%enddef
+#endif
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps
@@ -341,6 +419,7 @@
 %typemap(out) svn_error_t *
 {
   if ($1) {
+    svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_handle_svn_error($1);
   }
@@ -478,7 +557,10 @@
 
 %typemap(argout) apr_pool_t *pool
 {
-  svn_swig_rb_set_pool($result, _global_svn_swig_rb_pool);
+  VALUE target;
+  target = _global_vresult_address == &$result ? self : $result;
+  if (!svn_swig_rb_set_pool(target, _global_svn_swig_rb_pool))
+    svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
   svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
 }
 #endif
@@ -1058,6 +1140,17 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   useful convertors for svn_depth_t
+*/
+
+#ifdef SWIGRUBY
+%typemap(in) svn_depth_t {
+  $1 = svn_swig_rb_to_depth($input);
+}
+#endif
+
+
+/* -----------------------------------------------------------------------
    Special boolean mapping for ruby.
 */
 
@@ -1068,6 +1161,17 @@
 %typemap(in, numinputs=0) svn_boolean_t * (svn_boolean_t temp) "$1 = &temp;";
 %typemap(argout) svn_boolean_t * {
   %append_output(*$1 ? Qtrue : Qfalse);
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Filename to temporary file mapping for ruby.
+*/
+
+#ifdef SWIGRUBY
+%typemap(argout) const char **TO_TEMP_FILE
+{
+  %append_output(svn_swig_rb_filename_to_temp_file(*$1));
 }
 #endif
 

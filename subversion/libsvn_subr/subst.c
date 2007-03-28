@@ -2,7 +2,7 @@
  * subst.c :  generic eol/keyword substitution routines
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -552,9 +552,7 @@ translate_keyword_subst(char *buf,
     }
 
   /* Check for unexpanded keyword. */
-  else if ((buf_ptr[0] == '$')          /* "$keyword$" */
-           || ((buf_ptr[0] == ':') 
-               && (buf_ptr[1] == '$'))) /* "$keyword:$" */
+  else if (buf_ptr[0] == '$')          /* "$keyword$" */
     {
       /* unexpanded... */
       if (value)
@@ -589,10 +587,13 @@ translate_keyword_subst(char *buf,
     }
 
   /* Check for expanded keyword. */
-  else if ((*len >= 4 + keyword_len ) /* holds at least "$keyword: $" */
-           && (buf_ptr[0] == ':')     /* first char after keyword is ':' */
-           && (buf_ptr[1] == ' ')     /* second char after keyword is ' ' */
-           && (buf[*len - 2] == ' ')) /* has ' ' for next to last character */
+  else if (((*len >= 4 + keyword_len ) /* holds at least "$keyword: $" */
+           && (buf_ptr[0] == ':')      /* first char after keyword is ':' */
+           && (buf_ptr[1] == ' ')      /* second char after keyword is ' ' */
+           && (buf[*len - 2] == ' '))
+        || ((*len >= 3 + keyword_len ) /* holds at least "$keyword:$" */
+           && (buf_ptr[0] == ':')      /* first char after keyword is ':' */
+           && (buf_ptr[1] == '$')))    /* second char after keyword is '$' */
     {
       /* expanded... */
       if (! value)
@@ -1567,53 +1568,67 @@ static svn_error_t *
 create_special_file_from_stringbuf(svn_stringbuf_t *src, const char *dst,
                                    apr_pool_t *pool)
 {
-  svn_error_t *err;
   char *identifier, *remainder;
   const char *dst_tmp;
+  svn_boolean_t create_using_internal_representation = FALSE;
 
   /* Separate off the identifier.  The first space character delimits
      the identifier, after which any remaining characters are specific
-     to the actual special device being created. */
+     to the actual special file type being created. */
   identifier = src->data;
   for (remainder = identifier; *remainder; remainder++)
     {
       if (*remainder == ' ')
         {
-          *remainder = '\0';
           remainder++;
           break;
         }
     }
 
-  if (! strcmp(identifier, SVN_SUBST__SPECIAL_LINK_STR))
+  if (! strncmp(identifier, SVN_SUBST__SPECIAL_LINK_STR " ",
+                strlen(SVN_SUBST__SPECIAL_LINK_STR " ")))
     {
       /* For symlinks, the type specific data is just a filesystem
          path that the symlink should reference. */
-      err = svn_io_create_unique_link(&dst_tmp, dst, remainder,
-                                      ".tmp", pool);
+      svn_error_t *err = svn_io_create_unique_link(&dst_tmp, dst, remainder,
+                                                   ".tmp", pool);
+
+      /* If we had an error, check to see if it was because symlinks are
+         not supported on the platform.  If so, fall back
+         to using the internal representation. */
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+            {
+              svn_error_clear(err);
+              create_using_internal_representation = TRUE;
+            }
+          else
+            return err;
+        }
     }
   else
     {
-      /* We should return a valid error here. */
-      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               _("'%s' has unsupported special file type "
-                                 "'%s'"), src->data, identifier);
+      /* Just create a normal file using the internal special file
+         representation.  We don't want a commit of an unknown special
+         file type to DoS all the clients. */
+      create_using_internal_representation = TRUE;
     }
 
-  /* If we had an error, check to see if it was because this type of
-     special device is not supported. */
-  if (err)
+  /* If nothing else worked, write out the internal representation to
+     a file that can be edited by the user. */
+  if (create_using_internal_representation)
     {
-      if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
-        {
-          svn_error_clear(err);
-          /* Fall back to just copying the text-base. */
-          SVN_ERR(svn_io_open_unique_file2(NULL, &dst_tmp, dst, ".tmp",
-                                           svn_io_file_del_none, pool));
-          SVN_ERR(svn_io_file_create(dst_tmp, src->data, pool));
-        }
-      else
-        return err;
+      apr_file_t *dst_tmp_file;
+      apr_size_t written;
+
+
+      SVN_ERR(svn_io_open_unique_file2(&dst_tmp_file, &dst_tmp,
+                                       dst, ".tmp", svn_io_file_del_none,
+                                       pool));
+      SVN_ERR(svn_io_file_write_full(dst_tmp_file, src->data, src->len,
+                                     &written, pool));
+      SVN_ERR(svn_io_file_close(dst_tmp_file, pool));
     }
 
   /* Do the atomic rename from our temporary location. */

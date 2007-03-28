@@ -52,6 +52,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
 #ifdef SVN_HAVE_SASL
   conn->sock = sock;
+  conn->encrypted = FALSE;
 #endif
   conn->session = NULL;
   conn->read_ptr = conn->read_buf;
@@ -391,6 +392,33 @@ svn_error_t *svn_ra_svn_write_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    const char *word)
 {
   return writebuf_printf(conn, pool, "%s ", word);
+}
+
+svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                   	   apr_hash_t *props)
+{
+  apr_pool_t *iterpool;
+  apr_hash_index_t *hi;
+  const void *key;
+  void *val;
+  const char *propname;
+  svn_string_t *propval;
+
+  if (props)
+    {
+      iterpool = svn_pool_create(pool);
+      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+        {
+          svn_pool_clear(iterpool);
+          apr_hash_this(hi, &key, NULL, &val);
+          propname = key;
+          propval = val;          
+          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cs", propname, propval));
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_svn_start_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
@@ -749,6 +777,30 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   va_end(ap);
   return err;
 }
+
+svn_error_t *svn_ra_svn_parse_proplist(apr_array_header_t *list,
+																			 apr_pool_t *pool,
+                                   		 apr_hash_t **props)
+{
+  char *name;
+  svn_string_t *value;
+  svn_ra_svn_item_t *elt;
+  int i;
+
+  *props = apr_hash_make(pool);
+  for (i = 0; i < list->nelts; i++)
+    {
+      elt = &APR_ARRAY_IDX(list, i, svn_ra_svn_item_t);
+      if (elt->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Proplist element not a list"));
+      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cs", &name, &value));
+      apr_hash_set(*props, name, APR_HASH_KEY_STRING, value);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* --- READING AND WRITING COMMANDS AND RESPONSES --- */
 

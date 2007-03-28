@@ -66,15 +66,13 @@
                             svn_swig_pl_thunk_authz_func,
                             svn_swig_rb_repos_authz_func)
 
-/* cause SWIG syntax error.
 #ifdef SWIGRUBY
-%typemap(in) (svn_error_t *(*)(void *baton) start_callback, void *start_callback_baton)
+%typemap(in) (svn_error_t *(*start_callback)(void *), void *start_callback_baton)
 {
   $1 = svn_swig_rb_just_call;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 #endif
-*/
 
 #ifdef SWIGRUBY
 %callback_typemap(svn_repos_file_rev_handler_t handler, void *handler_baton,
@@ -103,6 +101,11 @@
 }
 #endif
 
+#ifdef SWIGRUBY
+%apply apr_hash_t **HASH_CSTRING { apr_hash_t **mergeoutput };
+#endif
+
+/* ----------------------------------------------------------------------- */
 /* Ruby fixups for functions not following the pool convention. */
 #ifdef SWIGRUBY
 %ignore svn_repos_fs;
@@ -132,3 +135,7 @@ svn_error_t *svn_repos_dump_fs2(svn_repos_t *repos,
 #endif
 
 %include svn_repos_h.swg
+
+#ifdef SWIGRUBY
+%define_close_related_methods(repos)
+#endif

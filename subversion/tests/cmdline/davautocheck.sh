@@ -243,6 +243,7 @@ MaxClients          16
 HostNameLookups     Off
 LogFormat           "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" format
 CustomLog           "$HTTPD_ROOT/req" format
+CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-ACTION}e" env=SVN-ACTION
 
 <Directory />
   AllowOverride     none

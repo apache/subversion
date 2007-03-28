@@ -175,7 +175,8 @@ svn_client__get_auto_props(apr_hash_t **properties,
   /* if mimetype has not been set check the file */
   if (! autoprops.mimetype)
     {
-      SVN_ERR(svn_io_detect_mimetype(&autoprops.mimetype, path, pool));
+      SVN_ERR(svn_io_detect_mimetype2(&autoprops.mimetype, path, 
+                                      ctx->mimetypes_map, pool));
       if (autoprops.mimetype)
         apr_hash_set(autoprops.properties, SVN_PROP_MIME_TYPE,
                      strlen(SVN_PROP_MIME_TYPE), 
@@ -514,6 +515,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   void *edit_baton;
   void *commit_baton;
   const char *log_msg;
+  apr_hash_t *revprop_table;
   apr_array_header_t *targets;
   svn_error_t *err;
   const char *common;
@@ -583,6 +585,8 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   else
     log_msg = "";
 
+  SVN_ERR(svn_client__get_revprop_table(&revprop_table, log_msg, ctx, pool));
+
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common, NULL,
@@ -599,8 +603,9 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
 
   /* Fetch RA commit editor */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
-  SVN_ERR(svn_ra_get_commit_editor2(ra_session, &editor, &edit_baton,
-                                    log_msg, svn_client__commit_callback,
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    revprop_table,
+                                    svn_client__commit_callback,
                                     commit_baton, 
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
@@ -663,7 +668,7 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
               /* ### If this returns an error, should we link it onto
                  err instead, so that the user is warned that we just
                  created an unversioned directory? */
-              svn_error_clear(svn_io_remove_dir(path, subpool));
+              svn_error_clear(svn_io_remove_dir2(path, FALSE, subpool));
               return err;
             }
         }

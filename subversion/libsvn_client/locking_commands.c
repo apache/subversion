@@ -29,6 +29,7 @@
 #include "svn_pools.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -251,13 +252,9 @@ organize_lock_targets(const char **common_parent,
           abs_path = svn_path_join
             (svn_wc_adm_access_path(*parent_adm_access_p), target, subpool);
 
-          SVN_ERR(svn_wc_entry(&entry, abs_path, *parent_adm_access_p, FALSE,
-                               subpool));
+          SVN_ERR(svn_wc__entry_versioned(&entry, abs_path,
+                                         *parent_adm_access_p, FALSE, subpool));
 
-          if (! entry)
-            return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                     _("'%s' is not under version control"), 
-                                     svn_path_local_style(target, pool));
           if (! entry->url)
             return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                      _("'%s' has no URL"),
@@ -406,7 +403,7 @@ svn_client_lock(const apr_array_header_t *targets,
       if (! svn_xml_is_xml_safe(comment, strlen(comment)))
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-           _("Lock comment has illegal characters"));      
+           _("Lock comment contains illegal characters"));      
     }
 
   SVN_ERR(organize_lock_targets(&common_parent, &adm_access,

@@ -86,8 +86,8 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
 
   output, errput = \
           svntest.main.run_command_stdin(
-    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
-    expected_stderr, 1, dump)
+    svntest.main.svnadmin_binary, expected_stderr, 1, dump,
+    'load', '--quiet', sbox.repo_dir)
 
   if expected_stdout:
     if expected_stdout == SVNAnyOutput:
@@ -236,6 +236,30 @@ def inconsistent_headers(sbox):
 
   load_and_verify_dumpstream(sbox, [], SVNAnyOutput,
                              dumpfile_revisions, dumpfile)
+
+#----------------------------------------------------------------------
+# Test for issue #2729: Datestamp-less revisions in dump streams do
+# not remain so after load
+def empty_date(sbox):
+  "preserve date-less revisions in load (issue #2729)"
+
+  test_create(sbox)
+
+  dumpfile = clean_dumpfile()
+
+  # Replace portions of the revision data to drop the svn:date revprop.
+  dumpfile[7:11] = \
+       [ "Prop-content-length: 52\n",
+         "Content-length: 52\n\n",
+         "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\nPROPS-END\n\n\n"
+         ]
+
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+
+  # Verify that the revision still lacks the svn:date property.
+  svntest.actions.run_and_verify_svn(None, [], [], "propget",
+                                     "--revprop", "-r1", "svn:date",
+                                     sbox.wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -393,6 +417,23 @@ def setrevprop(sbox):
                                      "--revprop", "-r0", "svn:author",
                                      sbox.wc_dir)
 
+def verify_windows_paths_in_repos(sbox):
+  "verify a repository containing paths like 'c:hi'"
+
+  # setup a repo with a directory 'c:hi'
+  sbox.build(create_wc = False)
+  repo_url       = sbox.repo_url
+  chi_url = sbox.repo_url + '/c:hi'
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'log_msg', 
+                                     chi_url)
+
+  output, errput = svntest.main.run_svnadmin("verify", sbox.repo_dir)
+  svntest.actions.compare_and_display_lines(
+    "Error while running 'svnadmin verify'.",
+    'STDERR', ["* Verified revision 0.\n",
+               "* Verified revision 1.\n",
+               "* Verified revision 2.\n"], errput)
 
 ########################################################################
 # Run the tests
@@ -403,12 +444,14 @@ test_list = [ None,
               extra_headers,
               extra_blockcontent,
               inconsistent_headers,
+              empty_date,
               dump_copied_dir,
               dump_move_dir_modify_child,
               dump_quiet,
               hotcopy_dot,
               hotcopy_format,
               setrevprop,
+              verify_windows_paths_in_repos,
              ]
 
 if __name__ == '__main__':

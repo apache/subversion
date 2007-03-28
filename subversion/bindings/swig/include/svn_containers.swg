@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,9 +14,9 @@
  * ====================================================================
  *
  * svn_containers.swg: This is a child file of svn_types.swg, and
- *   should not be included directly.  This file should contain
- *   typemaps that deal container types
- *   - i.e. apr_hash_t, apr_array_header_t .
+ *   should not be included directly.  This file contains typemaps
+ *   that deal with "container" data types (e.g. apr_hash_t,
+ *   apr_array_header_t, etc.).
  */
 
 /* =======================================================================
@@ -62,6 +62,10 @@
 %hash_argout_typemap(cfg_hash, svn_config_t *)
 #endif
 
+#ifdef SWIGRUBY
+%hash_argout_typemap(MERGEHASH, svn_merge_range_t *)
+#endif
+
 /* -----------------------------------------------------------------------
    Output of apr_hash_t * <const char *, svn_string_t *>
    (commonly used for property name and value pairs)
@@ -103,6 +107,17 @@
 
 
 /* -----------------------------------------------------------------------
+   Output of apr_hash_t * <const char *, const char *>
+*/
+
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **HASH_CSTRING {
+  %append_output(svn_swig_rb_apr_hash_to_hash_string(*$1));
+}
+#endif
+
+
+/* -----------------------------------------------------------------------
    apr_hash_t **locations
    svn_repos_trace_node_locations()
    svn_ra_get_locations()
@@ -137,6 +152,15 @@
    %typemap(in) apr_hash_t *
 */
 
+#ifdef SWIGRUBY
+%define %hash_in_typemap(ParamName, ValueType)
+%typemap(in) apr_hash_t *ParamName {
+  $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, #ValueType, _global_pool);
+}
+%enddef
+%hash_in_typemap(MERGEINFO, svn_mergeinfo_t *)
+#endif
+
 /* -----------------------------------------------------------------------
    Input of apr_hash_t * <const char *, svn_string_t *>
    (commonly used for property name and value pairs)
@@ -152,7 +176,21 @@
 #ifdef SWIGRUBY
 %typemap(in) apr_hash_t *PROPHASH
 {
+  VALUE rb_pool = Qnil;
+  if (!_global_pool) {
+    svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &_global_pool);
+    svn_swig_rb_push_pool(rb_pool);
+  }
   $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
+  if (!NIL_P(rb_pool)) {
+    _global_pool = NULL;
+    if (NIL_P($1)) {
+      svn_swig_rb_destroy_pool(rb_pool);
+    } else {
+      svn_swig_rb_set_pool_for_no_swig_type($input, rb_pool);
+    }
+    svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
+  }
 }
 #endif
 
@@ -160,8 +198,15 @@
 %apply apr_hash_t *PROPHASH {
   apr_hash_t *target_props,
   apr_hash_t *source_props,
-  apr_hash_t *hash
+  apr_hash_t *hash,
+  apr_hash_t *props
 };
+#endif
+
+#if defined(SWIGRUBY)
+%apply apr_hash_t *PROPHASH {
+  apr_hash_t *revprop_table
+}
 #endif
 
 /* -----------------------------------------------------------------------
@@ -280,12 +325,12 @@
 
 /* -----------------------------------------------------------------------
    apr_array_header_t **externals_p
-   svn_wc_parse_externals_description2()
+   svn_wc_parse_externals_description3()
 */
 
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **externals_p {
-  %append_output(svn_swig_rb_apr_array_to_array_external_item(*$1));
+  %append_output(svn_swig_rb_apr_array_to_array_external_item2(*$1));
 }
 #endif
 
@@ -401,29 +446,26 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   apr_array_header_t *wcprop_changes svn_wc_process_committed2()
-   apr_array_header_t *propchanges svn_wc_merge_props()
+   An array of svn_prop_t *.
 */
 
 #ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *wcprop_changes,
-             apr_array_header_t *propchanges
+%typemap(in) apr_array_header_t *PROP_LIST
 {
   VALUE rb_pool;
   apr_pool_t *pool;
 
   svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
 
-  $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
+  $1 = svn_swig_rb_to_apr_array_prop($input, pool);
 }
-#endif
 
-/* -----------------------------------------------------------------------
-   apr_array_header_t *merge_options
-   svn_wc_merge2()
-*/
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *merge_options
+%typemap(out) apr_array_header_t *PROP_LIST
+{
+  %append_output(svn_swig_rb_apr_array_to_array_prop($1));
+}
+
+%typemap(in) apr_array_header_t *PROP_LIST_MAY_BE_NULL
 {
   if (NIL_P($input)) {
     $1 = NULL;
@@ -432,8 +474,72 @@
     apr_pool_t *pool;
 
     svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
-    $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
+    $1 = svn_swig_rb_to_apr_array_prop($input, pool);
+  }
+}
+
+%typemap(out) apr_array_header_t *PROP_LIST_MAY_BE_NULL
+{
+  %append_output($1 ? svn_swig_rb_apr_array_to_array_prop($1) : Qnil);
+}
+
+%apply apr_array_header_t *PROP_LIST {
+  apr_array_header_t *wcprop_changes,
+  apr_array_header_t *propchanges
+};
+
+%apply apr_array_header_t *PROP_LIST_MAY_BE_NULL {
+  apr_array_header_t *incoming_prop_changes,
+  apr_array_header_t *outgoing_prop_changes,
+  apr_array_header_t *merge_options
+};
+
+#endif
+
+/* -----------------------------------------------------------------------
+   Input of apr_array_header_t * <svn_merge_range_t *>
+*/
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *RANGELIST {
+  $1 = svn_swig_py_rangelist_to_array($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
   }
 }
 #endif
 
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *RANGELIST {
+  $1 = svn_swig_rb_array_to_apr_array_merge_range($input, _global_pool);
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Input of
+   apr_hash_t * <const char *, apr_array_header_t * <svn_merge_range_t *>>
+*/
+#ifdef SWIGPYTHON
+%typemap(in) apr_hash_t *MERGEINFO {
+  $1 = svn_swig_py_mergeinfo_from_dict($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Output of
+   apr_hash_t * <const char *, apr_array_header_t * <svn_merge_range_t *>>
+*/
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **MERGEHASH
+{
+  %append_output
+    (svn_swig_py_mergeinfo_to_dict(*$1, $descriptor(svn_merge_range_t *),
+                                    _global_py_pool));
+
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif

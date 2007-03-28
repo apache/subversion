@@ -585,6 +585,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
               apr_pool_t *pool)
 {
   void *commit_baton;
+  apr_hash_t *revprop_table;
 
   /* Open an RA session to URL. */
   SVN_ERR(svn_client__open_ra_session_internal(ra_session,
@@ -611,9 +612,12 @@ get_ra_editor(svn_ra_session_t **ra_session,
   if (latest_rev)
     SVN_ERR(svn_ra_get_latest_revnum(*ra_session, latest_rev, pool));
   
+  SVN_ERR(svn_client__get_revprop_table(&revprop_table, log_msg, ctx, pool));
+
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
-  return svn_ra_get_commit_editor2(*ra_session, editor, edit_baton, log_msg,
+  return svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
+                                   revprop_table,
                                    svn_client__commit_callback,
                                    commit_baton, lock_tokens, keep_locks,
                                    pool);
@@ -1290,7 +1294,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
               while (strcmp(target, base_dir) != 0)
                 {
                   if ((target[0] == '\0') || 
-                      svn_path_is_root(target, strlen(target))
+                      svn_dirent_is_root(target, strlen(target))
                      )
                     abort();
 

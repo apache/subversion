@@ -1,23 +1,17 @@
 #!/usr/bin/env python
 
 """\
-This tool regenerates and replaces the ToC in design.html from the actual
+This tool regenerates and replaces the ToC in an HTML file from the actual
 structure of <div>s and <h[2345]>s present in the body of the document.
-The section to be overwritten in design.html is identified as the XML subtree
+The section to be overwritten is identified as the XML subtree
 rooted at <ol id="toc">.
 
-Usage: ./toctool.py
+Usage: ./toctool.py filename...
 """
 
 import sys
 import os
 import xml.parsers.expat
-
-
-def bind_handler_object_to_expat_parser(handlerobj, parser):
-  for name in dir(handlerobj): 
-    if name.endswith('Handler'):
-      setattr(parser, name, getattr(handlerobj, name))
 
 
 class Index:
@@ -65,7 +59,19 @@ class Index:
     return "\n".join(out)
 
 
-class IndexBuildHandler:
+class ExpatParseJob:
+  def parse(self, file):
+    p = xml.parsers.expat.ParserCreate()
+    p.ordered_attributes = self._ordered_attributes
+    p.returns_unicode = False
+    p.specified_attributes = True
+    for name in dir(self):
+      if name.endswith('Handler'):
+        setattr(p, name, getattr(self, name))
+    p.ParseFile(file)
+
+
+class IndexBuildParse(ExpatParseJob):
   keys = {'h2':None, 'h3':None, 'h4':None, 'h5':None}
 
   def __init__(self):
@@ -76,6 +82,7 @@ class IndexBuildHandler:
     self.waiting_for_elt = None
     self.saved_id = None
     self.elt_stack = []
+    self._ordered_attributes = False
 
   def StartElementHandler(self, name, attrs):
     if name == 'div':
@@ -116,7 +123,11 @@ def attrlist_to_dict(l):
   return d
 
 
-class IndexInsertHandler:
+def escape_entities(s):
+  return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+
+class IndexInsertParse(ExpatParseJob):
   do_not_minimize = {'script':None}
   temp_do_not_indent = {'div':None, 'a': None, 'strong': None, 'em': None}
 
@@ -128,13 +139,14 @@ class IndexInsertHandler:
     self.indentpos = 0
     self.elt_stack = []
     self.skipping_toc = False
+    self._ordered_attributes = True
 
   def _finish_pending(self, due_to_end):
     if self._element_open:
       self._element_open = False
       if due_to_end:
-        self.linepos += 2
-        self.outfp.write('/>')
+        self.linepos += 3
+        self.outfp.write(' />')
         return True
       else:
         self.linepos += 1
@@ -154,7 +166,7 @@ class IndexInsertHandler:
       toks = [ "<%s" % name ]
       while attrs:
         aname = attrs.pop(0)
-        aval = attrs.pop(0)
+        aval = escape_entities(attrs.pop(0))
         toks.append(' %s="%s"' % (aname, aval))
       for t in toks:
         self.linepos += len(t)
@@ -197,29 +209,25 @@ class IndexInsertHandler:
     self.outfp.write(data)
 
 
-def do_expat_parse(handler, file, ordered_attributes):
-  p = xml.parsers.expat.ParserCreate()
-  p.ordered_attributes = ordered_attributes
-  p.returns_unicode = False
-  p.specified_attributes = True
-  bind_handler_object_to_expat_parser(handler, p)
-  p.ParseFile(file)
-  
+def process(fn):
+  infp = open(fn, 'r')
+  builder = IndexBuildParse()
+  builder.parse(infp)
 
-def main():
-  builder = IndexBuildHandler()
-  infp = open('design.html', 'r')
-  do_expat_parse(builder, infp, False)
-  
   infp.seek(0)
-  outfp = open('design.html.new', 'w')
-  inserter = IndexInsertHandler(builder.index, outfp)
-  do_expat_parse(inserter, infp, True)
+  outfp = open(fn + '.new', 'w')
+  inserter = IndexInsertParse(builder.index, outfp)
+  inserter.parse(infp)
 
   infp.close()
   outfp.close()
-  os.rename('design.html', 'design.html.toctool-backup~')
-  os.rename('design.html.new', 'design.html')
+  os.rename(fn, fn + '.toctool-backup~')
+  os.rename(fn + '.new', fn)
+
+
+def main():
+  for fn in sys.argv[1:]:
+    process(fn)
 
 
 if __name__ == '__main__':

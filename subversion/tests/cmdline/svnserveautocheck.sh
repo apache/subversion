@@ -60,14 +60,28 @@ SERVER_CMD="$ABS_BUILDDIR/subversion/svnserve/svnserve"
 
 rm -f $SVNSERVE_PID
 
+SVNSERVE_PORT=$(($RANDOM+1024))
+while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
+  SVNSERVE_PORT=$(($RANDOM+1024))
+done
+
 $SERVER_CMD -d -r $ABS_BUILDDIR/subversion/tests/cmdline \
             --listen-host 127.0.0.1 \
+            --listen-port $SVNSERVE_PORT \
             --pid-file $SVNSERVE_PID &
 
-BASE_URL="svn://localhost"
-
-make svncheck
-r=$?
+BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
+if [ $# == 0 ]; then
+  time make check "BASE_URL=$BASE_URL"
+  r=$?
+else
+  pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
+  TEST="$1"
+  shift
+  time "$SCRIPTDIR/${TEST}_tests.py" "--url=$BASE_URL" $*
+  r=$?
+  popd >/dev/null
+fi
 
 really_cleanup
 exit $r

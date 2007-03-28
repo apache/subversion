@@ -64,10 +64,21 @@
                   ,
                   svn_swig_rb_fs_get_locks_callback)
 #endif
+/* -----------------------------------------------------------------------
+   svn_fs_get_merge_info
+*/
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **minfohash
+{
+  %append_output(svn_swig_py_stringhash_to_dict(*$1));
+}
+#endif
+%apply apr_hash_t *MERGEINFO { apr_hash_t *mergeinhash };
 
 /* -----------------------------------------------------------------------
    Fix the return value for svn_fs_commit_txn(). If the conflict result is
-   NULL, then t_output_helper() is passed Py_None, but that goofs up
+   NULL, then %append_output() is passed Py_None, but that goofs up
    because that is *also* the marker for "I haven't started assembling a
    multi-valued return yet" which means the second return value (new_rev)
    will not cause a 2-tuple to be manufactured.
@@ -115,3 +126,7 @@ svn_fs_root_fs_wrapper(svn_fs_root_t *root, apr_pool_t *pool)
 %}
 
 %include svn_fs_h.swg
+
+#ifdef SWIGRUBY
+%define_close_related_methods(fs);
+#endif

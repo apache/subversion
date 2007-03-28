@@ -2,7 +2,7 @@
  * util.c :  utility functions for the RA/DAV library
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -164,7 +164,7 @@ end_207_element(void *baton, int state,
       if (b->contains_error)
         return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                 _("The request response contained at least "
-                                  "one error."));
+                                  "one error"));
       break;
 
     case ELEM_responsedescription:
@@ -184,7 +184,7 @@ end_207_element(void *baton, int state,
         else
           return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                   _("The response contains a non-conforming "
-                                    "HTTP status line."));
+                                    "HTTP status line"));
       }
 
     default:
@@ -247,6 +247,37 @@ dav_request_cleanup(void *baton)
 }
 
 
+/* Return a path-absolute relative URL, given a URL reference (which may
+   be absolute or relative). */
+static const char *
+path_from_url(const char *url)
+{
+  const char *p;
+
+  /* Look for the scheme/authority separator.  Stop if we see a path
+     separator - that indicates that this definitely isn't an absolute URL. */
+  for (p = url; *p; p++)
+    if (*p == ':' || *p == '/')
+      break;
+
+  /* Check whether we found the scheme/authority separator. */
+  if (*p++ != ':' || *p++ != '/' || *p++ != '/')
+    {
+      /* No separator, so it must already be relative. */
+      return url;
+    }
+
+  /* Find the end of the authority section, indicated by the start of
+     a path, query, or fragment section. */
+  for (; *p; p++)
+    if (*p == '/' || *p == '?' || *p == '#')
+      break;
+
+  /* Return a pointer to the rest of the URL, or to the empty string if there
+     was no next section. */
+  return p;
+}
+
 svn_ra_dav__request_t *
 svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
                            const char *method, const char *url,
@@ -255,8 +286,15 @@ svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
   apr_pool_t *reqpool = svn_pool_create(pool);
   svn_ra_dav__request_t *req = apr_pcalloc(reqpool, sizeof(*req));
 
+  /* We never want to send Neon an absolute URL, since that can cause
+     problems with some servers (for example, those that may be accessed
+     using different server names from different locations, or those that
+     want to rewrite the incoming URL).  If the URL passed in is absolute,
+     convert it to a path-absolute relative URL. */
+  const char *path = path_from_url(url);
+
   req->ne_sess = sess->main_session_busy ? sess->ne_sess2 : sess->ne_sess;
-  req->ne_req = ne_request_create(req->ne_sess, method, url);
+  req->ne_req = ne_request_create(req->ne_sess, method, path);
   req->sess = sess;
   req->pool = reqpool;
   req->iterpool = svn_pool_create(req->pool);
@@ -1179,8 +1217,10 @@ svn_ra_dav__simple_request(int *code,
      and detected errors will be returned there... */
   (void) multistatus_parser_create(req);
 
-  /* svn_ra_dav__request_dispatch() adds the custom error response reader */
-  SVN_ERR(svn_ra_dav__request_dispatch(code, req, extra_headers, body,
+  /* svn_ra_dav__request_dispatch() adds the custom error response
+     reader.  Neon will take care of the Content-Length calculation */
+  SVN_ERR(svn_ra_dav__request_dispatch(code, req, extra_headers, 
+                                       body ? body : "", 
                                        okay_1, okay_2, pool));
   svn_ra_dav__request_destroy(req);
 

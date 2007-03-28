@@ -76,30 +76,6 @@ print_start_target_xml(const char *target, apr_pool_t *pool)
 }
 
 
-/* Prints XML header using POOL for temporary allocations. */
-static svn_error_t *
-print_header_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-
-  svn_xml_make_header(&sb, pool);
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "status", NULL);
-
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
-
-/* Prints XML footer using POOL for temporary allocations. */
-static svn_error_t *
-print_footer_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-
-  svn_xml_make_close_tag(&sb, pool, "status");
-
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
 /* Finish a target element by optionally printing an against element if
  * REPOS_REV is a valid revision number, and then printing an target end tag.
  * Use POOL for temporary allocations. */
@@ -206,9 +182,9 @@ do_status(svn_cl__opt_state_t *opt_state,
   if (opt_state->xml)
     SVN_ERR(print_start_target_xml(svn_path_local_style(target, pool), pool));
 
-  SVN_ERR(svn_client_status2(&repos_rev, target, rev,
+  SVN_ERR(svn_client_status3(&repos_rev, target, rev,
                              print_status, status_baton,
-                             opt_state->nonrecursive ? FALSE : TRUE,
+                             opt_state->depth,
                              opt_state->verbose,
                              opt_state->update,
                              opt_state->no_ignore,
@@ -249,6 +225,11 @@ svn_cl__status(apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 
+  /* ### TODO(sd): I don't think we need to convert to default depth here;
+     ### rather, depth should stay unknown, because it may depend on
+     ### what the working copy says.  On the other hand, if no -u
+     ### flag was passed, then does depth matter? */
+
   subpool = svn_pool_create(pool);
 
   sb.had_print_error = FALSE;
@@ -259,7 +240,7 @@ svn_cl__status(apr_getopt_t *os,
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        SVN_ERR(print_header_xml(pool));
+        SVN_ERR(svn_cl__xml_print_header("status", pool));
     }
   else
     {
@@ -329,7 +310,7 @@ svn_cl__status(apr_getopt_t *os,
 
   svn_pool_destroy(subpool);
   if (opt_state->xml && (! opt_state->incremental))
-    SVN_ERR(print_footer_xml(pool));
+    SVN_ERR(svn_cl__xml_print_footer("status", pool));
 
   return SVN_NO_ERROR;
 }

@@ -24,6 +24,11 @@ module Svn
       end
     end
 
+    class CommitItem3
+      alias_method :wcprop_changes, :incoming_prop_changes
+      alias_method :wcprop_changes=, :incoming_prop_changes=
+    end
+
     class Info
       alias url URL
       alias repos_root_url repos_root_URL
@@ -53,20 +58,12 @@ module Svn
     
     Context = Ctx
     class Context
-      class << self
-        undef new
-        def new
-          obj = Client.create_context
-          obj.funcall("initialize")
-          obj
-        end
-      end
-
       alias _auth_baton auth_baton
       attr_reader :auth_baton
-      
+
       alias _initialize initialize
       def initialize
+        _initialize
         @prompts = []
         @batons = []
         @providers = []
@@ -74,7 +71,6 @@ module Svn
         self.auth_baton = @auth_baton
         init_callbacks
       end
-      undef _initialize
 
       def checkout(url, path, revision=nil, peg_rev=nil,
                    recurse=true, ignore_externals=false)
@@ -377,7 +373,7 @@ module Svn
       
       # Returns a value of a revision property named +name+ for +uri+
       # at +rev+, as a String.
-      # Both URLs and paths are avaiable as +uri+.
+      # Both URLs and paths are available as +uri+.
       def revprop(name, uri, rev)
         value, = revprop_get(name, uri, rev)
         value
@@ -386,7 +382,7 @@ module Svn
       
       # Returns a value of a revision property named +name+ for +uri+
       # at +rev+, as an Array such as <tt>[value, rev]</tt>.
-      # Both URLs and paths are avaiable as +uri+.
+      # Both URLs and paths are available as +uri+.
       def revprop_get(name, uri, rev)
         result = Client.revprop_get(name, uri, rev, self)
         if result.is_a?(Array)
@@ -399,7 +395,7 @@ module Svn
       alias rpg revprop_get
       
       # Sets +value+ as a revision property named +name+ for +uri+ at +rev+.
-      # Both URLs and paths are avaiable as +uri+.
+      # Both URLs and paths are available as +uri+.
       def revprop_set(name, value, uri, rev, force=false)
         Client.revprop_set(name, value, uri, rev, force, self)
       end
@@ -407,7 +403,7 @@ module Svn
       alias rps revprop_set
       
       # Deletes a revision property, named +name+, for +uri+ at +rev+.
-      # Both URLs and paths are avaiable as +uri+.
+      # Both URLs and paths are available as +uri+.
       def revprop_del(name, uri, rev, force=false)
         Client.revprop_set(name, nil, uri, rev, force, self)
       end
@@ -417,7 +413,7 @@ module Svn
       # Returns a list of revision properties set for +uri+ at +rev+,
       # as an Array such as
       # <tt>[{revprop1 => value1, revprop2 => value2, ...}, rev]</tt>.
-      # Both URLs and paths are avaiable as +uri+.
+      # Both URLs and paths are available as +uri+.
       def revprop_list(uri, rev)
         props, rev = Client.revprop_list(uri, rev, self)
         if props.has_key?(Svn::Core::PROP_REVISION_DATE)
@@ -463,13 +459,13 @@ module Svn
         add_provider(Core.auth_get_simple_provider)
       end
 
-      if Core.respond_to?(:get_windows_simple_provider)
+      if Core.respond_to?(:auth_get_windows_simple_provider)
         def add_windows_simple_provider
           add_provider(Core.auth_get_windows_simple_provider)
         end
       end
       
-      if Core.respond_to?(:get_keychain_simple_provider)
+      if Core.respond_to?(:auth_get_keychain_simple_provider)
         def add_keychain_simple_provider
           add_provider(Core.auth_get_keychain_simple_provider)
         end
@@ -489,6 +485,12 @@ module Svn
 
       def add_ssl_server_trust_file_provider
         add_provider(Core.auth_get_ssl_server_trust_file_provider)
+      end
+
+      if Core.respond_to?(:auth_get_windows_ssl_server_trust_provider)
+        def add_windows_ssl_server_trust_provider
+          add_provider(Core.auth_get_windows_ssl_server_trust_provider)
+        end
       end
 
       def add_simple_prompt_provider(retry_limit, prompt=Proc.new)

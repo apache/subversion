@@ -2,7 +2,7 @@
  * copy.c:  wc 'copy' functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,7 +23,6 @@
 /*** Includes. ***/
 
 #include <string.h>
-#include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -35,6 +34,7 @@
 #include "translate.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -145,7 +145,7 @@ copy_added_dir_administratively(const char *src_path,
         SVN_ERR(cancel_func(cancel_baton));
 
       /* "Copy" the dir dst_path and schedule it, and possibly
-         it's children, for addition. */
+         its children, for addition. */
       SVN_ERR(svn_io_dir_make(dst_path, APR_OS_DEFAULT, pool));
 
       /* Add the directory, adding locking access for dst_path
@@ -288,24 +288,18 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
         {
           SVN_ERR(svn_wc_adm_retrieve(&parent_access, src_access,
                                       parent_path, pool));
-          SVN_ERR(svn_wc_entry(&entry, parent_path, parent_access,
-                               FALSE, pool));
+          SVN_ERR(svn_wc__entry_versioned(&entry, parent_path, parent_access,
+                                         FALSE, pool));
         }
       else /* ...get access for parent_path instead. */
         {
           SVN_ERR(svn_wc_adm_probe_open3(&parent_access, NULL,
                                          parent_path, FALSE, -1,
                                          NULL, NULL, pool));
-          SVN_ERR(svn_wc_entry(&entry, parent_path, parent_access,
-                               FALSE, pool));
+          SVN_ERR(svn_wc__entry_versioned(&entry, parent_path, parent_access,
+                                         FALSE, pool));
           SVN_ERR(svn_wc_adm_close(parent_access));
         }
-
-      if (! entry)
-        return svn_error_createf
-          (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-           _("'%s' is not under version control"),
-             svn_path_local_style(parent_path, pool));
 
       if (entry->copyfrom_url)
         {
@@ -377,12 +371,8 @@ copy_file_administratively(const char *src_path,
 
   /* Sanity check 1: You cannot make a copy of something that's not
      under version control. */
-  SVN_ERR(svn_wc_entry(&src_entry, src_path, src_access, FALSE, pool));
-  if (! src_entry)
-    return svn_error_createf 
-      (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-       _("Cannot copy or move '%s': it's not under version control"),
-       svn_path_local_style(src_path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&src_entry, src_path, src_access, FALSE,
+                                 pool));
 
   /* Sanity check 2: You cannot make a copy of something that's not
      in the repository unless it's a copy of an uncommitted copy. */
@@ -656,12 +646,8 @@ copy_dir_administratively(const char *src_path,
 
   /* Sanity check 1: You cannot make a copy of something that's not
      under version control. */
-  SVN_ERR(svn_wc_entry(&src_entry, src_path, src_access, FALSE, pool));
-  if (! src_entry)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
-       _("'%s' is not under version control"),
-       svn_path_local_style(src_path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&src_entry, src_path, src_access, FALSE,
+                                 pool));
 
   /* Sanity check 2: You cannot make a copy of something that's not
      in the repository unless it's a copy of an uncommitted copy. */
@@ -778,19 +764,10 @@ svn_wc_copy2(const char *src_path,
                                  cancel_func, cancel_baton, pool));
 
   dst_path =  svn_wc_adm_access_path(dst_parent);
-  SVN_ERR(svn_wc_entry(&dst_entry, dst_path, dst_parent, FALSE, pool));
-  if (! dst_entry)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       _("'%s' is not under version control"),
-       svn_path_local_style(dst_path, pool));
-
-  SVN_ERR(svn_wc_entry(&src_entry, src_path, adm_access, FALSE, pool));
-  if (! src_entry)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       _("'%s' is not under version control"),
-       svn_path_local_style(src_path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&dst_entry, dst_path, dst_parent, FALSE,
+                                 pool));
+  SVN_ERR(svn_wc__entry_versioned(&src_entry, src_path, adm_access, FALSE,
+                                 pool));
 
   if ((src_entry->repos != NULL && dst_entry->repos != NULL) &&
       strcmp(src_entry->repos, dst_entry->repos) != 0)

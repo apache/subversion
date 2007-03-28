@@ -1,4 +1,5 @@
 require "fileutils"
+require "pathname"
 
 require "my-assertions"
 
@@ -9,22 +10,28 @@ class Time
 end
 
 module SvnTestUtil
-
-  def setup_basic(need_svnserve=false)
-    @need_svnserve = need_svnserve
+  def setup_default_variables
+    test_dir = Pathname.new(File.dirname(__FILE__))
+    pwd = Pathname.new(Dir.pwd)
+    @base_dir = test_dir.relative_path_from(pwd).to_s
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
-    @repos_path = File.join("test", "repos")
+    @repos_path = File.join(@base_dir, "repos")
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_base_dir = File.join("test", "wc-tmp")
+    @wc_base_dir = File.join(@base_dir, "wc-tmp")
     @wc_path = File.join(@wc_base_dir, "wc")
     @full_wc_path = File.expand_path(@wc_path)
-    @tmp_path = File.join("test", "tmp")
-    @config_path = File.join("test", "config")
+    @tmp_path = File.join(@base_dir, "tmp")
+    @config_path = File.join(@base_dir, "config")
+  end
+
+  def setup_basic(need_svnserve=false)
+    @need_svnserve = need_svnserve
+    setup_default_variables
     setup_tmp
     setup_repository
     add_hooks
@@ -99,47 +106,11 @@ module SvnTestUtil
   end
 
   def teardown_repository(path=@repos_path)
-    Svn::Repos.delete(path)
+    @fs.close unless @fs.nil?
+    @repos.close unless @repos.nil?
+    Svn::Repos.delete(path) if File.exists?(path)
     @repos = nil
     @fs = nil
-  end
-
-  def setup_svnserve
-    @svnserve_port = nil
-    @repos_svnserve_uri = nil
-    @svnserve_ports.each do |port|
-      @svnserve_pid = fork {
-        STDERR.close
-        exec("svnserve",
-             "--listen-host", @svnserve_host,
-             "--listen-port", port,
-             "-d", "--foreground")
-      }
-      pid, status = Process.waitpid2(@svnserve_pid, Process::WNOHANG)
-      if status and status.exited?
-        STDERR.puts "port #{port} couldn't be used for svnserve"
-      else
-        @svnserve_port = port
-        @repos_svnserve_uri =
-          "svn://#{@svnserve_host}:#{@svnserve_port}#{@full_repos_path}"
-        break
-      end
-    end
-    if @svnserve_port.nil?
-      msg = "Can't run svnserve because available port "
-      msg << "isn't exist in [#{@svnserve_ports.join(', ')}]"
-      raise msg
-    end
-  end
-
-  def teardown_svnserve
-    if @svnserve_pid
-      Process.kill(:TERM, @svnserve_pid)
-      begin
-        Process.waitpid(@svnserve_pid)
-      rescue Errno::ECHILD
-      end
-    end
   end
 
   def setup_wc
@@ -183,26 +154,6 @@ realm = #{@realm}
     add_pre_revprop_change_hook
   end
 
-  def add_pre_revprop_change_hook
-    File.open(@repos.pre_revprop_change_hook, "w") do |hook|
-      hook.print <<-HOOK
-#!/bin/sh
-REPOS="$1"
-REV="$2"
-USER="$3"
-PROPNAME="$4"
-
-if [ "$PROPNAME" = "#{Svn::Core::PROP_REVISION_LOG}" -a \
-     "$USER" = "#{@author}" ]; then
-  exit 0
-fi
-
-exit 1
-      HOOK
-    end
-    FileUtils.chmod(0755, @repos.pre_revprop_change_hook)
-  end
-  
   def youngest_rev
     @fs.youngest_rev
   end
@@ -245,4 +196,82 @@ exit 1
   def windows?
     /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
   end
+
+  module Svnserve
+    def setup_svnserve
+      @svnserve_port = nil
+      @repos_svnserve_uri = nil
+      @svnserve_ports.each do |port|
+        @svnserve_pid = fork {
+          STDERR.close
+          exec("svnserve",
+               "--listen-host", @svnserve_host,
+               "--listen-port", port,
+               "-d", "--foreground")
+        }
+        pid, status = Process.waitpid2(@svnserve_pid, Process::WNOHANG)
+        if status and status.exited?
+          STDERR.puts "port #{port} couldn't be used for svnserve"
+        else
+          @svnserve_port = port
+          @repos_svnserve_uri =
+            "svn://#{@svnserve_host}:#{@svnserve_port}#{@full_repos_path}"
+          break
+        end
+      end
+      if @svnserve_port.nil?
+        msg = "Can't run svnserve because available port "
+        msg << "isn't exist in [#{@svnserve_ports.join(', ')}]"
+        raise msg
+      end
+    end
+
+    def teardown_svnserve
+      if @svnserve_pid
+        Process.kill(:TERM, @svnserve_pid)
+        begin
+          Process.waitpid(@svnserve_pid)
+        rescue Errno::ECHILD
+        end
+      end
+    end
+
+    def add_pre_revprop_change_hook
+      File.open(@repos.pre_revprop_change_hook, "w") do |hook|
+        hook.print <<-HOOK
+#!/bin/sh
+REPOS="$1"
+REV="$2"
+USER="$3"
+PROPNAME="$4"
+
+if [ "$PROPNAME" = "#{Svn::Core::PROP_REVISION_LOG}" -a \
+     "$USER" = "#{@author}" ]; then
+  exit 0
+fi
+
+exit 1
+        HOOK
+      end
+      FileUtils.chmod(0755, @repos.pre_revprop_change_hook)
+    end
+  end
+
+  module SetupEnvironment
+    def setup_test_environment(top_dir, base_dir, ext_dir)
+      svnserve_dir = File.join(top_dir, 'subversion', 'svnserve')
+      ENV["PATH"] = "#{svnserve_dir}:#{ENV['PATH']}"
+      FileUtils.ln_sf(File.join(base_dir, ".libs"), ext_dir)
+    end
+  end
+
+  if windows?
+    require 'windows_util'
+    include Windows::Svnserve
+    extend Windows::SetupEnvironment
+  else
+    include Svnserve
+    extend SetupEnvironment
+  end
 end
+

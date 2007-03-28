@@ -2,7 +2,7 @@
  * cat.c:  implementation of the 'cat' command
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,7 @@
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -66,13 +67,7 @@ cat_local_file(const char *path,
          revision->kind == svn_opt_revision_committed ||
          revision->kind == svn_opt_revision_unspecified);
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control "
-                               "or doesn't exist"),
-                             svn_path_local_style(path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   if (entry->kind != svn_node_file)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
@@ -176,9 +171,11 @@ svn_client_cat2(svn_stream_t *out,
 
   if (! svn_path_is_url(path_or_url)
       && (peg_revision->kind == svn_opt_revision_base
+          || peg_revision->kind == svn_opt_revision_working
           || peg_revision->kind == svn_opt_revision_committed
           || peg_revision->kind == svn_opt_revision_unspecified)
       && (revision->kind == svn_opt_revision_base
+          || revision->kind == svn_opt_revision_working
           || revision->kind == svn_opt_revision_committed
           || revision->kind == svn_opt_revision_unspecified))
     {

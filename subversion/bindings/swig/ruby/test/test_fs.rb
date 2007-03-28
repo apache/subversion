@@ -23,23 +23,46 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal(Svn::Core.subr_version, Svn::Fs.version)
   end
 
-  def test_create
+  def assert_create
     path = File.join(@tmp_path, "fs")
-    fs_type = Svn::Fs::TYPE_BDB
+    fs_type = Svn::Fs::TYPE_FSFS
     config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
 
     assert(!File.exist?(path))
-    fs = Svn::Fs::FileSystem.create(path, config)
-    assert(File.exist?(path))
-    assert_equal(fs_type, Svn::Fs.type(path))
-    fs.set_warning_func do |err|
-      p err
-      abort
+    fs = nil
+    callback = Proc.new do |fs|
+      assert(File.exist?(path))
+      assert_equal(fs_type, Svn::Fs.type(path))
+      fs.set_warning_func do |err|
+        p err
+        abort
+      end
+      assert_equal(path, fs.path)
     end
-    assert_equal(path, fs.path)
+    yield(:create, [path, config], callback)
+
+    assert(fs.closed?)
+    assert_raises(Svn::Error::FsAlreadyClose) do
+      fs.path
+    end
+
+    yield(:delete, [path])
+    assert(!File.exist?(path))
   end
 
-  def test_hotcopy
+  def test_create
+    assert_create do |method, args, callback|
+      Svn::Fs.__send__(method, *args, &callback)
+    end
+  end
+
+  def test_create_for_backward_compatibility
+    assert_create do |method, args, callback|
+      Svn::Fs::FileSystem.__send__(method, *args, &callback)
+    end
+  end
+
+  def assert_hotcopy
     log = "sample log"
     file = "hello.txt"
     path = File.join(@wc_path, file)
@@ -56,7 +79,7 @@ class SvnFsTest < Test::Unit::TestCase
     backup_path = File.join(@tmp_path, "back")
     config = {}
 
-    dest_fs = Svn::Fs::FileSystem.create(dest_path, config)
+    dest_fs = yield(:create, [dest_path, config])
 
     FileUtils.mv(@fs.path, backup_path)
     FileUtils.mv(dest_fs.path, @fs.path)
@@ -65,8 +88,20 @@ class SvnFsTest < Test::Unit::TestCase
       assert_equal(log, ctx.log_message(path, rev))
     end
 
-    Svn::Fs::FileSystem.hotcopy(backup_path, @fs.path)
+    yield(:hotcopy, [backup_path, @fs.path])
     assert_equal(log, ctx.log_message(path, rev))
+  end
+
+  def test_hotcopy
+    assert_hotcopy do |method, args, block|
+      Svn::Fs.__send__(method, *args, &block)
+    end
+  end
+
+  def test_hotcopy_for_backward_compatibility
+    assert_hotcopy do |method, args, block|
+      Svn::Fs::FileSystem.__send__(method, *args, &block)
+    end
   end
 
   def test_root
@@ -77,6 +112,7 @@ class SvnFsTest < Test::Unit::TestCase
     path = File.join(@wc_path, file)
     
     assert_nil(@fs.root.name)
+    assert_equal(Svn::Core::INVALID_REVNUM, @fs.root.base_revision)
     
     ctx = make_context(log)
     FileUtils.touch(path)
@@ -153,14 +189,22 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal([Svn::Core::PROP_REVISION_DATE], txn1.proplist.keys)
     assert_instance_of(Time, txn1.proplist[Svn::Core::PROP_REVISION_DATE])
     date = txn1.prop(Svn::Core::PROP_REVISION_DATE)
-    assert_operator(start_time..(Time.now), :include?, date)
+
+    # Subversion's clock is more precise than Ruby's on
+    # Windows.  So this test can fail intermittently because
+    # the begin and end of the range are the same (to 3
+    # decimal places), but the time from Subversion has 6
+    # decimal places so it looks like it's not in the range.
+    # So we just add a smidgen to the end of the Range.
+    assert_operator(start_time..(Time.now + 0.001), :include?, date)
     txn1.set_prop(Svn::Core::PROP_REVISION_DATE, nil)
     assert_equal([], txn1.proplist.keys)
     assert_equal(youngest_rev, txn1.base_revision)
     assert(txn1.root.txn_root?)
     assert(!txn1.root.revision_root?)
     assert_equal(txn1.name, txn1.root.name)
-    
+    assert_equal(txn1.base_revision, txn1.root.base_revision)
+
     @fs.transaction do |txn|
       assert_nothing_raised do
         @fs.open_txn(txn.name)
@@ -273,7 +317,7 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal(path2_in_repos, closet_path)
   end
 
-  def test_delta
+  def test_delta(use_deprecated_api=false)
     log = "sample log"
     file = "source.txt"
     src = "a\nb\nc\nd\ne\n"
@@ -291,35 +335,46 @@ class SvnFsTest < Test::Unit::TestCase
 
     File.open(path, "w") {|f| f.print(modified)}
     @fs.transaction do |txn|
-      checksum = MD5.new(result).hexdigest
+      checksum = MD5.new(normalize_line_break(result)).hexdigest
       stream = txn.root.apply_text(path_in_repos, checksum)
-      stream.write(result)
+      stream.write(normalize_line_break(result))
       stream.close
     end
     ctx.up(@wc_path)
     assert_equal(expected, File.open(path){|f| f.read})
 
     rev2 = ctx.ci(@wc_path).revision
-    stream = @fs.root(rev2).file_delta_stream(@fs.root(rev1),
-                                              path_in_repos,
-                                              path_in_repos)
+    if use_deprecated_api
+      stream = @fs.root(rev2).file_delta_stream(@fs.root(rev1),
+                                                path_in_repos,
+                                                path_in_repos)
+    else
+      stream = @fs.root(rev1).file_delta_stream(path_in_repos,
+                                                @fs.root(rev2),
+                                                path_in_repos)
+    end
+
     data = ''
     stream.each{|w| data << w.new_data}
-    assert_equal(expected, data)
+    assert_equal(normalize_line_break(expected), data)
 
     File.open(path, "w") {|f| f.print(src)}
     rev3 = ctx.ci(@wc_path).revision
     
     File.open(path, "w") {|f| f.print(modified)}
     @fs.transaction do |txn|
-      base_checksum = MD5.new(src).hexdigest
-      checksum = MD5.new(result).hexdigest
+      base_checksum = MD5.new(normalize_line_break(src)).hexdigest
+      checksum = MD5.new(normalize_line_break(result)).hexdigest
       handler = txn.root.apply_textdelta(path_in_repos,
                                          base_checksum, checksum)
       assert_raises(Svn::Error::ChecksumMismatch) do
         handler.call(nil)
       end
     end
+  end
+
+  def test_delta_with_deprecated_api
+    test_delta(true)
   end
 
   def test_prop
@@ -352,4 +407,62 @@ class SvnFsTest < Test::Unit::TestCase
                  @fs.proplist.keys.sort)
   end
 
+  def assert_recover
+    path = File.join(@tmp_path, "fs")
+    fs_type = Svn::Fs::TYPE_FSFS
+    config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
+
+    yield(:create, [path, config])
+
+    assert_raises(Svn::Error::Cancelled) do
+      yield(:recover, [path], Proc.new{raise Svn::Error::Cancelled})
+    end
+
+    assert_nothing_raised do
+      yield(:recover, [path], Proc.new{})
+    end
+  end
+
+  def test_recover_for_backward_compatibility
+    assert_recover do |method, args, block|
+      Svn::Fs::FileSystem.__send__(method, *args, &block)
+    end
+  end
+
+  def test_recover
+    assert_recover do |method, args, block|
+      Svn::Fs.__send__(method, *args, &block)
+    end
+  end
+
+  def test_deleted_revision
+    file = "file"
+    log = "sample log"
+    path = File.join(@wc_path, file)
+    path_in_repos = "/#{file}"
+    ctx = make_context(log)
+
+    FileUtils.touch(path)
+    ctx.add(path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    ctx.rm_f(path)
+    rev2 = ctx.ci(@wc_path).revision
+
+    FileUtils.touch(path)
+    ctx.add(path)
+    rev3 = ctx.ci(@wc_path).revision
+
+    ctx.rm_f(path)
+    rev4 = ctx.ci(@wc_path).revision
+
+    assert_equal(Svn::Core::INVALID_REVNUM,
+                 @fs.deleted_revision(path_in_repos, 0, rev4))
+    assert_equal(rev2, @fs.deleted_revision(path_in_repos, rev1, rev4))
+    assert_equal(Svn::Core::INVALID_REVNUM,
+                 @fs.deleted_revision(path_in_repos, rev2, rev4))
+    assert_equal(rev4, @fs.deleted_revision(path_in_repos, rev3, rev4))
+    assert_equal(Svn::Core::INVALID_REVNUM,
+                 @fs.deleted_revision(path_in_repos, rev4, rev4))
+  end
 end

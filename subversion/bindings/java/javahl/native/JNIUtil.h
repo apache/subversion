@@ -45,7 +45,7 @@ struct svn_error_t;
 class JNIUtil
 {
 public:
-    static svn_error_t *preprocessPath(const char *&path, apr_pool_t * pool);
+    static svn_error_t *preprocessPath(const char *&path, apr_pool_t *pool);
 
     /**
      * Throw the NativeException instance named by exceptionClassName.
@@ -60,15 +60,15 @@ public:
     static void throwNullPointerException(const char *message);
     static jbyteArray makeJByteArray(const signed char *data, int length);
     static void setRequestPool(Pool *pool);
-    static Pool * getRequestPool();
+    static Pool *getRequestPool();
     static jobject createDate(apr_time_t time);
     static void logMessage(const char *message);
     static int getLogLevel();
-    static char * getFormatBuffer();
+    static char *getFormatBuffer();
     static void initLogFile(int level, jstring path);
     static jstring makeJString(const char *txt);
     static bool isJavaExceptionThrown();
-    static JNIEnv * getEnv();
+    static JNIEnv *getEnv();
     static void setEnv(JNIEnv *);
 
     /**
@@ -118,7 +118,7 @@ public:
     static void throwError(const char *message)
     { raiseThrowable(JAVA_PACKAGE"/JNIError", message); }
 
-    static apr_pool_t * getPool();
+    static apr_pool_t *getPool();
     static bool JNIGlobalInit(JNIEnv *env);
     static bool JNIInit(JNIEnv *env);
     static JNIMutex *getGlobalPoolMutex();
@@ -127,8 +127,8 @@ public:
 
 private:
     static void assembleErrorMessage(svn_error_t *err, int depth,
-                                         apr_status_t parent_apr_err,
-                                         std::string &buffer);
+                                     apr_status_t parent_apr_err,
+                                     std::string &buffer);
     static void setExceptionThrown();
     /** 
      * the log level of this module
@@ -176,5 +176,43 @@ private:
      */
     static JNIMutex *g_globalPoolMutext;
 };
+
+/**
+ * A statement macro used for checking NULL pointers, in the style of
+ * SVN_ERR().
+ *
+ * Evaluate @a expr.  If it equals NULL, throw an NullPointerException with
+ * the value @a str, and return the @a ret_val.  Otherwise, continue.
+ *
+ * Note that if the enclosing function returns <tt>void</tt>, @a ret_val may
+ * be blank.
+ */
+
+#define SVN_JNI_NULL_PTR_EX(expr, str, ret_val)         \
+  if (expr == NULL) {                                   \
+    JNIUtil::throwNullPointerException(str);            \
+    return ret_val ;                                    \
+  }
+
+/**
+ * A statement macro used for checking for errors, in the style of
+ * SVN_ERR().
+ *
+ * Evalute @a expr.  If it yields an error, handle the JNI error, and 
+ * return @a ret_val.  Otherwise, continue.
+ *
+ * Note that if the enclosing function returns <tt>void</tt>, @a ret_val may
+ * be blank.
+ */
+
+#define SVN_JNI_ERR(expr, ret_val)                      \
+  do {                                                  \
+    svn_error_t *svn_jni_err__temp = (expr);            \
+    if (svn_jni_err__temp != SVN_NO_ERROR) {            \
+      JNIUtil::handleSVNError(svn_jni_err__temp);       \
+      return ret_val ;                                  \
+    }                                                   \
+  } while (0)
+
 // !defined(AFX_JNIUTIL_H__82301908_C6CB_4A77_8A28_899E72FBEEFF__INCLUDED_)
 #endif
