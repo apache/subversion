@@ -137,13 +137,13 @@ module Svn
       else
         base_props = base_root.node_prop_list(base_path)
       end
-      prop_changes = Core.prop_diffs(local_props, base_props)
-      prop_changes.each do |prop|
+      prop_changes = Core::Property.diffs2(local_props, base_props)
+      prop_changes.each do |name, value|
         entry = diff_entry(path, :property_changed)
-        entry.body << "Name: #{force_to_utf8(prop.name)}\n"
-        orig_value = base_props[prop.name]
+        entry.body << "Name: #{force_to_utf8(name)}\n"
+        orig_value = base_props[name]
         entry.body << "   - #{force_to_utf8(orig_value)}\n" if orig_value
-        entry.body << "   + #{force_to_utf8(prop.value)}\n" if prop.value
+        entry.body << "   + #{force_to_utf8(value)}\n" if value
       end
     end
     
