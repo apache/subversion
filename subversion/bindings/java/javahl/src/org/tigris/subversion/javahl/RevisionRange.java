@@ -37,6 +37,52 @@ public class RevisionRange implements Comparable
         this.to = to;
     }
 
+    /**
+     * Accepts a string in one of these forms: n m-n Parses the results into a
+     * from and to revision
+     * @param revisionElement revision range or single revision
+     */
+    public RevisionRange(String revisionElement)
+    {
+        super();
+        if (revisionElement == null)
+        {
+            return;
+        }
+
+        int hyphen = revisionElement.indexOf('-');
+        if (hyphen > 0)
+        {
+            try
+            {
+                long fromRev = Long
+                        .parseLong(revisionElement.substring(0, hyphen));
+                long toRev = Long.parseLong(revisionElement
+                        .substring(hyphen + 1));
+                this.from = new Revision.Number(fromRev);
+                this.to = new Revision.Number(toRev);
+            }
+            catch (NumberFormatException e)
+            {
+                return;
+            }
+
+        }
+        else
+        {
+            try
+            {
+                long revNum = Long.parseLong(revisionElement.trim());
+                this.from = new Revision.Number(revNum);
+                this.to = this.from;
+            }
+            catch (NumberFormatException e)
+            {
+                return;
+            }
+        }
+    }
+
     public Revision getFromRevision()
     {
         return from;
