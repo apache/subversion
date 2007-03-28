@@ -1885,31 +1885,25 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
     
     /**
-     *  Return the URL a given path or URL was copied from
-     * @param path  path of the item
-     * @return      URL item was copied from or null
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String)
      * @since 1.5
      */
-    public String getCopySource(String path) throws ClientException
+    public CopySource getCopySource(String path) throws SubversionException
     {
-        synchronized(clazz)
+        synchronized (clazz)
         {
             return worker.getCopySource(path);
         }
     }
 
     /**
-     * Retrieve the svn:mergeinfo property of an item
-     * @param path      path of the item
-     * @return the Property
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface#getMergeInfoProperty(String)
      * @since 1.5
      */
     public PropertyData getMergeInfoProperty(String path)
-            throws ClientException
+        throws SubversionException
     {
-        synchronized(clazz)
+        synchronized (clazz)
         {
             return worker.getMergeInfoProperty(path);
         }

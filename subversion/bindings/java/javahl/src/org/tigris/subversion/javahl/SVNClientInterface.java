@@ -1231,21 +1231,25 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     *  Return the URL a given path or URL was copied from
-     * @param path  path of the item
-     * @return      URL item was copied from or null
-     * @throws ClientException
+     * Return the source a WC path or URL was copied from.
+     * @param path The path to determine a source for.
+     * @return The last source <code>path</code> was copied from, or
+     * <code>null</code> if never copied.
+     * @throws SubversionException If there is a problem determing the
+     * copy source.
      * @since 1.5
      */
-    String getCopySource(String path) throws ClientException;
+    CopySource getCopySource(String path)
+        throws SubversionException;
 
     /**
-     * Retrieve the svn:mergeinfo property of an item
-     * @param path      path of the item
-     * @return the Property
-     * @throws ClientException
+     * Retrieve the <code>svn:mergeinfo</code> property of a path.
+     * @param path The path to get the property for.
+     * @return The property's value.
+     * @throws SubversionException If there is a problem getting the
+     * property value.
      * @since 1.5
      */
-    PropertyData getMergeInfoProperty(String path) throws ClientException;
-    
+    PropertyData getMergeInfoProperty(String path)
+        throws SubversionException;
 }
