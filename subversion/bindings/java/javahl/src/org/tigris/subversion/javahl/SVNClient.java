@@ -21,6 +21,9 @@ package org.tigris.subversion.javahl;
 import java.io.File;
 import java.io.OutputStream;
 
+import java.util.Map;
+import java.util.Iterator;
+
 /**
  * This is the main interface class. All subversion commandline client svn &
  * svnversion operation are implemented in this class. This class is not
@@ -1060,8 +1063,43 @@ public class SVNClient implements SVNClientInterface
      * @return array of property objects
      * @since 1.2
      */
-    public native PropertyData[] properties(String path, Revision revision,
-                                            Revision pegRevision)
+    public PropertyData[] properties(String path, Revision revision,
+                                     Revision pegRevision)
+            throws ClientException
+    {
+        ProplistCallbackImpl callback = new ProplistCallbackImpl();
+        properties(path, revision, pegRevision, false, callback);
+
+        Map propMap = callback.getProperties(path);
+        PropertyData[] props = new PropertyData[propMap.size()];
+
+        Iterator it = propMap.keySet().iterator();
+        int i = 0;
+        
+        while(it.hasNext())
+        {
+            String key = (String) it.next();
+            props[i] = new PropertyData(path, key,
+                    (String) propMap.get(key));
+            i++;
+        }
+
+        return props;
+    }
+
+    /**
+     * Retrieves the properties of an item
+     *
+     * @param path        the path of the item
+     * @param revision    the revision of the item
+     * @param pegRevision the revision to interpret path
+     * @param recurse     get properties from subdirectories also
+     * @param callback    the callback to use to return the properties
+     * @since 1.5
+     */
+    public native void properties(String path, Revision revision,
+                                  Revision pegRevision, boolean recurse,
+                                  ProplistCallback callback)
             throws ClientException;
 
     /**

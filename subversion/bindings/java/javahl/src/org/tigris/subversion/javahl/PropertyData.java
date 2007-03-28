@@ -117,6 +117,22 @@ public class PropertyData
     }
 
     /**
+     * this contructor is used when building a thin wrapper around other
+     * property retreival methods
+     * @param p     the path of the item owning this property
+     * @param n     the name of the property
+     * @param v     the string value of the property
+     */
+    PropertyData(String p, String n, String v)
+    {
+        path = p;
+        name = n;
+        value = v;
+        client = null;
+        data = v.getBytes();
+    }
+
+    /**
      * Returns the name of the property
      * @return the name
      */
