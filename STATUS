@@ -160,11 +160,3 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r23978
-    Wrap a call from one of JavaHL's synchronized methods in a synchronized()
-      block.
-    Justification:
-      Small fix.  Our synchronized client should fulfill its promise to be
-      synchronized.
-    Votes:
-      +1: hwright, dlr
