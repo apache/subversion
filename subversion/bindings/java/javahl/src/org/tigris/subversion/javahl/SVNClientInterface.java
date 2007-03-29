@@ -227,13 +227,14 @@ public interface SVNClientInterface
      *                      returned objects
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
-     * @return array of LogMessages
+     * @param callback      the object to receive the log messages
      * @since 1.5
      */
-    LogMessage[] logMessages(String path, Revision pegRevision,
-                             Revision revisionStart,
-                             Revision revisionEnd, boolean stopOnCopy,
-                             boolean discoverPath, long limit)
+    void logMessages(String path, Revision pegRevision,
+                     Revision revisionStart,
+                     Revision revisionEnd, boolean stopOnCopy,
+                     boolean discoverPath, long limit,
+                     LogMessageCallback callback)
             throws ClientException;
 
     /**

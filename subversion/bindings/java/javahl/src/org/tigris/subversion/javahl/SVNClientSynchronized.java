@@ -351,20 +351,21 @@ public class SVNClientSynchronized implements SVNClientInterface
      *                      returned objects
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
-     * @return array of LogMessages
+     * @param callback      the object to receive the messages
      * @since 1.5
      */
-    public LogMessage[] logMessages(String path, Revision pegRevision,
-                                    Revision revisionStart,
-                                    Revision revisionEnd, boolean stopOnCopy,
-                                    boolean discoverPath, long limit)
+    public void logMessages(String path, Revision pegRevision,
+                            Revision revisionStart,
+                            Revision revisionEnd, boolean stopOnCopy,
+                            boolean discoverPath, long limit,
+                            LogMessageCallback callback)
             throws ClientException
     {
         synchronized (clazz)
         {
-            return worker.logMessages(path, pegRevision, revisionStart,
-                                      revisionEnd, stopOnCopy, discoverPath,
-                                      limit);
+            worker.logMessages(path, pegRevision, revisionStart,
+                               revisionEnd, stopOnCopy, discoverPath,
+                               limit, callback);
         }
     }
 

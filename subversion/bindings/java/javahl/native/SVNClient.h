@@ -39,6 +39,7 @@ class CopySources;
 class DiffSummaryReceiver;
 class BlameCallback;
 class ProplistCallback;
+class LogMessageCallback;
 class CommitMessage;
 #include "svn_client.h"
 #include "SVNBase.h"
@@ -117,10 +118,11 @@ public:
     jlong checkout(const char *moduleName, const char *destPath,
                    Revision &revision, Revision &pegRevsion, bool recurse,
                    bool ignoreExternals, bool allowUnverObstructions);
-    jobjectArray logMessages(const char *path, Revision &pegRevision, 
+    void logMessages(const char *path, Revision &pegRevision, 
                              Revision &revisionStart,
                              Revision &revisionEnd, bool stopOnCopy,
-                             bool discoverPaths, long limit);
+                             bool discoverPaths, long limit,
+                             LogMessageCallback *callback);
     void setPrompt(Prompter *prompter);
     void password(const char *pi_password);
     void username(const char *pi_username);
@@ -216,13 +218,6 @@ private:
     std::string m_configDir;
     static jobject createJavaStatus(const char *path,
                                     svn_wc_status2_t *status);
-    static svn_error_t *messageReceiver(void *baton,
-                                        apr_hash_t *changed_paths,
-                                        svn_revnum_t rev,
-                                        const char *author,
-                                        const char *date,
-                                        const char *msg,
-                                        apr_pool_t *pool);
     static void statusReceiver(void *baton,
                                const char *path, svn_wc_status2_t *status);
     static svn_error_t *infoReceiver(void *baton, 

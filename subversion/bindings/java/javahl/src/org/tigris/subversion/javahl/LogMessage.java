@@ -49,14 +49,14 @@ public class LogMessage
     private ChangePath[] changedPaths;
 
     /**
-     * this constructor is only called only from JNI code
+     * this constructor is only called only from the thin wrapper
      * @param m     the log message text
      * @param d     the date of the commit
      * @param r     the number of the revision
      * @param a     the author of the commit
      * @param cp    the items changed by this commit
      */
-    LogMessage(String m, Date d, long r, String a, ChangePath[] cp)
+    LogMessage(ChangePath[] cp, long r, String a, Date d, String m)
     {
         message = m;
         date = d;
