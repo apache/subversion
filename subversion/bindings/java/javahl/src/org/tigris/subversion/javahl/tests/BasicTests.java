@@ -2142,8 +2142,8 @@ public class BasicTests extends SVNTests
         DiffSummaries summaries = new DiffSummaries();
         // Perform a recursive diff summary, ignoring ancestry.
         client.diffSummarize(thisTest.getUrl(), new Revision.Number(0),
-                             thisTest.getUrl(), Revision.HEAD, true, false,
-                             summaries);
+                             thisTest.getUrl(), Revision.HEAD, Depth.infinity,
+                             false, summaries);
         assertExpectedDiffSummaries(summaries);
 
         summaries.clear();
@@ -2151,7 +2151,7 @@ public class BasicTests extends SVNTests
         // ignoring ancestry.
         client.diffSummarize(thisTest.getUrl(), Revision.HEAD,
                              new Revision.Number(0), Revision.HEAD,
-                             true, false, summaries);
+                             Depth.infinity, false, summaries);
         assertExpectedDiffSummaries(summaries);
     }
 
@@ -2290,8 +2290,8 @@ public class BasicTests extends SVNTests
         try
         {
             // ...should fail
-            client.checkout(thisTest.getUrl(), secondWC, null, null, true,
-                            false, false);
+            client.checkout(thisTest.getUrl(), secondWC, null, null,
+                            Depth.infinity, false, false);
             fail("obstructed checkout should fail by default");
         }
         catch (ClientException expected)
@@ -2300,8 +2300,8 @@ public class BasicTests extends SVNTests
 
         // Attempt to checkout backup WC with "--force"
         // so obstructions are tolerated
-        client.checkout(thisTest.getUrl(), secondWC, null, null, true,
-                        false, true);
+        client.checkout(thisTest.getUrl(), secondWC, null, null,
+                        Depth.infinity, false, true);
 
         // Check the WC status, the only status should be a text
         // mod to lambda.  All the other obstructing files were identical
@@ -2357,7 +2357,7 @@ public class BasicTests extends SVNTests
         // Attempt to update backup WC with "--force"
         assertEquals("wrong revision from update",
                      client.update(backupTest.getWCPath(),
-                                   null, true, false, true), 2);
+                                   null, Depth.infinity, false, true), 2);
 
         // ----- TEST SWITCH -----
         // Add an unversioned file A/B/E/nu to the backup WC
@@ -2390,7 +2390,7 @@ public class BasicTests extends SVNTests
         // Complete the switch using "--force" and check the status
         client.doSwitch(backupTest.getWCPath() + "/A/B/E",
                 backupTest.getUrl() + "/A/D/H",
-                null, true, true);
+                null, Depth.infinity, true);
 
         backupTest.getWc().setItemIsSwitched("A/B/E",true);
         backupTest.getWc().removeItem("A/B/E/alpha");

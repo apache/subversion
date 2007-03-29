@@ -218,8 +218,9 @@ void SVNClient::statusReceiver(void *baton, const char *path,
 }
 
 
-jobjectArray SVNClient::status(const char *path, bool recurse, bool onServer,
-                               bool getAll, bool noIgnore, bool ignoreExternals)
+jobjectArray SVNClient::status(const char *path, svn_depth_t depth,
+                               bool onServer, bool getAll, bool noIgnore,
+                               bool ignoreExternals)
 {
     status_baton statusBaton;
     Pool requestPool;
@@ -242,7 +243,7 @@ jobjectArray SVNClient::status(const char *path, bool recurse, bool onServer,
     SVN_JNI_ERR(svn_client_status3(&youngest, checkedPath.c_str(),
                                    &rev, statusReceiver,
                                    &statusBaton,
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   depth,
                                    getAll, onServer, noIgnore,
                                    ignoreExternals,
                                    ctx, requestPool.pool()),
@@ -342,7 +343,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
 
 jlong SVNClient::checkout(const char *moduleName, const char *destPath,
                           Revision &revision, Revision &pegRevision,
-                          bool recurse, bool ignoreExternals,
+                          svn_depth_t depth, bool ignoreExternals,
                           bool allowUnverObstructions)
 {
     Pool requestPool;
@@ -366,7 +367,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
                                      path.c_str (),
                                      pegRevision.revision (),
                                      revision.revision (),
-                                     SVN_DEPTH_FROM_RECURSE(recurse),
+                                     depth,
                                      ignoreExternals,
                                      allowUnverObstructions,
                                      ctx,
@@ -446,8 +447,9 @@ void SVNClient::add(const char *path, bool recurse, bool force)
                                 ctx, requestPool.pool()), );
 }
 
-jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
-                             bool ignoreExternals, bool allowUnverObstructions)
+jlongArray SVNClient::update(Targets &targets, Revision &revision,
+                             svn_depth_t depth, bool ignoreExternals,
+                             bool allowUnverObstructions)
 {
     Pool requestPool;
 
@@ -461,7 +463,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
     SVN_JNI_ERR(targets.error_occured(), NULL);
     SVN_JNI_ERR(svn_client_update3(&retval, array,
                                    revision.revision(),
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   depth,
                                    ignoreExternals,
                                    allowUnverObstructions,
                                    ctx, requestPool.pool()),
@@ -601,7 +603,7 @@ void SVNClient::resolved(const char *path, bool recurse)
 
 jlong SVNClient::doExport(const char *srcPath, const char *destPath,
                           Revision &revision, Revision &pegRevision, bool force,
-                          bool ignoreExternals, bool recurse,
+                          bool ignoreExternals, svn_depth_t depth,
                           const char *nativeEOL)
 {
     Pool requestPool;
@@ -622,7 +624,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
                                    pegRevision.revision(),
                                    revision.revision(), force,
                                    ignoreExternals,
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   depth,
                                    nativeEOL, ctx,
                                    requestPool.pool()),
                 -1);
@@ -632,7 +634,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
 }
 
 jlong SVNClient::doSwitch(const char *path, const char *url,
-                          Revision &revision, bool recurse,
+                          Revision &revision, svn_depth_t depth,
                           bool allowUnverObstructions)
 {
     Pool requestPool;
@@ -652,7 +654,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
     SVN_JNI_ERR(svn_client_switch2(&retval, intPath.c_str (),
                                    intUrl.c_str(),
                                    revision.revision (),
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   depth,
                                    allowUnverObstructions,
                                    ctx,
                                    requestPool.pool()),
@@ -685,7 +687,7 @@ void SVNClient::doImport(const char *path, const char *url,
 
 void SVNClient::merge(const char *path1, Revision &revision1,
                       const char *path2, Revision &revision2,
-                      const char *localPath, bool force, bool recurse,
+                      const char *localPath, bool force, svn_depth_t depth,
                       bool ignoreAncestry, bool dryRun)
 {
     Pool requestPool;
@@ -710,14 +712,14 @@ void SVNClient::merge(const char *path1, Revision &revision1,
     SVN_JNI_ERR(svn_client_merge3(srcPath1.c_str(), revision1.revision(),
                                   srcPath2.c_str(), revision2.revision(),
                                   intLocalPath.c_str(),
-                                  SVN_DEPTH_FROM_RECURSE(recurse),
+                                  depth,
                                   ignoreAncestry, force, FALSE, dryRun, NULL,
                                   ctx, requestPool.pool()), );
 }
 
 void SVNClient::merge(const char *path, Revision &pegRevision,
                       Revision &revision1, Revision &revision2,
-                      const char *localPath, bool force, bool recurse,
+                      const char *localPath, bool force, svn_depth_t depth,
                       bool ignoreAncestry, bool dryRun)
 {
     Pool requestPool;
@@ -739,7 +741,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
                                       revision2.revision(),
                                       pegRevision.revision(),
                                       intLocalPath.c_str(),
-                                      SVN_DEPTH_FROM_RECURSE(recurse),
+                                      depth,
                                       ignoreAncestry, force, FALSE, dryRun,
                                       NULL, ctx, requestPool.pool()), );
 }
@@ -853,7 +855,7 @@ void SVNClient::propertyCreate(const char *path, const char *name,
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      Revision *pegRevision, const char *outfileName,
-                     bool recurse, bool ignoreAncestry,
+                     svn_depth_t depth, bool ignoreAncestry,
                      bool noDiffDelete, bool force)
 {
     svn_error_t *err;
@@ -894,7 +896,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    pegRevision->revision(),
                                    revision1.revision(),
                                    revision2.revision(),
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   depth,
                                    ignoreAncestry,
                                    noDiffDelete,
                                    force,
@@ -922,7 +924,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                revision1.revision(),
                                path2.c_str(),
                                revision2.revision(),
-                               SVN_DEPTH_FROM_RECURSE(recurse),
+                               depth,
                                ignoreAncestry,
                                noDiffDelete,
                                force,
@@ -948,26 +950,26 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
-                     const char *outfileName, bool recurse,
+                     const char *outfileName, svn_depth_t depth,
                      bool ignoreAncestry, bool noDiffDelete, bool force)
 {
-    diff(target1, revision1, target2, revision2, NULL, outfileName, recurse,
+    diff(target1, revision1, target2, revision2, NULL, outfileName, depth,
          ignoreAncestry, noDiffDelete, force);
 }
 
 void SVNClient::diff(const char *target, Revision &pegRevision,
                      Revision &startRevision, Revision &endRevision,
-                     const char *outfileName, bool recurse,
+                     const char *outfileName, svn_depth_t depth,
                      bool ignoreAncestry, bool noDiffDelete, bool force)
 {
     diff(target, startRevision, NULL, endRevision, &pegRevision, outfileName,
-         recurse, ignoreAncestry, noDiffDelete, force);
+         depth, ignoreAncestry, noDiffDelete, force);
 }
 
 void
 SVNClient::diffSummarize(const char *target1, Revision &revision1,
                          const char *target2, Revision &revision2,
-                         bool recurse, bool ignoreAncestry,
+                         svn_depth_t depth, bool ignoreAncestry,
                          DiffSummaryReceiver &receiver)
 {
     Pool requestPool;
@@ -986,7 +988,7 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
 
     SVN_JNI_ERR(svn_client_diff_summarize2(path1.c_str(), revision1.revision(),
                                            path2.c_str(), revision2.revision(),
-                                           SVN_DEPTH_FROM_RECURSE(recurse),
+                                           depth,
                                            ignoreAncestry,
                                            DiffSummaryReceiver::summarize,
                                            &receiver,
@@ -996,7 +998,7 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
 void
 SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                          Revision &startRevision, Revision &endRevision,
-                         bool recurse, bool ignoreAncestry,
+                         svn_depth_t depth, bool ignoreAncestry,
                          DiffSummaryReceiver &receiver)
 {
     Pool requestPool;
@@ -1014,7 +1016,7 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                                pegRevision.revision(),
                                                startRevision.revision(),
                                                endRevision.revision(),
-                                               SVN_DEPTH_FROM_RECURSE(recurse),
+                                               depth,
                                                ignoreAncestry,
                                                DiffSummaryReceiver::summarize,
                                                &receiver, ctx,
