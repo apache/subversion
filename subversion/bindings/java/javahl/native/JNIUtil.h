@@ -48,13 +48,14 @@ public:
     static svn_error_t *preprocessPath(const char *&path, apr_pool_t *pool);
 
     /**
-     * Throw the NativeException instance named by exceptionClassName.
-     * NativeException sub-class must supply a matching 3-arg
-     * constructor.
+     * Throw the Java NativeException instance named by
+     * exceptionClassName.  A NativeException sub-class must supply a
+     * 3-arg constructor identical to that of NativeException.  @a
+     * source is any file name and line number information.
      */
     static void throwNativeException(const char *exceptionClassName,
                                      const char *msg,
-                                     const char *fileName = NULL,
+                                     const char *source = NULL,
                                      int aprErr = -1);
 
     static void throwNullPointerException(const char *message);

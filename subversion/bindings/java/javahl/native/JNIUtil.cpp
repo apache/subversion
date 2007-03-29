@@ -20,6 +20,7 @@
  */
 
 #include "JNIUtil.h"
+#include <sstream>
 #include <locale.h>
 #include <apr_strings.h>
 #include <apr_tables.h>
@@ -321,7 +322,7 @@ jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
 
 void
 JNIUtil::throwNativeException(const char *className, const char *msg,
-                              const char *fileName, int aprErr)
+                              const char *source, int aprErr)
 {
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass(className);
@@ -331,8 +332,8 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
         JNICriticalSection cs(*g_logMutex);
         g_logStream << "Subversion JavaHL exception thrown, message:<";
         g_logStream << msg << ">";
-        if (fileName)
-            g_logStream << " file:<" << fileName << ">";
+        if (source)
+            g_logStream << " file:<" << source << ">";
         if (aprErr != -1)
             g_logStream << " apr-err:<" << aprErr << ">";
         g_logStream << std::endl;
@@ -343,7 +344,7 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
     jstring jmessage = makeJString(msg);
     if (isJavaExceptionThrown())
         return;
-    jstring jfile = makeJString(fileName);
+    jstring jsource = makeJString(source);
     if (isJavaExceptionThrown())
         return;
 
@@ -351,7 +352,7 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
         "(Ljava/lang/String;Ljava/lang/String;I)V");
     if (isJavaExceptionThrown())
         return;
-    jobject nativeException = env->NewObject(clazz, mid, jmessage, jfile,
+    jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
                                              static_cast<jint>(aprErr));
     if (isJavaExceptionThrown())
         return;
@@ -362,7 +363,7 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
     env->DeleteLocalRef(jmessage);
     if (isJavaExceptionThrown())
         return;
-    env->DeleteLocalRef(jfile);
+    env->DeleteLocalRef(jsource);
     if (isJavaExceptionThrown())
         return;
 
@@ -373,8 +374,10 @@ void JNIUtil::handleSVNError(svn_error_t *err)
 {
     std::string msg;
     assembleErrorMessage(err, 0, APR_SUCCESS, msg);
+    std::ostringstream source;
+    source << err->file << ':' << err->line;
     throwNativeException(JAVA_PACKAGE "/ClientException", msg.c_str(),
-                         err->file, err->apr_err);
+                         source.str().c_str(), err->apr_err);
     svn_error_clear(err);
 }
 
