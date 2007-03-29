@@ -95,8 +95,10 @@ public class BasicTests extends SVNTests
                     "' (which contains control characters) should fail",
                     Path.isValid(path));
     }
+
     /**
      * Tests MergeInfo and RevisionRange classes.
+     * @since 1.5
      */
     public void testMergeInfoParser() throws Throwable
     {
@@ -111,9 +113,9 @@ public class BasicTests extends SVNTests
         assertEquals("305", trunkRange[1].toString());
         assertEquals("307", trunkRange[2].toString());
         assertEquals("400-405", trunkRange[3].toString());
-        RevisionRange[] branchRange = info.getRevisionRange("/branches/branch");
+        RevisionRange[] branchRange =
+            info.getRevisionRange("/branches/branch");
         assertEquals(1, branchRange.length);
-        
     }
 
     /**
