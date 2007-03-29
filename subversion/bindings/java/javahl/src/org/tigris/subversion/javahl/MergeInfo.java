@@ -28,7 +28,7 @@ import java.util.StringTokenizer;
 
 /**
  * Merge history for a path.
- * 
+ *
  * @since 1.5
  */
 public class MergeInfo
@@ -149,7 +149,7 @@ public class MergeInfo
      * Parse a merge source line from a <code>svn:mergeinfo</code>
      * property value (e.g.
      * <code>"/trunk:1-100,104,108,110-115"</code>).
-     * 
+     *
      * @param line A line of merge info for a single merge source.
      */
     private void parseMergeInfoLine(String line)
@@ -167,7 +167,7 @@ public class MergeInfo
      * Parse the revisions in a merge info line into RevisionRange
      * objects and adds each of them to the internal Map
      * (e.g. <code>"1-100,104,108,110-115"</code>)
-     * 
+     *
      * @param path The merge source path.
      * @param revisions A textual representation of the revision ranges.
      */

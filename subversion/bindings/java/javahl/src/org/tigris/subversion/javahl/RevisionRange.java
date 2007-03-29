@@ -20,8 +20,8 @@ package org.tigris.subversion.javahl;
 
 /**
  * Object that describes a revision range
- * 
- * 
+ *
+ *
  * @since 1.5
  */
 public class RevisionRange implements Comparable

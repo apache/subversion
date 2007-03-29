@@ -36,7 +36,7 @@ LogMessageCallback::LogMessageCallback(jobject jcallback)
  */
 LogMessageCallback::~LogMessageCallback()
 {
-    // the m_callback does not need to be destroyed, because it is the passed 
+    // the m_callback does not need to be destroyed, because it is the passed
     // in parameter to the java SVNClient.blame method.
 }
 /**
@@ -59,7 +59,7 @@ LogMessageCallback::callback(apr_hash_t *changed_paths, svn_revnum_t rev,
 
     static jmethodID sm_mid = 0; // the method id will not change during
                                  // the time this library is loaded, so
-                                 // it can be cached. 
+                                 // it can be cached.
     if (sm_mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/LogMessageCallback");
@@ -97,7 +97,7 @@ LogMessageCallback::callback(apr_hash_t *changed_paths, svn_revnum_t rev,
            return SVN_NO_ERROR;
         }
     }
-    
+
     jobject jdate = NULL;
     if (date != NULL && *date != '\0')
     {
@@ -125,7 +125,7 @@ LogMessageCallback::callback(apr_hash_t *changed_paths, svn_revnum_t rev,
 
         /* Get an array of sorted hash keys. */
         sorted_paths = svn_sort__hash(changed_paths,
-                                      svn_sort_compare_items_as_paths, 
+                                      svn_sort_compare_items_as_paths,
                                       pool);
 
         jChangedPaths = env->NewObjectArray(sorted_paths->nelts, clazzCP, NULL);
@@ -135,7 +135,7 @@ LogMessageCallback::callback(apr_hash_t *changed_paths, svn_revnum_t rev,
             svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
                                                      svn_sort__item_t));
             const char *path = (const char *)item->key;
-            svn_log_changed_path_t *log_item 
+            svn_log_changed_path_t *log_item
                 = (svn_log_changed_path_t *)
                     apr_hash_get(changed_paths, item->key, item->klen);
 
@@ -189,7 +189,7 @@ LogMessageCallback::callback(apr_hash_t *changed_paths, svn_revnum_t rev,
     {
        return SVN_NO_ERROR;
     }
-    
+
     env->CallVoidMethod(m_callback, sm_mid, jChangedPaths, (jlong)rev, jauthor,
                         jdate, jmessage);
     if (JNIUtil::isJavaExceptionThrown())

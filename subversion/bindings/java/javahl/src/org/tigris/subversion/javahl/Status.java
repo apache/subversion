@@ -183,7 +183,7 @@ public class Status
      * @param urlCopiedFrom         if copied, the url of the copy source
      * @param revisionCopiedFrom    if copied, the revision number of the copy
      *                              source
-     * @param switched              flag if the node has been switched in the 
+     * @param switched              flag if the node has been switched in the
      *                              path
      * @param lockToken             the token for the current lock if any
      * @param lockOwner             the owner of the current lock is any
@@ -205,7 +205,7 @@ public class Status
                   boolean locked, boolean copied, String conflictOld,
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
-                  boolean switched, String lockToken, String lockOwner, 
+                  boolean switched, String lockToken, String lockOwner,
                   String lockComment, long lockCreationDate, Lock reposLock,
                   long reposLastCmtRevision, long reposLastCmtDate,
                   int reposKind, String reposLastCmtAuthor)

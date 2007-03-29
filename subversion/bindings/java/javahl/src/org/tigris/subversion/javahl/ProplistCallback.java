@@ -20,7 +20,7 @@ package org.tigris.subversion.javahl;
 import java.util.Map;
 
 /**
- * this interface is used to property lists for each path in a 
+ * this interface is used to property lists for each path in a
  * SVNClientInterface.properties call.
  */
 public interface ProplistCallback

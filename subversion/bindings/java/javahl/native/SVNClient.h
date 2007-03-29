@@ -47,11 +47,11 @@ class CommitMessage;
 class SVNClient :public SVNBase
 {
 public:
-    jobjectArray info2(const char *path, Revision &revision, 
+    jobjectArray info2(const char *path, Revision &revision,
                        Revision &pegRevision, bool recurse);
     void unlock(Targets &targets, bool force);
     void lock(Targets &targets, const char *comment, bool force);
-    jobjectArray revProperties(jobject jthis, const char *path, 
+    jobjectArray revProperties(jobject jthis, const char *path,
                                Revision &revision);
     void cancelOperation();
     void commitMessageHandler(CommitMessage *commitMessage);
@@ -64,12 +64,12 @@ public:
      */
     void setConfigDirectory(const char *configDir);
 
-    void blame(const char *path, Revision &pegRevision, 
+    void blame(const char *path, Revision &pegRevision,
                Revision &revisionStart, Revision &revisionEnd,
                bool ignoreMimeType, BlameCallback *callback);
     void relocate(const char *from, const char *to, const char *path,
                   bool recurse);
-    jbyteArray fileContent(const char *path, Revision &revision,  
+    jbyteArray fileContent(const char *path, Revision &revision,
                            Revision &pegRevision);
     void streamFileContent(const char *path, Revision &revision,
                            Revision &pegRevision, jobject outputStream,
@@ -92,9 +92,9 @@ public:
                   bool recurse);
     jlong doSwitch(const char *path, const char *url, Revision &revision,
                    bool recurse, bool allowUnverObstructions);
-    jlong doExport(const char *srcPath, const char *destPath, 
+    jlong doExport(const char *srcPath, const char *destPath,
                    Revision &revision, Revision &pegRevision, bool force,
-                   bool ignoreExternals, bool recurse, 
+                   bool ignoreExternals, bool recurse,
                    const char *nativeEOL);
     void resolved(const char *path, bool recurse);
     void cleanup(const char *path);
@@ -110,7 +110,7 @@ public:
                       bool ignoreExternals, bool allowUnverObstructions);
     void add(const char *path, bool recurse, bool force);
     void revert(const char *path, bool recurse);
-    void remove(Targets &targets, const char *message, bool force, 
+    void remove(Targets &targets, const char *message, bool force,
                 bool keep_local);
     void notification(Notify *notify);
     void notification2(Notify2 *notify2);
@@ -118,7 +118,7 @@ public:
     jlong checkout(const char *moduleName, const char *destPath,
                    Revision &revision, Revision &pegRevsion, bool recurse,
                    bool ignoreExternals, bool allowUnverObstructions);
-    void logMessages(const char *path, Revision &pegRevision, 
+    void logMessages(const char *path, Revision &pegRevision,
                              Revision &revisionStart,
                              Revision &revisionEnd, bool stopOnCopy,
                              bool discoverPaths, long limit,
@@ -134,7 +134,7 @@ public:
     jobjectArray getChangelist(const char *changelist, const char *rootPath);
     jobjectArray status(const char *path, bool recurse, bool onServer,
                         bool getAll, bool noIgnore, bool ignoreExternals);
-    jobjectArray list(const char *url, Revision &revision, 
+    jobjectArray list(const char *url, Revision &revision,
                       Revision &pegRevision, bool recurse);
     jobject revProperty(jobject jthis, const char *path, const char *name,
                         Revision &rev);
@@ -220,7 +220,7 @@ private:
                                     svn_wc_status2_t *status);
     static void statusReceiver(void *baton,
                                const char *path, svn_wc_status2_t *status);
-    static svn_error_t *infoReceiver(void *baton, 
+    static svn_error_t *infoReceiver(void *baton,
                                      const char *path,
                                      const svn_info_t *info,
                                      apr_pool_t *pool);

@@ -98,7 +98,7 @@ public class PropertyData
      * flag property if a lock is needed to modify this node
      */
     public static final String NEEDS_LOCK = "svn:needs-lock";
-    
+
     /**
      * this constructor is only used by the JNI code
      * @param cl    the client object, which created this object

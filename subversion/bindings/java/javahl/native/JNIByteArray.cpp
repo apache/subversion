@@ -23,14 +23,14 @@
 /**
  * Create a new object
  * @param jba the local reference to the java byte array
- * @param flag that the underlying byte array reference should be deleted at 
+ * @param flag that the underlying byte array reference should be deleted at
  *        destruction
  */
 JNIByteArray::JNIByteArray(jbyteArray jba, bool deleteByteArray)
 {
     m_array = jba;
     m_deleteByteArray = deleteByteArray;
-    if (jba != NULL) 
+    if (jba != NULL)
     {
         // get the bytes
         JNIEnv *env = JNIUtil::getEnv();

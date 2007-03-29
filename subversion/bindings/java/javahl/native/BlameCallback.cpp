@@ -35,11 +35,11 @@ BlameCallback::BlameCallback(jobject jcallback)
  */
 BlameCallback::~BlameCallback()
 {
-    // the m_callback does not need to be destroyed, because it is the passed 
+    // the m_callback does not need to be destroyed, because it is the passed
     // in parameter to the java SVNClient.blame method.
 }
 /**
- * Callback called for a single line in the file, for which the blame 
+ * Callback called for a single line in the file, for which the blame
  * information was requested
  * @param revision  the revision number, when the line was last changed
  *                  or -1, if not changed during the request revision
@@ -50,15 +50,15 @@ BlameCallback::~BlameCallback()
  * @param line      the content of the line
  * @param pool      memory pool for the use of this function
  */
-svn_error_t* BlameCallback::callback(svn_revnum_t revision, const char *author, 
-                                     const char *date, const char *line, 
+svn_error_t* BlameCallback::callback(svn_revnum_t revision, const char *author,
+                                     const char *date, const char *line,
                                      apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
     static jmethodID mid = 0; // the method id will not change during
                               // the time this library is loaded, so
-                              // it can be cached. 
+                              // it can be cached.
     if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/BlameCallback");
@@ -66,7 +66,7 @@ svn_error_t* BlameCallback::callback(svn_revnum_t revision, const char *author,
         {
             return SVN_NO_ERROR;
         }
-        mid = env->GetMethodID(clazz, "singleLine", 
+        mid = env->GetMethodID(clazz, "singleLine",
             "(Ljava/util/Date;JLjava/lang/String;Ljava/lang/String;)V");
         if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
@@ -106,7 +106,7 @@ svn_error_t* BlameCallback::callback(svn_revnum_t revision, const char *author,
     }
 
     // call the java method
-    env->CallVoidMethod(m_callback, mid, jdate, 
+    env->CallVoidMethod(m_callback, mid, jdate,
                         (jlong)revision, jauthor, jline);
     if (JNIUtil::isJavaExceptionThrown())
     {

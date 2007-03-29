@@ -42,7 +42,7 @@ private:
      */
     jbyte *m_data;
     /**
-     * flag that the underlying byte array reference should be deleted at 
+     * flag that the underlying byte array reference should be deleted at
      * destruction
      */
     bool m_deleteByteArray;

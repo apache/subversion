@@ -62,7 +62,7 @@ svn_stream_t *Outputer::getStream(const Pool &pool)
  * implements svn_write_fn_t to write data out from subversion
  * @param baton     an Outputer object for the callback
  * @param buffer    the buffer for the write data
- * @param len       on input the buffer len, on output the number of written 
+ * @param len       on input the buffer len, on output the number of written
  *                  bytes
  * @return a subversion error or SVN_NO_ERROR
  */

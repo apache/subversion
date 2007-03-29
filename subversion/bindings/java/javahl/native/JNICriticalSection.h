@@ -28,9 +28,9 @@
 class JNIMutex;
 /**
  * This class holds a mutex which will be locked during the constructor and
- * released during the destructor. If the object is created on the stack, this 
+ * released during the destructor. If the object is created on the stack, this
  * garanties that the mutex will be released all the time if the block is left.
- * Only one thread can enter all the critrical sections secured by the same 
+ * Only one thread can enter all the critrical sections secured by the same
  * mutex.
  */
 class JNICriticalSection
@@ -45,4 +45,4 @@ private:
     JNIMutex *m_mutex;
 };
 // !defined(AFX_JNICRITICALSECTION_H__601F33CC_3378_4B09_9917_6242857EF2B7__INCLUDED_)
-#endif 
+#endif

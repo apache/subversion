@@ -43,7 +43,7 @@ CommitMessage::~CommitMessage()
 
 CommitMessage *CommitMessage::makeCCommitMessage(jobject jcommitMessage)
 {
-    // if there is no object passed into this method, there is no need for a 
+    // if there is no object passed into this method, there is no need for a
     // C++ holding object
     if (jcommitMessage == NULL)
     {
@@ -68,8 +68,8 @@ CommitMessage *CommitMessage::makeCCommitMessage(jobject jcommitMessage)
         return NULL;
     }
 
-    // Since the reference is longer needed then the duration of the 
-    // SVNClient.commtMessage, the local reference has to be converted to a 
+    // Since the reference is longer needed then the duration of the
+    // SVNClient.commtMessage, the local reference has to be converted to a
     // global reference
     jobject myCommitMessage = env->NewGlobalRef(jcommitMessage);
     if (JNIUtil::isJavaExceptionThrown())
@@ -103,8 +103,8 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
         return NULL;
     }
 
-    // java method ids will not change during the time this library is loaded, 
-    // so they can be cached. 
+    // java method ids will not change during the time this library is loaded,
+    // so they can be cached.
 
     // get the method id for the CommitItem constructor
     static jmethodID midConstructor = 0;
@@ -176,7 +176,7 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
 
         // create the java object
         jobject jitem = env->NewObject(clazz, midConstructor, jpath,
-                                       jnodeKind, jstateFlags, jurl, 
+                                       jnodeKind, jstateFlags, jurl,
                                        jcopyUrl, jcopyRevision);
         if (JNIUtil::isJavaExceptionThrown())
         {
@@ -217,8 +217,8 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
     }
 
     // call the java callback method
-    jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage, 
-                                                      midCallback, 
+    jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage,
+                                                      midCallback,
                                                       jitems);
     if (JNIUtil::isJavaExceptionThrown())
     {

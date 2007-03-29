@@ -96,7 +96,7 @@ jint EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
 {
     jint jAction = -1;
-    // this is a switch to make the java constants independent from the C 
+    // this is a switch to make the java constants independent from the C
     // constants
     switch(action)
     {

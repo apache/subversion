@@ -214,7 +214,7 @@ jstring Prompter::password()
  * @param yesIsDefault  flag if the yes-button should be the default button
  * @return flag who the user answered the question
  */
-bool Prompter::askYesNo(const char *realm, const char *question, 
+bool Prompter::askYesNo(const char *realm, const char *question,
                         bool yesIsDefault)
 {
     JNIEnv *env = JNIUtil::getEnv();
@@ -229,7 +229,7 @@ bool Prompter::askYesNo(const char *realm, const char *question,
         {
             return false;
         }
-        mid = env->GetMethodID(clazz, "askYesNo", 
+        mid = env->GetMethodID(clazz, "askYesNo",
             "(Ljava/lang/String;Ljava/lang/String;Z)Z");
         if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
@@ -255,7 +255,7 @@ bool Prompter::askYesNo(const char *realm, const char *question,
     }
 
     // execute the callback
-    jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jquestion, 
+    jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jquestion,
                                           yesIsDefault ? JNI_TRUE : JNI_FALSE);
     if (JNIUtil::isJavaExceptionThrown())
     {
@@ -279,7 +279,7 @@ bool Prompter::askYesNo(const char *realm, const char *question,
 /**
  *
  */
-const char *Prompter::askQuestion(const char *realm, const char *question, 
+const char *Prompter::askQuestion(const char *realm, const char *question,
                                   bool showAnswer, bool maySave)
 {
     JNIEnv *env = JNIUtil::getEnv();
@@ -294,7 +294,7 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
             {
                 return NULL;
             }
-            mid = env->GetMethodID(clazz, "askQuestion", 
+            mid = env->GetMethodID(clazz, "askQuestion",
                 "(Ljava/lang/String;Ljava/lang/String;ZZ)Ljava/lang/String;");
             if (JNIUtil::isJavaExceptionThrown() || mid == 0)
             {
@@ -323,7 +323,7 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
             return NULL;
         }
         jstring janswer = static_cast<jstring>(
-            env->CallObjectMethod(m_prompter, mid, jrealm, jquestion, 
+            env->CallObjectMethod(m_prompter, mid, jrealm, jquestion,
                                   showAnswer ? JNI_TRUE : JNI_FALSE,
                                   maySave ? JNI_TRUE : JNI_FALSE));
         if (JNIUtil::isJavaExceptionThrown())
@@ -367,7 +367,7 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
             {
                 return NULL;
             }
-            mid = env->GetMethodID(clazz, "askQuestion", 
+            mid = env->GetMethodID(clazz, "askQuestion",
                 "(Ljava/lang/String;Ljava/lang/String;Z)Ljava/lang/String;");
             if (JNIUtil::isJavaExceptionThrown() || mid == 0)
             {
@@ -391,7 +391,7 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
             return NULL;
         }
         jstring janswer = static_cast<jstring>(
-            env->CallObjectMethod(m_prompter, mid, jrealm, jquestion, 
+            env->CallObjectMethod(m_prompter, mid, jrealm, jquestion,
                                   showAnswer ? JNI_TRUE : JNI_FALSE));
         if (JNIUtil::isJavaExceptionThrown())
         {
@@ -437,7 +437,7 @@ int Prompter::askTrust(const char *question, bool maySave)
             {
                 return -1;
             }
-            mid = env->GetMethodID(clazz, "askTrustSSLServer", 
+            mid = env->GetMethodID(clazz, "askTrustSSLServer",
                                    "(Ljava/lang/String;Z)I");
             if (JNIUtil::isJavaExceptionThrown() || mid == 0)
             {
@@ -454,7 +454,7 @@ int Prompter::askTrust(const char *question, bool maySave)
         {
             return -1;
         }
-        jint ret = env->CallIntMethod(m_prompter, mid, jquestion, 
+        jint ret = env->CallIntMethod(m_prompter, mid, jquestion,
                                       maySave ? JNI_TRUE : JNI_FALSE);
         if (JNIUtil::isJavaExceptionThrown())
         {
@@ -481,12 +481,12 @@ int Prompter::askTrust(const char *question, bool maySave)
         const char *answer = askQuestion(NULL, q.c_str(), true, false);
         if (*answer == 't' || *answer == 'T')
         {
-            return 
+            return
               org_tigris_subversion_javahl_PromptUserPassword2_AcceptTemporary;
         }
         else if (maySave && (*answer == 'p' || *answer == 'P'))
         {
-            return 
+            return
              org_tigris_subversion_javahl_PromptUserPassword2_AcceptPermanently;
         }
         else
@@ -509,7 +509,7 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
             {
                 return false;
             }
-            mid = env->GetMethodID(clazz, "prompt", 
+            mid = env->GetMethodID(clazz, "prompt",
                                    "(Ljava/lang/String;Ljava/lang/String;Z)Z");
             if (JNIUtil::isJavaExceptionThrown() || mid == 0)
             {
@@ -570,7 +570,7 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
             {
                 return false;
             }
-            mid = env->GetMethodID(clazz, "prompt", 
+            mid = env->GetMethodID(clazz, "prompt",
                                    "(Ljava/lang/String;Ljava/lang/String;)Z");
             if (JNIUtil::isJavaExceptionThrown() || mid == 0)
             {
@@ -593,7 +593,7 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
         {
             return false;
         }
-        jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, 
+        jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm,
             jusername);
         if (JNIUtil::isJavaExceptionThrown())
         {
@@ -668,14 +668,14 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword()
 
     return provider;
 }
-svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p, 
+svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p,
                                      void *baton,
-                                     const char *realm, const char *username, 
+                                     const char *realm, const char *username,
                                      svn_boolean_t may_save,
                                      apr_pool_t *pool)
 {
     Prompter *that = (Prompter*)baton;
-    svn_auth_cred_simple_t *ret = (svn_auth_cred_simple_t*)apr_pcalloc(pool, 
+    svn_auth_cred_simple_t *ret = (svn_auth_cred_simple_t*)apr_pcalloc(pool,
                                                                 sizeof(*ret));
     if (!that->prompt(realm, username, may_save ? true : false))
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
@@ -699,16 +699,16 @@ svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p,
     *cred_p = ret;
     return SVN_NO_ERROR;
 }
-svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p, 
+svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p,
                                        void *baton,
-                                       const char *realm, 
-                                       svn_boolean_t may_save, 
+                                       const char *realm,
+                                       svn_boolean_t may_save,
                                        apr_pool_t *pool)
 {
     Prompter *that = (Prompter*)baton;
-    svn_auth_cred_username_t *ret = 
+    svn_auth_cred_username_t *ret =
         (svn_auth_cred_username_t*)apr_pcalloc(pool, sizeof(*ret));
-    const char *user = that->askQuestion(realm, _("Username: "), true, 
+    const char *user = that->askQuestion(realm, _("Username: "), true,
                                          may_save ? true : false);
     if (user == NULL)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
@@ -728,7 +728,7 @@ svn_error_t *Prompter::ssl_server_trust_prompt(
                               apr_pool_t *pool)
 {
     Prompter *that = (Prompter*)baton;
-    svn_auth_cred_ssl_server_trust_t *ret = 
+    svn_auth_cred_ssl_server_trust_t *ret =
             (svn_auth_cred_ssl_server_trust_t*)apr_pcalloc(pool, sizeof(*ret));
 
     std::string question = _("Error validating server certificate for ");
@@ -787,16 +787,16 @@ svn_error_t *Prompter::ssl_server_trust_prompt(
 }
 svn_error_t *Prompter::ssl_client_cert_prompt(
                                      svn_auth_cred_ssl_client_cert_t **cred_p,
-                                     void *baton, 
-                                     const char *realm, 
+                                     void *baton,
+                                     const char *realm,
                                      svn_boolean_t may_save,
                                      apr_pool_t *pool)
 {
     Prompter *that = (Prompter*)baton;
-    svn_auth_cred_ssl_client_cert_t *ret = 
+    svn_auth_cred_ssl_client_cert_t *ret =
         (svn_auth_cred_ssl_client_cert_t*)apr_pcalloc(pool, sizeof(*ret));
-    const char *cert_file = that->askQuestion(realm, 
-                                _("client certificate filename: "), true, 
+    const char *cert_file = that->askQuestion(realm,
+                                _("client certificate filename: "), true,
                                 may_save ? true : false);
     if (cert_file == NULL)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
@@ -808,16 +808,16 @@ svn_error_t *Prompter::ssl_client_cert_prompt(
 }
 svn_error_t *Prompter::ssl_client_cert_pw_prompt(
                                   svn_auth_cred_ssl_client_cert_pw_t **cred_p,
-                                  void *baton, 
-                                  const char *realm, 
+                                  void *baton,
+                                  const char *realm,
                                   svn_boolean_t may_save,
                                   apr_pool_t *pool)
 {
     Prompter *that = (Prompter*)baton;
-    svn_auth_cred_ssl_client_cert_pw_t *ret = 
+    svn_auth_cred_ssl_client_cert_pw_t *ret =
         (svn_auth_cred_ssl_client_cert_pw_t*)apr_pcalloc(pool, sizeof(*ret));
-    const char *info = that->askQuestion(realm, 
-                                         _("client certificate passphrase: "), 
+    const char *info = that->askQuestion(realm,
+                                         _("client certificate passphrase: "),
                                          false, may_save ? true : false);
     if (info == NULL)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,

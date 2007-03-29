@@ -66,4 +66,4 @@ private:
     CommitMessage(jobject jcommitMessage);
 };
 // !defined(AFX_COMMITMESSAGE_H__9AD3F0B0_9DBB_4701_9EE7_3BE0AEB51EDB__INCLUDED_)
-#endif 
+#endif

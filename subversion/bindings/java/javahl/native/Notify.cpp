@@ -36,7 +36,7 @@ Notify::Notify(jobject p_notify)
 
 /**
  * Destroy the object and delete the global reference to the java object
- */ 
+ */
 Notify::~Notify()
 {
     if (m_notify != NULL)
@@ -139,8 +139,8 @@ Notify::onNotify (
     svn_revnum_t revision)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // java method id will not change during the time this library is loaded, 
-    // so it can be cached. 
+    // java method id will not change during the time this library is loaded,
+    // so it can be cached.
     static jmethodID mid = 0;
     if (mid == 0)
     {

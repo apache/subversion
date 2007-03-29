@@ -28,7 +28,7 @@
 #include <jni.h>
 #include "svn_opt.h"
 
-class Revision  
+class Revision
 {
 private:
     svn_opt_revision_t m_revision;

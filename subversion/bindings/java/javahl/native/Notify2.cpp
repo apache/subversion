@@ -124,7 +124,7 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
         {
             return;
         }
-        mid = env->GetMethodID(clazz, "onNotify", 
+        mid = env->GetMethodID(clazz, "onNotify",
             "(Lorg/tigris/subversion/javahl/NotifyInformation;)V");
         if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
@@ -144,7 +144,7 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
     }
     if (midCT == 0)
     {
-        midCT = env->GetMethodID(clazz, "<init>", 
+        midCT = env->GetMethodID(clazz, "<init>",
             "(Ljava/lang/String;IILjava/lang/String;"
             "Lorg/tigris/subversion/javahl/Lock;Ljava/lang/String;IIIJ)V");
         if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
@@ -183,7 +183,7 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
     // call the java method
     jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
                                    jKind, jMimeType, jLock, jErr,
-                                   jContentState, jPropState, jLockState, 
+                                   jContentState, jPropState, jLockState,
                                    (jlong) wcNotify->revision);
     if (JNIUtil::isJavaExceptionThrown())
     {

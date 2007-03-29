@@ -82,7 +82,7 @@ Revision::Revision(jobject jthis, bool headIfUnspecified, bool oneIfUnspecified)
                 static jfieldID fidNum = 0;
                 if (fidNum == 0)
                 {
-                    jclass clazz = 
+                    jclass clazz =
                         env->FindClass(JAVA_PACKAGE"/Revision$Number");
                     if (JNIUtil::isJavaExceptionThrown())
                     {
@@ -109,13 +109,13 @@ Revision::Revision(jobject jthis, bool headIfUnspecified, bool oneIfUnspecified)
                 static jfieldID fidDate = 0;
                 if (fidDate == 0)
                 {
-                    jclass clazz = 
+                    jclass clazz =
                         env->FindClass(JAVA_PACKAGE"/Revision$DateSpec");
                     if (JNIUtil::isJavaExceptionThrown())
                     {
                         return;
                     }
-                    fidDate = env->GetFieldID(clazz, "revDate", 
+                    fidDate = env->GetFieldID(clazz, "revDate",
                                               "Ljava/util/Date;");
                     if (JNIUtil::isJavaExceptionThrown())
                     {

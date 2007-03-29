@@ -25,7 +25,7 @@ import java.util.Date;
 
 /**
  * A general subversion directory entry. Used for SVNClientInterface.list
- * @author C&eacute;dric Chabanois 
+ * @author C&eacute;dric Chabanois
  *         <a href="mailto:cchabanois@ifrance.com">cchabanois@ifrance.com</a>
  *
  */
