@@ -617,11 +617,12 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
     {
         return -1;
     }
-    SVN_JNI_ERR(svn_client_export3(&retval, sourcePath.c_str(), 
+    SVN_JNI_ERR(svn_client_export4(&retval, sourcePath.c_str(), 
                                    destinationPath.c_str(),
                                    pegRevision.revision(),
                                    revision.revision(), force,
-                                   ignoreExternals, recurse,
+                                   ignoreExternals,
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
                                    nativeEOL, ctx,
                                    requestPool.pool()),
                 -1);
