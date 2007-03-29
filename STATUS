@@ -117,7 +117,24 @@ Candidate changes:
    Justification:
      Otherwise mis-reports itself as unlock().
    Votes:
-     +1: dlr
+     +1: dlr, hwright
+
+  * r23906
+    Fix argument passing in one of JavaHL's update() wrappers.
+    Justification:
+      The API should behave as described, not ignore parameters in favor of
+      defaults.
+    Votes:
+      +1: hwright
+
+  * r23978
+    Wrap a call from one of JavaHL's synchronized methods in a synchronized()
+      block.
+    Justification:
+      Small fix.  Our synchronized client should fulfill its promise to be
+      synchronized.
+    Votes:
+      +1: hwright
 
 
 Veto-blocked changes:
