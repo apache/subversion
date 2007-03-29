@@ -1481,4 +1481,4 @@ V.    PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
 
       For Java bindings, see the file
 
-          ./subversion/bindings/java/README
+          ./subversion/bindings/java/javahl/README
