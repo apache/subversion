@@ -27,56 +27,60 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 /**
- * Merge history
- * 
+ * Merge history for a path.
  * 
  * @since 1.5
  */
 public class MergeInfo
 {
-    private Map info;
+    /**
+     * A mapping of repository-relative paths to a list of revision
+     * ranges.
+     */
+    private Map mergeSources;
 
     public MergeInfo()
     {
-        super();
-        info = new HashMap();
+        mergeSources = new HashMap();
     }
 
     /**
-     * Construct using the contents of the svn:mergeinfo property
-     * @param propertyValue content of svn:mergeinfo property
+     * Create and populate an instance using the contents of the
+     * <code>svn:mergeinfo</code> property.
+     * @param mergeInfo <code>svn:mergeinfo</code> property value.
      */
-    public MergeInfo(String propertyValue)
+    public MergeInfo(String mergeInfo)
     {
         this();
-        this.loadFromMergeInfoProperty(propertyValue);
+        this.loadFromMergeInfoProperty(mergeInfo);
     }
 
     /**
      * Add one or more RevisionRange objects to merge info. If path is already
      * stored, the list of revisions is replaced.
-     * @param path the merge source path
-     * @param range List of RevisionRange objects to add
-     * @throws SubversionException if List contains objects of type other than
-     * RevisionRange
+     * @param path The merge source path.
+     * @param range List of RevisionRange objects to add.
+     * @throws SubversionException If range list contains objects of
+     * type other than RevisionRange.
      */
     public void addRevisions(String path, List range)
             throws SubversionException
     {
         for (Iterator iterator = range.iterator(); iterator.hasNext();)
         {
-            if (iterator.next().getClass() != RevisionRange.class)
+            if (!(iterator.next() instanceof RevisionRange))
                 throw new SubversionException(
-                        "List must only contain objects of type RevisionRange.");
+                      "List must only contain objects of type RevisionRange");
         }
-        info.put(path, range);
+        mergeSources.put(path, range);
     }
 
     /**
-     * Add a RevisionRange object to path. If path is already stored, object is
-     * added to existing list.
-     * @param path the merge source path
-     * @param range the RevisionRange to add
+     * Add a revision range to the merged revisions for a path.  If
+     * the path already has associated revision ranges, add the
+     * revision range to the existing list.
+     * @param path The merge source path.
+     * @param range The revision range to add.
      */
     public void addRevisionRange(String path, RevisionRange range)
     {
@@ -91,57 +95,58 @@ public class MergeInfo
         catch (SubversionException e)
         {
             // Should be impossible to get here
+            throw new RuntimeException(e.getMessage());
         }
     }
 
     /**
-     * Get the merge source paths
-     * @return the merge source paths
+     * Get the merge source paths.
+     * @return The merge source paths.
      */
     public String[] getPaths()
     {
-        Set pathSet = info.keySet();
+        Set pathSet = mergeSources.keySet();
         if (pathSet == null)
             return null;
-        return (String[]) pathSet.toArray(new String[pathSet.size()]);
+        return (String []) pathSet.toArray(new String[pathSet.size()]);
     }
 
     /**
-     * Get the RevisionRange objects for the specified path
-     * @param path the merge source path
-     * @return List of RevisionRange objects or null
+     * Get the revision ranges for the specified path.
+     * @param path The merge source path.
+     * @return List of RevisionRange objects, or <code>null</code>.
      */
     public List getRevisions(String path)
     {
         if (path == null)
             return null;
-        return (List) info.get(path);
+        return (List) mergeSources.get(path);
     }
 
     /**
      * Get the RevisionRange objects for the specified path
-     * @param path the merge source path
-     * @return array of RevisionRange objects or null
+     * @param path The merge source path.
+     * @return Array of RevisionRange objects, or <code>null</code>.
      */
     public RevisionRange[] getRevisionRange(String path)
     {
         List revisions = this.getRevisions(path);
         if (revisions == null)
             return null;
-        return (RevisionRange[]) revisions.toArray(new RevisionRange[revisions
-                .size()]);
+        return (RevisionRange [])
+            revisions.toArray(new RevisionRange[revisions.size()]);
     }
 
     /**
-     * Takes the svn:mergeinfo property and parses it to populate the merge
-     * source paths and revision ranges contained in the property.
-     * @param propertyValue the contents of the svn:mergeinfo property
+     * Parse the <code>svn:mergeinfo</code> property to populate the
+     * merge source paths and revision ranges of this instance.
+     * @param mergeInfo <code>svn:mergeinfo</code> property value.
      */
-    public void loadFromMergeInfoProperty(String propertyValue)
+    public void loadFromMergeInfoProperty(String mergeInfo)
     {
-        if (propertyValue == null)
+        if (mergeInfo == null)
             return;
-        StringTokenizer st = new StringTokenizer(propertyValue, "\n");
+        StringTokenizer st = new StringTokenizer(mergeInfo, "\n");
         while (st.hasMoreTokens())
         {
             parseMergeInfoLine(st.nextToken());
@@ -149,10 +154,11 @@ public class MergeInfo
     }
 
     /**
-     * Parses a given line of the merge info property. Example:
-     * /trunk:1-100,104,108,110-115
+     * Parse a merge source line from a <code>svn:mergeinfo</code>
+     * property value (e.g.
+     * <code>"/trunk:1-100,104,108,110-115"</code>).
      * 
-     * @param line a line of merge info
+     * @param line A line of merge info for a single merge source.
      */
     private void parseMergeInfoLine(String line)
     {
@@ -163,15 +169,15 @@ public class MergeInfo
             String revisions = line.substring(colon + 1);
             parseRevisions(pathElement, revisions);
         }
-
     }
 
     /**
-     * Parses the revisions in a merge info line into RevisionRange objects and
-     * adds each of them to the internal Map Example: 1-100,104,108,110-115
+     * Parse the revisions in a merge info line into RevisionRange
+     * objects and adds each of them to the internal Map
+     * (e.g. <code>"1-100,104,108,110-115"</code>)
      * 
-     * @param path the merge source path
-     * @param revisions the revision info
+     * @param path The merge source path.
+     * @param revisions A textual representation of the revision ranges.
      */
     private void parseRevisions(String path, String revisions)
     {
@@ -182,6 +188,5 @@ public class MergeInfo
             RevisionRange range = new RevisionRange(revisionElement);
             this.addRevisionRange(path, range);
         }
-
     }
 }
