@@ -22,6 +22,9 @@ import java.io.File;
 import java.io.OutputStream;
 
 import java.util.Map;
+import java.util.List;
+import java.util.Vector;
+import java.util.Date;
 import java.util.Iterator;
 
 /**
@@ -379,8 +382,12 @@ public class SVNClient implements SVNClientInterface
                                     long limit)
             throws ClientException
     {
-        return logMessages(path, revisionEnd, revisionStart, revisionEnd,
-                           stopOnCopy, discoverPath, limit);
+        MyLogMessageCallback callback = new MyLogMessageCallback();
+        
+        logMessages(path, revisionEnd, revisionStart, revisionEnd,
+                    stopOnCopy, discoverPath, limit, callback);
+
+        return callback.getMessages();
     }
 
     /**
@@ -397,12 +404,13 @@ public class SVNClient implements SVNClientInterface
      * @return array of LogMessages
      * @since 1.5
      */
-    public native LogMessage[] logMessages(String path, Revision pegRevision,
-                                           Revision revisionStart,
-                                           Revision revisionEnd,
-                                           boolean stopOnCopy,
-                                           boolean discoverPath,
-                                           long limit)
+    public native void logMessages(String path, Revision pegRevision,
+                                   Revision revisionStart,
+                                   Revision revisionEnd,
+                                   boolean stopOnCopy,
+                                   boolean discoverPath,
+                                   long limit,
+                                   LogMessageCallback callback)
             throws ClientException;
 
     /**
@@ -1677,4 +1685,34 @@ public class SVNClient implements SVNClientInterface
      * NativeResources.loadNativeLibrary
      */
     static native void initNative();
+
+    /**
+     */
+    private class MyLogMessageCallback implements LogMessageCallback
+    {
+        private List messages = new Vector();
+
+        public void singleMessage(ChangePath[] changedPaths, long revision,
+                                  String author, Date date, String message)
+        {
+            LogMessage msg = new LogMessage(changedPaths, revision, author,
+                                            date, message);
+            messages.add(msg);
+        }
+
+        public LogMessage[] getMessages()
+        {
+            LogMessage[] messageArray = new LogMessage[messages.size()];
+            Iterator it = messages.iterator();
+            int i = 0;
+
+            while (it.hasNext())
+            {
+                messageArray[i] = (LogMessage) it.next();
+                i++;
+            }
+
+            return messageArray;
+        }
+    }
 }

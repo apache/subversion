@@ -36,6 +36,7 @@
 #include "DiffSummaryReceiver.h"
 #include "BlameCallback.h"
 #include "ProplistCallback.h"
+#include "LogMessageCallback.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -245,41 +246,43 @@ Java_org_tigris_subversion_javahl_SVNClient_setPrompt
     cl->setPrompt(prompter);
 }
 
-JNIEXPORT jobjectArray JNICALL
+JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_logMessages
   (JNIEnv* env, jobject jthis, jstring jpath, jobject jpegRevision,
    jobject jrevisionStart, jobject jrevisionEnd, jboolean jstopOnCopy,
-   jboolean jdisoverPaths, jlong jlimit)
+   jboolean jdisoverPaths, jlong jlimit, jobject jlogMessageCallback)
 {
     JNIEntry(SVNClient, logMessages);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
-        return NULL;
+        return;
     }
     Revision pegRevision(jpegRevision, true);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
     Revision revisionStart(jrevisionStart, false, true);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
     Revision revisionEnd(jrevisionEnd, true);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
     JNIStringHolder path(jpath);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
-    return cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
-        jstopOnCopy ? true: false, jdisoverPaths ? true : false, jlimit);
+    LogMessageCallback callback(jlogMessageCallback);
+    cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
+        jstopOnCopy ? true: false, jdisoverPaths ? true : false, jlimit,
+        &callback);
 }
 
 JNIEXPORT jlong JNICALL
