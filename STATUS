@@ -160,14 +160,6 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r23906
-    Fix argument passing in one of JavaHL's update() wrappers.
-    Justification:
-      The API should behave as described, not ignore parameters in favor of
-      defaults.
-    Votes:
-      +1: hwright, dlr
-
   * r23978
     Wrap a call from one of JavaHL's synchronized methods in a synchronized()
       block.
