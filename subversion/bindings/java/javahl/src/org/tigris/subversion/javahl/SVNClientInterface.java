@@ -1248,13 +1248,14 @@ public interface SVNClientInterface
     /**
      * Return the source a WC path or URL was copied from.
      * @param path The path to determine a source for.
+     * @param revision The revision at which to determine a source.
      * @return The last source <code>path</code> was copied from, or
      * <code>null</code> if never copied.
      * @throws SubversionException If there is a problem determing the
      * copy source.
      * @since 1.5
      */
-    CopySource getCopySource(String path)
+    CopySource getCopySource(String path, Revision revision)
         throws SubversionException;
 
     /**

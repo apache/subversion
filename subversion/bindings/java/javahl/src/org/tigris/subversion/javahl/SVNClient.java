@@ -1667,10 +1667,10 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
     
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String)
+     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String, Revision)
      * @since 1.5
      */
-    public native CopySource getCopySource(String path)
+    public native CopySource getCopySource(String path, Revision revision)
         throws SubversionException;
 
     /**
