@@ -44,6 +44,7 @@
 #include "svn_config.h"
 #include "svn_io.h"
 #include "svn_path.h"
+#include "svn_utf.h"
 #include "svn_private_config.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
@@ -887,15 +888,16 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 
     if (pegRevision)
     {
-        err = svn_client_diff_peg2(diffOptions,
+        err = svn_client_diff_peg4(diffOptions,
                                    path1.c_str(),
                                    pegRevision->revision(),
                                    revision1.revision(),
                                    revision2.revision(),
-                                   recurse ? TRUE : FALSE,
-                                   ignoreAncestry ? TRUE : FALSE,
-                                   noDiffDelete ? TRUE : FALSE,
-                                   force  ? TRUE : FALSE,
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   ignoreAncestry,
+                                   noDiffDelete,
+                                   force,
+                                   SVN_APR_LOCALE_CHARSET,
                                    outfile,
                                    NULL /* error file */,
                                    ctx,
@@ -914,15 +916,16 @@ void SVNClient::diff(const char *target1, Revision &revision1,
             SVN_JNI_ERR(err, );
         }
 
-        err = svn_client_diff2(diffOptions,
+        err = svn_client_diff4(diffOptions,
                                path1.c_str(),
                                revision1.revision(),
                                path2.c_str(),
                                revision2.revision(),
-                               recurse ? TRUE : FALSE,
-                               ignoreAncestry ? TRUE : FALSE,
-                               noDiffDelete ? TRUE : FALSE,
-                               force  ? TRUE : FALSE,
+                               SVN_DEPTH_FROM_RECURSE(recurse),
+                               ignoreAncestry,
+                               noDiffDelete,
+                               force,
+                               SVN_APR_LOCALE_CHARSET,
                                outfile,
                                NULL /* error file */,
                                ctx,
@@ -980,13 +983,13 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
     Path path2(target2);
     SVN_JNI_ERR(path2.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_diff_summarize(path1.c_str(), revision1.revision(),
-                                          path2.c_str(), revision2.revision(),
-                                          recurse ? TRUE : FALSE,
-                                          ignoreAncestry ? TRUE : FALSE,
-                                          DiffSummaryReceiver::summarize,
-                                          &receiver,
-                                          ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_diff_summarize2(path1.c_str(), revision1.revision(),
+                                           path2.c_str(), revision2.revision(),
+                                           SVN_DEPTH_FROM_RECURSE(recurse),
+                                           ignoreAncestry,
+                                           DiffSummaryReceiver::summarize,
+                                           &receiver,
+                                           ctx, requestPool.pool()), );
 }
 
 void
@@ -1006,15 +1009,15 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
     Path path(target);
     SVN_JNI_ERR(path.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_diff_summarize_peg(path.c_str(),
-                                              pegRevision.revision(),
-                                              startRevision.revision(),
-                                              endRevision.revision(),
-                                              recurse ? TRUE : FALSE,
-                                              ignoreAncestry ? TRUE : FALSE,
-                                              DiffSummaryReceiver::summarize,
-                                              &receiver, ctx,
-                                              requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_diff_summarize_peg2(path.c_str(),
+                                               pegRevision.revision(),
+                                               startRevision.revision(),
+                                               endRevision.revision(),
+                                               SVN_DEPTH_FROM_RECURSE(recurse),
+                                               ignoreAncestry,
+                                               DiffSummaryReceiver::summarize,
+                                               &receiver, ctx,
+                                               requestPool.pool()), );
 }
 
 svn_client_ctx_t *SVNClient::getContext(const char *message)
