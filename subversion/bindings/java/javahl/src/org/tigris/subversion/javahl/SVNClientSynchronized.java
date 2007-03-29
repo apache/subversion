@@ -1907,14 +1907,15 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
     
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String)
+     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String, Revision)
      * @since 1.5
      */
-    public CopySource getCopySource(String path) throws SubversionException
+    public CopySource getCopySource(String path, Revision revision)
+        throws SubversionException
     {
         synchronized (clazz)
         {
-            return worker.getCopySource(path);
+            return worker.getCopySource(path, revision);
         }
     }
 
