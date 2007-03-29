@@ -480,13 +480,12 @@ bool JNIUtil::isJavaExceptionThrown()
  */
 jstring JNIUtil::makeJString(const char *txt)
 {
-    if (txt == NULL) // NULL string can be converted to a null java string
-    {
+    if (txt == NULL)
+        // A NULL pointer is equates to a null java.lang.String.
         return NULL;
-    }
+
     JNIEnv *env = getEnv();
-    jstring js = env->NewStringUTF(txt);
-    return js;
+    return env->NewStringUTF(txt);
 }
 /**
  * set the flag, that an exception has been thrown
