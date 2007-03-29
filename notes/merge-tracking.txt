@@ -25,6 +25,13 @@ history index).
   * Default revision range (e.g. for -r/-c) to "all unmerged revisions",
     "oldest revision at merge source's path" thru HEAD.
 
+  * Provide an API capable of listing "all unmerged revisions".  Client
+    tool would use this to allow the user to select the revisions to merge.
+
+  * Provide support for arbitrary revision ranges (-r 10,14,18-24) in
+    libsvn_client.  Client tools will need to be able to support this
+    to properly support cherry-pick merges.
+
 * Allow for merge info which contains empty range lists, necessary for
   override of merge info by child paths which would otherwise inherit
   merge info from their parents which they don't reflect.
@@ -68,6 +75,12 @@ history index).
       overlapping conflict makers, or apply a merge inside a conflict
       marker!), being sure to record partial application of merge
       ranges.
+      
+    * Add a notification message or perhaps a notification callback so
+      that a client may provide detailed information about the state of
+      the merge.  Something which identifies which revisions have been
+      merged and that the user needs to resolve the conflicts and then
+      restart the merge process to allow it to pick up where it left off.
 
 * Handle merge info inheritance (and eliding, if any additional work
   is necessary).  (pburba/dlr)
