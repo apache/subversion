@@ -84,17 +84,17 @@ public:
                     ProplistCallback *callback);
     void merge(const char *path1, Revision &revision1, const char *path2,
                Revision &revision2, const char *localPath, bool force,
-               bool recurse, bool ignoreAncestry, bool dryRun);
+               svn_depth_t depth, bool ignoreAncestry, bool dryRun);
     void merge(const char *path, Revision &pegRevision, Revision &revision1,
                Revision &revision2, const char *localPath, bool force,
-               bool recurse, bool ignoreAncestry, bool dryRun);
+               svn_depth_t depth, bool ignoreAncestry, bool dryRun);
     void doImport(const char *path, const char *url, const char *message,
                   bool recurse);
     jlong doSwitch(const char *path, const char *url, Revision &revision,
-                   bool recurse, bool allowUnverObstructions);
+                   svn_depth_t depth, bool allowUnverObstructions);
     jlong doExport(const char *srcPath, const char *destPath,
                    Revision &revision, Revision &pegRevision, bool force,
-                   bool ignoreExternals, bool recurse,
+                   bool ignoreExternals, svn_depth_t depth,
                    const char *nativeEOL);
     void resolved(const char *path, bool recurse);
     void cleanup(const char *path);
@@ -106,7 +106,7 @@ public:
     jlong commit(Targets &targets, const char *message, bool recurse,
                  bool noUnlock, bool keepChangelist,
                  const char *changelistName);
-    jlongArray update(Targets &targets, Revision &revision, bool recurse,
+    jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                       bool ignoreExternals, bool allowUnverObstructions);
     void add(const char *path, bool recurse, bool force);
     void revert(const char *path, bool recurse);
@@ -116,7 +116,7 @@ public:
     void notification2(Notify2 *notify2);
     void setProgressListener(ProgressListener *progressListener);
     jlong checkout(const char *moduleName, const char *destPath,
-                   Revision &revision, Revision &pegRevsion, bool recurse,
+                   Revision &revision, Revision &pegRevsion, svn_depth_t depth,
                    bool ignoreExternals, bool allowUnverObstructions);
     void logMessages(const char *path, Revision &pegRevision,
                              Revision &revisionStart,
@@ -132,7 +132,7 @@ public:
     void addToChangelist(Targets &srcPaths, const char *changelist);
     void removeFromChangelist(Targets &srcPaths, const char *changelist);
     jobjectArray getChangelist(const char *changelist, const char *rootPath);
-    jobjectArray status(const char *path, bool recurse, bool onServer,
+    jobjectArray status(const char *path, svn_depth_t depth, bool onServer,
                         bool getAll, bool noIgnore, bool ignoreExternals);
     jobjectArray list(const char *url, Revision &revision,
                       Revision &pegRevision, bool recurse);
@@ -146,19 +146,19 @@ public:
                         Revision &revision, Revision &pegRevision);
     void diff(const char *target1, Revision &revision1,
               const char *target2, Revision &revision2,
-              const char *outfileName,bool recurse, bool ignoreAncestry,
+              const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
               bool noDiffDelete, bool force);
     void diff(const char *target, Revision &pegevision,
               Revision &startRevision, Revision &endRevision,
-              const char *outfileName,bool recurse, bool ignoreAncestry,
+              const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
               bool noDiffDelete, bool force);
     void diffSummarize(const char *target1, Revision &revision1,
                        const char *target2, Revision &revision2,
-                       bool recurse, bool ignoreAncestry,
+                       svn_depth_t depth, bool ignoreAncestry,
                        DiffSummaryReceiver &receiver);
     void diffSummarize(const char *target, Revision &pegRevision,
                        Revision &startRevision, Revision &endRevision,
-                       bool recurse, bool ignoreAncestry,
+                       svn_depth_t depth, bool ignoreAncestry,
                        DiffSummaryReceiver &receiver);
 
     const char *getLastPath();
@@ -188,7 +188,7 @@ private:
     void diff(const char *target1, Revision &revision1,
               const char *target2, Revision &revision2,
               Revision *pegRevision,
-              const char *outfileName, bool recurse, bool ignoreAncestry,
+              const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
               bool noDiffDelete, bool force);
 
     Notify *m_notify;

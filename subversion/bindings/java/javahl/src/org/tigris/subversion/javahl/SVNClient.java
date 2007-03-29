@@ -245,9 +245,29 @@ public class SVNClient implements SVNClientInterface
      * @return Array of Status entries.
      * @since 1.2
      */
-    public native Status[] status(String path, boolean descend,
-                                  boolean onServer, boolean getAll,
-                                  boolean noIgnore, boolean ignoreExternals)
+    public Status[] status(String path, boolean descend, boolean onServer,
+                           boolean getAll, boolean noIgnore,
+                           boolean ignoreExternals)
+            throws ClientException
+    {
+        return status(path, Depth.fromRecurse(descend), onServer, getAll,
+                      noIgnore, ignoreExternals);
+    }
+
+    /**
+     * List a directory or file of the working copy.
+     *
+     * @param path      Path to explore.
+     * @param depth     How deep to recurse into subdirectories.
+     * @param onServer  Request status information from server.
+     * @param getAll    get status for uninteresting (unchanged) files.
+     * @param noIgnore  get status for normaly ignored files and directories.
+     * @param ignoreExternals if externals are ignored during status
+     * @return Array of Status entries.
+     * @since 1.5
+     */
+    public native Status[] status(String path, int depth, boolean onServer,
+                    boolean getAll, boolean noIgnore, boolean ignoreExternals)
             throws ClientException;
 
     /**
@@ -419,7 +439,7 @@ public class SVNClient implements SVNClientInterface
      * @param destPath destination directory for checkout.
      * @param revision the revision to checkout.
      * @param pegRevision the peg revision to interpret the path
-     * @param recurse whether you want it to checkout files recursively.
+     * @param depth how deep to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @exception ClientException
@@ -427,7 +447,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native long checkout(String moduleName, String destPath,
                                 Revision revision, Revision pegRevision,
-                                boolean recurse, boolean ignoreExternals,
+                                int depth, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
@@ -447,8 +467,9 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return checkout(moduleName, destPath, revision, revision, recurse,
-                        ignoreExternals, false);
+        return checkout(moduleName, destPath, revision, revision, 
+                        Depth.fromRecurse(recurse), ignoreExternals,
+                        false);
     }
 
     /**
@@ -464,7 +485,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return checkout(moduleName, destPath, revision, revision, recurse,
-                        false, false);
+                        false);
     }
 
     /**
@@ -572,7 +593,8 @@ public class SVNClient implements SVNClientInterface
     public long update(String path, Revision revision, boolean recurse)
             throws ClientException
     {
-        return update(new String[]{path}, revision, recurse, false, false)[0];
+        return update(new String[]{path}, revision, Depth.fromRecurse(recurse),
+                      false, false)[0];
     }
 
     /**
@@ -590,7 +612,8 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, recurse, ignoreExternals, false);
+        return update(path, revision, Depth.fromRecurse(recurse),
+                      ignoreExternals, false);
     }
 
     /**
@@ -599,18 +622,18 @@ public class SVNClient implements SVNClientInterface
      * @param revision the revision number to update.
      *                 Revision.HEAD will update to the
      *                 latest revision.
-     * @param recurse recursively update.
+     * @param depth  the depth to recursively update.
      * @param ignoreExternals externals will be ignore during update
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @exception ClientException
      * @since 1.5
      */
-    public long update(String path, Revision revision, boolean recurse,
+    public long update(String path, Revision revision, int depth,
                        boolean ignoreExternals,
                        boolean allowUnverObstructions)
             throws ClientException
     {
-        return update(new String[]{path}, revision, recurse,
+        return update(new String[]{path}, revision, depth,
                       ignoreExternals, allowUnverObstructions)[0];
     }
 
@@ -620,14 +643,14 @@ public class SVNClient implements SVNClientInterface
      * @param revision the revision number to update.
      *                 Revision.HEAD will update to the
      *                 latest revision.
-     * @param recurse recursively update.
+     * @param depth  the depth to recursively update.
      * @param ignoreExternals externals will be ignore during update
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @exception ClientException
      * @since 1.5
      */
     public native long[] update(String[] path, Revision revision,
-                                boolean recurse, boolean ignoreExternals,
+                                int depth, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
@@ -810,10 +833,36 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
+    public long doExport(String srcPath, String destPath, Revision revision,
+                         Revision pegRevision, boolean force,
+                         boolean ignoreExternals, boolean recurse,
+                         String nativeEOL)
+            throws ClientException
+    {
+        return doExport(srcPath, destPath, revision, pegRevision, force,
+                        ignoreExternals, Depth.fromRecurse(recurse), nativeEOL);
+    }
+
+    /**
+     * Exports the contents of either a subversion repository into a
+     * 'clean' directory (meaning a directory with no administrative
+     * directories).
+     *
+     * @param srcPath         the url of the repository path to be exported
+     * @param destPath        a destination path that must not already exist.
+     * @param revision        the revsion to be exported
+     * @param pegRevision     the revision to interpret srcPath
+     * @param force           set if it is ok to overwrite local files
+     * @param ignoreExternals ignore external during export
+     * @param depth           how deep to recurse in subdirectories
+     * @param nativeEOL       which EOL characters to use during export
+     * @throws ClientException
+     * @since 1.5
+     */
     public native long doExport(String srcPath, String destPath,
                                 Revision revision, Revision pegRevision,
                                 boolean force, boolean ignoreExternals,
-                                boolean recurse, String nativeEOL)
+                                int depth, String nativeEOL)
             throws ClientException;
 
     /**
@@ -821,13 +870,13 @@ public class SVNClient implements SVNClientInterface
      * @param path      the working copy path
      * @param url       the new url for the working copy
      * @param revision  the new base revision of working copy
-     * @param recurse   traverse into subdirectories
+     * @param depth     how deep to traverse into subdirectories
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @exception ClientException
      * @since 1.5
      */
     public native long doSwitch(String path, String url, Revision revision,
-                                boolean recurse,
+                                int depth,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
@@ -842,7 +891,7 @@ public class SVNClient implements SVNClientInterface
     public long doSwitch(String path, String url, Revision revision,
                          boolean recurse) throws ClientException
     {
-        return doSwitch(path, url, revision, recurse, false);
+        return doSwitch(path, url, revision, Depth.fromRecurse(recurse), false);
     }
 
     /**
@@ -892,9 +941,33 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
+    public void merge(String path1, Revision revision1, String path2,
+                      Revision revision2, String localPath, boolean force,
+                      boolean recurse, boolean ignoreAncestry, boolean dryRun)
+            throws ClientException
+    {
+        merge(path1, revision1, path2, revision2, localPath, force,
+              Depth.fromRecurse(recurse), ignoreAncestry, dryRun);
+    }
+
+    /**
+     * Merge changes from two paths into a new local path.
+     *
+     * @param path1          first path or url
+     * @param revision1      first revision
+     * @param path2          second path or url
+     * @param revision2      second revision
+     * @param localPath      target local path
+     * @param force          overwrite local changes
+     * @param depth          how deep to traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param dryRun         do not change anything
+     * @throws ClientException
+     * @since 1.5
+     */
     public native void merge(String path1, Revision revision1, String path2,
                              Revision revision2, String localPath,
-                             boolean force, boolean recurse,
+                             boolean force, int depth,
                              boolean ignoreAncestry, boolean dryRun)
             throws ClientException;
 
@@ -913,12 +986,35 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
+    public void merge(String path, Revision pegRevision, Revision revision1,
+                      Revision revision2, String localPath, boolean force,
+                      boolean recurse, boolean ignoreAncestry, boolean dryRun)
+           throws ClientException
+    {
+        merge(path, pegRevision, revision1, revision2, localPath, force,
+              Depth.fromRecurse(recurse), ignoreAncestry, dryRun);
+    }
+
+    /**
+     * Merge changes from two paths into a new local path.
+     *
+     * @param path           path or url
+     * @param pegRevision    revision to interpret path
+     * @param revision1      first revision
+     * @param revision2      second revision
+     * @param localPath      target local path
+     * @param force          overwrite local changes
+     * @param depth          how deep to traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param dryRun         do not change anything
+     * @throws ClientException
+     * @since 1.5
+     */
     public native void merge(String path, Revision pegRevision,
                              Revision revision1, Revision revision2,
-                             String localPath, boolean force, boolean recurse,
+                             String localPath, boolean force, int depth,
                              boolean ignoreAncestry, boolean dryRun)
            throws ClientException;
-
 
     /**
      * Merge set of revisions into a new local path.
@@ -927,7 +1023,7 @@ public class SVNClient implements SVNClientInterface
      * @param revisions     revisions to merge
      * @param localPath     target local path
      * @param force         overwrite local changes
-     * @param recurse       traverse into subdirectories
+     * @param depth         how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun        do not change anything
      * @exception ClientException
@@ -935,14 +1031,14 @@ public class SVNClient implements SVNClientInterface
      */
     public void merge(String path, Revision pegRevision,
                       RevisionRange[] revisions, String localPath,
-                      boolean force, boolean recurse, boolean ignoreAncestry,
+                      boolean force, int depth, boolean ignoreAncestry,
                       boolean dryRun)
             throws ClientException
     {
         for (int i = 0; i < revisions.length; i++)
         {
             this.merge(path, pegRevision, revisions[i].getFromRevision(),
-                       revisions[i].getToRevision(), localPath, force, recurse,
+                       revisions[i].getToRevision(), localPath, force, depth,
                        ignoreAncestry, dryRun);
         }
     }
@@ -981,10 +1077,35 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String outFileName, boolean recurse,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force)
+            throws ClientException
+    {
+        diff(target1, revision1, target2, revision2, outFileName,
+             Depth.fromRecurse(recurse), ignoreAncestry, noDiffDeleted,
+             force);
+    }
+
+    /**
+     * Display the differences between two paths
+     * @param target1       first path or url
+     * @param revision1     first revision
+     * @param target2       second path or url
+     * @param revision2     second revision
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @exception ClientException
+     * @since 1.5
+     */
     public native void diff(String target1, Revision revision1, String target2,
-                            Revision revision2, String outFileName,
-                            boolean recurse, boolean ignoreAncestry,
-                            boolean noDiffDeleted, boolean force)
+                            Revision revision2, String outFileName, int depth,
+                            boolean ignoreAncestry, boolean noDiffDeleted,
+                            boolean force)
             throws ClientException;
 
     /**
@@ -1002,9 +1123,34 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String outFileName, boolean recurse,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force)
+            throws ClientException
+    {
+        diff(target, pegRevision, startRevision, endRevision, outFileName,
+             Depth.fromRecurse(recurse), ignoreAncestry, noDiffDeleted, force);
+    }
+
+    /**
+     * Display the differences between two paths
+     * @param target        path or url
+     * @param pegRevision   revision tointerpret target
+     * @param startRevision first Revision to compare
+     * @param endRevision   second Revision to compare
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @exception ClientException
+     * @since 1.5
+     */
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
-                            String outFileName, boolean recurse,
+                            String outFileName, int depth,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force)
             throws ClientException;
@@ -1017,7 +1163,7 @@ public class SVNClient implements SVNClientInterface
      * @param revision1 Revision of <code>target1</code>.
      * @param target2 Path or URL.
      * @param revision2 Revision of <code>target2</code>.
-     * @param recurse Whether to recurse.
+     * @param depth how deep to recurse.
      * @param ignoreAncestry Whether to ignore unrelated files during
      * comparison.  False positives may potentially be reported if
      * this parameter <code>false</code>, since a file might have been
@@ -1031,7 +1177,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void diffSummarize(String target1, Revision revision1,
                                      String target2, Revision revision2,
-                                     boolean recurse, boolean ignoreAncestry,
+                                     int depth, boolean ignoreAncestry,
                                      DiffSummaryReceiver receiver)
         throws ClientException;
 
@@ -1050,7 +1196,7 @@ public class SVNClient implements SVNClientInterface
      * <code>target</code>.
      * @param endRevision End of range for comparsion of
      * <code>target</code>.
-     * @param recurse Whether to recurse.
+     * @param depth how deep to recurse.
      * @param ignoreAncestry Whether to ignore unrelated files during
      * comparison.  False positives may potentially be reported if
      * this parameter <code>false</code>, since a file might have been
@@ -1065,7 +1211,7 @@ public class SVNClient implements SVNClientInterface
     public native void diffSummarize(String target, Revision pegRevision,
                                      Revision startRevision,
                                      Revision endRevision,
-                                     boolean recurse, boolean ignoreAncestry,
+                                     int depth, boolean ignoreAncestry,
                                      DiffSummaryReceiver receiver)
         throws ClientException;
 
