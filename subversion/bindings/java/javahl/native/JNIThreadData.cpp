@@ -60,7 +60,7 @@ bool JNIThreadData::initThreadData()
 
     // request a key for the thread local storage from the global pool and
     // register a callback function called, when the thread is deleted
-    apr_status_t apr_err = apr_threadkey_private_create  ( &g_key, del, 
+    apr_status_t apr_err = apr_threadkey_private_create  ( &g_key, del,
         JNIUtil::getPool());
     if (apr_err)
     {
@@ -84,7 +84,7 @@ JNIThreadData *JNIThreadData::getThreadData()
 
     // retrieve the thread local storage from apr
     JNIThreadData *data = NULL;
-    apr_status_t apr_err = apr_threadkey_private_get 
+    apr_status_t apr_err = apr_threadkey_private_get
         (reinterpret_cast<void**>(&data), g_key);
     if (apr_err)
     {
@@ -113,7 +113,7 @@ JNIThreadData *JNIThreadData::getThreadData()
 void JNIThreadData::pushNewThreadData()
 {
     JNIThreadData *data = NULL;
-    apr_status_t apr_err = apr_threadkey_private_get 
+    apr_status_t apr_err = apr_threadkey_private_get
         (reinterpret_cast<void**>(&data), g_key);
     if (apr_err)
     {
@@ -135,7 +135,7 @@ void JNIThreadData::pushNewThreadData()
 void JNIThreadData::popThreadData()
 {
     JNIThreadData *data = NULL;
-    apr_status_t apr_err = apr_threadkey_private_get 
+    apr_status_t apr_err = apr_threadkey_private_get
         (reinterpret_cast<void**>(&data), g_key);
     if (apr_err)
     {
@@ -156,7 +156,7 @@ void JNIThreadData::popThreadData()
     }
 }
 /**
- * callback called by apr, when the thread dies. Deletes the thread local 
+ * callback called by apr, when the thread dies. Deletes the thread local
  * storage
  */
 void JNIThreadData::del(void *p)

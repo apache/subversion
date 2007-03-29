@@ -29,7 +29,7 @@
 #include "svn_client.h"
 
 /**
- * this class holds a java callback object, which will receive every line of 
+ * this class holds a java callback object, which will receive every line of
  * the file for which the callback information is requested.
  */
 class BlameCallback
@@ -38,7 +38,7 @@ public:
     BlameCallback(jobject jcallback);
     ~BlameCallback();
     svn_error_t *callback(svn_revnum_t revision, const char *author,
-                          const char *date, const char *line, 
+                          const char *date, const char *line,
                           apr_pool_t *pool);
 private:
     /**

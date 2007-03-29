@@ -30,7 +30,7 @@ struct apr_pool_t;
 
 /**
  * this class manages one apr pool. Objects of this class are allocated on
- * the stack of the SVNClient & SVNAdmin methods as the request pool. 
+ * the stack of the SVNClient & SVNAdmin methods as the request pool.
  * Leaving the methods will destroy the pool.
  */
 class Pool
@@ -47,4 +47,4 @@ private:
 
 };
 // !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)
-#endif 
+#endif

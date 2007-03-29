@@ -36,7 +36,7 @@ private:
     /**
      * the java object to receive the notifications. This is a global reference
      * because it has to live longer than the SVNClient.notification call
-     */ 
+     */
     jobject m_notify;
     Notify(jobject p_notify);
 public:

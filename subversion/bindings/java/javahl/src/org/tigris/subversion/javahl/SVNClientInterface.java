@@ -729,7 +729,7 @@ public interface SVNClientInterface
      * @since 1.2
      */
     void diff(String target1, Revision revision1, String target2,
-              Revision revision2, String outFileName, boolean recurse, 
+              Revision revision2, String outFileName, boolean recurse,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force)
             throws ClientException;
 
@@ -836,7 +836,7 @@ public interface SVNClientInterface
      * @return array of property objects
      * @since 1.2
      */
-    PropertyData[] properties(String path, Revision revision, 
+    PropertyData[] properties(String path, Revision revision,
                               Revision pegRevision)
             throws ClientException;
 
@@ -1072,7 +1072,7 @@ public interface SVNClientInterface
      * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedInputStream.html">PipedInputStream</a>
      */
     void streamFileContent(String path, Revision revision, Revision pegRevision,
-                           int bufferSize, OutputStream stream) 
+                           int bufferSize, OutputStream stream)
         throws ClientException;
 
     /**

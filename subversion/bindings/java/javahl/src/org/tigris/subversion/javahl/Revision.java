@@ -101,7 +101,7 @@ public class Revision
         if (!(target instanceof Revision))
             return false;
 
-        return ((Revision)target).revKind == revKind;        
+        return ((Revision)target).revKind == revKind;
     }
 
     /**
@@ -222,7 +222,7 @@ public class Revision
             if (!super.equals(target))
                 return false;
 
-            return ((Revision.Number)target).revNumber == revNumber;        
+            return ((Revision.Number)target).revNumber == revNumber;
         }
 
         /* (non-Javadoc)
@@ -269,7 +269,7 @@ public class Revision
          * @return english text
          */
         public String toString() {
-            
+
             SimpleDateFormat dateFormat =
                     new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z",
                             Locale.US);
@@ -285,7 +285,7 @@ public class Revision
             if (!super.equals(target))
                 return false;
 
-            return ((Revision.DateSpec)target).revDate.equals(revDate);        
+            return ((Revision.DateSpec)target).revDate.equals(revDate);
         }
         /* (non-Javadoc)
          * @see org.tigris.subversion.javahl.Revision#hashCode()
@@ -294,7 +294,7 @@ public class Revision
         {
             return revDate.hashCode();
         }
-        
+
     }
 
     /**

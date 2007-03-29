@@ -31,7 +31,7 @@
  * @param method    the name of the method
  * @param jthis     the java object for which the method is call
  */
-JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz, 
+JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
                                  const char *method, jobject jthis)
 {
     JNIUtil::JNIInit(env);
@@ -87,8 +87,8 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
 
         // generate the log message
         char *buffer = JNIUtil::getFormatBuffer();
-        apr_snprintf(buffer, JNIUtil::formatBufferSize, 
-            "entry class %s method %s object %s", m_clazz, m_method, 
+        apr_snprintf(buffer, JNIUtil::formatBufferSize,
+            "entry class %s method %s object %s", m_clazz, m_method,
             m_objectID);
         JNIUtil::logMessage(buffer);
     }
@@ -101,7 +101,7 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
     }
 }
 /**
- * Destroy an object and create a log message for the exit of the method, if 
+ * Destroy an object and create a log message for the exit of the method, if
  * one was create for the entry
  */
 JNIStackElement::~JNIStackElement()
@@ -110,8 +110,8 @@ JNIStackElement::~JNIStackElement()
     {
         // generate a log message
         char *buffer = JNIUtil::getFormatBuffer();
-        apr_snprintf(buffer, JNIUtil::formatBufferSize, 
-                     "exit class %s method %s object %s", m_clazz, 
+        apr_snprintf(buffer, JNIUtil::formatBufferSize,
+                     "exit class %s method %s object %s", m_clazz,
                      m_method, m_objectID);
         JNIUtil::logMessage(buffer);
     }

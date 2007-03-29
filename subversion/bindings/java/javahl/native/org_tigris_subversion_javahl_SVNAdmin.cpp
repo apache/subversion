@@ -103,7 +103,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_create
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNAdmin_deltify
-  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevisionStart, 
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevisionStart,
    jobject jrevisionStop)
 {
     JNIEntry(SVNAdmin, deltify);
@@ -136,7 +136,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_deltify
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNAdmin_dump
-  (JNIEnv *env, jobject jthis, jstring jpath, jobject jdataout, 
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jdataout,
    jobject jmessageout, jobject jrevisionStart,
    jobject jrevisionEnd, jboolean jincremental)
 {
@@ -177,13 +177,13 @@ Java_org_tigris_subversion_javahl_SVNAdmin_dump
         return;
     }
 
-    cl->dump(path, dataOut, messageOut, revisionStart, revisionEnd, 
+    cl->dump(path, dataOut, messageOut, revisionStart, revisionEnd,
              jincremental ? true : false);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNAdmin_hotcopy
-  (JNIEnv *env, jobject jthis, jstring jpath, jstring jtargetPath, 
+  (JNIEnv *env, jobject jthis, jstring jpath, jstring jtargetPath,
    jboolean jcleanLogs)
 {
     JNIEntry(SVNAdmin, hotcopy);
@@ -265,8 +265,8 @@ Java_org_tigris_subversion_javahl_SVNAdmin_listUnusedDBLogs
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNAdmin_load
-  (JNIEnv *env, jobject jthis, jstring jpath, jobject jinputData, 
-   jobject joutputMsg, jboolean jignoreUUID, jboolean jforceUUID, 
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jinputData,
+   jobject joutputMsg, jboolean jignoreUUID, jboolean jforceUUID,
    jstring jrelativePath)
 {
     JNIEntry(SVNAdmin, load);
@@ -301,7 +301,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_load
         return;
     }
 
-    cl->load(path, inputData, outputMsg, jignoreUUID ? true : false, 
+    cl->load(path, inputData, outputMsg, jignoreUUID ? true : false,
              jforceUUID ? true : false, relativePath);
 }
 
@@ -425,7 +425,7 @@ setRevProp(jobject jthis, jstring jpath, jobject jrevision,
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNAdmin_setLog
-  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision, 
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
    jstring jmessage, jboolean jbypassHooks)
 {
     JNIEntry(SVNAdmin, setLog);
@@ -441,7 +441,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_setLog
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNAdmin_setRevProp
-  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision, 
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
    jstring jpropName, jstring jpropValue, jboolean jusePreRevPropChangeHook,
    jboolean jusePostRevPropChangeHook)
 {
@@ -452,7 +452,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_setRevProp
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNAdmin_verify
-  (JNIEnv *env, jobject jthis, jstring jpath, jobject jmessageout, 
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jmessageout,
    jobject jrevisionStart, jobject jrevisionEnd)
 {
     JNIEntry(SVNAdmin, dump);

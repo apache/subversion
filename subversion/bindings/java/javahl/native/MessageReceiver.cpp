@@ -33,7 +33,7 @@ MessageReceiver::MessageReceiver(jobject jthis)
  */
 MessageReceiver::~MessageReceiver()
 {
-    // the m_callback does not need to be destroyed, because it is the passed 
+    // the m_callback does not need to be destroyed, because it is the passed
     // in parameter to the java method.
 }
 /**
@@ -45,7 +45,7 @@ void MessageReceiver::receiveMessage(const char *message)
     JNIEnv *env = JNIUtil::getEnv();
     static jmethodID mid = 0; // the method id will not change during
                               // the time this library is loaded, so
-                              // it can be cached. 
+                              // it can be cached.
     if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNAdmin$MessageReceiver");
@@ -71,7 +71,7 @@ void MessageReceiver::receiveMessage(const char *message)
     {
         return;
     }
-    
+
     // call the java method
     env->CallVoidMethod(m_jthis, mid);
     if (JNIUtil::isJavaExceptionThrown())

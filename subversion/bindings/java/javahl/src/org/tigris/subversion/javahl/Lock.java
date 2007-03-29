@@ -13,7 +13,7 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
- * 
+ *
  * @endcopyright
  */
 package org.tigris.subversion.javahl;

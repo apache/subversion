@@ -33,7 +33,7 @@
  * this class contains all the mappers between the C enum's and the matching
  * java int's.
  */
-class EnumMapper  
+class EnumMapper
 {
 public:
     static jint mapCommitMessageStateFlags(apr_byte_t flags);

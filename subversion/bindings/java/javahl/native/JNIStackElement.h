@@ -32,14 +32,14 @@
  * Create a stack element on the stack, which will be used to track
  * the entry and exit of a method.  Assumes that there are a local
  * variables named "env" and "jthis" available.
- */ 
+ */
 #define JNIEntry(c,m) JNIStackElement se(env, #c, #m, jthis);
 
 /**
  * Create a stack element on the stack, which will be used to track
  * the entry and exit of a static method.  Assumes that there are a
  * local variables named "env" and "jthis" available.
- */ 
+ */
 #define JNIEntryStatic(c,m) JNIStackElement se(env, #c, #m, jclazz);
 
 
@@ -70,4 +70,4 @@ private:
     char m_objectID[JNIUtil::formatBufferSize];
 };
 // !defined(AFX_JNISTACKELEMENT_H__81945F80_D56F_4782_B8E7_6A82483E6463__INCLUDED_)
-#endif 
+#endif

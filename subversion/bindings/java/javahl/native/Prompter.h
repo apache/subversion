@@ -30,10 +30,10 @@
 #include "svn_auth.h"
 #include <string>
 /**
- * This class requests username/password and informations about 
+ * This class requests username/password and informations about
  * ssl-certificates from the user. There are 3 java interfaces for that.
  * PromptUserPassword, PromptUserPassword2 and PromptUserPassword3
- * each following interface extends the previous interface. 
+ * each following interface extends the previous interface.
  */
 class Prompter
 {
@@ -51,11 +51,11 @@ private:
      */
     bool m_version3;
     /**
-     * intermediate storage for an answer. 
+     * intermediate storage for an answer.
      */
     std::string m_answer;
     /**
-     * flag is the user allowed, that the last answer is stored in 
+     * flag is the user allowed, that the last answer is stored in
      * the configuration
      */
     bool m_maySave;

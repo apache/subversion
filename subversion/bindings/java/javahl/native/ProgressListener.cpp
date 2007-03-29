@@ -102,7 +102,7 @@ ProgressListener::onProgress(apr_off_t progressVal, apr_off_t total,
         {
             return;
         }
-        mid = env->GetMethodID(clazz, "onProgress", 
+        mid = env->GetMethodID(clazz, "onProgress",
             "(Lorg/tigris/subversion/javahl/ProgressEvent;)V");
         if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {

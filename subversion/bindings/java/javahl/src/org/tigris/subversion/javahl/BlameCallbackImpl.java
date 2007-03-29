@@ -78,7 +78,7 @@ public class BlameCallbackImpl implements BlameCallback
 
     /**
      * Class represeting one line of the lines, i.e. a blame record
-     * 
+     *
      */
     public static class BlameLine
     {
@@ -93,7 +93,7 @@ public class BlameCallbackImpl implements BlameCallback
 
         /**
          * Constructor
-         * 
+         *
          * @param revision
          * @param author
          * @param changed

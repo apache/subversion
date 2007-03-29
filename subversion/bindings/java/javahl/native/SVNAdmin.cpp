@@ -149,8 +149,8 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
     return;
 }
 
-void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut, 
-                    Revision &revsionStart, Revision &revisionEnd, 
+void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut,
+                    Revision &revsionStart, Revision &revisionEnd,
                     bool incremental)
 {
     Pool requestPool;
@@ -211,7 +211,7 @@ void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut,
                                   NULL, NULL, requestPool.pool()), );
 }
 
-void SVNAdmin::hotcopy(const char *path, const char *targetPath, 
+void SVNAdmin::hotcopy(const char *path, const char *targetPath,
                        bool cleanLogs)
 {
     Pool requestPool;
@@ -316,7 +316,7 @@ jlong SVNAdmin::recover(const char *path)
        people what the latest revision is.  It also proves that the
        recovery actually worked. */
     SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), -1);
-    SVN_JNI_ERR(svn_fs_youngest_rev(&youngest_rev, svn_repos_fs (repos), 
+    SVN_JNI_ERR(svn_fs_youngest_rev(&youngest_rev, svn_repos_fs (repos),
                                     requestPool.pool()),
                 -1);
     return youngest_rev;
@@ -409,7 +409,7 @@ void SVNAdmin::setRevProp(const char *path, Revision &revision,
     SVN_JNI_ERR(err, );
 }
 
-void SVNAdmin::verify(const char *path, Outputer &messageOut, 
+void SVNAdmin::verify(const char *path, Outputer &messageOut,
                       Revision &revisionStart, Revision &revisionEnd)
 {
     Pool requestPool;
@@ -421,10 +421,10 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
     /* This whole process is basically just a dump of the repository
        with no interest in the output. */
     SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
-    SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs (repos), 
+    SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs (repos),
                                     requestPool.pool()), );
     SVN_JNI_ERR(svn_repos_dump_fs(repos, NULL, messageOut.getStream(requestPool),
-                                  0, youngest, FALSE, NULL, NULL, 
+                                  0, youngest, FALSE, NULL, NULL,
                                   requestPool.pool()), );
 }
 
@@ -463,9 +463,9 @@ jobjectArray SVNAdmin::lslocks(const char *path)
     {
         return NULL;
     }
-    
+
     int i = 0;
-    for (hi = apr_hash_first (requestPool.pool(), locks); hi; 
+    for (hi = apr_hash_first (requestPool.pool(), locks); hi;
             hi = apr_hash_next (hi),i++)
     {
         void *val;
@@ -483,7 +483,7 @@ jobjectArray SVNAdmin::lslocks(const char *path)
             return NULL;
         }
     }
-  
+
     return ret;
 }
 void SVNAdmin::rmlocks(const char *path, Targets &locks)
@@ -499,7 +499,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
     SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
     fs = svn_repos_fs (repos);
     const char *username;
-  
+
     /* svn_fs_unlock() demands that some username be associated with the
        filesystem, so just use the UID of the person running 'svnadmin'.*/
     {
@@ -528,7 +528,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
     {
         const char *lock_path = APR_ARRAY_IDX (args, i, const char *);
         svn_lock_t *lock;
-      
+
         /* Fetch the path's svn_lock_t. */
         svn_error_t *err = svn_fs_get_lock(&lock, fs, lock_path, subpool);
         if (err)
@@ -537,14 +537,14 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
         {
             continue;
         }
-      
+
         /* Now forcibly destroy the lock. */
         err = svn_fs_unlock (fs, lock_path,
                              lock->token, 1 /* force */, subpool);
         if (err)
             goto move_on;
-      
-    move_on:      
+
+    move_on:
         svn_error_clear (err);
         svn_pool_clear (subpool);
     }
