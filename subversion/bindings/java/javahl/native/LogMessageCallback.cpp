@@ -132,19 +132,19 @@ LogMessageCallback::callback(apr_hash_t *changed_paths, svn_revnum_t rev,
 
         for (i = 0; i < sorted_paths->nelts; i++)
         {
-            svn_sort__item_t *item = &(APR_ARRAY_IDX (sorted_paths, i,
-                                                    svn_sort__item_t));
+            svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
+                                                     svn_sort__item_t));
             const char *path = (const char *)item->key;
             svn_log_changed_path_t *log_item 
                 = (svn_log_changed_path_t *)
-                    apr_hash_get (changed_paths, item->key, item->klen);
+                    apr_hash_get(changed_paths, item->key, item->klen);
 
             jstring jpath = JNIUtil::makeJString(path);
             if (JNIUtil::isJavaExceptionThrown())
             {
                 return SVN_NO_ERROR;
             }
-            jstring jcopyFromPath = 
+            jstring jcopyFromPath =
                 JNIUtil::makeJString(log_item->copyfrom_path);
             if (JNIUtil::isJavaExceptionThrown())
             {
@@ -154,7 +154,7 @@ LogMessageCallback::callback(apr_hash_t *changed_paths, svn_revnum_t rev,
             jchar jaction = log_item->action;
 
             jobject cp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
-                jcopyFromPath, jaction);
+                                        jcopyFromPath, jaction);
             if (JNIUtil::isJavaExceptionThrown())
             {
                 return SVN_NO_ERROR;
