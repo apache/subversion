@@ -191,8 +191,8 @@ public class Revision
         {
             super(Kind.number, true);
             if (number < 0)
-                throw new IllegalArgumentException(
-                        "negative revision numbers are not allowed");
+                throw new IllegalArgumentException
+                    ("Invalid (negative) revision number: " + number);
             revNumber = number;
         }
 
