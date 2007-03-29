@@ -72,7 +72,7 @@ public class MergeInfo
                 throw new SubversionException(
                       "List must only contain objects of type RevisionRange");
         }
-        mergeSources.put(path, range);
+        this.setRevisionList(path, range);
     }
 
     /**
@@ -88,15 +88,7 @@ public class MergeInfo
         if (revisions == null)
             revisions = new ArrayList();
         revisions.add(range);
-        try
-        {
-            this.addRevisions(path, revisions);
-        }
-        catch (SubversionException e)
-        {
-            // Should be impossible to get here
-            throw new RuntimeException(e.getMessage());
-        }
+        this.setRevisionList(path, revisions);
     }
 
     /**
@@ -181,12 +173,30 @@ public class MergeInfo
      */
     private void parseRevisions(String path, String revisions)
     {
+        List rangeList = this.getRevisions(path);
         StringTokenizer st = new StringTokenizer(revisions, ",");
         while (st.hasMoreTokens())
         {
             String revisionElement = st.nextToken();
             RevisionRange range = new RevisionRange(revisionElement);
-            this.addRevisionRange(path, range);
+            if (rangeList == null)
+                rangeList = new ArrayList();
+            rangeList.add(range);
         }
+        if (rangeList != null)
+            setRevisionList(path, rangeList);
+    }
+
+
+    /**
+     * Add the List object to the map.  This method is only
+     * used internally where we know that List contains a
+     * type-safe set of RevisionRange objects.
+     * @param path The merge source path.
+     * @param range List of RevisionRange objects to add.
+     */
+    private void setRevisionList(String path, List range)
+    {
+        mergeSources.put(path, range);
     }
 }
