@@ -132,7 +132,7 @@ public:
     void addToChangelist(Targets &srcPaths, const char *changelist);
     void removeFromChangelist(Targets &srcPaths, const char *changelist);
     jobjectArray getChangelist(const char *changelist, const char *rootPath);
-    jobjectArray status(const char *path, bool descend, bool onServer,
+    jobjectArray status(const char *path, bool recurse, bool onServer,
                         bool getAll, bool noIgnore, bool ignoreExternals);
     jobjectArray list(const char *url, Revision &revision, 
                       Revision &pegRevision, bool recurse);

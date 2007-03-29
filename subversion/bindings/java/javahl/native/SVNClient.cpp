@@ -217,7 +217,7 @@ void SVNClient::statusReceiver(void *baton, const char *path,
 }
 
 
-jobjectArray SVNClient::status(const char *path, bool descend, bool onServer, 
+jobjectArray SVNClient::status(const char *path, bool recurse, bool onServer, 
                                bool getAll, bool noIgnore, bool ignoreExternals)
 {
     status_baton statusBaton;
@@ -238,13 +238,12 @@ jobjectArray SVNClient::status(const char *path, bool descend, bool onServer,
     rev.kind = svn_opt_revision_unspecified;
     statusBaton.pool = requestPool.pool();
 
-    SVN_JNI_ERR(svn_client_status2(&youngest, checkedPath.c_str(), 
+    SVN_JNI_ERR(svn_client_status3(&youngest, checkedPath.c_str(), 
                                    &rev, statusReceiver, 
-                                   &statusBaton, descend ? TRUE : FALSE,
-                                   getAll ? TRUE : FALSE,
-                                   onServer ? TRUE : FALSE,
-                                   noIgnore ? TRUE : FALSE, 
-                                   ignoreExternals ? TRUE : FALSE, 
+                                   &statusBaton,
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   getAll, onServer, noIgnore, 
+                                   ignoreExternals,
                                    ctx, requestPool.pool()),
                 NULL);
 
