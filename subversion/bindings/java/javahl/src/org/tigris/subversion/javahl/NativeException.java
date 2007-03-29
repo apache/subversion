@@ -24,8 +24,8 @@ package org.tigris.subversion.javahl;
 class NativeException extends SubversionException
 {
     /**
-     * Any associated error source (e.g. line number) for a wrapped
-     * <code>svn_error_t</code>.
+     * Any associated error source (e.g. file name and line number)
+     * for a wrapped <code>svn_error_t</code>.
      */
     private String source;
 
