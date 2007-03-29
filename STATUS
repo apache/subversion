@@ -112,13 +112,6 @@ Candidate changes:
    Votes:
      +1: dionisos, dlr
 
- * r24219
-   Fix error reporting for JavaHL's info2() API.
-   Justification:
-     Otherwise mis-reports itself as unlock().
-   Votes:
-     +1: dlr, hwright
-
 
 Veto-blocked changes:
 

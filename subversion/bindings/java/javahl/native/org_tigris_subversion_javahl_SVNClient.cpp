@@ -1815,7 +1815,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_info2
   (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision, 
    jobject jpegRevision, jboolean jrecurse)
 {
-    JNIEntry(SVNClient, unlock);
+    JNIEntry(SVNClient, info2);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if(cl == NULL)
     {
