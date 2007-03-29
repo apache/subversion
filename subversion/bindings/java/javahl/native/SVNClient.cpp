@@ -303,7 +303,7 @@ void SVNClient::setPrompt(Prompter *prompter)
     m_prompter = prompter;
 }
 
-svn_error_t *
+static svn_error_t *
 log_message_receiver(void *baton, apr_hash_t *changed_paths, svn_revnum_t rev,
                      const char *author, const char *date, const char *msg,
                      apr_pool_t *pool)
@@ -788,7 +788,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     return createJavaProperty(jthis, path, name, propval);
 }
 
-svn_error_t *
+static svn_error_t *
 proplist_receiver(void *baton,
                   svn_stringbuf_t *path,
                   apr_hash_t *prop_hash,
