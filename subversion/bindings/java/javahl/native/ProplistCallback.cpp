@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,15 +41,27 @@ ProplistCallback::~ProplistCallback()
     // in parameter to the java SVNClient.blame method.
 }
 
+svn_error_t *
+ProplistCallback::callback(void *baton,
+                  svn_stringbuf_t *path,
+                  apr_hash_t *prop_hash,
+                  apr_pool_t *pool)
+{
+    if (baton)
+        return ((ProplistCallback *)baton)->singlePath(path, prop_hash, pool);
+
+    return SVN_NO_ERROR;
+}
+
 /**
  * Callback called for a single path
  * @param path      the path name
  * @param prop_hash the hash of properties on this path
  * @param pool      memory pool for the use of this function
  */
-svn_error_t* ProplistCallback::callback(svn_stringbuf_t *path,
-                                        apr_hash_t *prop_hash,
-                                        apr_pool_t *pool)
+svn_error_t* ProplistCallback::singlePath(svn_stringbuf_t *path,
+                                         apr_hash_t *prop_hash,
+                                         apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
 

@@ -37,9 +37,17 @@ class ProplistCallback
 public:
     ProplistCallback(jobject jcallback);
     ~ProplistCallback();
-    svn_error_t *callback(svn_stringbuf_t *path,
-                          apr_hash_t *prop_hash,
-                          apr_pool_t *pool);
+
+    static svn_error_t *callback(void *baton,
+                                 svn_stringbuf_t *path,
+                                 apr_hash_t *prop_hash,
+                                 apr_pool_t *pool);
+
+protected:
+    svn_error_t *singlePath(svn_stringbuf_t *path,
+                            apr_hash_t *prop_hash,
+                            apr_pool_t *pool);
+
 private:
     /**
      * this a local reference to the java object.
