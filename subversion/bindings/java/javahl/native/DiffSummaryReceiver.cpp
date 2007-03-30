@@ -41,15 +41,10 @@ DiffSummaryReceiver::summarize(const svn_client_diff_summarize_t *diff,
                                apr_pool_t *pool)
 {
     if (baton)
-    {
         return ((DiffSummaryReceiver *) baton)->onSummary(diff, pool);
-    }
-    else
-    {
-        return SVN_NO_ERROR;
-    }
-}
 
+    return SVN_NO_ERROR;
+}
 
 svn_error_t *
 DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
@@ -66,20 +61,16 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
         // Initialize the method ID.
         clazz = env->FindClass(JAVA_PACKAGE "/DiffSummaryReceiver");
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return SVN_NO_ERROR;
-        }
+
         callback = env->GetMethodID(clazz, "onSummary",
             "(Lorg/tigris/subversion/javahl/DiffSummary;)V");
         if (JNIUtil::isJavaExceptionThrown() || callback == 0)
-        {
             return SVN_NO_ERROR;
-        }
+
         env->DeleteLocalRef(clazz);
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return SVN_NO_ERROR;
-        }
     }
 
     // Do some prep work for tranforming the DIFF parameter into a
@@ -87,24 +78,20 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
     static jmethodID ctor = 0;
     clazz = env->FindClass(JAVA_PACKAGE "/DiffSummary");
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return SVN_NO_ERROR;
-    }
+
     if (ctor == 0)
     {
         ctor = env->GetMethodID(clazz, "<init>",
                                 "(Ljava/lang/String;IZI)V");
         if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
-        {
             return SVN_NO_ERROR;
-        }
     }
     // Convert the arguments into their Java equivalent,
     jstring jPath = JNIUtil::makeJString(diff->path);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return SVN_NO_ERROR;
-    }
+
     jint jNodeKind = EnumMapper::mapNodeKind(diff->node_kind);
     // Actually tranform the DIFF parameter into a Java equivalent.
     jobject jDiffSummary = env->NewObject(clazz, ctor, jPath,
@@ -112,31 +99,24 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
                                           (jboolean) diff->prop_changed,
                                           jNodeKind);
     if (JNIUtil::isJavaExceptionThrown() || jDiffSummary == NULL)
-    {
         return SVN_NO_ERROR;
-    }
+
     env->DeleteLocalRef(jPath);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return SVN_NO_ERROR;
-    }
+
     env->DeleteLocalRef(clazz);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return SVN_NO_ERROR;
-    }
 
     // Invoke the Java DiffSummaryReceiver callback.
     env->CallVoidMethod(m_receiver, callback, jDiffSummary);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return SVN_NO_ERROR;
-    }
+
     env->DeleteLocalRef(jDiffSummary);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return SVN_NO_ERROR;
-    }
 
     return SVN_NO_ERROR;
 }
