@@ -340,16 +340,14 @@ revision-install:
 install-static: @INSTALL_STATIC_RULES@
 
 # JavaHL target aliases
-javahl: javahl-java javahl-javah javahl-lib @JAVAHL_TESTS_TARGET@
+javahl: mkdir-init javahl-java javahl-javah javahl-lib @JAVAHL_TESTS_TARGET@
 install-javahl: install-javahl-java install-javahl-javah install-javahl-lib
 
-### FIXME: We need to delete {*.lo,*.la,*.o} from the javahl/native/
-### dir, or we get complaints from g++.
-### FIXME: Instead of removing the contents of javahl_java_PATH, we should
-### remove the entire directory, and create it again when running the 'javahl'
-### target.
 clean-javahl:
-	rm -rf $(javahl_java_PATH)/* $(javahl_javah_PATH) @JAVAHL_OBJDIR@
+	rm -rf $(javahl_java_PATH) $(javahl_javah_PATH) @JAVAHL_OBJDIR@
+	rm -f $(libsvnjavahl_PATH)/*.la
+	rm -f $(libsvnjavahl_PATH)/*.lo
+	rm -f $(libsvnjavahl_PATH)/*.o
 
 check-javahl: javahl
 	@if [ -z "@JAVAHL_TESTS_TARGET@" ]; then \
