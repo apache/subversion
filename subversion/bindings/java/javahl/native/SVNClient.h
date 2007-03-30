@@ -175,7 +175,6 @@ private:
     jobject createJavaProperty(jobject jthis, const char *path,
                                const char *name, svn_string_t *value);
     jobject createJavaDirEntry(const char *path, svn_dirent_t *dirent);
-    jobject createJavaInfo(const svn_wc_entry_t *entry);
     svn_client_ctx_t *getContext(const char *message);
     svn_stream_t *createReadStream(apr_pool_t* pool, const char *path,
                                    Revision &revision, Revision &pegRevision,
@@ -190,6 +189,10 @@ private:
               Revision *pegRevision,
               const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
               bool noDiffDelete, bool force);
+
+    // Shared info implementation
+    jobjectArray info(const char *path, int version, Revision &revision,
+                      Revision &pegRevision, bool recurse);
 
     Notify *m_notify;
     Notify2 *m_notify2;
@@ -224,7 +227,7 @@ private:
                                      const char *path,
                                      const svn_info_t *info,
                                      apr_pool_t *pool);
-    static jobject createJavaInfo2(const char *path, const svn_info_t *info);
+    static jobject createJavaInfo2(void *info_entry);
 
 };
 // !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
