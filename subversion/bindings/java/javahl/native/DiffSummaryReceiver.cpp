@@ -115,8 +115,7 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
         return SVN_NO_ERROR;
 
     env->DeleteLocalRef(jDiffSummary);
-    if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+    // We return whether an exception was thrown or not.
 
     return SVN_NO_ERROR;
 }
