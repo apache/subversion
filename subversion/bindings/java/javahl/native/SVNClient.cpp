@@ -788,15 +788,6 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     return createJavaProperty(jthis, path, name, propval);
 }
 
-static svn_error_t *
-proplist_receiver(void *baton,
-                  svn_stringbuf_t *path,
-                  apr_hash_t *prop_hash,
-                  apr_pool_t *pool)
-{
-    return ((ProplistCallback *)baton)->callback(path, prop_hash, pool);
-}
-
 void SVNClient::properties(const char *path, Revision & revision,
                            Revision &pegRevision, bool recurse,
                            ProplistCallback *callback)
@@ -814,7 +805,7 @@ void SVNClient::properties(const char *path, Revision & revision,
 
     SVN_JNI_ERR(svn_client_proplist3(intPath.c_str(), pegRevision.revision(),
                                      revision.revision(), recurse,
-                                     proplist_receiver, callback,
+                                     ProplistCallback::callback, callback,
                                      ctx, requestPool.pool()), );
 
     return;
