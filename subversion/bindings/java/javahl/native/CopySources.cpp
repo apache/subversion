@@ -40,6 +40,37 @@ CopySources::~CopySources()
     // explicitly managed.
 }
 
+jobject
+CopySources::makeJCopySource(const char *path, svn_revnum_t rev, Pool &pool)
+{
+    JNIEnv *env = JNIUtil::getEnv();
+
+    jobject jpath = JNIUtil::makeJString(path);
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    jobject jrevision = Revision::makeJRevision(rev);
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+    jclass clazz = env->FindClass(JAVA_PACKAGE "/CopySource");
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    static jmethodID ctor = 0;
+    if (ctor == 0)
+    {
+        ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;"
+                                "L" JAVA_PACKAGE "/Revision;"
+                                "L" JAVA_PACKAGE "/Revision;)V");
+        if (JNIUtil::isExceptionThrown())
+            return NULL;
+    }
+
+    jobject jcopySource = env->NewObject(clazz, ctor, jpath, jrevision, NULL);
+    env->DeleteLocalRef(jpath);
+    env->DeleteLocalRef(jrevision);
+    return jcopySource;
+}
+
 apr_array_header_t *
 CopySources::array(Pool &pool)
 {
