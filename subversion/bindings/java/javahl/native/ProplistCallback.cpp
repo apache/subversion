@@ -140,7 +140,6 @@ jobject ProplistCallback::makeMapFromHash(apr_hash_t *prop_hash,
         return NULL;
 
     apr_hash_index_t *hi;
-    int count = apr_hash_count(prop_hash);
     int i = 0;
     for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi), i++)
     {
