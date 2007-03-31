@@ -1732,17 +1732,6 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
                                     requestPool.pool()), );
 }
 
-static svn_error_t *
-blame_receiver (void *baton,
-                apr_int64_t line_no,
-                svn_revnum_t revision,
-                const char *author,
-                const char *date,
-                const char *line,
-                apr_pool_t *pool)
-{
-    return ((BlameCallback *)baton)->callback(revision, author, date, line, pool);
-}
 void SVNClient::blame(const char *path, Revision &pegRevision,
                       Revision &revisionStart, Revision &revisionEnd,
                       bool ignoreMimeType, BlameCallback *callback)
@@ -1762,7 +1751,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
                                   revisionStart.revision(),
                                   revisionEnd.revision(),
                                   svn_diff_file_options_create(pool), false,
-                                  blame_receiver, callback, ctx, pool), );
+                                  BlameCallback::callback, callback, ctx, pool), );
 }
 
 void SVNClient::setConfigDirectory(const char *configDir)

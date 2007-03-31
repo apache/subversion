@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,9 +37,20 @@ class BlameCallback
 public:
     BlameCallback(jobject jcallback);
     ~BlameCallback();
-    svn_error_t *callback(svn_revnum_t revision, const char *author,
-                          const char *date, const char *line,
-                          apr_pool_t *pool);
+
+    static svn_error_t *callback(void *baton,
+                                 apr_int64_t line_no,
+                                 svn_revnum_t revision,
+                                 const char *author,
+                                 const char *date,
+                                 const char *line,
+                                 apr_pool_t *pool);
+
+protected:
+    svn_error_t *singleLine(svn_revnum_t revision, const char *author,
+                            const char *date, const char *line,
+                            apr_pool_t *pool);
+
 private:
     /**
      * this a local reference to the java object.
