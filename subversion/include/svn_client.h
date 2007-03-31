@@ -2392,6 +2392,24 @@ svn_client_merge_peg(const char *source,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
+/**
+ * Retrieve the merge info for @a path_or_url in @a *mergeinfo,
+ * storing a mapping of repository-relative paths to @c
+ * apr_array_header_t *'s of @c svn_merge_range_t *'s, or @c NULL if
+ * there is no merge info.
+ *
+ * @a path_or_url is a WC path or repository URL.  @a revision is the
+ * revision at which to get @a path's merge info.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
+                         const char *path_or_url,
+                         svn_opt_revision_t *revision,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *pool);
+
 /** @} */
 
 /**

@@ -2371,3 +2371,59 @@ svn_client_merge_peg(const char *source,
                                target_wcpath, recurse, ignore_ancestry, force,
                                dry_run, NULL, ctx, pool);
 }
+
+svn_error_t *
+svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
+                         const char *path_or_url,
+                         svn_opt_revision_t *revision,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *pool)
+{
+  svn_revnum_t rev;
+  svn_wc_adm_access_t *adm_access;
+  const svn_wc_entry_t *entry;
+  svn_ra_session_t *ra_session;
+  const char *url;
+
+  if (svn_path_is_url(path_or_url))
+    {
+      url = path_or_url;
+    }
+  else
+    {
+      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url, FALSE,
+                                     0, ctx->cancel_func, ctx->cancel_baton,
+                                     pool));
+      SVN_ERR(svn_wc__entry_versioned(&entry, path_or_url, adm_access, FALSE,
+                                      pool));
+      if (entry->url == NULL)
+        return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                                 _("'%s' has no URL"),
+                                 svn_path_local_style(path_or_url, pool));
+    }
+
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, entry->url,
+                                               NULL, NULL, NULL, FALSE,
+                                               TRUE, ctx, pool));
+  SVN_ERR(svn_client__get_revision_number(&rev, ra_session, revision,
+                                          "", pool));
+
+  if (svn_path_is_url(path_or_url))
+    {
+      char *repos_rel_path;
+      SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, url, NULL,
+                                                ra_session, NULL, pool));
+      SVN_ERR(svn_client__get_repos_merge_info(ra_session, mergeinfo,
+                                               repos_rel_path, rev, pool));
+    }
+  else
+    {
+      svn_boolean_t inherited;
+      SVN_ERR(get_wc_or_repos_merge_info(mergeinfo, &entry, &inherited,
+                                         ra_session, path_or_url, adm_access,
+                                         ctx, pool));
+      SVN_ERR(svn_wc_adm_close(adm_access));
+    }
+
+  return SVN_NO_ERROR;
+}
