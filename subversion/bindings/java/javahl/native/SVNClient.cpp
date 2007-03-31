@@ -2275,41 +2275,13 @@ struct info_entry
 struct info_baton
 {
     std::vector<info_entry> infoVect;
-    int info_ver;
+    const char *wcPath;
     apr_pool_t *pool;
 };
 
-/**
- * get information about a file or directory
- */
-jobject SVNClient::info(const char *path)
-{
-    JNIEnv *env = JNIUtil::getEnv();
-    Revision rev = Revision();
-    jobjectArray jInfoArray = info(path, 1, rev, rev, false);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobject jInfo = env->GetObjectArrayElement(jInfoArray, 0);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    env->DeleteLocalRef(jInfoArray);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    return jInfo;
-}
-
-jobjectArray SVNClient::info2(const char *path, Revision &revision,
-                              Revision &pegRevision, bool recurse)
-{
-    return info(path, 2, revision, pegRevision, recurse);
-}
-
 jobjectArray
-SVNClient::info(const char *path, int version, Revision &revision,
-                Revision &pegRevision, bool recurse)
+SVNClient::info(const char *path, Revision &revision, Revision &pegRevision,
+                bool recurse)
 {
     info_baton infoBaton;
     Pool requestPool;
@@ -2325,6 +2297,18 @@ SVNClient::info(const char *path, int version, Revision &revision,
     SVN_JNI_ERR(checkedPath.error_occured(), NULL);
 
     infoBaton.pool = requestPool.pool();
+
+    // If either revision is not unspecified, we'll need to store the our
+    // directory, so that we can retreive the absolute path in the receiver
+    if (revision.revision()->kind != svn_opt_revision_unspecified
+        || pegRevision.revision()->kind != svn_opt_revision_unspecified)
+    {
+        infoBaton.wcPath = path;
+    }
+    else
+    {
+        infoBaton.wcPath = NULL;
+    }
 
     SVN_JNI_ERR(svn_client_info(checkedPath.c_str(),
                                 pegRevision.revision(),
@@ -2357,6 +2341,19 @@ SVNClient::info(const char *path, int version, Revision &revision,
     {
         info_entry infoEntry = infoBaton.infoVect[i];
 
+        // Because we can't store a NULL reference in the infoVect, we signal
+        // the lack of an entry by storing a NULL path.  If the path is NULL,
+        // we add a NULL to the array of info objects.
+        if (infoEntry.path == NULL)
+        {
+            env->SetObjectArrayElement(ret, i, NULL);
+            if (JNIUtil::isJavaExceptionThrown())
+            {
+                return NULL;
+            }
+            continue;
+        }
+
         jobject jInfo = createJavaInfo2(&infoEntry);
         env->SetObjectArrayElement(ret, i, jInfo);
         if (JNIUtil::isJavaExceptionThrown())
@@ -2383,26 +2380,41 @@ svn_error_t *SVNClient::infoReceiver(void *baton,
     info_baton *infoBaton = (info_baton*)baton;
     info_entry infoEntry;
 
-    // We may still need to fetch the entry and return a few status flags
+    // We still need to fetch the entry and return a few status flags
     // for backward compat.
-    if (infoBaton->info_ver == 1)
+    svn_wc_adm_access_t *adm_access;
+    const svn_wc_entry_t *entry;
+    const char *full_path;
+
+    // If we've cached the wcPath, it means that 
+    if (infoBaton->wcPath != NULL)
     {
-        svn_wc_adm_access_t *adm_access;
-        const svn_wc_entry_t *entry;
-        SVN_JNI_ERR(svn_wc_adm_probe_open2(&adm_access, NULL, path,
-                                           FALSE, 0, pool),
-                    NULL);
-        SVN_JNI_ERR(svn_wc_entry(&entry, path, adm_access, FALSE,
-                                 pool),
-                    NULL);
-
-        SVN_JNI_ERR(svn_wc_adm_close(adm_access), NULL);
-
-        infoEntry.copied = entry->copied;
-        infoEntry.deleted = entry->deleted;
-        infoEntry.absent = entry->absent;
-        infoEntry.incomplete = entry->incomplete;
+        full_path = svn_path_join(infoBaton->wcPath, path, pool);
     }
+    else
+    {
+        full_path = path;
+    }
+
+    SVN_ERR(svn_wc_adm_probe_open2(&adm_access, NULL, full_path, FALSE, 0,
+                                   pool));
+    SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+    SVN_ERR(svn_wc_adm_close(adm_access));
+
+    if (!entry)
+    {
+        // We want to store a NULL in the resulting array, but we can't put a
+        // NULL reference into the infoVect vector, so we just set the path to
+        // NULL, and use that later.
+        infoEntry.path = NULL;
+        infoBaton->infoVect.push_back(infoEntry);
+        return SVN_NO_ERROR;
+    }
+
+    infoEntry.copied = entry->copied;
+    infoEntry.deleted = entry->deleted;
+    infoEntry.absent = entry->absent;
+    infoEntry.incomplete = entry->incomplete;
 
     // we don't create here java Status object as we don't want too many local
     // references

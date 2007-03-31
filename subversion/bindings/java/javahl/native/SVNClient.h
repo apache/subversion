@@ -47,8 +47,8 @@ class CommitMessage;
 class SVNClient :public SVNBase
 {
 public:
-    jobjectArray info2(const char *path, Revision &revision,
-                       Revision &pegRevision, bool recurse);
+    jobjectArray info(const char *path, Revision &revision,
+                      Revision &pegRevision, bool recurse);
     void unlock(Targets &targets, bool force);
     void lock(Targets &targets, const char *comment, bool force);
     jobjectArray revProperties(jobject jthis, const char *path,
@@ -128,7 +128,6 @@ public:
     void username(const char *pi_username);
     jstring getAdminDirectoryName();
     jboolean isAdminDirectory(const char *name);
-    jobject info(const char *path);
     void addToChangelist(Targets &srcPaths, const char *changelist);
     void removeFromChangelist(Targets &srcPaths, const char *changelist);
     jobjectArray getChangelist(const char *changelist, const char *rootPath);
@@ -189,10 +188,6 @@ private:
               Revision *pegRevision,
               const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
               bool noDiffDelete, bool force);
-
-    // Shared info implementation
-    jobjectArray info(const char *path, int version, Revision &revision,
-                      Revision &pegRevision, bool recurse);
 
     Notify *m_notify;
     Notify2 *m_notify2;
