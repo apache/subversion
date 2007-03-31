@@ -22,7 +22,7 @@
 
 ######################################################################
 
-import sys, os, getopt, shutil, string, re
+import sys, os, getopt, stat, string, re
 
 ######################################################################
 # Global Settings
@@ -42,6 +42,39 @@ archive_map = {
   'bz2' : ".tar.bz2",
   'zip' : ".zip"
   }
+
+# Chmod recursively on a whole subtree
+def chmod_tree(path, mode, mask):
+  def visit(arg, dirname, names):
+    mode, mask = arg
+    for name in names:
+      fullname = os.path.join(dirname, name)
+      if not os.path.islink(fullname):
+        new_mode = (os.stat(fullname)[stat.ST_MODE] & ~mask) | mode
+        os.chmod(fullname, new_mode)
+  os.path.walk(path, visit, (mode, mask))
+
+# For clearing away read-only directories
+def safe_rmtree(dirname, retry=0):
+  "Remove the tree at DIRNAME, making it writable first"
+  def rmtree(dirname):
+    chmod_tree(dirname, 0666, 0666)
+    shutil.rmtree(dirname)
+
+  if not os.path.exists(dirname):
+    return
+
+  if retry:
+    for delay in (0.5, 1, 2, 4):
+      try:
+        rmtree(dirname)
+        break
+      except:
+        time.sleep(delay)
+    else:
+      rmtree(dirname)
+  else:
+    rmtree(dirname)
 
 ######################################################################
 # Command line arguments
@@ -256,7 +289,7 @@ if archive_type:
     sys.exit(err_code)
   else:
     print "Archive created, removing backup '" + backup_subdir + "'..."
-    shutil.rmtree(backup_subdir)
+    safe_rmtree(backup_subdir, 1)
 
 ### Step 5: finally, remove all repository backups other than the last
 ###         NUM_BACKUPS.
@@ -271,6 +304,6 @@ if num_backups > 0:
     old_backup_item = os.path.join(backup_dir, item)
     print "Removing old backup: " + old_backup_item
     if os.path.isdir(old_backup_item):
-      shutil.rmtree(old_backup_item)
+      safe_rmtree(old_backup_item, 1)
     else:
       os.remove(old_backup_item)
