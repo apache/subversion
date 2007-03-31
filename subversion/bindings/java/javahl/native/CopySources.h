@@ -54,6 +54,12 @@ public:
      */
     apr_array_header_t *array(Pool &pool);
 
+    /**
+     * Make a (single) CopySource Java object.
+     */
+    static jobject makeJCopySource(const char *path, svn_revnum_t rev,
+                                   Pool &pool);
+
 private:
     /**
      * A local reference to the Java CopySources peer.
