@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -38,6 +38,23 @@ BlameCallback::~BlameCallback()
     // the m_callback does not need to be destroyed, because it is the passed
     // in parameter to the java SVNClient.blame method.
 }
+
+svn_error_t *
+BlameCallback::callback(void *baton,
+                        apr_int64_t line_no,
+                        svn_revnum_t revision,
+                        const char *author,
+                        const char *date,
+                        const char *line,
+                        apr_pool_t *pool)
+{
+    if (baton)
+        return ((BlameCallback *)baton)->singleLine(revision, author, date,
+                                                    line, pool);
+
+    return SVN_NO_ERROR;
+}
+
 /**
  * Callback called for a single line in the file, for which the blame
  * information was requested
@@ -50,9 +67,10 @@ BlameCallback::~BlameCallback()
  * @param line      the content of the line
  * @param pool      memory pool for the use of this function
  */
-svn_error_t* BlameCallback::callback(svn_revnum_t revision, const char *author,
-                                     const char *date, const char *line,
-                                     apr_pool_t *pool)
+svn_error_t *
+BlameCallback::singleLine(svn_revnum_t revision, const char *author,
+                          const char *date, const char *line,
+                          apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
