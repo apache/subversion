@@ -2406,7 +2406,7 @@ svn_client_merge_peg(const char *source,
 svn_error_t *
 svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
                          const char *path_or_url,
-                         svn_opt_revision_t *revision,
+                         const svn_opt_revision_t *revision,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool);
 

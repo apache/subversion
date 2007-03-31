@@ -2375,7 +2375,7 @@ svn_client_merge_peg(const char *source,
 svn_error_t *
 svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
                          const char *path_or_url,
-                         svn_opt_revision_t *revision,
+                         const svn_opt_revision_t *revision,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
@@ -2410,7 +2410,7 @@ svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
 
   if (svn_path_is_url(path_or_url))
     {
-      char *repos_rel_path;
+      const char *repos_rel_path;
       SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, url, NULL,
                                                 ra_session, NULL, pool));
       SVN_ERR(svn_client__get_repos_merge_info(ra_session, mergeinfo,
