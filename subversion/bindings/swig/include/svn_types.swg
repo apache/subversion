@@ -130,6 +130,7 @@
   svn_ra_plugin_t **,
   const svn_ra_reporter_t **,
   const svn_ra_reporter2_t **,
+  const svn_ra_reporter3_t **,
   svn_ra_session_t **,
   void **delta_baton,
   void **report_baton,

@@ -411,6 +411,9 @@ svn_error_t *svn_swig_rb_client_list_func(void *baton,
                                           const char *abs_path,
                                           apr_pool_t *pool);
 
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+extern svn_ra_reporter3_t *svn_swig_rb_ra_reporter3;
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

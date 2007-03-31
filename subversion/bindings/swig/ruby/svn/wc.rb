@@ -267,10 +267,11 @@ module Svn
       end
 
       def crawl_revisions(path, reporter, restore_files=true,
-                          recurse=true, use_commit_times=true,
+                          depth=nil, use_commit_times=true,
                           notify_func=nil, traversal_info=nil)
-        Wc.crawl_revisions2(path, self, reporter, reporter.baton,
-                            restore_files, recurse, use_commit_times,
+        depth ||= Svn::Core::DEPTH_INFINITY
+        Wc.crawl_revisions3(path, self, reporter, reporter.baton,
+                            restore_files, depth, use_commit_times,
                             notify_func, traversal_info)
       end
 

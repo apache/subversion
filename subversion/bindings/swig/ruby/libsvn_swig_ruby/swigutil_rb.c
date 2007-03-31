@@ -58,6 +58,8 @@ static VALUE cSvnError = Qnil;
 static VALUE cSvnErrorSvnError = Qnil;
 static VALUE cSvnFs = Qnil;
 static VALUE cSvnFsFileSystem = Qnil;
+static VALUE cSvnRa = Qnil;
+static VALUE cSvnRaReporter3 = Qnil;
 
 #define DEFINE_ID(key, name)                    \
 static ID id_ ## key = 0;                       \
@@ -121,6 +123,11 @@ DEFINE_ID(destroy, "destroy")
 DEFINE_ID(filename_to_temp_file, "filename_to_temp_file")
 DEFINE_ID(inspect, "inspect")
 DEFINE_ID(handle_error, "handle_error")
+DEFINE_ID(set_path, "set_path")
+DEFINE_ID(delete_path, "delete_path")
+DEFINE_ID(link_path, "link_path")
+DEFINE_ID(finish_report, "finish_report")
+DEFINE_ID(abort_report, "abort_report")
 
 typedef void *(*r2c_func)(VALUE value, void *ctx, apr_pool_t *pool);
 typedef VALUE (*c2r_func)(void *value, void *ctx);
@@ -266,6 +273,24 @@ rb_svn_fs_file_system(void)
     rb_ivar_set(cSvnFsFileSystem, rb_id___batons__(), rb_hash_new());
   }
   return cSvnFsFileSystem;
+}
+
+static VALUE
+rb_svn_ra(void)
+{
+  if (NIL_P(cSvnRa)) {
+    cSvnRa = rb_const_get(rb_svn(), rb_intern("Ra"));
+  }
+  return cSvnRa;
+}
+
+static VALUE
+rb_svn_ra_reporter3(void)
+{
+  if (NIL_P(cSvnRaReporter3)) {
+    cSvnRaReporter3 = rb_const_get(rb_svn_ra(), rb_intern("Reporter3"));
+  }
+  return cSvnRaReporter3;
 }
 
 
@@ -711,7 +736,11 @@ svn_swig_rb_from_swig_type(void *value, void *ctx)
 svn_depth_t
 svn_swig_rb_to_depth(VALUE value)
 {
-  if (RTEST(rb_obj_is_kind_of(value, rb_cString))) {
+  if ((VALUE)value == Qtrue) {
+    return SVN_DEPTH_FROM_RECURSE(TRUE);
+  } else if ((VALUE)value == Qfalse) {
+    return SVN_DEPTH_FROM_RECURSE(FALSE);
+  } else if (RTEST(rb_obj_is_kind_of(value, rb_cString))) {
     return svn_depth_from_word(StringValueCStr(value));
   } else if (RTEST(rb_obj_is_kind_of(value, rb_cInteger))) {
     return NUM2INT(value);
@@ -738,6 +767,8 @@ c2r_string2(const char *cstr)
 {
   return c2r_string((void *)cstr, NULL);
 }
+
+#define c2r_bool2(bool) (bool ? Qtrue : Qfalse)
 
 VALUE
 svn_swig_rb_svn_date_string_to_time(const char *date)
@@ -3394,3 +3425,170 @@ svn_swig_rb_client_list_func(void *baton,
   return err;
 }
 
+
+/* svn_ra_reporter3_t */
+static void
+c2r_ra_reporter3(VALUE rb_reporter, svn_ra_reporter3_t **reporter, void **baton,
+                 apr_pool_t *pool)
+{
+    VALUE rb_baton;
+
+    r2c_swig_type2(rb_reporter, "svn_ra_reporter3_t *", (void **)reporter);
+
+    rb_baton = rb_funcall(rb_reporter, rb_id_baton(), 0);
+    r2c_swig_type2(rb_baton, "void *", baton);
+}
+
+static svn_error_t *
+svn_swig_rb_ra_reporter_set_path(void *report_baton, const char *path,
+                                 svn_revnum_t revision, svn_depth_t depth,
+                                 svn_boolean_t start_empty,
+                                 const char *lock_token, apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE reporter, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)report_baton, &reporter, &rb_pool);
+  if (rb_obj_is_kind_of(reporter, rb_svn_ra_reporter3())) {
+    svn_ra_reporter3_t *svn_reporter;
+    void *baton;
+
+    c2r_ra_reporter3(reporter, &svn_reporter, &baton, pool);
+    err = svn_reporter->set_path(baton, path, revision, depth,
+                                 start_empty, lock_token, pool);
+  } else if (!NIL_P(reporter)) {
+    callback_baton_t cbb;
+
+    cbb.receiver = reporter;
+    cbb.message = rb_id_set_path();
+    cbb.args = rb_ary_new3(4,
+                           c2r_string2(path),
+                           INT2NUM(revision),
+                           INT2NUM(depth),
+                           c2r_bool2(start_empty));
+    invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+  }
+
+  return err;
+}
+
+static svn_error_t *
+svn_swig_rb_ra_reporter_delete_path(void *report_baton, const char *path,
+                                    apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE reporter, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)report_baton, &reporter, &rb_pool);
+  if (rb_obj_is_kind_of(reporter, rb_svn_ra_reporter3())) {
+    svn_ra_reporter3_t *svn_reporter;
+    void *baton;
+
+    c2r_ra_reporter3(reporter, &svn_reporter, &baton, pool);
+    err = svn_reporter->delete_path(baton, path, pool);
+  } else if (!NIL_P(reporter)) {
+    callback_baton_t cbb;
+
+    cbb.receiver = reporter;
+    cbb.message = rb_id_delete_path();
+    cbb.args = rb_ary_new3(1,
+                           c2r_string2(path));
+    invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+  }
+
+  return err;
+}
+
+static svn_error_t *
+svn_swig_rb_ra_reporter_link_path(void *report_baton, const char *path,
+                                  const char *url, svn_revnum_t revision,
+                                  svn_depth_t depth, svn_boolean_t start_empty,
+                                  const char *lock_token, apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE reporter, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)report_baton, &reporter, &rb_pool);
+  if (rb_obj_is_kind_of(reporter, rb_svn_ra_reporter3())) {
+    svn_ra_reporter3_t *svn_reporter;
+    void *baton;
+
+    c2r_ra_reporter3(reporter, &svn_reporter, &baton, pool);
+    err = svn_reporter->link_path(baton, path, url, revision, depth,
+                                  start_empty, lock_token, pool);
+  } else if (!NIL_P(reporter)) {
+    callback_baton_t cbb;
+
+    cbb.receiver = reporter;
+    cbb.message = rb_id_link_path();
+    cbb.args = rb_ary_new3(5,
+                           c2r_string2(path),
+                           c2r_string2(url),
+                           INT2NUM(revision),
+                           INT2NUM(depth),
+                           c2r_bool2(start_empty));
+    invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+  }
+
+  return err;
+}
+
+static svn_error_t *
+svn_swig_rb_ra_reporter_finish_report(void *report_baton, apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE reporter, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)report_baton, &reporter, &rb_pool);
+  if (rb_obj_is_kind_of(reporter, rb_svn_ra_reporter3())) {
+    svn_ra_reporter3_t *svn_reporter;
+    void *baton;
+
+    c2r_ra_reporter3(reporter, &svn_reporter, &baton, pool);
+    err = svn_reporter->finish_report(baton, pool);
+  } else if (!NIL_P(reporter)) {
+    callback_baton_t cbb;
+
+    cbb.receiver = reporter;
+    cbb.message = rb_id_finish_report();
+    cbb.args = rb_ary_new();
+    invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+  }
+
+  return err;
+}
+
+static svn_error_t *
+svn_swig_rb_ra_reporter_abort_report(void *report_baton, apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE reporter, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)report_baton, &reporter, &rb_pool);
+  if (rb_obj_is_kind_of(reporter, rb_svn_ra_reporter3())) {
+    svn_ra_reporter3_t *svn_reporter;
+    void *baton;
+
+    c2r_ra_reporter3(reporter, &svn_reporter, &baton, pool);
+    err = svn_reporter->abort_report(baton, pool);
+  } else if (!NIL_P(reporter)) {
+    callback_baton_t cbb;
+
+    cbb.receiver = reporter;
+    cbb.message = rb_id_abort_report();
+    cbb.args = rb_ary_new();
+    invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+  }
+
+  return err;
+}
+
+static svn_ra_reporter3_t rb_ra_reporter3 = {
+  svn_swig_rb_ra_reporter_set_path,
+  svn_swig_rb_ra_reporter_delete_path,
+  svn_swig_rb_ra_reporter_link_path,
+  svn_swig_rb_ra_reporter_finish_report,
+  svn_swig_rb_ra_reporter_abort_report
+};
+
+svn_ra_reporter3_t *svn_swig_rb_ra_reporter3 = &rb_ra_reporter3;
