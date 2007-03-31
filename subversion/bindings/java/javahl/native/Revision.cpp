@@ -195,7 +195,32 @@ Revision::~Revision()
 {
 
 }
+
 const svn_opt_revision_t *Revision::revision () const
 {
     return &m_revision;
+}
+
+jobject
+Revision::makeJRevision(svn_revnum_t rev)
+{
+    JNIEnv *env = JNIUtil::getEnv();
+    jclass clazz = env->FindClass(JAVA_PACKAGE "/Revision");
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+    static jmethodID getInstance = 0;
+    if (getInstance == 0)
+    {
+        getInstance = env->GetStaticMethodID(clazz, "getInstance",
+                                             "(J)L" JAVA_PACKAGE "/Revision;");
+        if (JNIUtil::isExceptionThrown())
+            return NULL;
+    }
+
+    jobject jrevision = env->CallStaticObjectMethod(clazz, getInstance,
+                                                    (jlong) rev);
+    if (JNIUtil::isExceptionThrown())
+        return NULL;
+    return jrevision;
 }
