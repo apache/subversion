@@ -258,11 +258,12 @@ module Svn
 
       def process_committed(path, new_revnum, rev_date=nil, rev_author=nil,
                             wcprop_changes=[], recurse=true,
-                            remove_lock=true, digest=nil)
-        Wc.process_committed3(path, self, recurse,
+                            remove_lock=true, digest=nil,
+                            remove_change_list=false)
+        Wc.process_committed4(path, self, recurse,
                               new_revnum, rev_date,
                               rev_author, wcprop_changes,
-                              remove_lock, digest)
+                              remove_lock, remove_change_list, digest)
       end
 
       def crawl_revisions(path, reporter, restore_files=true,
