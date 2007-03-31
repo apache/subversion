@@ -91,9 +91,9 @@ module Svn
       end
 
       def update2(revision_to_update_to, update_target, editor, recurse=true)
-        reporter, reporter_baton = Ra.do_update(self, revision_to_update_to,
-                                                update_target, recurse,
-                                                editor)
+        reporter, reporter_baton = Ra.do_update2(self, revision_to_update_to,
+                                                 update_target, recurse,
+                                                 editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -113,9 +113,9 @@ module Svn
 
       def switch2(revision_to_switch_to, switch_target, switch_url,
                   editor, recurse=true)
-        reporter, reporter_baton = Ra.do_switch(self, revision_to_switch_to,
-                                                switch_target, recurse,
-                                                switch_url, editor)
+        reporter, reporter_baton = Ra.do_switch2(self, revision_to_switch_to,
+                                                 switch_target, recurse,
+                                                 switch_url, editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -133,8 +133,8 @@ module Svn
       end
 
       def status2(revision, status_target, editor, recurse=true)
-        reporter, reporter_baton = Ra.do_status(self, status_target,
-                                                revision, recurse, editor)
+        reporter, reporter_baton = Ra.do_status2(self, status_target,
+                                                 revision, recurse, editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -146,10 +146,11 @@ module Svn
       end
 
       def diff(rev, target, versus_url, editor,
-               recurse=true, ignore_ancestry=true, text_deltas=true)
-        args = [self, rev, target, recurse, ignore_ancestry,
+               depth=nil, ignore_ancestry=true, text_deltas=true)
+        depth ||= Svn::Core::DEPTH_INFINITY
+        args = [self, rev, target, depth, ignore_ancestry,
                 text_deltas, versus_url, editor]
-        reporter, baton = Ra.do_diff2(*args)
+        reporter, baton = Ra.do_diff3(*args)
         reporter.baton = baton
         reporter
       end
@@ -250,31 +251,33 @@ module Svn
       end
     end
 
-    class Reporter2
+    class Reporter3
       attr_accessor :baton
+      def set_path(path, revision, depth=nil, start_empty=true,
+                   lock_token=nil)
+        depth ||= Svn::Core::DEPTH_INFINITY
+        Ra.reporter3_invoke_set_path(self, @baton, path, revision,
+                                     depth, start_empty, lock_token)
+      end
 
-      def set_path(path, revision, start_empty=true, lock_token=nil)
-        Ra.reporter2_invoke_set_path(self, @baton, path, revision,
-                                     start_empty, lock_token)
-      end
-      
       def delete_path(path)
-        Ra.reporter2_invoke_set_path(self, @baton, path)
+        Ra.reporter3_invoke_delete_path(self, @baton, path)
       end
-      
-      def link_path(path, url, revision, start_empty=true, lock_token=nil)
-        Ra.reporter2_invoke_link_path(self, @baton, path, url,
-                                      revision, start_empty, lock_token)
+
+      def link_path(path, url, revision, depth=nil,
+                    start_empty=true, lock_token=nil)
+        depth ||= Svn::Core::DEPTH_INFINITY
+        Ra.reporter3_invoke_link_path(self, @baton, path, url,
+                                      revision, depth, start_empty, lock_token)
       end
 
       def finish_report
-        Ra.reporter2_invoke_finish_report(self, @baton)
+        Ra.reporter3_invoke_finish_report(self, @baton)
       end
 
       def abort_report
-        Ra.reporter2_invoke_abort_report(self, @baton)
+        Ra.reporter3_invoke_abort_report(self, @baton)
       end
-      
     end
 
     remove_const(:Callbacks)
