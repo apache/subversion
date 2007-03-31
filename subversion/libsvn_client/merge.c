@@ -969,8 +969,9 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
    merge info prop, or that inherited from its nearest ancestor if the
    target has no info of its own.  If no merge info can be obtained
    from the WC get if from repository.  Store any merge info obtained
-   for the target (reflected by *ENTRY) in *TARGET_MERGEINFO, if no merge
-   info is found *TARGET_MERGEINFO is an empty hash.  If the target
+   for the target (reflected by *ENTRY, which is also acquired and
+   returned by this function) in *TARGET_MERGEINFO, if no merge info
+   is found *TARGET_MERGEINFO is an empty hash.  If the target
    inherited any merge info from a WC ancestor set *INHERITED to TRUE,
    set it to FALSE otherwise. */
 static svn_error_t *
