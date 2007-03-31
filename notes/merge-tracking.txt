@@ -25,12 +25,17 @@ history index).
   * Default revision range (e.g. for -r/-c) to "all unmerged revisions",
     "oldest revision at merge source's path" thru HEAD.
 
-  * Provide an API capable of listing "all unmerged revisions".  Client
-    tool would use this to allow the user to select the revisions to merge.
+* Provide a libsvn_client API to retrieve the merge info for a path.
+  Client tools will use this to display which paths/revisions have
+  already been merged, and to suggest likely merge sources.  (dlr)
 
-  * Provide support for arbitrary revision ranges (-r 10,14,18-24) in
-    libsvn_client.  Client tools will need to be able to support this
-    to properly support cherry-pick merges.
+* Provide a libsvn_client API for merging arbitrary revision ranges
+  (-r 10,14,18-24).  Client tools will use this to best support
+  cherry-picking.  (dlr)
+
+* Provide a libsvn_client API capable of listing "all unmerged
+  revisions".  Client tools will use this to allow the user to select
+  the revisions to merge.
 
 * Allow for merge info which contains empty range lists, necessary for
   override of merge info by child paths which would otherwise inherit
