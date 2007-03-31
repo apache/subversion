@@ -99,6 +99,8 @@
 ;; P I   - svn-status-property-ignore-file-extension
 ;; P C-i - svn-status-property-edit-svn-ignore
 ;; P k   - svn-status-property-set-keyword-list
+;; P K i - svn-status-property-set-keyword-id
+;; P K d - svn-status-property-set-keyword-date
 ;; P y   - svn-status-property-set-eol-style
 ;; P x   - svn-status-property-set-executable
 ;; P m   - svn-status-property-set-mime-type
@@ -1743,6 +1745,8 @@ A and B must be line-info's."
   (define-key svn-status-mode-property-map [(control ?i)] 'svn-status-property-edit-svn-ignore)
   (define-key svn-status-mode-property-map (kbd "TAB") 'svn-status-property-edit-svn-ignore)
   (define-key svn-status-mode-property-map (kbd "k") 'svn-status-property-set-keyword-list)
+  (define-key svn-status-mode-property-map (kbd "Ki") 'svn-status-property-set-keyword-id)
+  (define-key svn-status-mode-property-map (kbd "Kd") 'svn-status-property-set-keyword-date)
   (define-key svn-status-mode-property-map (kbd "y") 'svn-status-property-set-eol-style)
   (define-key svn-status-mode-property-map (kbd "x") 'svn-status-property-set-executable)
   (define-key svn-status-mode-property-map (kbd "m") 'svn-status-property-set-mime-type)
@@ -1827,6 +1831,9 @@ A and B must be line-info's."
      ["Edit svn:ignore Property" svn-status-property-edit-svn-ignore t]
      "---"
      ["Edit svn:keywords List" svn-status-property-set-keyword-list t]
+     ["Add/Remove Id to/from svn:keywords" svn-status-property-set-keyword-id t]
+     ["Add/Remove Date to/from svn:keywords" svn-status-property-set-keyword-date t]
+     "---"
      ["Select svn:eol-style" svn-status-property-set-eol-style t]
      ["Set svn:executable" svn-status-property-set-executable t]
      ["Set svn:mime-type" svn-status-property-set-mime-type t]
@@ -4159,7 +4166,7 @@ When called with a prefix argument, it is possible to enter a new property."
                    (svn-run t t 'propdel
                                 (append (list "propdel" prop-name) file-names))))))))))
 
-(defun svn-status-property-edit (file-info-list prop-name &optional new-prop-value)
+(defun svn-status-property-edit (file-info-list prop-name &optional new-prop-value remove-values)
   (let* ((commit-buffer (get-buffer-create "*svn-property-edit*"))
          (dir default-directory)
          ;; now only one file is implemented ...
@@ -4184,14 +4191,18 @@ When called with a prefix argument, it is possible to enter a new property."
     (svn-status-remove-control-M)
     (when new-prop-value
       (when (listp new-prop-value)
-        (message "Adding new prop values %S " new-prop-value)
+        (if remove-values
+            (message "Remove prop values %S " new-prop-value)
+          (message "Adding new prop values %S " new-prop-value))
         (while new-prop-value
           (goto-char (point-min))
-          (unless (re-search-forward
-                   (concat "^" (regexp-quote (car new-prop-value)) "$") nil t)
-            (goto-char (point-max))
-            (when (> (current-column) 0) (insert "\n"))
-            (insert (car new-prop-value)))
+          (if (re-search-forward (concat "^" (regexp-quote (car new-prop-value)) "$") nil t)
+              (when remove-values
+                (kill-whole-line 1))
+            (unless remove-values
+              (goto-char (point-max))
+              (when (> (current-column) 0) (insert "\n"))
+              (insert (car new-prop-value))))
           (setq new-prop-value (cdr new-prop-value)))))
     (svn-prop-edit-mode)))
 
@@ -4297,6 +4308,25 @@ When called with a prefix argument, it is possible to enter a new property."
   (interactive)
   ;;(message "Set svn:keywords for %S" (svn-status-marked-file-names))
   (svn-status-property-edit (svn-status-marked-files) "svn:keywords"))
+
+(defun svn-status-property-set-keyword-id (arg)
+  "Set/Remove Id from the svn:keywords property.
+Normally Id is added to the svn:keywords property.
+
+When called with the prefix arg -, remove Id from the svn:keywords property."
+  (interactive "P")
+  (svn-status-property-edit (svn-status-marked-files) "svn:keywords" '("Id") (eq arg '-))
+  (svn-prop-edit-do-it nil))
+
+(defun svn-status-property-set-keyword-date (arg)
+  "Set/Remove Date from the svn:keywords property.
+Normally Date is added to the svn:keywords property.
+
+When called with the prefix arg -, remove Date from the svn:keywords property."
+  (interactive "P")
+  (svn-status-property-edit (svn-status-marked-files) "svn:keywords" '("Date") (eq arg '-))
+  (svn-prop-edit-do-it nil))
+
 
 (defun svn-status-property-set-eol-style ()
   "Edit the svn:eol-style property on the marked files."
