@@ -303,15 +303,6 @@ void SVNClient::setPrompt(Prompter *prompter)
     m_prompter = prompter;
 }
 
-static svn_error_t *
-log_message_receiver(void *baton, apr_hash_t *changed_paths, svn_revnum_t rev,
-                     const char *author, const char *date, const char *msg,
-                     apr_pool_t *pool)
-{
-    return ((LogMessageCallback *)baton)->callback(changed_paths, rev, author,
-                                                   date, msg, pool);
-}
-
 void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             Revision &revisionStart,
                             Revision &revisionEnd, bool stopOnCopy,
@@ -337,7 +328,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                                 limit,
                                 discoverPaths,
                                 stopOnCopy,
-                                log_message_receiver, callback, ctx,
+                                LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }
 

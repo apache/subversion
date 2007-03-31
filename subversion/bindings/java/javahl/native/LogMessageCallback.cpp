@@ -39,6 +39,21 @@ LogMessageCallback::~LogMessageCallback()
     // the m_callback does not need to be destroyed, because it is the passed
     // in parameter to the java SVNClient.blame method.
 }
+
+svn_error_t *
+LogMessageCallback::callback(void *baton, apr_hash_t *changed_paths,
+                             svn_revnum_t rev, const char *author,
+                             const char *date, const char *msg,
+                             apr_pool_t *pool)
+{
+    if (baton)
+        return ((LogMessageCallback *)baton)->singleMessage(changed_paths, rev,
+                                                            author, date, msg,
+                                                            pool);
+
+    return SVN_NO_ERROR;
+}
+
 /**
  * Callback called for a single log message
  * @param revision  the revision number, when the line was last changed
@@ -51,9 +66,10 @@ LogMessageCallback::~LogMessageCallback()
  * @param pool      memory pool for the use of this function
  */
 svn_error_t *
-LogMessageCallback::callback(apr_hash_t *changed_paths, svn_revnum_t rev,
-                             const char *author, const char *date,
-                             const char *msg, apr_pool_t *pool)
+LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
+                                  svn_revnum_t rev,
+                                  const char *author, const char *date,
+                                  const char *msg, apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
