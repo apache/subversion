@@ -200,11 +200,11 @@ svn_client__path_relative_to_root(const char **rel_path,
 }
 
 svn_error_t *
-svn_client__get_merge_info_for_path(svn_ra_session_t *ra_session,
-                                    apr_hash_t **target_mergeinfo,
-                                    const char *rel_path,
-                                    svn_revnum_t rev,
-                                    apr_pool_t *pool)
+svn_client__get_repos_merge_info(svn_ra_session_t *ra_session,
+                                 apr_hash_t **target_mergeinfo,
+                                 const char *rel_path,
+                                 svn_revnum_t rev,
+                                 apr_pool_t *pool)
 {
   apr_hash_t *repos_mergeinfo;
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
