@@ -216,11 +216,11 @@ svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
    If there is no merge info available for REL_PATH, set
    *TARGET_MERGEINFO to NULL. */
 svn_error_t *
-svn_client__get_merge_info_for_path(svn_ra_session_t *ra_session,
-                                    apr_hash_t **target_mergeinfo,
-                                    const char *rel_path,
-                                    svn_revnum_t rev,
-                                    apr_pool_t *pool);
+svn_client__get_repos_merge_info(svn_ra_session_t *ra_session,
+                                 apr_hash_t **target_mergeinfo,
+                                 const char *rel_path,
+                                 svn_revnum_t rev,
+                                 apr_pool_t *pool);
 
 /* Parse any merge info from WCPATH's ENTRY and store it in MERGEINFO.
    If no merge info is available, set MERGEINFO to an empty hash. */
