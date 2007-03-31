@@ -283,8 +283,7 @@ Contents
 5. Current Status
 =================
 
-   http://svn.collab.net/repos/svn/branches/sparse-directories/
-   contains the latest code.
+   The sparse-directories code is merged to trunk in revision r23994.
 
    A new enum type 'svn_depth_t depth' is defined in svn_types.h.
    Both client and server side now understand the concept of depth,
