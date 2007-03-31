@@ -1025,10 +1025,10 @@ get_wc_or_repos_merge_info(apr_hash_t **target_mergeinfo,
   if (!apr_hash_count(*target_mergeinfo))
     {
       apr_hash_t *repos_mergeinfo;
-      SVN_ERR(svn_client__get_merge_info_for_path(ra_session,
-                                                  &repos_mergeinfo,
-                                                  repos_rel_path, target_rev,
-                                                  pool));
+      SVN_ERR(svn_client__get_repos_merge_info(ra_session,
+                                               &repos_mergeinfo,
+                                               repos_rel_path, target_rev,
+                                               pool));
 
       if (repos_mergeinfo)
         *target_mergeinfo = repos_mergeinfo;
