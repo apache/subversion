@@ -82,7 +82,6 @@ module Svn
     class AdmAccess
       class << self
         def ensure(path, uuid, url, repos, revision, depth=nil)
-          depth ||= Svn::Core::DEPTH_INFINITY
           Wc.ensure_adm3(path, uuid, url, repos, revision, depth)
         end
 
@@ -273,7 +272,6 @@ module Svn
       def crawl_revisions(path, reporter, restore_files=true,
                           depth=nil, use_commit_times=true,
                           notify_func=nil, traversal_info=nil)
-        depth ||= Svn::Core::DEPTH_INFINITY
         traversal_info ||= _traversal_info
         Wc.crawl_revisions3(path, self, reporter, reporter.baton,
                             restore_files, depth, use_commit_times,
@@ -287,7 +285,6 @@ module Svn
       def update_editor(target_revision, target, use_commit_times=true,
                         depth=nil, allow_unver_obstruction=false, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil)
-        depth ||= Svn::Core::DEPTH_INFINITY
         traversal_info ||= _traversal_info
         results = Wc.get_update_editor3(target_revision, self, target,
                                         use_commit_times, depth,
@@ -304,7 +301,6 @@ module Svn
                         use_commit_times=true, depth=nil,
                         allow_unver_obstruction=false, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil)
-        depth ||= Svn::Core::DEPTH_INFINITY
         traversal_info ||= _traversal_info
         results = Wc.get_switch_editor3(target_revision, self, target,
                                         switch_url, use_commit_times, depth,

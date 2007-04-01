@@ -382,13 +382,11 @@ module Svn
         
         def baton.set_path(path, revision, start_empty=false, lock_token=nil,
                            depth=nil)
-          depth ||= Svn::Core::DEPTH_INFINITY
           Repos.set_path3(self, path, revision, depth, start_empty, lock_token)
         end
         
         def baton.link_path(path, link_path, revision, start_empty=false,
                             lock_token=nil, depth=nil)
-          depth ||= Svn::Core::DEPTH_INFINITY
           Repos.link_path3(self, path, link_path, revision, depth,
                            start_empty, lock_token)
         end
