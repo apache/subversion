@@ -736,7 +736,9 @@ svn_swig_rb_from_swig_type(void *value, void *ctx)
 svn_depth_t
 svn_swig_rb_to_depth(VALUE value)
 {
-  if ((VALUE)value == Qtrue) {
+  if (NIL_P(value)) {
+    return svn_depth_infinity;
+  } else if ((VALUE)value == Qtrue) {
     return SVN_DEPTH_FROM_RECURSE(TRUE);
   } else if ((VALUE)value == Qfalse) {
     return SVN_DEPTH_FROM_RECURSE(FALSE);

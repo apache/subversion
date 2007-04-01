@@ -91,7 +91,6 @@ module Svn
       end
 
       def update2(revision_to_update_to, update_target, editor, depth=nil)
-        depth ||= Svn::Core::DEPTH_INFINITY
         reporter, reporter_baton = Ra.do_update2(self, revision_to_update_to,
                                                  update_target, depth, editor)
         reporter.baton = reporter_baton
@@ -113,7 +112,6 @@ module Svn
 
       def switch2(revision_to_switch_to, switch_target, switch_url,
                   editor, depth=nil)
-        depth ||= Svn::Core::DEPTH_INFINITY
         reporter, reporter_baton = Ra.do_switch2(self, revision_to_switch_to,
                                                  switch_target, depth,
                                                  switch_url, editor)
@@ -148,7 +146,6 @@ module Svn
 
       def diff(rev, target, versus_url, editor,
                depth=nil, ignore_ancestry=true, text_deltas=true)
-        depth ||= Svn::Core::DEPTH_INFINITY
         args = [self, rev, target, depth, ignore_ancestry,
                 text_deltas, versus_url, editor]
         reporter, baton = Ra.do_diff3(*args)
@@ -256,7 +253,6 @@ module Svn
       attr_accessor :baton
       def set_path(path, revision, depth=nil, start_empty=true,
                    lock_token=nil)
-        depth ||= Svn::Core::DEPTH_INFINITY
         Ra.reporter3_invoke_set_path(self, @baton, path, revision,
                                      depth, start_empty, lock_token)
       end
@@ -267,7 +263,6 @@ module Svn
 
       def link_path(path, url, revision, depth=nil,
                     start_empty=true, lock_token=nil)
-        depth ||= Svn::Core::DEPTH_INFINITY
         Ra.reporter3_invoke_link_path(self, @baton, path, url,
                                       revision, depth, start_empty, lock_token)
       end
