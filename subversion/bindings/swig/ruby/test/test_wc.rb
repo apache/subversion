@@ -478,7 +478,7 @@ EOE
     assert(!Svn::Wc.locked?(@wc_path))
   end
 
-  def assert_translated_file_eol(method_name)
+  def assert_translated_eol(method_name)
     src_file = "src"
     crlf_file = "crlf"
     cr_file = "cr"
@@ -512,36 +512,55 @@ EOE
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
       _wrap_assertion do
         File.open(src_path, "wb") {|f| f.print(source)}
-
         args = [method_name, src_path, crlf_path, Svn::Wc::TRANSLATE_FROM_NF]
+        result = yield(access.send(*args), source)
+        result ||= File.open(src_path, "rb") {|f| f.read}
         if windows?
-          assert_equal(lf_source, yield(access.send(*args)))
+          assert_equal(lf_source, result)
         else
-          assert_equal(crlf_source, yield(access.send(*args)))
+          assert_equal(crlf_source, result)
         end
 
+        File.open(src_path, "wb") {|f| f.print(source)}
         args = [method_name, src_path, cr_path, Svn::Wc::TRANSLATE_FROM_NF]
-        assert_equal(cr_source, yield(access.send(*args)))
+        result = yield(access.send(*args), source)
+        result ||= File.open(src_path, "rb") {|f| f.read}
+        assert_equal(cr_source, result)
 
+        File.open(src_path, "wb") {|f| f.print(source)}
         args = [method_name, src_path, lf_path, Svn::Wc::TRANSLATE_FROM_NF]
-        assert_equal(lf_source, yield(access.send(*args)))
+        result = yield(access.send(*args), source)
+        result ||= File.open(src_path, "rb") {|f| f.read}
+        assert_equal(lf_source, result)
       end
     end
   end
 
   def test_translated_file_eol
-    assert_translated_file_eol(:translated_file) do |name|
+    assert_translated_eol(:translated_file) do |name, source|
       File.open(name, "rb") {|f| f.read}
     end
   end
 
   def test_translated_file2_eol
-    assert_translated_file_eol(:translated_file2) do |file|
+    assert_translated_eol(:translated_file2) do |file, source|
       file.read
     end
   end
 
-  def assert_translated_file_keyword(method_name)
+  def test_translated_stream_eol
+    assert_translated_eol(:translated_stream) do |stream, source|
+      if source
+        stream.write(source)
+        stream.close
+        nil
+      else
+        stream.read
+      end
+    end
+  end
+
+  def assert_translated_keyword(method_name)
     src_file = "$Revision$"
     revision_file = "revision_file"
     src_path = File.join(@wc_path, src_file)
@@ -560,24 +579,38 @@ EOE
 
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
       File.open(src_path, "w") {|f| f.print(source)}
-
       args = [method_name, src_path, revision_path, Svn::Wc::TRANSLATE_FROM_NF]
-      assert_equal(revision_source, yield(access.send(*args)))
+      result = yield(access.send(*args), source)
+      result ||= File.open(src_path, "rb") {|f| f.read}
+      assert_equal(revision_source, result)
 
+      File.open(src_path, "w") {|f| f.print(source)}
       args = [method_name, src_path, revision_path, Svn::Wc::TRANSLATE_TO_NF]
       assert_equal(source, yield(access.send(*args)))
     end
   end
 
   def test_translated_file_keyword
-    assert_translated_file_keyword(:translated_file) do |name|
+    assert_translated_keyword(:translated_file) do |name, source|
       File.open(name, "rb") {|f| f.read}
     end
   end
 
   def test_translated_file2_keyword
-    assert_translated_file_keyword(:translated_file2) do |file|
+    assert_translated_keyword(:translated_file2) do |file, source|
       file.read
+    end
+  end
+
+  def test_translated_stream_keyword
+    assert_translated_keyword(:translated_stream) do |stream, source|
+      if source
+        stream.write(source)
+        stream.close
+        nil
+      else
+        stream.read
+      end
     end
   end
 
