@@ -146,11 +146,17 @@ module Svn
          apply_textdelta change_file_prop close_file
          absent_file close_edit abort_edit).each do |name|
         alias_method("_#{name}", name)
-        alias_method("_#{name}=", "#{name}=")
+        undef_method("#{name}=")
       end
 
       attr_accessor :baton
-      
+      attr_writer :target_revision_address
+      private :target_revision_address=
+
+      def target_revision
+        Svn::Delta.swig_rb_delta_editor_get_target_revision(self)
+      end
+
       def set_target_revision(target_revision)
         args = [self, @baton, target_revision]
         Svn::Delta.editor_invoke_set_target_revision(*args)

@@ -44,6 +44,7 @@
 %ignore svn_wc_external_item2_dup;
 %ignore svn_wc_revision_status;
 %ignore svn_wc_committed_queue_create;
+%ignore svn_wc_init_traversal_info;
 #endif
 
 /* -----------------------------------------------------------------------
@@ -73,7 +74,6 @@
     const char *rev_author,
     const char *trail_url
 }
-
 
 %hash_argout_typemap(entries, svn_wc_entry_t *)
 %hash_argout_typemap(externals_p, svn_wc_external_item_t *)
@@ -144,6 +144,23 @@
 %typemap(argout) svn_wc_committed_queue_t **queue {
   %append_output(argv[0]);
 };
+#endif
+
+/*
+   svn_wc_get_update_editor3()
+   svn_wc_get_switch_editor3()
+*/
+#ifdef SWIGRUBY
+%typemap(in) svn_revnum_t *target_revision
+{
+  $1 = apr_palloc(_global_pool, sizeof(svn_revnum_t));
+  *$1 = NUM2LONG($input);
+}
+
+%typemap(argout) svn_revnum_t *target_revision
+{
+  %append_output(LONG2NUM((long)$1));
+}
 #endif
 
 /* ----------------------------------------------------------------------- */
@@ -223,6 +240,21 @@ struct svn_wc_committed_queue_t
   };
 
   ~svn_wc_committed_queue_t() {
+  };
+}
+
+/* Dummy declaration */
+struct svn_wc_traversal_info_t
+{
+};
+
+%extend svn_wc_traversal_info_t
+{
+  svn_wc_traversal_info_t(apr_pool_t *pool) {
+    return svn_wc_init_traversal_info(pool);
+  };
+
+  ~svn_wc_traversal_info_t() {
   };
 }
 #endif
