@@ -325,20 +325,20 @@ module Svn
         Wc.prop_set2(name, value, path, self, skip_checks)
       end
 
-      def diff_editor(target, callbacks, recurse=true,
+      def diff_editor(target, callbacks, depth=nil,
                       ignore_ancestry=true, use_text_base=false,
                       reverse_order=false, cancel_func=nil)
         callbacks_wrapper = DiffCallbacksWrapper.new(callbacks)
-        args = [target, callbacks_wrapper, recurse, ignore_ancestry,
+        args = [target, callbacks_wrapper, depth, ignore_ancestry,
                 use_text_base, reverse_order, cancel_func]
         diff_editor2(*args)
       end
 
-      def diff_editor2(target, callbacks, recurse=true,
+      def diff_editor2(target, callbacks, depth=nil,
                        ignore_ancestry=true, use_text_base=false,
                        reverse_order=false, cancel_func=nil)
-        editor, editor_baton = Wc.get_diff_editor3(self, target, callbacks,
-                                                   recurse, ignore_ancestry,
+        editor, editor_baton = Wc.get_diff_editor4(self, target, callbacks,
+                                                   depth, ignore_ancestry,
                                                    use_text_base, reverse_order,
                                                    cancel_func)
         editor.baton = editor_baton
