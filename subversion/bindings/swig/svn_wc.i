@@ -63,6 +63,10 @@
   apr_hash_t *new_props
 };
 
+/* svn_wc_match_ignore_list() */
+%apply const apr_array_header_t *STRINGLIST {
+  apr_array_header_t *list
+};
 
 /* svn_wc_cleanup2() */
 %apply const char *MAY_BE_NULL {
