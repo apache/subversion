@@ -86,19 +86,19 @@ module Svn
           Wc.ensure_adm3(path, uuid, url, repos, revision, depth)
         end
 
-        def open(associated, path, write_lock,
-                 depth, cancel_func=nil, &block)
+        def open(associated, path, write_lock=true,
+                 depth=-1, cancel_func=nil, &block)
           _open(:adm_open3, associated, path, write_lock,
                 depth, cancel_func, &block)
         end
 
-        def probe_open(associated, path, write_lock, depth,
+        def probe_open(associated, path, write_lock=true, depth=-1,
                        cancel_func=nil, &block)
           _open(:adm_probe_open3, associated, path, write_lock,
                 depth, cancel_func, &block)
         end
 
-        def open_anchor(path, write_lock, depth,
+        def open_anchor(path, write_lock=true, depth=-1,
                         cancel_func=nil, &block)
           _open(:adm_open_anchor, path, write_lock, depth,
                 cancel_func, &block)
@@ -106,19 +106,22 @@ module Svn
 
         private
         def _open(name, *args, &block)
-          adm = Wc.__send__(name, *args, &block)
-          
+          results = Wc.__send__(name, *args, &block)
+          adm, *rest = results
+
           if block_given?
             begin
-              yield adm
+              yield *results
             ensure
               adm.close
             end
           else
-            adm
+            results
           end
         end
       end
+
+      attr_accessor :traversal_info
 
       def open(*args, &block)
         self.class.open(self, *args, &block)
@@ -195,6 +198,7 @@ module Svn
       def status_editor(target, config, recurse=true,
                         get_all=true, no_ignore=true,
                         cancel_func=nil, traversal_info=nil)
+        traversal_info ||= _traversal_info
         status_func = Proc.new do |path, status|
           yield(path, status)
         end
@@ -270,6 +274,7 @@ module Svn
                           depth=nil, use_commit_times=true,
                           notify_func=nil, traversal_info=nil)
         depth ||= Svn::Core::DEPTH_INFINITY
+        traversal_info ||= _traversal_info
         Wc.crawl_revisions3(path, self, reporter, reporter.baton,
                             restore_files, depth, use_commit_times,
                             notify_func, traversal_info)
@@ -279,25 +284,35 @@ module Svn
         Wc.is_wc_root(path, self)
       end
 
-      def update_editor(target, use_commit_times=true, recurse=true,
-                        diff3_cmd=nil, notify_func=nil, cancel_func=nil,
-                        traversal_info=nil)
-        editor, editor_baton = Wc.get_update_editor2(target, self,
-                                                     use_commit_times, recurse,
-                                                     notify_func, cancel_func,
-                                                     diff3_cmd, traversal_info)
+      def update_editor(target_revision, target, use_commit_times=true,
+                        depth=nil, allow_unver_obstruction=false, diff3_cmd=nil,
+                        notify_func=nil, cancel_func=nil, traversal_info=nil)
+        depth ||= Svn::Core::DEPTH_INFINITY
+        traversal_info ||= _traversal_info
+        results = Wc.get_update_editor3(target_revision, self, target,
+                                        use_commit_times, depth,
+                                        allow_unver_obstruction,
+                                        notify_func, cancel_func, diff3_cmd,
+                                        traversal_info)
+        target_revision_address, editor, editor_baton = results
+        editor.__send__(:target_revision_address=, target_revision_address)
         editor.baton = editor_baton
         editor
       end
 
-      def switch_editor(target, switch_url, use_commit_times=true,
-                        recurse=true, diff3_cmd=nil, notify_func=nil,
-                        cancel_func=nil, traversal_info=nil)
-        editor, editor_baton = Wc.get_update_editor2(target, switch_url,
-                                                     self, use_commit_times,
-                                                     recurse, notify_func,
-                                                     cancel_func, diff3_cmd,
-                                                     traversal_info)
+      def switch_editor(target_revision, target, switch_url,
+                        use_commit_times=true, depth=nil,
+                        allow_unver_obstruction=false, diff3_cmd=nil,
+                        notify_func=nil, cancel_func=nil, traversal_info=nil)
+        depth ||= Svn::Core::DEPTH_INFINITY
+        traversal_info ||= _traversal_info
+        results = Wc.get_switch_editor3(target_revision, self, target,
+                                        switch_url, use_commit_times, depth,
+                                        allow_unver_obstruction,
+                                        notify_func, cancel_func,
+                                        diff3_cmd, traversal_info)
+        target_revision_address, editor, editor_baton = results
+        editor.__send__(:target_revision_address=, target_revision_address)
         editor.baton = editor_baton
         editor
       end
@@ -415,6 +430,11 @@ module Svn
       def remove_lock(path)
         Wc.remove_lock(path, self)
       end
+
+      private
+      def _traversal_info
+        @traversal_info ||= nil
+      end
     end
 
     class DiffCallbacksWrapper
@@ -450,15 +470,7 @@ module Svn
       end
     end
 
-    TraversalInfo = SWIG::TYPE_p_svn_wc_traversal_info_t
-    
     class TraversalInfo
-      class << self
-        def new
-          Wc.init_traversal_info
-        end
-      end
-
       def edited_externals
         Wc.edited_externals(self)
       end

@@ -84,16 +84,16 @@ module Svn
       end
 
       def update(revision_to_update_to, update_target,
-                 editor, editor_baton, recurse=true, &block)
+                 editor, editor_baton, depth=nil, &block)
         editor.baton = editor_baton
         update2(revision_to_update_to, update_target,
-                editor, recurse, &block)
+                editor, depth, &block)
       end
 
-      def update2(revision_to_update_to, update_target, editor, recurse=true)
+      def update2(revision_to_update_to, update_target, editor, depth=nil)
+        depth ||= Svn::Core::DEPTH_INFINITY
         reporter, reporter_baton = Ra.do_update2(self, revision_to_update_to,
-                                                 update_target, recurse,
-                                                 editor)
+                                                 update_target, depth, editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -105,16 +105,17 @@ module Svn
       end
 
       def switch(revision_to_switch_to, switch_target, switch_url,
-                 editor, editor_baton, recurse=true, &block)
+                 editor, editor_baton, depth=nil, &block)
         editor.baton = editor_baton
         switch2(revision_to_switch_to, switch_target, switch_url,
-                editor, recurse, &block)
+                editor, depth, &block)
       end
 
       def switch2(revision_to_switch_to, switch_target, switch_url,
-                  editor, recurse=true)
+                  editor, depth=nil)
+        depth ||= Svn::Core::DEPTH_INFINITY
         reporter, reporter_baton = Ra.do_switch2(self, revision_to_switch_to,
-                                                 switch_target, recurse,
+                                                 switch_target, depth,
                                                  switch_url, editor)
         reporter.baton = reporter_baton
         if block_given?
