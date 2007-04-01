@@ -165,7 +165,7 @@ static VALUE
 svn_swig_rb_delta_editor_get_target_revision(VALUE editor)
 {
   static ID id_target_revision_address = 0;
-  VALUE *rb_target_address;
+  VALUE rb_target_address;
   svn_revnum_t *target_address;
 
   if (id_target_revision_address == 0)
