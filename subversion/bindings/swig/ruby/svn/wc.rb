@@ -408,6 +408,10 @@ module Svn
         Wc.translated_file2(src, versioned_file, self, flags)
       end
 
+      def translated_stream(path, versioned_file, flags)
+        Wc.translated_stream(path, versioned_file, self, flags)
+      end
+
       def transmit_text_deltas(path, editor, file_baton, fulltext=false)
         editor.baton = file_baton
         Wc.transmit_text_deltas(path, self, fulltext, editor)
