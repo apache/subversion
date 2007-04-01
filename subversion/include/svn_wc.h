@@ -3606,6 +3606,8 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
  *
  * @a adm_access is an access baton for the directory containing
  * @a path.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_wc_relocate3(const char *path,
