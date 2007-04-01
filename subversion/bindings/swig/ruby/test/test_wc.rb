@@ -807,4 +807,52 @@ EOE
       assert_equal(rev1, editor.target_revision)
     end
   end
+
+  def test_relocate
+    log = "sample log"
+    file1 = "hello.txt"
+    file2 = "hello2.txt"
+    src = "Hello"
+    dir1 = "dir1"
+    dir2 = "dir2"
+    dir1_path = File.join(@wc_path, dir1)
+    dir2_path = File.join(@wc_path, dir2)
+    dir1_uri = "#{@repos_uri}/#{dir1}"
+    dir2_uri = "#{@repos_uri}/#{dir2}"
+    path1 = File.join(dir1_path, file1)
+    path2 = File.join(dir2_path, file2)
+
+    ctx = make_context(log)
+    config = {}
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
+
+    FileUtils.mkdir(dir1_path)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(dir1_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    FileUtils.mkdir(dir2_path)
+    File.open(path2, "w") {|f| f.print(src)}
+    ctx.add(dir2_path)
+    rev2 = ctx.commit(@wc_path).revision
+
+    Svn::Wc::AdmAccess.probe_open(nil, @wc_path) do |access|
+      assert(@repos_uri, access.entry(@wc_path).url)
+      values = []
+      access.relocate(@wc_path, @repos_uri, dir2_uri) do |uuid, url, root_url|
+        values << [uuid, url, root_url]
+      end
+      assert_equal([
+                    [@fs.uuid, dir2_uri, nil],
+                    [@fs.uuid, dir2_uri, dir2_uri],
+                    [nil, "#{dir2_uri}/#{dir1}", dir2_uri],
+                    [nil, "#{dir2_uri}/#{dir1}/#{file1}", dir2_uri],
+                    [nil, "#{dir2_uri}/#{dir2}", dir2_uri],
+                    [nil, "#{dir2_uri}/#{dir2}/#{file2}", dir2_uri],
+                   ],
+                   values)
+      assert(dir2_uri, access.entry(@wc_path).url)
+    end
+  end
 end

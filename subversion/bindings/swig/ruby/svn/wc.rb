@@ -167,7 +167,7 @@ module Svn
       end
 
       def entry(path, show_hidden=false)
-        Wc.entry(path, self, show_hidden, Svn::Core::Pool.new)
+        Entry.new(path, self, show_hidden, Svn::Core::Pool.new)
       end
 
       def read_entries(show_hidden=false)
@@ -379,8 +379,15 @@ module Svn
                            base_merge, dry_run)
       end
 
-      def relocate(path, from, to, recurse=true, validator=nil)
-        Wc.relocate2(path, self, from, to, recurse, validator)
+      def relocate(path, from, to, recurse=true, old_validator=nil, &validator)
+        if validator.nil? and !old_validator.nil?
+          validator = Proc.new do |uuid, url, root_url|
+            old_validator.call(uuid,
+                               root_url ? root_url : url,
+                               root_url ? true : false)
+          end
+        end
+        Wc.relocate3(path, self, from, to, recurse, validator)
       end
 
       def revert(path, recurse=true, use_commit_times=true,
@@ -473,13 +480,6 @@ module Svn
     end
 
     class Entry
-
-      class << self
-        def new(path, adm_access, show_hidden)
-          Wc.entry(path, adm_access, show_hidden)
-        end
-      end
-      
       def dup
         Wc.entry_dup(self, Svn::Core::Pool.new)
       end

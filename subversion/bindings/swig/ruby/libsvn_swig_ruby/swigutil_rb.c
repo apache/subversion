@@ -2546,10 +2546,10 @@ svn_swig_rb_repos_file_rev_handler(void *baton,
 }
 
 svn_error_t *
-svn_swig_rb_wc_relocation_validator2(void *baton,
+svn_swig_rb_wc_relocation_validator3(void *baton,
                                      const char *uuid,
                                      const char *url,
-                                     svn_boolean_t root,
+                                     const char *root_url,
                                      apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -2565,7 +2565,7 @@ svn_swig_rb_wc_relocation_validator2(void *baton,
     cbb.args = rb_ary_new3(3,
                            c2r_string2(uuid),
                            c2r_string2(url),
-                           root ? Qtrue : Qfalse);
+                           c2r_string2(root_url));
     invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
   }
 

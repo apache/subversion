@@ -290,10 +290,10 @@ svn_error_t *svn_swig_rb_repos_file_rev_handler(void *baton,
                                                 apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-svn_error_t *svn_swig_rb_wc_relocation_validator2(void *baton,
+svn_error_t *svn_swig_rb_wc_relocation_validator3(void *baton,
                                                   const char *uuid,
                                                   const char *url,
-                                                  svn_boolean_t root,
+                                                  const char *root_url,
                                                   apr_pool_t *pool);
 
 
