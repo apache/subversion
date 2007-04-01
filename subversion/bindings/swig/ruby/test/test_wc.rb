@@ -888,4 +888,13 @@ EOE
       assert(dir2_uri, access.entry(@wc_path).url)
     end
   end
+
+  def test_ignore?
+    assert(!Svn::Wc.ignore?("xxx.c", []))
+    assert(Svn::Wc.ignore?("xxx.c", ["*.c"]))
+    assert(!Svn::Wc.ignore?("xxx.c", ["XXX.c"]))
+    assert(Svn::Wc.ignore?("xxx.c", ["xxx.c"]))
+    assert(!Svn::Wc.ignore?("xxx.c", ["*.H", "*.C"]))
+    assert(Svn::Wc.ignore?("xxx.C", ["*.H", "*.C"]))
+  end
 end

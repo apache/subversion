@@ -65,6 +65,10 @@ module Svn
       Wc.cleanup2(path, diff3_cmd, cancel_func)
     end
 
+    def ignore?(path, patterns)
+      Wc.match_ignore_list(path, patterns)
+    end
+
     module ExternalsDescription
       module_function
       def parse(parent_dir, desc)
