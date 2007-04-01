@@ -45,6 +45,7 @@
 %ignore svn_wc_revision_status;
 %ignore svn_wc_committed_queue_create;
 %ignore svn_wc_init_traversal_info;
+%ignore svn_wc_entry;
 #endif
 
 /* -----------------------------------------------------------------------
@@ -119,11 +120,11 @@
                   ,
                   svn_swig_rb_wc_diff_callbacks2())
 
-%callback_typemap(svn_wc_relocation_validator2_t validator,
+%callback_typemap(svn_wc_relocation_validator3_t validator,
                   void *validator_baton,
                   ,
                   ,
-                  svn_swig_rb_wc_relocation_validator2)
+                  svn_swig_rb_wc_relocation_validator3)
 #endif
 
 
@@ -255,6 +256,19 @@ struct svn_wc_traversal_info_t
   };
 
   ~svn_wc_traversal_info_t() {
+  };
+}
+
+%extend svn_wc_entry_t
+{
+  svn_wc_entry_t(const char *path, svn_wc_adm_access_t *adm_access,
+                 svn_boolean_t show_hidden, apr_pool_t *pool) {
+    const svn_wc_entry_t *self;
+    svn_wc_entry(&self, path, adm_access, show_hidden, pool);
+    return (svn_wc_entry_t *)self;
+  };
+
+  ~svn_wc_entry_t() {
   };
 }
 #endif
