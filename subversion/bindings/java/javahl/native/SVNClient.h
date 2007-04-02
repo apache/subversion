@@ -82,6 +82,7 @@ public:
     void properties(const char *path, Revision &revision,
                     Revision &pegRevision, bool recurse,
                     ProplistCallback *callback);
+    jobject getMergeInfo(const char *target, Revision &rev);
     void merge(const char *path1, Revision &revision1, const char *path2,
                Revision &revision2, const char *localPath, bool force,
                svn_depth_t depth, bool ignoreAncestry, bool dryRun);

@@ -30,9 +30,17 @@ public class RevisionRange implements Comparable
     private Revision from;
     private Revision to;
 
+    /**
+     * Creates a new instance.  Called by native library.
+     */
+    private RevisionRange(long from, long to)
+    {
+        this.from = Revision.getInstance(from);
+        this.to = Revision.getInstance(to);
+    }
+
     public RevisionRange(Revision from, Revision to)
     {
-        super();
         this.from = from;
         this.to = to;
     }
