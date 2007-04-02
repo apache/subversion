@@ -2093,19 +2093,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#getMergeInfoProperty(String)
-     * @since 1.5
-     */
-    public PropertyData getMergeInfoProperty(String path)
-        throws SubversionException
-    {
-        synchronized (clazz)
-        {
-            return worker.getMergeInfoProperty(path);
-        }
-    }
-
-    /**
      *  Produce a compact "version number" for a working copy
      * @param path          path of the working copy
      * @param trailUrl      to detect switches of the whole working copy

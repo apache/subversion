@@ -1831,13 +1831,6 @@ public class SVNClient implements SVNClientInterface
         throws SubversionException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#getMergeInfoProperty(String)
-     * @since 1.5
-     */
-    public native PropertyData getMergeInfoProperty(String path)
-        throws ClientException;
-
-    /**
      * Internal method to initialize the native layer. Only to be called by
      * NativeResources.loadNativeLibrary
      */
