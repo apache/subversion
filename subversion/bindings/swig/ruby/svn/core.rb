@@ -595,5 +595,15 @@ module Svn
           [@name, @value] == [other.name, other.value]
       end
     end
+
+    class MergeRange
+      def to_a
+        [self.start, self.end]
+      end
+
+      def inspect
+        super.gsub(/>$/, ":#{to_a.inspect}>")
+      end
+    end
   end
 end

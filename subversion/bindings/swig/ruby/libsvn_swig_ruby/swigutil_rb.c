@@ -966,6 +966,11 @@ c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)                  \
 #define DEFINE_DUP_NO_CONST2(type) \
   DEFINE_DUP_NO_CONST(type, type ## _dup)
 
+#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type, dup_func) \
+  DEFINE_DUP_BASE(type, dup_func,)
+#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE2(type) \
+  DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type, type ## _dup)
+
 
 DEFINE_DUP(wc_notify, wc_dup_notify)
 DEFINE_DUP2(txdelta_window)
@@ -981,6 +986,7 @@ DEFINE_DUP_NO_CONVENIENCE2(client_proplist_item)
 DEFINE_DUP_NO_CONVENIENCE2(wc_external_item2)
 DEFINE_DUP_NO_CONVENIENCE2(log_changed_path)
 DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
+DEFINE_DUP_NO_CONST_NO_CONVENIENCE2(merge_range)
 
 
 /* Ruby -> C */
@@ -1081,6 +1087,15 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_proplist_item,
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_external_item2,
                           c2r_wc_external_item2_dup, EMPTY_CPP_ARGUMENT,
                           svn_wc_external_item2_t *, NULL)
+DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_merge_range,
+                          c2r_merge_range_dup, EMPTY_CPP_ARGUMENT,
+                          svn_merge_range_t *, NULL)
+
+VALUE
+c2r_merge_range_array(void *value, void *ctx)
+{
+  return svn_swig_rb_apr_array_to_array_merge_range(value);
+}
 
 VALUE
 svn_swig_rb_prop_apr_array_to_hash_prop(const apr_array_header_t *apr_ary)
@@ -1193,6 +1208,12 @@ VALUE
 svn_swig_rb_apr_hash_to_hash_swig_type(apr_hash_t *hash, const char *type_name)
 {
   return c2r_hash(hash, c2r_swig_type, (void *)type_name);
+}
+
+VALUE
+svn_swig_rb_apr_hash_to_hash_merge_range(apr_hash_t *hash)
+{
+  return c2r_hash(hash, c2r_merge_range_array, NULL);
 }
 
 VALUE

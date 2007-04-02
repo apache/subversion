@@ -50,6 +50,12 @@
 }
 #endif
 
+#ifdef SWIGRUBY
+%apply apr_hash_t **MERGEHASH {
+  apr_hash_t **mergeinfo
+}
+#endif
+
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
