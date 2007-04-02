@@ -489,17 +489,17 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
     {
-        return -1;
+        return SVN_INVALID_REVNUM;
     }
     SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, recurse,
                                    noUnlock, keepChangelist, changelistName,
                                    ctx, requestPool.pool()),
-                -1);
+                SVN_INVALID_REVNUM);
 
-    if (commit_info && SVN_IS_VALID_REVNUM (commit_info->revision))
+    if (commit_info && SVN_IS_VALID_REVNUM(commit_info->revision))
       return commit_info->revision;
 
-    return -1;
+    return SVN_INVALID_REVNUM;
 }
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
