@@ -37,6 +37,7 @@
 #include "BlameCallback.h"
 #include "ProplistCallback.h"
 #include "LogMessageCallback.h"
+#include "InfoCallback.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -1663,34 +1664,35 @@ Java_org_tigris_subversion_javahl_SVNClient_unlock
     cl->unlock(targets, jforce ? true : false);
 }
 
-JNIEXPORT jobjectArray JNICALL
+JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_info2
   (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
-   jobject jpegRevision, jboolean jrecurse)
+   jobject jpegRevision, jboolean jrecurse, jobject jinfoCallback)
 {
     JNIEntry(SVNClient, info2);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if (cl == NULL)
     {
         JNIUtil::throwError("bad c++ this");
-        return NULL;
+        return;
     }
     JNIStringHolder path(jpath);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
     Revision revision(jrevision);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
     Revision pegRevision(jpegRevision);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
-    return cl->info(path, revision, pegRevision, jrecurse ? true : false);
+    InfoCallback callback(jinfoCallback);
+    cl->info(path, revision, pegRevision, jrecurse ? true : false, &callback);
 }
 
 JNIEXPORT jobject JNICALL
