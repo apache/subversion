@@ -3151,11 +3151,12 @@ etc.)</li>
 
 <p>Note: this assumes the repository is being served by Apache 2.0.x.</p>
 
-<p>There is a bug in APR 0.9.6 that is present when it is running on
-Tiger, and shows up when you attempt to check out a file larger than
-64K.  The resulting checkout fails, often with unpredictable error
-messages.  Here are some examples of what you might see on the client
-side, the specific errors may differ for you:</p>
+<p>There is <a href="http://issues.apache.org/bugzilla/show_bug.cgi?id=34332"
+>a bug in APR 0.9.6</a> that is present when it is running on Tiger,
+and shows up when you attempt to check out a file larger than 64Kb.
+The resulting checkout fails, often with unpredictable error messages.
+Here are some examples of what you might see on the client side, the
+specific errors may differ for you:</p>
 
 <pre>
    svn: Invalid diff stream: [tgt] insn 1 starts beyond the target view position
@@ -3184,9 +3185,11 @@ will access the filesystem directly instead of going through Apache.
 If the resulting checkout completes successfully, then it is almost
 certain that this is the problem.</p>
 
-<p>Currently, the best solution is to rebuild Apache and Subversion
-from their respective sources, setting the following environment
-variable before running configure for Apache:</p>
+<p>Currently, the best solution is to upgrade to APR 1.2.0+.</p>
+
+<p>Alternately, you can rebuild Apache and Subversion from their
+respective sources, setting the following environment variable before
+running configure for Apache:</p>
 
 <pre>
    setenv ac_cv_func_poll no
