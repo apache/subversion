@@ -717,6 +717,10 @@ SubversionException = _core.SubversionException
 #ifdef SWIGRUBY
 %init %{
   svn_swig_rb_initialize();
+
+  rb_define_const(mCore, "SVN_VER_NUM", rb_str_new2(SVN_VER_NUM));
+  rb_define_const(mCore, "SVN_VER_NUMBER", rb_str_new2(SVN_VER_NUMBER));
+  rb_define_const(mCore, "SVN_VERSION", rb_str_new2(SVN_VERSION));
 %}
 
 %header %{

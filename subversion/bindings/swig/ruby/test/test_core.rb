@@ -107,6 +107,14 @@ class SvnCoreTest < Test::Unit::TestCase
     assert_false(ver1.compatible?(ver5))
   end
 
+  def test_version
+    vers = [Svn::Core::VER_MAJOR, Svn::Core::VER_MINOR, Svn::Core::VER_PATCH]
+    ver_num = vers.collect {|ver| ver.to_s}.join(".")
+    assert_equal(ver_num, Svn::Core::VER_NUM)
+    assert_equal("#{ver_num}#{Svn::Core::VER_NUMTAG}", Svn::Core::VER_NUMBER)
+    assert_equal("#{ver_num}#{Svn::Core::VER_TAG}", Svn::Core::VERSION)
+  end
+
   def test_auth_parameter
     key = "key"
     value = "value"
