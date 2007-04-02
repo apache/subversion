@@ -1991,17 +1991,42 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
-        final String targetPath = new File(thisTest.getWCPath(),
-                                           "branches/A/mu").getPath();
-        MergeInfo mergeInfo = client.getMergeInfo(targetPath, Revision.HEAD);
-        assertNotNull("Missing merge info", mergeInfo);
+        // Test retrieval of uncommitted, inerhited merge info from a WC path.
+        String targetPath =
+            new File(thisTest.getWCPath(), "branches/A/mu").getPath();
         final String mergeSrc = "/A/mu";
+        acquireMergeInfoAndAssertEquals("1-2", targetPath, mergeSrc);
+
+        // Commit the result of the merge in preparation for testing
+        // retrieval of merge info from the repository.
+        assertEquals("Unexpected rev number from commit",
+                     Revision.SVN_INVALID_REVNUM,
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true));
+
+        // Test retrieval of inherited merge info from the repository.
+        targetPath = thisTest.getUrl() + "/branches/A/mu";
+        acquireMergeInfoAndAssertEquals("1-2", targetPath, mergeSrc);
+    }
+
+    /**
+     * Helper method for {@link #testMergeInfoRetrieval()}.
+     */
+    private void acquireMergeInfoAndAssertEquals(String expectedFirstRange,
+                                                 String targetPath,
+                                                 String mergeSrc)
+        throws SubversionException
+    {
+        MergeInfo mergeInfo = client.getMergeInfo(targetPath, Revision.HEAD);
+        assertNotNull("Missing merge info on '" + targetPath + '\'',
+                      mergeInfo);
         List ranges = mergeInfo.getRevisions(mergeSrc);
-        assertTrue("Missing merge info for '" + mergeSrc + "' on '" +
+        assertTrue("Missing merge info for source '" + mergeSrc + "' on '" +
                    targetPath + '\'', ranges != null && !ranges.isEmpty());
         RevisionRange range = (RevisionRange) ranges.get(0);
         assertEquals("Unexpected first revision range for '" + mergeSrc +
-                     "' on '" + targetPath + '\'', "1-2", range.toString());
+                     "' on '" + targetPath + '\'', expectedFirstRange,
+                     range.toString());
     }
 
     /**
