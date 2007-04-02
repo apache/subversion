@@ -749,8 +749,8 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
 
     apr_hash_t *mergeinfo;
     svn_error_t *err = svn_client_get_mergeinfo(&mergeinfo, target,
-						rev.revision(), ctx,
-						requestPool.pool());
+                                                rev.revision(), ctx,
+                                                requestPool.pool());
     if (err)
     {
         JNIUtil::handleSVNError(err);
@@ -772,7 +772,7 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
     if (addRevisions == 0)
     {
         addRevisions = env->GetMethodID(clazz, "addRevisions",
-					"(Ljava/lang/String;"
+                                        "(Ljava/lang/String;"
                                         "Ljava/util/List;)V");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
@@ -800,11 +800,11 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
 
     apr_hash_index_t *hi;
     for (hi = apr_hash_first(requestPool.pool(), mergeinfo);
-	 hi;
-	 hi = apr_hash_next(hi))
+         hi;
+         hi = apr_hash_next(hi))
     {
-	const void *path;
-	void *val;
+        const void *path;
+        void *val;
         apr_hash_this(hi, &path, NULL, &val);
 
         jstring jpath = JNIUtil::makeJString((const char *) path);
@@ -838,7 +838,7 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
                 return NULL;
         }
 
-	env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
+        env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
 
         env->DeleteLocalRef(jranges);
         if (JNIUtil::isJavaExceptionThrown())
