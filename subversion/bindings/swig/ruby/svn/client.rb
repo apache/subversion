@@ -260,10 +260,10 @@ module Svn
       end
 
       def merge(src1, rev1, src2, rev2, target_wcpath,
-                recurse=true, ignore_ancestry=false,
-                force=false, dry_run=false, options=nil)
-        Client.merge2(src1, rev1, src2, rev2, target_wcpath,
-                      recurse, ignore_ancestry, force,
+                depth=nil, ignore_ancestry=false,
+                force=false, dry_run=false, options=nil, record_only=false)
+        Client.merge3(src1, rev1, src2, rev2, target_wcpath,
+                      depth, ignore_ancestry, force, record_only,
                       dry_run, options, self)
       end
 
