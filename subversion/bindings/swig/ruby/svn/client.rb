@@ -138,10 +138,12 @@ module Svn
         rm(paths, true)
       end
 
-      def update(paths, rev="HEAD", recurse=true, ignore_externals=false)
+      def update(paths, rev="HEAD", depth=nil, ignore_externals=false,
+                 allow_unver_obstruction=false)
         paths_is_array = paths.is_a?(Array)
         paths = [paths] unless paths_is_array
-        result = Client.update2(paths, rev, recurse, ignore_externals, self)
+        result = Client.update3(paths, rev, depth, ignore_externals,
+                                allow_unver_obstruction, self)
         result = result.first unless paths_is_array
         result
       end
