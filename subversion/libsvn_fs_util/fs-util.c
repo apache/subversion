@@ -16,24 +16,13 @@
  * ====================================================================
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
-#include <ctype.h>
-#include <assert.h>
 
-#include <apr_general.h>
 #include <apr_pools.h>
+#include <apr_strings.h>
 
-#include <sqlite3.h>
-
-#include "svn_fs.h"
 #include "svn_path.h"
-#include "svn_private_config.h"
-
-#include "../libsvn_fs/fs-loader.h"
-
-/* Miscellany */
+#include "private/svn_fs_util.h"
 
 const char *
 svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
