@@ -1383,15 +1383,4 @@ public interface SVNClientInterface
      */
     CopySource getCopySource(String path, Revision revision)
         throws SubversionException;
-
-    /**
-     * Retrieve the <code>svn:mergeinfo</code> property of a path.
-     * @param path The path to get the property for.
-     * @return The property's value.
-     * @throws SubversionException If there is a problem getting the
-     * property value.
-     * @since 1.5
-     */
-    PropertyData getMergeInfoProperty(String path)
-        throws SubversionException;
 }
