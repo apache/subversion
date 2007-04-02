@@ -40,6 +40,7 @@ class DiffSummaryReceiver;
 class BlameCallback;
 class ProplistCallback;
 class LogMessageCallback;
+class InfoCallback;
 class CommitMessage;
 #include "svn_client.h"
 #include "SVNBase.h"
@@ -47,8 +48,8 @@ class CommitMessage;
 class SVNClient :public SVNBase
 {
 public:
-    jobjectArray info(const char *path, Revision &revision,
-                      Revision &pegRevision, bool recurse);
+    void info(const char *path, Revision &revision, Revision &pegRevision,
+              bool recurse, InfoCallback *callback);
     void unlock(Targets &targets, bool force);
     void lock(Targets &targets, const char *comment, bool force);
     jobjectArray revProperties(jobject jthis, const char *path,
@@ -223,7 +224,6 @@ private:
                                      const char *path,
                                      const svn_info_t *info,
                                      apr_pool_t *pool);
-    static jobject createJavaInfo2(void *info_entry);
 
 };
 // !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)

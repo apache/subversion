@@ -1796,8 +1796,29 @@ public class SVNClient implements SVNClientInterface
      * @return the information objects
      * @since 1.2
      */
-    public native Info2[] info2(String pathOrUrl, Revision revision,
-                                Revision pegRevision, boolean recurse)
+    public Info2[] info2(String pathOrUrl, Revision revision,
+                         Revision pegRevision, boolean recurse)
+            throws ClientException
+    {
+        MyInfoCallback callback = new MyInfoCallback();
+
+        info2(pathOrUrl, revision, pegRevision, recurse, callback);
+        return callback.getInfoArray();
+    }
+
+    /**
+     * Retrieve information about repository or working copy items.
+     * @param pathOrUrl     the path or the url of the item
+     * @param revision      the revision of the item to return
+     * @param pegRevision   the revision to interpret pathOrUrl
+     * @param recurse       flag if to recurse, if the item is a directory
+     * @param callback      a callback to receive the infos retreived
+     * @return              the information objects
+     * @since 1.5
+     */
+    public native void info2(String pathOrUrl, Revision revision,
+                             Revision pegRevision, boolean recurse,
+                             InfoCallback callback)
             throws ClientException;
 
     /**
@@ -1840,6 +1861,33 @@ public class SVNClient implements SVNClientInterface
             }
 
             return messageArray;
+        }
+    }
+
+    /**
+     */
+    private class MyInfoCallback implements InfoCallback
+    {
+        private List infos = new Vector();
+
+        public void singleInfo(Info2 info)
+        {
+            infos.add(info);
+        }
+
+        public Info2[] getInfoArray()
+        {
+            Info2[] infoArray = new Info2[infos.size()];
+            Iterator it = infos.iterator();
+            int i = 0;
+
+            while (it.hasNext())
+            {
+                infoArray[i] = (Info2) it.next();
+                i++;
+            }
+
+            return infoArray;
         }
     }
 }

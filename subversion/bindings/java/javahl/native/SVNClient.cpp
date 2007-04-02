@@ -33,6 +33,7 @@
 #include "BlameCallback.h"
 #include "ProplistCallback.h"
 #include "LogMessageCallback.h"
+#include "InfoCallback.h"
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
 #include "EnumMapper.h"
@@ -2355,391 +2356,35 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
     }
     return ret;
 }
-struct info_entry
-{
-    const char *path;
-    bool copied;
-    bool deleted;
-    bool absent;
-    bool incomplete;
-    svn_info_t *info;
-};
 
-struct info_baton
-{
-    std::vector<info_entry> infoVect;
-    const char *wcPath;
-    apr_pool_t *pool;
-};
-
-jobjectArray
+void
 SVNClient::info(const char *path, Revision &revision, Revision &pegRevision,
-                bool recurse)
+                bool recurse, InfoCallback *callback)
 {
-    info_baton infoBaton;
     Pool requestPool;
 
-    SVN_JNI_NULL_PTR_EX(path, "path", NULL);
+    SVN_JNI_NULL_PTR_EX(path, "path", );
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
-    {
-        return NULL;
-    }
-    Path checkedPath(path);
-    SVN_JNI_ERR(checkedPath.error_occured(), NULL);
+        return;
 
-    infoBaton.pool = requestPool.pool();
+    Path checkedPath(path);
+    SVN_JNI_ERR(checkedPath.error_occured(), );
 
     // If either revision is not unspecified, we'll need to store the our
     // directory, so that we can retreive the absolute path in the receiver
     if (revision.revision()->kind != svn_opt_revision_unspecified
-        || pegRevision.revision()->kind != svn_opt_revision_unspecified)
-    {
-        infoBaton.wcPath = path;
-    }
+            || pegRevision.revision()->kind != svn_opt_revision_unspecified)
+        callback->setWcPath(path);
     else
-    {
-        infoBaton.wcPath = NULL;
-    }
+        callback->setWcPath(NULL);
 
     SVN_JNI_ERR(svn_client_info(checkedPath.c_str(),
                                 pegRevision.revision(),
                                 revision.revision(),
-                                infoReceiver,
-                                &infoBaton,
+                                InfoCallback::callback,
+                                callback,
                                 recurse ? TRUE :FALSE,
-                                ctx, requestPool.pool()),
-                NULL);
-
-    JNIEnv *env = JNIUtil::getEnv();
-    int size = infoBaton.infoVect.size();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/Info2");
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-
-    for(int i = 0; i < size; i++)
-    {
-        info_entry infoEntry = infoBaton.infoVect[i];
-
-        // Because we can't store a NULL reference in the infoVect, we signal
-        // the lack of an entry by storing a NULL path.  If the path is NULL,
-        // we add a NULL to the array of info objects.
-        if (infoEntry.path == NULL)
-        {
-            env->SetObjectArrayElement(ret, i, NULL);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-            continue;
-        }
-
-        jobject jInfo = createJavaInfo2(&infoEntry);
-        env->SetObjectArrayElement(ret, i, jInfo);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        env->DeleteLocalRef(jInfo);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-    }
-    return ret;
-}
-
-svn_error_t *SVNClient::infoReceiver(void *baton,
-                                     const char *path,
-                                     const svn_info_t *info,
-                                     apr_pool_t *pool)
-{
-    if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
-
-    info_baton *infoBaton = (info_baton*)baton;
-    info_entry infoEntry;
-
-    // We still need to fetch the entry and return a few status flags
-    // for backward compat.
-    svn_wc_adm_access_t *adm_access;
-    const svn_wc_entry_t *entry;
-    const char *full_path;
-
-    // If we've cached the wcPath, it means that 
-    if (infoBaton->wcPath != NULL)
-    {
-        full_path = svn_path_join(infoBaton->wcPath, path, pool);
-    }
-    else
-    {
-        full_path = path;
-    }
-
-    SVN_ERR(svn_wc_adm_probe_open2(&adm_access, NULL, full_path, FALSE, 0,
-                                   pool));
-    SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-    SVN_ERR(svn_wc_adm_close(adm_access));
-
-    if (!entry)
-    {
-        // We want to store a NULL in the resulting array, but we can't put a
-        // NULL reference into the infoVect vector, so we just set the path to
-        // NULL, and use that later.
-        infoEntry.path = NULL;
-        infoBaton->infoVect.push_back(infoEntry);
-        return SVN_NO_ERROR;
-    }
-
-    infoEntry.copied = entry->copied;
-    infoEntry.deleted = entry->deleted;
-    infoEntry.absent = entry->absent;
-    infoEntry.incomplete = entry->incomplete;
-
-    // we don't create here java Status object as we don't want too many local
-    // references
-    infoEntry.path = apr_pstrdup(infoBaton->pool,path);
-    infoEntry.info = (svn_info_t*)apr_pcalloc (infoBaton->pool, sizeof(svn_info_t));
-    infoEntry.info->URL = apr_pstrdup(infoBaton->pool,info->URL);
-    infoEntry.info->rev = info->rev;
-    infoEntry.info->kind = info->kind;
-    infoEntry.info->repos_root_URL = apr_pstrdup(infoBaton->pool,
-        info->repos_root_URL);
-    infoEntry.info->repos_UUID = apr_pstrdup(infoBaton->pool, info->repos_UUID);
-    infoEntry.info->last_changed_rev = info->last_changed_rev;
-    infoEntry.info->last_changed_date = info->last_changed_date;
-    infoEntry.info->last_changed_author = apr_pstrdup(infoBaton->pool,
-        info->last_changed_author);
-    if (info->lock != NULL)
-        infoEntry.info->lock = svn_lock_dup(info->lock, infoBaton->pool);
-    else
-        infoEntry.info->lock = NULL;
-    infoEntry.info->has_wc_info = info->has_wc_info;
-    infoEntry.info->schedule = info->schedule;
-    infoEntry.info->copyfrom_url = apr_pstrdup(infoBaton->pool,
-        info->copyfrom_url);
-    infoEntry.info->copyfrom_rev = info->copyfrom_rev;
-    infoEntry.info->text_time = info->text_time;
-    infoEntry.info->prop_time = info->prop_time;
-    infoEntry.info->checksum = apr_pstrdup(infoBaton->pool, info->checksum);
-    infoEntry.info->conflict_old = apr_pstrdup(infoBaton->pool,
-        info->conflict_old);
-    infoEntry.info->conflict_new = apr_pstrdup(infoBaton->pool,
-        info->conflict_new);
-    infoEntry.info->conflict_wrk = apr_pstrdup(infoBaton->pool,
-        info->conflict_wrk);
-    infoEntry.info->prejfile = apr_pstrdup(infoBaton->pool, info->prejfile);
-
-    infoBaton->infoVect.push_back(infoEntry);
-    return SVN_NO_ERROR;
-}
-
-jobject SVNClient::createJavaInfo2(void *entry)
-{
-    info_entry *infoEntry = (info_entry *)entry;
-    const char *path = infoEntry->path;
-    const svn_info_t *info = infoEntry->info;
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/Info2");
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    static jmethodID mid = 0;
-    if (mid == 0)
-    {
-        mid = env->GetMethodID(clazz, "<init>",
-            "(Ljava/lang/String;Ljava/lang/String;JILjava/lang/String;"
-             "Ljava/lang/String;JLjava/util/Date;Ljava/lang/String;"
-             "Lorg/tigris/subversion/javahl/Lock;ZILjava/lang/String;J"
-             "Ljava/util/Date;Ljava/util/Date;"
-             "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
-             "Ljava/lang/String;Ljava/lang/String;ZZZZ)V");
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-    }
-    jstring jpath = JNIUtil::makeJString(path);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jstring jurl = JNIUtil::makeJString(info->URL);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jlong jrev = info->rev;
-    jint jnodeKind = EnumMapper::mapNodeKind(info->kind);
-    jstring jreposRootUrl = JNIUtil::makeJString(info->repos_root_URL);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jstring jreportUUID = JNIUtil::makeJString(info->repos_UUID);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jlong jlastChangedRev = info->last_changed_rev;
-    jobject jlastChangedDate = JNIUtil::createDate(info->last_changed_date);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jstring jlastChangedAuthor =
-        JNIUtil::makeJString(info->last_changed_author);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jobject jlock = createJavaLock(info->lock);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jboolean jhasWcInfo = info->has_wc_info ? JNI_TRUE:JNI_FALSE;
-    jint jschedule = EnumMapper::mapScheduleKind(info->schedule);
-    jstring jcopyFromUrl = JNIUtil::makeJString(info->copyfrom_url);
-    jlong jcopyFromRev = info->copyfrom_rev;
-    jobject jtextTime = JNIUtil::createDate(info->text_time);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jobject jpropTime = JNIUtil::createDate(info->prop_time);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jstring jchecksum = JNIUtil::makeJString(info->checksum);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jstring jconflictOld = JNIUtil::makeJString(info->conflict_old);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jstring jconflictNew = JNIUtil::makeJString(info->conflict_new);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jstring jconflictWrk = JNIUtil::makeJString(info->conflict_wrk);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jstring jprejfile = JNIUtil::makeJString(info->prejfile);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jboolean jcopied = infoEntry->copied ? JNI_TRUE : JNI_FALSE;
-    jboolean jdeleted = infoEntry->deleted ? JNI_TRUE : JNI_FALSE;
-    jboolean jabsent = infoEntry->absent ? JNI_TRUE : JNI_FALSE;
-    jboolean jincomplete = infoEntry->incomplete ? JNI_TRUE : JNI_FALSE;
-
-    jobject ret = env->NewObject(clazz, mid, jpath, jurl, jrev, jnodeKind,
-        jreposRootUrl, jreportUUID, jlastChangedRev, jlastChangedDate,
-        jlastChangedAuthor, jlock, jhasWcInfo, jschedule, jcopyFromUrl,
-        jcopyFromRev, jtextTime, jpropTime, jchecksum, jconflictOld,
-        jconflictNew, jconflictWrk, jprejfile, jcopied, jdeleted, jabsent,
-        jincomplete);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jpath);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jurl);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jreposRootUrl);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jlastChangedDate);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jlastChangedAuthor);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jlock);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jcopyFromUrl);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jchecksum);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jtextTime);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jpropTime);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jconflictOld);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jconflictNew);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jconflictWrk);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    env->DeleteLocalRef(jprejfile);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    return ret;
+                                ctx, requestPool.pool()), );
 }
