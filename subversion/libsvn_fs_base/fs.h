@@ -1,7 +1,7 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -72,18 +72,6 @@ typedef struct
   int format;
 
 } base_fs_data_t;
-
-
-/* Return a canonicalized version of a filesystem PATH, allocated in
-   POOL.  While the filesystem API is pretty flexible about the
-   incoming paths (they must be UTF-8 with '/' as separators, but they
-   don't have to begin with '/', and multiple contiguous '/'s are
-   ignored) we want any paths that are physically stored in the
-   underlying database to look consistent.  Specifically, absolute
-   filesystem paths should begin with '/', and all redundant and trailing '/'
-   characters be removed.  */
-const char *
-svn_fs_base__canonicalize_abspath(const char *path, apr_pool_t *pool);
 
 
 /*** Filesystem Revision ***/

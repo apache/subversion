@@ -1,7 +1,7 @@
 /* lock.c :  functions for manipulating filesystem locks.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -29,6 +29,7 @@
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
 #include "../libsvn_fs/fs-loader.h"
+#include "private/svn_fs_util.h"
 
 
 /* Add LOCK and its associated LOCK_TOKEN (associated with PATH) as
@@ -217,7 +218,7 @@ svn_fs_base__lock(svn_lock_t **lock,
   SVN_ERR(svn_fs_base__check_fs(fs));
 
   args.lock_p = lock;
-  args.path = svn_fs_base__canonicalize_abspath(path, pool);
+  args.path = svn_fs__canonicalize_abspath(path, pool);
   args.token = token;
   args.comment = comment;
   args.is_dav_comment = is_dav_comment;
@@ -305,7 +306,7 @@ svn_fs_base__unlock(svn_fs_t *fs,
 
   SVN_ERR(svn_fs_base__check_fs(fs));
 
-  args.path = svn_fs_base__canonicalize_abspath(path, pool);
+  args.path = svn_fs__canonicalize_abspath(path, pool);
   args.token = token;
   args.break_lock = break_lock;
   return svn_fs_base__retry_txn(fs, txn_body_unlock, &args, pool);
@@ -379,7 +380,7 @@ svn_fs_base__get_lock(svn_lock_t **lock,
 
   SVN_ERR(svn_fs_base__check_fs(fs));
   
-  args.path = svn_fs_base__canonicalize_abspath(path, pool);
+  args.path = svn_fs__canonicalize_abspath(path, pool);
   args.lock_p = lock;  
   return svn_fs_base__retry_txn(fs, txn_body_get_lock, &args, pool);
 }
@@ -413,7 +414,7 @@ svn_fs_base__get_locks(svn_fs_t *fs,
   struct locks_get_args args;
 
   SVN_ERR(svn_fs_base__check_fs(fs));
-  args.path = svn_fs_base__canonicalize_abspath(path, pool);
+  args.path = svn_fs__canonicalize_abspath(path, pool);
   args.get_locks_func = get_locks_func;
   args.get_locks_baton = get_locks_baton;
   return svn_fs_base__retry_txn(fs, txn_body_get_locks, &args, pool);

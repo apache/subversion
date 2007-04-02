@@ -1,7 +1,7 @@
 /* lock.c :  functions for manipulating filesystem locks.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,6 +37,7 @@
 #include "fs_fs.h"
 #include "../libsvn_fs/fs-loader.h"
 
+#include "private/svn_fs_util.h"
 #include "svn_private_config.h"
 
 /* Names of special lock directories in the fs_fs filesystem. */
@@ -651,7 +652,7 @@ svn_fs_fs__allow_locked_operation(const char *path,
                                   svn_boolean_t have_write_lock,
                                   apr_pool_t *pool)
 {
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, pool);
   if (recurse)
     {
       /* Discover all locks at or below the path. */
@@ -854,7 +855,7 @@ svn_fs_fs__lock(svn_lock_t **lock_p,
   struct lock_baton lb;
 
   SVN_ERR(svn_fs_fs__check_fs(fs));
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, pool);
 
   lb.lock_p = lock_p;
   lb.fs = fs;
@@ -900,7 +901,7 @@ svn_fs_fs__unlock(svn_fs_t *fs,
   struct unlock_baton ub;
 
   SVN_ERR(svn_fs_fs__check_fs(fs));
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, pool);
 
   ub.fs = fs;
   ub.path = path;
@@ -920,7 +921,7 @@ svn_fs_fs__get_lock(svn_lock_t **lock_p,
                     apr_pool_t *pool)
 {
   SVN_ERR(svn_fs_fs__check_fs(fs));
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, pool);
   return get_lock_helper(fs, lock_p, path, FALSE, pool);
 }
 
@@ -935,7 +936,7 @@ svn_fs_fs__get_locks(svn_fs_t *fs,
   const char *digest_path;
 
   SVN_ERR(svn_fs_fs__check_fs(fs));
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, pool);
 
   /* Get the top digest path in our tree of interest, and then walk it. */
   digest_path = digest_path_from_path(fs, path, pool);
