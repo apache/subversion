@@ -106,9 +106,11 @@ module Svn
         Client.mkdir2(normalize_path(paths), self)
       end
 
-      def commit(targets, recurse=true, keep_locks=false)
+      def commit(targets, recurse=true, keep_locks=false,
+                 keep_changelist=false, changelist_name=nil)
         targets = [targets] unless targets.is_a?(Array)
-        Client.commit3(targets, recurse, keep_locks, self)
+        Client.commit4(targets, recurse, keep_locks, keep_changelist,
+                       changelist_name, self)
       end
       alias ci commit
 
