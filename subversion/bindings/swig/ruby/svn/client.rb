@@ -474,10 +474,10 @@ module Svn
                     fetch_locks, block, self)
       end
 
-      def switch(path, uri, rev=nil, recurse=true)
-        Client.switch(path, uri, rev, recurse, self)
+      def switch(path, uri, rev=nil, depth=nil, allow_unver_obstruction=false)
+        Client.switch2(path, uri, rev, depth, allow_unver_obstruction, self)
       end
-      
+
       def add_simple_provider
         add_provider(Core.auth_get_simple_provider)
       end
