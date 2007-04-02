@@ -129,12 +129,12 @@ class GeneratorBase(gen_base.GeneratorBase):
 
   def __init__(self, fname, verfname, options):
 
-    # Initialize parent
-    gen_base.GeneratorBase.__init__(self, fname, verfname, options)
-    
     # parse (and save) the options that were passed to us
     self.parse_options(options)
 
+    # Initialize parent
+    gen_base.GeneratorBase.__init__(self, fname, verfname, options)
+    
     # Find Berkeley DB
     self._find_bdb()
 
