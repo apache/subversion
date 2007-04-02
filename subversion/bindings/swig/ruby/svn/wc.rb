@@ -12,7 +12,7 @@ module Svn
     self.swig_init_asp_dot_net_hack()
 
     @@alias_targets = %w(parse_externals_description
-                         ensure_adm cleanup)
+                         ensure_adm cleanup set_changelist)
     class << self
       @@alias_targets.each do |target|
         alias_method "_#{target}", target
@@ -67,6 +67,13 @@ module Svn
 
     def ignore?(path, patterns)
       Wc.match_ignore_list(path, patterns)
+    end
+
+    def set_changelist(paths, changelist, matching_changelist=nil,
+                       cancel_func=nil, notify_func=nil)
+      paths = [paths] unless paths.is_a?(Array)
+      Wc._set_changelist(paths, changelist, matching_changelist,
+                         cancel_func, notify_func)
     end
 
     module ExternalsDescription
@@ -540,16 +547,10 @@ module Svn
     end
 
     class Notify
-      class << self
-        def new(path, action)
-          Wc.create_notify(path, action)
-        end
-      end
-
       def dup
         Wc.dup_notify(self, Core::Pool.new)
       end
-      
+
       def commit_added?
         action == NOTIFY_COMMIT_ADDED
       end

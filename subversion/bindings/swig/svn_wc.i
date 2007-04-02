@@ -46,6 +46,7 @@
 %ignore svn_wc_committed_queue_create;
 %ignore svn_wc_init_traversal_info;
 %ignore svn_wc_entry;
+%ignore svn_wc_notify;
 #endif
 
 /* -----------------------------------------------------------------------
@@ -168,6 +169,15 @@
 }
 #endif
 
+/* svn_wc_notify_t */
+#ifdef SWIGRUBY
+%typemap(out) svn_error_t *err
+{
+  $result = $1 ? svn_swig_rb_svn_error_to_rb_error($1) : Qnil;
+}
+#endif
+
+
 /* ----------------------------------------------------------------------- */
 
 %{
@@ -273,6 +283,17 @@ struct svn_wc_traversal_info_t
   };
 
   ~svn_wc_entry_t() {
+  };
+}
+
+%extend svn_wc_notify_t
+{
+  svn_wc_notify_t(const char *path, svn_wc_notify_action_t action,
+                  apr_pool_t *pool) {
+    return svn_wc_create_notify(path, action, pool);
+  };
+
+  ~svn_wc_notify_t() {
   };
 }
 #endif
