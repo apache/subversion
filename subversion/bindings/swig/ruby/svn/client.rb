@@ -224,13 +224,13 @@ module Svn
       end
 
       def diff(options, path1, rev1, path2, rev2,
-               out_file, err_file, recurse=true,
+               out_file, err_file, depth=nil,
                ignore_ancestry=false,
                no_diff_deleted=false, force=false,
                header_encoding=nil)
         header_encoding ||= Core::LOCALE_CHARSET
-        Client.diff3(options, path1, rev1, path2, rev2,
-                     recurse, ignore_ancestry,
+        Client.diff4(options, path1, rev1, path2, rev2,
+                     depth, ignore_ancestry,
                      no_diff_deleted, force, header_encoding,
                      out_file, err_file, self)
       end
