@@ -1466,7 +1466,7 @@ The results are used to build the `svn-status-info' variable."
                                 8 6))
           (dir-set '("."))
           (externals-map (make-hash-table :test 'equal))
-          (next-is-first-line-of-external-list nil))
+          (skip-double-external-dir-entry-name nil))
       (set-buffer svn-process-buffer-name)
       (setq svn-status-info nil)
       (run-hooks 'svn-pre-parse-status-hook)
@@ -1494,9 +1494,10 @@ The results are used to build the `svn-status-info' variable."
           ;; so we should merge lines 'X dir' with ' dir', but for now
           ;; we just leave both in the results
 
-          ;; My attempt to merge the lines uses next-is-first-line-of-external-list
+          ;; My attempt to merge the lines uses skip-double-external-dir-entry-name
           ;; and externals-map
-          (setq next-is-first-line-of-external-list t)
+          (setq skip-double-external-dir-entry-name (match-string-no-properties 1))
+          ;; (message "Going to skip %s" skip-double-external-dir-entry-name)
           nil)
          (t
           (setq svn-marks (buffer-substring (point) (+ (point) svn-marks-length))
@@ -1540,15 +1541,17 @@ The results are used to build the `svn-status-info' variable."
               (let ((dirname (directory-file-name dir)))
                 (if (not (member dirname dir-set))
                     (setq dir-set (cons dirname dir-set)))))
-          (if next-is-first-line-of-external-list
+          (if (and skip-double-external-dir-entry-name (string= skip-double-external-dir-entry-name path))
               ;; merge this entry to a previous saved one
               (let ((info (gethash path externals-map)))
+                ;; (message "skip-double-external-dir-entry-name: %s - path: %s" skip-double-external-dir-entry-name path)
                 (if info
                     (progn
                       (svn-status-line-info->set-localrev info local-rev)
                       (svn-status-line-info->set-lastchangerev info last-change-rev)
                       (svn-status-line-info->set-author info author)
-                      (svn-status-message 3 "next-is-first-line-of-external-list %s: %s" path info))
+                      (svn-status-message 3 "merging entry for %s to %s" path info)
+                      (setq skip-double-external-dir-entry-name nil))
                   (message "psvn: %s not handled correct, please report this case." path)))
             (setq svn-status-info
                   (cons (svn-status-make-line-info path
@@ -1570,8 +1573,7 @@ The results are used to build the `svn-status-info' variable."
           (setq revision-width (max revision-width
                                     (length (number-to-string local-rev))
                                     (length (number-to-string last-change-rev))))
-          (setq author-width (max author-width (length author)))
-          (setq next-is-first-line-of-external-list nil)))
+          (setq author-width (max author-width (length author)))))
         (forward-line 1))
       (unless svn-status-verbose
         (setq svn-status-info (svn-status-make-dummy-dirs dir-set
