@@ -62,10 +62,6 @@
 %hash_argout_typemap(cfg_hash, svn_config_t *)
 #endif
 
-#ifdef SWIGRUBY
-%hash_argout_typemap(MERGEHASH, svn_merge_range_t *)
-#endif
-
 /* -----------------------------------------------------------------------
    Output of apr_hash_t * <const char *, svn_string_t *>
    (commonly used for property name and value pairs)
@@ -567,5 +563,12 @@
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
+}
+#endif
+
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **MERGEHASH
+{
+  %append_output(svn_swig_rb_apr_hash_to_hash_merge_range(*$1));
 }
 #endif

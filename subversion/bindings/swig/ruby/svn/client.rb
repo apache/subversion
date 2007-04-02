@@ -578,6 +578,11 @@ module Svn
         Client.get_config(self)
       end
 
+      def merge_info(path_or_url, revision=nil)
+        Client.get_mergeinfo(path_or_url, revision, self)
+      end
+      alias_method :mergeinfo, :merge_info
+
       private
       def init_callbacks
         set_log_msg_func(nil)
