@@ -1865,4 +1865,11 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(options,
                  ctx.config[Svn::Core::CONFIG_CATEGORY_SERVERS].to_hash)
   end
+
+  def test_context_mimetypes_map
+    context = Svn::Client::Context.new
+    assert_nil(context.mimetypes_map)
+    context.mimetypes_map = {"txt" => "text/plain"}
+    assert_equal({"txt" => "text/plain"}, context.mimetypes_map)
+  end
 end

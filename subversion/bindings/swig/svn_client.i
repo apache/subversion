@@ -43,6 +43,10 @@
     const char *comment
 };
 
+%apply apr_hash_t *HASH_CSTRING_MAYBENULL {
+    apr_hash_t *mimetypes_map
+}
+
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
