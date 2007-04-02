@@ -111,21 +111,15 @@
 }
 #endif
 
-#ifdef SWIGPYTHON
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
 %callback_typemap(svn_client_get_commit_log3_t log_msg_func,
                   void *log_msg_baton,
                   svn_swig_py_get_commit_log_func,
                   ,
-                  )
+                  svn_swig_rb_get_commit_log_func)
 #endif
 
 #ifdef SWIGRUBY
-%callback_typemap(svn_client_get_commit_log3_t log_msg_func,
-                  void *log_msg_baton,
-                  ,
-                  ,
-                  svn_swig_rb_get_commit_log_func)
-
 %callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
                   ,
                   ,
