@@ -56,6 +56,12 @@
 }
 #endif
 
+#ifdef SWIGRUBY
+%apply apr_array_header_t *SOURCES {
+  apr_array_header_t *sources
+}
+#endif
+
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
@@ -293,6 +299,9 @@
 %ignore svn_client_commit_item_create;
 %ignore svn_client_commit_item2_dup;
 %ignore svn_client_commit_item3_dup;
+%ignore svn_client_copy_source_t::path;
+%ignore svn_client_copy_source_t::revision;
+%ignore svn_client_copy_source_t::peg_revision;
 #endif
 
 %include svn_client_h.swg
@@ -338,6 +347,54 @@
 
   svn_client_commit_item3_t *dup(apr_pool_t *pool) {
     return svn_client_commit_item3_dup(self, pool);
+  };
+}
+
+%extend svn_client_copy_source_t
+{
+  %rename(path) _path;
+  %rename(revision) _revision;
+  %rename(peg_revision) _peg_revision;
+
+  svn_client_copy_source_t(const char *path,
+                           const svn_opt_revision_t *rev,
+                           const svn_opt_revision_t *peg_rev,
+                           apr_pool_t *pool) {
+    svn_client_copy_source_t *self;
+    svn_opt_revision_t *revision;
+    svn_opt_revision_t *peg_revision;
+
+    self = apr_palloc(pool, sizeof(*self));
+    self->path = path ? apr_pstrdup(pool, path) : NULL;
+
+    revision = apr_palloc(pool, sizeof(revision));
+    revision->kind = rev->kind;
+    revision->value.number = rev->value.number;
+    revision->value.date = rev->value.date;
+    self->revision = revision;
+
+    peg_revision = apr_palloc(pool, sizeof(peg_revision));
+    peg_revision->kind = peg_rev->kind;
+    peg_revision->value.number = peg_rev->value.number;
+    peg_revision->value.date = peg_rev->value.date;
+    self->peg_revision = peg_revision;
+
+    return self;
+  };
+
+  ~svn_client_copy_source_t() {
+  };
+
+  const char *_path(void) {
+    return self->path;
+  };
+
+  const svn_opt_revision_t *_revision(void) {
+    return self->revision;
+  };
+
+  const svn_opt_revision_t *_peg_revision(void) {
+    return self->peg_revision;
   };
 }
 

@@ -208,12 +208,31 @@ module Svn
       alias prop_list proplist
       alias plist proplist
       alias pl proplist
-      
-      def copy(src_path, dst_path, rev=nil)
-        Client.copy3(src_path, rev || "HEAD", dst_path, self)
+
+      def copy(src_paths, dst_path, rev_or_copy_as_child=nil)
+        if src_paths.is_a?(Array)
+          copy_as_child = rev_or_copy_as_child
+          if copy_as_child.nil?
+            copy_as_child = src_paths.size == 1 ? false : true
+          end
+          src_paths = src_paths.collect do |path|
+            if path.is_a?(CopySource)
+              path
+            else
+              CopySource.new(path)
+            end
+          end
+        else
+          copy_as_child = false
+          unless src_paths.is_a?(CopySource)
+            src_paths = CopySource.new(src_paths, rev_or_copy_as_child)
+          end
+          src_paths = [src_paths]
+        end
+        Client.copy4(src_paths, dst_path, copy_as_child, self)
       end
       alias cp copy
-      
+
       def move(src_path, dst_path, force=false)
         Client.move4(src_path, dst_path, force, self)
       end
@@ -677,6 +696,14 @@ module Svn
       # Returns +true+ when the instance is a change made to an unknown node.
       def node_kind_unknown?
         node_kind == Core::NODE_UNKNOWN
+      end
+    end
+
+    class CopySource
+      alias_method :_initialize, :initialize
+      private :_initialize
+      def initialize(path, rev=nil, peg_rev=nil)
+        _initialize(path, rev, peg_rev)
       end
     end
   end

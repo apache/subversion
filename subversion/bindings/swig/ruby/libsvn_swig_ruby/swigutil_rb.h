@@ -128,6 +128,9 @@ apr_array_header_t *svn_swig_rb_array_to_apr_array_revnum(VALUE array,
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_rb_array_to_apr_array_merge_range(VALUE array,
                                                                apr_pool_t *pool);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_array_header_t *svn_swig_rb_array_to_apr_array_copy_source(VALUE array,
+                                                               apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_rb_to_apr_array_prop(VALUE array_or_hash,

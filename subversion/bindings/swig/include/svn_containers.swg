@@ -537,6 +537,15 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   Input of apr_array_header_t * <svn_client_copy_source_t *>
+*/
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *SOURCES {
+  $1 = svn_swig_rb_array_to_apr_array_copy_source($input, _global_pool);
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Input of
    apr_hash_t * <const char *, apr_array_header_t * <svn_merge_range_t *>>
 */
