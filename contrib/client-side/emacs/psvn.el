@@ -491,7 +491,8 @@ svn-status-coding-system is used in svn-run, if it is not nil.")
 (defvar svn-status-svn-file-coding-system 'undecided-unix
   "The coding system that is used to save files that are loaded as
 parameter or data files via the svn command line client.
-It is used in the following functions: `svn-prop-edit-do-it', `svn-log-edit-done'")
+It is used in the following functions: `svn-prop-edit-do-it', `svn-log-edit-done'.
+You could set it to 'utf-8")
 
 (defcustom svn-status-use-ido-completion
   (fboundp 'ido-completing-read)
@@ -4419,9 +4420,11 @@ Commands:
                                 svn-status-propedit-file-list "")
     (setq svn-status-propedit-file-list nil)
     (svn-run async t 'propset "propset"
-         svn-status-propedit-property-name
-                 "--targets" svn-status-temp-arg-file
-                 "-F" (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
+             svn-status-propedit-property-name
+             "--targets" svn-status-temp-arg-file
+             (when (eq svn-status-svn-file-coding-system 'utf-8)
+               '("--encoding" "UTF-8"))
+             "-F" (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
     (unless async (svn-status-remove-temp-file-maybe)))
   (when svn-status-pre-propedit-window-configuration
     (set-window-configuration svn-status-pre-propedit-window-configuration)))
@@ -4546,6 +4549,8 @@ Commands:
                    (unless svn-status-recursive-commit "--non-recursive")
                    "--targets" svn-status-temp-arg-file
                    "-F" svn-status-temp-file-to-remove
+                   (when (eq svn-status-svn-file-coding-system 'utf-8)
+                     '("--encoding" "UTF-8"))
                    svn-status-default-commit-arguments))
     (set-window-configuration svn-status-pre-commit-window-configuration)
     (message "svn-log editing done")))
