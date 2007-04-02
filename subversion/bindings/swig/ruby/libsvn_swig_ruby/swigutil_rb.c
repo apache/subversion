@@ -1151,6 +1151,9 @@ DEFINE_ARRAY_TO_APR_ARRAY(svn_revnum_t,
 DEFINE_ARRAY_TO_APR_ARRAY(svn_merge_range_t *,
                           svn_swig_rb_array_to_apr_array_merge_range,
                           r2c_swig_type, (void *)"svn_merge_range_t *")
+DEFINE_ARRAY_TO_APR_ARRAY(svn_client_copy_source_t *,
+                          svn_swig_rb_array_to_apr_array_copy_source,
+                          r2c_swig_type, (void *)"svn_client_copy_source_t *")
 
 
 /* apr_hash_t -> Ruby Hash */
