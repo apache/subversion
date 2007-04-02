@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -1981,28 +1982,36 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test the basic functionality of {@link
+     * org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(}).
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testMergeInfoRetrieval() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        final String targetPath = new File(thisTest.getWCPath(),
+                                           "branches/A/mu").getPath();
+        MergeInfo mergeInfo = client.getMergeInfo(targetPath, Revision.HEAD);
+        assertNotNull("Missing merge info", mergeInfo);
+        final String mergeSrc = "/A/mu";
+        List ranges = mergeInfo.getRevisions(mergeSrc);
+        assertTrue("Missing merge info for '" + mergeSrc + "' on '" +
+                   targetPath + '\'', ranges != null && !ranges.isEmpty());
+        RevisionRange range = (RevisionRange) ranges.get(0);
+        assertEquals("Unexpected first revision range for '" + mergeSrc +
+                     "' on '" + targetPath + '\'', "1-2", range.toString());
+    }
+
+    /**
      * Test the basic functionality of SVNClient.merge().
      * @throws Throwable
      * @since 1.2
      */
     public void testBasicMerge() throws Throwable
     {
-        // build the test setup
-        OneTest thisTest = new OneTest();
-
-        // create branches directory in the repository (r2)
-        addExpectedCommitItem(null, thisTest.getUrl(), "branches",
-                              NodeKind.none, CommitItemStateFlags.Add);
-        client.mkdir(new String[]{thisTest.getUrl() + "/branches"}, "log_msg");
-
-        // copy A to branches (r3)
-        addExpectedCommitItem(null, thisTest.getUrl(), "branches/A",
-                              NodeKind.none, CommitItemStateFlags.Add);
-        client.copy(thisTest.getUrl() + "/A", thisTest.getUrl() +
-                    "/branches/A", "create A branch", Revision.HEAD);
-
-        // update the WC (to r3) so that it has the branches folder
-        client.update(thisTest.getWCPath(), Revision.HEAD, true);
+        OneTest thisTest = setupAndPerformMerge();
 
         // modify file A/mu
         File mu = new File(thisTest.getWorkingCopy(), "A/mu");
@@ -2057,6 +2066,34 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision number from commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true), 5);
+    }
+
+    /**
+     * Setup a test with a WC.  In the repository, create a
+     * "/branches" directory, with a branch of "/A" underneath it.
+     * Update the WC to reflect these modifications.
+     * @return This test.
+     */
+    private OneTest setupAndPerformMerge()
+        throws Exception
+    {
+        OneTest thisTest = new OneTest();
+
+        // create branches directory in the repository (r2)
+        addExpectedCommitItem(null, thisTest.getUrl(), "branches",
+                              NodeKind.none, CommitItemStateFlags.Add);
+        client.mkdir(new String[]{thisTest.getUrl() + "/branches"}, "log_msg");
+
+        // copy A to branches (r3)
+        addExpectedCommitItem(null, thisTest.getUrl(), "branches/A",
+                              NodeKind.none, CommitItemStateFlags.Add);
+        client.copy(thisTest.getUrl() + "/A", thisTest.getUrl() +
+                    "/branches/A", "create A branch", Revision.HEAD);
+
+        // update the WC (to r3) so that it has the branches folder
+        client.update(thisTest.getWCPath(), Revision.HEAD, true);
+
+        return thisTest;
     }
 
     /**

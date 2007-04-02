@@ -1044,6 +1044,13 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(String, Revision)
+     * @since 1.5
+     */
+    public native MergeInfo getMergeInfo(String path, Revision revision)
+        throws SubversionException;
+
+    /**
      * Display the differences between two paths
      * @param target1       first path or url
      * @param revision1     first revision
