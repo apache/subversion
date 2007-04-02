@@ -677,7 +677,7 @@ svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line)
                     4, code, message, file, line);
 }
 
-static VALUE
+VALUE
 svn_swig_rb_svn_error_to_rb_error(svn_error_t *error)
 {
   VALUE error_code = INT2NUM(error->apr_err);
@@ -1984,17 +1984,21 @@ svn_swig_rb_notify_func2(void *baton,
                          apr_pool_t *pool)
 {
   VALUE proc, rb_pool;
+  callback_baton_t cbb;
 
   svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
-  
-  if (!NIL_P(proc)) {
-    callback_baton_t cbb;
 
+  if (!NIL_P(proc)) {
     cbb.receiver = proc;
     cbb.message = rb_id_call();
     cbb.args = rb_ary_new3(1, c2r_wc_notify__dup(notify));
-    invoke_callback((VALUE)(&cbb), rb_pool);
   }
+
+  if (notify->err)
+    svn_error_clear(notify->err);
+
+  if (!NIL_P(proc))
+    invoke_callback((VALUE)(&cbb), rb_pool);
 }
 
 svn_error_t *

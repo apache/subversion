@@ -58,6 +58,8 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message,
                                 VALUE file, VALUE line);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+VALUE svn_swig_rb_svn_error_to_rb_error(svn_error_t *error);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_handle_svn_error(svn_error_t *error);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT

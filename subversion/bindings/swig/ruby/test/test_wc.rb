@@ -897,4 +897,45 @@ EOE
     assert(!Svn::Wc.ignore?("xxx.c", ["*.H", "*.C"]))
     assert(Svn::Wc.ignore?("xxx.C", ["*.H", "*.C"]))
   end
+
+  def test_changelist
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      assert_nil(access.entry(@wc_path).changelist)
+    end
+
+    notifies = []
+    notify_collector = Proc.new {|notify| notifies << notify }
+    Svn::Wc.set_changelist(path, "123", nil, nil, notify_collector)
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      assert("123", access.entry(@wc_path).changelist)
+    end
+    assert_equal([[path, nil]],
+                 notifies.collect {|notify| [notify.path, notify.err]})
+
+    notifies = []
+    Svn::Wc.set_changelist(path, "456", nil, nil, notify_collector)
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      assert("456", access.entry(@wc_path).changelist)
+    end
+    assert_equal([[path, nil]],
+                 notifies.collect {|notify| [notify.path, notify.err]})
+
+    notifies = []
+    Svn::Wc.set_changelist(path, "789", "000", nil, notify_collector)
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      assert("456", access.entry(@wc_path).changelist)
+    end
+    assert_equal([[path, Svn::Error::WcMismatchedChangelist]],
+                 notifies.collect {|notify| [notify.path, notify.err.class]})
+  end
 end
