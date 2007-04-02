@@ -125,9 +125,9 @@ module Svn
         Client.add3(path, recurse, force, no_ignore, self)
       end
 
-      def delete(paths, force=false)
+      def delete(paths, force=false, keep_local=false)
         paths = [paths] unless paths.is_a?(Array)
-        Client.delete2(paths, force, self)
+        Client.delete3(paths, force, keep_local, self)
       end
       alias del delete
       alias remove delete
