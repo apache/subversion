@@ -3313,7 +3313,8 @@ The version number of the client is cached in `svn-client-version'."
     (if (or (interactive-p) (not svn-status-cached-version-string))
         (progn
           (svn-run nil t 'version "--version")
-          (svn-status-show-process-output 'info t)
+          (when (interactive-p)
+            (svn-status-show-process-output 'info t))
           (with-current-buffer svn-status-last-output-buffer-name
             (goto-char (point-min))
             (setq svn-client-version
