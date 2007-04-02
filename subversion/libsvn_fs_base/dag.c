@@ -1,7 +1,7 @@
 /* dag.c : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -46,6 +46,7 @@
 #include "bdb/strings-table.h"
 
 #include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -1350,7 +1351,7 @@ svn_fs_base__dag_copy(dag_node_t *to_node,
          reserved above.  */
       SVN_ERR(svn_fs_bdb__create_copy
               (fs, copy_id,
-               svn_fs_base__canonicalize_abspath(from_path, pool),
+               svn_fs__canonicalize_abspath(from_path, pool),
                from_txn_id, id, copy_kind_real, trail, pool));
 
       /* Finally, add the COPY_ID to the transaction's list of copies

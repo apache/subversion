@@ -1,7 +1,7 @@
 /* fs-test.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,6 +33,7 @@
 #include "../../libsvn_fs_base/bdb/txn-table.h"
 #include "../../libsvn_fs_base/bdb/nodes-table.h"
 
+#include "private/svn_fs_util.h"
 #include "../../libsvn_delta/delta.h"
 
 #define SET_STR(ps, s) ((ps)->data = (s), (ps)->len = strlen(s))
@@ -1152,7 +1153,7 @@ canonicalize_abspath(const char **msg,
     { "///foo///bar///baz///", "/foo/bar/baz" },
   };
 
-  *msg = "test svn_fs_base__canonicalize_abspath";
+  *msg = "test svn_fs__canonicalize_abspath";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1161,7 +1162,7 @@ canonicalize_abspath(const char **msg,
     {
       const char *input = paths[i][0];
       const char *output = paths[i][1];
-      const char *actual = svn_fs_base__canonicalize_abspath(input, pool);
+      const char *actual = svn_fs__canonicalize_abspath(input, pool);
       
       if ((! output) && (! actual))
         continue;

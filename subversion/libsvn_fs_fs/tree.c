@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -50,6 +50,7 @@
 #include "id.h"
 
 #include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
 
@@ -650,7 +651,7 @@ open_path(parent_path_t **parent_path_p,
   dag_node_t *here; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root.  */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
-  const char *canon_path = svn_fs_fs__canonicalize_abspath(path, pool);
+  const char *canon_path = svn_fs__canonicalize_abspath(path, pool);
   const char *path_so_far = "/";
 
   /* Make a parent_path item for the root node, using its own current
@@ -872,7 +873,7 @@ get_dag(dag_node_t **dag_node_p,
   dag_node_t *node = NULL;
 
   /* Canonicalize the input PATH. */
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, pool);
 
   /* If ROOT is a revision root, we'll look for the DAG in our cache. */
   node = dag_node_cache_get(root, path, pool);
@@ -915,7 +916,7 @@ add_change(svn_fs_t *fs,
            apr_pool_t *pool)
 {
   SVN_ERR(svn_fs_fs__add_change(fs, txn_id,
-                                svn_fs_fs__canonicalize_abspath(path, pool),
+                                svn_fs__canonicalize_abspath(path, pool),
                                 noderev_id, change_kind, text_mod, prop_mod,
                                 copyfrom_rev, copyfrom_path,
                                 pool));
@@ -1152,7 +1153,7 @@ fs_change_node_prop(svn_fs_root_t *root,
          children of the root are received without a leading slash
          (e.g. "/file.txt" is received as "file.txt"), so must be made
          absolute. */
-      const char *canon_path = svn_fs_fs__canonicalize_abspath(path, pool);
+      const char *canon_path = svn_fs__canonicalize_abspath(path, pool);
 
       SVN_ERR(root->fs->vtable->open_txn(&txn, root->fs, txn_id, pool));
 
@@ -2061,7 +2062,7 @@ copy_helper(svn_fs_root_t *from_root,
                                 to_path, pool));
 
       /* Canonicalize the copyfrom path. */
-      from_canonpath = svn_fs_fs__canonicalize_abspath(from_path, pool);
+      from_canonpath = svn_fs__canonicalize_abspath(from_path, pool);
 
       SVN_ERR(svn_fs_fs__dag_copy(to_parent_path->parent->node,
                                   to_parent_path->entry,
@@ -2803,7 +2804,7 @@ fs_node_history(svn_fs_history_t **history_p,
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history(root->fs,
-                                svn_fs_fs__canonicalize_abspath(path, pool),
+                                svn_fs__canonicalize_abspath(path, pool),
                                 root->rev, FALSE, NULL, 
                                 SVN_INVALID_REVNUM, pool);
   return SVN_NO_ERROR;
