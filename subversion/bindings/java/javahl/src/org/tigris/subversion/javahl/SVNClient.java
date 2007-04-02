@@ -655,13 +655,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * Commits changes to the repository.
-     * @param path      files to commit.
-     * @param message   log message.
-     * @param recurse   whether the operation should be done recursively.
-     * @return Returns a long representing the revision. It returns a
-     *         -1 if the revision number is invalid.
-     * @exception ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean)
      */
     public long commit(String[] path, String message, boolean recurse)
             throws ClientException
@@ -670,16 +664,7 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
-     * Commits changes to the repository.
-     * @param path            files to commit.
-     * @param message         log message.
-     * @param recurse         whether the operation should be done recursively.
-     * @param noUnlock        do remove any locks
-     * @param keepChangelist  keep changelist associations after the commit.
-     * @param changelistName  if non-null, filter paths using changelist
-     * @return Returns a long representing the revision. It returns a
-     *         -1 if the revision number is invalid.
-     * @exception ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean, boolean, String)
      * @since 1.5
      */
     public native long commit(String[] path, String message, boolean recurse,
@@ -1768,15 +1753,7 @@ public class SVNClient implements SVNClientInterface
     public static native int versionMicro();
 
     /**
-     * Commits changes to the repository.
-     *
-     * @param path     files to commit.
-     * @param message  log message.
-     * @param recurse  whether the operation should be done recursively.
-     * @param noUnlock do remove any locks
-     * @return Returns a long representing the revision. It returns a
-     *         -1 if the revision number is invalid.
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean)
      * @since 1.2
      */
     public long commit(String[] path, String message, boolean recurse,

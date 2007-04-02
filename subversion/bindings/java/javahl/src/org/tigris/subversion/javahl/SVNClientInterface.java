@@ -445,8 +445,9 @@ public interface SVNClientInterface
      * @param path      files to commit.
      * @param message   log message.
      * @param recurse   whether the operation should be done recursively.
-     * @return Returns a long representing the revision. It returns a
-     *         -1 if the revision number is invalid.
+     * @return The new revision number created by the commit, or
+     * {@link Revision.SVN_INVALID_REVNUM} if the revision number is
+     * invalid.
      * @exception ClientException
      */
     long commit(String[] path, String message, boolean recurse)
@@ -458,9 +459,11 @@ public interface SVNClientInterface
      * @param message   log message.
      * @param recurse   whether the operation should be done recursively.
      * @param noUnlock  do remove any locks
-     * @return Returns a long representing the revision. It returns a
-     *         -1 if the revision number is invalid.
+     * @return The new revision number created by the commit, or
+     * {@link Revision.SVN_INVALID_REVNUM} if the revision number is
+     * invalid.
      * @exception ClientException
+     * @since 1.2
      */
     long commit(String[] path, String message, boolean recurse,
                 boolean noUnlock) throws ClientException;
@@ -473,8 +476,9 @@ public interface SVNClientInterface
      * @param noUnlock        do remove any locks
      * @param keepChangelist  keep changelist associations after the commit.
      * @param changelistName  if non-null, filter paths using changelist
-     * @return Returns a long representing the revision. It returns a
-     *         -1 if the revision number is invalid.
+     * @return The new revision number created by the commit, or
+     * {@link Revision.SVN_INVALID_REVNUM} if the revision number is
+     * invalid.
      * @exception ClientException
      * @since 1.5
      */
