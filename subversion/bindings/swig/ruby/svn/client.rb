@@ -259,10 +259,10 @@ module Svn
       end
 
       def diff_summarize_peg(path1, rev1, rev2, peg_rev=nil,
-                             recurse=true, ignore_ancestry=true,
+                             depth=nil, ignore_ancestry=true,
                              &block)
-        Client.diff_summarize_peg(path1, rev1, rev2, peg_rev,
-                                  recurse, ignore_ancestry, block, self)
+        Client.diff_summarize_peg2(path1, rev1, rev2, peg_rev,
+                                   depth, ignore_ancestry, block, self)
       end
 
       def merge(src1, rev1, src2, rev2, target_wcpath,
