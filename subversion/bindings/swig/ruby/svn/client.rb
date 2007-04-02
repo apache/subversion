@@ -92,10 +92,12 @@ module Svn
       end
 
       def checkout(url, path, revision=nil, peg_rev=nil,
-                   recurse=true, ignore_externals=false)
+                   depth=nil, ignore_externals=false,
+                   allow_unver_obstruction=false)
         revision ||= "HEAD"
-        Client.checkout2(url, path, peg_rev, revision,
-                         recurse, ignore_externals, self)
+        Client.checkout3(url, path, peg_rev, revision, depth,
+                         ignore_externals, allow_unver_obstruction,
+                         self)
       end
       alias co checkout
 
