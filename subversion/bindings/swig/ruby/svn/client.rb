@@ -252,10 +252,10 @@ module Svn
       # and returns +nil+.
       # +diff+ is an instance of Svn::Client::DiffSummarize.
       def diff_summarize(path1, rev1, path2, rev2,
-                         recurse=true, ignore_ancestry=true,
+                         depth=nil, ignore_ancestry=true,
                          &block) # :yields: diff
-        Client.diff_summarize(path1, rev1, path2, rev2,
-                              recurse, ignore_ancestry, block, self)
+        Client.diff_summarize2(path1, rev1, path2, rev2,
+                               depth, ignore_ancestry, block, self)
       end
 
       def diff_summarize_peg(path1, rev1, rev2, peg_rev=nil,
