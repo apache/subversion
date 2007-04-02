@@ -44,7 +44,8 @@
 };
 
 %apply apr_hash_t *HASH_CSTRING_MAYBENULL {
-    apr_hash_t *mimetypes_map
+  apr_hash_t *mimetypes_map,
+  apr_hash_t *revprop_table
 }
 
 #ifdef SWIGPYTHON
