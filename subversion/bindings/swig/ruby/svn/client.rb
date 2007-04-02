@@ -237,12 +237,12 @@ module Svn
 
       def diff_peg(options, path, start_rev, end_rev,
                    out_file, err_file, peg_rev=nil,
-                   recurse=true, ignore_ancestry=false,
+                   depth=nil, ignore_ancestry=false,
                    no_diff_deleted=false, force=false,
                    header_encoding=nil)
         header_encoding ||= Core::LOCALE_CHARSET
-        Client.diff_peg3(options, path, peg_rev, start_rev, end_rev,
-                         recurse, ignore_ancestry,
+        Client.diff_peg4(options, path, peg_rev, start_rev, end_rev,
+                         depth, ignore_ancestry,
                          no_diff_deleted, force, header_encoding,
                          out_file, err_file, self)
       end
