@@ -274,12 +274,12 @@ module Svn
       end
 
       def merge_peg(src, rev1, rev2, target_wcpath,
-                    peg_rev=nil, recurse=true,
+                    peg_rev=nil, depth=nil,
                     ignore_ancestry=false, force=false,
-                    dry_run=false, options=nil)
-        Client.merge_peg2(src, rev1, rev2, peg_rev,
-                          target_wcpath, recurse, ignore_ancestry,
-                          force, dry_run, options, self)
+                    dry_run=false, options=nil, record_only=false)
+        Client.merge_peg3(src, rev1, rev2, peg_rev,
+                          target_wcpath, depth, ignore_ancestry,
+                          force, record_only, dry_run, options, self)
       end
       
       # Returns a content of +path+ at +rev+ as a String.
