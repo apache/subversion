@@ -6,7 +6,7 @@
 ;;	Mattias Engdegård <mattias@virtutech.com>
 ;; Maintainer: David Kågedal <david@virtutech.com>
 ;; Created: 27 Jan 2006
-;; Version: 1.0
+;; Version: 1.1
 ;; Keywords: docs
 
 ;; This program is free software; you can redistribute it and/or
@@ -299,7 +299,10 @@ Argument ARG are the command line arguments."
                  (svn-action-files)))
         (commit-buf (current-buffer))
         (status-buf svn-status-buf)
-        (msg-file (make-temp-file "svn-commit")))
+        (msg-file (if (fboundp 'make-temp-file)
+		      (make-temp-file "svn-commit")
+		    (make-temp-name (expand-file-name "svn-commit"
+						      (temp-directory))))))
     ;; Ensure final newline
     (goto-char (point-max))
     (unless (bolp)
@@ -359,7 +362,7 @@ Argument ARG are the command line arguments."
           (when pos
             (svn-update-status-flag pos ?\  ?\ )
             (svn-update-status-msg pos "Committed"))
-          (when file-buffer
+          (when (and file-buffer (fboundp 'vc-svn-workfile-version))
             (with-current-buffer file-buffer
               ;; Use buffer-file-name instead of path to get the
               ;; canonical file name used by vc
@@ -562,20 +565,22 @@ If optional argument CLEAR is non-NIL, clear the buffer first."
 
 (defun svn-refresh-one (file)
   "Run `svn status' on FILE."
-  (interactive (list (read-file-name "Svn status on file: "
-                                     default-directory
-                                     nil t
-                                     (or (svn-getprop (point) 'file)
-                                         (svn-getprop (point) 'dir)))))
+  (interactive (list (expand-file-name
+		      (read-file-name "Svn status on file: "
+				      default-directory
+				      nil t
+				      (or (svn-getprop (point) 'file)
+					  (svn-getprop (point) 'dir))))))
   (if (file-directory-p file)
       (setq file (file-name-as-directory file)))
   (svn-check-running)
-  (let ((local-file
+  (let* ((exp-default-dir (expand-file-name default-directory))
+	 (local-file
 	 (if (file-name-absolute-p file)
-	     (let ((ddl (length default-directory)))
+	     (let ((ddl (length exp-default-dir)))
 	       (if (or (< (length file) ddl)
 		       (not (string= (substring file 0 ddl)
-				     default-directory)))
+				     exp-default-dir)))
 		   (error "Outside working copy")
 		 (substring file ddl)))
 	   file)))
@@ -957,8 +962,10 @@ been modified."
                       (insert "         Top-level directory:")
                     (insert "         Directory " dir ":"))
                   (newline)
+		  ;; Next line only needed on XEmacs
+		  (remove-text-properties start (point) '(svn-file nil))
                   (add-text-properties start (point)
-                                       (list 'face '(:weight bold)
+                                       (list 'face 'bold
                                              'svn-dir dir))))))
           (forward-line 1))))))
 
