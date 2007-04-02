@@ -199,6 +199,9 @@ class WinGeneratorBase(GeneratorBase):
     # Find the installed SWIG version to adjust swig options
     self._find_swig()
 
+    # Find the installed Java Development Kit
+    self._find_jdk()
+
     # Look for ML
     if self.zlib_path:
       self._find_ml()
@@ -405,6 +408,15 @@ class WinGeneratorBase(GeneratorBase):
   def get_proj_sources(self, quote_path, target):
     "Get the list of source files for each project"
     sources = [ ]
+
+    javac_exe = "javac"
+    javah_exe = "javah"
+    jar_exe = "jar"
+    if self.jdk_path:
+      javac_exe = os.path.join(self.jdk_path, "bin", javac_exe)
+      javah_exe = os.path.join(self.jdk_path, "bin", javah_exe)
+      jar_exe = os.path.join(self.jdk_path, "bin", jar_exe)
+    
     if not isinstance(target, gen_base.TargetProject):
       cbuild = None
       ctarget = None
@@ -417,8 +429,9 @@ class WinGeneratorBase(GeneratorBase):
           headers = self.path(target.headers)
           classname = target.package + "." + source.class_name
 
-          cbuild = "javah -verbose -force -classpath %s -d %s %s" \
-                   % (self.quote(classes), self.quote(headers), classname)
+          cbuild = "%s -verbose -force -classpath %s -d %s %s" \
+                   % (self.quote(javah_exe), self.quote(classes),
+                      self.quote(headers), classname)
 
           ctarget = self.path(object.filename_win)
 
@@ -429,9 +442,10 @@ class WinGeneratorBase(GeneratorBase):
 
           sourcepath = self.path(source.sourcepath)
 
-          cbuild = "javac -g -target 1.2 -source 1.3 -classpath %s -d %s " \
+          cbuild = "%s -g -target 1.2 -source 1.3 -classpath %s -d %s " \
                    "-sourcepath %s $(InputPath)" \
-                   % tuple(map(self.quote, (classes, targetdir, sourcepath)))
+                   % tuple(map(self.quote, (javac_exe, classes,
+                                            targetdir, sourcepath)))
 
           ctarget = self.path(object.filename)
 
@@ -445,8 +459,9 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
       classdir = self.path(target.classes)
       jarfile = msvc_path_join(classdir, target.jar)
-      cbuild = "jar cf %s -C %s %s" \
-               % (jarfile, classdir, string.join(target.packages))
+      cbuild = "%s cf %s -C %s %s" \
+               % (self.quote(jar_exe), jarfile, classdir,
+                  string.join(target.packages))
       deps = map(lambda x: x.custom_target, sources)
       sources.append(ProjectItem(path='makejar', reldir='', user_deps=deps,
                                  custom_build=cbuild, custom_target=jarfile))
@@ -827,6 +842,10 @@ class WinGeneratorBase(GeneratorBase):
 
     if self.sasl_path:
       fakeincludes.append(self.apath(self.sasl_path, 'include'))
+
+    if target.name == "libsvnjavahl" and self.jdk_path:
+      fakeincludes.append(os.path.join(self.jdk_path, 'include'))
+      fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
     
     return fakeincludes
 
@@ -1104,6 +1123,37 @@ class WinGeneratorBase(GeneratorBase):
       self.python_libdir = self.apath(sysconfig.PREFIX, "libs")
     except ImportError:
       pass
+
+  def _find_jdk(self):
+    self.jdk_path = None
+    jdk_ver = None
+    try:
+      import _winreg
+      key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
+                            r"SOFTWARE\JavaSoft\Java Development Kit")
+      # Find the newest JDK version.
+      num_values = _winreg.QueryInfoKey(key)[1]
+      for i in range(num_values):
+        (name, value, key_type) = _winreg.EnumValue(key, i)
+        if name == "CurrentVersion":
+          jdk_ver = value
+          break
+      
+      # Find the JDK path.
+      if jdk_ver is not None:
+        key = _winreg.OpenKey(key, jdk_ver)
+        num_values = _winreg.QueryInfoKey(key)[1]
+        for i in range(num_values):
+          (name, value, key_type) = _winreg.EnumValue(key, i)
+          if name == "JavaHome":
+            self.jdk_path = value
+            break
+      _winreg.CloseKey(key)
+    except (ImportError, EnvironmentError):
+      pass
+    if self.jdk_path:
+      sys.stderr.write("Found JDK version %s in %s\n"
+                       % (jdk_ver, self.jdk_path))
 
   def _find_swig(self):
     # Require 1.3.24. If not found, assume 1.3.25.
