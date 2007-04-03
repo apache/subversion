@@ -691,6 +691,22 @@ EOM
                  Svn::Core::Property.categorize2(props))
   end
 
+  def test_merge_info_parse
+    assert_equal({}, Svn::Core::MergeInfo.parse(""))
+
+    input = "/trunk: 5,7-9,10,11,13,14"
+    result = Svn::Core::MergeInfo.parse(line_input)
+    assert_equal(["/trunk"], result.keys)
+    assert_equal([[5, 5], [7, 11], [13, 14]],
+                 result["/trunk"].collect {|range| range.to_a})
+
+    single_line_input = "/trunk: 5,7-9,10,11,13,14"
+    result = Svn::Core::MergeInfo.parse(single_line_input)
+    assert_equal(["/trunk"], result.keys)
+    assert_equal([[5, 5], [7, 11], [13, 14]],
+                 result["/trunk"].collect {|range| range.to_a})
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new

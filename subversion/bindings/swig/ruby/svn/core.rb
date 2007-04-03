@@ -605,5 +605,12 @@ module Svn
         super.gsub(/>$/, ":#{to_a.inspect}>")
       end
     end
+
+    module MergeInfo
+      module_function
+      def parse(input)
+        Core.mergeinfo_parse(input)
+      end
+    end
   end
 end
