@@ -69,12 +69,14 @@ module Svn
       Wc.match_ignore_list(path, patterns)
     end
 
-    def set_changelist(paths, changelist, matching_changelist=nil,
-                       cancel_func=nil, notify_func=nil)
+    def set_change_list(paths, change_list_name, matching_change_list_name=nil,
+                        cancel_func=nil, notify_func=nil)
       paths = [paths] unless paths.is_a?(Array)
-      Wc._set_changelist(paths, changelist, matching_changelist,
+      Wc._set_changelist(paths, change_list_name, matching_change_list_name,
                          cancel_func, notify_func)
     end
+    alias_method :set_changelist, :set_change_list
+    module_function :set_changelist
 
     module ExternalsDescription
       module_function
@@ -495,6 +497,8 @@ module Svn
     end
 
     class Entry
+      alias_method :change_list, :changelist
+
       def dup
         Wc.entry_dup(self, Svn::Core::Pool.new)
       end
