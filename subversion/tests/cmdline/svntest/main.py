@@ -91,20 +91,20 @@ class SVNRepositoryCreateFailure(Failure):
 
 # Windows specifics
 if sys.platform == 'win32':
-  windows = 1
+  windows = True
   file_scheme_prefix = 'file:///'
   _exe = '.exe'
 else:
-  windows = 0
+  windows = False
   file_scheme_prefix = 'file://'
   _exe = ''
 
 # os.wait() specifics
 try:
   from os import wait
-  platform_with_os_wait = 1
+  platform_with_os_wait = True
 except ImportError:
-  platform_with_os_wait = 0
+  platform_with_os_wait = False
 
 # The locations of the svn, svnadmin and svnlook binaries, relative to
 # the only scripts that import this file right now (they live in ../).
@@ -126,21 +126,21 @@ wc_passwd = 'rayjandom'
 wc_author2 = 'jconstant' # use the same password as wc_author
 
 # Global variable indicating if we want verbose output.
-verbose_mode = 0
+verbose_mode = False
 
 # Global variable indicating if we want test data cleaned up after success
-cleanup_mode = 0
+cleanup_mode = False
 
 # Global variable indicating if svnserve should use Cyrus SASL
-enable_sasl = 0
+enable_sasl = False
 
 # Global variable indicating if this is a child process and no cleanup
 # of global directories is needed.
-is_child_process = 0
+is_child_process = False
 
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
-if windows == 1:
+if windows:
   test_area_url = test_area_url.replace('\\', '/')
 
 # Global variable indicating the FS type for repository creations.
@@ -455,7 +455,7 @@ def create_repos(path):
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
              "[general]\nauth-access = write\n");
-  if enable_sasl == 1:
+  if enable_sasl:
     file_append(get_svnserve_conf_file_path(path),
                 "realm = svntest\n[sasl]\nuse-sasl = true\n")
   else:
@@ -628,7 +628,7 @@ class Sandbox:
     elif self.repo_url.startswith("svn"):
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
 
-    if windows == 1:
+    if windows:
       self.repo_url = self.repo_url.replace('\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
 
@@ -934,7 +934,7 @@ def run_tests(test_list, serial_only = False):
 
   testnums = []
   # Should the tests be listed (as opposed to executed)?
-  list_tests = 0
+  list_tests = False
 
   parallel = 0
 
@@ -945,7 +945,7 @@ def run_tests(test_list, serial_only = False):
   for arg in args:
     if arg == "list":
       # This is an old deprecated variant of the "--list" option:
-      list_tests = 1
+      list_tests = True
     elif arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
@@ -964,16 +964,16 @@ def run_tests(test_list, serial_only = False):
       fs_type = val
 
     elif opt == "-v" or opt == "--verbose":
-      verbose_mode = 1
+      verbose_mode = True
 
     elif opt == "--cleanup":
-      cleanup_mode = 1
+      cleanup_mode = True
 
     elif opt == "--list":
-      list_tests = 1
+      list_tests = True
 
     elif opt == "--enable-sasl":
-      enable_sasl = 1
+      enable_sasl = True
 
     elif opt == "-h" or opt == "--help":
       usage()
@@ -983,7 +983,7 @@ def run_tests(test_list, serial_only = False):
       parallel = 5   # use 5 parallel threads.
 
     elif opt == '-c':
-      is_child_process = 1
+      is_child_process = True
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
@@ -998,7 +998,7 @@ def run_tests(test_list, serial_only = False):
 
   # Calculate pristine_url from test_area_url.
   pristine_url = test_area_url + '/' + pristine_dir
-  if windows == 1:
+  if windows:
     pristine_url = pristine_url.replace('\\', '/')  
   
   # Setup the pristine repository (and working copy)
