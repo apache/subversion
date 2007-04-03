@@ -172,8 +172,11 @@ module Svn
         Client.resolved(path, recurse, self)
       end
       
-      def propset(name, value, target, recurse=true, force=false)
-        Client.propset2(name, value, target, recurse, force, self)
+      def propset(name, value, target, recurse=true, force=false,
+                  base_revision_for_url=nil)
+        base_revision_for_url ||= Svn::Core::INVALID_REVNUM
+        Client.propset3(name, value, target, recurse, force,
+                        base_revision_for_url, self)
       end
       alias prop_set propset
       alias pset propset
