@@ -38,6 +38,7 @@
 #include "ProplistCallback.h"
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
+#include "StatusCallback.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -156,27 +157,28 @@ Java_org_tigris_subversion_javahl_SVNClient_list
     return cl->list(url, revision, pegRevision, jrecurse ? true:false);
 }
 
-JNIEXPORT jobjectArray JNICALL
+JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_status
   (JNIEnv* env, jobject jthis, jstring jpath, jint jdepth,
    jboolean jonServer, jboolean jgetAll, jboolean jnoIgnore,
-   jboolean jignoreExternals)
+   jboolean jignoreExternals, jobject jstatusCallback)
 {
     JNIEntry(SVNClient, status);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if (cl == NULL)
     {
-        return NULL;
+        return;
     }
     JNIStringHolder path(jpath);
     if (JNIUtil::isExceptionThrown())
     {
-        return NULL;
+        return;
     }
-    return cl->status(path, (svn_depth_t)jdepth,
-                      jonServer ? true:false,
-                      jgetAll ? true:false, jnoIgnore ? true:false,
-                      jignoreExternals ? true:false);
+    StatusCallback callback(jstatusCallback);
+    cl->status(path, (svn_depth_t)jdepth,
+               jonServer ? true:false,
+               jgetAll ? true:false, jnoIgnore ? true:false,
+               jignoreExternals ? true:false, &callback);
 }
 
 JNIEXPORT void JNICALL

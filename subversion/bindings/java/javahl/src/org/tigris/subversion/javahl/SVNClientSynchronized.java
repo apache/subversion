@@ -183,14 +183,15 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @return Array of Status entries.
      * @since 1.5
      */
-    public Status[] status(String path, int depth, boolean onServer,
-                    boolean getAll, boolean noIgnore, boolean ignoreExternals)
+    public void status(String path, int depth, boolean onServer,
+                       boolean getAll, boolean noIgnore,
+                       boolean ignoreExternals, StatusCallback callback)
             throws ClientException
     {
         synchronized (clazz)
         {
-            return worker.status(path, depth, onServer, getAll, noIgnore,
-                                 ignoreExternals);
+            worker.status(path, depth, onServer, getAll, noIgnore,
+                          ignoreExternals, callback);
         }
     }
 
