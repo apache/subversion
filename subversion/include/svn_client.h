@@ -2580,7 +2580,7 @@ typedef struct svn_client_copy_source_t
  * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
  * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
  *
- * If @a src_paths has multiple items, and @a copy_as_child is FALSE, fail
+ * If @a sources has multiple items, and @a copy_as_child is FALSE, fail
  * with @c SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED.
  *
  * If @a dst_path is a URL, use the authentication baton 
