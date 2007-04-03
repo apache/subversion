@@ -611,6 +611,10 @@ module Svn
       def parse(input)
         Core.mergeinfo_parse(input)
       end
+
+      def diff(from, to)
+        Core.mergeinfo_diff(from, to)
+      end
     end
   end
 end

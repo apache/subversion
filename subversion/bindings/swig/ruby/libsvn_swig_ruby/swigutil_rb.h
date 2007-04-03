@@ -116,6 +116,9 @@ apr_hash_t *svn_swig_rb_hash_to_apr_hash_swig_type(VALUE hash,
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_hash_t *svn_swig_rb_hash_to_apr_hash_revnum(VALUE hash,
                                                 apr_pool_t *pool);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_hash_t *svn_swig_rb_hash_to_apr_hash_merge_range(VALUE hash,
+                                                     apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_rb_strings_to_apr_array(VALUE strings,

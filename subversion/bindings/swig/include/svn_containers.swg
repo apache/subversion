@@ -148,15 +148,6 @@
    %typemap(in) apr_hash_t *
 */
 
-#ifdef SWIGRUBY
-%define %hash_in_typemap(ParamName, ValueType)
-%typemap(in) apr_hash_t *ParamName {
-  $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, #ValueType, _global_pool);
-}
-%enddef
-%hash_in_typemap(MERGEINFO, svn_mergeinfo_t *)
-#endif
-
 /* -----------------------------------------------------------------------
    Input of apr_hash_t * <const char *, svn_string_t *>
    (commonly used for property name and value pairs)
@@ -555,6 +546,12 @@
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
+}
+#endif
+
+#ifdef SWIGRUBY
+%typemap(in) apr_hash_t *MERGEINFO {
+  $1 = svn_swig_rb_hash_to_apr_hash_merge_range($input, _global_pool);
 }
 #endif
 
