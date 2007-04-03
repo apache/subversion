@@ -473,8 +473,8 @@ def checkout_repo_with_symlinks(sbox):
   # Load the dumpfile into the repos.
   data_dir = os.path.join(os.path.dirname(sys.argv[0]),
                           'special_tests_data')
-  dump_str = file(os.path.join(data_dir,
-                               "symlink.dump"), "rb").read()
+  dump_str = svntest.main.file_read(os.path.join(data_dir,
+                                                 "symlink.dump"), "rb")
   svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
   
   expected_output = svntest.wc.State(sbox.wc_dir, {
@@ -544,8 +544,8 @@ def checkout_repo_with_unknown_special_type(sbox):
   # Load the dumpfile into the repos.
   data_dir = os.path.join(os.path.dirname(sys.argv[0]),
                           'special_tests_data')
-  dump_str = file(os.path.join(data_dir,
-                               "bad-special-type.dump"), "rb").read()
+  dump_str = svntest.main.file_read(os.path.join(data_dir,
+                                                 "bad-special-type.dump"), "rb")
   svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {

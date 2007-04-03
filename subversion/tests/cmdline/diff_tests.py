@@ -700,13 +700,11 @@ def dont_diff_binary_file(sbox):
   wc_dir = sbox.wc_dir
   
   # Add a binary file to the project.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
-  theta_contents = fp.read()  # suck up contents of a test .png file
-  fp.close()
-
+  theta_contents = svntest.main.file_read(
+    os.path.join(sys.path[0], "theta.bin"), 'rb')
   # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  svntest.main.file_write(theta_path, theta_contents)
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
   
   svntest.main.run_svn(None, 'add', theta_path)  
 
