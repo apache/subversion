@@ -1940,6 +1940,14 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal([path2], yield(ctx, change_list1, @wc_path))
     ctx.remove_from_change_list(change_list1, [path2])
     assert_equal([], yield(ctx, change_list1, @wc_path))
+
+    ctx.add_to_change_list(change_list1, path1)
+    ctx.add_to_change_list(change_list2, path2)
+    assert_equal([path1], yield(ctx, change_list1, @wc_path))
+    assert_equal([path2], yield(ctx, change_list2, @wc_path))
+    ctx.remove_from_change_list(nil, [path1, path2])
+    assert_equal([], yield(ctx, change_list1, @wc_path))
+    assert_equal([], yield(ctx, change_list2, @wc_path))
   end
 
   def test_change_list_get_without_block
