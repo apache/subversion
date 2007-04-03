@@ -57,28 +57,24 @@ const apr_array_header_t *Targets::array(const Pool &pool)
         JNIEnv *env = JNIUtil::getEnv();
         jint arraySize = env->GetArrayLength(m_targetArray);
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return NULL;
-        }
+
         jclass clazz = env->FindClass("java/lang/String");
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return NULL;
-        }
+
         for( int i = 0; i < arraySize; i++)
         {
             jobject elem = env->GetObjectArrayElement(m_targetArray, i);
             if (JNIUtil::isJavaExceptionThrown())
-            {
                 return NULL;
-            }
+
             if (env->IsInstanceOf(elem, clazz))
             {
                 JNIStringHolder text((jstring)elem);
                 if (JNIUtil::isJavaExceptionThrown())
-                {
                     return NULL;
-                }
+
                 const char *tt = (const char *)text;
                 if (!m_doesNotContainsPath)
                 {
@@ -92,9 +88,8 @@ const apr_array_header_t *Targets::array(const Pool &pool)
                 m_targets.push_back(tt);
             }
             if (JNIUtil::isJavaExceptionThrown())
-            {
                 return NULL;
-            }
+
             env->DeleteLocalRef(elem);
         }
         env->DeleteLocalRef(clazz);

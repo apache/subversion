@@ -34,9 +34,7 @@ JNIMutex::JNIMutex(apr_pool_t *pool)
     apr_status_t apr_err =
         apr_thread_mutex_create (&m_mutex, APR_THREAD_MUTEX_NESTED, pool);
     if (apr_err)
-    {
         JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_create");
-    }
 }
 
 /**
@@ -46,7 +44,5 @@ JNIMutex::~JNIMutex()
 {
     apr_status_t apr_err = apr_thread_mutex_destroy (m_mutex);
     if (apr_err)
-    {
         JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_destroy");
-    }
 }

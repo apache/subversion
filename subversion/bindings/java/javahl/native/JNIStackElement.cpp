@@ -40,9 +40,8 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
     {
         jclass jlo = env->FindClass("java/lang/Object");
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return;
-        }
+
         // the method id will not change during
         // the time this library is loaded, so
         // it can be cached.
@@ -51,17 +50,13 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
         {
             mid = env->GetMethodID(jlo, "toString", "()Ljava/lang/String;");
             if (JNIUtil::isJavaExceptionThrown())
-            {
                 return;
-            }
         }
 
         // this will call java.lang.Object.toString, even when it is overriden.
         jobject oStr = env->CallNonvirtualObjectMethod(jthis, jlo, mid);
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return;
-        }
 
         // copy the result to a buffer
         JNIStringHolder name(reinterpret_cast<jstring>(oStr));
@@ -71,15 +66,11 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
         // release the java string
         env->DeleteLocalRef(jlo);
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return;
-        }
 
         env->DeleteLocalRef(jlo);
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return;
-        }
 
         // remember the parameter for the exit of the method
         m_clazz = clazz;

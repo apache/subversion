@@ -450,19 +450,15 @@ jobjectArray SVNAdmin::lslocks(const char *path)
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Lock");
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return NULL;
-    }
+
     jobjectArray ret = env->NewObjectArray(count, clazz, NULL);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return NULL;
-    }
+
     env->DeleteLocalRef(clazz);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return NULL;
-    }
 
     int i = 0;
     for (hi = apr_hash_first (requestPool.pool(), locks); hi;
@@ -474,18 +470,16 @@ jobjectArray SVNAdmin::lslocks(const char *path)
         jobject jLock = SVNClient::createJavaLock(lock);
         env->SetObjectArrayElement(ret, i, jLock);
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return NULL;
-        }
+
         env->DeleteLocalRef(jLock);
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return NULL;
-        }
     }
 
     return ret;
 }
+
 void SVNAdmin::rmlocks(const char *path, Targets &locks)
 {
     Pool requestPool;
@@ -534,9 +528,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
         if (err)
             goto move_on;
         if (! lock)
-        {
             continue;
-        }
 
         /* Now forcibly destroy the lock. */
         err = svn_fs_unlock (fs, lock_path,
