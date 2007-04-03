@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-03-27 09:31+0200\n"
+"POT-Creation-Date: 2007-04-03 11:15+0200\n"
 "PO-Revision-Date: 2007-03-27 09:33+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
@@ -1048,8 +1048,8 @@ msgid "Path '%s' does not exist"
 msgstr "Le chemin '%s' n'existe pas"
 
 #: libsvn_client/commit.c:741 libsvn_client/copy.c:295
-#: libsvn_client/copy.c:768 libsvn_client/copy.c:1036
-#: libsvn_client/copy.c:1423
+#: libsvn_client/copy.c:759 libsvn_client/copy.c:1025
+#: libsvn_client/copy.c:1417
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "Le chemin '%s' existe déjà"
@@ -1059,15 +1059,15 @@ msgstr "Le chemin '%s' existe déjà"
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "'%s' est un nom réservé et ne peut être importé"
 
-#: libsvn_client/commit.c:872 libsvn_client/copy.c:918
+#: libsvn_client/commit.c:872 libsvn_client/copy.c:909
 msgid "Commit failed (details follow):"
 msgstr "Échec de la propagation (commit), détails : "
 
-#: libsvn_client/commit.c:880 libsvn_client/copy.c:926
+#: libsvn_client/commit.c:880 libsvn_client/copy.c:917
 msgid "Commit succeeded, but other errors follow:"
 msgstr "Succès de la propagation (commit), mais erreurs : "
 
-#: libsvn_client/commit.c:887 libsvn_client/copy.c:933
+#: libsvn_client/commit.c:887 libsvn_client/copy.c:924
 msgid "Error unlocking locked dirs (details follow):"
 msgstr "Erreur en déverrouillant des répertoires verrouillés, détails :"
 
@@ -1077,7 +1077,7 @@ msgstr ""
 "Erreur en incrémentant les révisions après la propagation (post-commit), "
 "détails :"
 
-#: libsvn_client/commit.c:909 libsvn_client/copy.c:944
+#: libsvn_client/commit.c:909 libsvn_client/copy.c:935
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "Erreur lors du nettoyage d'après-propagation (post-commit), détails :"
 
@@ -1169,13 +1169,13 @@ msgstr ""
 "Les propriétés standards ne peuvent être définies explicitement comme des "
 "propriétés de révision"
 
-#: libsvn_client/copy.c:305 libsvn_client/copy.c:1433
+#: libsvn_client/copy.c:305 libsvn_client/copy.c:1427
 #: libsvn_client/update.c:98
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "Le chemin '%s' n'est pas un répertoire"
 
-#: libsvn_client/copy.c:667
+#: libsvn_client/copy.c:658
 #, c-format
 msgid ""
 "Source and dest appear not to be in the same repository (src: '%s'; dst: '%"
@@ -1183,68 +1183,68 @@ msgid ""
 msgstr ""
 "Source et destination ne sont pas dans le même dépôt (src = '%s', dst = '%s')"
 
-#: libsvn_client/copy.c:749
+#: libsvn_client/copy.c:740
 #, c-format
 msgid "Cannot move URL '%s' into itself"
 msgstr "L'URL '%s' ne peut être déplacée (move) dans elle-même"
 
-#: libsvn_client/copy.c:758 libsvn_client/prop_commands.c:229
+#: libsvn_client/copy.c:749 libsvn_client/prop_commands.c:229
 #, c-format
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "Le chemin '%s' n'existe pas à la révision %ld"
 
-#: libsvn_client/copy.c:1265
+#: libsvn_client/copy.c:1259
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr ""
 "L'URL source '%s' est dans un dépôt distant ; laissée comme une copie "
 "disjointe"
 
-#: libsvn_client/copy.c:1410
+#: libsvn_client/copy.c:1404
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "Chemin '%s' non trouvé à la révision %ld"
 
-#: libsvn_client/copy.c:1415
+#: libsvn_client/copy.c:1409
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "Chemin '%s' non trouvé à la révision de tête"
 
-#: libsvn_client/copy.c:1458
+#: libsvn_client/copy.c:1452
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "L'entrée pour '%s' existe (mais la copie locale manque)"
 
-#: libsvn_client/copy.c:1552 libsvn_client/log.c:87
+#: libsvn_client/copy.c:1546 libsvn_client/log.c:87
 msgid "Revision type requires a working copy path, not a URL"
 msgstr ""
 "Type de révision qui requiert un chemin dans une copie locale, pas une URL"
 
-#: libsvn_client/copy.c:1587
+#: libsvn_client/copy.c:1581
 msgid "Cannot mix repository and working copy sources"
 msgstr "Impossible de mélanger des sources du dépôt et de la copie de travail"
 
-#: libsvn_client/copy.c:1629
+#: libsvn_client/copy.c:1623
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "Le chemin '%s' ne peut être copié dans son propre enfant '%s'"
 
-#: libsvn_client/copy.c:1649
+#: libsvn_client/copy.c:1643
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "Le chemin '%s' ne peut être déplacé dans lui-même"
 
-#: libsvn_client/copy.c:1658
+#: libsvn_client/copy.c:1652
 msgid "Moves between the working copy and the repository are not supported"
 msgstr ""
 "Les déplacements (move) entre copie de travail et dépôt ne sont pas supportés"
 
-#: libsvn_client/copy.c:1716
+#: libsvn_client/copy.c:1710
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' ne semble pas avoir d'URL associée"
 
-#: libsvn_client/copy.c:2054 svn/move-cmd.c:60
+#: libsvn_client/copy.c:2048 svn/move-cmd.c:60
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "L'opération 'move' n'accepte d'autre révision que HEAD"
 
@@ -1381,8 +1381,8 @@ msgstr ""
 "Aucun parent commun trouvé, impossible de travailler avec des arguments "
 "disjoints"
 
-#: libsvn_client/locking_commands.c:260 libsvn_client/merge.c:2054
-#: libsvn_client/merge.c:2060 libsvn_client/merge.c:2238
+#: libsvn_client/locking_commands.c:260 libsvn_client/merge.c:2062
+#: libsvn_client/merge.c:2068 libsvn_client/merge.c:2246
 #: libsvn_client/ra.c:375 libsvn_client/ra.c:741 libsvn_client/ra.c:878
 #, c-format
 msgid "'%s' has no URL"
@@ -1453,7 +1453,7 @@ msgstr ".fusion-gauche.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".fusion-droit.r%ld"
 
-#: libsvn_client/merge.c:1156
+#: libsvn_client/merge.c:1164
 #, c-format
 msgid ""
 "Path '%s' is in conflict, and must be resolved before the remainder of the "
@@ -1462,7 +1462,7 @@ msgstr ""
 "Le chemin '%s' est en conflit et doit être résolu (resolved) avant que la "
 "suite de la fusion soit appliquée"
 
-#: libsvn_client/merge.c:1449 libsvn_client/merge.c:1762
+#: libsvn_client/merge.c:1457 libsvn_client/merge.c:1770
 msgid "Use of two URLs is not compatible with merge info modification"
 msgstr ""
 "L'utilisation de deux URLs n'est pas compatible avec la modification des "
@@ -1871,126 +1871,126 @@ msgstr "récupérant l'identifiant (uuid) du dépôt"
 msgid "set repository uuid"
 msgstr "définissant l'identifiant (uuid) du dépôt"
 
-#: libsvn_fs_base/dag.c:219
+#: libsvn_fs_base/dag.c:220
 #, c-format
 msgid "Corrupt DB: initial transaction id not '0' in filesystem '%s'"
 msgstr ""
 "Base corrompue : la transaction initiale n'est pas '0' dans le système de "
 "fichier '%s'"
 
-#: libsvn_fs_base/dag.c:227
+#: libsvn_fs_base/dag.c:228
 #, c-format
 msgid "Corrupt DB: initial copy id not '0' in filesystem '%s'"
 msgstr ""
 "Base corrompue : la copie initiale n'est pas '0' dans le système de fichier "
 "'%s'"
 
-#: libsvn_fs_base/dag.c:236
+#: libsvn_fs_base/dag.c:237
 #, c-format
 msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
 msgstr ""
 "Base corrompue : le numéro de révision initial n'est pas '0' dans le système "
 "de fichier '%s'"
 
-#: libsvn_fs_base/dag.c:284 libsvn_fs_base/dag.c:460 libsvn_fs_fs/dag.c:333
+#: libsvn_fs_base/dag.c:285 libsvn_fs_base/dag.c:461 libsvn_fs_fs/dag.c:333
 msgid "Attempted to create entry in non-directory parent"
 msgstr ""
 "Tentative de création d'une entrée dans un parent qui n'est pas un répertoire"
 
-#: libsvn_fs_base/dag.c:454 libsvn_fs_fs/dag.c:327
+#: libsvn_fs_base/dag.c:455 libsvn_fs_fs/dag.c:327
 #, c-format
 msgid "Attempted to create a node with an illegal name '%s'"
 msgstr "Tentative de création d'un noeud avec un nom illégal '%s'"
 
-#: libsvn_fs_base/dag.c:466 libsvn_fs_base/dag.c:700 libsvn_fs_fs/dag.c:339
+#: libsvn_fs_base/dag.c:467 libsvn_fs_base/dag.c:701 libsvn_fs_fs/dag.c:339
 #, c-format
 msgid "Attempted to clone child of non-mutable node"
 msgstr "Tentative de clonage d'un enfant de noeud non modifiable"
 
-#: libsvn_fs_base/dag.c:473
+#: libsvn_fs_base/dag.c:474
 #, c-format
 msgid "Attempted to create entry that already exists"
 msgstr "Tentative de création d'une entrée qui existe déjà"
 
-#: libsvn_fs_base/dag.c:524 libsvn_fs_fs/dag.c:401
+#: libsvn_fs_base/dag.c:525 libsvn_fs_fs/dag.c:401
 msgid "Attempted to set entry in non-directory node"
 msgstr "Tentative de fixer une entrée à un noeud qui n'est pas un répertoire"
 
-#: libsvn_fs_base/dag.c:530 libsvn_fs_fs/dag.c:407
+#: libsvn_fs_base/dag.c:531 libsvn_fs_fs/dag.c:407
 msgid "Attempted to set entry in immutable node"
 msgstr "Tentative de fixer une entrée à un noeud non modifiable"
 
-#: libsvn_fs_base/dag.c:594
+#: libsvn_fs_base/dag.c:595
 #, c-format
 msgid "Can't set proplist on *immutable* node-revision %s"
 msgstr ""
 "Impossible de fixer des propriétés sur la révision de noeud *non modifiable* "
 "%s"
 
-#: libsvn_fs_base/dag.c:706
+#: libsvn_fs_base/dag.c:707
 #, c-format
 msgid "Attempted to make a child clone with an illegal name '%s'"
 msgstr "Tentative de clonage d'un enfant avec un nom illégal '%s'"
 
-#: libsvn_fs_base/dag.c:832
+#: libsvn_fs_base/dag.c:833
 #, c-format
 msgid "Attempted to delete entry '%s' from *non*-directory node"
 msgstr ""
 "Tentative de suppression de l'entrée '%s' d'un noeud qui n'est *pas* un "
 "répertoire"
 
-#: libsvn_fs_base/dag.c:838
+#: libsvn_fs_base/dag.c:839
 #, c-format
 msgid "Attempted to delete entry '%s' from immutable directory node"
 msgstr ""
 "Tentative de suppression de l'entrée '%s' d'un noeud répertoire non "
 "modifiable"
 
-#: libsvn_fs_base/dag.c:845
+#: libsvn_fs_base/dag.c:846
 #, c-format
 msgid "Attempted to delete a node with an illegal name '%s'"
 msgstr "Tentative de suppression d'un noeud avec un nom illégal '%s'"
 
-#: libsvn_fs_base/dag.c:860 libsvn_fs_base/dag.c:893
+#: libsvn_fs_base/dag.c:861 libsvn_fs_base/dag.c:894
 #, c-format
 msgid "Delete failed: directory has no entry '%s'"
 msgstr "Suppression échouée : le répertoire n'a pas d'entrée '%s'"
 
-#: libsvn_fs_base/dag.c:942
+#: libsvn_fs_base/dag.c:943
 #, c-format
 msgid "Attempted removal of immutable node"
 msgstr "Tentative d'effacer un noeud non modifiable"
 
-#: libsvn_fs_base/dag.c:1062
+#: libsvn_fs_base/dag.c:1063
 #, c-format
 msgid "Attempted to get textual contents of a *non*-file node"
 msgstr ""
 "Tentative d'obtention du contenu textuel d'une noeud qui n'est pas un fichier"
 
-#: libsvn_fs_base/dag.c:1097
+#: libsvn_fs_base/dag.c:1098
 #, c-format
 msgid "Attempted to get length of a *non*-file node"
 msgstr "Tentative d'obtention de la taille d'un noeud qui n'est pas un fichier"
 
-#: libsvn_fs_base/dag.c:1123
+#: libsvn_fs_base/dag.c:1124
 #, c-format
 msgid "Attempted to get checksum of a *non*-file node"
 msgstr ""
 "Tentative d'obtention de la somme de contrôle d'un noeud qui n'est pas un "
 "fichier"
 
-#: libsvn_fs_base/dag.c:1154 libsvn_fs_base/dag.c:1208
+#: libsvn_fs_base/dag.c:1155 libsvn_fs_base/dag.c:1209
 #, c-format
 msgid "Attempted to set textual contents of a *non*-file node"
 msgstr ""
 "Tentative de définir le contenu textuel d'un noeud qui n'est pas un fichier"
 
-#: libsvn_fs_base/dag.c:1160 libsvn_fs_base/dag.c:1214
+#: libsvn_fs_base/dag.c:1161 libsvn_fs_base/dag.c:1215
 #, c-format
 msgid "Attempted to set textual contents of an immutable node"
 msgstr "Tentative de définir le contenu textuel d'un noeud non modifiable"
 
-#: libsvn_fs_base/dag.c:1237
+#: libsvn_fs_base/dag.c:1238
 #, c-format
 msgid ""
 "Checksum mismatch, rep '%s':\n"
@@ -2001,12 +2001,12 @@ msgstr ""
 "   attendu :  %s\n"
 "    obtenu :  %s\n"
 
-#: libsvn_fs_base/dag.c:1292
+#: libsvn_fs_base/dag.c:1293
 #, c-format
 msgid "Attempted to open non-existent child node '%s'"
 msgstr "Tentative d'ouverture d'un noeud fils non existant '%s'"
 
-#: libsvn_fs_base/dag.c:1298
+#: libsvn_fs_base/dag.c:1299
 #, c-format
 msgid "Attempted to open node with an illegal name '%s'"
 msgstr "Tentative d'ouverture d'un noeud avec un nom illégal '%s'"
@@ -2185,30 +2185,30 @@ msgstr ""
 "copie à chaud. Si le problème persiste, essayer de désactiver cette option\n"
 "dans DB_CONFIG"
 
-#: libsvn_fs_base/fs.c:1240
+#: libsvn_fs_base/fs.c:1178
 msgid "Module for working with a Berkeley DB repository."
 msgstr "Module destiné à travailler avec un dépôt Berkeley DB."
 
-#: libsvn_fs_base/fs.c:1274
+#: libsvn_fs_base/fs.c:1212
 #, c-format
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "Version %d du chargeur FS non supportée pour bdb"
 
-#: libsvn_fs_base/lock.c:444 libsvn_fs_fs/lock.c:615
+#: libsvn_fs_base/lock.c:445 libsvn_fs_fs/lock.c:616
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
 msgstr ""
 "Impossible de vérifier le verrou sur le chemin '%s' ; Aucun nom "
 "d'utilisateur disponible"
 
-#: libsvn_fs_base/lock.c:450 libsvn_fs_fs/lock.c:621
+#: libsvn_fs_base/lock.c:451 libsvn_fs_fs/lock.c:622
 #, c-format
 msgid "User %s does not own lock on path '%s' (currently locked by %s)"
 msgstr ""
 "L'utilisateur '%s' ne possède pas le verrou sur '%s' (actuellement "
 "verrouillé par %s)"
 
-#: libsvn_fs_base/lock.c:457 libsvn_fs_fs/lock.c:628
+#: libsvn_fs_base/lock.c:458 libsvn_fs_fs/lock.c:629
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
 msgstr "Le verrou sur '%s' ne peut être vérifié : pas de verrou de ce nom"
@@ -2311,89 +2311,89 @@ msgstr "Transaction interrompue, mais échec du nettoyage (cleanup)"
 #. Constructing nice error messages for roots.
 #. Return the error SVN_ERR_FS_NOT_FOUND, with a detailed error text,
 #. for PATH in ROOT.
-#: libsvn_fs_base/tree.c:391 libsvn_fs_fs/tree.c:310
+#: libsvn_fs_base/tree.c:392 libsvn_fs_fs/tree.c:311
 #, c-format
 msgid "File not found: transaction '%s', path '%s'"
 msgstr "Fichier non trouvé : transaction '%s', chemin '%s'"
 
-#: libsvn_fs_base/tree.c:396 libsvn_fs_fs/tree.c:315
+#: libsvn_fs_base/tree.c:397 libsvn_fs_fs/tree.c:316
 #, c-format
 msgid "File not found: revision %ld, path '%s'"
 msgstr "Fichier non trouvé : révision %ld, chemin '%s'"
 
 #. Build a detailed `file already exists' message for PATH in ROOT.
-#: libsvn_fs_base/tree.c:406 libsvn_fs_fs/tree.c:330
+#: libsvn_fs_base/tree.c:407 libsvn_fs_fs/tree.c:331
 #, c-format
 msgid "File already exists: filesystem '%s', transaction '%s', path '%s'"
 msgstr ""
 "Le fichier existe déjà : système de fichiers '%s', transaction '%s', chemin "
 "'%s'"
 
-#: libsvn_fs_base/tree.c:411 libsvn_fs_fs/tree.c:336
+#: libsvn_fs_base/tree.c:412 libsvn_fs_fs/tree.c:337
 #, c-format
 msgid "File already exists: filesystem '%s', revision %ld, path '%s'"
 msgstr ""
 "Le fichier existe déjà : système de fichiers '%s', révision %ld, chemin '%s'"
 
-#: libsvn_fs_base/tree.c:419 libsvn_fs_fs/tree.c:346
+#: libsvn_fs_base/tree.c:420 libsvn_fs_fs/tree.c:347
 msgid "Root object must be a transaction root"
 msgstr "L'objet racine doit être la racine d'une transaction"
 
-#: libsvn_fs_base/tree.c:834 libsvn_fs_fs/tree.c:755
+#: libsvn_fs_base/tree.c:835 libsvn_fs_fs/tree.c:756
 #, c-format
 msgid "Failure opening '%s'"
 msgstr "Échec à l'ouverture de '%s'"
 
-#: libsvn_fs_base/tree.c:1466 libsvn_fs_fs/tree.c:1202
+#: libsvn_fs_base/tree.c:1467 libsvn_fs_fs/tree.c:1203
 msgid "Cannot compare property value between two different filesystems"
 msgstr ""
 "Impossible de comparer des propriétés entre deux systèmes de fichiers "
 "différents"
 
-#: libsvn_fs_base/tree.c:1799
+#: libsvn_fs_base/tree.c:1800
 msgid "Corrupt DB: faulty predecessor count"
 msgstr "Base de données corrompue : nombre de prédécesseurs incorrect"
 
-#: libsvn_fs_base/tree.c:1854 libsvn_fs_fs/tree.c:1239
+#: libsvn_fs_base/tree.c:1855 libsvn_fs_fs/tree.c:1240
 #, c-format
 msgid "Unexpected immutable node at '%s'"
 msgstr "Noeud non-modifiable inattendu à '%s'"
 
-#: libsvn_fs_base/tree.c:1875 libsvn_fs_fs/tree.c:1262
+#: libsvn_fs_base/tree.c:1876 libsvn_fs_fs/tree.c:1263
 #, c-format
 msgid "Conflict at '%s'"
 msgstr "Conflit sur '%s'"
 
-#: libsvn_fs_base/tree.c:1925 libsvn_fs_base/tree.c:2637
-#: libsvn_fs_fs/tree.c:1311 libsvn_fs_fs/tree.c:1803
+#: libsvn_fs_base/tree.c:1926 libsvn_fs_base/tree.c:2638
+#: libsvn_fs_fs/tree.c:1312 libsvn_fs_fs/tree.c:1804
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr ""
 "Mauvaise fusion (merge) ; parent, source et cible pas tous dans le même FS"
 
-#: libsvn_fs_base/tree.c:1941 libsvn_fs_fs/tree.c:1327
+#: libsvn_fs_base/tree.c:1942 libsvn_fs_fs/tree.c:1328
 #, c-format
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr "Mauvaise fusion (merge) ; la cible '%s' a l'id '%s', comme le parent"
 
-#: libsvn_fs_base/tree.c:2444
+#: libsvn_fs_base/tree.c:2445
 #, c-format
 msgid "Transaction '%s' out of date with respect to revision '%s'"
 msgstr "La transaction '%s' est obsolète par rapport à la révision '%s'"
 
-#: libsvn_fs_base/tree.c:2820 libsvn_fs_fs/tree.c:1942
+#: libsvn_fs_base/tree.c:2821 libsvn_fs_fs/tree.c:1943
 msgid "The root directory cannot be deleted"
 msgstr "Le répertoire racine ne peut être effacé"
 
-#: libsvn_fs_base/tree.c:3000 libsvn_fs_fs/tree.c:2014
+#: libsvn_fs_base/tree.c:3001 libsvn_fs_fs/tree.c:2015
 #, c-format
 msgid "Cannot copy between two different filesystems ('%s' and '%s')"
 msgstr "Impossible de copier d'un système de fichiers à l'autre ('%s' et '%s')"
 
-#: libsvn_fs_base/tree.c:3009 libsvn_fs_fs/tree.c:2020
+#: libsvn_fs_base/tree.c:3010 libsvn_fs_fs/tree.c:2021
 msgid "Copy from mutable tree not currently supported"
 msgstr "Copie à partir d'un arbre modifiable non supportée"
 
-#: libsvn_fs_base/tree.c:3504 libsvn_fs_fs/tree.c:2444
+#: libsvn_fs_base/tree.c:3505 libsvn_fs_fs/tree.c:2445
 #, c-format
 msgid ""
 "Base checksum mismatch on '%s':\n"
@@ -2404,14 +2404,14 @@ msgstr ""
 "   attendu :  %s\n"
 "    obtenu :  %s\n"
 
-#: libsvn_fs_base/tree.c:3757 libsvn_fs_fs/tree.c:2680
+#: libsvn_fs_base/tree.c:3758 libsvn_fs_fs/tree.c:2681
 msgid "Cannot compare file contents between two different filesystems"
 msgstr ""
 "Impossible de comparer le contenu de fichiers dans des système de fichiers "
 "différents"
 
-#: libsvn_fs_base/tree.c:3766 libsvn_fs_base/tree.c:3771
-#: libsvn_fs_fs/tree.c:2689 libsvn_fs_fs/tree.c:2694
+#: libsvn_fs_base/tree.c:3767 libsvn_fs_base/tree.c:3772
+#: libsvn_fs_fs/tree.c:2690 libsvn_fs_fs/tree.c:2695
 #: libsvn_repos/rev_hunt.c:804
 #, c-format
 msgid "'%s' is not a file"
@@ -2458,11 +2458,11 @@ msgstr "Impossible de créer l'exclusivité (txn list mutex) de FSFS"
 msgid "Can't store FSFS shared data"
 msgstr "Impossible de stocker les données partagées de FSFS"
 
-#: libsvn_fs_fs/fs.c:352
+#: libsvn_fs_fs/fs.c:290
 msgid "Module for working with a plain file (FSFS) repository."
 msgstr "Module de stockage de dépôt à base de fichiers simples (FSFS)."
 
-#: libsvn_fs_fs/fs.c:386
+#: libsvn_fs_fs/fs.c:324
 #, c-format
 msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "Version %d du chargeur FS non supportée pour fsfs"
@@ -2711,22 +2711,22 @@ msgstr "La réparation a trouvé une réprésentation différentielle de répert
 msgid "No such transaction"
 msgstr "Transaction non trouvée"
 
-#: libsvn_fs_fs/lock.c:230
+#: libsvn_fs_fs/lock.c:231
 #, c-format
 msgid "Cannot write lock/entries hashfile '%s'"
 msgstr "Impossible d'écrire dans le fichier-hash de verrouillage '%s'"
 
-#: libsvn_fs_fs/lock.c:286
+#: libsvn_fs_fs/lock.c:287
 #, c-format
 msgid "Can't parse lock/entries hashfile '%s'"
 msgstr "Impossible d'analyser le fichier-hash de verrouillage '%s'"
 
-#: libsvn_fs_fs/lock.c:715 libsvn_fs_fs/lock.c:736
+#: libsvn_fs_fs/lock.c:716 libsvn_fs_fs/lock.c:737
 #, c-format
 msgid "Path '%s' doesn't exist in HEAD revision"
 msgstr "Le chemin '%s' n'existe pas à la révision de tête (HEAD)"
 
-#: libsvn_fs_fs/lock.c:741
+#: libsvn_fs_fs/lock.c:742
 #, c-format
 msgid "Lock failed: newer version of '%s' exists"
 msgstr "Échec du verrouillage : il existe une version plus récente de '%s'"
@@ -9478,36 +9478,36 @@ msgstr "exporté%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' non versionné et non exporté\n"
 
-#~ msgid "descend recursively"
-#~ msgstr "descend récursivement"
+#~ msgid "Invalid depth (%"
+#~ msgstr "Profondeur invalide (%s)"
 
-#~ msgid "This directory's entry has invalid or missing working-size"
+#~ msgid "'%s' is not under version control or doesn't exist"
+#~ msgstr "'%s' n'est pas versionné ou n'existe pas"
+
+#~ msgid "Cannot read entry for '%s'"
+#~ msgstr "Impossible de lire l'entrée pour '%s'"
+
+#~ msgid "Can't find entry for '%s'"
+#~ msgstr "Pas d'entrée pour '%s'"
+
+#~ msgid "No entry for '%s'"
+#~ msgstr "Pas d'entrée pour '%s'"
+
+#~ msgid "Cannot revert: '%s' is not under version control"
 #~ msgstr ""
-#~ "L'entrée de ce répertoire a un taille (working-size) invalide ou manquante"
-
-#~ msgid "Entry '%s' has invalid or missing working-size"
-#~ msgstr "L'entrée '%s' a une taille (working-size) invalide ou manquante"
+#~ "Rétablissement impossible : '%s' n'est pas sous gestionnaire de version"
 
 #~ msgid "Cannot copy or move '%s': it's not under version control"
 #~ msgstr ""
 #~ "Copie ou déplacement de '%s' impossible : il n'est pas sous gestionnaire "
 #~ "de version"
 
-#~ msgid "Cannot revert: '%s' is not under version control"
+#~ msgid "Entry '%s' has invalid or missing working-size"
+#~ msgstr "L'entrée '%s' a une taille (working-size) invalide ou manquante"
+
+#~ msgid "This directory's entry has invalid or missing working-size"
 #~ msgstr ""
-#~ "Rétablissement impossible : '%s' n'est pas sous gestionnaire de version"
+#~ "L'entrée de ce répertoire a un taille (working-size) invalide ou manquante"
 
-#~ msgid "No entry for '%s'"
-#~ msgstr "Pas d'entrée pour '%s'"
-
-#~ msgid "Can't find entry for '%s'"
-#~ msgstr "Pas d'entrée pour '%s'"
-
-#~ msgid "Cannot read entry for '%s'"
-#~ msgstr "Impossible de lire l'entrée pour '%s'"
-
-#~ msgid "'%s' is not under version control or doesn't exist"
-#~ msgstr "'%s' n'est pas versionné ou n'existe pas"
-
-#~ msgid "Invalid depth (%"
-#~ msgstr "Profondeur invalide (%s)"
+#~ msgid "descend recursively"
+#~ msgstr "descend récursivement"
