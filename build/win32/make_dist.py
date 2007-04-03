@@ -260,6 +260,21 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                                    '%(bindsrc)s/java/javahl/classes'),
                         ),
 
+             'ruby': None,
+             'ruby/lib': None,
+             'ruby/lib/svn': FileGlob('%(bindsrc)s/swig/ruby/svn/*.rb'),
+             'ruby/ext': None,
+             'ruby/ext/svn': None,
+             'ruby/ext/svn/ext':
+               (FileGlob('%(binddir)s/swig/ruby/*.dll'),
+                FileGlob('%(binddir)s/swig/ruby/*.pdb'),
+                FileGlob('%(binddir)s/swig/ruby/libsvn_swig_ruby/*.dll'),
+                FileGlob('%(binddir)s/swig/ruby/libsvn_swig_ruby/*.pdb'),
+                FileGlob('%(blddir)s/libsvn_*/*.dll'),
+                File('%(@apr)s/%(aprrel)s/libapr.dll'),
+                File('%(@apr-iconv)s/%(aprrel)s/libapriconv.dll'),
+                File('%(@apr-util)s/%(aprrel)s/libaprutil.dll')),
+
              'share': None,
              'share/locale': InstallMoFiles('%(srcdir)s/%(svnrel)s/mo'),
              }
@@ -399,6 +414,8 @@ def _make_dist(cfg):
     _make_zip('_pdb',    ('',), '-i "*.pdb"')
     _make_zip('_pl',     ('/README.txt', '/perl'), xpdb)
     _make_zip('_py',     ('/README.txt', '/python'), xpdb)
+    _make_zip('_rb',     ('/README.txt', '/ruby', '/licenses', '/share/locale'),
+              xpdb)
 
   except:
     traceback.print_exc(None, _stderr)
