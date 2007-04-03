@@ -244,6 +244,12 @@ module Svn
         Ra.reparent(self, url)
       end
 
+      def merge_info(paths, revision=nil, include_parents=true)
+        paths = [paths] unless paths.is_a?(Array)
+        revision ||= Svn::Core::INVALID_REVNUM
+        Ra.get_merge_info(self, paths, revision, include_parents)
+      end
+
       private
       def props_filter(props)
         date_str = props[Svn::Core::PROP_ENTRY_COMMITTED_DATE]
