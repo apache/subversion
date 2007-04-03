@@ -233,13 +233,15 @@ module Svn
       end
       alias cp copy
 
-      def move(src_path, dst_path, force=false)
-        Client.move4(src_path, dst_path, force, self)
+      def move(src_paths, dst_path, force=false, move_as_child=nil)
+        src_paths = [src_paths] unless src_paths.is_a?(Array)
+        move_as_child = src_paths.size == 1 ? false : true if move_as_child.nil?
+        Client.move5(src_paths, dst_path, force, move_as_child, self)
       end
       alias mv move
 
-      def mv_f(src_path, dst_path)
-        move(src_path, dst_path, true)
+      def mv_f(src_paths, dst_path, move_as_child=nil)
+        move(src_paths, dst_path, true, move_as_child)
       end
 
       def diff(options, path1, rev1, path2, rev2,
