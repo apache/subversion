@@ -41,6 +41,7 @@ class BlameCallback;
 class ProplistCallback;
 class LogMessageCallback;
 class InfoCallback;
+class StatusCallback;
 class CommitMessage;
 #include "svn_client.h"
 #include "SVNBase.h"
@@ -133,8 +134,9 @@ public:
     void addToChangelist(Targets &srcPaths, const char *changelist);
     void removeFromChangelist(Targets &srcPaths, const char *changelist);
     jobjectArray getChangelist(const char *changelist, const char *rootPath);
-    jobjectArray status(const char *path, svn_depth_t depth, bool onServer,
-                        bool getAll, bool noIgnore, bool ignoreExternals);
+    void status(const char *path, svn_depth_t depth, bool onServer,
+                bool getAll, bool noIgnore, bool ignoreExternals,
+                StatusCallback *callback);
     jobjectArray list(const char *url, Revision &revision,
                       Revision &pegRevision, bool recurse);
     jobject revProperty(jobject jthis, const char *path, const char *name,
@@ -216,15 +218,6 @@ private:
     std::string m_userName;
     std::string m_passWord;
     std::string m_configDir;
-    static jobject createJavaStatus(const char *path,
-                                    svn_wc_status2_t *status);
-    static void statusReceiver(void *baton,
-                               const char *path, svn_wc_status2_t *status);
-    static svn_error_t *infoReceiver(void *baton,
-                                     const char *path,
-                                     const svn_info_t *info,
-                                     apr_pool_t *pool);
-
 };
 // !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
 #endif

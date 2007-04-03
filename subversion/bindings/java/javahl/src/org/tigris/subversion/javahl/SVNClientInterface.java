@@ -115,8 +115,9 @@ public interface SVNClientInterface
      * @return Array of Status entries.
      * @since 1.5
      */
-    Status[] status(String path, int depth, boolean onServer,
-                    boolean getAll, boolean noIgnore, boolean ignoreExternals)
+    void status(String path, int depth, boolean onServer,
+                boolean getAll, boolean noIgnore, boolean ignoreExternals,
+                StatusCallback callback)
             throws ClientException;
 
     /**

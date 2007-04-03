@@ -250,8 +250,12 @@ public class SVNClient implements SVNClientInterface
                            boolean ignoreExternals)
             throws ClientException
     {
-        return status(path, Depth.fromRecurse(descend), onServer, getAll,
-                      noIgnore, ignoreExternals);
+        MyStatusCallback callback = new MyStatusCallback();
+
+        status(path, Depth.fromRecurse(descend), onServer, getAll, noIgnore,
+               ignoreExternals, callback);
+
+        return callback.getStatusArray();
     }
 
     /**
@@ -266,8 +270,9 @@ public class SVNClient implements SVNClientInterface
      * @return Array of Status entries.
      * @since 1.5
      */
-    public native Status[] status(String path, int depth, boolean onServer,
-                    boolean getAll, boolean noIgnore, boolean ignoreExternals)
+    public native void status(String path, int depth, boolean onServer,
+                    boolean getAll, boolean noIgnore, boolean ignoreExternals,
+                    StatusCallback callback)
             throws ClientException;
 
     /**
@@ -1873,6 +1878,23 @@ public class SVNClient implements SVNClientInterface
         public Info2[] getInfoArray()
         {
             return (Info2[]) infos.toArray(new Info2[infos.size()]);
+        }
+    }
+
+    /**
+     */
+    private class MyStatusCallback implements StatusCallback
+    {
+        private List statuses = new ArrayList();
+
+        public void doStatus(Status status)
+        {
+            statuses.add(status);
+        }
+
+        public Status[] getStatusArray()
+        {
+            return (Status[]) statuses.toArray(new Status[statuses.size()]);
         }
     }
 }
