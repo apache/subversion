@@ -50,39 +50,29 @@ void MessageReceiver::receiveMessage(const char *message)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNAdmin$MessageReceiver");
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return;
-        }
+
         mid = env->GetMethodID(clazz, "receiveMessageLine",
                                "(Ljava/lang/String;)V");
         if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        {
             return;
-        }
+
         env->DeleteLocalRef(clazz);
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return;
-        }
     }
     // convert the message to a java string
     jstring jmsg = JNIUtil::makeJString(message);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return;
-    }
 
     // call the java method
     env->CallVoidMethod(m_jthis, mid);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return;
-    }
 
     // delete the java string
     env->DeleteLocalRef(jmsg);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return;
-    }
 }

@@ -61,9 +61,8 @@ void SVNBase::finalize()
 {
     // This object should've already been disposed of!
     if (JNIUtil::getLogLevel() >= JNIUtil::errorLog)
-    {
         JNIUtil::logMessage("An SVNBase object escaped disposal");
-    }
+
     JNIUtil::enqueueForDeletion(this);
 }
 
@@ -73,14 +72,11 @@ void SVNBase::dispose(jobject jthis, jfieldID *fid, const char *className)
     JNIEnv *env = JNIUtil::getEnv();
     SVNBase::findCppAddrFieldID(fid, className, env);
     if (*fid == 0)
-    {
         return;
-    }
+
     env->SetLongField(jthis, *fid, 0);
     if (JNIUtil::isJavaExceptionThrown())
-    {
         return;
-    }
 }
 
 inline void SVNBase::findCppAddrFieldID(jfieldID *fid, const char *className,
@@ -93,9 +89,7 @@ inline void SVNBase::findCppAddrFieldID(jfieldID *fid, const char *className,
         {
             *fid = env->GetFieldID(clazz, "cppAddr", "J");
             if (JNIUtil::isJavaExceptionThrown())
-            {
                 *fid = 0;
-            }
         }
     }
 }

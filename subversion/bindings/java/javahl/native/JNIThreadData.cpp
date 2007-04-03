@@ -54,9 +54,7 @@ bool JNIThreadData::initThreadData()
 {
     // if already initialized -> nothing to do
     if (g_key != NULL)
-    {
         return false;
-    }
 
     // request a key for the thread local storage from the global pool and
     // register a callback function called, when the thread is deleted
@@ -78,9 +76,7 @@ JNIThreadData *JNIThreadData::getThreadData()
 {
     // we should never be called before initThreadData
     if (g_key == NULL)
-    {
         return NULL;
-    }
 
     // retrieve the thread local storage from apr
     JNIThreadData *data = NULL;
@@ -143,9 +139,8 @@ void JNIThreadData::popThreadData()
         return;
     }
     if (data == NULL)
-    {
         return;
-    }
+
     JNIThreadData *oldData = data->m_previous;
     delete data;
     apr_err = apr_threadkey_private_set (oldData, g_key);

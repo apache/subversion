@@ -50,25 +50,20 @@ Revision::Revision(jobject jthis, bool headIfUnspecified, bool oneIfUnspecified)
         {
             jclass clazz = env->FindClass(JAVA_PACKAGE"/Revision");
             if (JNIUtil::isJavaExceptionThrown())
-            {
                 return;
-            }
+
             fid = env->GetFieldID(clazz, "revKind", "I");
             if (JNIUtil::isJavaExceptionThrown())
-            {
                 return;
-            }
+
             env->DeleteLocalRef(clazz);
             if (JNIUtil::isJavaExceptionThrown())
-            {
                 return;
-            }
         }
         jint jKind = env->GetIntField(jthis, fid);
         if (JNIUtil::isJavaExceptionThrown())
-        {
             return;
-        }
+
         m_revision.value.number = 0;
 
         switch(jKind)
@@ -85,19 +80,15 @@ Revision::Revision(jobject jthis, bool headIfUnspecified, bool oneIfUnspecified)
                     jclass clazz =
                         env->FindClass(JAVA_PACKAGE"/Revision$Number");
                     if (JNIUtil::isJavaExceptionThrown())
-                    {
                         return;
-                    }
+
                     fidNum = env->GetFieldID(clazz, "revNumber", "J");
                     if (JNIUtil::isJavaExceptionThrown())
-                    {
                         return;
-                    }
+
                     env->DeleteLocalRef(clazz);
                     if (JNIUtil::isJavaExceptionThrown())
-                    {
                         return;
-                    }
                 }
                 jlong jNumber = env->GetLongField(jthis, fidNum);
                 m_revision.value.number = jNumber;
@@ -112,56 +103,44 @@ Revision::Revision(jobject jthis, bool headIfUnspecified, bool oneIfUnspecified)
                     jclass clazz =
                         env->FindClass(JAVA_PACKAGE"/Revision$DateSpec");
                     if (JNIUtil::isJavaExceptionThrown())
-                    {
                         return;
-                    }
+
                     fidDate = env->GetFieldID(clazz, "revDate",
                                               "Ljava/util/Date;");
                     if (JNIUtil::isJavaExceptionThrown())
-                    {
                         return;
-                    }
+
                     env->DeleteLocalRef(clazz);
                     if (JNIUtil::isJavaExceptionThrown())
-                    {
                         return;
-                    }
                 }
                 jobject jDate = env->GetObjectField(jthis, fidDate);
                 if (JNIUtil::isJavaExceptionThrown())
-                {
                     return;
-                }
 
                 static jmethodID mid = 0;
                 if (mid == 0)
                 {
                     jclass clazz = env->FindClass("java/util/Date");
                     if (JNIUtil::isJavaExceptionThrown())
-                    {
                         return;
-                    }
+
                     mid = env->GetMethodID(clazz, "getTime", "()J");
                     if (JNIUtil::isJavaExceptionThrown())
-                    {
                         return;
-                    }
+
                     env->DeleteLocalRef(clazz);
                     if (JNIUtil::isJavaExceptionThrown())
-                    {
                         return;
-                    }
                 }
                 jlong jMillSec = env->CallLongMethod(jDate, mid);
                 if (JNIUtil::isJavaExceptionThrown())
-                {
                     return;
-                }
+
                 env->DeleteLocalRef(jDate);
                 if (JNIUtil::isJavaExceptionThrown())
-                {
                     return;
-                }
+
                 m_revision.value.date = jMillSec * 1000;
             }
             break;
@@ -222,5 +201,6 @@ Revision::makeJRevision(svn_revnum_t rev)
                                                     (jlong) rev);
     if (JNIUtil::isExceptionThrown())
         return NULL;
+
     return jrevision;
 }

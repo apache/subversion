@@ -76,9 +76,7 @@ bool JNIUtil::JNIInit(JNIEnv *env)
     // lock the list of finalized objects
     JNICriticalSection cs(*g_finalizedObjectsMutex) ;
     if (isExceptionThrown())
-    {
         return false;
-    }
 
     // delete all finalized, but not yet deleted objects
     for(std::list<SVNBase*>::iterator it = g_finalizedObjects.begin();
@@ -100,18 +98,16 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     // programm
     static bool run = false;
     if (run) // already run
-    {
         return true;
-    }
+
     run = true;
     // do not run this part more than one time.
     // this leaves a small time window when two threads create their first
     // SVNClient & SVNAdmin at the same time, but I do not see a better
     // option without APR already initialized
     if (g_inInit)
-    {
         return false;
-    }
+
     g_inInit = true;
     g_initEnv = env;
 
@@ -245,33 +241,23 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     // build all mutexes
     g_finalizedObjectsMutex = new JNIMutex(g_pool);
     if (isExceptionThrown())
-    {
         return false;
-    }
 
     g_logMutex = new JNIMutex(g_pool);
     if (isExceptionThrown())
-    {
         return false;
-    }
 
     g_globalPoolMutext = new JNIMutex(g_pool);
     if (isExceptionThrown())
-    {
         return false;
-    }
 
     // initialized the thread local storage
     if (!JNIThreadData::initThreadData())
-    {
         return false;
-    }
 
     setEnv(env);
     if (isExceptionThrown())
-    {
         return false;
-    }
 
     g_initEnv = NULL;
     g_inInit = false;
@@ -300,12 +286,12 @@ void JNIUtil::raiseThrowable(const char *name, const char *message)
         JNICriticalSection cs(*g_logMutex);
         g_logStream << "Throwable raised <" << message << ">" << std::endl;
     }
+
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass(name);
     if (isJavaExceptionThrown())
-    {
         return;
-    }
+
     env->ThrowNew(clazz, message);
     setExceptionThrown();
     env->DeleteLocalRef(clazz);
@@ -360,9 +346,11 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
     env->DeleteLocalRef(clazz);
     if (isJavaExceptionThrown())
         return;
+
     env->DeleteLocalRef(jmessage);
     if (isJavaExceptionThrown())
         return;
+
     env->DeleteLocalRef(jsource);
     if (isJavaExceptionThrown())
         return;
@@ -390,9 +378,7 @@ void JNIUtil::enqueueForDeletion(SVNBase *object)
 {
     JNICriticalSection cs(*g_finalizedObjectsMutex);
     if (!isExceptionThrown())
-    {
         g_finalizedObjects.push_back(object);
-    }
 }
 
 /**
@@ -404,9 +390,8 @@ void JNIUtil::handleAPRError(int error, const char *op)
 {
     char *buffer = getFormatBuffer();
     if (buffer == NULL)
-    {
         return;
-    }
+
     apr_snprintf(buffer, formatBufferSize,
         _("an error occurred in function %s with return value %d"),
         op, error);
@@ -420,9 +405,7 @@ void JNIUtil::handleAPRError(int error, const char *op)
 bool JNIUtil::isExceptionThrown()
 {
     if (g_inInit) // during init -> look in the global member
-    {
         return g_initException;
-    }
 
     // look in the thread local storage
     JNIThreadData *data = JNIThreadData::getThreadData();
@@ -447,9 +430,7 @@ JNIEnv *JNIUtil::getEnv()
 {
     // during init -> look into the global variable
     if (g_inInit)
-    {
         return g_initEnv;
-    }
 
     // look in the thread local storage
     JNIThreadData *data = JNIThreadData::getThreadData();
@@ -520,9 +501,8 @@ void JNIUtil::initLogFile(int level, jstring path)
     // lock this operation
     JNICriticalSection cs(*g_logMutex);
     if (g_logLevel > noLog) // if the log file has been opened
-    {
         g_logStream.close();
-    }
+
     // remember the log level
     g_logLevel = level;
     JNIStringHolder myPath(path);
@@ -539,15 +519,13 @@ void JNIUtil::initLogFile(int level, jstring path)
 char *JNIUtil::getFormatBuffer()
 {
     if (g_inInit) // during init -> use the global buffer
-    {
         return g_initFormatBuffer;
-    }
+
     // use the buffer in the thread local storage
     JNIThreadData *data = JNIThreadData::getThreadData();
     if (data == NULL) // if that does not exists -> use the global buffer
-    {
         return g_initFormatBuffer;
-    }
+
     return data->m_formatBuffer;
 }
 /**
@@ -580,28 +558,24 @@ jobject JNIUtil::createDate(apr_time_t time)
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass("java/util/Date");
     if (isJavaExceptionThrown())
-    {
         return NULL;
-    }
+
     static jmethodID mid = 0;
     if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>", "(J)V");
         if (isJavaExceptionThrown())
-        {
             return NULL;
-        }
     }
+
     jobject ret = env->NewObject(clazz, mid, javatime);
     if (isJavaExceptionThrown())
-    {
         return NULL;
-    }
+
     env->DeleteLocalRef(clazz);
     if (isJavaExceptionThrown())
-    {
         return NULL;
-    }
+
     return ret;
 }
 /**
@@ -629,26 +603,21 @@ void JNIUtil::setRequestPool(Pool *pool)
  */
 jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 {
-    if (data == NULL || length == 0) // a NULL or empty will create no
-                                    // java array
-    {
+    if (data == NULL || length == 0)
+        // a NULL or empty will create no java array
         return NULL;
-    }
+
     JNIEnv *env = getEnv();
 
     // allocate the java array
     jbyteArray ret = env->NewByteArray(length);
     if (isJavaExceptionThrown())
-    {
         return NULL;
-    }
 
     // access the bytes
     jbyte *retdata = env->GetByteArrayElements(ret, NULL);
     if (isJavaExceptionThrown())
-    {
         return NULL;
-    }
 
     // copy the bytes
     memcpy(retdata, data, length);
@@ -656,9 +625,8 @@ jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
     // release the bytes
     env->ReleaseByteArrayElements(ret, retdata, 0);
     if (isJavaExceptionThrown())
-    {
         return NULL;
-    }
+
     return ret;
 }
 /**
@@ -710,15 +678,13 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
 void JNIUtil::throwNullPointerException(const char *message)
 {
     if (getLogLevel() >= errorLog)
-    {
         logMessage("NullPointerException thrown");
-    }
+
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass("java/lang/NullPointerException");
     if (isJavaExceptionThrown())
-    {
         return;
-    }
+
     env->ThrowNew(clazz, message);
     setExceptionThrown();
     env->DeleteLocalRef(clazz);
