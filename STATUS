@@ -23,15 +23,15 @@ Status of 1.4.4:
 
 Candidate changes:
 
-  * r22311
+  * r20667 (part), (r22311, already in 1.4.x)
     Make svn_ra_do_{update,switch,status} work with the SWIG/Perl bindings.
     Notes:
-      Backport was originally attempted in r22694, but merge was
-      botched due to an incomplete listing in STATUS (r22311 itself
-      backported, but there is additional supporting code required to
-      make this change functional).  Probably needs a backport branch.
+      Backport of r22311 was originally attempted in r22694, but merge was
+      botched due to an incomplete listing in STATUS (r22311 depends upon
+      additional supporting code in r20667, which wasn't backported).
     Justification:
       Would be nice to fix something we already said we'd fixed in 1.4.3.
+    Branch: 1.4.x-r22311 (-c24188)
     Votes:
       +1: cmpilato
       +0: malcolm, dlr
@@ -73,7 +73,7 @@ Candidate changes:
       setting the stage for a cycle in the representations table delta
       chain.  In case you're wondering, that's oh-so-bad.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, malcolm
       +0: dlr
 
   * r23217, r23223, r23225, r23226, r23227, r23231, r23232
@@ -100,9 +100,10 @@ Candidate changes:
       loss bad.
     Notes:
       glasser (nominating this) only tested that merge was clean and
-      did not run tests.
+      did not run tests.  (There's an ignorable dirprops conflict for
+      the 'tsvn:logwidthmarker' and 'svk:merge' props).
     Votes:
-      +1: glasser
+      +1: glasser, malcolm
 
  * r23910
    Fix issue 1789: large 'svn diff' on Win32 fails
@@ -111,6 +112,7 @@ Candidate changes:
      does a fallback for one specific (Windows) error code
    Votes:
      +1: dionisos, dlr
+     +0: malcolm
 
 
 Veto-blocked changes:
