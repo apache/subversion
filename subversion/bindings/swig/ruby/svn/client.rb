@@ -53,28 +53,33 @@ module Svn
       alias repos_root_url repos_root_URL
     end
 
-    PropListItem = ProplistItem
-    # Following methods are also available:
-    #
-    # [name]
-    #   Returns an URI for the item concerned with the instance.
-    # [props]
-    #   Returns a Hash of properties, such as
-    #   <tt>{propname1 => propval1, propname2 => propval2, ...}</tt>.
+
+    # For backward compatibility
     class PropListItem
-      alias name node_name
-      alias props prop_hash
+      # Returns an URI for the item concerned with the instance.
+      attr_accessor :name
+
+      # Returns a Hash of properties, such as
+      # <tt>{propname1 => propval1, propname2 => propval2, ...}</tt>.
+      attr_accessor :props
+
+      alias_method :node_name, :name
+      alias_method :prop_hash, :props
+
+      def initialize(name, props)
+        @name = name
+        @props = props
+      end
 
       def method_missing(meth, *args)
-        _props = props
-        if _props.respond_to?(meth)
-          _props.__send__(meth, *args)
+        if @props.respond_to?(meth)
+          @props.__send__(meth, *args)
         else
           super
         end
       end
     end
-    
+
     Context = Ctx
     class Context
       alias _auth_baton auth_baton
@@ -200,13 +205,21 @@ module Svn
       alias pget propget
       alias pg propget
 
+      # Obsoleted document.
+      #
       # Returns list of properties attached to +target+ as an Array of
       # Svn::Client::PropListItem.
       # Paths and URIs are available as +target+.
-      def proplist(target, rev=nil, peg_rev=nil, recurse=true)
+      def proplist(target, rev=nil, peg_rev=nil, recurse=true, &block)
         rev ||= "HEAD"
         peg_rev ||= rev
-        Client.proplist2(target, rev, peg_rev, recurse, self)
+        items = []
+        receiver = Proc.new do |path, prop_hash|
+          items << PropListItem.new(path, prop_hash)
+          block.call(path, prop_hash) if block
+        end
+        Client.proplist3(target, rev, peg_rev, recurse, receiver, self)
+        items
       end
       alias prop_list proplist
       alias plist proplist
