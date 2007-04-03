@@ -179,6 +179,11 @@
                   ,
                   ,
                   svn_swig_rb_client_list_func)
+
+%callback_typemap(svn_proplist_receiver_t receiver, void *receiver_baton,
+                  ,
+                  ,
+                  svn_swig_rb_proplist_receiver)
 #endif
 
 /* -----------------------------------------------------------------------

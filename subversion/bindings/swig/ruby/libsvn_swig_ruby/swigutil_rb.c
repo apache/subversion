@@ -806,6 +806,20 @@ c2r_svn_string(void *value, void *ctx)
   return c2r_string2(s->data);
 }
 
+static VALUE
+c2r_svn_stringbuf(void *value, void *ctx)
+{
+  const svn_stringbuf_t *buffer = (svn_stringbuf_t *)value;
+
+  return rb_str_new(buffer->data, buffer->len);
+}
+
+static VALUE
+c2r_svn_stringbuf2(const svn_stringbuf_t *buffer)
+{
+  return c2r_svn_stringbuf((void *)buffer, NULL);
+}
+
 typedef struct {
   apr_array_header_t *array;
   apr_pool_t *pool;
@@ -3449,6 +3463,30 @@ svn_swig_rb_client_list_func(void *baton,
                            c2r_dirent__dup(dirent),
                            c2r_lock__dup(lock),
                            c2r_string2(abs_path));
+    invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+  }
+
+  return err;
+}
+
+svn_error_t *
+svn_swig_rb_proplist_receiver(void *baton,
+                              svn_stringbuf_t *path,
+                              apr_hash_t *prop_hash,
+                              apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+  if (!NIL_P(proc)) {
+    callback_baton_t cbb;
+
+    cbb.receiver = proc;
+    cbb.message = rb_id_call();
+    cbb.args = rb_ary_new3(2,
+                           c2r_svn_stringbuf2(path),
+                           svn_swig_rb_prop_hash_to_hash(prop_hash));
     invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
   }
 
