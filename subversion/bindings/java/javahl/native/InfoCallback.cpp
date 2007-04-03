@@ -37,8 +37,7 @@ struct info_entry
 };
 
 /**
- * Create a InfoCallback object
- * @param jcallback the java callback object.
+ * Create a InfoCallback object.  jcallback is the java callback object.
  */
 InfoCallback::InfoCallback(jobject jcallback)
 {
@@ -52,7 +51,7 @@ InfoCallback::InfoCallback(jobject jcallback)
 InfoCallback::~InfoCallback()
 {
     // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the java SVNClient.blame method.
+    // in parameter to the java SVNClient.info method.
 }
 
 svn_error_t *
@@ -74,13 +73,13 @@ InfoCallback::setWcPath(const char *path)
 }
 
 /**
- * Callback called for a single path
- * @param path      the path name
- * @param pool      memory pool for the use of this function
+ * Callback called for a single path.  path is the path name, pool may be used
+ * for memory allocation.
  */
-svn_error_t* InfoCallback::singleInfo(const char *path,
-                                      const svn_info_t *info,
-                                      apr_pool_t *pool)
+svn_error_t *
+InfoCallback::singleInfo(const char *path,
+                         const svn_info_t *info,
+                         apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
@@ -108,6 +107,10 @@ svn_error_t* InfoCallback::singleInfo(const char *path,
     jobject jinfo2 = createJavaInfo2(&infoEntry);
 
     env->CallVoidMethod(m_callback, mid, jinfo2);
+    if (JNIUtil::isJavaExceptionThrown())
+        return SVN_NO_ERROR;
+
+    env->DeleteLocalRef(jinfo2);
     // Return SVN_NO_ERROR here regardless of an exception or not.
 
     return SVN_NO_ERROR;
