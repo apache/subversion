@@ -388,7 +388,7 @@ int main(int argc, const char *argv[])
           break;
 
         case SVNSERVE_OPT_VERSION:
-          SVN_INT_ERR(version(os, pool));
+          SVN_INT_ERR(version(NULL, pool));
           exit(0);
           break;
           
