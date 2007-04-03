@@ -59,8 +59,14 @@ module Svn
         [editor, editor_baton]
       end
 
-      def commit_editor2(log_msg, lock_tokens={}, keep_lock=false, &callback)
-        editor, editor_baton = Ra.get_commit_editor2(self, log_msg, callback,
+      def commit_editor2(log_msg_or_rev_props, lock_tokens={},
+                         keep_lock=false, &callback)
+        if log_msg_or_rev_props.is_a?(Hash)
+          rev_props = log_msg_or_rev_props
+        else
+          rev_props = {Svn::Core::PROP_REVISION_LOG => log_msg_or_rev_props}
+        end
+        editor, editor_baton = Ra.get_commit_editor3(self, rev_props, callback,
                                                      lock_tokens, keep_lock)
         editor.baton = editor_baton
         editor
