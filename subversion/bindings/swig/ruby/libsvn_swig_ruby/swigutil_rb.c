@@ -1233,6 +1233,20 @@ svn_swig_rb_apr_hash_to_hash_merge_range(apr_hash_t *hash)
   return c2r_hash(hash, c2r_merge_range_array, NULL);
 }
 
+static VALUE
+c2r_merge_range_hash(void *value, void *ctx)
+{
+  apr_hash_t *hash = value;
+
+  return svn_swig_rb_apr_hash_to_hash_merge_range(hash);
+}
+
+VALUE
+svn_swig_rb_apr_hash_to_hash_merge_range_hash(apr_hash_t *hash)
+{
+  return c2r_hash(hash, c2r_merge_range_hash, NULL);
+}
+
 VALUE
 svn_swig_rb_prop_hash_to_hash(apr_hash_t *prop_hash)
 {

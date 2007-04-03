@@ -82,6 +82,8 @@ VALUE svn_swig_rb_apr_hash_to_hash_swig_type(apr_hash_t *hash,
                                              const char *type_name);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_apr_hash_to_hash_merge_range(apr_hash_t *hash);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+VALUE svn_swig_rb_apr_hash_to_hash_merge_range_hash(apr_hash_t *hash);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_prop_hash_to_hash(apr_hash_t *prop_hash);

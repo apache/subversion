@@ -581,3 +581,16 @@
   %append_output(svn_swig_rb_apr_hash_to_hash_merge_range(*$1));
 }
 #endif
+
+/* -----------------------------------------------------------------------
+   Output of
+   apr_hash_t * <const char *,
+                 apr_hash_t * <const char *,
+                               array_header_t * <svn_merge_range_t *>>>
+*/
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **HASH_OF_MERGE_INFO_HASH
+{
+  %append_output(svn_swig_rb_apr_hash_to_hash_merge_range_hash(*$1));
+}
+#endif

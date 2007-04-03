@@ -98,7 +98,11 @@
                   svn_swig_rb_ra_lock_callback)
 #endif
 
-%apply apr_hash_t **MERGEHASH { apr_hash_t **mergeoutput };
+#ifdef SWIGRUBY
+%apply apr_hash_t **HASH_OF_MERGE_INFO_HASH {
+  apr_hash_t **mergeoutput
+};
+#endif
 
 /* ----------------------------------------------------------------------- */
 
