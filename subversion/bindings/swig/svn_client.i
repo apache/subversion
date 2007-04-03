@@ -320,9 +320,26 @@
 %ignore svn_client_copy_source_t::path;
 %ignore svn_client_copy_source_t::revision;
 %ignore svn_client_copy_source_t::peg_revision;
+
+%ignore svn_client_remove_from_changelist;
 #endif
 
 %include svn_client_h.swg
+
+#ifdef SWIGRUBY
+%header %{
+#define _svn_client_remove_from_changelist svn_client_remove_from_changelist
+%}
+%rename(svn_client_remove_from_changelist) _svn_client_remove_from_changelist;
+%apply const char *MAY_BE_NULL {
+  const char *removed_changelist
+}
+svn_error_t *
+_svn_client_remove_from_changelist(const apr_array_header_t *paths,
+                                   const char *removed_changelist,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool);
+#endif
 
 #ifdef SWIGPYTHON
 
