@@ -31,7 +31,7 @@
 svn_error_t *
 svn_fs_fs__check_fs(svn_fs_t *fs)
 {
-  if (fs->path)
+  if (fs->fsap_data)
     return SVN_NO_ERROR;
   else
     return svn_error_create(SVN_ERR_FS_NOT_OPEN, 0,
