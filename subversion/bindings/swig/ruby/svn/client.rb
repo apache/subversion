@@ -489,9 +489,9 @@ module Svn
 
       def export(from, to, rev=nil, peg_rev=nil,
                  force=false, ignore_externals=false,
-                 recurse=true, native_eol=nil)
-        Client.export3(from, to, rev, peg_rev, force,
-                       ignore_externals, recurse, native_eol, self)
+                 depth=nil, native_eol=nil)
+        Client.export4(from, to, rev, peg_rev, force,
+                       ignore_externals, depth, native_eol, self)
       end
       
       def ls(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
