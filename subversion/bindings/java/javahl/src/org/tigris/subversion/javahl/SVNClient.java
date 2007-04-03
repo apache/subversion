@@ -23,7 +23,7 @@ import java.io.OutputStream;
 
 import java.util.Map;
 import java.util.List;
-import java.util.Vector;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -1835,10 +1835,12 @@ public class SVNClient implements SVNClientInterface
     static native void initNative();
 
     /**
+     * A private log message callback implementation used by thin wrappers.
+     * Instances of this class are not thread-safe.
      */
     private class MyLogMessageCallback implements LogMessageCallback
     {
-        private List messages = new Vector();
+        private List messages = new ArrayList();
 
         public void singleMessage(ChangePath[] changedPaths, long revision,
                                   String author, Date date, String message)
@@ -1850,25 +1852,18 @@ public class SVNClient implements SVNClientInterface
 
         public LogMessage[] getMessages()
         {
-            LogMessage[] messageArray = new LogMessage[messages.size()];
-            Iterator it = messages.iterator();
-            int i = 0;
-
-            while (it.hasNext())
-            {
-                messageArray[i] = (LogMessage) it.next();
-                i++;
-            }
-
-            return messageArray;
+            return (LogMessage[]) messages.toArray(
+                                            new LogMessage[messages.size()]);
         }
     }
 
     /**
+     * A private info callback implementation used by thin wrappers.
+     * Instances of this class are not thread-safe.
      */
     private class MyInfoCallback implements InfoCallback
     {
-        private List infos = new Vector();
+        private List infos = new ArrayList();
 
         public void singleInfo(Info2 info)
         {
@@ -1877,17 +1872,7 @@ public class SVNClient implements SVNClientInterface
 
         public Info2[] getInfoArray()
         {
-            Info2[] infoArray = new Info2[infos.size()];
-            Iterator it = infos.iterator();
-            int i = 0;
-
-            while (it.hasNext())
-            {
-                infoArray[i] = (Info2) it.next();
-                i++;
-            }
-
-            return infoArray;
+            return (Info2[]) infos.toArray(new Info2[infos.size()]);
         }
     }
 }
