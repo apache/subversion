@@ -105,7 +105,7 @@ public class Lock
      */
     public Date getCreationDate()
     {
-        if(creationDate == 0)
+        if (creationDate == 0)
             return null;
         else
             return new Date(creationDate/1000);
@@ -116,7 +116,7 @@ public class Lock
      */
     public Date getExpirationDate()
     {
-        if(expirationDate == 0)
+        if (expirationDate == 0)
             return null;
         else
             return new Date(expirationDate/1000);

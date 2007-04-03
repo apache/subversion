@@ -87,24 +87,6 @@ svn_boolean_t
 svn_client__revision_is_local(const svn_opt_revision_t *revision);
 
 
-/* Resolve peg revisions and operational revisions in the following way:
-    * A URL pegrev defaults to HEAD, unless specified.
-    * A wc-path pegrev defaults to BASE, unless specified.
-    * Operational revs default to pegrev, unless specified.
-    
-    Both PEG_REV and OP_REV may be modified as a result of this function.
-    IS_URL should be TRUE if the path the revisions refer to is a url,
-    FALSE otherwise.
-    
-    If NOTICE_LOCAL_MODS is set, the WORKING is used, instead of BASE.
-  */
-svn_error_t *
-svn_client__resolve_revisions(svn_opt_revision_t *peg_rev,
-                              svn_opt_revision_t *op_rev,
-                              svn_boolean_t is_url,
-                              svn_boolean_t notice_local_mods);
-
-
 /* Given the CHANGED_PATHS and REVISION from an instance of a
    svn_log_message_receiver_t function, determine at which location
    PATH may be expected in the next log message, and set *PREV_PATH_P
@@ -200,6 +182,62 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+    
+/* Return the path of PATH_OR_URL relative to the repository root
+   (REPOS_ROOT) in REL_PATH (URI-decoded).
+
+   The remaining parameters are used to procure the repository root.
+   Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
+   REPOS_ROOT or ADM_ACCESS (which may also be NULL) should be passed
+   when available as an optimization (in that order of preference). */
+svn_error_t *
+svn_client__path_relative_to_root(const char **rel_path,
+                                  const char *path_or_url,
+                                  const char *repos_root,
+                                  svn_ra_session_t *ra_session,
+                                  svn_wc_adm_access_t *adm_access,
+                                  apr_pool_t *pool);
+
+
+/* Return the property value for any PROPNAME set on TARGET in *PROPS,
+   with WC paths of char * for keys and property values of
+   svn_string_t * for values.  Assumes that PROPS is non-NULL. */
+svn_error_t *
+svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
+                             const char *target, svn_boolean_t pristine,
+                             const svn_wc_entry_t *entry,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_boolean_t recurse, svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
+
+
+/* Obtain any inherited/direct merge info for the session-relative
+   path REL_PATH from the repository, and set it in *TARGET_MERGEINFO.
+   If there is no merge info available for REL_PATH, set
+   *TARGET_MERGEINFO to NULL. */
+svn_error_t *
+svn_client__get_merge_info_for_path(svn_ra_session_t *ra_session,
+                                    apr_hash_t **target_mergeinfo,
+                                    const char *rel_path,
+                                    svn_revnum_t rev,
+                                    apr_pool_t *pool);
+
+/* Parse any merge info from WCPATH's ENTRY and store it in MERGEINFO.
+   If no merge info is available, set MERGEINFO to an empty hash. */
+svn_error_t *
+svn_client__parse_merge_info(apr_hash_t **mergeinfo,
+                             const svn_wc_entry_t *entry,
+                             const char *wcpath,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
+
+/* Write MERGEINFO into the WC for WCPATH. */
+svn_error_t *
+svn_client__record_wc_merge_info(const char *wcpath,
+                                 apr_hash_t *mergeinfo,
+                                 svn_wc_adm_access_t *adm_access,
+                                 apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -357,20 +395,37 @@ apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
 /*** Checkout, update and switch ***/
 
 /* Update a working copy PATH to REVISION, and (if not NULL) set
-   RESULT_REV to the update revision.  RECURSE if so commanded;
-   likewise, possibly IGNORE_EXTERNALS.  If TIMESTAMP_SLEEP is NULL this
-   function will sleep before returning to ensure timestamp integrity.
-   If TIMESTAMP_SLEEP is not NULL then the function will not sleep but
-   will set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will
-   not change *TIMESTAMP_SLEEP if no sleep is required.  If
-   ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
-   obstruct items added from the repos are tolerated; if FALSE, these
-   obstructions cause the update to fail. */
+   RESULT_REV to the update revision.
+
+   If DEPTH is svn_depth_unknown, then use whatever depth is already
+   set for PATH, or @c svn_depth_infinity if PATH does not exist.
+
+   Else if DEPTH is svn_depth_infinity, then update fully recursively
+   (resetting the existing depth of the working copy if necessary).
+   Else if DEPTH is svn_depth_files, update all files under PATH (if 
+   any), but exclude any subdirectories.  Else if DEPTH is
+   svn_depth_immediates, update all files and include immediate
+   subdirectories (at svn_depth_empty).  Else if DEPTH is
+   svn_depth_empty, just update PATH; if PATH is a directory, that
+   means touching only its properties not its entries.
+
+   If IGNORE_EXTERNALS is true, do no externals processing.
+
+   If TIMESTAMP_SLEEP is NULL this function will sleep before
+   returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
+   NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
+   to TRUE if a sleep is required, and will not change
+   *TIMESTAMP_SLEEP if no sleep is required.
+
+   If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
+   that obstruct items added from the repos are tolerated; if FALSE,
+   these obstructions cause the update to fail. */
+
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const svn_opt_revision_t *revision,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
@@ -378,22 +433,34 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             apr_pool_t *pool);
 
 /* Checkout into PATH a working copy of URL at REVISION, and (if not
-   NULL) set RESULT_REV to the checked out revision.  RECURSE if so
-   commanded; likewise, possibly IGNORE_EXTERNALS.  If TIMESTAMP_SLEEP
-   is NULL this function will sleep before returning to ensure
-   timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then the
-   function will not sleep but will set *TIMESTAMP_SLEEP to TRUE if a
-   sleep is required, and will not change *TIMESTAMP_SLEEP if no sleep
-   is required.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children
-   of PATH that obstruct items added from the repos are tolerated; if FALSE,
-   these obstructions cause the checkout to fail. */
+   NULL) set RESULT_REV to the checked out revision.  
+
+   If DEPTH is svn_depth_infinity, then check out fully recursively.
+   Else if DEPTH is svn_depth_files, checkout all files under PATH (if 
+   any), but not subdirectories.  Else if DEPTH is
+   svn_depth_immediates, check out all files and include immediate
+   subdirectories (at svn_depth_empty).  Else if DEPTH is
+   svn_depth_empty, just check out PATH, with none of its entries.
+
+   DEPTH must be a definite depth, not (e.g.) svn_depth_unknown.
+
+   If IGNORE_EXTERNALS is true, do no externals processing.
+
+   If TIMESTAMP_SLEEP is NULL this function will sleep before
+   returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
+   NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
+   to TRUE if a sleep is required, and will not change
+   *TIMESTAMP_SLEEP if no sleep is required.  If
+   ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
+   obstruct items added from the repos are tolerated; if FALSE, these
+   obstructions cause the checkout to fail. */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *URL,
                               const char *path,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
-                              svn_boolean_t recurse,
+                              svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
                               svn_boolean_t *timestamp_sleep,
@@ -439,7 +506,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
  * DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
  * implement the file comparison function
  *
- * RECURSE is set if the diff is to be recursive.
+ * DEPTH is the depth to recurse.
  *
  * DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
  *
@@ -458,7 +525,7 @@ svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
                             const svn_wc_diff_callbacks2_t *diff_cmd,
                             void *diff_cmd_baton,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t dry_run,
                             svn_ra_session_t *ra_session, 
                             svn_revnum_t revision,
@@ -512,7 +579,7 @@ typedef struct
     /* The source path or url. */
     const char *src;
 
-    /* The source path relative to the wc root */
+    /* The source path relative to the repository root */
     const char *src_rel;
 
     /* The absolute path of the source. */
@@ -735,8 +802,8 @@ svn_client__do_commit(const char *base_url,
 /*** Externals (Modules) ***/
 
 /* Handle changes to the svn:externals property in the tree traversed
-   by TRAVERSAL_INFO (obtained from svn_wc_get_checkout_editor,
-   svn_wc_get_update_editor, svn_wc_get_switch_editor, for example).
+   by TRAVERSAL_INFO (obtained from svn_wc_get_update_editor or
+   svn_wc_get_switch_editor, for example).
 
    For each changed value of the property, discover the nature of the
    change and behave appropriately -- either check a new "external"
@@ -808,6 +875,18 @@ svn_client__get_log_msg(const char **log_msg,
                         const apr_array_header_t *commit_items,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
+
+/* Return the revision properties stored in CTX (if any), adding LOG_MSG
+   as SVN_PROP_REVISION_LOG in *REVPROP_TABLE, allocated in POOL.
+   *REVPROP_TABLE will map const char * property names to svn_string_t values.
+   If CTX->REVPROP_TABLE is non-NULL, check that it doesn't contain
+   any of the standard Subversion properties.  In that case, return
+   SVN_ERR_CLIENT_PROPERTY_NAME. */
+svn_error_t *svn_client__get_revprop_table(apr_hash_t **revprop_table,
+                                           const char *log_msg,
+                                           svn_client_ctx_t *ctx,
+                                           apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

@@ -43,7 +43,7 @@ Pool::~Pool()
 {
     JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
     JNIUtil::setRequestPool(NULL);
-    if(m_pool)
+    if (m_pool)
     {
         svn_pool_destroy (m_pool);
     }
@@ -53,7 +53,7 @@ Pool::~Pool()
  * Returns the apr pool.
  * @return the apr pool
  */
-apr_pool_t * Pool::pool () const
+apr_pool_t *Pool::pool () const
 {
     return m_pool;
 }

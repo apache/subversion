@@ -2,7 +2,7 @@
  * main.c: Subversion server administration tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -379,9 +379,9 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
   {"recover", subcommand_recover, {0}, N_
    ("usage: svnadmin recover REPOS_PATH\n\n"
-    "Run the Berkeley DB recovery procedure on a repository.  Do\n"
-    "this if you've been getting errors indicating that recovery\n"
-    "ought to be run.  Recovery requires exclusive access and will\n"
+    "Run the recovery procedure on a repository.  Do this if you've\n"
+    "been getting errors indicating that recovery ought to be run.\n"
+    "Berkeley DB recovery requires exclusive access and will\n"
     "exit if the repository is in use by another process.\n"),
    {svnadmin__wait} },
 
@@ -798,8 +798,9 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
    * touch the repository. */
   setup_cancellation_signals(SIG_DFL);
 
-  err = svn_repos_recover2(opt_state->repository_path, TRUE,
-                           recovery_started, pool, pool);
+  err = svn_repos_recover3(opt_state->repository_path, TRUE,
+                           recovery_started, pool,
+                           check_cancel, NULL, pool);
   if (err)
     {
       if (! APR_STATUS_IS_EAGAIN(err->apr_err))
@@ -815,8 +816,9 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                  _("Waiting on repository lock; perhaps"
                                    " another process has it open?\n")));
       SVN_ERR(svn_cmdline_fflush(stdout));
-      SVN_ERR(svn_repos_recover2(opt_state->repository_path, FALSE,
-                                 recovery_started, pool, pool));
+      SVN_ERR(svn_repos_recover3(opt_state->repository_path, FALSE,
+                                 recovery_started, pool,
+                                 check_cancel, NULL, pool));
     }
 
   SVN_ERR(svn_cmdline_printf(pool, _("\nRecovery completed.\n")));
@@ -1507,7 +1509,7 @@ main(int argc, const char *argv[])
           else
             svn_error_clear
               (svn_cmdline_fprintf
-               (stderr, pool, _("subcommand '%s' doesn't accept option '%s'\n"
+               (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
                                 "Type 'svnadmin help %s' for usage.\n"),
                 subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);

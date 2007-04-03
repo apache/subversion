@@ -92,7 +92,7 @@ public class SVNInputStream extends PipedInputStream
          */
         public int write(byte[] data) throws IOException
         {
-            if(closed)
+            if (closed)
                 throw new IOException("stream has been closed");
             myStream.write(data);
             return data.length;

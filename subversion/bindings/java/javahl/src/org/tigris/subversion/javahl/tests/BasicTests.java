@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,6 +21,7 @@ import org.tigris.subversion.javahl.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
@@ -44,7 +45,7 @@ public class BasicTests extends SVNTests
      */
     public BasicTests()
     {
-        if(!testName.equals(testBaseName))
+        if (!testName.equals(testBaseName))
         {
             testCounter = 0;
             testBaseName = testName;
@@ -570,6 +571,30 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * test the basic property setting/getting functionality
+     * @throws Throwable
+     */
+    public void testBasicProperties() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        String itemPath = thisTest.getWCPath() + "/iota";
+        Revision rev = Revision.getInstance(RevisionKind.head);
+
+        client.propertySet(itemPath, "abc", "def", false);
+        PropertyData[] properties = 
+            client.properties(itemPath);
+
+        PropertyData prop = properties[0];
+        assertEquals("abc", prop.getName());
+        assertEquals("def", prop.getValue());
+
+        wc.setItemPropStatus("iota", Status.Kind.modified);
+        thisTest.checkStatus();
+    }
+
+    /**
      * test the basic SVNClient.update functionality
      * @throws Throwable
      */
@@ -687,9 +712,11 @@ public class BasicTests extends SVNTests
             wc.addItem("A/B/F/" + fileName,
                        wc.getItemContent("A/B/E/" + fileName));
             wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
+            wc.setItemPropStatus("A/B/F/" + fileName, Status.Kind.normal);
             addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                                   "A/B/F/" + fileName, NodeKind.file,
                                   CommitItemStateFlags.Add |
+                                  CommitItemStateFlags.PropMods |
                                   CommitItemStateFlags.IsCopy);
         }
         client.copy(sources,
@@ -1884,7 +1911,34 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.merge functionality
+     * test basic changelist functionality
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testBasicChangelist() throws Throwable
+    {
+        // build the working copy
+        OneTest thisTest = new OneTest();
+        String changelistName = "changelist1";
+
+        String[] paths = new String[]
+            {thisTest.getWCPath() + "/iota"};
+
+        // Add a path to a changelist, and check to see if it got added
+        client.addToChangelist(paths, changelistName);
+        String[] cl = client.getChangelist(changelistName,
+                                           thisTest.getWCPath());
+        assertTrue(java.util.Arrays.equals(cl, paths));
+
+        // Remove the path from the changelist, and check to see if the path is
+        // actually removed.
+        client.removeFromChangelist(paths, changelistName);
+        cl = client.getChangelist(changelistName, thisTest.getWCPath());
+        assertTrue(cl.length == 0);
+    }
+
+    /**
+     * Test the basic functionality of SVNClient.merge().
      * @throws Throwable
      * @since 1.2
      */
@@ -1893,17 +1947,18 @@ public class BasicTests extends SVNTests
         // build the test setup
         OneTest thisTest = new OneTest();
         
-        // create branches directory in the repository
-        addExpectedCommitItem(null, thisTest.getUrl(), "branches", NodeKind.none,
-              CommitItemStateFlags.Add);
+        // create branches directory in the repository (r2)
+        addExpectedCommitItem(null, thisTest.getUrl(), "branches",
+                              NodeKind.none, CommitItemStateFlags.Add);
         client.mkdir(new String[]{thisTest.getUrl() + "/branches"}, "log_msg");
 
-        // copy A to branches
-        addExpectedCommitItem(null, thisTest.getUrl(), "branches/A", NodeKind.none,
-                CommitItemStateFlags.Add);
-        client.copy(thisTest.getUrl() + "/A", thisTest.getUrl() + "/branches/A", "create A branch", Revision.HEAD);
+        // copy A to branches (r3)
+        addExpectedCommitItem(null, thisTest.getUrl(), "branches/A",
+                              NodeKind.none, CommitItemStateFlags.Add);
+        client.copy(thisTest.getUrl() + "/A", thisTest.getUrl() +
+                    "/branches/A", "create A branch", Revision.HEAD);
 
-        // update the WC so that it has the branches folder
+        // update the WC (to r3) so that it has the branches folder
         client.update(thisTest.getWCPath(), Revision.HEAD, true);
 
         // modify file A/mu
@@ -1914,9 +1969,9 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemWorkingCopyRevision("A/mu", 4);
         thisTest.getWc().setItemContent("A/mu",
                 thisTest.getWc().getItemContent("A/mu") + "appended mu text");
-        addExpectedCommitItem(thisTest.getWCPath(),
-                thisTest.getUrl(), "A/mu",NodeKind.file,
-                CommitItemStateFlags.TextMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
 
         // modify file A/D/G/rho
         File rho = new File(thisTest.getWorkingCopy(), "A/D/G/rho");
@@ -1927,34 +1982,110 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemContent("A/D/G/rho",
                 thisTest.getWc().getItemContent("A/D/G/rho")
                 + "new appended text for rho");
-        addExpectedCommitItem(thisTest.getWCPath(),
-                thisTest.getUrl(), "A/D/G/rho",NodeKind.file,
-                CommitItemStateFlags.TextMods);
-        // commit the changes
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/G/rho", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        // commit the changes (r4)
         assertEquals("wrong revision number from commit",
-              client.commit(new String[]{thisTest.getWCPath()}, "log msg",
-                      true), 4);
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true), 4);
 
         // merge changes in A to branches/A
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
         // test --dry-run
-        client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD, branchPath, false, true, false, true);
+        client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD,
+                     branchPath, false, true, false, true);
 
         // now do the real merge
-        client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD, branchPath, false, true, false, false);
-        
+        client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD,
+                     branchPath, false, true, false, false);
+
         // commit the changes so that we can verify merge
-        addExpectedCommitItem(thisTest.getWCPath(),
-                thisTest.getUrl(), "branches/A/mu",NodeKind.file,
-                CommitItemStateFlags.TextMods);
-        addExpectedCommitItem(thisTest.getWCPath(),
-                thisTest.getUrl(), "branches/A/D/G/rho",NodeKind.file,
-                CommitItemStateFlags.TextMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A/D/G/rho", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
         assertEquals("wrong revision number from commit",
-              client.commit(new String[]{thisTest.getWCPath()}, "log msg",
-                      true), 5);
- 
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true), 5);
+    }
+
+    /**
+     * Test the {@link SVNClientInterface.diff()} APIs.
+     * @since 1.5
+     */
+    public void testDiff()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(true);
+        File diffOutput = new File(super.localTmp, thisTest.testName);
+        final String sepLine =
+            "===================================================================\n";
+        final String expectedDiffBody =
+            "@@ -1 +1 @@\n" +
+            "-This is the file 'iota'.\n" +
+            "\\ No newline at end of file\n" +
+            "+This is the file 'mu'.\n" +
+            "\\ No newline at end of file\n";
+
+        // Two-path diff of URLs.
+        String expectedDiffOutput = "Index: iota\n" + sepLine +
+            "--- iota\t(.../iota)\t(revision 1)\n" +
+            "+++ iota\t(.../A/mu)\t(revision 1)\n" +
+            expectedDiffBody;
+        client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
+                    thisTest.getUrl() + "/A/mu", Revision.HEAD,
+                    diffOutput.getPath(), false, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
+
+        // Two-path diff of WC paths.
+        String iotaPath = thisTest.getWCPath() + "/iota";
+        PrintWriter writer = new PrintWriter(new FileOutputStream(iotaPath));
+        writer.print("This is the file 'mu'.");
+        writer.flush();
+        writer.close();
+        expectedDiffOutput = "Index: " + iotaPath + '\n' + sepLine +
+            "--- " + iotaPath + "\t(revision 1)\n" +
+            "+++ " + iotaPath + "\t(working copy)\n" +
+            expectedDiffBody;
+        client.diff(iotaPath, Revision.BASE,
+                    iotaPath, Revision.WORKING,
+                    diffOutput.getPath(), false, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
+
+        // Peg revision diff of a single file.
+        client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
+                    new Revision.Number(1), Revision.HEAD,
+                    diffOutput.getPath(), false, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 "", diffOutput);
+
+        diffOutput.delete();
+    }
+
+    private void assertFileContentsEquals(String msg, String expected,
+                                          File actual)
+        throws IOException
+    {
+        FileReader reader = new FileReader(actual);
+        StringBuffer buf = new StringBuffer();
+        int ch;
+        while ((ch = reader.read()) != -1)
+        {
+            buf.append((char) ch);
+        }
+        assertEquals(msg, expected, buf.toString());
     }
 
     /**
@@ -2237,8 +2368,36 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * A DiffSummaryReceiver implementation which collects all
-     * DiffSummary notifications.
+     * Test basic blame functionality.  This test marginally tests blame
+     * correctness, mainly just that the blame APIs link correctly.
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testBasicBlame() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        // Test the old interface to be sure it still works
+        byte[] result = client.blame(thisTest.getWCPath() + "/iota", Revision
+                .getInstance(1), Revision.getInstance(1));
+        assertEquals("     1    jrandom This is the file 'iota'.\n",
+                     new String(result));
+
+        // Test the current interface
+        BlameCallbackImpl callback = new BlameCallbackImpl();
+        client.blame(thisTest.getWCPath() + "/iota", Revision.getInstance(1),
+                     Revision.getInstance(1), callback);
+        assertEquals(1, callback.numberOfLines());
+        BlameCallbackImpl.BlameLine line = callback.getBlameLine(0);
+        if (line != null)
+        {
+            assertEquals(1, line.getRevision());
+            assertEquals("jrandom", line.getAuthor());
+        }
+    }
+
+    /**
+     * A DiffSummaryReceiver implementation which collects all DiffSummary
+     * notifications.
      */
     private static class DiffSummaries extends HashMap
         implements DiffSummaryReceiver

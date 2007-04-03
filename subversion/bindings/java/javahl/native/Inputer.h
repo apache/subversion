@@ -45,7 +45,7 @@ private:
 public:
     Inputer(jobject jthis);
     ~Inputer();
-    svn_stream_t *getStream(const Pool & pool);
+    svn_stream_t *getStream(const Pool &pool);
 };
 // !defined(AFX_INPUTER_H__6896EB42_07D2_406B_A4A5_F2908AFF4815__INCLUDED_)
 #endif

@@ -39,7 +39,7 @@ Notify::Notify(jobject p_notify)
  */ 
 Notify::~Notify()
 {
-    if(m_notify != NULL)
+    if (m_notify != NULL)
     {
         JNIEnv *env = JNIUtil::getEnv();
         env->DeleteGlobalRef(m_notify);
@@ -50,26 +50,26 @@ Notify::~Notify()
  * Create a C++ peer object for the java object
  * @param notify    a local reference to the java object
  */
-Notify * Notify::makeCNotify(jobject notify)
+Notify *Notify::makeCNotify(jobject notify)
 {
     // if the java object is null -> no C++ peer needed
-    if(notify == NULL)
+    if (notify == NULL)
         return NULL;
     JNIEnv *env = JNIUtil::getEnv();
 
     // sanity check, that the object implements Notify
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Notify");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
-    if(!env->IsInstanceOf(notify, clazz))
+    if (!env->IsInstanceOf(notify, clazz))
     {
         env->DeleteLocalRef(clazz);
         return NULL;
     }
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -77,7 +77,7 @@ Notify * Notify::makeCNotify(jobject notify)
     // make a global reference, because the reference is longer needed, than
     // the call
     jobject myNotify = env->NewGlobalRef(notify);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -109,8 +109,8 @@ Notify::notify (
     svn_revnum_t revision)
 {
     // an Notify object is used as the baton
-    Notify * notify = (Notify *) baton;
-    if(notify) // sanity check
+    Notify *notify = (Notify *) baton;
+    if (notify) // sanity check
     {
         // call our method
         notify->onNotify(path, action, kind, mime_type,
@@ -142,21 +142,21 @@ Notify::onNotify (
     // java method id will not change during the time this library is loaded, 
     // so it can be cached. 
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/Notify");
         //jclass clazz = env->GetObjectClass(m_notify);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return;
         }
         mid = env->GetMethodID(clazz, "onNotify", "(Ljava/lang/String;IILjava/lang/String;IIJ)V");
-        if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
             return;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return;
         }
@@ -164,7 +164,7 @@ Notify::onNotify (
 
     // convert the parameter to their java relatives
     jstring jPath = JNIUtil::makeJString(path);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
@@ -172,7 +172,7 @@ Notify::onNotify (
     jint jAction = EnumMapper::mapNotifyAction(action);
     jint jKind = EnumMapper::mapNodeKind(kind);
     jstring jMimeType = JNIUtil::makeJString(mime_type);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
@@ -182,19 +182,19 @@ Notify::onNotify (
     // call the java method
     env->CallVoidMethod(m_notify, mid, jPath, jAction, jKind, jMimeType, jContentState, jPropState,
         (jlong)revision);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
 
     // release all the temporary java objects
     env->DeleteLocalRef(jPath);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
     env->DeleteLocalRef(jMimeType);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }

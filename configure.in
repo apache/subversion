@@ -69,7 +69,7 @@ SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
-NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2"
+NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3"
 NEON_RECOMMENDED_VER=0.25.5
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
@@ -86,6 +86,12 @@ SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_RECOMMENDED_VER, $NEON_URL)
 
 dnl Search for serf as an alternative to neon
 SVN_LIB_SERF
+
+dnl Search for SQLite
+SQLITE_ALLOWED_LIST="3.*"
+SQLITE_RECOMMENDED_VER="3.3.13"
+SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
+SVN_LIB_SQLITE($SQLITE_ALLOWED_LIST, $SQLITE_RECOMMENDED_VER, $SQLITE_URL)
 
 dnl Set up a number of directories ---------------------
 
@@ -440,7 +446,7 @@ AC_HELP_STRING([--with-ssl],
 
 AC_ARG_ENABLE(debug,
 AC_HELP_STRING([--enable-debug],
-	       [Turn on debugging and compile time warnings]),
+	       [Turn on debugging]),
 [
     if test "$enableval" = "yes" ; then
       enable_debugging="yes"
@@ -448,11 +454,29 @@ AC_HELP_STRING([--enable-debug],
       enable_debugging="no"
     fi
 ])
+
+AC_ARG_ENABLE(maintainer-mode,
+AC_HELP_STRING([--enable-maintainer-mode],
+	       [Turn on debugging and very strict compile-time warnings]),
+[
+    if test "$enableval" = "yes" ; then
+      if test "$enable_debugging" = "no" ; then
+        AC_MSG_ERROR(Can't have --disable-debug and --enable-maintainer-mode)
+      fi
+      enable_debugging=yes
+      if test "$GCC" = "yes"; then
+        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
+      fi
+    fi
+])
+
 if test "$enable_debugging" = "yes" ; then
   dnl At the moment, we don't want optimization, because we're
   dnl debugging.
-  dnl ### actually, debugging should be fine with the default -O2
   CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-O[^ ]* //g'`"]
+  dnl SVN_DEBUG enables specific features for developer builds
+  dnl AP_DEBUG enables specific (Apache) features for developer builds
+  CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
 else
   if test "$enable_debugging" = "no" ; then
     CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
@@ -492,24 +516,6 @@ AC_HELP_STRING([--disable-mod-activation],
 ])
 AC_SUBST(MOD_ACTIVATION)
 
-
-AC_ARG_ENABLE(maintainer-mode,
-AC_HELP_STRING([--enable-maintainer-mode],
-	       [Turn on debugging and very strict compile-time warnings]),
-[
-    if test "$enableval" = "yes" ; then
-      if test "$enable_debugging" = "no" ; then
-        AC_MSG_ERROR(Can't have --disable-debug and --enable-maintainer-mode)
-      fi
-      enable_debugging=yes
-      dnl SVN_DEBUG enables specific features for developer builds
-      dnl AP_DEBUG enables specific (Apache) features for developer builds
-      CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
-      if test "$GCC" = "yes"; then
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
-      fi
-    fi
-])
 
 
 AC_ARG_ENABLE(gprof,
@@ -768,9 +774,9 @@ AC_CONFIG_FILES([Makefile])
 AC_CONFIG_COMMANDS(mkdir-init, [make mkdir-init])
 
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
-SVN_CONFIG_SCRIPT(contrib/client-side/svn_load_dirs.pl)
-SVN_CONFIG_SCRIPT(contrib/client-side/svncopy.pl)
-SVN_CONFIG_SCRIPT(contrib/client-side/testsvncopy.pl)
+SVN_CONFIG_SCRIPT(contrib/client-side/svn_load_dirs/svn_load_dirs.pl)
+SVN_CONFIG_SCRIPT(contrib/client-side/svncopy/svncopy.pl)
+SVN_CONFIG_SCRIPT(contrib/client-side/svncopy/testsvncopy.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-email.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)

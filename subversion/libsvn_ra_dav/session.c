@@ -651,7 +651,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
   svn_config_t *cfg;
   const char *server_group;
   char *itr;
-  unsigned int neon_auth_types;
+  unsigned int neon_auth_types = 0;
   neonprogress_baton_t *neonprogress_baton =
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
@@ -712,11 +712,6 @@ svn_ra_dav__open(svn_ra_session_t *session,
     int timeout;
     int debug;
 
-#ifdef SVN_NEON_0_26
-    neon_auth_types = NE_AUTH_BASIC | NE_AUTH_DIGEST;
-    if (is_ssl_session)
-      neon_auth_types |= NE_AUTH_NEGOTIATE;
-#endif
     SVN_ERR(get_server_settings(&proxy_host,
                                 &proxy_port,
                                 &proxy_username,
@@ -728,6 +723,17 @@ svn_ra_dav__open(svn_ra_session_t *session,
                                 cfg,
                                 uri->host,
                                 pool));
+
+#ifdef SVN_NEON_0_26
+    if (neon_auth_types == 0)
+      {
+        /* If there were no auth types specified in the configuration
+           file, provide the appropriate defaults. */
+        neon_auth_types = NE_AUTH_BASIC | NE_AUTH_DIGEST;
+        if (is_ssl_session)
+          neon_auth_types |= NE_AUTH_NEGOTIATE;
+      }
+#endif
 
     if (debug)
       ne_debug_init(stderr, debug);
@@ -961,6 +967,7 @@ static const svn_ra__vtable_t dav_vtable = {
   svn_ra_dav__get_commit_editor,
   svn_ra_dav__get_file,
   svn_ra_dav__get_dir,
+  svn_ra_dav__get_merge_info,
   svn_ra_dav__do_update,
   svn_ra_dav__do_switch,
   svn_ra_dav__do_status,

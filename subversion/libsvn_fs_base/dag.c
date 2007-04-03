@@ -1,7 +1,7 @@
 /* dag.c : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,7 @@
 #include "reps-strings.h"
 #include "revs-txns.h"
 #include "id.h"
+#include "tree.h"  /* needed for SVN_FS_PROP_TXN_MERGEINFO */
 
 #include "util/fs_skels.h"
 
@@ -44,6 +45,7 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 
+#include "private/svn_fs_merge_info.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -1461,18 +1463,35 @@ svn_fs_base__dag_deltify(dag_node_t *target,
 
 svn_error_t *
 svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
-                            svn_fs_t *fs,
-                            const char *txn_id,
+                            svn_fs_txn_t *txn,
                             trail_t *trail,
                             apr_pool_t *pool)
 {
   revision_t revision;
   svn_string_t date;
   apr_hash_t *txnprops;
+  svn_fs_t *fs = txn->fs;
+  const char *txn_id = txn->id;
+  const svn_string_t *target_mergeinfo;
 
   /* Remove any temporary transaction properties initially created by
      begin_txn().  */
   SVN_ERR(svn_fs_base__txn_proplist_in_trail(&txnprops, txn_id, trail));
+
+  /* Add new revision entry to `revisions' table. */
+  revision.txn_id = txn_id;
+  *new_rev = SVN_INVALID_REVNUM;
+  SVN_ERR(svn_fs_bdb__put_rev(new_rev, fs, &revision, trail, pool));
+
+  target_mergeinfo = apr_hash_get(txnprops, SVN_FS_PROP_TXN_MERGEINFO,
+                                  APR_HASH_KEY_STRING);
+  if (target_mergeinfo)
+    {
+      SVN_ERR(svn_fs_merge_info__update_index(txn, *new_rev, TRUE, pool));
+      SVN_ERR(svn_fs_base__set_txn_prop
+              (fs, txn_id, SVN_FS_PROP_TXN_MERGEINFO, NULL, trail, pool));
+    }
+
   if (txnprops)
     {
       if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
@@ -1485,12 +1504,6 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
         SVN_ERR(svn_fs_base__set_txn_prop 
                 (fs, txn_id, SVN_FS_PROP_TXN_CHECK_LOCKS, NULL, trail, pool));
     }
-
-  /* Add new revision entry to `revisions' table. */
-  revision.txn_id = txn_id;
-  *new_rev = SVN_INVALID_REVNUM;
-  SVN_ERR(svn_fs_bdb__put_rev(new_rev, fs, &revision, trail, pool));
-
   /* Promote the unfinished transaction to a committed one. */
   SVN_ERR(svn_fs_base__txn_make_committed(fs, txn_id, *new_rev, 
                                           trail, pool));

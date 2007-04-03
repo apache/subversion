@@ -682,7 +682,7 @@ def authz_aliases(sbox):
   if sbox.repo_url.startswith("http"):
     expected_err = ".*403 Forbidden.*"
   else:
-    expected_err = ".*svn: Access denied.*"
+    expected_err = ".*svn: Authorization failed.*"
 
   write_authz_file(sbox, { "/" : "* = r",
                            "/A/B" : "&jray = rw" },
@@ -866,7 +866,7 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  svntest.main.run_tests(test_list)
+  svntest.main.run_tests(test_list, serial_only = True)
   # NOTREACHED
 
 

@@ -31,6 +31,7 @@
 #include "svn_time.h"
 #include "svn_path.h"
 #include "svn_pools.h"
+#include "svn_io.h"
 #include "client.h"
 
 #include "svn_private_config.h"
@@ -42,7 +43,7 @@ svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const svn_opt_revision_t *revision,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
@@ -51,13 +52,15 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
-  const svn_ra_reporter2_t *reporter;
+  const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *anchor, *target;
+  svn_node_kind_t kind;
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
+  int adm_open_depth;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t use_commit_times;
@@ -69,6 +72,23 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config, 
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
+
+  /* ### TODO(sd): Ah, the irony.  We'd like to base our adm_open depth on
+     ### the depth we're going to use for the update.  But that
+     ### may depend on the depth in the working copy, which we can't
+     ### discover without calling adm_open.  We could expend an extra
+     ### call, with adm_open_depth=0, to get the real depth (but only
+     ### if we need to) and then make the real call... but it's not
+     ### worth the complexity right now.  Locking the entire tree when
+     ### we didn't need to is a performance hit, but (except for
+     ### access contention) not a correctness problem. */
+
+  if (depth == svn_depth_empty
+      || depth == svn_depth_files
+      || depth == svn_depth_immediates)
+    adm_open_depth = 0;
+  else
+    adm_open_depth = -1;
   
   /* Sanity check.  Without this, the update is meaningless. */
   assert(path);
@@ -80,7 +100,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* Use PATH to get the update's anchor and targets and get a write lock */
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
-                                 TRUE, recurse ? -1 : 0,
+                                 TRUE, adm_open_depth,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   anchor = svn_wc_adm_access_path(adm_access);
@@ -91,6 +111,42 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Entry '%s' has no URL"),
                              svn_path_local_style(anchor, pool));
+
+  /* Figure out the real depth for the update, using sophisticated
+     techniques from http://en.wikipedia.org/wiki/Bone_divination. */
+  if (depth == svn_depth_unknown)
+    {
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+      if (kind == svn_node_none || kind == svn_node_file)
+        depth = svn_depth_infinity;
+      else if (kind == svn_node_dir)
+        {
+          if (adm_access == dir_access)
+            depth = entry->depth;
+          else
+            {
+              /* I'm not sure this situation can ever happen in real
+                 life, but svn_wc_adm_open_anchor() doesn't explicitly
+                 prohibit it, so we must be prepared. */
+              const svn_wc_entry_t *tmp_ent;
+              SVN_ERR(svn_wc_entry(&tmp_ent, path, dir_access, FALSE, pool));
+              if (tmp_ent)
+                depth = tmp_ent->depth;
+              else
+                return svn_error_createf
+                  (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                   _("'%s' is not a working copy directory"),
+                   svn_path_local_style(path, pool));
+            }
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+             _("'%s' is neither a file nor a directory"),
+             svn_path_local_style(path, pool));
+        }
+    }
 
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */
@@ -132,7 +188,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc_get_update_editor3(&revnum, adm_access, target,
-                                    use_commit_times, recurse,
+                                    use_commit_times, depth,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
@@ -143,18 +199,18 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
-  SVN_ERR(svn_ra_do_update(ra_session,
-                           &reporter, &report_baton,
-                           revnum,
-                           target,
-                           recurse,
-                           update_editor, update_edit_baton, pool));
+  SVN_ERR(svn_ra_do_update2(ra_session,
+                            &reporter, &report_baton,
+                            revnum,
+                            target,
+                            depth,
+                            update_editor, update_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
-     update_editor will be driven by svn_repos_dir_delta. */
-  err = svn_wc_crawl_revisions2(path, dir_access, reporter, report_baton,
-                                TRUE, recurse, use_commit_times,
+     update_editor will be driven by svn_repos_dir_delta2. */
+  err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
+                                TRUE, depth, use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 traversal_info, pool);
       
@@ -170,7 +226,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  if (recurse && (! ignore_externals))
+  if ((depth == svn_depth_infinity) && (! ignore_externals))
     SVN_ERR(svn_client__handle_externals(traversal_info, 
                                          TRUE, /* update unchanged ones */
                                          use_sleep, ctx, pool));
@@ -204,7 +260,7 @@ svn_error_t *
 svn_client_update3(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
                    const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
+                   svn_depth_t depth,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
@@ -229,7 +285,7 @@ svn_client_update3(apr_array_header_t **result_revs,
         break;
 
       err = svn_client__update_internal(&result_rev, path, revision,
-                                        recurse, ignore_externals,
+                                        depth, ignore_externals,
                                         allow_unver_obstructions,
                                         &sleep, ctx, subpool);
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
@@ -267,7 +323,8 @@ svn_client_update2(apr_array_header_t **result_revs,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client_update3(result_revs, paths, revision, recurse,
+  return svn_client_update3(result_revs, paths, revision,
+                            SVN_DEPTH_FROM_RECURSE(recurse),
                             ignore_externals, FALSE, ctx, pool);
 }
 
@@ -279,6 +336,7 @@ svn_client_update(svn_revnum_t *result_rev,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  return svn_client__update_internal(result_rev, path, revision, recurse, 
+  return svn_client__update_internal(result_rev, path, revision,
+                                     SVN_DEPTH_FROM_RECURSE(recurse), 
                                      FALSE, FALSE, NULL, ctx, pool);
 }

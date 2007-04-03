@@ -2,7 +2,7 @@
  * fs_loader.c:  Front-end to the various FS back ends
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -398,6 +398,21 @@ svn_fs_hotcopy(const char *src_path, const char *dest_path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_recover(const char *path,
+               svn_cancel_func_t cancel_func, void *cancel_baton,
+               apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+  svn_fs_t *fs;
+
+  SVN_ERR(fs_library_vtable(&vtable, path, pool));
+  fs = svn_fs_new(NULL, pool);
+  SVN_ERR(vtable->open_for_recovery(fs, path, pool));
+  SVN_ERR(serialized_init(fs, pool));
+  return vtable->recover(fs, cancel_func, cancel_baton, pool);
+}
+
 
 /* --- Berkeley-specific functions --- */
 
@@ -449,10 +464,7 @@ svn_fs_hotcopy_berkeley(const char *src_path, const char *dest_path,
 svn_error_t *
 svn_fs_berkeley_recover(const char *path, apr_pool_t *pool)
 {
-  fs_library_vtable_t *vtable;
-
-  SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  return vtable->bdb_recover(path, pool);
+  return svn_fs_recover(path, NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -723,6 +735,25 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
                     svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
   return root->vtable->closest_copy(root_p, path_p, root, path, pool);
+}
+
+svn_error_t *
+svn_fs_change_merge_info(svn_fs_root_t *root, const char *path, 
+                         apr_hash_t *minfo,
+                         apr_pool_t *pool)
+{
+  return root->vtable->change_merge_info(root, path, minfo, pool);
+}
+
+svn_error_t *
+svn_fs_get_merge_info(apr_hash_t **minfohash,
+                      svn_fs_root_t *root,
+                      const apr_array_header_t *paths,
+                      svn_boolean_t include_parents,
+                      apr_pool_t *pool)
+{
+  return root->vtable->get_merge_info(minfohash, root, paths, include_parents,
+                                      pool);
 }
 
 svn_error_t *

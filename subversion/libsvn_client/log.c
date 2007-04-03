@@ -35,6 +35,7 @@
 #include "svn_path.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Getting update information ***/
@@ -127,12 +128,9 @@ svn_client_log3(const apr_array_header_t *targets,
           SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
                                          FALSE, 0, ctx->cancel_func,
                                          ctx->cancel_baton, pool));
-          SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, pool));
-          if (! entry)
-            return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                     _("'%s' is not under version control"),
-                                     svn_path_local_style(target, pool));
-          
+          SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
+                                         pool));
+
           if (! entry->url)
             return svn_error_createf
               (SVN_ERR_ENTRY_MISSING_URL, NULL,

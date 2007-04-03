@@ -599,15 +599,15 @@ def build_generic_tree(nodelist):
 #   Tree nodes will contain no contents, a 'status' att, and a
 #   'writelocked' att.
 
-def build_tree_from_checkout(lines):
+def build_tree_from_checkout(lines, include_skipped=1):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
 
   root = SVNTreeNode(root_node_name)
   rm1 = re.compile ('^([MAGCUDE_ ][MAGCUDE_ ])([B ])\s+(.+)')
-  # There may be other verbs we need to match, in addition to
-  # "Restored".  If so, add them as alternatives in the first match
-  # group below.
-  rm2 = re.compile ('^(Restored)\s+\'(.+)\'')
+  if include_skipped:
+    rm2 = re.compile ('^(Restored|Skipped)\s+\'(.+)\'')
+  else:
+    rm2 = re.compile ('^(Restored)\s+\'(.+)\'')
 
   for line in lines:
     match = rm1.search(line)

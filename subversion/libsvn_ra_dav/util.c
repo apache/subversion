@@ -1217,8 +1217,10 @@ svn_ra_dav__simple_request(int *code,
      and detected errors will be returned there... */
   (void) multistatus_parser_create(req);
 
-  /* svn_ra_dav__request_dispatch() adds the custom error response reader */
-  SVN_ERR(svn_ra_dav__request_dispatch(code, req, extra_headers, body,
+  /* svn_ra_dav__request_dispatch() adds the custom error response
+     reader.  Neon will take care of the Content-Length calculation */
+  SVN_ERR(svn_ra_dav__request_dispatch(code, req, extra_headers, 
+                                       body ? body : "", 
                                        okay_1, okay_2, pool));
   svn_ra_dav__request_destroy(req);
 

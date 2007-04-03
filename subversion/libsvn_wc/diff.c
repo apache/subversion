@@ -47,6 +47,8 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 
+#include "private/svn_wc_private.h"
+
 #include "wc.h"
 #include "props.h"
 #include "adm_files.h"
@@ -136,9 +138,8 @@ struct edit_baton {
   const svn_wc_diff_callbacks2_t *callbacks;
   void *callback_baton;
 
-  /* Flags whether to diff recursively or not. If set the diff is
-     recursive. */
-  svn_boolean_t recurse;
+  /* How does this diff descend? */
+  svn_depth_t depth;
 
   /* Should this diff ignore node ancestry. */
   svn_boolean_t ignore_ancestry;
@@ -232,18 +233,20 @@ struct callbacks_wrapper_baton {
 
 /* Create a new edit baton. TARGET/ANCHOR are working copy paths that
  * describe the root of the comparison. CALLBACKS/CALLBACK_BATON
- * define the callbacks to compare files. RECURSE defines whether to
+ * define the callbacks to compare files. DEPTH defines if and how to
  * descend into subdirectories.  IGNORE_ANCESTRY defines whether to
  * utilize node ancestry when calculating diffs.  USE_TEXT_BASE
  * defines whether to compare against working files or text-bases.
  * REVERSE_ORDER defines which direction to perform the diff.
+ *
+ * ### TODO(sd): document depth's behavior more precisely.
  */
 static struct edit_baton *
 make_editor_baton(svn_wc_adm_access_t *anchor,
                   const char *target,
                   const svn_wc_diff_callbacks2_t *callbacks,
                   void *callback_baton,
-                  svn_boolean_t recurse,
+                  svn_depth_t depth,
                   svn_boolean_t ignore_ancestry,
                   svn_boolean_t use_text_base,
                   svn_boolean_t reverse_order,
@@ -256,7 +259,7 @@ make_editor_baton(svn_wc_adm_access_t *anchor,
   eb->target = apr_pstrdup(pool, target);
   eb->callbacks = callbacks;
   eb->callback_baton = callback_baton;
-  eb->recurse = recurse;
+  eb->depth = depth;
   eb->ignore_ancestry = ignore_ancestry;
   eb->use_text_base = use_text_base;
   eb->reverse_order = reverse_order;
@@ -577,12 +580,12 @@ file_diff(struct dir_baton *dir_baton,
       break;
 
     default:
-      SVN_ERR(svn_wc_text_modified_p2(&modified, path, FALSE,
-                                      FALSE, adm_access, pool));
+      SVN_ERR(svn_wc_text_modified_p(&modified, path, FALSE,
+                                     adm_access, pool));
       if (modified)
         {
           /* Note that this might be the _second_ time we translate
-             the file, as svn_wc_text_modified_p2() might have used a
+             the file, as svn_wc_text_modified_p() might have used a
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
@@ -738,7 +741,8 @@ directory_elements_diff(struct dir_baton *dir_baton)
 
           /* Check the subdir if in the anchor (the subdir is the target), or
              if recursive */
-          if (in_anchor_not_target || dir_baton->edit_baton->recurse)
+          if (in_anchor_not_target
+              || (dir_baton->edit_baton->depth == svn_depth_infinity))
             {
               subdir_baton = make_dir_baton(path, dir_baton,
                                             dir_baton->edit_baton,
@@ -924,7 +928,7 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
           break;
 
         case svn_node_dir:
-          if (eb->recurse)
+          if (eb->depth == svn_depth_infinity)
             {
               struct dir_baton *subdir_baton = make_dir_baton(path,
                                                               dir_baton,
@@ -1423,8 +1427,8 @@ close_file(void *file_baton,
      (BASE:WORKING) modifications. */
   modified = (b->temp_file_path != NULL);
   if (!modified && !eb->use_text_base)
-    SVN_ERR(svn_wc_text_modified_p2(&modified, b->path, FALSE,
-                                    FALSE, adm_access, pool));
+    SVN_ERR(svn_wc_text_modified_p(&modified, b->path, FALSE,
+                                   adm_access, pool));
 
   if (modified)
     {
@@ -1671,11 +1675,11 @@ static struct svn_wc_diff_callbacks2_t callbacks_wrapper = {
 
 /* Create a diff editor and baton. */
 svn_error_t *
-svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
+svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         const char *target,
                         const svn_wc_diff_callbacks2_t *callbacks,
                         void *callback_baton,
-                        svn_boolean_t recurse,
+                        svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
@@ -1689,7 +1693,7 @@ svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
   svn_delta_editor_t *tree_editor;
 
   eb = make_editor_baton(anchor, target, callbacks, callback_baton,
-                         recurse, ignore_ancestry, use_text_base,
+                         depth, ignore_ancestry, use_text_base,
                          reverse_order, pool);
   tree_editor = svn_delta_default_editor(eb->pool);
 
@@ -1716,6 +1720,36 @@ svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
                                             pool));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
+                        const char *target,
+                        const svn_wc_diff_callbacks2_t *callbacks,
+                        void *callback_baton,
+                        svn_boolean_t recurse,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        apr_pool_t *pool)
+{
+  return svn_wc_get_diff_editor4(anchor,
+                                 target,
+                                 callbacks,
+                                 callback_baton,
+                                 SVN_DEPTH_FROM_RECURSE(recurse),
+                                 ignore_ancestry,
+                                 use_text_base,
+                                 reverse_order,
+                                 cancel_func,
+                                 cancel_baton,
+                                 editor,
+                                 edit_baton,
+                                 pool);
 }
 
 svn_error_t *
@@ -1763,7 +1797,9 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
 }
 
 
-/* Compare working copy against the text-base. */
+/* Compare working copy against the text-base.
+   ### TODO(sd): I'm not sure we need to change RECURSE to DEPTH here,
+   ### since this only descends within the working copy anyway. */
 svn_error_t *
 svn_wc_diff3(svn_wc_adm_access_t *anchor,
              const char *target,
@@ -1780,18 +1816,16 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
   svn_wc_adm_access_t *adm_access;
 
   eb = make_editor_baton(anchor, target, callbacks, callback_baton,
-                         recurse, ignore_ancestry, FALSE, FALSE, pool);
+                         SVN_DEPTH_FROM_RECURSE(recurse),
+                         ignore_ancestry, FALSE, FALSE, pool);
 
   target_path = svn_path_join(svn_wc_adm_access_path(anchor), target,
                               eb->pool);
 
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, anchor, target_path,
                                     eb->pool));
-  SVN_ERR(svn_wc_entry(&entry, target_path, adm_access, FALSE, eb->pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(target_path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, target_path, adm_access, FALSE,
+                                  eb->pool));
 
   if (entry->kind == svn_node_dir)
     b = make_dir_baton(target_path, NULL, eb, FALSE, eb->pool);

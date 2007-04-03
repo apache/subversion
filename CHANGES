@@ -1,8 +1,33 @@
+Version 1.4.4
+(?? April 2007, from /branches/1.4.x)
+http://svn.collab.net/repos/svn/tags/1.4.4
+
+ User-visible changes:
+  - Client:
+    * fixed: 'svn up' of replaced file without history fails (issue #2618)
+    * fixed: ra_dav litters empty transactions if initial setup fails (r23594)
+
+  - Server:
+    * fixed: 'svnadmin load' invents svn:date if none exists (issue #2729)
+
+  - Client and Server:
+    * translation updates for Simplified Chinese, Japanese, and Norwegian
+
+ Developer-visible changes:
+ * new "make svnserveautocheck" testing target (r23558)
+ * javahl bindings:
+     - fixed: potential segfault in initialisation (r23383)
+ * SWIG/python bindings:
+     - fixed: memory leak whenever C APIs returned errors (r21453, r23468)
+ * SWIG/ruby bindings:
+     - fixed: typos in method Svn::Wc#merge_prop_diffs and docs (r23405, -6)
+
+
 Version 1.4.3
 (18 January 2007, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.3
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: crash using automatic auth protocols with Neon 0.26 (r22440, -61)
     * fixed: svn_load_dirs.pl cannot import file names containing '@' (r22203)
@@ -20,27 +45,26 @@ http://svn.collab.net/repos/svn/tags/1.4.3
     * translation updates for Korean, Spanish, Italian, Simplified Chinese,
           and Japanese (fixing issues #2649 and #2681)
 
-Developer-visible-changes:
-* support Neon 0.26.2 (issue #2666)
-* update (experimental) ra_serf repository access module for DAV (r22872)
-* Windows installer improvements (r21516, r22155, r22224)
-* fixed: svn_{ra,repos}_replay() doesn't send checksums (r22346, -51, -52)
-* fixed: error when calling svn_repos_replay2() with a txn root (r22609)
-* fixed: Solaris packaging script broken (issue #2669)
-* javahl bindings:
-    - fixed: auth cache is created in the current directory (r22780)
-    - fixed: SVNAdmin's setLog() method always fails (r22387)
-    - fixed: target dependency order in generated build scripts (r22209)
-* SWIG/perl bindings:
-    - fixed: ra_do_{update,switch,status} work with Perl delta editors (r22311)
-    - fixed: memory leak when calling methods on a Perl commit editor (r22332)
+ Developer-visible changes:
+ * support Neon 0.26.2 (issue #2666)
+ * update (experimental) ra_serf repository access module for DAV (r22872)
+ * Windows installer improvements (r21516, r22155, r22224)
+ * fixed: svn_{ra,repos}_replay() doesn't send checksums (r22346, -51, -52)
+ * fixed: error when calling svn_repos_replay2() with a txn root (r22609)
+ * fixed: Solaris packaging script broken (issue #2669)
+ * javahl bindings:
+     - fixed: auth cache is created in the current directory (r22780)
+     - fixed: SVNAdmin's setLog() method always fails (r22387)
+     - fixed: target dependency order in generated build scripts (r22209)
+ * SWIG/perl bindings:
+     - fixed: memory leak when calling methods on a Perl commit editor (r22332)
 
 
 Version 1.4.2
 (2 November 2006, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.2
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * new "notes/svnsync.txt" file explains common svnsync usage
     * install a manpage for svnsync (r21403)
@@ -68,24 +92,24 @@ http://svn.collab.net/repos/svn/tags/1.4.2
     * improved error checking when running hook scripts, etc (r21483)
     * mailer.py: new commit_url option links to web page for a commit (r21333)
 
-Developer-visible-changes:
-* support Neon 0.26.0 and 0.26.1 (r21289, r21293, r21956)
-* support current CVS versions of libtool (post-1.5.22) (r22120)
-* now compiles on architectures without APR_HAS_DSO (e.g. RISC OS) (r21473)
-* fixed: build error on FreeBSD due to missing svnsync manpage (r21403)
-* RHEL3 RPM package requires correct version of Apache httpd (r21974)
-* numerous improvements to coverage of the test suite
-* javahl bindings:
-    - compile Java bytecode for Java 1.2 VM (r21765, -7, r21814)
-    - fixed: crash if using 1.4.x bindings with older libraries (r21316, -429)
-    - fixed: crash when empty destination path passed to checkout (r21770)
-* SWIG/ruby bindings:
-    - fixed: accept nil for Svn::Repos#load_fs's parent_dir argument (r21793)
-* SWIG/python bindings:
-    - fixed: crash when using an apr_hash_t typemap (issue #2606)
-    - fixed: in tests, use URLs that work on Windows (r21392)
-* SWIG/perl bindings:
-    - fixed: ra_replay works with Perl delta editors (r20666)
+ Developer-visible changes:
+ * support Neon 0.26.0 and 0.26.1 (r21289, r21293, r21956)
+ * support current CVS versions of libtool (post-1.5.22) (r22120)
+ * now compiles on architectures without APR_HAS_DSO (e.g. RISC OS) (r21473)
+ * fixed: build error on FreeBSD due to missing svnsync manpage (r21403)
+ * RHEL3 RPM package requires correct version of Apache httpd (r21974)
+ * numerous improvements to coverage of the test suite
+ * javahl bindings:
+     - compile Java bytecode for Java 1.2 VM (r21765, -7, r21814)
+     - fixed: crash if using 1.4.x bindings with older libraries (r21316, -429)
+     - fixed: crash when empty destination path passed to checkout (r21770)
+ * SWIG/ruby bindings:
+     - fixed: accept nil for Svn::Repos#load_fs's parent_dir argument (r21793)
+ * SWIG/python bindings:
+     - fixed: crash when using an apr_hash_t typemap (issue #2606)
+     - fixed: in tests, use URLs that work on Windows (r21392)
+ * SWIG/perl bindings:
+     - fixed: ra_replay works with Perl delta editors (r20666)
 
 
 Version 1.4.1
@@ -96,7 +120,7 @@ Version 1.4.0
 (10 September 2006, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.0
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * new 'svnsync' commandline tool for repository replication
     * numerous working copy improvements (WARNING! upgrades to new format!):
@@ -194,80 +218,80 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * improve speed of non-verbose svn ls (r17067 -71)
     * fixed: delta combiner reading past EOF (r17743)
 
-Developer-visible-changes:
-* require APR >= 0.9.7 to improve error detection for FSFS repos (r19915)
-* require zlib, for svndiff1 delta encoding (r18363)
-* support SWIG 1.3.29 (r19968)
-* support autoconf 2.60-dev (r19919 20632 -36)
-* removed no-longer-supported Red Hat 7.x RPMs (r20462)
-* add support for building RPMs for x86-64 architecture (r20548 -552)
-* numerous improvements to gen-make.py build system, especially on win32
-* removed Visual Studio.NET APR 0.9 project files (r20170)
-* numerous improvements to the test suite
-* new public APIs:
-  - keyword and eol translation helpers and generic streams (see svn_subst.h)
-  - new generic stream helpers (see svn_io.h)
-  - authentication providers made available to other clients (see svn_auth.h)
-  - svn_cmdline_setup_auth_baton
-  - svn_dso_initialize, svn_dso_load
-  - svn_client_diff_summarize and svn_client_diff_summarize_peg
-  - svn_client_list
-  - svn_config_has_section
-  - svn_txdelta_compose_windows and svn_txdelta_apply_instructions
-  - svn_txdelta_stream_create
-  - svn_diff_file_options_create and svn_diff_file_options_parse
-  - svn_err_best_message
-  - svn_compat_wrap_commit_callback
-  - svn_uuid_generate
-  - svn_user_get_name and svn_user_get_homedir
-  - svn_io_get_dir_filenames
-  - svn_ra_reparent
-  - svn_ra_replay
-  - svn_wc_revision_status
-  - several rev'd APIs, see doxygen docs
-* flush stdout after each status/notification line (r19476 -656)
-* new (experimental) ra_serf repository access module for pipelined DAV
-* .svn/entries use a less verbose non-xml format (r19420)
-* make recursive 'svn ls' streamy (issue #1809)
-* remove svn-config script
-* empty-file and README.txt removed from WC admin areas (r17181 -268 -364)
-* replace cmdline client XML DTDs with RNG schemas (r16379 -80 -93 -571 17248)
-* fixed: log --limit against old svnserve leaves unusable session (r19638)
-* fixed: Solaris build problems (r19636)
-* fixed: blame of WORKING revision shouldn't give BASE (r19558)
-* fixed: svn_client_copy and _move should fail if target exists (issue #2188)
-* fixed: svn_io_file_rename and readonlyness on Windows and UNIX (r17366 -69)
-* fixed: ra_dav memory leak when reusing session (issue #2247)
-* fixed: console character encoding problems when built with VS2005 (r20108)
-* fixed: various problems with --enable-dso and global pools (r20996, r20999)
-* fixed: syntax error in installer files on new versions of Inno Setup (r21022)
-* SWIG bindings:
-    - SWIG/python bindings:
-      - new support for svn_client_info (r19413)
-    - SWIG/ruby bindings:
-      - full support for Subversion 1.4 APIs, including :
-        svn_ra_replay and svn_diff_summarize
-      - numerous bug fixes
-      - add ruby documentation (make install-swig-rb-doc) (r20166)
-      - add APIs for adding a provider (r21079)
-    - SWIG/perl bindings:
-      - new support for svn_client_info (r18758)
-      - minor corrections to SVN::Fs (r19312)
-* javahl bindings:
-    - APIs to get version info for the native libraries  (r17604 -07)
-    - API for path validation (r18989, r19079)
-    - C++/Java code refactoring, cleanup, and consolidation
-    - fixed: handle possible errors from date/time conversions (r17213)
-    - fixed: SVNClient username/password JVM crash on null input (r19803 -13)
-    - fixed: specify default UUID load action (r18030)
-    - fixed: compile error on Visual Studio 2005 (r18054)
+ Developer-visible changes:
+ * require APR >= 0.9.7 to improve error detection for FSFS repos (r19915)
+ * require zlib, for svndiff1 delta encoding (r18363)
+ * support SWIG 1.3.29 (r19968)
+ * support autoconf 2.60-dev (r19919 20632 -36)
+ * removed no-longer-supported Red Hat 7.x RPMs (r20462)
+ * add support for building RPMs for x86-64 architecture (r20548 -552)
+ * numerous improvements to gen-make.py build system, especially on win32
+ * removed Visual Studio.NET APR 0.9 project files (r20170)
+ * numerous improvements to the test suite
+ * new public APIs:
+     - keyword / eol translation helpers and generic streams (see svn_subst.h)
+     - new generic stream helpers (see svn_io.h)
+     - authn providers made available to other clients (see svn_auth.h)
+     - svn_cmdline_setup_auth_baton
+     - svn_dso_initialize, svn_dso_load
+     - svn_client_diff_summarize and svn_client_diff_summarize_peg
+     - svn_client_list
+     - svn_config_has_section
+     - svn_txdelta_compose_windows and svn_txdelta_apply_instructions
+     - svn_txdelta_stream_create
+     - svn_diff_file_options_create and svn_diff_file_options_parse
+     - svn_err_best_message
+     - svn_compat_wrap_commit_callback
+     - svn_uuid_generate
+     - svn_user_get_name and svn_user_get_homedir
+     - svn_io_get_dir_filenames
+     - svn_ra_reparent
+     - svn_ra_replay
+     - svn_wc_revision_status
+     - several rev'd APIs, see doxygen docs
+ * flush stdout after each status/notification line (r19476 -656)
+ * new (experimental) ra_serf repository access module for pipelined DAV
+ * .svn/entries use a less verbose non-xml format (r19420)
+ * make recursive 'svn ls' streamy (issue #1809)
+ * remove svn-config script
+ * empty-file and README.txt removed from WC admin areas (r17181 -268 -364)
+ * replace cmdline client XML DTDs with RNG schemas (r16379 -80 -93 -571 17248)
+ * fixed: log --limit against old svnserve leaves unusable session (r19638)
+ * fixed: Solaris build problems (r19636)
+ * fixed: blame of WORKING revision shouldn't give BASE (r19558)
+ * fixed: svn_client_copy and _move should fail if target exists (issue #2188)
+ * fixed: svn_io_file_rename and readonlyness on Windows and UNIX (r17366 -69)
+ * fixed: ra_dav memory leak when reusing session (issue #2247)
+ * fixed: console character encoding problems when built with VS2005 (r20108)
+ * fixed: various problems with --enable-dso and global pools (r20996, r20999)
+ * fixed: installer file syntax error in new versions of Inno Setup (r21022)
+ * SWIG bindings:
+     - SWIG/python bindings:
+       - new support for svn_client_info (r19413)
+     - SWIG/ruby bindings:
+       - full support for Subversion 1.4 APIs, including :
+         svn_ra_replay and svn_diff_summarize
+       - numerous bug fixes
+       - add ruby documentation (make install-swig-rb-doc) (r20166)
+       - add APIs for adding a provider (r21079)
+     - SWIG/perl bindings:
+       - new support for svn_client_info (r18758)
+       - minor corrections to SVN::Fs (r19312)
+ * javahl bindings:
+     - APIs to get version info for the native libraries  (r17604 -07)
+     - API for path validation (r18989, r19079)
+     - C++/Java code refactoring, cleanup, and consolidation
+     - fixed: handle possible errors from date/time conversions (r17213)
+     - fixed: SVNClient username/password JVM crash on null input (r19803 -13)
+     - fixed: specify default UUID load action (r18030)
+     - fixed: compile error on Visual Studio 2005 (r18054)
 
 
 Version 1.3.2
 (23 May 2006, from /branches/1.3.x)
 http://svn.collab.net/repos/svn/tags/1.3.2
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: 'svn st -u' crash on missing subdirs (r19348, -71, issue #2551)
     * fixed: leaving stray working copy locks on cancellation (r18893)
@@ -284,22 +308,22 @@ http://svn.collab.net/repos/svn/tags/1.3.2
     * fixed: authz requires read access for root for writes (issue #2486)
     * svnauthz-validate: add config file validation tool (r18504, -09)
 
-Developer-visible-changes:
-* fixed: tests don't catch repository creation failure properly (r19149,-51)
-* support SWIG 1.3.28
-* support APR 0.9.x >= 0.9.10 (r19039, -57, -60)
-* python bindings:
-      - fixed: link error on OpenBSD (r18983)
-* ruby bindings:
-      - fixed: memory leak (r19493)
-      - fixed: NULL argument conversion bug (r19543)
+ Developer-visible changes:
+ * fixed: tests don't catch repository creation failure properly (r19149,-51)
+ * support SWIG 1.3.28
+ * support APR 0.9.x >= 0.9.10 (r19039, -57, -60)
+ * python bindings:
+     - fixed: link error on OpenBSD (r18983)
+ * ruby bindings:
+     - fixed: memory leak (r19493)
+     - fixed: NULL argument conversion bug (r19543)
 
 
 Version 1.3.1
 (25 March 2006, from /branches/1.3.x)
 http://svn.collab.net/repos/svn/tags/1.3.1
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: segfault moving unversioned files (issue #2436)
     * fixed: verbose list broken over ra_dav (issue #2442)
@@ -327,29 +351,29 @@ http://svn.collab.net/repos/svn/tags/1.3.1
   - Both:
     * fixed: copyright years updated to include 2006 (r18021, -127)
 
-Developer-visible-changes:
-* fixed: missing #include (r18065)
-* fixed: allow building with Neon 0.25.5 (r18215)
-* fixed: error leaks (18196, -249)
-* javahl bindings:
-      - fixed: compile error on Visual Studio 2005 (r18054, -55)
-* python bindings:
-      - fixed: libsvn_swig_py link problem on Solaris 10 (r17910)
-      - fixed: pool lifetime bug (r17992)
-      - fixed: memory leak (r18230)
-      - fixed: race condition during application pool initialization (r18721)
-* ruby bindings:
-      - fixed: pool management issue (r17795, -811)
-      - fixed: protect baton from garbage collection (r17627)
-      - fixed: conversion bug (r17726, -925)
-      - fixed: compile errors with SWIG 1.3.24 (r18456, -58)
+ Developer-visible changes:
+ * fixed: missing #include (r18065)
+ * fixed: allow building with Neon 0.25.5 (r18215)
+ * fixed: error leaks (18196, -249)
+ * javahl bindings:
+     - fixed: compile error on Visual Studio 2005 (r18054, -55)
+ * python bindings:
+     - fixed: libsvn_swig_py link problem on Solaris 10 (r17910)
+     - fixed: pool lifetime bug (r17992)
+     - fixed: memory leak (r18230)
+     - fixed: race condition during application pool initialization (r18721)
+ * ruby bindings:
+     - fixed: pool management issue (r17795, -811)
+     - fixed: protect baton from garbage collection (r17627)
+     - fixed: conversion bug (r17726, -925)
+     - fixed: compile errors with SWIG 1.3.24 (r18456, -58)
 
 
 Version 1.3.0
 (30 December 2005, from /branches/1.3.x)
 http://svn.collab.net/repos/svn/tags/1.3.0
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * 'svn ls -v' now shows remote locks (issue #2291)
     * 'svn status' speedup (r15061, r15103)
@@ -415,42 +439,42 @@ http://svn.collab.net/repos/svn/tags/1.3.0
     * faster multiple (un)locks in a single svn:// request (issue #2264)
     * the Subversion Book is no longer bundled (r17466)
 
-Developer-visible-changes:
-* reorganization of automated tests, including ability to run on ramdisk
-* lots of Doxygen/API documentation cleanup
-* numerous improvements to gen-make.py build system, especially on win32
-* working copy is now storing repos_root as separate field (issue #960)
-* keywords are now stored in an internal hash (issue #890)
-* client status APIs now makes more server-side info available (r16344)
-* new public APIs:  
-   - new transfer progress callback for DAV (r15948)
-   - svn_ra_initialize(), svn_client_open_ra_session()
-   - svn_fs_closest_copy(), svn_fs_type()
-   - several rev'd APIs, see doxygen docs
-* SWIG bindings: No more compile-time or runtime SWIG dependencies
-    - SWIG/python bindings:
-       - automatic memory management: APIs no longer require pool arguments!
-       - improved stability, as shown by our new testsuite
-       - better error messages
-    - SWIG/ruby bindings:
-       - complete API coverage!
-       - automatic memory management
-       - greatly expanded test suite
-    - SWIG/perl bindings:
-       - new accessors for svn_lock_t, svn_fs_access_t
-       - a number of bugfixes
-* javahl bindings:
-    - add streamy API for fetching file contents (r15584) 
-    - fixed: let tests run before bindings are installed (issue #2040)
-    - fixed: lock command not raising errors properly (issue #2394)
-    - fixed: ignored errors from svn_client_blame2() (r16434)
+ Developer-visible changes:
+ * reorganization of automated tests, including ability to run on ramdisk
+ * lots of Doxygen/API documentation cleanup
+ * numerous improvements to gen-make.py build system, especially on win32
+ * working copy is now storing repos_root as separate field (issue #960)
+ * keywords are now stored in an internal hash (issue #890)
+ * client status APIs now makes more server-side info available (r16344)
+ * new public APIs:  
+     - new transfer progress callback for DAV (r15948)
+     - svn_ra_initialize(), svn_client_open_ra_session()
+     - svn_fs_closest_copy(), svn_fs_type()
+     - several rev'd APIs, see doxygen docs
+ * SWIG bindings: No more compile-time or runtime SWIG dependencies
+     - SWIG/python bindings:
+        - automatic memory management: APIs no longer require pool arguments!
+        - improved stability, as shown by our new testsuite
+        - better error messages
+     - SWIG/ruby bindings:
+        - complete API coverage!
+        - automatic memory management
+        - greatly expanded test suite
+     - SWIG/perl bindings:
+        - new accessors for svn_lock_t, svn_fs_access_t
+        - a number of bugfixes
+ * javahl bindings:
+     - add streamy API for fetching file contents (r15584) 
+     - fixed: let tests run before bindings are installed (issue #2040)
+     - fixed: lock command not raising errors properly (issue #2394)
+     - fixed: ignored errors from svn_client_blame2() (r16434)
 
 
 Version 1.2.3
 (19 August 2005, from /branches/1.2.x)
 http://svn.collab.net/repos/svn/tags/1.2.3
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: 'svn status -u' fails against pre-1.2 mod_dav_svn (r15359, r15423)
     * fixed: 'svn export' segfault (r15516)
@@ -470,22 +494,22 @@ http://svn.collab.net/repos/svn/tags/1.2.3
     * fixed: crash when >50 options passed to any commandline app (r15251)
     * fixed: memory leak in character translation handle caching (r15379,-398)
 
-Developer-visible-changes:
-* fixed: crash when calling svn_client_(un)lock with no targets (r15734)
-* rhel-4 RPM bugfix for python bindings (r15616)
-* missing #include in SWIG bindings (r15683)
-* javahl bindings:
-      - fixed: JNI library loading bug (r15552)
-      - fixed: JNI stack-name cut and paste error (r15337)
-      - fixed: crash when revisions have no dates (r15737)
-* perl bindings:
-      - now compatible with SWIG 1.3.25 (r15248)
-      - allow SVN::Pool to be used as pool parameter (r15450)
-      - make SVN::Delta::Editor friendlier for debugging (r15609)
-      - fixed: wrap svn_ra_stat properly (r15713)
-      - fixed: bug in SVN::Core::Stream's read function (r15698, r15700)
-* ruby bindings:
-      - now compatible with SWIG 1.3.25 (r14980, r15361)
+ Developer-visible changes:
+ * fixed: crash when calling svn_client_(un)lock with no targets (r15734)
+ * rhel-4 RPM bugfix for python bindings (r15616)
+ * missing #include in SWIG bindings (r15683)
+ * javahl bindings:
+     - fixed: JNI library loading bug (r15552)
+     - fixed: JNI stack-name cut and paste error (r15337)
+     - fixed: crash when revisions have no dates (r15737)
+ * perl bindings:
+     - now compatible with SWIG 1.3.25 (r15248)
+     - allow SVN::Pool to be used as pool parameter (r15450)
+     - make SVN::Delta::Editor friendlier for debugging (r15609)
+     - fixed: wrap svn_ra_stat properly (r15713)
+     - fixed: bug in SVN::Core::Stream's read function (r15698, r15700)
+ * ruby bindings:
+     - now compatible with SWIG 1.3.25 (r14980, r15361)
 
 
 Version 1.2.2
@@ -496,7 +520,7 @@ Version 1.2.1
 (5 July 2005, from /branches/1.2.x)
 http://svn.collab.net/repos/svn/tags/1.2.1
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: 'svn lock' on switched file locks wrong thing (issue #2307)
     * fixed: 'svn (un)lock' errors on multiple targets (r14736, 14775)
@@ -515,14 +539,14 @@ http://svn.collab.net/repos/svn/tags/1.2.1
     * fixed: 'svn log -v' performance regression, FSFS-specific (r15016)
     * fixed: mod_dav_svn bug sets content-type incorrectly (r15046)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * fixed: win32 innosetup's add/repair/remove features (r14830)
  * fixed: OBOE with 'limit' parameter of svn_repos_get_logs3(). (r15119)
  * redhat RPM fixes (r15050)
  * perl bindings:
-      - accessors for svn_lock_t (r15082)
-      - call utf_initialize, adjust global pool usage (r15076, r15080,
-                                                       r15081, r15117)
+     - accessors for svn_lock_t (r15082)
+     - call utf_initialize, adjust global pool usage (r15076, r15080,
+                                                      r15081, r15117)
 
 
 Version 1.2.0
@@ -532,7 +556,7 @@ http://svn.collab.net/repos/svn/tags/1.2.0
 See the 1.2 release notes for a more verbose overview of the changes since
 the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * add peg-rev syntax to co/blame/cat/ls/pget/plist/export (issue #1093)
     * 'svn info' now works on URLs (r13123, 13144)
@@ -663,10 +687,10 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
  * fixed: mod_dav_svn sending illegal editor-drive (issue #2258)
  * pool usage improvements (r12954, 12852, r13386, issue #1310)
  * SWIG bindings:  better API coverage overall.
-    - new ruby bindings!
-    - remove bitrotting swig-java bindings
-    - perl and python bindings:  numerous improvements, see their own logs.
-    - bindings tests now within svntest framework
+     - new ruby bindings!
+     - remove bitrotting swig-java bindings
+     - perl and python bindings:  numerous improvements, see their own logs.
+     - bindings tests now within svntest framework
  * javahl bindings:   numerous improvements, see its own logs.
  * many improvements to mailer.py and commit-email.pl
  * rewrite/improvements to gen-make build system, including VS.NET support
@@ -678,7 +702,7 @@ Version 1.1.4
 (1 April 2005, from /branches/1.1.x)
 http://svn.collab.net/repos/svn/tags/1.1.4
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: win32 not ignoring versioned symlinks (issue #2173)
     * fixed: 'svn merge' can cause broken working copy (issue #2222)
@@ -701,7 +725,7 @@ http://svn.collab.net/repos/svn/tags/1.1.4
   - Both:
     * fixed: (win32) retry file operation if sharing violation (r12983, r12986)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * add SWIG 1.3.24 and .25 compatibility (r12551, r12717-9, r12722, r13504)
  * fixed: JavaHL run-time link error (r12576), path/url cleanups (r13090)
  * fixed: python bindings log_receiver failure with SWIG 1.3.24 (r13487)
@@ -712,11 +736,11 @@ Version 1.1.3
 (14 January 2005, from /branches/1.1.x)
 http://svn.collab.net/repos/svn/tags/1.1.3
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * translation updates for localized client messages.
     
- Developer-visible-changes:
+ Developer-visible changes:
  * Fix a compile error in the Perl bindings.
 
  
@@ -724,7 +748,7 @@ Version 1.1.2
 (20 December 2004, from /branches/1.1.x)
 http://svn.collab.net/repos/svn/tags/1.1.2
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: 'svn switch' interruption can break working copy (issue #1826)
     * fixed: 'svn switch' memleak over ra_dav (issue #2106)
@@ -759,7 +783,7 @@ http://svn.collab.net/repos/svn/tags/1.1.2
     * fixed: canonicalize paths sent by ra_svn/svnserve (issue #2119)
     * fixed: memleak into UTF8 translation routines (r11689)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * add support for BerkeleyDB 4.3 (if using a compatible apr-util)
  * add support for any apr/apr-util 1.X
  * disallow incompatible SWIG versions (r12450)
@@ -777,7 +801,7 @@ Version 1.1.1
 (22 October 2004, from /branches/1.1.x)
 http://svn.collab.net/repos/svn/tags/1.1.1
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: 'svn status' win32 performance regression (issue #2016)
     * fixed: 'svn ls' dying on non-ascii paths over DAV (issue #2060)
@@ -801,7 +825,7 @@ http://svn.collab.net/repos/svn/tags/1.1.1
     * fixed: XML-escape author and date strings before sending (issue #2071)
     * fixed: invalid XML being sent over DAV (issue #2090)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * fixed: IRIX compile error (issue #2082)
  * fixed: error in perl bindings (r11290)
  * fixed: error leaks in mod_dav_svn (r11458)
@@ -812,12 +836,12 @@ Version 1.0.9
 (13 October 2004, from /branches/1.0.9)
 http://svn.collab.net/repos/svn/tags/1.0.9
 
- User-visible-changes:
+ User-visible changes:
   - Server:
     * fixed: 'svn ls' HTTP performance regression (r11211, -232, -285)
     * fixed: 'svn log -v' hiding too much info on 'empty' revisions. (r11137)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * fixed: make redhat 7/8 rpm scripts build the book correctly (11143)
 
 
@@ -828,7 +852,7 @@ http://svn.collab.net/repos/svn/tags/1.1.0
 See the 1.1 release notes for a more verbose overview of the changes since
 1.0.x: http://subversion.tigris.org/svn_1.1_releasenotes.html
 
- User-visible-changes:
+ User-visible changes:
  * new non-database repository back-end (libsvn_fs_fs)
  * symlinks can now be placed under version control (unix systems only)
  * cmdline client now supports psuedo-IRIs and autoescapes chars (issue #1910)
@@ -953,7 +977,7 @@ Version 1.0.8
 (22 September 2004, from /branches/1.0.8)
 http://svn.collab.net/repos/svn/tags/1.0.8
 
- User-visible-changes:
+ User-visible changes:
  * fixed: mod_authz_svn path and log-message metadata leaks.
           See CAN-2004-0749, and descriptive advisory at 
           http://subversion.tigris.org/security/CAN-2004-0749-advisory.txt
@@ -963,7 +987,7 @@ Version 1.0.7
 (17 September 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.7
 
- User-visible-changes:
+ User-visible changes:
  * fixed: win32 'file not found' error [issue #1862]
  * fixed: 'svn st -u' crash (r10841)
  * fixed: potential repos corruption; ensure stdin/out/err always open (r10819)
@@ -982,7 +1006,7 @@ Version 1.0.6
 (19 July 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.6
 
- User-visible-changes:
+ User-visible changes:
  * fixed: crash in status command, caused by race (r10144)
  * fixed: crashes when deleting a revision-prop (r10148, r10185, r10192)
  * fixed: mod_authz_svn allows COPY method on repos with space in name (#1837)
@@ -996,7 +1020,7 @@ Version 1.0.5
 (10 Jun 2004, from /branches/1.0.5)
 http://svn.collab.net/repos/svn/tags/1.0.5
 
- User-visible-changes:
+ User-visible changes:
  * fixed: security bug in svn protocol string parsing. (CAN-2004-0413)
 
 
@@ -1004,7 +1028,7 @@ Version 1.0.4
 (21 May 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.4
 
- User-visible-changes:
+ User-visible changes:
  * fixed: 'svn up' can delete unversioned data on win32 fs (issue #1854)
  * fixed: pool leaks in 'svnlook diff/changed/dirs-changed'
  * fixed: insecure script example in pre-commit-hook template
@@ -1023,7 +1047,7 @@ Version 1.0.3
 (19 May 2004, from /branches/1.0.3)
 http://svn.collab.net/repos/svn/tags/1.0.3
 
- User-visible-changes:
+ User-visible changes:
  * fixed: security bug in date parsing. (CAN-2004-0397)
 
 

@@ -48,26 +48,38 @@ extern "C" {
    file entries which don't already have a repository root set.  This prevents
    the entries file from being corrupted by this operation.
 
-   If PATH is a directory and RECURSIVE is set, then recursively walk
-   over all entries files below PATH.  While doing this, if
-   NEW_REVISION is valid, then tweak every entry to have this new
+   If PATH is a directory, then, walk entries below PATH according to
+   DEPTH thusly:
+
+   If DEPTH is svn_depth_infinity, perform the following actions on
+   every entry below PATH; if svn_depth_immediates, svn_depth_files,
+   or svn_depth_empty, perform them only on PATH:
+
+   If NEW_REVISION is valid, then tweak every entry to have this new
    working revision (excluding files that are scheduled for addition
    or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
    all urls to be "telescoping" children of the base_url.
 
+   ### TODO(sd): See README.branch about depth behavior above!
+
    If REMOVE_MISSING_DIRS is TRUE, then delete the entries for any 
    missing directories.  If NOTIFY_FUNC is non-null, invoke it with 
    NOTIFY_BATON for each missing entry deleted.
+
+   EXCLUDE_PATHS is a hash containing const char * pathnames.  Entries
+   for pathnames contained in EXCLUDE_PATHS are not touched by this
+   function.
 */
 svn_error_t *svn_wc__do_update_cleanup(const char *path,
                                        svn_wc_adm_access_t *adm_access,
-                                       svn_boolean_t recursive,
+                                       svn_depth_t depth,
                                        const char *base_url,
                                        const char *repos,
                                        svn_revnum_t new_revision,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
                                        svn_boolean_t remove_missing_dirs,
+                                       apr_hash_t *exclude_paths,
                                        apr_pool_t *pool);
 
 

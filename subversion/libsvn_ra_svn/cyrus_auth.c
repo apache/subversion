@@ -163,18 +163,10 @@ apr_status_t svn_ra_svn__sasl_common_init(void)
   return apr_err;
 }
 
-static sasl_callback_t interactions[] =
-{
-  /* Use SASL interactions for username & password */
-  {SASL_CB_AUTHNAME, NULL, NULL}, 
-  {SASL_CB_PASS, NULL, NULL},
-  {SASL_CB_LIST_END, NULL, NULL}
-};
-
 static svn_error_t *sasl_init_cb(void)
 {
   if (svn_ra_svn__sasl_common_init() != APR_SUCCESS
-      || sasl_client_init(interactions) != SASL_OK)
+      || sasl_client_init(NULL) != SASL_OK)
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             _("Could not initialize the SASL library"));
   return SVN_NO_ERROR;
@@ -217,19 +209,120 @@ void svn_ra_svn__default_secprops(sasl_security_properties_t *secprops)
   secprops->property_names = secprops->property_values = NULL;
 }
 
+/* A baton type used by the SASL username and password callbacks. */
+typedef struct cred_baton {
+  svn_auth_baton_t *auth_baton;
+  svn_auth_iterstate_t *iterstate;
+  const char *realmstring;
+
+  /* Unfortunately SASL uses two separate callbacks for the username and
+     password, but we must fetch both of them at the same time. So we cache
+     their values in the baton, set them to NULL individually when SASL
+     demands them, and fetch the next pair when both are NULL. */
+  const char *username;
+  const char *password;
+
+  /* Any errors we receive from svn_auth_{first,next}_credentials 
+     are saved here. */
+  svn_error_t *err;
+  /* This flag is set when we run out of credential providers. */
+  svn_boolean_t no_more_creds;
+
+  apr_pool_t *pool;
+} cred_baton_t;
+
+/* Call svn_auth_{first,next}_credentials. If successful, set BATON->username
+   and BATON->password to the new username and password and return TRUE,
+   otherwise return FALSE. If there are no more credentials, set
+   BATON->no_more_creds to TRUE. Any errors are saved in BATON->err. */
+static svn_boolean_t
+get_credentials(cred_baton_t *baton)
+{
+  void *creds;
+
+  if (baton->iterstate)
+    baton->err = svn_auth_next_credentials(&creds, baton->iterstate,
+                                           baton->pool);
+  else
+    baton->err = svn_auth_first_credentials(&creds, &baton->iterstate,
+                                            SVN_AUTH_CRED_SIMPLE,
+                                            baton->realmstring,
+                                            baton->auth_baton, baton->pool);
+  if (baton->err)
+    return FALSE;
+
+  if (! creds)
+    {
+      baton->no_more_creds = TRUE;
+      return FALSE;
+    }
+
+  baton->username = ((svn_auth_cred_simple_t *)creds)->username;
+  baton->password = ((svn_auth_cred_simple_t *)creds)->password;
+
+  return TRUE;
+}
+
+/* The username callback. Implements the sasl_getsimple_t interface. */
+static int
+get_username_cb(void *b, int id, const char **username, unsigned *len)
+{
+  cred_baton_t *baton = b;
+
+  if (baton->username || get_credentials(baton))
+    {
+      *username = baton->username;
+      if (len)
+        *len = strlen(baton->username);
+      baton->username = NULL;
+
+      return SASL_OK;
+    }
+
+  return SASL_FAIL;
+}
+
+/* The password callback. Implements the sasl_getsecret_t interface. */
+static int
+get_password_cb(sasl_conn_t *conn, void *b, int id, sasl_secret_t **psecret)
+{
+  cred_baton_t *baton = b;
+
+  if (baton->password || get_credentials(baton))
+    {
+      sasl_secret_t *secret;
+      int len = strlen(baton->password);
+
+      /* sasl_secret_t is a struct with a variable-sized array as a final
+         member, which means we need to allocate len-1 supplementary bytes
+         (one byte is part of sasl_secret_t, and we don't need a NULL 
+         terminator). */
+      secret = apr_palloc(baton->pool, sizeof(*secret) + len - 1);
+      secret->len = len;
+      memcpy(secret->data, baton->password, len);
+      baton->password = NULL;
+      *psecret = secret;
+
+      return SASL_OK;
+    }
+
+  return SASL_FAIL;
+}
+
 /* Create a new SASL context. */
 static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                                  svn_boolean_t is_tunneled,
                                  const char *hostname, 
                                  const char *local_addrport,
                                  const char *remote_addrport, 
+                                 sasl_callback_t *callbacks,
                                  apr_pool_t *pool)
 {
   sasl_security_properties_t secprops;
   int result;
 
   result = sasl_client_new("svn", hostname, local_addrport, remote_addrport,
-                           interactions, SASL_SUCCESS_DATA, 
+                           callbacks, SASL_SUCCESS_DATA, 
                            sasl_ctx);
   if (result != SASL_OK)
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
@@ -261,46 +354,9 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
   return SVN_NO_ERROR;
 }
 
-/* Fill in the information requested by client_interact */
-static svn_error_t *handle_interact(svn_auth_cred_simple_t *creds,
-                                    sasl_interact_t *client_interact,
-                                    const char *last_err,
-                                    apr_pool_t *pool)
-{
-  sasl_interact_t *prompt;
-
-  for (prompt = client_interact; prompt->id != SASL_CB_LIST_END; prompt++)
-    {
-      switch (prompt->id)
-        {
-        case SASL_CB_AUTHNAME:
-          if (!creds)
-            return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                    _("Can't get user name"));
-          prompt->result = creds->username;
-          prompt->len = strlen(creds->username);
-          break;
-        case SASL_CB_PASS:
-          if (!creds)
-            return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                    _("Can't get password"));
-          prompt->result = creds->password;
-          prompt->len = strlen(creds->password);
-          break;
-        default:
-          /* This should never be reached. */
-          return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                  _("Unhandled SASL interaction"));
-          break;
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
 /* Perform an authentication exchange */
 static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
                              sasl_conn_t *sasl_ctx,
-                             svn_auth_cred_simple_t *creds,
                              svn_boolean_t *success,
                              const char **last_err,
                              const char *mechstring,
@@ -317,21 +373,12 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
   do
     {
       again = FALSE;
-      do
-        {
-          result = sasl_client_start(sasl_ctx,
-                                     mechstring,
-                                     &client_interact,
-                                     &out,
-                                     &outlen,
-                                     &mech);
-
-          /* Fill in username and password, if required. */
-          if (result == SASL_INTERACT)
-            SVN_ERR(handle_interact(creds, client_interact, *last_err, pool));
-        }
-      while (result == SASL_INTERACT);
-
+      result = sasl_client_start(sasl_ctx,
+                                 mechstring,
+                                 &client_interact,
+                                 &out,
+                                 &outlen,
+                                 &mech);
       switch (result)
         {
           case SASL_OK:
@@ -339,6 +386,7 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
             /* Success. */
             break;
           case SASL_NOMECH:
+            return svn_error_create(SVN_ERR_RA_SVN_NO_MECHANISMS, NULL, NULL);
           case SASL_BADPARAM:
           case SASL_NOMEM:
             /* Fatal error.  Fail the authentication. */
@@ -393,20 +441,12 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
       if (strcmp(mech, "CRAM-MD5") != 0) 
         in = svn_base64_decode_string(in, pool);
  
-      do
-        {
-          result = sasl_client_step(sasl_ctx, 
-                                    in->data,
-                                    in->len,
-                                    &client_interact, 
-                                    &out, /* Filled in by SASL. */
-                                    &outlen);
-
-          /* Fill in username and password, if required. */
-          if (result == SASL_INTERACT)
-            SVN_ERR(handle_interact(creds, client_interact, *last_err, pool));
-        }
-      while (result == SASL_INTERACT);
+      result = sasl_client_step(sasl_ctx, 
+                                in->data,
+                                in->len,
+                                &client_interact, 
+                                &out, /* Filled in by SASL. */
+                                &outlen);
 
       if (result != SASL_OK && result != SASL_CONTINUE)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
@@ -681,18 +721,21 @@ static svn_error_t *get_remote_hostname(char **hostname, apr_socket_t *sock)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
-                                 apr_array_header_t *mechlist,
-                                 const char *realm, apr_pool_t *pool)
+svn_error_t *
+svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
+                          apr_array_header_t *mechlist,
+                          const char *realm, apr_pool_t *pool)
 {
   apr_pool_t *subpool;
   sasl_conn_t *sasl_ctx;
-  const char *mechstring = "", *last_err = "";
+  const char *mechstring = "", *last_err = "", *realmstring;
   const char *local_addrport = NULL, *remote_addrport = NULL;
   char *hostname = NULL;
-  svn_auth_iterstate_t *iterstate = NULL;
-  void *creds;
-  svn_boolean_t success, compat = (realm == NULL), need_creds = TRUE;
+  svn_boolean_t success, compat = (realm == NULL);
+  /* Reserve space for 3 callbacks (for the username, password and the
+     array terminator). */
+  sasl_callback_t callbacks[3];
+  cred_baton_t cred_baton;
   int i;
 
   if (!sess->is_tunneled)
@@ -712,61 +755,101 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
           || strcmp(elt->u.word, "EXTERNAL") == 0)
         {
           mechstring = elt->u.word;
-          need_creds = FALSE;
           break;
         }
-
       mechstring = apr_pstrcat(pool, 
                                mechstring, 
                                i == 0 ? "" : " ", 
                                elt->u.word, NULL);
     }
 
-  if (need_creds)
-    {
-      const char *realmstring;
+  realmstring = realm ?
+                apr_psprintf(pool, "%s %s", sess->realm_prefix, realm)
+                : sess->realm_prefix;
 
-      realmstring = realm ? 
-                    apr_psprintf(pool, "%s %s", sess->realm_prefix, realm)
-                    : sess->realm_prefix;
-      SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
-                                         SVN_AUTH_CRED_SIMPLE, 
-                                         realmstring,
-                                         sess->callbacks->auth_baton, pool));
-    }
+  /* Initialize the credential baton. */
+  memset(&cred_baton, 0, sizeof(cred_baton));
+  cred_baton.auth_baton = sess->callbacks->auth_baton;
+  cred_baton.realmstring = realmstring;
+  cred_baton.pool = pool;
+
+  /* Initialize the callbacks array. */
+
+  /* The username callback. */
+  callbacks[0].id = SASL_CB_AUTHNAME;
+  callbacks[0].proc = get_username_cb;
+  callbacks[0].context = &cred_baton;
+
+  /* The password callback. */
+  callbacks[1].id = SASL_CB_PASS;
+  callbacks[1].proc = get_password_cb;
+  callbacks[1].context = &cred_baton;
+
+  /* Mark the end of the array. */
+  callbacks[2].id = SASL_CB_LIST_END;
+  callbacks[2].proc = NULL;
+  callbacks[2].context = NULL;
 
   subpool = svn_pool_create(pool);
   do
     {
+      svn_error_t *err;
+
+      /* If last_err was set to a non-empty string, it needs to be duplicated
+         to the parent pool before the subpool is cleared. */
+      if (*last_err)
+        last_err = apr_pstrdup(pool, last_err);
       svn_pool_clear(subpool);
 
       SVN_ERR(new_sasl_ctx(&sasl_ctx, sess->is_tunneled,
                            hostname, local_addrport, remote_addrport,
-                           sess->conn->pool));
-      SVN_ERR(try_auth(sess,
-                       sasl_ctx,
-                       creds,
-                       &success,
-                       &last_err,
-                       mechstring,
-                       compat,
-                       subpool));
+                           callbacks, sess->conn->pool));
+      err = try_auth(sess, sasl_ctx, &success, &last_err, mechstring,
+                     compat, subpool);
 
-      if (!success && need_creds)
-        SVN_ERR(svn_auth_next_credentials(&creds, iterstate, pool));
-      /* If we ran out of authentication providers, return the last 
-         error sent by the server. */
-      if (!creds)
-        return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                _("Authentication error from server: %s"),
-                                last_err);
+      /* If we encountered an error while fetching credentials, that error
+         has priority. */
+      if (cred_baton.err)
+        {
+          svn_error_clear(err);
+          return cred_baton.err;
+        }
+      if (cred_baton.no_more_creds)
+        {
+          svn_error_clear(err);
+          /* If we ran out of authentication providers, return the last 
+             error sent by the server, if any. */
+          if (*last_err)
+            return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                     _("Authentication error from server: %s"),
+                                     last_err);
+          /* Hmm, we don't have a server error. Return a generic error. */
+          return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                  _("Can't get username or password"));
+        }
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_RA_SVN_NO_MECHANISMS)
+            {
+              svn_error_clear(err);
+
+              /* We could not find a supported mechanism in the list sent by the
+                 server. In many cases this happens because the client is missing
+                 the CRAM-MD5 or ANONYMOUS plugins, in which case we can simply use
+                 the built-in implementation. In all other cases this call will be
+                 useless, but hey, at least we'll get consistent error messages. */
+              return svn_ra_svn__do_internal_auth(sess, mechlist, 
+                                                  realm, pool);
+            }
+          return err;
+        }
     }
   while (!success);
   svn_pool_destroy(subpool);
 
   SVN_ERR(svn_ra_svn__enable_sasl_encryption(sess->conn, sasl_ctx, pool));
 
-  SVN_ERR(svn_auth_save_credentials(iterstate, pool));
+  SVN_ERR(svn_auth_save_credentials(cred_baton.iterstate, pool));
 
   return SVN_NO_ERROR;
 }

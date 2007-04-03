@@ -40,7 +40,7 @@ Notify2::Notify2(jobject p_notify)
  */
 Notify2::~Notify2()
 {
-    if(m_notify != NULL)
+    if (m_notify != NULL)
     {
         JNIEnv *env = JNIUtil::getEnv();
         env->DeleteGlobalRef(m_notify);
@@ -51,26 +51,26 @@ Notify2::~Notify2()
  * Create a C++ peer object for the java object
  * @param notify    a local reference to the java object
  */
-Notify2 * Notify2::makeCNotify(jobject notify)
+Notify2 *Notify2::makeCNotify(jobject notify)
 {
     // if the java object is null -> no C++ peer needed
-    if(notify == NULL)
+    if (notify == NULL)
         return NULL;
     JNIEnv *env = JNIUtil::getEnv();
 
     // sanity check, that the object implements Notify
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Notify2");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
-    if(!env->IsInstanceOf(notify, clazz))
+    if (!env->IsInstanceOf(notify, clazz))
     {
         env->DeleteLocalRef(clazz);
         return NULL;
     }
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -78,7 +78,7 @@ Notify2 * Notify2::makeCNotify(jobject notify)
     // make a global reference, because the reference is longer needed, than
     // the call
     jobject myNotify = env->NewGlobalRef(notify);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -97,8 +97,8 @@ void
 Notify2::notify(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool)
 {
     // an Notify object is used as the baton
-    Notify2 * that = (Notify2 *) baton;
-    if(that) // sanity check
+    Notify2 *that = (Notify2 *) baton;
+    if (that) // sanity check
     {
         // call our method
         that->onNotify(notify, pool);
@@ -117,32 +117,32 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
     // java method id will not change during the time this library is loaded,
     // so it can be cached.
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/Notify2");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return;
         }
         mid = env->GetMethodID(clazz, "onNotify", 
             "(Lorg/tigris/subversion/javahl/NotifyInformation;)V");
-        if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
             return;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return;
         }
     }
     static jmethodID midCT = 0;
     jclass clazz = env->FindClass(JAVA_PACKAGE"/NotifyInformation");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
-    if(midCT == 0)
+    if (midCT == 0)
     {
         midCT = env->GetMethodID(clazz, "<init>", 
             "(Ljava/lang/String;IILjava/lang/String;"
@@ -155,7 +155,7 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
 
     // convert the parameter to their java relatives
     jstring jPath = JNIUtil::makeJString(wcNotify->path);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
@@ -163,17 +163,17 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
     jint jAction = EnumMapper::mapNotifyAction(wcNotify->action);
     jint jKind = EnumMapper::mapNodeKind(wcNotify->kind);
     jstring jMimeType = JNIUtil::makeJString(wcNotify->mime_type);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
     jobject jLock = SVNClient::createJavaLock(wcNotify->lock);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
     jstring jErr = JNIUtil::makeSVNErrorMessage(wcNotify->err);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
@@ -185,46 +185,46 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
                                    jKind, jMimeType, jLock, jErr,
                                    jContentState, jPropState, jLockState, 
                                    (jlong) wcNotify->revision);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
 
     // release all the temporary java objects
     env->DeleteLocalRef(jPath);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
     env->DeleteLocalRef(jMimeType);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
     env->DeleteLocalRef(jErr);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
     env->DeleteLocalRef(jLock);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
 
     env->CallVoidMethod(m_notify, mid, jInfo);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
 
     env->DeleteLocalRef(jInfo);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }

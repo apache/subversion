@@ -89,8 +89,14 @@ svn_client__can_delete(const char *path,
   revision.kind = svn_opt_revision_unspecified;
   sb.err = SVN_NO_ERROR;
   sb.pool = pool;
-  SVN_ERR(svn_client_status2(NULL, path, &revision, find_undeletables, &sb,
-                             TRUE, FALSE, FALSE, FALSE, FALSE, ctx, pool));
+  SVN_ERR(svn_client_status3
+          (NULL, path, &revision, find_undeletables, &sb,
+           /* ### TODO(sd): It's not urgent, but it would be nice to
+              ### understand why the code was originally passing a
+              ### hardcoded TRUE for recurse when this call was to
+              ### svn_client_status2 (hence the hardcoded
+              ### svn_depth_infinity now that it's svn_client_status3). */
+           svn_depth_infinity, FALSE, FALSE, FALSE, FALSE, ctx, pool));
   return sb.err;
 }
 
@@ -119,6 +125,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
   void *edit_baton;
   void *commit_baton;
   const char *log_msg;
+  apr_hash_t *revprop_table;
   svn_node_kind_t kind;
   apr_array_header_t *targets;
   svn_error_t *err;
@@ -155,10 +162,15 @@ delete_urls(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
                                       ctx, pool));
       if (! log_msg)
-        return SVN_NO_ERROR;
+        {
+          svn_pool_destroy(subpool);
+          return SVN_NO_ERROR;
+        }
     }
   else
     log_msg = "";
+
+  SVN_ERR(svn_client__get_revprop_table(&revprop_table, log_msg, ctx, pool));
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
@@ -186,8 +198,9 @@ delete_urls(svn_commit_info_t **commit_info_p,
 
   /* Fetch RA commit editor */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
-  SVN_ERR(svn_ra_get_commit_editor2(ra_session, &editor, &edit_baton,
-                                    log_msg, svn_client__commit_callback,
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    revprop_table,
+                                    svn_client__commit_callback,
                                     commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));

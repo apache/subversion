@@ -30,6 +30,14 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/**
+ *
+ *
+ * @defgroup base64 Base64 encoding/decoding functions
+ *
+ * @{
+ */
+
 /** Return a writable generic stream which will encode binary data in
  * base64 format and write the encoded data to @c output.  Be sure to
  * close the stream when done writing in order to squeeze out the last

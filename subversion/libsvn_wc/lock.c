@@ -269,9 +269,9 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
              We just silently ignore errors, because keeping these files is
              not catastrophic. */
 
-          svn_error_clear(svn_io_remove_dir
+          svn_error_clear(svn_io_remove_dir2
             (svn_wc__adm_path(access_path, FALSE, pool, SVN_WC__ADM_WCPROPS,
-                              NULL), pool));
+                              NULL), FALSE, pool));
           svn_error_clear(svn_io_remove_file
             (svn_wc__adm_path(access_path, FALSE, pool,
                               SVN_WC__ADM_DIR_WCPROPS, NULL), pool));
@@ -1131,7 +1131,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
   const char *base_name = svn_path_basename(path, pool);
 
   if (svn_path_is_empty(path)
-      || svn_path_is_root(path, strlen(path)) 
+      || svn_dirent_is_root(path, strlen(path)) 
       || ! strcmp(base_name, ".."))
     {
       SVN_ERR(do_open(anchor_access, NULL, path, write_lock, depth, FALSE,

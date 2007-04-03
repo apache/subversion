@@ -38,6 +38,7 @@ BEGIN {
 
 use strict;
 use Carp;
+use POSIX qw(strftime);
 my ($sendmail, $smtp_server);
 
 ######################################################################
@@ -545,18 +546,14 @@ foreach my $project (@project_settings_list)
       }
 
     my @head;
+    my $formatted_date;
     if (defined $stdout)
       {
-        my ( $h_date, $h_year, $h_time, $h_day, $h_offset, $h_week_day, $h_short_date, $h_month_day, $h_month_name );
-
-        $h_date = $date;
-		  $h_date =~ s/[(),]//g;
-
-		  ( $h_short_date, $h_time, $h_offset, $h_week_day, $h_month_day, $h_month_name, $h_year ) = split(/ /, $h_date);
-
-		  push(@head, "From $mail_from $h_week_day $h_month_name $h_month_day $h_time $h_year\n");
-		  push(@head, "Date: $h_week_day, $h_month_name $h_month_day $h_year $h_time $h_offset\n");
+        $formatted_date = strftime('%a %b %e %X %Y', localtime());
+        push(@head, "From $mail_from $formatted_date\n");
       }
+    $formatted_date = strftime('%a, %e %b %Y %X %z', localtime());
+    push(@head, "Date: $formatted_date\n");
     push(@head, "To: $to\n");
     push(@head, "From: $mail_from\n");
     push(@head, "Subject: $subject\n");

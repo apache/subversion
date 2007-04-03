@@ -1,0 +1,62 @@
+#!/bin/sh
+
+# Copyright 2007 Max Bowsher
+# Licensed under the terms Subversion ships under
+
+# Runs the 'find' program, with arguments munged such that '.svn' or 'CVS'
+# working copy administrative directories and their contents are ignored.
+
+optspaths=
+expropts=
+exproptarg=
+exprmain=
+depth=
+somethingseen=
+phase=optspaths
+print=-print
+for option in "$@"; do
+    if [ "$phase" = "optspaths" ]; then
+        case $option in
+            -H|-L|-P) ;;
+            -*|"("*|")"*|,*|!*) phase=exprmain ;;
+            *) ;;
+        esac
+    fi
+    if [ "$exproptarg" = "yes" ]; then
+        exproptarg=
+        phase=expropts
+    fi
+    if [ "$phase" = "exprmain" ]; then
+        case $option in
+            -depth|-d) depth=yes ;;
+            -delete|-exec|-exec|-execdir|-execdir|-fls|-fprint|-fprint0 \
+            |-fprintf|-ok|-print|-okdir|-print0|-printf|-quit|-ls) print= ;;
+        esac
+        case $option in
+            -depth|-d|-noleaf|-mount|-xdev|-warn|-nowarn \
+            |-ignore_readdir_race|-noignore_readdir_race) phase=expropts ;;
+            -maxdepth|-mindepth|-regextype) phase=expropts; exproptarg=yes ;;
+            -follow|-daystart) ;;
+            *) somethingseen=yes
+        esac
+    fi
+    eval "$phase=\"\$$phase \\\"$option\\\"\""
+    if [ "$phase" = "expropts" ]; then
+        phase=exprmain
+    fi
+done
+
+if [ -z "$somethingseen" ]; then
+    exprmain="$exprmain -print"
+    print=
+fi
+
+if [ "$depth" = "yes" ]; then
+    eval find $optspaths $expropts \
+    -regex \''.*/\.svn'\' -or -regex \''.*/\.svn/.*'\' \
+    -or -regex \''.*/CVS'\' -or -regex \''.*/CVS/.*'\' \
+    -or '\(' $exprmain '\)' $print
+else
+    eval find $optspaths $expropts '\(' -name .svn -or -name CVS '\)' -prune \
+    -or '\(' $exprmain '\)' $print
+fi

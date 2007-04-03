@@ -25,7 +25,7 @@ shopt -s extglob
 #   as they are mandatory in this case.
 # - argument values are suggested to some other options, eg directory names
 #   for --config-dir.
-# - values suggested to some options can be extended with environment variables:
+# - values for some options can be extended with environment variables:
 #     SVN_BASH_FILE_PROPS: other properties on files/directories
 #     SVN_BASH_REV_PROPS: other properties on revisions
 #     SVN_BASH_ENCODINGS: encodings to be suggested
@@ -262,6 +262,10 @@ _svn()
 
 	    [[ $previous = '--encoding' ]] && \
 		values="latin1 utf8 $SVN_BASH_ENCODINGS"
+
+	    [[ $previous = '--extensions' || $previous = '-x' ]] && \
+		values="--unified --ignore-space-change \
+   		        --ignore-all-space --ignore-eol-style"
 
 	    # could look at ~/.subversion/
 	    [[ $previous = '--username' ]] && beep=1
@@ -616,7 +620,7 @@ _svn()
 	COMPREPLY=( $( compgen -W "$cmdOpts" -- $cur ) )
 	return 0
 }
-complete -F _svn -o default svn
+complete -F _svn -f -X '@(*/.svn|.svn)' svn
 
 _svnadmin ()
 {

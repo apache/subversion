@@ -1,8 +1,9 @@
 require "English"
 require "time"
 require "stringio"
-require "svn/error"
+require "tempfile"
 require "svn/util"
+require "svn/error"
 require "svn/ext/core"
 
 class Time
@@ -15,6 +16,7 @@ class Time
     end
 
     def from_svn_format(str)
+      return nil if str.nil?
       from_apr_time(Svn::Core.time_from_cstring(str))
     end
 
@@ -85,9 +87,13 @@ module Svn
         _initialize(parent)
         @parent = parent
       end
-    end
 
-    Stream = SWIG::TYPE_p_svn_stream_t
+      def destroy
+        @parent = nil
+        _destroy
+      end
+      private :_destroy
+    end
 
     class Stream
       if Core.const_defined?(:STREAM_CHUNK_SIZE)
@@ -118,8 +124,8 @@ module Svn
         Core.stream_close(self)
       end
 
-      def copy(other)
-        Core.stream_copy(self, other)
+      def copy(other, &cancel_proc)
+        Core.stream_copy2(self, other, cancel_proc)
       end
       
       private
@@ -137,18 +143,12 @@ module Svn
     end
 
 
-    AuthBaton = SWIG::TYPE_p_svn_auth_baton_t
     class AuthBaton
-      class << self
-        def new(providers=[], *rest)
-          baton = Core.auth_open(providers)
-          baton.funcall("initialize", providers, *rest)
-          baton
-        end
-      end
-
       attr_reader :parameters
-      def initialize(providers, parameters={})
+
+      alias _initialize initialize
+      def initialize(providers=[], parameters={})
+        _initialize(providers)
         @providers = providers
         self.parameters = parameters
       end
@@ -169,7 +169,7 @@ module Svn
         end
       end
     end
-    
+
 
     class AuthProviderObject
       class << self
@@ -263,13 +263,6 @@ module Svn
 
     class DiffFileOptions
       class << self
-        undef new
-        def new(*args)
-          options = Svn::Core.diff_file_options_create(*args)
-          options.funcall("initialize", *args)
-          options
-        end
-
         def parse(*args)
           options = new
           options.parse(*args)
@@ -502,22 +495,52 @@ module Svn
       def prop_diffs(target_props, source_props)
         Core.prop_diffs(target_props, source_props)
       end
+
+      def has_svn_prop?(props)
+        Core.prop_has_svn_prop(props)
+      end
+      alias_method :have_svn_prop?, :has_svn_prop?
+      module_function :have_svn_prop?
+
+      def valid_name?(name)
+        Core.prop_name_is_valid(name)
+      end
+    end
+
+    module Depth
+      module_function
+      def from_string(str)
+        return nil if str.nil?
+        Core.depth_from_word(str)
+      end
+
+      def to_string(depth)
+        Core.depth_to_word(depth)
+      end
+    end
+
+    module MimeType
+      module_function
+      def parse(source)
+        file = Tempfile.new("svn-ruby-mime-type")
+        file.print(source)
+        file.close
+        Core.io_parse_mimetypes_file(file.path)
+      end
+
+      def parse_file(path)
+        Core.io_parse_mimetypes_file(path)
+      end
+
+      def detect(path, type_map={})
+        Core.io_detect_mimetype2(path, type_map)
+      end
     end
 
     class CommitInfo
-      class << self
-        undef new
-        def new
-          info = Core.create_commit_info
-          info.funcall("initialize")
-          info
-        end
-      end
-      
       alias _date date
       def date
-        __date = _date
-        __date && Time.from_svn_format(__date)
+        Time.from_svn_format(_date)
       end
     end
 

@@ -116,6 +116,18 @@ char *svn_path_basename(const char *path, apr_pool_t *pool);
  */
 char *svn_path_dirname(const char *path, apr_pool_t *pool);
 
+/** Split @a path into a root portion and an extension such that
+ * the root + the extension = the original path, and where the
+ * extension contains no period (.) characters.  If not @c NULL, set
+ * @a *path_root to the root portion.  If not @c NULL, set
+ * @a *path_ext to the extension (or "" if there is no extension 
+ * found).  Allocate both @a *path_root and @a *path_ext in @a pool.
+ *
+ * @since New in 1.5.
+ */
+void svn_path_splitext(const char **path_root, const char **path_ext,
+                       const char *path, apr_pool_t *pool);
+
 /** Return the number of components in the canonicalized @a path.
  *
  * @since New in 1.1.
@@ -177,22 +189,14 @@ void svn_path_split(const char *path,
  */
 int svn_path_is_empty(const char *path);
 
-/** Return TRUE if @a path is considered a root path on the platform at 
- * hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/', 
+/** Return TRUE if @a directory is considered a root directory on the platform
+ * at hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/', 
  * '\\\\.\\..', '\\\\server\\share' on Windows.
  *
  * @since New in 1.5.
  */
-svn_boolean_t svn_path_is_root(const char *path, apr_size_t len);
+svn_boolean_t svn_dirent_is_root(const char *dirent, apr_size_t len);
 
-
-/** Return TRUE if @a path is considered absolute on the platform at 
- * hand, amongst which '/foo' on all platforms or 'X:/foo', '\\\\?\\X:/foo',
- * '\\\\server\\share\\foo' on Windows.
- *
- * @since New in 1.5.
- */
-svn_boolean_t svn_path_is_absolute(const char *path, apr_size_t len);
 
 /** Return a new path (or URL) like @a path, but transformed such that
  * some types of path specification redundancies are removed.

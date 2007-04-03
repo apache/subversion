@@ -32,11 +32,8 @@ module Svn
       _hotcopy(src, dest, clean_logs)
     end
 
-    def recover(path,	nonblocking=false)
-      start_callback = Proc.new do
-        yield
-      end
-      recover2(path, nonblocking, start_callback)
+    def recover(path, nonblocking=false, cancel_func=nil, &start_callback)
+      recover3(path, nonblocking, start_callback, cancel_func)
     end
 
     def db_logfiles(path, only_unused=true)
@@ -101,6 +98,25 @@ module Svn
         end
       end
 
+      def report2(rev, fs_base, target, tgt_path, editor, text_deltas=true,
+                  ignore_ancestry=false, depth=nil, authz_read_func=nil)
+        authz_read_func ||= @authz_read_func
+        args = [
+          rev, self, fs_base, target, tgt_path, text_deltas,
+          ignore_ancestry, editor, authz_read_func,
+        ]
+        report_baton = Repos.begin_report2(*args)
+        setup_report_baton(report_baton)
+        if block_given?
+          report_baton.set_path("", rev, false, nil, depth)
+          result = yield(report_baton)
+          report_baton.finish_report unless report_baton.aborted?
+          result
+        else
+          report_baton
+        end
+      end
+
       def commit_editor(repos_url, base_path, txn=nil, user=nil,
                         log_msg=nil, commit_callback=nil,
                         authz_callback=nil)
@@ -123,9 +139,21 @@ module Svn
         editor
       end
 
-      def youngest_rev
+      def commit_editor3(repos_url, base_path, txn=nil, rev_props=nil,
+                         commit_callback=nil, authz_callback=nil)
+        rev_props ||= {}
+        editor, baton = Repos.get_commit_editor5(self, txn, repos_url,
+                                                 base_path, rev_props,
+                                                 commit_callback,
+                                                 authz_callback)
+        editor.baton = baton
+        editor
+      end
+
+      def youngest_revision
         fs.youngest_rev
       end
+      alias_method :youngest_rev, :youngest_revision
 
       def dated_revision(date)
         Repos.dated_revision(self, date.to_apr_time)
@@ -167,11 +195,18 @@ module Svn
         Repos.fs_commit_txn(self, txn)
       end
 
-      def transaction_for_commit(author, log, rev=nil)
-        txn = nil
-        args = [self, rev || youngest_rev, author, log]
-        txn = Repos.fs_begin_txn_for_commit(*args)
-        
+      def transaction_for_commit(*args)
+        if args.first.is_a?(Hash)
+          props, rev = args
+        else
+          author, log, rev = args
+          props = {
+            Svn::Core::PROP_REVISION_AUTHOR => author,
+            Svn::Core::PROP_REVISION_LOG => log,
+          }
+        end
+        txn = Repos.fs_begin_txn_for_commit2(self, rev || youngest_rev, props)
+
         if block_given?
           yield(txn)
           commit(txn) if fs.transactions.include?(txn.name)
@@ -181,10 +216,8 @@ module Svn
       end
 
       def transaction_for_update(author, rev=nil)
-        txn = nil
-        args = [self, rev || youngest_rev, author]
-        txn = Repos.fs_begin_txn_for_update(*args)
-        
+        txn = Repos.fs_begin_txn_for_update(self, rev || youngest_rev, author)
+
         if block_given?
           yield(txn)
           txn.abort if fs.transactions.include?(txn.name)
@@ -219,23 +252,36 @@ module Svn
         Repos.fs_get_locks(self, path, authz_read_func)
       end
 
-      def set_prop(author, name, new_value, rev=nil, authz_read_func=nil)
+      def set_prop(author, name, new_value, rev=nil, authz_read_func=nil,
+                   use_pre_revprop_change_hook=true,
+                   use_post_revprop_change_hook=true)
         authz_read_func ||= @authz_read_func
         rev ||= youngest_rev
-        Repos.fs_change_rev_prop2(self, rev, author, name,
-                                  new_value, authz_read_func)
+        Repos.fs_change_rev_prop3(self, rev, author, name, new_value,
+                                  use_pre_revprop_change_hook,
+                                  use_post_revprop_change_hook,
+                                  authz_read_func)
       end
 
       def prop(name, rev=nil, authz_read_func=nil)
         authz_read_func ||= @authz_read_func
         rev ||= youngest_rev
-        Repos.fs_revision_prop(self, rev, name, authz_read_func)
+        value = Repos.fs_revision_prop(self, rev, name, authz_read_func)
+        if name == Svn::Core::PROP_REVISION_DATE
+          value = Time.from_svn_format(value)
+        end
+        value
       end
 
       def proplist(rev=nil, authz_read_func=nil)
         authz_read_func ||= @authz_read_func
         rev ||= youngest_rev
-        Repos.fs_revision_proplist(self, rev, authz_read_func)
+        props = Repos.fs_revision_proplist(self, rev, authz_read_func)
+        if props.has_key?(Svn::Core::PROP_REVISION_DATE)
+          props[Svn::Core::PROP_REVISION_DATE] =
+            Time.from_svn_format(props[Svn::Core::PROP_REVISION_DATE])
+        end
+        props
       end
 
       def node_editor(base_root, root)
@@ -298,7 +344,20 @@ module Svn
         root.replay(editor)
         editor.baton.node
       end
-      
+
+      def merge_info(paths, revision=nil, include_parents=true, &authz_read_func)
+        path = nil
+        unless paths.is_a?(Array)
+          path = paths
+          paths = [path]
+        end
+        revision ||= Svn::Core::INVALID_REVNUM
+        results = Repos.fs_get_merge_info(self, paths, revision,
+                                          include_parents, authz_read_func)
+        results = results[path] if path
+        results
+      end
+
       private
       def setup_report_baton(baton)
         baton.instance_variable_set("@aborted", false)
@@ -307,13 +366,16 @@ module Svn
           @aborted
         end
         
-        def baton.set_path(path, revision, start_empty=false, lock_token=nil)
-          Repos.set_path2(self, path, revision, start_empty, lock_token)
+        def baton.set_path(path, revision, start_empty=false, lock_token=nil,
+                           depth=nil)
+          depth ||= Svn::Core::DEPTH_INFINITY
+          Repos.set_path3(self, path, revision, depth, start_empty, lock_token)
         end
         
-        def baton.link_path(path, link_path, revision,
-                            start_empty=false, lock_token=nil)
-          Repos.link_path2(self, path, link_path, revision,
+        def baton.link_path(path, link_path, revision, start_empty=false,
+                            lock_token=nil, depth=nil)
+          depth ||= Svn::Core::DEPTH_INFINITY
+          Repos.link_path3(self, path, link_path, revision, depth,
                            start_empty, lock_token)
         end
         

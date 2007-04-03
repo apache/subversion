@@ -57,6 +57,7 @@
 #include "bdb/lock-tokens-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
+#include "private/svn_fs_merge_info.h"
 
 
 /* Checking for return values, and reporting errors.  */
@@ -644,6 +645,7 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
     (svn_path_join(fs->path, FORMAT_FILE, pool), format, pool);
   if (svn_err) goto error;
 
+  SVN_ERR(svn_fs_merge_info__create_index(path, pool));
   return SVN_NO_ERROR;
 
 error:
@@ -748,10 +750,22 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
 }
 
 static svn_error_t *
-base_bdb_recover(const char *path,
+base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+{
+  /* Just stash the path in the fs pointer - it's all we really need. */
+  fs->path = apr_pstrdup(fs->pool, path);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+base_bdb_recover(svn_fs_t *fs,
+                 svn_cancel_func_t cancel_func, void *cancel_baton,
                  apr_pool_t *pool)
 {
-  return bdb_recover(path, FALSE, pool);
+  /* The fs pointer is a fake created in base_open_for_recovery above.
+     We only care about the path. */
+  return bdb_recover(fs->path, FALSE, pool);
 }
 
 
@@ -1027,6 +1041,10 @@ base_hotcopy(const char *src_path,
   /* Copy the DB_CONFIG file. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, "DB_CONFIG", pool));
 
+  /* Copy the merge tracking info. */
+  SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, SVN_FS_MERGE_INFO__DB_NAME,
+                               pool));
+
   /* In order to copy the database files safely and atomically, we
      must copy them in chunks which are multiples of the page-size
      used by BDB.  See sleepycat docs for details, or svn issue #1818. */
@@ -1143,7 +1161,7 @@ base_delete_fs(const char *path,
   SVN_ERR(svn_fs_bdb__remove(path, pool));
 
   /* Remove the environment directory. */
-  SVN_ERR(svn_io_remove_dir(path, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1229,6 +1247,7 @@ static fs_library_vtable_t library_vtable = {
   base_version,
   base_create,
   base_open,
+  base_open_for_recovery,
   base_delete_fs,
   base_hotcopy,
   base_get_description,

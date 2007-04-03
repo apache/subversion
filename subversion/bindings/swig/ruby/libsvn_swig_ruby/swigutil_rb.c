@@ -13,6 +13,14 @@
 #  endif
 #endif
 
+#ifndef RSTRING_LEN
+#  define RSTRING_LEN(str) (RSTRING(str)->len)
+#endif
+
+#ifndef RSTRING_PTR
+#  define RSTRING_PTR(str) (RSTRING(str)->ptr)
+#endif
+
 #include <locale.h>
 
 #include "svn_nls.h"
@@ -38,6 +46,7 @@
 
 static VALUE mSvn = Qnil;
 static VALUE mSvnClient = Qnil;
+static VALUE mSvnUtil = Qnil;
 static VALUE cSvnClientContext = Qnil;
 static VALUE mSvnCore = Qnil;
 static VALUE cSvnCorePool = Qnil;
@@ -107,6 +116,10 @@ DEFINE_ID(dir_props_changed, "dir_props_changed")
 DEFINE_ID(handler, "handler")
 DEFINE_ID(handler_baton, "handler_baton")
 DEFINE_ID(__batons__, "__batons__")
+DEFINE_ID(destroy, "destroy")
+DEFINE_ID(filename_to_temp_file, "filename_to_temp_file")
+DEFINE_ID(inspect, "inspect")
+DEFINE_ID(handle_error, "handle_error")
 
 typedef void *(*r2c_func)(VALUE value, void *ctx, apr_pool_t *pool);
 typedef VALUE (*c2r_func)(void *value, void *ctx);
@@ -119,6 +132,7 @@ typedef struct hash_to_apr_hash_data_t
 } hash_to_apr_hash_data_t;
 
 static void r2c_swig_type2(VALUE value, const char *type_name, void **result);
+static const char *r2c_inspect(VALUE object);
 
 
 
@@ -130,6 +144,15 @@ rb_svn(void)
     mSvn = rb_const_get(rb_cObject, rb_intern("Svn"));
   }
   return mSvn;
+}
+
+static VALUE
+rb_svn_util(void)
+{
+  if (NIL_P(mSvnUtil)) {
+    mSvnUtil = rb_const_get(rb_svn(), rb_intern("Util"));
+  }
+  return mSvnUtil;
 }
 
 static VALUE
@@ -460,10 +483,6 @@ void
 svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
                      VALUE *rb_pool, apr_pool_t **pool)
 {
-  VALUE target;
-  apr_pool_wrapper_t *pool_wrapper;
-  apr_pool_wrapper_t **pool_wrapper_p;
-  
   *rb_pool = Qnil;
   
   if (argc > 0) {
@@ -473,9 +492,7 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
     }
   }
 
-  target = find_swig_type_object(argc, argv);
-  
-  if (!NIL_P(self)) {
+  if (NIL_P(*rb_pool) && !NIL_P(self)) {
     *rb_pool = rb_get_pool(self);
     if (POOL_P(*rb_pool)) {
       *rb_pool = rb_pool_new(*rb_pool);
@@ -485,38 +502,73 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
   }
 
   if (NIL_P(*rb_pool)) {
+    VALUE target;
+    target = find_swig_type_object(argc, argv);
     *rb_pool = rb_pool_new(rb_get_pool(target));
   }
 
-  pool_wrapper_p = &pool_wrapper;
-  r2c_swig_type2(*rb_pool, "apr_pool_wrapper_t *", (void **)pool_wrapper_p);
-  *pool = pool_wrapper->pool;
+  if (pool) {
+    apr_pool_wrapper_t *pool_wrapper;
+    apr_pool_wrapper_t **pool_wrapper_p;
+
+    pool_wrapper_p = &pool_wrapper;
+    r2c_swig_type2(*rb_pool, "apr_pool_wrapper_t *", (void **)pool_wrapper_p);
+    *pool = pool_wrapper->pool;
+  }
 }
 
-static VALUE
+static svn_boolean_t
 rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
 {
   VALUE targets[1] = {target};
-  
+
   if (!NIL_P(find_swig_type_object(1, targets))) {
     rb_set_pool(target, pool);
+    return TRUE;
+  } else {
+    return FALSE;
   }
-
-  return Qnil;
 }
 
-void
+struct rb_set_pool_for_hash_arg {
+  svn_boolean_t set;
+  VALUE pool;
+};
+
+static int
+rb_set_pool_for_hash_callback(VALUE key, VALUE value,
+                              struct rb_set_pool_for_hash_arg *arg)
+{
+  if (rb_set_pool_if_swig_type_object(value, arg->pool))
+    arg->set = TRUE;
+  return ST_CONTINUE;
+}
+
+svn_boolean_t
 svn_swig_rb_set_pool(VALUE target, VALUE pool)
 {
   if (NIL_P(target)) {
-    return;
-  }
-    
-  if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
-    target = rb_ary_new3(1, target);
+    return FALSE;
   }
 
-  rb_iterate(rb_each, target, rb_set_pool_if_swig_type_object, pool);
+  if (RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
+    long i;
+    svn_boolean_t set = FALSE;
+
+    for (i = 0; i < RARRAY(target)->len; i++) {
+      if (rb_set_pool_if_swig_type_object(RARRAY(target)->ptr[i], pool))
+        set = TRUE;
+    }
+    return set;
+  } else if (RTEST(rb_obj_is_kind_of(target, rb_cHash))) {
+    struct rb_set_pool_for_hash_arg arg;
+    arg.set = FALSE;
+    arg.pool = pool;
+    rb_hash_foreach(target, rb_set_pool_for_hash_callback, (VALUE)&arg);
+    return arg.set;
+  } else {
+    return rb_set_pool_if_swig_type_object(target, pool);
+  }
 }
 
 void
@@ -525,7 +577,7 @@ svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool)
   if (NIL_P(target)) {
     return;
   }
-    
+
   if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
     target = rb_ary_new3(1, target);
   }
@@ -547,6 +599,20 @@ svn_swig_rb_pop_pool(VALUE pool)
   if (!NIL_P(pool)) {
     rb_holder_pop(rb_svn_pool_holder(), pool);
   }
+}
+
+void
+svn_swig_rb_destroy_pool(VALUE pool)
+{
+  if (!NIL_P(pool)) {
+    rb_funcall(pool, rb_id_destroy(), 0);
+  }
+}
+
+void
+svn_swig_rb_destroy_internal_pool(VALUE object)
+{
+  svn_swig_rb_destroy_pool(rb_get_pool(object));
 }
 
 
@@ -641,6 +707,21 @@ svn_swig_rb_from_swig_type(void *value, void *ctx)
 }
 #define c2r_swig_type svn_swig_rb_from_swig_type
 
+svn_depth_t
+svn_swig_rb_to_depth(VALUE value)
+{
+  if (RTEST(rb_obj_is_kind_of(value, rb_cString))) {
+    return svn_depth_from_word(StringValueCStr(value));
+  } else if (RTEST(rb_obj_is_kind_of(value, rb_cInteger))) {
+    return NUM2INT(value);
+  } else {
+    rb_raise(rb_eArgError,
+             "'%s' must be DEPTH_STRING (e.g. \"infinity\") " \
+             "or Svn::Core::DEPTH_*",
+             r2c_inspect(value));
+  }
+}
+
 static VALUE
 c2r_string(void *value, void *ctx)
 {
@@ -689,6 +770,47 @@ c2r_svn_string(void *value, void *ctx)
   const svn_string_t *s = (svn_string_t *)value;
 
   return c2r_string2(s->data);
+}
+
+typedef struct {
+  apr_array_header_t *array;
+  apr_pool_t *pool;
+} prop_hash_each_arg_t;
+
+static int
+svn_swig_rb_to_apr_array_prop_callback(VALUE key, VALUE value,
+                                       prop_hash_each_arg_t *arg)
+{
+  svn_prop_t *prop;
+
+  prop = apr_palloc(arg->pool, sizeof(svn_prop_t));
+  prop->name = apr_pstrdup(arg->pool, StringValueCStr(key));
+  prop->value = svn_string_ncreate(RSTRING_PTR(value), RSTRING_LEN(value),
+                                   arg->pool);
+  APR_ARRAY_PUSH(arg->array, svn_prop_t *) = prop;
+  return ST_CONTINUE;
+}
+
+apr_array_header_t *
+svn_swig_rb_to_apr_array_prop(VALUE array_or_hash, apr_pool_t *pool)
+{
+  if (RTEST(rb_obj_is_kind_of(array_or_hash, rb_cArray))) {
+    return svn_swig_rb_array_to_apr_array_prop(array_or_hash, pool);
+  } else if (RTEST(rb_obj_is_kind_of(array_or_hash, rb_cHash))) {
+    apr_array_header_t *result;
+    prop_hash_each_arg_t arg;
+
+    result = apr_array_make(pool, 0, sizeof(svn_prop_t));
+    arg.array = result;
+    arg.pool = pool;
+    rb_hash_foreach(array_or_hash, svn_swig_rb_to_apr_array_prop_callback,
+                    (VALUE)&arg);
+    return result;
+  } else {
+    rb_raise(rb_eArgError,
+             "'%s' must be [Svn::Core::Prop, ...] or {'name' => 'value', ...}",
+             r2c_inspect(array_or_hash));
+  }
 }
 
 
@@ -751,12 +873,20 @@ DEFINE_DUP2(dirent)
 DEFINE_DUP_NO_CONVENIENCE2(prop)
 DEFINE_DUP_NO_CONVENIENCE2(client_commit_item3)
 DEFINE_DUP_NO_CONVENIENCE2(client_proplist_item)
-DEFINE_DUP_NO_CONVENIENCE2(wc_external_item)
+DEFINE_DUP_NO_CONVENIENCE2(wc_external_item2)
 DEFINE_DUP_NO_CONVENIENCE2(log_changed_path)
 DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
 
 
 /* Ruby -> C */
+static const char *
+r2c_inspect(VALUE object)
+{
+  VALUE inspected;
+  inspected = rb_funcall(object, rb_id_inspect(), 0);
+  return StringValueCStr(inspected);
+}
+
 static void *
 r2c_string(VALUE value, void *ctx, apr_pool_t *pool)
 {
@@ -845,9 +975,9 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_rev,
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_proplist_item,
                           c2r_client_proplist_item_dup, EMPTY_CPP_ARGUMENT,
                           svn_client_proplist_item_t *, NULL)
-DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_external_item,
-                          c2r_wc_external_item_dup, EMPTY_CPP_ARGUMENT,
-                          svn_wc_external_item_t *, NULL)
+DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_external_item2,
+                          c2r_wc_external_item2_dup, EMPTY_CPP_ARGUMENT,
+                          svn_wc_external_item2_t *, NULL)
 
 
 /* Ruby Array -> apr_array_t */
@@ -883,6 +1013,9 @@ DEFINE_ARRAY_TO_APR_ARRAY(svn_prop_t *,
 DEFINE_ARRAY_TO_APR_ARRAY(svn_revnum_t,
                           svn_swig_rb_array_to_apr_array_revnum,
                           r2c_long, NULL)
+DEFINE_ARRAY_TO_APR_ARRAY(svn_merge_range_t *,
+                          svn_swig_rb_array_to_apr_array_merge_range,
+                          r2c_swig_type, (void *)"svn_merge_range_t *")
 
 
 /* apr_hash_t -> Ruby Hash */
@@ -1107,8 +1240,12 @@ static VALUE
 invoke_callback(VALUE baton, VALUE pool)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
-  cbb->pool = pool;
-  return rb_ensure(callback, baton, callback_ensure, pool);
+  VALUE sub_pool;
+  VALUE argv[] = {pool};
+
+  svn_swig_rb_get_pool(1, argv, Qnil, &sub_pool, NULL);
+  cbb->pool = sub_pool;
+  return rb_ensure(callback, baton, callback_ensure, sub_pool);
 }
 
 static VALUE
@@ -1698,10 +1835,17 @@ svn_swig_rb_get_commit_log_func(const char **log_msg,
     result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
 
     if (!err) {
+      char error_message[] =
+        "log_msg_func should return an array not '%s': "                \
+        "[TRUE_IF_IT_IS_MESSAGE, MESSAGE_OR_FILE_AS_STRING]";
+
+      if (!RTEST(rb_obj_is_kind_of(result, rb_cArray)))
+        rb_raise(rb_eTypeError, error_message, r2c_inspect(result));
       is_message = rb_ary_entry(result, 0);
       value = rb_ary_entry(result, 1);
 
-      Check_Type(value, T_STRING);
+      if (!RTEST(rb_obj_is_kind_of(value, rb_cString)))
+        rb_raise(rb_eTypeError, error_message, r2c_inspect(result));
       ret = (char *)r2c_string(value, NULL, pool);
       if (RTEST(is_message)) {
         *log_msg = ret;
@@ -2597,6 +2741,13 @@ svn_swig_rb_make_stream(VALUE io)
   return stream;
 }
 
+VALUE
+svn_swig_rb_filename_to_temp_file(const char *file_name)
+{
+  return rb_funcall(rb_svn_util(), rb_id_filename_to_temp_file(),
+                    1, rb_str_new2(file_name));
+}
+
 void
 svn_swig_rb_set_revision(svn_opt_revision_t *rev, VALUE value)
 {
@@ -2725,12 +2876,12 @@ svn_swig_rb_client_blame_receiver_func(void *baton,
 
 
 
-/* svn_wc_entry_callbacks_t */
+/* svn_wc_entry_callbacks2_t */
 static svn_error_t *
-wc_entry_callbacks_found_entry(const char *path,
-                               const svn_wc_entry_t *entry,
-                               void *walk_baton,
-                               apr_pool_t *pool)
+wc_entry_callbacks2_found_entry(const char *path,
+                                const svn_wc_entry_t *entry,
+                                void *walk_baton,
+                                apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE callbacks, rb_pool;
@@ -2751,11 +2902,44 @@ wc_entry_callbacks_found_entry(const char *path,
   return err;
 }
 
-svn_wc_entry_callbacks_t *
-svn_swig_rb_wc_entry_callbacks(void)
+static svn_error_t *
+wc_entry_callbacks2_handle_error(const char *path,
+                                 svn_error_t *err,
+                                 void *walk_baton,
+                                 apr_pool_t *pool)
 {
-  static svn_wc_entry_callbacks_t wc_entry_callbacks = {
-    wc_entry_callbacks_found_entry
+  VALUE callbacks, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)walk_baton, &callbacks, &rb_pool);;
+
+  if (!NIL_P(callbacks)) {
+    callback_baton_t cbb;
+    ID message;
+
+    message = rb_id_handle_error();
+    if (rb_obj_respond_to(callbacks, message, FALSE)) {
+      VALUE rb_err;
+
+      cbb.receiver = callbacks;
+      cbb.message = rb_id_handle_error();
+      rb_err = err ? svn_swig_rb_svn_error_to_rb_error(err) : Qnil;
+      if (err)
+        svn_error_clear(err);
+      err = NULL;
+      cbb.args = rb_ary_new3(2, c2r_string2(path), rb_err);
+      invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+    }
+  }
+
+  return err;
+}
+
+svn_wc_entry_callbacks2_t *
+svn_swig_rb_wc_entry_callbacks2(void)
+{
+  static svn_wc_entry_callbacks2_t wc_entry_callbacks = {
+    wc_entry_callbacks2_found_entry,
+    wc_entry_callbacks2_handle_error,
   };
 
   return &wc_entry_callbacks;

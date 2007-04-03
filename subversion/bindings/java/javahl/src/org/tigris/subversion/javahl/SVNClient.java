@@ -269,8 +269,11 @@ public class SVNClient implements SVNClientInterface
      * @param onServer  Request status information from the server.
      * @return  the subversion status of the file.
      */
-    public native Status singleStatus(String path, boolean onServer)
-            throws ClientException;
+    public Status singleStatus(String path, boolean onServer)
+            throws ClientException
+    {
+        return status(path, false, onServer, true, false, false)[0];
+    }
     /**
      * Sets the user name used for authentification.
      * @param username The user name.
@@ -351,7 +354,32 @@ public class SVNClient implements SVNClientInterface
      * @return array of LogMessages
      * @since 1.2
      */
-    public native LogMessage[] logMessages(String path, Revision revisionStart,
+    public LogMessage[] logMessages(String path, Revision revisionStart,
+                                           Revision revisionEnd,
+                                           boolean stopOnCopy,
+                                           boolean discoverPath,
+                                           long limit) throws ClientException
+    {
+        return logMessages(path, revisionEnd, revisionStart, revisionEnd,
+                stopOnCopy, discoverPath, limit);
+    }
+
+    /**
+     * Retrieve the log messages for an item
+     * @param path          path or url to get the log message for.
+     * @param pegRevision   the revision to interpret path
+     * @param revisionStart first revision to show
+     * @param revisionEnd   last revision to show
+     * @param stopOnCopy    do not continue on copy operations
+     * @param discoverPath  returns the paths of the changed items in the
+     *                      returned objects
+     * @param limit         limit the number of log messages (if 0 or less no
+     *                      limit)
+     * @return array of LogMessages
+     * @since 1.5
+     */
+    public native LogMessage[] logMessages(String path, Revision pegRevision,
+                                           Revision revisionStart,
                                            Revision revisionEnd,
                                            boolean stopOnCopy,
                                            boolean discoverPath,
@@ -451,7 +479,22 @@ public class SVNClient implements SVNClientInterface
      * @param force     delete even when there are local modifications.
      * @exception ClientException
      */
-    public native void remove(String[] path, String message, boolean force)
+    public void remove(String[] path, String message, boolean force)
+            throws ClientException
+    {
+        remove(path, message, force, false);
+    }
+    /**
+     * Sets a file for deletion.
+     * @param path      path or url to be deleted
+     * @param message   if path is a url, this will be the commit message.
+     * @param force     delete even when there are local modifications.
+     * @param keepLocal only remove the paths from the repository.
+     * @exception ClientException
+     * @since 1.5
+     */
+    public native void remove(String[] path, String message, boolean force,
+                              boolean keepLocal)
             throws ClientException;
     /**
      * Reverts a file to a pristine state.
@@ -514,7 +557,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, recurse, false, false);
+        return update(path, revision, recurse, ignoreExternals, false);
     }
 
     /**
@@ -569,6 +612,24 @@ public class SVNClient implements SVNClientInterface
     {
         return commit(path, message, recurse, false);
     }
+
+    /**
+     * Commits changes to the repository.
+     * @param path            files to commit.
+     * @param message         log message.
+     * @param recurse         whether the operation should be done recursively.
+     * @param noUnlock        do remove any locks
+     * @param keepChangelist  keep changelist associations after the commit.
+     * @param changelistName  if non-null, filter paths using changelist
+     * @return Returns a long representing the revision. It returns a
+     *         -1 if the revision number is invalid.
+     * @exception ClientException
+     * @since 1.5
+     */
+    public native long commit(String[] path, String message, boolean recurse,
+                              boolean noUnlock, boolean keepChangelist,
+                              String changelistName)
+            throws ClientException;
 
     /**
      * Copy versioned paths with the history preserved.
@@ -1247,8 +1308,24 @@ public class SVNClient implements SVNClientInterface
      * @return  the content together with author and revision of last change
      * @throws ClientException
      */
-    public native byte[] blame(String path, Revision revisionStart,
-                               Revision revisionEnd) throws ClientException;
+    public byte[] blame(String path, Revision revisionStart,
+                        Revision revisionEnd) throws ClientException
+    {
+        BlameCallbackImpl callback = new BlameCallbackImpl();
+        blame(path, revisionEnd, revisionStart, revisionEnd, false, callback);
+
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < callback.numberOfLines(); i++)
+        {
+            BlameCallbackImpl.BlameLine line = callback.getBlameLine(i);
+            if (line != null)
+            {
+                sb.append(line.toString());
+                sb.append("\n");
+            }
+        }
+        return sb.toString().getBytes();
+    }
     /**
      * Retrieve the content together with the author, the revision and the date
      * of the last change of each line
@@ -1263,7 +1340,7 @@ public class SVNClient implements SVNClientInterface
                              Revision revisionEnd, BlameCallback callback)
             throws ClientException
     {
-        blame(path, revisionEnd, revisionStart, revisionEnd, callback);
+        blame(path, revisionEnd, revisionStart, revisionEnd, false, callback);
     }
 
     /**
@@ -1278,9 +1355,31 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    public native void blame(String path, Revision pegRevision,
+    public void blame(String path, Revision pegRevision,
                              Revision revisionStart, Revision revisionEnd,
-                             BlameCallback callback) throws ClientException;
+                             BlameCallback callback) throws ClientException
+    {
+        blame(path, pegRevision, revisionStart, revisionEnd, false, callback);
+    }
+
+    /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * @param path          the path
+     * @param pegRevision   the revision to interpret the path
+     * @param revisionStart the first revision to show
+     * @param revisionEnd   the last revision to show
+     * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param callback      callback to receive the file content and the other
+     *                      information
+     * @throws ClientException
+     * @since 1.5
+     */
+
+    public native void blame(String path, Revision pegRevision,
+                               Revision revisionStart,
+                               Revision revisionEnd, boolean ignoreMimeType,
+                               BlameCallback callback) throws ClientException;
 
     /**
      * Set directory for the configuration information
@@ -1308,6 +1407,30 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      */
     public native Info info(String path) throws ClientException;
+
+    /**
+     * Add paths to a changelist
+     * @param paths      paths to add to the changelist
+     * @param changelist changelist name
+     */
+    public native void addToChangelist(String[] paths, String changelist)
+            throws ClientException;
+
+    /**
+     * Remove paths from a changelist
+     * @param paths      paths to remove from the changelist
+     * @param changelist changelist name
+     */
+    public native void removeFromChangelist(String[] paths, String changelist)
+            throws ClientException;
+
+    /**
+     * Recursively get the paths which belong to a changelist
+     * @param changelist  changelist name
+     * @param rootPath    the wc path under which to check
+     */
+    public native String[] getChangelist(String changelist, String rootPath)
+            throws ClientException;
 
     /**
      *  Produce a compact "version number" for a working copy
@@ -1373,8 +1496,11 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    public native long commit(String[] path, String message, boolean recurse,
-                              boolean noUnlock) throws ClientException;
+    public long commit(String[] path, String message, boolean recurse,
+                              boolean noUnlock) throws ClientException
+    {
+        return commit(path, message, recurse, noUnlock, false, null);
+    }
 
     /**
      * Lock a working copy item

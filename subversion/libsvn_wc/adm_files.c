@@ -6,7 +6,7 @@
  *              information is kept.  
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -32,7 +32,6 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_path.h"
-#include "svn_wc.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -40,6 +39,7 @@
 #include "lock.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** File names in the adm area. ***/
@@ -1028,12 +1028,8 @@ check_adm_exists(svn_boolean_t *exists,
 
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, FALSE, 0,
                                NULL, NULL, pool));
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
       SVN_ERR(svn_wc_adm_close(adm_access));
-      if (!entry)
-        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                 _("No entry for '%s'"),
-                                 svn_path_local_style(path, pool));
 
       /* When the directory exists and is scheduled for deletion do not
        * check the revision or the URL.  The revision can be any 
@@ -1110,6 +1106,7 @@ init_adm(const char *path,
          const char *url,
          const char *repos,
          svn_revnum_t initial_rev,
+         svn_depth_t depth,
          apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -1147,7 +1144,8 @@ init_adm(const char *path,
   /* SVN_WC__ADM_ENTRIES */
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
-  SVN_ERR(svn_wc__entries_init(path, uuid, url, repos, initial_rev, pool));
+  SVN_ERR(svn_wc__entries_init(path, uuid, url, repos,
+                               initial_rev, depth, pool));
 
   /* We provide this for backwards compatibilty.  Clients that don't understand
      format version 7 or higher will display a nicer error message if this
@@ -1166,6 +1164,21 @@ init_adm(const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_ensure_adm3(const char *path,
+                   const char *uuid,
+                   const char *url,
+                   const char *repos,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *pool)
+{
+  svn_boolean_t exists_already;
+
+  SVN_ERR(check_adm_exists(&exists_already, path, url, revision, pool));
+  return (exists_already ? SVN_NO_ERROR :
+          init_adm(path, uuid, url, repos, revision, depth, pool));
+}
 
 svn_error_t *
 svn_wc_ensure_adm2(const char *path,
@@ -1175,12 +1188,10 @@ svn_wc_ensure_adm2(const char *path,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
-  svn_boolean_t exists_already;
-
-  SVN_ERR(check_adm_exists(&exists_already, path, url, revision, pool));
-  return (exists_already ? SVN_NO_ERROR :
-          init_adm(path, uuid, url, repos, revision, pool));
+  return svn_wc_ensure_adm3(path, uuid, url, repos, revision,
+                            svn_depth_infinity, pool);
 }
+
 
 svn_error_t *
 svn_wc_ensure_adm(const char *path,
@@ -1204,7 +1215,7 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
      directory, which also removes the lock file */
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                               NULL, FALSE, pool, NULL);
-  SVN_ERR(svn_io_remove_dir(path, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
   SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
@@ -1222,8 +1233,8 @@ svn_wc__adm_cleanup_tmp_area(svn_wc_adm_access_t *adm_access,
   /* Get the path to the tmp area, and blow it away. */
   tmp_path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                                   NULL, 0, pool, SVN_WC__ADM_TMP, NULL);
-  SVN_ERR(svn_io_remove_dir(tmp_path, pool));
 
+  SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, pool));
   /* Now, rebuild the tmp area. */
   SVN_ERR(init_adm_tmp_area(adm_access, pool));
 

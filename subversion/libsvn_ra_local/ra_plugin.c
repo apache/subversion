@@ -24,6 +24,7 @@
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -61,13 +62,14 @@ static svn_error_t *
 reporter_set_path(void *reporter_baton,
                   const char *path,
                   svn_revnum_t revision,
+                  svn_depth_t depth,
                   svn_boolean_t start_empty,
                   const char *lock_token,
                   apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_set_path2(rbaton->report_baton, path,
-                             revision, start_empty, lock_token, pool);
+  return svn_repos_set_path3(rbaton->report_baton, path,
+                             revision, depth, start_empty, lock_token, pool);
 }
 
 
@@ -86,6 +88,7 @@ reporter_link_path(void *reporter_baton,
                    const char *path,
                    const char *url,
                    svn_revnum_t revision,
+                   svn_depth_t depth,
                    svn_boolean_t start_empty,
                    const char *lock_token,
                    apr_pool_t *pool)
@@ -105,8 +108,8 @@ reporter_link_path(void *reporter_baton,
                                "'%s'"), url, rbaton->session->repos_url);
   fs_path = url + repos_url_len;
 
-  return svn_repos_link_path2(rbaton->report_baton, path, fs_path, revision,
-                              start_empty, lock_token, pool);
+  return svn_repos_link_path3(rbaton->report_baton, path, fs_path, revision,
+                              depth, start_empty, lock_token, pool);
 }
 
 
@@ -128,7 +131,7 @@ reporter_abort_report(void *reporter_baton,
 }
 
 
-static const svn_ra_reporter2_t ra_local_reporter = 
+static const svn_ra_reporter3_t ra_local_reporter = 
 {
   reporter_set_path,
   reporter_delete_path,
@@ -489,7 +492,7 @@ static svn_error_t *
 svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                                 const svn_delta_editor_t **editor,
                                 void **edit_baton,
-                                const char *log_msg,
+                                apr_hash_t *revprop_table,
                                 svn_commit_callback2_t callback,
                                 void *callback_baton,
                                 apr_hash_t *lock_tokens,
@@ -536,13 +539,17 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
         }
     }
               
+  /* Copy the revprops table so we can add the username. */
+  revprop_table = apr_hash_copy(pool, revprop_table);
+  apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
+               svn_string_create(sess_baton->username, pool));
+
   /* Get the repos commit-editor */     
-  SVN_ERR(svn_repos_get_commit_editor4
+  SVN_ERR(svn_repos_get_commit_editor5
           (editor, edit_baton, sess_baton->repos, NULL,
            svn_path_uri_decode(sess_baton->repos_url, pool),
            sess_baton->fs_path->data,
-           sess_baton->username, log_msg,
-           deltify_etc, db, NULL, NULL, pool));
+           revprop_table, deltify_etc, db, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -550,13 +557,13 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
 
 static svn_error_t *
 make_reporter(svn_ra_session_t *session,
-              const svn_ra_reporter2_t **reporter,
+              const svn_ra_reporter3_t **reporter,
               void **report_baton,
               svn_revnum_t revision,
               const char *target,
               const char *other_url,
               svn_boolean_t text_deltas,
-              svn_boolean_t recurse,
+              svn_depth_t depth,
               svn_boolean_t ignore_ancestry,
               const svn_delta_editor_t *editor,
               void *edit_baton,
@@ -607,21 +614,19 @@ make_reporter(svn_ra_session_t *session,
                                               pool));
 
   /* Build a reporter baton. */
-  SVN_ERR(svn_repos_begin_report(&rbaton,
-                                 revision,
-                                 sbaton->username,
-                                 sbaton->repos,
-                                 sbaton->fs_path->data,
-                                 target,
-                                 other_fs_path,
-                                 text_deltas,
-                                 recurse,
-                                 ignore_ancestry,
-                                 editor,
-                                 edit_baton,
-                                 NULL,
-                                 NULL,
-                                 pool));
+  SVN_ERR(svn_repos_begin_report2(&rbaton,
+                                  revision,
+                                  sbaton->repos,
+                                  sbaton->fs_path->data,
+                                  target,
+                                  other_fs_path,
+                                  text_deltas,
+                                  ignore_ancestry,
+                                  editor,
+                                  edit_baton,
+                                  NULL,
+                                  NULL,
+                                  pool));
 
   /* Wrap the report baton given us by the repos layer with our own
      reporter baton. */
@@ -632,12 +637,54 @@ make_reporter(svn_ra_session_t *session,
 
 
 static svn_error_t *
+svn_ra_local__get_merge_info(svn_ra_session_t *session,
+                             apr_hash_t **mergeinfo,
+                             const apr_array_header_t *paths,
+                             svn_revnum_t revision,
+                             svn_boolean_t include_parents,
+                             apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *baton = session->priv;
+  apr_hash_t *tmp_mergeinfo;
+
+  SVN_ERR(svn_repos_fs_get_merge_info(&tmp_mergeinfo, baton->repos, paths,
+                                      revision, include_parents,
+                                      NULL, NULL, pool));
+  if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
+    {
+      const void *key;
+      void *value;
+      apr_hash_index_t *hi;
+
+      *mergeinfo = apr_hash_make(pool);
+
+      for (hi = apr_hash_first(pool, tmp_mergeinfo); hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *path, *info;
+          apr_hash_t *for_path;
+
+          apr_hash_this(hi, &key, NULL, &value);
+          path = key;
+          info = value;
+          SVN_ERR(svn_mergeinfo_parse(info, &for_path, pool));
+          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
+        }
+    }
+  else
+    *mergeinfo = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 svn_ra_local__do_update(svn_ra_session_t *session,
-                        const svn_ra_reporter2_t **reporter,
+                        const svn_ra_reporter3_t **reporter,
                         void **report_baton,
                         svn_revnum_t update_revision,
                         const char *update_target,
-                        svn_boolean_t recurse,
+                        svn_depth_t depth,
                         const svn_delta_editor_t *update_editor,
                         void *update_baton,
                         apr_pool_t *pool)
@@ -649,7 +696,7 @@ svn_ra_local__do_update(svn_ra_session_t *session,
                        update_target,
                        NULL,
                        TRUE,
-                       recurse,
+                       depth,
                        FALSE,
                        update_editor,
                        update_baton,
@@ -659,11 +706,11 @@ svn_ra_local__do_update(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__do_switch(svn_ra_session_t *session,
-                        const svn_ra_reporter2_t **reporter,
+                        const svn_ra_reporter3_t **reporter,
                         void **report_baton,
                         svn_revnum_t update_revision,
                         const char *update_target,
-                        svn_boolean_t recurse,
+                        svn_depth_t depth,
                         const char *switch_url,
                         const svn_delta_editor_t *update_editor,
                         void *update_baton,
@@ -676,7 +723,7 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
                        update_target,
                        switch_url,
                        TRUE,
-                       recurse,
+                       depth,
                        TRUE,
                        update_editor,
                        update_baton,
@@ -686,11 +733,11 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__do_status(svn_ra_session_t *session,
-                        const svn_ra_reporter2_t **reporter,
+                        const svn_ra_reporter3_t **reporter,
                         void **report_baton,
                         const char *status_target,
                         svn_revnum_t revision,
-                        svn_boolean_t recurse,
+                        svn_depth_t depth,
                         const svn_delta_editor_t *status_editor,
                         void *status_baton,
                         apr_pool_t *pool)
@@ -702,7 +749,7 @@ svn_ra_local__do_status(svn_ra_session_t *session,
                        status_target,
                        NULL,
                        FALSE,
-                       recurse,
+                       depth,
                        FALSE,
                        status_editor,
                        status_baton,
@@ -712,11 +759,11 @@ svn_ra_local__do_status(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__do_diff(svn_ra_session_t *session,
-                      const svn_ra_reporter2_t **reporter,
+                      const svn_ra_reporter3_t **reporter,
                       void **report_baton,
                       svn_revnum_t update_revision,
                       const char *update_target,
-                      svn_boolean_t recurse,
+                      svn_depth_t depth,
                       svn_boolean_t ignore_ancestry,
                       svn_boolean_t text_deltas,
                       const char *switch_url,
@@ -731,7 +778,7 @@ svn_ra_local__do_diff(svn_ra_session_t *session,
                        update_target,
                        switch_url,
                        text_deltas,
-                       recurse,
+                       depth,
                        ignore_ancestry,
                        update_editor,
                        update_baton,
@@ -1347,6 +1394,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_commit_editor,
   svn_ra_local__get_file,
   svn_ra_local__get_dir,
+  svn_ra_local__get_merge_info,
   svn_ra_local__do_update,
   svn_ra_local__do_switch,
   svn_ra_local__do_status,

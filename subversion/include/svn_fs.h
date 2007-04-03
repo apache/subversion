@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -224,6 +224,47 @@ svn_error_t *svn_fs_delete_fs(const char *path, apr_pool_t *pool);
 svn_error_t *svn_fs_hotcopy(const char *src_path, const char *dest_path,
                             svn_boolean_t clean, apr_pool_t *pool);
 
+/** Perform any necessary non-catastrophic recovery on the Subversion
+ * filesystem located at @a path.
+ *
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * recovery.  BDB filesystems do not currently support cancellation.
+ *
+ * Do any necessary allocation within @a pool.
+ *
+ * For FSFS filesystems, recovery is currently limited to recreating
+ * the db/current file, and does not require exclusive access.
+ *
+ * For BDB filesystems, recovery requires exclusive access, and is
+ * described in detail below.
+ *
+ * After an unexpected server exit, due to a server crash or a system
+ * crash, a Subversion filesystem based on Berkeley DB needs to run
+ * recovery procedures to bring the database back into a consistent
+ * state and release any locks that were held by the deceased process.
+ * The recovery procedures require exclusive access to the database
+ * --- while they execute, no other process or thread may access the
+ * database.
+ *
+ * In a server with multiple worker processes, like Apache, if a
+ * worker process accessing the filesystem dies, you must stop the
+ * other worker processes, and run recovery.  Then, the other worker
+ * processes can re-open the database and resume work.
+ *
+ * If the server exited cleanly, there is no need to run recovery, but
+ * there is no harm in it, either, and it take very little time.  So
+ * it's a fine idea to run recovery when the server process starts,
+ * before it begins handling any requests.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_fs_recover(const char *path,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool);
+
+
 /** Subversion filesystems based on Berkeley DB.
  *
  * The following functions are specific to Berkeley DB filesystems.
@@ -262,32 +303,6 @@ svn_error_t *svn_fs_set_berkeley_errcall(svn_fs_t *fs,
                                          void (*handler)(const char *errpfx,
                                                          char *msg));
 
-/** Perform any necessary non-catastrophic recovery on a Berkeley
- * DB-based Subversion filesystem, stored in the environment @a path.
- * Do any necessary allocation within @a pool.
- *
- * After an unexpected server exit, due to a server crash or a system
- * crash, a Subversion filesystem based on Berkeley DB needs to run
- * recovery procedures to bring the database back into a consistent
- * state and release any locks that were held by the deceased process.
- * The recovery procedures require exclusive access to the database
- * --- while they execute, no other process or thread may access the
- * database.
- *
- * In a server with multiple worker processes, like Apache, if a
- * worker process accessing the filesystem dies, you must stop the
- * other worker processes, and run recovery.  Then, the other worker
- * processes can re-open the database and resume work.
- *
- * If the server exited cleanly, there is no need to run recovery, but
- * there is no harm in it, either, and it take very little time.  So
- * it's a fine idea to run recovery when the server process starts,
- * before it begins handling any requests.
- */
-svn_error_t *svn_fs_berkeley_recover(const char *path,
-                                     apr_pool_t *pool);
-
-
 /** Set @a *logfiles to an array of <tt>const char *</tt> log file names
  * of Berkeley DB-based Subversion filesystem.
  *
@@ -312,7 +327,8 @@ svn_error_t *svn_fs_berkeley_logfiles(apr_array_header_t **logfiles,
  *
  * In Subversion 1.2 and earlier, they only work on Berkeley DB filesystems.
  * In Subversion 1.3 and later, they perform largely as aliases for their
- * generic counterparts.
+ * generic counterparts (with the exception of recover, which only gained
+ * a generic counterpart in 1.5).
  *
  * @defgroup svn_fs_bdb_deprecated berkeley db filesystem compatibility
  * @{
@@ -337,6 +353,10 @@ svn_error_t *svn_fs_delete_berkeley(const char *path, apr_pool_t *pool);
 svn_error_t *svn_fs_hotcopy_berkeley(const char *src_path, 
                                      const char *dest_path, 
                                      svn_boolean_t clean_logs,
+                                     apr_pool_t *pool);
+
+/** @deprecated Provided for backward compatibility with the 1.4 API. */
+svn_error_t *svn_fs_berkeley_recover(const char *path,
                                      apr_pool_t *pool);
 /** @} */
 
@@ -1151,6 +1171,40 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
                                  const char *path,
                                  apr_pool_t *pool);
 
+/** Change a node's merge info
+ *
+ * - @a root and @a path indicate the node whose property should change.
+ *   @a root must be the root of a transaction, not the root of a
+ *   revision.
+ * - @a mergeinhash is the new value of the mergeinfo for PATH, or NULL if
+ *   the merge info for that path should be removed altogether.
+ *
+ * Do any necessary temporary allocation in @a pool.
+ */
+svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
+                                      const char *path,
+                                      apr_hash_t *mergeinhash,
+                                      apr_pool_t *pool);
+
+/** Retrieve merge info for multiple nodes.
+ *
+ * @a minfohash is filled with merge info for each of the @a paths,
+ * stored as a string.  It will never be @c NULL, but may be empty.
+ *
+ * @a root indicates the revision root to use when looking up paths.
+ *
+ * @a paths indicate the paths you are requesting information for
+ *
+ * When @a include_parents is @c TRUE, include inherited merge info
+ * from parent directories of @a paths.
+ *
+ * Do any necessary temporary allocation in @a pool.
+ */
+svn_error_t *svn_fs_get_merge_info(apr_hash_t **minfohash,
+                                   svn_fs_root_t *root,
+                                   const apr_array_header_t *paths,
+                                   svn_boolean_t include_parents,
+                                   apr_pool_t *pool);
 
 /** Merge changes between two nodes into a third node.
  *

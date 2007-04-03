@@ -85,6 +85,9 @@ load_config(svn_ra_serf__session_t *session,
                               SVN_CONFIG_SECTION_GLOBAL,
                               SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
 
+  svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG, config);
+
   server_group = svn_config_find_group(config,
                                        session->repos_url.hostname,
                                        SVN_CONFIG_SECTION_GROUPS, pool);
@@ -95,6 +98,8 @@ load_config(svn_ra_serf__session_t *session,
                                   server_group,
                                   SVN_CONFIG_OPTION_HTTP_COMPRESSION,
                                   session->using_compression));
+      svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                             SVN_AUTH_PARAM_SERVER_GROUP, server_group);
     }
 
   return SVN_NO_ERROR;
@@ -145,6 +150,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0] = apr_pcalloc(pool, sizeof(*serf_sess->conns[0]));
   serf_sess->conns[0]->bkt_alloc =
           serf_bucket_allocator_create(serf_sess->pool, NULL, NULL);
+  serf_sess->conns[0]->session = serf_sess;
 
   /* fetch the DNS record for this host */
   status = apr_sockaddr_info_get(&serf_sess->conns[0]->address, url.hostname,
@@ -657,16 +663,14 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  const char *root_url;
 
   props = apr_hash_make(pool);
 
-  svn_ra_serf__get_repos_root(ra_session, &root_url, pool);
-
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      root_url, SVN_INVALID_REVNUM, "0",
+                                      session->repos_url.path,
+                                      SVN_INVALID_REVNUM, "0",
                                       uuid_props, pool));
-  *uuid = svn_ra_serf__get_prop(props, root_url,
+  *uuid = svn_ra_serf__get_prop(props, session->repos_url.path,
                                 SVN_DAV_PROP_NS_DAV, "repository-uuid");
 
   if (!*uuid)
@@ -691,6 +695,7 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__get_commit_editor,
   svn_ra_serf__get_file,
   svn_ra_serf__get_dir,
+  svn_ra_serf__get_merge_info,
   svn_ra_serf__do_update,
   svn_ra_serf__do_switch,
   svn_ra_serf__do_status,

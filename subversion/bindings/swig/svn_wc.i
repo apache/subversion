@@ -38,6 +38,14 @@
 /* ### ignore this structure because the accessors will need a pool */
 %ignore svn_wc_keywords_t;
 
+#ifdef SWIGRUBY
+%ignore svn_wc_external_item_create;
+%ignore svn_wc_external_item_dup;
+%ignore svn_wc_external_item2_dup;
+%ignore svn_wc_revision_status;
+%ignore svn_wc_committed_queue_create;
+#endif
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
@@ -85,11 +93,11 @@
 #endif
 
 #ifdef SWIGRUBY
-%callback_typemap(const svn_wc_entry_callbacks_t *walk_callbacks,
+%callback_typemap(const svn_wc_entry_callbacks2_t *walk_callbacks,
                   void *walk_baton,
                   ,
                   ,
-                  svn_swig_rb_wc_entry_callbacks())
+                  svn_swig_rb_wc_entry_callbacks2())
 #endif
 
 #ifndef SWIGRUBY
@@ -118,6 +126,26 @@
                   svn_swig_rb_wc_relocation_validator2)
 #endif
 
+
+/* svn_wc_translated2() */
+#ifdef SWIGRUBY
+%apply const char **TO_TEMP_FILE {
+    const char **xlated_path
+};
+#endif
+
+/* svn_wc_queue_committed() */
+#ifdef SWIGRUBY
+%typemap(in) svn_wc_committed_queue_t **queue (void *tempp=NULL) {
+  SWIG_ConvertPtr($input, &tempp, $*1_descriptor, 0);
+  $1 = ($1_ltype)&tempp;
+};
+
+%typemap(argout) svn_wc_committed_queue_t **queue {
+  %append_output(argv[0]);
+};
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %{
@@ -140,4 +168,61 @@ svn_wc_swig_init_asp_dot_net_hack (apr_pool_t *pool)
 
 #if defined(SWIGPYTHON)
 %pythoncode %{ svn_wc_swig_init_asp_dot_net_hack() %}
+#endif
+
+#ifdef SWIGRUBY
+%extend svn_wc_external_item2_t
+{
+  svn_wc_external_item2_t(apr_pool_t *pool) {
+    svn_error_t *err;
+    const svn_wc_external_item2_t *self;
+    err = svn_wc_external_item_create(&self, pool);
+    if (err)
+      svn_swig_rb_handle_svn_error(err);
+    return (svn_wc_external_item2_t *)self;
+  };
+
+  ~svn_wc_external_item2_t() {
+  };
+
+  svn_wc_external_item2_t *dup(apr_pool_t *pool) {
+    return svn_wc_external_item2_dup(self, pool);
+  };
+}
+
+%extend svn_wc_revision_status_t
+{
+  svn_wc_revision_status_t(const char *wc_path,
+                           const char *trail_url,
+                           svn_boolean_t committed,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *pool) {
+    svn_error_t *err;
+    svn_wc_revision_status_t *self;
+    err = svn_wc_revision_status(&self, wc_path, trail_url, committed,
+                                 cancel_func, cancel_baton, pool);
+    if (err)
+      svn_swig_rb_handle_svn_error(err);
+    return self;
+  };
+
+  ~svn_wc_revision_status_t() {
+  };
+}
+
+/* Dummy declaration */
+struct svn_wc_committed_queue_t
+{
+};
+
+%extend svn_wc_committed_queue_t
+{
+  svn_wc_committed_queue_t(apr_pool_t *pool) {
+    return svn_wc_committed_queue_create(pool);
+  };
+
+  ~svn_wc_committed_queue_t() {
+  };
+}
 #endif

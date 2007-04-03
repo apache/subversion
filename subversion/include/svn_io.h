@@ -732,17 +732,27 @@ svn_stream_contents_same(svn_boolean_t *same,
 
 /** @} */
 
-/** Sets @a *result to a string containing the contents of @a filename, a
- * utf8-encoded path. 
+/** Set @a *result to a string containing the contents of @a
+ * filename, which is either "-" (indicating that stdin should be
+ * read) or the utf8-encoded path of a real file.
  *
- * If @a filename is "-", return the error @c SVN_ERR_UNSUPPORTED_FEATURE
- * and don't touch @a *result.
+ * @warning Callers should be aware of possible unexpected results
+ * when using this function to read from stdin where additional
+ * stdin-reading processes abound.  For example, if a program tries
+ * both to invoke an external editor and to read from stdin, stdin
+ * could be trashed and the editor might act funky or die outright.
  *
- * ### Someday, "-" will fill @a *result from stdin.  The problem right
- * now is that if the same command invokes the editor, stdin is crap,
- * and the editor acts funny or dies outright.  One solution is to
- * disallow stdin reading and invoking the editor, but how to do that
- * reliably?
+ * @since New in 1.5.
+ */
+svn_error_t *svn_stringbuf_from_file2(svn_stringbuf_t **result, 
+                                      const char *filename, 
+                                      apr_pool_t *pool);
+
+/** Similar to svn_stringbuf_from_file2(), except that if @a filename
+ * is "-", return the error @c SVN_ERR_UNSUPPORTED_FEATURE and don't
+ * touch @a *result.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *svn_stringbuf_from_file(svn_stringbuf_t **result, 
                                      const char *filename, 
@@ -761,7 +771,21 @@ svn_error_t *svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
  */
 svn_error_t *svn_io_remove_file(const char *path, apr_pool_t *pool);
 
-/** Recursively remove directory @a path.  @a path is utf8-encoded. */
+/** Recursively remove directory @a path.  @a path is utf8-encoded.
+ * If @a ignore_enoent is @c TRUE, don't fail if the target directory
+ * doesn't exist.  Use @a pool for temporary allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_io_remove_dir2(const char *path,
+                                svn_boolean_t ignore_enoent,
+                                apr_pool_t *pool);
+
+/** Similar to svn_io_remove_dir2(), but with @a ignore_enoent set to
+ * @C FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API
+ */
 svn_error_t *svn_io_remove_dir(const char *path, apr_pool_t *pool);
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
@@ -986,16 +1010,46 @@ svn_error_t *svn_io_run_diff3(const char *dir,
                               apr_pool_t *pool);
 
 
+/** Parse utf8-encoded @a mimetypes_file as a MIME types file (such as
+ * is provided with Apache HTTP Server), and set @a *type_map to a
+ * hash mapping <tt>const char *</tt> filename extensions to 
+ * <tt>const char *</tt> MIME types.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_io_parse_mimetypes_file(apr_hash_t **type_map,
+                                         const char *mimetypes_file,
+                                         apr_pool_t *pool);
+
+
 /** Examine utf8-encoded @a file to determine if it can be described by a
  * known (as in, known by this function) Multipurpose Internet Mail
  * Extension (MIME) type.  If so, set @a *mimetype to a character string
- * describing the MIME type, else set it to @c NULL.  Use @a pool for any
- * necessary allocations.
+ * describing the MIME type, else set it to @c NULL.  
+ *
+ * If not @c NULL, @a mimetype_map is a hash mapping <tt>const char *</tt>
+ * filename extensions to <tt>const char *</tt> MIME types, and is the
+ * first source consulted regarding @a file's MIME type.
+ *
+ * Use @a pool for any necessary allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_io_detect_mimetype2(const char **mimetype,
+                                     const char *file,
+                                     apr_hash_t *mimetype_map,
+                                     apr_pool_t *pool);
+                                      
+
+/** Like svn_io_detect_mimetype2, but with @a mimetypes_map set to 
+ * @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API
  */
 svn_error_t *svn_io_detect_mimetype(const char **mimetype,
                                     const char *file,
                                     apr_pool_t *pool);
-                                      
+
 
 /** Wrapper for apr_file_open(), which see.  @a fname is utf8-encoded. */
 svn_error_t *
@@ -1110,7 +1164,7 @@ svn_io_dir_open(apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool);
 
 /** Wrapper for apr_dir_remove(), which see.  @a dirname is utf8-encoded.
  * @note This function has this name to avoid confusion with
- * svn_io_remove_dir(), which is recursive.
+ * svn_io_remove_dir2(), which is recursive.
  */
 svn_error_t *
 svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool);

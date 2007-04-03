@@ -28,12 +28,13 @@ module Svn
       Wc.locked(path)
     end
 
-    def ensure_adm(path, uuid, url, repos, revision)
-      Wc.ensure_adm2(path, uuid, url, repos, revision)
+    def ensure_adm(*args)
+      AdmAccess.ensure(*args)
     end
 
-    def parse_externals_description(parent_dir, desc)
-      Wc.parse_externals_description2(parent_dir, desc)
+    # For backward compatibility
+    def parse_externals_description(*args)
+      ExternalsDescription.parse(*args)
     end
 
     def actual_target(path)
@@ -64,9 +65,27 @@ module Svn
       Wc.cleanup2(path, diff3_cmd, cancel_func)
     end
 
+    module ExternalsDescription
+      module_function
+      def parse(parent_dir, desc)
+        Wc.parse_externals_description3(parent_dir, desc)
+      end
+    end
+
+    class ExternalItem
+      class << self
+        undef new
+      end
+    end
+
     AdmAccess = SWIG::TYPE_p_svn_wc_adm_access_t
     class AdmAccess
       class << self
+        def ensure(path, uuid, url, repos, revision, depth=nil)
+          depth ||= Svn::Core::DEPTH_INFINITY
+          Wc.ensure_adm3(path, uuid, url, repos, revision, depth)
+        end
+
         def open(associated, path, write_lock,
                  depth, cancel_func=nil, &block)
           _open(:adm_open3, associated, path, write_lock,
@@ -158,7 +177,7 @@ module Svn
       end
 
       def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil)
-        Wc.walk_entries2(path, self, callbacks, show_hidden, cancel_func)
+        Wc.walk_entries3(path, self, callbacks, show_hidden, cancel_func)
       end
 
       def mark_missing_deleted(path)
@@ -195,8 +214,8 @@ module Svn
         Wc.copy2(src, self, dst_basename, cancel_func, notify_func)
       end
 
-      def delete(path, cancel_func=nil, notify_func=nil)
-        Wc.delete2(path, self, cancel_func, notify_func)
+      def delete(path, cancel_func=nil, notify_func=nil, keep_local=false)
+        Wc.delete3(path, self, cancel_func, notify_func, keep_local)
       end
 
       def add(path, copyfrom_url=nil, copyfrom_rev=0,
@@ -326,7 +345,7 @@ module Svn
                       base_merge, dry_run)
       end
 
-      def mrege_prop_diffs(path, propchanges, base_merge=true,
+      def merge_prop_diffs(path, propchanges, base_merge=true,
                            dry_run=false)
         Wc.merge_prop_diffs(path, self, propchanges,
                            base_merge, dry_run)
@@ -343,6 +362,14 @@ module Svn
       end
 
       def translated_file(src, versioned_file, flags)
+        temp = Wc.translated_file2(src, versioned_file, self, flags)
+        temp.close
+        path = temp.path
+        path.instance_variable_set("@__temp__", temp)
+        path
+      end
+
+      def translated_file2(src, versioned_file, flags)
         Wc.translated_file2(src, versioned_file, self, flags)
       end
 
@@ -483,11 +510,23 @@ module Svn
     end
 
     class RevisionStatus
-      class << self
-        undef new
-        def new(wc_path, trail_url, committed, cancel_func=nil)
-          Wc.revision_status(wc_path, trail_url, committed, cancel_func)
-        end
+      alias _initialize initialize
+      def initialize(wc_path, trail_url, committed, cancel_func=nil)
+        _initialize(wc_path, trail_url, committed, cancel_func)
+      end
+    end
+
+    class CommittedQueue
+      def push(access, path, recurse=true, wcprop_changes={}, remove_lock=true,
+               remove_change_list=false, digest=nil)
+        Wc.queue_committed(self, path, access, recurse, wcprop_changes,
+                           remove_lock, remove_change_list, digest)
+        self
+      end
+
+      def process(access, new_rev, rev_date=nil, rev_author=nil)
+        rev_date = rev_date.to_svn_format if rev_date.is_a?(Time)
+        Wc.process_committed_queue(self, access, new_rev, rev_date, rev_author)
       end
     end
   end

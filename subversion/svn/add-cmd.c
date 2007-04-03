@@ -55,6 +55,9 @@ svn_cl__add(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
 
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = svn_depth_infinity;
+
   subpool = svn_pool_create(pool);
   for (i = 0; i < targets->nelts; i++)
     {
@@ -63,7 +66,8 @@ svn_cl__add(apr_getopt_t *os,
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
       SVN_ERR(svn_cl__try 
-              (svn_client_add3(target, (! opt_state->nonrecursive), 
+              (svn_client_add3(target,
+                               SVN_DEPTH_TO_RECURSE(opt_state->depth),
                                opt_state->force, opt_state->no_ignore,
                                ctx, subpool),
                NULL, opt_state->quiet,

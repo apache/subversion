@@ -30,6 +30,7 @@
 #include "svn_repos.h"
 #include "svn_md5.h"
 #include "svn_props.h"
+#include "repos.h"
 #include "svn_private_config.h"
 
 
@@ -42,12 +43,8 @@ struct edit_baton
 
   /** Supplied when the editor is created: **/
 
-  /* The user doing the commit.  Presumably, some higher layer has
-     already authenticated this user. */
-  const char *user;
-
-  /* Commit message for this commit. */
-  const char *log_msg;
+  /* Revision properties to set for this commit. */
+  apr_hash_t *revprop_table;
 
   /* Callback to run when the commit is done. */
   svn_commit_callback2_t commit_callback;
@@ -179,31 +176,16 @@ open_root(void *edit_baton,
      make our own. */
   if (eb->txn_owner)
     {
-      SVN_ERR(svn_repos_fs_begin_txn_for_commit(&(eb->txn),
-                                                eb->repos, 
-                                                youngest,
-                                                eb->user, 
-                                                eb->log_msg,
-                                                eb->pool));
+      SVN_ERR(svn_repos_fs_begin_txn_for_commit2(&(eb->txn),
+                                                 eb->repos, 
+                                                 youngest,
+                                                 eb->revprop_table,
+                                                 eb->pool));
     }
   else /* Even if we aren't the owner of the transaction, we might
           have been instructed to set some properties. */
     {
-      svn_string_t propval;
-      if (eb->user)
-        {
-          propval.data = eb->user;
-          propval.len = strlen(eb->user);
-          SVN_ERR(svn_fs_change_txn_prop(eb->txn, SVN_PROP_REVISION_AUTHOR,
-                                         &propval, pool));
-        }
-      if (eb->log_msg)
-        {
-          propval.data = eb->log_msg;
-          propval.len = strlen(eb->log_msg);
-          SVN_ERR(svn_fs_change_txn_prop(eb->txn, SVN_PROP_REVISION_LOG,
-                                         &propval, pool));
-        }
+      SVN_ERR(svn_repos__change_txn_props(eb->txn, eb->revprop_table, pool));
     }
   SVN_ERR(svn_fs_txn_name(&(eb->txn_name), eb->txn, eb->pool));
   SVN_ERR(svn_fs_txn_root(&(eb->txn_root), eb->txn, eb->pool));
@@ -760,18 +742,44 @@ abort_edit(void *edit_baton,
 }
 
 
+/* Copy REVPROP_TABLE and its data to POOL. */
+static apr_hash_t *
+revprop_table_dup(apr_hash_t *revprop_table,
+                  apr_pool_t *pool)
+{
+  apr_hash_t *new_revprop_table = NULL;
+  const void *key;
+  apr_ssize_t klen;
+  void *value;
+  const char *propname;
+  const svn_string_t *propval;
+  apr_hash_index_t *hi;
+
+  new_revprop_table =  apr_hash_make(pool);
+
+  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, &klen, &value);
+      propname = apr_pstrdup(pool, (const char *) key);          
+      propval = svn_string_dup((const svn_string_t *) value, pool);
+      apr_hash_set(new_revprop_table, propname, klen, propval);          
+    }
+
+  return new_revprop_table;
+}
+
+
 
 /*** Public interfaces. ***/
 
 svn_error_t *
-svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
+svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              svn_repos_t *repos,
                              svn_fs_txn_t *txn,
                              const char *repos_url,
                              const char *base_path,
-                             const char *user,
-                             const char *log_msg,
+                             apr_hash_t *revprop_table,
                              svn_commit_callback2_t callback,
                              void *callback_baton,
                              svn_repos_authz_callback_t authz_callback,
@@ -815,8 +823,7 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
-  eb->user = user ? apr_pstrdup(subpool, user) : NULL;
-  eb->log_msg = apr_pstrdup(subpool, log_msg);
+  eb->revprop_table = revprop_table_dup(revprop_table, subpool);
   eb->commit_callback = callback;
   eb->commit_callback_baton = callback_baton;
   eb->authz_callback = authz_callback;
@@ -835,6 +842,38 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
   
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_repos_t *repos,
+                             svn_fs_txn_t *txn,
+                             const char *repos_url,
+                             const char *base_path,
+                             const char *user,
+                             const char *log_msg,
+                             svn_commit_callback2_t callback,
+                             void *callback_baton,
+                             svn_repos_authz_callback_t authz_callback,
+                             void *authz_baton,
+                             apr_pool_t *pool)
+{
+  apr_hash_t *revprop_table = apr_hash_make(pool);
+  if (user)
+    apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                 APR_HASH_KEY_STRING,
+                 svn_string_create(user, pool));
+  if (log_msg)
+    apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
+                 APR_HASH_KEY_STRING,
+                 svn_string_create(log_msg, pool));
+  return svn_repos_get_commit_editor5(editor, edit_baton, repos, txn,
+                                      repos_url, base_path, revprop_table,
+                                      callback, callback_baton,
+                                      authz_callback, authz_baton, pool);
+}
+
 
 svn_error_t *
 svn_repos_get_commit_editor3(const svn_delta_editor_t **editor,

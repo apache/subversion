@@ -22,11 +22,11 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
-#include "svn_wc.h"
 #include "svn_path.h"
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 
@@ -80,15 +80,9 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
                                      0, NULL, NULL, pool));
-      SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
       SVN_ERR(svn_wc_adm_close(adm_access));
 
-      if (! ent)
-        return svn_error_createf
-        (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-	 _("'%s' is not under version control"),
-         svn_path_local_style(path, pool));
-      
       if ((revision->kind == svn_opt_revision_base)
           || (revision->kind == svn_opt_revision_working))
         *revnum = ent->revision;
@@ -139,33 +133,5 @@ svn_client__revision_is_local(const svn_opt_revision_t *revision)
     return FALSE;
   else
     return TRUE;
-}
-
-
-svn_error_t *
-svn_client__resolve_revisions(svn_opt_revision_t *peg_rev,
-                              svn_opt_revision_t *op_rev,
-                              svn_boolean_t is_url,
-                              svn_boolean_t notice_local_mods)
-{
-  if (peg_rev->kind == svn_opt_revision_unspecified)
-    {
-      if (is_url)
-        {
-          peg_rev->kind = svn_opt_revision_head;
-        }
-      else
-        {
-          if (notice_local_mods)
-            peg_rev->kind = svn_opt_revision_working;
-          else
-            peg_rev->kind = svn_opt_revision_base;
-        }
-    }
-
-  if (op_rev->kind == svn_opt_revision_unspecified)
-    *op_rev = *peg_rev;
-
-  return SVN_NO_ERROR;
 }
 

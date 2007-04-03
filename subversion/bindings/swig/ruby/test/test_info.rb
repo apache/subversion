@@ -176,7 +176,7 @@ class SvnInfoTest < Test::Unit::TestCase
     file4_prop_key = "XXX"
     file4_prop_value = "YYY"
     File.open(file1_path, "w") {|f| f.puts "changed"}
-    File.open(file2_path, "w") {|f| f.puts "removed\nadded"}
+    File.open(file2_path, "wb") {|f| f.puts "removed\nadded"}
     FileUtils.touch(file4_path)
     ctx.add(file4_path)
     ctx.propdel(file1_prop_key, file1_path)

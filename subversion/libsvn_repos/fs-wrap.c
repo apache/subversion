@@ -64,6 +64,59 @@ svn_repos_fs_commit_txn(const char **conflict_p,
 /*** Transaction creation wrappers. ***/
 
 svn_error_t *
+svn_repos__change_txn_props(svn_fs_txn_t *txn,
+                            apr_hash_t *txnprop_table,
+                            apr_pool_t *pool)
+{
+  apr_pool_t *iterpool;
+  apr_hash_index_t *hi;
+  const void *key;
+  void *value;
+  const char *propname;
+  const svn_string_t *propval;
+
+  iterpool = svn_pool_create(pool);
+  for (hi = apr_hash_first(pool, txnprop_table); hi; hi = apr_hash_next(hi))
+    {
+      svn_pool_clear(iterpool);
+      apr_hash_this(hi, &key, NULL, &value);
+      propname = key;
+      propval = value;
+      SVN_ERR(svn_repos_fs_change_txn_prop(txn, propname, propval, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+    
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
+                                   svn_repos_t *repos,
+                                   svn_revnum_t rev,
+                                   apr_hash_t *revprop_table,
+                                   apr_pool_t *pool)
+{
+  svn_string_t *author = apr_hash_get(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                                      APR_HASH_KEY_STRING);
+  /* Run start-commit hooks. */
+  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
+                                        pool));
+
+  /* Begin the transaction, ask for the fs to do on-the-fly lock checks. */
+  SVN_ERR(svn_fs_begin_txn2(txn_p, repos->fs, rev,
+                            SVN_FS_TXN_CHECK_LOCKS, pool));
+
+  /* We pass the revision properties to the filesystem by adding them
+     as properties on the txn.  Later, when we commit the txn, these
+     properties will be copied into the newly created revision. */
+  SVN_ERR(svn_repos__change_txn_props(*txn_p, revprop_table, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_repos_fs_begin_txn_for_commit(svn_fs_txn_t **txn_p,
                                   svn_repos_t *repos,
                                   svn_revnum_t rev,
@@ -71,44 +124,17 @@ svn_repos_fs_begin_txn_for_commit(svn_fs_txn_t **txn_p,
                                   const char *log_msg,
                                   apr_pool_t *pool)
 {
-  /* Run start-commit hooks. */
-  SVN_ERR(svn_repos__hooks_start_commit(repos, author, pool));
-
-  /* Begin the transaction, ask for the fs to do on-the-fly lock checks. */
-  SVN_ERR(svn_fs_begin_txn2(txn_p, repos->fs, rev,
-                            SVN_FS_TXN_CHECK_LOCKS, pool));
-
-  /* We pass the author and log message to the filesystem by adding
-     them as properties on the txn.  Later, when we commit the txn,
-     these properties will be copied into the newly created revision. */
-
-  /* User (author). */
+  apr_hash_t *revprop_table = apr_hash_make(pool);
   if (author)
-    {
-      svn_string_t val;
-      val.data = author;
-      val.len = strlen(author);
-      SVN_ERR(svn_fs_change_txn_prop(*txn_p, SVN_PROP_REVISION_AUTHOR,
-                                     &val, pool));
-    }
-    
-  /* Log message. */
+    apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                 APR_HASH_KEY_STRING,
+                 svn_string_create(author, pool));
   if (log_msg)
-    {
-      /* Heh heh -- this is unexpected fallout from changing most code
-         to use plain strings instead of svn_stringbuf_t and
-         svn_string_t.  The log_msg is passed in as const char * data,
-         but svn_fs_change_txn_prop() is a generic propset function
-         that must accept arbitrary data as values.  So we create an
-         svn_string_t as wrapper here. */
-        svn_string_t l;
-        l.data = log_msg;
-        l.len = strlen(log_msg);
-        SVN_ERR(svn_fs_change_txn_prop(*txn_p, SVN_PROP_REVISION_LOG,
-                                       &l, pool));
-    }
-
-  return SVN_NO_ERROR;
+    apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
+                 APR_HASH_KEY_STRING,
+                 svn_string_create(log_msg, pool));
+  return svn_repos_fs_begin_txn_for_commit2(txn_p, repos, rev, revprop_table,
+                                            pool);
 }
 
 
@@ -593,6 +619,68 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
 }
 
 
+svn_error_t *
+svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
+                            svn_repos_t *repos,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t rev,
+                            svn_boolean_t include_parents,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            apr_pool_t *pool)
+{
+  apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
+  svn_fs_root_t *root;
+  int i;
+
+  if (!SVN_IS_VALID_REVNUM(rev))
+    SVN_ERR(svn_fs_youngest_rev(&rev, repos->fs, pool));
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, rev, pool));
+
+  /* Filter out unreadable paths before divining merge tracking info. */
+  if (authz_read_func)
+    {
+      apr_pool_t *subpool = svn_pool_create(pool);
+
+      for (i = 0; i < paths->nelts; i++)
+        {
+          svn_boolean_t readable;
+          const char *path = APR_ARRAY_IDX(paths, i, char *);
+          svn_pool_clear(subpool);
+          SVN_ERR(authz_read_func(&readable, root, path, authz_read_baton,
+                                  subpool));
+          if (readable && readable_paths != paths)
+            APR_ARRAY_PUSH(readable_paths, const char *) = path;
+          else if (!readable && readable_paths == paths)
+            {
+              /* Requested paths differ from readable paths.  Fork
+                 list of readable paths from requested paths. */
+              int j;
+              readable_paths = apr_array_make(pool, paths->nelts - 1,
+                                              sizeof(char *));
+              for (j = 0; j < i; j++)
+                {
+                  path = APR_ARRAY_IDX(paths, j, char *);
+                  APR_ARRAY_PUSH(readable_paths, const char *) = path;
+                }
+            }
+        }
+
+      apr_pool_destroy(subpool);
+    }
+
+  /* We consciously do not perform authz checks on the paths returned
+     in *MERGEINFO, avoiding massive authz overhead which would allow
+     us to protect the name of where a change was merged from, but not
+     the change itself. */
+  if (readable_paths->nelts > 0)
+    SVN_ERR(svn_fs_get_merge_info(mergeinfo, root, readable_paths,
+                                  include_parents, pool));
+  else
+    *mergeinfo = NULL;
+
+  return SVN_NO_ERROR;
+}
 
 
 

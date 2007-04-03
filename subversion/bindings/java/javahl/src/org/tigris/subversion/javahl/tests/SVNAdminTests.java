@@ -18,11 +18,9 @@
 package org.tigris.subversion.javahl.tests;
 
 import java.io.IOException;
-import junit.framework.TestCase;
 
 import org.tigris.subversion.javahl.Revision;
 import org.tigris.subversion.javahl.SubversionException;
-import org.tigris.subversion.javahl.SVNAdmin;
 
 /**
  * This class is used for testing the SVNAdmin class

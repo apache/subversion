@@ -1,6 +1,21 @@
-unless respond_to?(:funcall)
+if /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+  $LOAD_PATH.each do |load_path|
+    svn_ext_path = File.join(load_path, "svn", "ext")
+    if File.exists?(svn_ext_path)
+      svn_ext_path_win = File.expand_path(svn_ext_path)
+      svn_ext_path_win = svn_ext_path.gsub(File::SEPARATOR, File::ALT_SEPARATOR)
+      unless ENV["PATH"].split(";").find {|path| path == svn_ext_path_win}
+        ENV["PATH"] = "#{svn_ext_path_win};#{ENV['PATH']}"
+      end
+    end
+  end
+end
+
+require 'tempfile'
+
+unless respond_to?(:__send!)
   module Kernel
-    alias funcall __send__
+    alias __send! __send__
   end
 end
 
@@ -69,6 +84,16 @@ module Svn
 EOC
         end
       end
+    end
+
+    def filename_to_temp_file(filename)
+      file = Tempfile.new("svn-ruby")
+      file.binmode
+      file.print(File.read(filename))
+      file.close
+      file.open
+      file.binmode
+      file
     end
   end
 end

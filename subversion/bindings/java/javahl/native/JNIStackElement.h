@@ -59,11 +59,11 @@ private:
     /**
      * the name of the method
      */
-    const char * m_method;
+    const char *m_method;
     /**
      * the name of the clazz
      */
-    const char * m_clazz;
+    const char *m_clazz;
     /**
      * a buffer for the result for jthis.toString to identify the object
      */

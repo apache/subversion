@@ -132,6 +132,12 @@ public interface NotifyAction
     public static final int changelist_clear = 27;
 
     /**
+     * @since 1.5
+     * Changelist operation failed.
+     */
+    public static final int changelist_failed = 28;
+
+    /**
      * textual representation of the action types
      */
     public static final String[] actionNames =

@@ -30,7 +30,7 @@ JNIByteArray::JNIByteArray(jbyteArray jba, bool deleteByteArray)
 {
     m_array = jba;
     m_deleteByteArray = deleteByteArray;
-    if(jba != NULL) 
+    if (jba != NULL) 
     {
         // get the bytes
         JNIEnv *env = JNIUtil::getEnv();
@@ -46,11 +46,11 @@ JNIByteArray::JNIByteArray(jbyteArray jba, bool deleteByteArray)
  */
 JNIByteArray::~JNIByteArray()
 {
-    if(m_array != NULL)
+    if (m_array != NULL)
     {
         // release the bytes
         JNIUtil::getEnv()->ReleaseByteArrayElements(m_array, m_data, JNI_ABORT);
-        if(m_deleteByteArray)
+        if (m_deleteByteArray)
             // and if needed the byte array
             JNIUtil::getEnv()->DeleteLocalRef(m_array);
     }
@@ -61,7 +61,7 @@ JNIByteArray::~JNIByteArray()
  */
 int JNIByteArray::getLength()
 {
-    if(m_data == NULL)
+    if (m_data == NULL)
     {
         return 0;
     }
@@ -74,7 +74,7 @@ int JNIByteArray::getLength()
  * returns the bytes of the byte array
  * @return the bytes
  */
-const signed char * JNIByteArray::getBytes()
+const signed char *JNIByteArray::getBytes()
 {
     return m_data;
 }

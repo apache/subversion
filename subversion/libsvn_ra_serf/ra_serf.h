@@ -32,6 +32,8 @@
 #include "svn_dav.h"
 
 
+typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
+
 /* A serf connection and optionally associated SSL context.  */
 typedef struct {
   /* Our connection to a server. */
@@ -63,6 +65,10 @@ typedef struct {
 
   /* Optional SSL context for this connection. */
   serf_ssl_context_t *ssl_context;
+  svn_auth_iterstate_t *ssl_client_auth_state;
+  svn_auth_iterstate_t *ssl_client_pw_auth_state;
+
+  svn_ra_serf__session_t *session;
 } svn_ra_serf__connection_t;
 
 /*
@@ -70,7 +76,7 @@ typedef struct {
  *
  * This is stored in the ra session ->priv field.
  */
-typedef struct {
+struct svn_ra_serf__session_t {
   /* Pool for allocations during this session */
   apr_pool_t *pool;
 
@@ -118,7 +124,7 @@ typedef struct {
 
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
-} svn_ra_serf__session_t;
+};
 
 /*
  * Structure which represents a DAV element with a NAMESPACE and NAME.
@@ -233,6 +239,17 @@ svn_ra_serf__is_conn_closing(serf_bucket_t *response);
 
 apr_status_t
 svn_ra_serf__cleanup_serf_session(void *data);
+
+/* Helper function to provide SSL client certificates. */
+apr_status_t
+svn_ra_serf__handle_client_cert(void *data,
+                                const char **cert_path);
+
+/* Helper function to provide SSL client certificate passwords. */
+apr_status_t
+svn_ra_serf__handle_client_cert_pw(void *data,
+                                   const char *cert_path,
+                                   const char **password);
 
 /*
  * Create a REQUEST with an associated REQ_BKT in the SESSION.
@@ -897,7 +914,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *session,
 
 svn_error_t *
 svn_ra_serf__do_diff(svn_ra_session_t *session,
-                     const svn_ra_reporter2_t **reporter,
+                     const svn_ra_reporter3_t **reporter,
                      void **report_baton,
                      svn_revnum_t revision,
                      const char *diff_target,
@@ -911,7 +928,7 @@ svn_ra_serf__do_diff(svn_ra_session_t *session,
 
 svn_error_t *
 svn_ra_serf__do_status(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        const char *status_target,
                        svn_revnum_t revision,
@@ -922,7 +939,7 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
 
 svn_error_t *
 svn_ra_serf__do_update(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        svn_revnum_t revision_to_update_to,
                        const char *update_target,
@@ -933,7 +950,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
 
 svn_error_t *
 svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        svn_revnum_t revision_to_switch_to,
                        const char *switch_target,
@@ -962,7 +979,7 @@ svn_error_t *
 svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
                                const svn_delta_editor_t **editor,
                                void **edit_baton,
-                               const char *log_msg,
+                               apr_hash_t *revprop_table,
                                svn_commit_callback2_t callback,
                                void *callback_baton,
                                apr_hash_t *lock_tokens,
@@ -1022,3 +1039,11 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        apr_hash_t **locks,
                        const char *path,
                        apr_pool_t *pool);
+
+svn_error_t * svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
+                                          apr_hash_t **mergeinfo,
+                                          const apr_array_header_t *paths,
+                                          svn_revnum_t revision,
+                                          svn_boolean_t include_parents,
+                                          apr_pool_t *pool);
+

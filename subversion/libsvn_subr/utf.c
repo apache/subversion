@@ -2,7 +2,7 @@
  * utf.c:  UTF-8 conversion routines
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -454,10 +454,10 @@ convert_to_stringbuf(xlate_handle_node_t *node,
                      svn_stringbuf_t **dest,
                      apr_pool_t *pool)
 {
-  apr_size_t buflen = src_length;
+  apr_size_t buflen = src_length * 2;
   apr_status_t apr_err;
   apr_size_t srclen = src_length;
-  apr_size_t destlen = 0;
+  apr_size_t destlen = buflen;
   char *destbuf;
 
   /* Initialize *DEST to an empty stringbuf. */
@@ -471,11 +471,17 @@ convert_to_stringbuf(xlate_handle_node_t *node,
 
   do 
     {
-      /* A 1:2 ratio of input characters to output characters should
-         be enough for most translations, and conveniently enough, if
-         it isn't, we'll grow the buffer size by 2 again. */
-      if (destlen == 0)
-        buflen *= 2;
+      /* A 1:2 ratio of input bytes to output bytes (as assigned above)
+         should be enough for most translations, and if it turns out not
+         to be enough, we'll grow the buffer again, sizing it based on a
+         1:3 ratio of the remainder of the string.
+
+         We also want to ensure that the output buffer always has at
+         least 3 bytes spare so that we always have room to convert at
+         least one character (we assume that no encoding uses more than
+         three bytes for a character) */
+      if (destlen < 3)
+        buflen += (srclen * 3);
 
       /* Ensure that *DEST has sufficient storage for the translated
          result. */
@@ -487,6 +493,7 @@ convert_to_stringbuf(xlate_handle_node_t *node,
 
       /* Set up state variables for xlate. */
       destlen = buflen - (*dest)->len;
+      assert(destlen >= 3);
 
       /* Attempt the conversion. */
       apr_err = apr_xlate_conv_buffer(node->handle,

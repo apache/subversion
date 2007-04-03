@@ -45,7 +45,7 @@ class Outputer
 public:
     Outputer(jobject jthis);
     ~Outputer();
-    svn_stream_t *getStream(const Pool & pool);
+    svn_stream_t *getStream(const Pool &pool);
 
 };
 

@@ -19,6 +19,7 @@
 
 #include "svn_diff.h"
 #include "svn_pools.h"
+#include "svn_utf.h"
 
 #include "../svn_test.h"
 
@@ -235,10 +236,10 @@ two_way_diff(const char *filename1,
     return svn_error_createf(status, NULL, "failed to open '%s'", diff_name);
 
   ostream = svn_stream_from_aprfile(output, pool);
-  SVN_ERR(svn_diff_file_output_unified(ostream, diff,
-                                       filename1, filename2,
-                                       filename1, filename2,
-                                       pool));
+  SVN_ERR(svn_diff_file_output_unified2(ostream, diff,
+                                        filename1, filename2,
+                                        filename1, filename2,
+                                        SVN_APR_LOCALE_CHARSET, pool));
   SVN_ERR(svn_stream_close(ostream));
   status = apr_file_close(output);
   if (status)

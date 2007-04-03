@@ -16,7 +16,7 @@
  * svn_types.swg: This is the main file of the Subversion typemap
  *   library.  Certain categories of typemaps are removed into child
  *   files that are then %included into this one, solely to promote
- *   understandability of the code by grouping related parts.
+ *   code comprehensibility by grouping related parts.
  */
 
 %include apr.swg
@@ -102,6 +102,7 @@
   /* svn_client */
   svn_client_commit_info_t **,
   svn_client_ctx_t **,
+  const svn_client_commit_item3_t **,
   /* svn_delta */
   const svn_delta_editor_t **,
   svn_txdelta_stream_t **,
@@ -144,6 +145,7 @@
   void **node_baton,
   /* svn_wc */
   svn_wc_adm_access_t **,
+  svn_wc_external_item2_t **,
   svn_wc_entry_t **,
   svn_wc_revision_status_t **,
   svn_wc_status_t **,
@@ -157,7 +159,7 @@
   tmp = SWIG_NewPointerObj(*$1, $*1_descriptor, 0);
   if (rb_block_given_p()) {
     rb_yield(tmp);
-    rb_funcall(_global_svn_swig_rb_pool, rb_intern("destroy"), 0);
+    svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
     DATA_PTR(tmp) = NULL;
   } else {
     %append_output(tmp);
@@ -197,17 +199,11 @@
 static VALUE
 svn_ ## TYPE ## _swig_rb_close(VALUE self)
 {
-  VALUE argv[1];
-  VALUE rb_pool;
-  apr_pool_t *pool;
-
   if (!DATA_PTR(self)) {
     svn_swig_rb_raise_svn_ ## TYPE ## _already_close();
   }
 
-  argv[0] = self;
-  svn_swig_rb_get_pool(1, argv, self, &rb_pool, &pool);
-  rb_funcall(rb_pool, rb_intern("destroy"), 0);
+  svn_swig_rb_destroy_internal_pool(self);
   DATA_PTR(self) = NULL;
 
   return Qnil;
@@ -423,6 +419,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(out) svn_error_t *
 {
   if ($1) {
+    svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_handle_svn_error($1);
   }
@@ -560,7 +557,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 %typemap(argout) apr_pool_t *pool
 {
-  svn_swig_rb_set_pool($result, _global_svn_swig_rb_pool);
+  VALUE target;
+  target = _global_vresult_address == &$result ? self : $result;
+  if (!svn_swig_rb_set_pool(target, _global_svn_swig_rb_pool))
+    svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
   svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
 }
 #endif
@@ -1127,6 +1127,17 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 /* -----------------------------------------------------------------------
+   useful convertors for svn_depth_t
+*/
+
+#ifdef SWIGRUBY
+%typemap(in) svn_depth_t {
+  $1 = svn_swig_rb_to_depth($input);
+}
+#endif
+
+
+/* -----------------------------------------------------------------------
    Special boolean mapping for ruby.
 */
 
@@ -1137,6 +1148,17 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(in, numinputs=0) svn_boolean_t * (svn_boolean_t temp) "$1 = &temp;";
 %typemap(argout) svn_boolean_t * {
   %append_output(*$1 ? Qtrue : Qfalse);
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Filename to temporary file mapping for ruby.
+*/
+
+#ifdef SWIGRUBY
+%typemap(argout) const char **TO_TEMP_FILE
+{
+  %append_output(svn_swig_rb_filename_to_temp_file(*$1));
 }
 #endif
 

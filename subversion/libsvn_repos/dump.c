@@ -1157,7 +1157,7 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                                        NULL,
                                        NULL,
                                        FALSE, /* don't send text-deltas */
-                                       TRUE, /* recurse */
+                                       svn_depth_infinity,
                                        FALSE, /* don't send entry props */
                                        FALSE, /* don't ignore ancestry */
                                        subpool));

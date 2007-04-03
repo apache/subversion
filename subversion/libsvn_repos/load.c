@@ -1251,11 +1251,13 @@ close_revision(void *baton)
 
   /* Grrr, svn_fs_commit_txn rewrites the datestamp property to the
      current clock-time.  We don't want that, we want to preserve
-     history exactly.  Good thing revision props aren't versioned! */
-  if (rb->datestamp)
-    SVN_ERR(svn_fs_change_rev_prop(pb->fs, *new_rev,
-                                   SVN_PROP_REVISION_DATE, rb->datestamp,
-                                   rb->pool));
+     history exactly.  Good thing revision props aren't versioned!
+     Note that if rb->datestamp is NULL, that's fine -- if the dump
+     data doesn't carry a datestamp, we want to preserve that fact in
+     the load. */
+  SVN_ERR(svn_fs_change_rev_prop(pb->fs, *new_rev,
+                                 SVN_PROP_REVISION_DATE, rb->datestamp,
+                                 rb->pool));
 
   if (*new_rev == rb->rev)
     {

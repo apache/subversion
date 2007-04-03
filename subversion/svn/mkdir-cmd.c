@@ -59,11 +59,12 @@ svn_cl__mkdir(apr_getopt_t *os,
   if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
     {
       ctx->log_msg_func3 = NULL;
-      if (opt_state->message || opt_state->filedata)
+      if (opt_state->message || opt_state->filedata || opt_state->revprop_table)
         {
           return svn_error_create
             (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE, NULL,
-             _("Local, non-commit operations do not take a log message"));
+             _("Local, non-commit operations do not take a log message "
+               "or revision properties"));
         }
     }
   else
@@ -71,6 +72,8 @@ svn_cl__mkdir(apr_getopt_t *os,
       SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                          NULL, ctx->config, subpool));
     }
+
+  ctx->revprop_table = opt_state->revprop_table;
 
   err = svn_client_mkdir2(&commit_info, targets, ctx, subpool);
 

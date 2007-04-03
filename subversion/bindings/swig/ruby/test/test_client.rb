@@ -240,14 +240,10 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.commit(@wc_path)
 
     File.open(path, "w") {|f| f.print(src * 2)}
-    gc_disable do
-      assert_raises(Svn::Error::ClientModified) do
-        ctx.delete(path)
-      end
-      assert_raises(Svn::Error::WcLocked) do
-        ctx.delete(path, true)
-      end
-      ctx.cleanup(@wc_path)
+    assert_raises(Svn::Error::ClientModified) do
+      ctx.delete(path)
+    end
+    assert_nothing_raised do
       ctx.delete(path, true)
       ctx.commit(@wc_path)
     end
@@ -280,14 +276,10 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.commit(@wc_path)
 
     File.open(path, "w") {|f| f.print(src * 2)}
-    gc_disable do
-      assert_raises(Svn::Error::ClientModified) do
-        ctx.rm(path)
-      end
-      assert_raises(Svn::Error::WcLocked) do
-        ctx.rm_f(path)
-      end
-      ctx.cleanup(@wc_path)
+    assert_raises(Svn::Error::ClientModified) do
+      ctx.rm(path)
+    end
+    assert_nothing_raised do
       ctx.rm_f(path)
       ctx.commit(@wc_path)
     end
@@ -828,7 +820,7 @@ class SvnClientTest < Test::Unit::TestCase
   def test_merge
     log = "sample log"
     file = "sample.txt"
-    src = normalize_line_break("sample\n")
+    src = "sample\n"
     trunk = File.join(@wc_path, "trunk")
     branch = File.join(@wc_path, "branch")
     trunk_path = File.join(trunk, file)
@@ -848,7 +840,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge(branch, rev1, branch, rev2, trunk)
     rev3 = ctx.commit(@wc_path).revision
 
-    assert_equal(src, ctx.cat(trunk_path, rev3))
+    assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
     
     ctx.rm(branch_path)
     rev4 = ctx.commit(@wc_path).revision
@@ -856,6 +848,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge(branch, rev3, branch, rev4, trunk)
     assert(!File.exist?(trunk_path))
 
+    ctx.propdel("svn:mergeinfo", trunk)
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
     ctx.merge(branch, rev3, branch, rev4, trunk)
@@ -875,7 +868,7 @@ class SvnClientTest < Test::Unit::TestCase
   def test_merge_peg
     log = "sample log"
     file = "sample.txt"
-    src = normalize_line_break("sample\n")
+    src = "sample\n"
     trunk = File.join(@wc_path, "trunk")
     branch = File.join(@wc_path, "branch")
     trunk_path = File.join(trunk, file)
@@ -895,7 +888,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge_peg(branch, rev1, rev2, trunk)
     rev3 = ctx.commit(@wc_path).revision
 
-    assert_equal(src, ctx.cat(trunk_path, rev3))
+    assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
     
     ctx.rm(branch_path)
     rev4 = ctx.commit(@wc_path).revision
@@ -903,6 +896,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge_peg(branch, rev3, rev4, trunk)
     assert(!File.exist?(trunk_path))
 
+    ctx.propdel("svn:mergeinfo", trunk)
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
     ctx.merge_peg(branch, rev3, rev4, trunk)
@@ -932,32 +926,39 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx.up(@wc_path, rev - 1)
     File.open(path, "w") {|f| f.print(src)}
-    
-    gc_disable do
-      assert_raise(Svn::Error::WC_OBSTRUCTED_UPDATE) do
-        ctx.up(@wc_path, rev)
-      end
+
+    assert_raise(Svn::Error::WC_OBSTRUCTED_UPDATE) do
+      ctx.up(@wc_path, rev)
+    end
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1) do |access|
       assert_raise(Svn::Error::WC_LOCKED) do
         ctx.commit(@wc_path)
       end
+    end
 
-      ctx.set_cancel_func do
-        raise Svn::Error::CANCELLED
-      end
+    ctx.set_cancel_func do
+      raise Svn::Error::CANCELLED
+    end
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1) do |access|
       assert_raise(Svn::Error::CANCELLED) do
         ctx.cleanup(@wc_path)
       end
       assert_raise(Svn::Error::WC_LOCKED) do
         ctx.commit(@wc_path)
       end
+    end
 
-      ctx.set_cancel_func(nil)
-      assert_nothing_raised do
-        ctx.cleanup(@wc_path)
-      end
-      assert_nothing_raised do
-        ctx.commit(@wc_path)
-      end
+    ctx.set_cancel_func(nil)
+    access = Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1)
+    assert_nothing_raised do
+      ctx.cleanup(@wc_path)
+    end
+    assert_nothing_raised do
+      ctx.commit(@wc_path)
+    end
+    assert_raises(Svn::Error::SvnError) do
+      access.close
     end
   end
 
@@ -1274,8 +1275,8 @@ class SvnClientTest < Test::Unit::TestCase
   
   def test_cat
     log = "sample log"
-    src1 = normalize_line_break("source1\n")
-    src2 = normalize_line_break("source2\n")
+    src1 = "source1\n"
+    src2 = "source2\n"
     file = "sample.txt"
     path = File.join(@wc_path, file)
 
@@ -1286,17 +1287,17 @@ class SvnClientTest < Test::Unit::TestCase
     commit_info = ctx.commit(@wc_path)
     rev1 = commit_info.revision
 
-    assert_equal(src1, ctx.cat(path, rev1))
-    assert_equal(src1, ctx.cat(path))
+    assert_equal(normalize_line_break(src1), ctx.cat(path, rev1))
+    assert_equal(normalize_line_break(src1), ctx.cat(path))
     
     File.open(path, "w") {|f| f.print(src2)}
 
     commit_info = ctx.commit(@wc_path)
     rev2 = commit_info.revision
 
-    assert_equal(src1, ctx.cat(path, rev1))
-    assert_equal(src2, ctx.cat(path, rev2))
-    assert_equal(src2, ctx.cat(path))
+    assert_equal(normalize_line_break(src1), ctx.cat(path, rev1))
+    assert_equal(normalize_line_break(src2), ctx.cat(path, rev2))
+    assert_equal(normalize_line_break(src2), ctx.cat(path))
   end
 
   def test_lock
@@ -1553,8 +1554,8 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_switch
     log = "sample log"
-    trunk_src = normalize_line_break("trunk source\n")
-    tag_src = normalize_line_break("tag source\n")
+    trunk_src = "trunk source\n"
+    tag_src = "tag source\n"
     file = "sample.txt"
     file = "sample.txt"
     trunk_dir = "trunk"
@@ -1582,10 +1583,10 @@ class SvnClientTest < Test::Unit::TestCase
     tag_rev = ctx.commit(@wc_path).revision
 
     assert_equal(youngest_rev, ctx.switch(@wc_path, trunk_repos_uri))
-    assert_equal(trunk_src, ctx.cat(path))
+    assert_equal(normalize_line_break(trunk_src), ctx.cat(path))
 
     assert_equal(youngest_rev, ctx.switch(@wc_path, tag_repos_uri))
-    assert_equal(tag_src, ctx.cat(path))
+    assert_equal(normalize_line_break(tag_src), ctx.cat(path))
 
 
     notify_info = []
@@ -1594,7 +1595,7 @@ class SvnClientTest < Test::Unit::TestCase
     end
     
     assert_equal(trunk_rev, ctx.switch(@wc_path, trunk_repos_uri, trunk_rev))
-    assert_equal(trunk_src, ctx.cat(path))
+    assert_equal(normalize_line_break(trunk_src), ctx.cat(path))
     assert_equal([
                    [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                    [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
@@ -1604,7 +1605,7 @@ class SvnClientTest < Test::Unit::TestCase
 
     notify_info.clear
     assert_equal(tag_rev, ctx.switch(@wc_path, tag_repos_uri, tag_rev))
-    assert_equal(tag_src, ctx.cat(path))
+    assert_equal(normalize_line_break(tag_src), ctx.cat(path))
     assert_equal([
                    [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                    [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
@@ -1615,7 +1616,7 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_authentication
     log = "sample log"
-    src = normalize_line_break("source\n")
+    src = "source\n"
     file = "sample.txt"
     path = File.join(@wc_path, file)
     svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
@@ -1655,85 +1656,60 @@ class SvnClientTest < Test::Unit::TestCase
       cred.password = @password
       cred.may_save = false
     end
-    assert_equal(src, ctx.cat(svnserve_uri))
+    assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
+  end
+
+  def assert_simple_provider(method)
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    path = File.join(@wc_path, file)
+    svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
+    
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    setup_auth_baton(ctx.auth_baton)
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
+    ctx.add_simple_provider
+    assert_raises(Svn::Error::RaNotAuthorized) do
+      assert_equal(src, ctx.cat(svnserve_uri))
+    end
+
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
+    ctx.add_simple_provider
+    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
+      cred.username = @author
+      cred.password = @password
+      cred.may_save = true
+    end
+    assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
+
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
+    ctx.send(method)
+    assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
   end
 
   def test_simple_provider
-    log = "sample log"
-    src = normalize_line_break("source\n")
-    file = "sample.txt"
-    path = File.join(@wc_path, file)
-    svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
-    
-    File.open(path, "w") {|f| f.print(src)}
-
-    ctx = make_context(log)
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add(path)
-    ctx.commit(@wc_path)
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add_simple_provider
-    assert_raises(Svn::Error::RaNotAuthorized) do
-      assert_equal(src, ctx.cat(svnserve_uri))
-    end
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add_simple_provider
-    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
-      cred.username = @author
-      cred.password = @password
-      cred.may_save = true
-    end
-    assert_equal(src, ctx.cat(svnserve_uri))
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add_simple_provider
-    assert_equal(src, ctx.cat(svnserve_uri))
+    assert_simple_provider(:add_simple_provider)
   end
 
   def test_windows_simple_provider
-    return unless Svn::Core.respond_to?(:add_windows_simple_provider)
-
-    log = "sample log"
-    src = normalize_line_break("source\n")
-    file = "sample.txt"
-    path = File.join(@wc_path, file)
-    svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
-    
-    File.open(path, "w") {|f| f.print(src)}
-
-    ctx = make_context(log)
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add(path)
-    ctx.commit(@wc_path)
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add_windows_simple_provider
-    assert_raises(Svn::Error::RaNotAuthorized) do
-      assert_equal(src, ctx.cat(svnserve_uri))
-    end
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add_simple_provider
-    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
-      cred.username = @author
-      cred.password = @password
-      cred.may_save = true
-    end
-    assert_equal(src, ctx.cat(svnserve_uri))
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add_windows_simple_provider
-    assert_equal(src, ctx.cat(svnserve_uri))
+    return unless Svn::Core.respond_to?(:auth_get_windows_simple_provider)
+    assert_simple_provider(:add_windows_simple_provider)
   end
-  
+
+  def test_keychain_simple_provider
+    return unless Svn::Core.respond_to?(:auth_get_keychain_simple_provider)
+    assert_simple_provider(:add_keychain_simple_provider)
+  end
+
   def test_username_provider
     log = "sample log"
     new_log = "sample new log"
@@ -1794,13 +1770,57 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.add_ssl_client_cert_file_provider
       ctx.add_ssl_client_cert_pw_file_provider
       ctx.add_ssl_server_trust_file_provider
+      if Svn::Core.respond_to?(:auth_get_windows_ssl_server_trust_provider)
+        ctx.add_windows_ssl_server_trust_provider
+      end
     end
   end
 
-  def test_not_new
+  def test_commit_item
     assert_raise(NoMethodError) do
       Svn::Client::CommitItem.new
     end
+
+    assert_raise(NoMethodError) do
+      Svn::Client::CommitItem2.new
+    end
+
+    item = Svn::Client::CommitItem3.new
+    assert_kind_of(Svn::Client::CommitItem3, item)
+
+    url = "xxx"
+    item.url = url
+    assert_equal(url, item.dup.url)
+  end
+
+  def test_log_msg_func_commit_items
+    log = "sample log"
+    file = "file"
+    file2 = "file2"
+    src = "source"
+    path = File.join(@wc_path, file)
+    repos_uri2 = "#{@repos_uri}/#{file2}"
+
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    items = nil
+    ctx.set_log_msg_func do |items|
+      [true, log]
+    end
+
+    ctx.add(path)
+    ctx.prop_set(Svn::Core::PROP_MIME_TYPE, "text/plain", path)
+    ctx.commit(@wc_path)
+    assert_equal([[]], items.collect {|item| item.wcprop_changes})
+    assert_equal([[]], items.collect {|item| item.incoming_prop_changes})
+    assert_equal([nil], items.collect {|item| item.outgoing_prop_changes})
+
+    items = nil
+    ctx.cp(path, repos_uri2)
+    assert_equal([nil], items.collect {|item| item.wcprop_changes})
+    assert_equal([nil], items.collect {|item| item.incoming_prop_changes})
+    assert_equal([nil], items.collect {|item| item.outgoing_prop_changes})
   end
 
   def test_log_msg_func_cancel

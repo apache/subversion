@@ -26,13 +26,14 @@
 #include "svn_string.h"
 #include "svn_sorts.h"
 #include "svn_ra.h"
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_path.h"
 #include "svn_props.h"
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
+
 
 
 static svn_error_t *
@@ -175,11 +176,8 @@ set_wc_prop(void *baton,
   const svn_wc_entry_t *entry;
   const char *full_path = svn_path_join(cb->base_dir, path, pool);
 
-  SVN_ERR(svn_wc_entry(&entry, full_path, cb->base_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(full_path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, cb->base_access, FALSE,
+                                 pool));
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, cb->base_access,
                               (entry->kind == svn_node_dir
@@ -351,13 +349,8 @@ svn_client_uuid_from_path(const char **uuid,
 {
   const svn_wc_entry_t *entry;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access,
-                       TRUE,  /* show deleted */ pool));
-
-  if (! entry)
-    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                             _("Can't find entry for '%s'"),
-                             svn_path_local_style(path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access,
+                                 TRUE,  /* show deleted */ pool));
 
   if (entry->uuid)
     {
@@ -620,7 +613,7 @@ slow_locations(const char **start_path, const char** end_path,
   if (lrb.kind == svn_node_none)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, NULL,
-       _("path '%s' doesn't exist in revision %ld"),
+       _("Path '%s' doesn't exist in revision %ld"),
        orig_path, peg_revnum);
 
   /* Populate most of our log receiver baton structure. */
@@ -886,9 +879,10 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
   start_rev = *revision;
   peg_revision = *peg_revision_p;
-  svn_client__resolve_revisions(&peg_revision, &start_rev,
-                                svn_path_is_url(path_or_url),
-                                TRUE);
+  SVN_ERR(svn_opt_resolve_revisions(&peg_revision, &start_rev,
+                                    svn_path_is_url(path_or_url),
+                                    TRUE,
+                                    pool));
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
                                                NULL, NULL, NULL,

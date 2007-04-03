@@ -476,21 +476,20 @@ count_and_verify_instructions(int *ninst,
   while (p < end)
     {
       p = decode_instruction(&op, p, end);
-      if (p == NULL || op.length <= 0 || op.length > tview_len - tpos)
-        {
-          if (p == NULL)
-            return svn_error_createf
-              (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-               _("Invalid diff stream: insn %d cannot be decoded"), n);
-          else if (op.length <= 0)
-            return svn_error_createf
-              (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-               _("Invalid diff stream: insn %d has non-positive length"), n);
-          else
-            return svn_error_createf
-              (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-               _("Invalid diff stream: insn %d overflows the target view"), n);
-        }
+
+      /* Detect any malformed operations from the instruction stream. */
+      if (p == NULL)
+        return svn_error_createf
+          (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
+           _("Invalid diff stream: insn %d cannot be decoded"), n);
+      else if (op.length <= 0)
+        return svn_error_createf
+          (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
+           _("Invalid diff stream: insn %d has non-positive length"), n);
+      else if (op.length > tview_len - tpos)
+        return svn_error_createf
+          (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
+           _("Invalid diff stream: insn %d overflows the target view"), n);
 
       switch (op.action_code)
         {

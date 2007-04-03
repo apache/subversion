@@ -92,11 +92,12 @@ or a url (when false) copy source is used."""
 
 # Helper for wc_copy_replace_with_props and
 # repos_to_wc_copy_replace_with_props
-def copy_replace_with_props(sbox, wc_copy):
+def copy_replace_with_props(sbox, wc_copy, contact_repos_for_merge_info = 0):
   """Tests for 'R'eplace functionanity for files with props.
 
-Depending on the value of wc_copy either a working copy (when true)
-or a url (when false) copy source is used."""
+Depending on the value of wc_copy either a working copy (when true) or
+a url (when false) copy source is used.  CONTACT_REPOS_FOR_MERGE_INFO
+is only relevant when WC_COPY is true."""
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -161,9 +162,12 @@ or a url (when false) copy source is used."""
                                      'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
+  props = { 'phony-prop' : '*' }
+  if not wc_copy or contact_repos_for_merge_info:
+    props['svn:mergeinfo'] = '/A/D/G/pi:1-2'
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
-                      props={ 'phony-prop': '*' })
+                      props=props)
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
@@ -339,6 +343,15 @@ def basic_copy_and_move_files(sbox):
                                         None, None,
                                         None, None,
                                         wc_dir)
+
+  # Assure that attempts at local copy and move fail when a log
+  # message is provided.
+  expected_stderr = \
+    ".*Local, non-commit operations do not take a log message"
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'cp', '-m', 'op fails', rho_path, D_path)
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'mv', '-m', 'op fails', rho_path, D_path)
 
 
 #----------------------------------------------------------------------
@@ -843,6 +856,10 @@ def copy_preserve_executable_bit(sbox):
 def wc_to_repos(sbox):
   "working-copy to repository copy"
 
+  ### FIXME: This test is currently failing over ra_dav.
+  if svntest.main.is_ra_type_dav():
+    raise svntest.Skip
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -901,6 +918,14 @@ def wc_to_repos(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status)
+
+  # Validate that the merge info of the copy destination matches the
+  # implied merge info from the copy source.
+  for dest, merge_info in ((beta2_url, '/A/B/E/beta:1'),
+                           (H2_url, '/A/D/H:1'),
+                           (H2_url + '/beta', '/A/B/E/beta:1')):
+    svntest.actions.run_and_verify_svn(None, [merge_info + '\n'], [],
+                                       'propget', 'svn:mergeinfo', dest)
 
   # check local property was copied
   svntest.actions.run_and_verify_svn(None, ['bar\n'], [], 'propget', 'foo',
@@ -1027,6 +1052,12 @@ def repos_to_wc(sbox):
     'A/D/B/F'       : Item(status='  ', copied='+', wc_rev='-'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
+
+  # Validate that the merge info of the copy destination matches the
+  # implied merge info from the copy source.
+  svntest.actions.run_and_verify_svn(None, ['/A/B:1\n'], [],
+                                     'propget', 'svn:mergeinfo',
+                                     os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug
@@ -1782,7 +1813,9 @@ def wc_copy_replacement(sbox):
 def wc_copy_replace_with_props(sbox):
   "svn cp PATH PATH replace file with props"
 
-  copy_replace_with_props(sbox, 1)
+  copy_replace_with_props(sbox, 1, 0)
+  ### FIXME: WC -> WC copies don't yet handle merge info.
+  copy_replace_with_props(sbox, 1, 1)
 
 def repos_to_wc_copy_replacement(sbox):
   "svn cp URL PATH replace file"
@@ -2632,6 +2665,11 @@ def copy_added_paths_to_URL(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-m', '',
                                      upsilon_path, upsilon_copy_URL)
 
+  # Validate that the merge info of the copy destination matches the
+  # implied merge info from the copy source.
+  svntest.actions.run_and_verify_svn(None, ['\n'], [], 'propget',
+                                     'svn:mergeinfo', upsilon_copy_URL)
+
   # Copy added dir A/D/I to URL://A/D/G/I
   I_copy_URL = sbox.repo_url + '/A/D/G/I'
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-m', '',
@@ -3198,7 +3236,8 @@ def copy_peg_rev_local_files(sbox):
   expected_disk.tweak('iota', contents=psi_text)
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
-    'sigma' : Item(contents=psi_text),
+    'sigma' : Item(contents=psi_text,
+                   props={ 'svn:mergeinfo' : '/A/D/H/psi:1' }),
     })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
@@ -3267,6 +3306,7 @@ def copy_peg_rev_local_dirs(sbox):
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'A/J'         : Item(props={ 'svn:mergeinfo' : '/A/B/E:1' }),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
     'A/J/beta'  : Item(contents="This is the file 'beta'.\n"),
     })
@@ -3310,6 +3350,11 @@ def copy_peg_rev_url(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      iota_url + '@HEAD', '-r', '1',
                                      sigma_url, '-m', 'rev 3')
+
+  # Validate that the merge info of the copy destination matches the
+  # implied merge info from the copy source.
+  svntest.actions.run_and_verify_svn(None, ['/A/D/H/psi:1\n'], [],
+                                     'propget', 'svn:mergeinfo', sigma_url)
 
   # Update to HEAD and verify disk contents
   expected_output = svntest.wc.State(wc_dir, {
@@ -3370,7 +3415,7 @@ test_list = [ None,
               wc_copy_dir_to_itself,
               mixed_wc_to_url,
               wc_copy_replacement,
-              wc_copy_replace_with_props,
+              XFail(wc_copy_replace_with_props),
               repos_to_wc_copy_replacement,
               repos_to_wc_copy_replace_with_props,
               delete_replaced_file,

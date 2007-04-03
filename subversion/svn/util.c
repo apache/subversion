@@ -4,7 +4,7 @@
  * in here.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,7 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
+#include "svn_ctype.h"
 #include "svn_client.h"
 #include "svn_cmdline.h"
 #include "svn_string.h"
@@ -130,8 +131,23 @@ svn_cl__edit_externally(svn_string_t **edited_contents /* UTF-8! */,
 #endif
 
   /* Abort if there is no editor specified */
-  if (! editor)
-    return svn_error_create 
+  if (editor)
+    {
+      const char *c;
+
+      for (c = editor; *c; c++)
+        if (!svn_ctype_isspace(*c))
+          break;
+
+      if (! *c)
+        return svn_error_create
+          (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
+           _("The EDITOR, SVN_EDITOR or VISUAL environment variable or "
+             "'editor-cmd' run-time configuration option is empty or "
+             "consists solely of whitespace. Expected a shell command."));
+    }
+  else
+    return svn_error_create
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
        _("None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
          "set, and no 'editor-cmd' run-time configuration option was found"));
@@ -797,6 +813,34 @@ svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
       svn_xml_escape_cdata_cstring(sb, string, pool);
       svn_xml_make_close_tag(sb, pool, tagname);
     }
+}
+
+
+svn_error_t *
+svn_cl__xml_print_header(const char *tagname,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+
+  /* <?xml version="1.0"?> */
+  svn_xml_make_header(&sb, pool);
+
+  /* "<TAGNAME>" */
+  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, tagname, NULL);
+
+  return svn_cl__error_checked_fputs(sb->data, stdout);
+}
+
+
+svn_error_t *
+svn_cl__xml_print_footer(const char *tagname,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+
+  /* "</TAGNAME>" */
+  svn_xml_make_close_tag(&sb, pool, tagname);
+  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 

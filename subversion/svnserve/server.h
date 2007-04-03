@@ -73,21 +73,53 @@ typedef struct serve_params_t {
   /* True if the read-only flag was specified on the command-line,
      which forces all connections to be read-only. */
   svn_boolean_t read_only;
+
+  /* A parsed repository svnserve configuration file, ala
+     svnserve.conf.  If this is NULL, then no configuration file was
+     specified on the command line.  If this is non-NULL, then
+     per-repository svnserve.conf are not read. */
+  svn_config_t *cfg;
+
+  /* A parsed repository password database.  If this is NULL, then
+     either no svnserve configuration file was specified on the
+     command line, or it was specified and it did not refer to a
+     password database. */
+  svn_config_t *pwdb;
+
+  /* A parsed repository authorization database.  If this is NULL,
+     then either no svnserve configuration file was specified on the
+     command line, or it was specified and it did not refer to a
+     authorization database. */
+  svn_authz_t *authzdb;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */
 svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                    apr_pool_t *pool);
 
+/* Load a svnserve configuration file located at FILENAME into CFG,
+   any referenced password database into PWDB and any referenced
+   authorization database into AUTHZDB.  If MUST_EXIST is true and
+   FILENAME does not exist, then this returns an error.  BASE may be
+   specified as the base path to any referenced password and
+   authorization files found in FILENAME. */
+svn_error_t *load_configs(svn_config_t **cfg,
+                          svn_config_t **pwdb,
+                          svn_authz_t **authzdb,
+                          const char *filename,
+                          svn_boolean_t must_exist,
+                          const char *base,
+                          apr_pool_t *pool);
+
 /* Initialize the Cyrus SASL library. */
-svn_error_t *sasl_init(void);
+svn_error_t *cyrus_init(void);
 
 /* Authenticate using Cyrus SASL. */
-svn_error_t *sasl_auth_request(svn_ra_svn_conn_t *conn, 
-                               apr_pool_t *pool,
-                               server_baton_t *b, 
-                               enum access_type required,
-                               svn_boolean_t needs_username);
+svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn, 
+                                apr_pool_t *pool,
+                                server_baton_t *b, 
+                                enum access_type required,
+                                svn_boolean_t needs_username);
 
 #ifdef __cplusplus
 }

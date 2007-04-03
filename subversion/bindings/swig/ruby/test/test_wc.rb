@@ -139,13 +139,26 @@ class SvnWcTest < Test::Unit::TestCase
     assert_equal([{}, {}], info.edited_externals)
   end
 
-  def test_externals
+  def assert_externals_description
     dir = "dir"
     url = "http://svn.example.com/trunk"
     description = "#{dir} #{url}"
-    items = Svn::Wc.parse_externals_description(@wc_path, description)
+    items = yield([@wc_path, description])
     assert_equal([[dir, url]],
                  items.collect {|item| [item.target_dir, item.url]})
+    assert_kind_of(Svn::Wc::ExternalItem2, items.first)
+  end
+
+  def test_externals_description
+    assert_externals_description do |args|
+      Svn::Wc::ExternalsDescription.parse(*args)
+    end
+  end
+
+  def test_externals_description_for_backward_compatibility
+    assert_externals_description do |args|
+      Svn::Wc.parse_externals_description(*args)
+    end
   end
 
   def test_notify
@@ -207,6 +220,30 @@ class SvnWcTest < Test::Unit::TestCase
     end
   end
 
+  def test_committed_queue
+    log = "sample log"
+    source1 = "source"
+    source2 = "SOURCE"
+    file1 = "file1"
+    file2 = "file2"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+    ctx = make_context(log)
+
+    File.open(path1, "w") {|f| f.print(source1)}
+    File.open(path2, "w") {|f| f.print(source2)}
+    ctx.add(path1)
+    ctx.add(path2)
+    rev1 = ctx.ci(@wc_path).revision
+    next_rev = rev1 + 1
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+      queue = Svn::Wc::CommittedQueue.new
+      queue.push(access, path1, true, {"my-prop" => "value"})
+      queue.process(access, next_rev)
+    end
+  end
+
   def test_ancestry
     file1 = "file1"
     file2 = "file2"
@@ -237,6 +274,32 @@ class SvnWcTest < Test::Unit::TestCase
                    result.collect{|path, entry| path}.sort)
       entry = result.assoc(path2)[1]
       assert_equal(file2, entry.name)
+
+      callbacks = Proc.new do |path, entry|
+        raise Svn::Error::Cancelled
+      end
+      def callbacks.found_entry(path, entry)
+        call(path, entry)
+      end
+      assert_raises(Svn::Error::Cancelled) do
+        access.walk_entries(@wc_path, callbacks)
+      end
+
+      def callbacks.ignored_errors=(value)
+        @ignored_errors = value
+      end
+      def callbacks.handle_error(path, err)
+        @ignored_errors << [path, err] if err
+      end
+      ignored_errors = []
+      callbacks.ignored_errors = ignored_errors
+      access.walk_entries(@wc_path, callbacks)
+      assert_equal([
+                    [@wc_path, Svn::Error::Cancelled],
+                    [path1, Svn::Error::Cancelled],
+                    [path2, Svn::Error::Cancelled],
+                   ],
+                   ignored_errors.collect {|path, err| [path, err.class]})
     end
 
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
@@ -247,8 +310,15 @@ class SvnWcTest < Test::Unit::TestCase
       access.mark_missing_deleted(path1)
       access.maybe_set_repos_root(path2, @repos_uri)
     end
+  end
 
+  def test_adm_ensure
+    adm_dir = Dir.glob(File.join(@wc_path, "{.,_}svn")).first
+    assert(File.exists?(adm_dir))
+    FileUtils.rm_rf(adm_dir)
+    assert(!File.exists?(adm_dir))
     Svn::Wc.ensure_adm(@wc_path, nil, @repos_uri, nil, 0)
+    assert(File.exists?(adm_dir))
   end
 
   def test_merge
@@ -362,35 +432,46 @@ EOE
       assert_equal(Svn::Wc::STATUS_NONE, status.text_status)
     end
   end
-  
-  def test_locked
-    log = "sample log"
 
-    assert(!Svn::Wc.locked?(@wc_path))
+  def test_delete
+    source = "source"
+    file = "file"
+    path = File.join(@wc_path, file)
+    log = "sample log"
     ctx = make_context(log)
 
-    gc_disable do
-      assert_raise(Svn::Error::FS_NO_SUCH_REVISION) do
-        ctx.update(@wc_path, youngest_rev + 1)
-      end
-      assert(Svn::Wc.locked?(@wc_path))
+    File.open(path, "w") {|f| f.print(source)}
+    ctx.add(path)
+    ctx.ci(@wc_path).revision
+
+    assert(File.exists?(path))
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+      access.delete(path)
     end
-    gc_enable do
-      GC.start
-      assert(!Svn::Wc.locked?(@wc_path))
+    assert(!File.exists?(path))
+
+    ctx.revert(path)
+
+    assert(File.exists?(path))
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+      access.delete(path, nil, nil, true)
     end
-    
-    gc_disable do
-      assert_raise(Svn::Error::FS_NO_SUCH_REVISION) do
-        ctx.update(@wc_path, youngest_rev + 1)
-      end
-      assert(Svn::Wc.locked?(@wc_path))
-      ctx.cleanup(@wc_path)
-      assert(!Svn::Wc.locked?(@wc_path))
-    end
+    assert(File.exists?(path))
   end
 
-  def test_translated_file
+  def test_locked
+    assert(!Svn::Wc.locked?(@wc_path))
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1) do |access|
+      assert(Svn::Wc.locked?(@wc_path))
+    end
+    assert(!Svn::Wc.locked?(@wc_path))
+    Svn::Wc::AdmAccess.open(nil, @wc_path, false, -1) do |access|
+      assert(!Svn::Wc.locked?(@wc_path))
+    end
+    assert(!Svn::Wc.locked?(@wc_path))
+  end
+
+  def assert_translated_file_eol(method_name)
     src_file = "src"
     crlf_file = "crlf"
     cr_file = "cr"
@@ -422,20 +503,74 @@ EOE
     ctx.ci(lf_path)
 
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
-      File.open(src_path, "wb") {|f| f.print(source)}
-      translated_file = access.translated_file(src_path, lf_path,
-                                               Svn::Wc::TRANSLATE_TO_NF)
-      File.open(src_path, "wb") {|f| f.print(File.read(translated_file))}
+      _wrap_assertion do
+        File.open(src_path, "wb") {|f| f.print(source)}
 
-      translated_file = access.translated_file(src_path, crlf_path,
-                                               Svn::Wc::TRANSLATE_FROM_NF)
-      assert_equal(crlf_source, File.open(translated_file, "rb") {|f| f.read})
-      translated_file = access.translated_file(src_path, cr_path,
-                                               Svn::Wc::TRANSLATE_FROM_NF)
-      assert_equal(cr_source, File.open(translated_file, "rb") {|f| f.read})
-      translated_file = access.translated_file(src_path, lf_path,
-                                               Svn::Wc::TRANSLATE_FROM_NF)
-      assert_equal(lf_source, File.open(translated_file, "rb") {|f| f.read})
+        args = [method_name, src_path, crlf_path, Svn::Wc::TRANSLATE_FROM_NF]
+        if windows?
+          assert_equal(lf_source, yield(access.send(*args)))
+        else
+          assert_equal(crlf_source, yield(access.send(*args)))
+        end
+
+        args = [method_name, src_path, cr_path, Svn::Wc::TRANSLATE_FROM_NF]
+        assert_equal(cr_source, yield(access.send(*args)))
+
+        args = [method_name, src_path, lf_path, Svn::Wc::TRANSLATE_FROM_NF]
+        assert_equal(lf_source, yield(access.send(*args)))
+      end
+    end
+  end
+
+  def test_translated_file_eol
+    assert_translated_file_eol(:translated_file) do |name|
+      File.open(name, "rb") {|f| f.read}
+    end
+  end
+
+  def test_translated_file2_eol
+    assert_translated_file_eol(:translated_file2) do |file|
+      file.read
+    end
+  end
+
+  def assert_translated_file_keyword(method_name)
+    src_file = "$Revision$"
+    revision_file = "revision_file"
+    src_path = File.join(@wc_path, src_file)
+    revision_path = File.join(@wc_path, revision_file)
+
+    source = "$Revision$\n"
+    revision_source = source.gsub(/\$Revision\$/, "$Revision: 1 $")
+
+    File.open(revision_path, "w") {}
+
+    log = "log"
+    ctx = make_context(log)
+    ctx.add(revision_path)
+    ctx.prop_set("svn:keywords", "Revision", revision_path)
+    ctx.ci(revision_path)
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+      File.open(src_path, "w") {|f| f.print(source)}
+
+      args = [method_name, src_path, revision_path, Svn::Wc::TRANSLATE_FROM_NF]
+      assert_equal(revision_source, yield(access.send(*args)))
+
+      args = [method_name, src_path, revision_path, Svn::Wc::TRANSLATE_TO_NF]
+      assert_equal(source, yield(access.send(*args)))
+    end
+  end
+
+  def test_translated_file_keyword
+    assert_translated_file_keyword(:translated_file) do |name|
+      File.open(name, "rb") {|f| f.read}
+    end
+  end
+
+  def test_translated_file2_keyword
+    assert_translated_file_keyword(:translated_file2) do |file|
+      file.read
     end
   end
 
@@ -458,5 +593,28 @@ EOE
     status = Svn::Wc::RevisionStatus.new(path, nil, true)
     assert_equal(rev, status.min_rev)
     assert_equal(rev, status.max_rev)
+  end
+
+  def test_external_item_new
+    assert_raises(NoMethodError) do
+      Svn::Wc::ExternalItem.new
+    end
+
+    item = Svn::Wc::ExternalItem2.new
+    assert_kind_of(Svn::Wc::ExternalItem2, item)
+  end
+
+  def test_external_item_dup
+    item = Svn::Wc::ExternalItem2.new
+    assert_kind_of(Svn::Wc::ExternalItem2, item)
+
+    item.target_dir = "xxx"
+    duped_item = item.dup
+    assert_equal(item.target_dir, duped_item.target_dir)
+  end
+
+  def test_committed_queue_new
+    queue = Svn::Wc::CommittedQueue.new
+    assert_kind_of(Svn::Wc::CommittedQueue, queue)
   end
 end

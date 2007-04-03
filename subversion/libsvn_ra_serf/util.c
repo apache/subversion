@@ -27,6 +27,7 @@
 
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "private/svn_compat.h"
 
 #include "ra_serf.h"
 
@@ -55,6 +56,14 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
       if (!conn->ssl_context)
         {
           conn->ssl_context = serf_bucket_ssl_decrypt_context_get(bucket);
+#if SERF_VERSION_AT_LEAST(0,1,1)
+          serf_ssl_client_cert_provider_set(conn->ssl_context,
+                                            svn_ra_serf__handle_client_cert,
+                                            conn, conn->session->pool);
+          serf_ssl_client_cert_password_set(conn->ssl_context,
+                                            svn_ra_serf__handle_client_cert_pw,
+                                            conn, conn->session->pool);
+#endif
         }
     }
 
@@ -138,6 +147,108 @@ svn_ra_serf__cleanup_serf_session(void *data)
   return APR_SUCCESS;
 }
 
+apr_status_t svn_ra_serf__handle_client_cert(void *data,
+                                             const char **cert_path)
+{
+    svn_ra_serf__connection_t *conn = data;
+    svn_ra_serf__session_t *session = conn->session;
+    const char *realm;
+    apr_port_t port;
+    svn_error_t *error;
+    void *creds;
+
+    *cert_path = NULL;
+
+    if (session->repos_url.port_str)
+      {
+        port = session->repos_url.port;
+      }
+    else
+      {
+        port = apr_uri_port_of_scheme(session->repos_url.scheme);
+      }
+
+    realm = apr_psprintf(session->pool, "%s://%s:%d",
+                         session->repos_url.scheme,
+                         session->repos_url.hostname,
+                         port);
+
+    if (!conn->ssl_client_auth_state)
+      {
+        error = svn_auth_first_credentials(&creds,
+                                           &conn->ssl_client_auth_state,
+                                           SVN_AUTH_CRED_SSL_CLIENT_CERT,
+                                           realm,
+                                           session->wc_callbacks->auth_baton,
+                                           session->pool);
+      }
+    else
+      {
+        error = svn_auth_next_credentials(&creds,
+                                          conn->ssl_client_auth_state,
+                                          session->pool);
+      }
+
+    if (error)
+      {
+        session->pending_error = error;
+        return error->apr_err;
+      }
+
+    if (creds)
+      {
+        svn_auth_cred_ssl_client_cert_t *client_creds;
+        client_creds = creds;
+        *cert_path = client_creds->cert_file;
+      }
+
+    return APR_SUCCESS;
+}
+
+apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
+                                                const char *cert_path,
+                                                const char **password)
+{
+    svn_ra_serf__connection_t *conn = data;
+    svn_ra_serf__session_t *session = conn->session;
+    apr_port_t port;
+    svn_error_t *error;
+    void *creds;
+
+    *password = NULL;
+
+    if (!conn->ssl_client_pw_auth_state)
+      {
+        error = svn_auth_first_credentials(&creds,
+                                           &conn->ssl_client_pw_auth_state,
+                                           SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+                                           cert_path,
+                                           session->wc_callbacks->auth_baton,
+                                           session->pool);
+      }
+    else
+      {
+        error = svn_auth_next_credentials(&creds,
+                                          conn->ssl_client_pw_auth_state,
+                                          session->pool);
+      }
+
+    if (error)
+      {
+        session->pending_error = error;
+        return error->apr_err;
+      }
+
+    if (creds)
+      {
+        svn_auth_cred_ssl_client_cert_pw_t *pw_creds;
+        pw_creds = creds;
+        *password = pw_creds->password;
+      }
+
+    return APR_SUCCESS;
+}
+
 void
 svn_ra_serf__setup_serf_req(serf_request_t *request,
                             serf_bucket_t **req_bkt,
@@ -171,6 +282,14 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
       if (!conn->ssl_context)
         {
           conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*req_bkt);
+#if SERF_VERSION_AT_LEAST(0,1,1)
+          serf_ssl_client_cert_provider_set(conn->ssl_context,
+                                            svn_ra_serf__handle_client_cert,
+                                            conn, conn->session->pool);
+          serf_ssl_client_cert_password_set(conn->ssl_context,
+                                            svn_ra_serf__handle_client_cert_pw,
+                                            conn, conn->session->pool);
+#endif
         }
     }
 

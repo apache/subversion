@@ -23,6 +23,7 @@
 #include <mod_dav.h>
 
 #include "svn_repos.h"
+#include "svn_string.h"
 #include "svn_types.h"
 #include "svn_xml.h"
 #include "svn_path.h"
@@ -215,10 +216,12 @@ dav_svn__log_report(const dav_resource *resource,
   /* These get determined from the request document. */
   svn_revnum_t start = SVN_INVALID_REVNUM;   /* defaults to HEAD */
   svn_revnum_t end = SVN_INVALID_REVNUM;     /* defaults to HEAD */
-  svn_boolean_t discover_changed_paths = 0;  /* off by default */
-  svn_boolean_t strict_node_history = 0;     /* off by default */
+  svn_boolean_t discover_changed_paths = FALSE;  /* off by default */
+  svn_boolean_t strict_node_history = FALSE;     /* off by default */
   apr_array_header_t *paths
-    = apr_array_make(resource->pool, 0, sizeof(const char *));
+    = apr_array_make(resource->pool, 1, sizeof(const char *));
+  svn_stringbuf_t *comma_separated_paths =
+    svn_stringbuf_create("", resource->pool);
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -247,9 +250,9 @@ dav_svn__log_report(const dav_resource *resource,
       else if (strcmp(child->name, "limit") == 0)
         limit = atoi(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "discover-changed-paths") == 0)
-        discover_changed_paths = 1; /* presence indicates positivity */
+        discover_changed_paths = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "strict-node-history") == 0)
-        strict_node_history = 1; /* presence indicates positivity */
+        strict_node_history = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "path") == 0)
         {
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
@@ -258,6 +261,14 @@ dav_svn__log_report(const dav_resource *resource,
           target = svn_path_join(resource->info->repos_path, rel_path, 
                                  resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
+
+          /* Gather a formatted list of paths to include in our
+             operational logging. */
+          if (comma_separated_paths->len > 0)
+            svn_stringbuf_appendbytes(comma_separated_paths, ", ", 2);
+          svn_stringbuf_appendcstr(comma_separated_paths,
+                                   svn_path_uri_encode(target,
+                                                       resource->pool));
         }
       /* else unknown element; skip it */
     }
@@ -317,19 +328,9 @@ dav_svn__log_report(const dav_resource *resource,
  cleanup:
 
   /* We've detected a 'high level' svn action to log. */
-  if (paths->nelts == 0)
-    action = "log";
-  else if (paths->nelts == 1)
-    action = apr_psprintf(resource->pool, "log-all '%s'",
-                          svn_path_uri_encode(APR_ARRAY_IDX
-                                              (paths, 0, const char *),
-                                              resource->pool));
-  else
-    action = apr_psprintf(resource->pool, "log-partial '%s'",
-                          svn_path_uri_encode(APR_ARRAY_IDX
-                                              (paths, 0, const char *),
-                                              resource->pool));
-
+  action = apr_psprintf(resource->pool,
+                        "log '%s' r%" SVN_REVNUM_T_FMT ":%" SVN_REVNUM_T_FMT,
+                        comma_separated_paths->data, start, end);
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
 
 

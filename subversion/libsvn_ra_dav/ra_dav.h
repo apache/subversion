@@ -214,7 +214,7 @@ svn_error_t *svn_ra_dav__rev_prop(svn_ra_session_t *session,
 svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
                                             const svn_delta_editor_t **editor,
                                             void **edit_baton,
-                                            const char *log_msg,
+                                            apr_hash_t *revprop_table,
                                             svn_commit_callback2_t callback,
                                             void *callback_baton,
                                             apr_hash_t *lock_tokens,
@@ -241,43 +241,50 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
 svn_error_t * svn_ra_dav__abort_commit(void *session_baton,
                                        void *edit_baton);
 
+svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
+                                         apr_hash_t **mergeinfo,
+                                         const apr_array_header_t *paths,
+                                         svn_revnum_t revision,
+                                         svn_boolean_t include_parents,
+                                         apr_pool_t *pool);
+
 svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
-                                    const svn_ra_reporter2_t **reporter,
+                                    const svn_ra_reporter3_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
-                                    svn_boolean_t recurse,
+                                    svn_depth_t depth,
                                     const svn_delta_editor_t *wc_update,
                                     void *wc_update_baton,
                                     apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
-                                    const svn_ra_reporter2_t **reporter,
+                                    const svn_ra_reporter3_t **reporter,
                                     void **report_baton,
                                     const char *status_target,
                                     svn_revnum_t revision,
-                                    svn_boolean_t recurse,
+                                    svn_depth_t depth,
                                     const svn_delta_editor_t *wc_status,
                                     void *wc_status_baton,
                                     apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
-                                    const svn_ra_reporter2_t **reporter,
+                                    const svn_ra_reporter3_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
-                                    svn_boolean_t recurse,
+                                    svn_depth_t depth,
                                     const char *switch_url,
                                     const svn_delta_editor_t *wc_update,
                                     void *wc_update_baton,
                                     apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
-                                  const svn_ra_reporter2_t **reporter,
+                                  const svn_ra_reporter3_t **reporter,
                                   void **report_baton,
                                   svn_revnum_t revision,
                                   const char *diff_target,
-                                  svn_boolean_t recurse,
+                                  svn_depth_t depth,
                                   svn_boolean_t ignore_ancestry,
                                   svn_boolean_t text_deltas,
                                   const char *versus_url,
@@ -756,7 +763,11 @@ enum {
   ELEM_change_dir_prop,
   ELEM_close_file,
   ELEM_close_directory,
-  ELEM_deadprop_count
+  ELEM_deadprop_count,
+  ELEM_merge_info_report,
+  ELEM_merge_info_item,
+  ELEM_merge_info_path,
+  ELEM_merge_info_info
 };
 
 /* ### docco */
@@ -841,7 +852,10 @@ svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
 
    BODY is a null terminated string containing an in-memory request
    body.  Use svn_ra_dav__set_neon_body_provider() if you want the
-   request body to be read from a file.
+   request body to be read from a file.  For requests which have no
+   body at all, consider passing the empty string ("") instead of
+   NULL, as this will cause Neon to generate a "Content-Length: 0"
+   header (which is important to some proxies).
 
    OKAY_1 and OKAY_2 are the "acceptable" result codes. Anything other
    than one of these will generate an error. OKAY_1 should always be

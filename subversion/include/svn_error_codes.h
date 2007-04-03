@@ -391,6 +391,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 25,
              "Invalid switch")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_WC_MISMATCHED_CHANGELIST,
+             SVN_ERR_WC_CATEGORY_START + 26,
+             "Changelist doesn't match")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -574,6 +579,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_FS_OUT_OF_DATE,
              SVN_ERR_FS_CATEGORY_START + 42,
              "Item is out of date")
+  
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_SQLITE_ERROR,
+             SVN_ERR_FS_CATEGORY_START + 43,
+             "SQLite error")
 
   /**@since New in 1.2.
    *
@@ -769,6 +779,12 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_SVN_BAD_VERSION,
              SVN_ERR_RA_SVN_CATEGORY_START + 6,
              "Client/server version mismatch")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RA_SVN_NO_MECHANISMS,
+             SVN_ERR_RA_SVN_CATEGORY_START + 7,
+             "Cannot negotiate authentication mechanism")
+
 
   /* libsvn_auth errors */
 
@@ -1013,6 +1029,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_NO_AUTH_FILE_PATH,
              SVN_ERR_MISC_CATEGORY_START + 18,
              "No auth file path available")
+  
+  SVN_ERRDEF(SVN_ERR_MERGE_INFO_PARSE_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 19,
+             "Merge info parse error")
 
   /** @since New in 1.1. */
   SVN_ERRDEF(SVN_ERR_VERSION_MISMATCH,

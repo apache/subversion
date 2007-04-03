@@ -33,13 +33,15 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Helpers
 
-def revert_replacement_with_props(sbox, wc_copy):
+def revert_replacement_with_props(sbox, wc_copy,
+                                  contact_repos_for_merge_info = 0):
   """Helper implementing the core of
   revert_{repos,wc}_to_wc_replace_with_props().
 
-  Uses a working copy (when wc_copy == True) or a URL (when wc_copy == False)
-  source to copy from.
-  """
+  Uses a working copy (when wc_copy == True) or a URL (when wc_copy ==
+  False) source to copy from.  CONTACT_REPOS_FOR_MERGE_INFO is only
+  relevant when WC_COPY is true."""
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -104,9 +106,12 @@ def revert_replacement_with_props(sbox, wc_copy):
                                      'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
+  props = { 'phony-prop' : '*' }
+  if not wc_copy or contact_repos_for_merge_info:
+    props['svn:mergeinfo'] = '/A/D/G/pi:1-2'
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
-                      props={ 'phony-prop': '*' })
+                      props=props)
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
@@ -451,11 +456,20 @@ def revert_file_merge_replace_with_history(sbox):
   expected_disk.tweak('A/D/G/rho', contents="new rho\n")
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
+  # Make sure the revert removed the copy from information.
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
+                                                   rho_path)
+  for line in output:
+    if line.find("Copied") != -1:
+      print "Error: Revert didn't get rid of copy from information"
+      raise svntest.Failure
 
 def revert_wc_to_wc_replace_with_props(sbox):
   "revert svn cp PATH PATH replace file with props"
 
   revert_replacement_with_props(sbox, 1)
+  ### FIXME: WC -> WC copies don't yet handle merge info.
+  revert_replacement_with_props(sbox, 1, 1)
 
 def revert_repos_to_wc_replace_with_props(sbox):
   "revert svn cp URL PATH replace file with props"
@@ -631,7 +645,7 @@ test_list = [ None,
               revert_reexpand_keyword,
               revert_replaced_file_without_props,
               XFail(revert_moved_file),
-              revert_wc_to_wc_replace_with_props,
+              XFail(revert_wc_to_wc_replace_with_props),
               revert_file_merge_replace_with_history,
               revert_repos_to_wc_replace_with_props,
               revert_after_second_replace,

@@ -33,7 +33,6 @@ extern "C" {
 
 
 #define SVN_WC__TMP_EXT       ".tmp"
-#define SVN_WC__TEXT_REJ_EXT  ".rej"
 #define SVN_WC__PROP_REJ_EXT  ".prej"
 #define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
 #define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
@@ -109,6 +108,17 @@ struct svn_wc_traversal_info_t
    <modify-entry name="foo.c" revision="5" timestamp="working"/>
  */
 #define SVN_WC__TIMESTAMP_WC   "working"
+
+
+
+/*** Filesizes. ***/
+
+/* A special filesize value which means "use the filesize from the
+   working copy".  This is sometimes used in a log entry like:
+
+   <modify-entry name="foo.c" revision="5" working-size="working"/>
+ */
+#define SVN_WC__WORKING_SIZE_WC   "working"
 
 
 
@@ -188,9 +198,6 @@ void svn_wc__compat_call_notify_func(void *baton,
  * detranslated version of *FILENAME and the text base, otherwise, a
  * translated version of the text base and *FILENAME will be compared.
  *
- * If USE_TMP_TEXTBASE is true the temporary text base is used in the
- * comparison.
- *
  * If FILENAME does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
@@ -201,7 +208,6 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                  svn_boolean_t force_comparison,
                                  svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t compare_textbases,
-                                 svn_boolean_t use_tmp_textbase,
                                  apr_pool_t *pool);
 
 

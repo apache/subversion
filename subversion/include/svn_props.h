@@ -105,6 +105,14 @@ svn_prop_kind_t svn_property_kind(int *prefix_len,
 svn_boolean_t svn_prop_is_svn_prop(const char *prop_name);
 
 
+/** Return @c TRUE iff @a props has at least one property whose name
+ * represents the name of a Subversion property.
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t svn_prop_has_svn_prop(apr_hash_t *props,
+                                     apr_pool_t *pool);
+
 /** If @a prop_name requires that its value be stored as UTF8/LF in the
  * repository, then return @c TRUE.  Else return @c FALSE.  This is for
  * users of libsvn_client or libsvn_fs, since it their responsibility
@@ -239,6 +247,16 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  * which this property is set.
  */
 #define SVN_PROP_EXTERNALS  SVN_PROP_PREFIX "externals"
+
+/** Merge info property used to record a resource's merge history.
+ *
+ * The format is a series of lines containing merge paths and revision
+ * ranges, such as:
+ *
+ *<pre>   /trunk: 1-6,9,37-38
+ *   /trunk/foo: 10</pre>
+ */
+#define SVN_PROP_MERGE_INFO SVN_PROP_PREFIX "mergeinfo"
 
 /** @} */
 

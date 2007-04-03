@@ -23,6 +23,7 @@ import stat    # for ST_MODE
 import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
+import threading
 
 import getopt
 try:
@@ -132,6 +133,10 @@ cleanup_mode = 0
 
 # Global variable indicating if svnserve should use Cyrus SASL
 enable_sasl = 0
+
+# Global variable indicating if this is a child process and no cleanup
+# of global directories is needed.
+is_child_process = 0
 
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
@@ -244,16 +249,7 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
                            None, *varargs)
 
 # Run any binary, supplying input text, logging the command line
-def run_command_stdin(command, error_expected, binary_mode=0,
-                      stdin_lines=None, *varargs):
-  """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
-  which should include newline characters) to program via stdin - this
-  should not be very large, as if the program outputs more than the OS
-  is willing to buffer, this will deadlock, with both Python and
-  COMMAND waiting to write to each other for ever.
-  Return stdout, stderr as lists of lines.
-  If ERROR_EXPECTED is None, any stderr also will be printed."""
-
+def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   args = ''
   for arg in varargs:                   # build the command string
     arg = str(arg)
@@ -270,7 +266,6 @@ def run_command_stdin(command, error_expected, binary_mode=0,
   else:
     mode = 't'
 
-  start = time.time()
   infile, outfile, errfile = os.popen3(command + args, mode)
 
   if stdin_lines:
@@ -284,6 +279,8 @@ def run_command_stdin(command, error_expected, binary_mode=0,
   outfile.close()
   errfile.close()
 
+  exit_code = 0
+
   if platform_with_os_wait:
     pid, wait_code = os.wait()
 
@@ -294,6 +291,26 @@ def run_command_stdin(command, error_expected, binary_mode=0,
       sys.stdout.write("".join(stdout_lines))
       sys.stderr.write("".join(stderr_lines))
       raise SVNProcessTerminatedBySignal
+
+  return exit_code, stdout_lines, stderr_lines
+
+def run_command_stdin(command, error_expected, binary_mode=0,
+                      stdin_lines=None, *varargs):
+  """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
+  which should include newline characters) to program via stdin - this
+  should not be very large, as if the program outputs more than the OS
+  is willing to buffer, this will deadlock, with both Python and
+  COMMAND waiting to write to each other for ever.
+  Return stdout, stderr as lists of lines.
+  If ERROR_EXPECTED is None, any stderr also will be printed."""
+
+  if verbose_mode:
+    start = time.time()
+  
+  exit_code, stdout_lines, stderr_lines = spawn_process(command, 
+                                                        binary_mode, 
+                                                        stdin_lines, 
+                                                        *varargs)
 
   if verbose_mode:
     stop = time.time()
@@ -670,6 +687,40 @@ def _cleanup_test_path(path, retrying=None):
       print "WARNING: cleanup failed, will try again later"
     _deferred_test_paths.append(path)
 
+class SpawnTest(threading.Thread):
+  """Encapsulate a single test case, run it in a separate child process. 
+  Instead of waiting till the process is finished, add this class to a 
+  list of active tests for follow up in the parent process."""
+  def __init__(self, index, tests = None):
+    threading.Thread.__init__(self)
+    self.index = index
+    self.tests = tests
+    self.result = None
+    self.stdout_lines = None
+    self.stderr_lines = None
+
+  def run(self):
+    command = sys.argv[0]
+
+    args = []
+    args.append(str(self.index))
+    args.append('-c')
+    # add some startup arguments from this process
+    if fs_type:
+      args.append('--fs-type=' + fs_type)
+    if test_area_url:
+      args.append('--url=' + test_area_url)
+    if verbose_mode:
+      args.append('-v')
+    if cleanup_mode:
+      args.append('--cleanup')
+    if enable_sasl:
+      args.append('--enable-sasl')
+    
+    self.result, self.stdout_lines, self.stderr_lines =\
+                                         spawn_process(command, 1, None, *args)
+    sys.stdout.write('.')
+    self.tests.append(self)
 
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
@@ -709,6 +760,7 @@ class TestRunner:
     # Tests that want to use an editor should invoke svntest.main.use_editor.
     os.environ['SVN_EDITOR'] = ''
     os.environ['SVNTEST_EDITOR_FUNC'] = ''
+    actions.no_sleep_for_timestamps()
 
     try:
       rc = apply(self.pred.run, (), kw)
@@ -752,7 +804,6 @@ class TestRunner:
       sandbox.cleanup_test_paths()
     return result
 
-
 ######################################################################
 # Main testing functions
 
@@ -763,26 +814,71 @@ class TestRunner:
 # it can be displayed by the 'list' command.)
 
 # Func to run one test in the list.
-def run_one_test(n, test_list):
-  "Run the Nth client test in TEST_LIST, return the result."
+def run_one_test(n, test_list, parallel = 0, finished_tests = None):
+  """Run the Nth client test in TEST_LIST, return the result.
+  
+  If we're running the tests in parallel spawn the test in a new process.
+  """
 
   if (n < 1) or (n > len(test_list) - 1):
     print "There is no test", `n` + ".\n"
     return 1
 
   # Run the test.
-  exit_code = TestRunner(test_list[n], n).run()
-  return exit_code
+  if parallel:
+    st = SpawnTest(n, finished_tests)
+    st.start()
+    return 0
+  else:
+    exit_code = TestRunner(test_list[n], n).run()
+    return exit_code
 
-def _internal_run_tests(test_list, testnums):
-  """Run the tests from TEST_LIST whose indices are listed in TESTNUMS."""
+def _internal_run_tests(test_list, testnums, parallel):
+  """Run the tests from TEST_LIST whose indices are listed in TESTNUMS.
+  
+  If we're running the tests in parallel spawn as much parallel processes
+  as requested and gather the results in a temp. buffer when a child 
+  process is finished.
+  """
 
   exit_code = 0
+  finished_tests = []
+  tests_started = 0
 
-  for testnum in testnums:
-    # 1 is the only return code that indicates actual test failure.
-    if run_one_test(testnum, test_list) == 1:
-      exit_code = 1
+  if not parallel:
+    for testnum in testnums:
+      if run_one_test(testnum, test_list) == 1:
+          exit_code = 1
+  else:
+    for testnum in testnums:
+      # wait till there's a free spot.
+      while tests_started - len(finished_tests) > parallel:
+        time.sleep(0.2)
+      run_one_test(testnum, test_list, parallel, finished_tests)
+      tests_started += 1
+
+    # wait for all tests to finish
+    while len(finished_tests) < len(testnums):
+      time.sleep(0.2)
+
+    # Sort test results list by test nr.
+    deco = [(test.index, test) for test in finished_tests]
+    deco.sort()
+    finished_tests = [test for (ti, test) in deco]
+
+    # terminate the line of dots
+    print
+
+    # all tests are finished, find out the result and print the logs.
+    for test in finished_tests:
+      if test.stdout_lines:
+        for line in test.stdout_lines:
+          sys.stdout.write(line)
+      if test.stderr_lines:
+        for line in test.stderr_lines:
+          sys.stdout.write(line)
+      if test.result == 1:
+        exit_code = 1
 
   _cleanup_deferred_test_paths()
   return exit_code
@@ -804,6 +900,7 @@ def usage():
   print " --verbose     Print binary command-lines"
   print " --cleanup     Whether to clean up"
   print " --enable-sasl Whether to enable SASL authentication"
+  print " --parallel    Run the tests in parallel"
   print " --help        This information"
 
 
@@ -811,7 +908,7 @@ def usage():
 # to run their list of tests.
 #
 # This routine parses sys.argv to decide what to do.
-def run_tests(test_list):
+def run_tests(test_list, serial_only = False):
   """Main routine to run all tests in TEST_LIST.
 
   NOTE: this function does not return. It does a sys.exit() with the
@@ -824,13 +921,17 @@ def run_tests(test_list):
   global verbose_mode
   global cleanup_mode
   global enable_sasl
+  global is_child_process
+
   testnums = []
   # Should the tests be listed (as opposed to executed)?
   list_tests = 0
 
-  opts, args = my_getopt(sys.argv[1:], 'vh',
+  parallel = 0
+
+  opts, args = my_getopt(sys.argv[1:], 'vhpc',
                          ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
-                          'enable-sasl', 'help'])
+                          'enable-sasl', 'help', 'parallel'])
 
   for arg in args:
     if arg == "list":
@@ -869,8 +970,22 @@ def run_tests(test_list):
       usage()
       sys.exit(0)
 
+    elif opt == '-p' or opt == "--parallel":
+      parallel = 5   # use 5 parallel threads.
+
+    elif opt == '-c':
+      is_child_process = 1
+
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
+
+  ######################################################################
+  # Initialization
+  
+  # Cleanup: if a previous run crashed or interrupted the python
+  # interpreter, then `temp_dir' was never removed.  This can cause wonkiness.
+  if not is_child_process:
+    safe_rmtree(temp_dir)
 
   # Calculate pristine_url from test_area_url.
   pristine_url = test_area_url + '/' + pristine_dir
@@ -884,6 +999,11 @@ def run_tests(test_list):
     # If no test numbers were listed explicitly, include all of them:
     testnums = range(1, len(test_list))
 
+  # don't run tests in parallel when the tests don't support it or there 
+  # are only a few tests to run.
+  if serial_only or len(testnums) < 2:
+    parallel = 0
+
   if list_tests:
     print "Test #  Mode   Test Description"
     print "------  -----  ----------------"
@@ -893,26 +1013,22 @@ def run_tests(test_list):
     # done. just exit with success.
     sys.exit(0)
 
-  else:
-    exit_code = _internal_run_tests(test_list, testnums)
+  # Setup the pristine repository (and working copy)
+  actions.setup_pristine_repository()
 
-    # remove all scratchwork: the 'pristine' repository, greek tree, etc.
-    # This ensures that an 'import' will happen the next time we run.
+  # Run the tests.
+  exit_code = _internal_run_tests(test_list, testnums, parallel)
+
+  # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
+  # This ensures that an 'import' will happen the next time we run.
+  if not is_child_process:
     safe_rmtree(temp_dir)
 
-    _cleanup_deferred_test_paths()
+  # Cleanup after ourselves.
+  _cleanup_deferred_test_paths()
 
-    # return the appropriate exit code from the tests.
-    sys.exit(exit_code)
-
-
-######################################################################
-# Initialization
-
-# Cleanup: if a previous run crashed or interrupted the python
-# interpreter, then `temp_dir' was never removed.  This can cause wonkiness.
-
-safe_rmtree(temp_dir)
+  # Return the appropriate exit code from the tests.
+  sys.exit(exit_code)
 
 # the modules import each other, so we do this import very late, to ensure
 # that the definitions in "main" have been completed.

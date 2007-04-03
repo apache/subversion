@@ -2,7 +2,7 @@
  * log.c:  handle the adm area's log file.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -173,6 +173,8 @@
 #define SVN_WC__LOG_ATTR_ARG_5          "arg5"
 /* For upgrade-format. */
 #define SVN_WC__LOG_ATTR_FORMAT         "format"
+/* For modify-entry */
+#define SVN_WC__LOG_ATTR_FORCE          "force"
 
 
 
@@ -285,23 +287,37 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
 
     case svn_wc__xfer_cp_and_translate:
       {
-        const char *tmp_file;
+        svn_subst_eol_style_t style;
+        const char *eol;
+        apr_hash_t *keywords;
+        svn_boolean_t special;
 
-        err = svn_wc_translated_file2
-          (&tmp_file,
-           full_from_path, versioned ? full_versioned_path : full_dest_path,
-           adm_access,
-           SVN_WC_TRANSLATE_FROM_NF
-           | SVN_WC_TRANSLATE_FORCE_COPY,
-           pool);
+        if (! full_versioned_path)
+          full_versioned_path = full_dest_path;
+
+        err = svn_wc__get_eol_style(&style, &eol, full_versioned_path,
+                                    adm_access, pool);
+        if (! err)
+          err = svn_wc__get_keywords(&keywords, full_versioned_path,
+                                     adm_access, NULL, pool);
+        if (! err)
+          err = svn_wc__get_special(&special, full_versioned_path, adm_access,
+                                    pool);
+
+        if (! err)
+          err = svn_subst_copy_and_translate3
+                (full_from_path, full_dest_path,
+                 eol, TRUE,
+                 keywords, TRUE,
+                 special,
+                 pool);
+
         if (err)
           {
             if (! rerun || ! APR_STATUS_IS_ENOENT(err->apr_err))
               return err;
             svn_error_clear(err);
           }
-        else
-          SVN_ERR(svn_io_file_rename(tmp_file, full_dest_path, pool));
 
         SVN_ERR(svn_wc__maybe_set_read_only(NULL, full_dest_path,
                                             adm_access, pool));
@@ -822,6 +838,46 @@ log_do_modify_entry(struct log_runner *loggy,
       entry->prop_time = prop_time;
     }
 
+  valuestr = apr_hash_get(ah, SVN_WC__ENTRY_ATTR_WORKING_SIZE,
+                          APR_HASH_KEY_STRING);
+  if ((modify_flags & SVN_WC__ENTRY_MODIFY_WORKING_SIZE)
+      && (! strcmp(valuestr, SVN_WC__WORKING_SIZE_WC)))
+    {
+      apr_finfo_t finfo;
+      const svn_wc_entry_t *tfile_entry;
+
+      err = svn_wc_entry(&tfile_entry, tfile, loggy->adm_access,
+                         FALSE, loggy->pool);
+
+      if (err)
+        SIGNAL_ERROR(loggy, err);
+
+      if (! tfile_entry)
+        return SVN_NO_ERROR;
+
+      err = svn_io_stat(&finfo, tfile, APR_FINFO_MIN | APR_FINFO_LINK,
+                        loggy->pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          svn_error_clear(err);
+          finfo.size = 0;
+        }
+      else if (err)
+        return svn_error_createf
+          (pick_error_code(loggy), NULL,
+            _("Error getting file size on '%s'"),
+            svn_path_local_style(tfile, loggy->pool));
+
+      entry->working_size = finfo.size;
+    }
+
+
+  /* Handle force flag. */
+  valuestr = apr_hash_get(ah, SVN_WC__LOG_ATTR_FORCE,
+                          APR_HASH_KEY_STRING);
+  if (valuestr && strcmp(valuestr, "true") == 0)
+    modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
+
   /* Now write the new entry out */
   err = svn_wc__entry_modify(loggy->adm_access, name,
                              entry, modify_flags, FALSE, loggy->pool);
@@ -1279,7 +1335,16 @@ log_do_committed(struct log_runner *loggy,
 
   if (! is_this_dir)
     {
-      /* Install the new file, which may involve expanding keywords. */
+      /* Install the new file, which may involve expanding keywords.
+         A copy of this file should have been dropped into our `tmp/text-base'
+         directory during the commit process.  Part of this process
+         involves setting the textual timestamp for this entry.  We'd like
+         to just use the timestamp of the working file, but it is possible
+         that at some point during the commit, the real working file might
+         have changed again.  If that has happened, we'll use the
+         timestamp of the copy of this file in `tmp/text-base' (which
+         by then will have moved to `text-base'. */
+
       if ((err = install_committed_file
            (&overwrote_working, loggy->adm_access, name,
             remove_executable, set_read_write, pool)))
@@ -1287,14 +1352,12 @@ log_do_committed(struct log_runner *loggy,
           (pick_error_code(loggy), err,
            _("Error replacing text-base of '%s'"), name);
 
-      if ((err = svn_io_stat(&finfo, full_path, APR_FINFO_MIN | APR_FINFO_LINK,
-                             pool)))
+      if ((err = svn_io_stat(&finfo, full_path,
+                             APR_FINFO_MIN | APR_FINFO_LINK, pool)))
         return svn_error_createf(pick_error_code(loggy), err,
                                  _("Error getting 'affected time' of '%s'"),
                                  svn_path_local_style(full_path, pool));
-      /* If the working file was overwritten (due to re-translation)
-         or touched (due to +x / -x), then use *that* textual
-         timestamp instead. */
+
       if (overwrote_working)
         text_time = finfo.mtime;
       else
@@ -1302,61 +1365,52 @@ log_do_committed(struct log_runner *loggy,
           /* The working copy file hasn't been overwritten, meaning
              we need to decide which timestamp to use. */
 
-          /* For file commit items, we need to "install" the user's working
-             file as the new `text-base' in the administrative area.  A copy
-             of this file should have been dropped into our `tmp/text-base'
-             directory during the commit process.  Part of this process
-             involves setting the textual timestamp for this entry.  We'd like
-             to just use the timestamp of the working file, but it is possible
-             that at some point during the commit, the real working file might
-             have changed again.  If that has happened, we'll use the
-             timestamp of the copy of this file in `tmp/text-base'. */
-
-          const char *tmpf;
+          const char *basef;
           svn_boolean_t modified = FALSE;
-          apr_finfo_t tmpf_finfo;
+          apr_finfo_t basef_finfo;
 
-          /* Assume for now our working file copy
-             is present in the temp area. */
-          tmpf = svn_wc__text_base_path(full_path, 1, pool);
-
-          /* If it isn't, we'll error out here... */
-          err = svn_io_stat(&tmpf_finfo, tmpf, APR_FINFO_MIN | APR_FINFO_LINK,
+          /* If the working file was overwritten (due to re-translation)
+             or touched (due to +x / -x), then use *that* textual
+             timestamp instead. */
+          basef = svn_wc__text_base_path(full_path, 0, pool);
+          err = svn_io_stat(&basef_finfo, basef, APR_FINFO_MIN | APR_FINFO_LINK,
                             pool);
           if (err)
-            {
-              if (APR_STATUS_IS_ENOENT(err->apr_err)
-                  || APR_STATUS_IS_ENOTDIR(err->apr_err))
-                svn_error_clear(err);
-              else
-                return svn_error_createf
-                  (pick_error_code(loggy), err,
-                   _("Error getting 'affected time' for '%s'"),
-                   svn_path_local_style(tmpf, pool));
-            }
+            return svn_error_createf
+              (pick_error_code(loggy), err,
+               _("Error getting 'affected time' for '%s'"),
+               svn_path_local_style(basef, pool));
           else
             {
-              /* Verify that the working file is the same as the tmpf file. */
-              modified = finfo.size == tmpf_finfo.size;
-              if (finfo.mtime != tmpf_finfo.mtime && ! modified)
+              /* Verify that the working file is the same as the base file
+                 by comparing file sizes, then timestamps and the contents
+                 after that. */
+
+              /*###FIXME: if the file needs translation, don't compare
+                file-sizes, just compare timestamps and do the rest of the
+                hokey pokey. */
+              modified = finfo.size != basef_finfo.size;
+              if (finfo.mtime != basef_finfo.mtime && ! modified)
                 {
                   err = svn_wc__versioned_file_modcheck(&modified, full_path,
                                                         loggy->adm_access,
-                                                        tmpf, FALSE, pool);
+                                                        basef, FALSE, pool);
                   if (err)
                     return svn_error_createf
                       (pick_error_code(loggy), err,
                        _("Error comparing '%s' and '%s'"),
                        svn_path_local_style(full_path, pool),
-                       svn_path_local_style(tmpf, pool));
+                       svn_path_local_style(basef, pool));
                 }
               /* If they are the same, use the working file's timestamp,
-                 else use the tmpf file's timestamp. */
-              text_time = modified ? tmpf_finfo.mtime : finfo.mtime;
+                 else use the base file's timestamp. */
+              text_time = modified ? basef_finfo.mtime : finfo.mtime;
             }
         }
     }
-    
+  else
+    finfo.size = 0;
+
   /* Files have been moved, and timestamps have been found.  It is now
      time for The Big Entry Modification. */
   entry->revision = SVN_STR_TO_REV(rev);
@@ -1372,6 +1426,7 @@ log_do_committed(struct log_runner *loggy,
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->has_prop_mods = FALSE;
+  entry->working_size = finfo.size;
   if ((err = svn_wc__entry_modify(loggy->adm_access, name, entry,
                                   (SVN_WC__ENTRY_MODIFY_REVISION 
                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE 
@@ -1387,6 +1442,7 @@ log_do_committed(struct log_runner *loggy,
                                       ? SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                       : 0)
                                    | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
+                                   | SVN_WC__ENTRY_MODIFY_WORKING_SIZE
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
                                   FALSE, pool)))
     return svn_error_createf
@@ -2239,6 +2295,14 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
                  entry->present_props);
 
+  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
+                 SVN_WC__ENTRY_ATTR_WORKING_SIZE,
+                 apr_psprintf(pool, "%" APR_OFF_T_FMT,
+                              entry->working_size));
+  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_FORCE,
+                 SVN_WC__LOG_ATTR_FORCE,
+                 "true");
+
 #undef ADD_ENTRY_ATTR
 
   if (apr_hash_count(prop_hash) == 0)
@@ -2341,6 +2405,26 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                         SVN_WC__LOG_ATTR_NAME,
                         path,
                         time_prop,
+                        SVN_WC__TIMESTAMP_WC,
+                        NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
+                                                svn_wc_adm_access_t *adm_access,
+                                                const char *path,
+                                                apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum,
+                        pool,
+                        svn_xml_self_closing,
+                        SVN_WC__LOG_MODIFY_ENTRY,
+                        SVN_WC__LOG_ATTR_NAME,
+                        path,
+                        SVN_WC__ENTRY_ATTR_WORKING_SIZE,
                         SVN_WC__TIMESTAMP_WC,
                         NULL);
 
@@ -2526,8 +2610,8 @@ svn_wc_cleanup2(const char *path,
           SVN_ERR(svn_wc_props_modified_p(&modified, entry_path,
                                           adm_access, subpool));
           if (entry->kind == svn_node_file)
-            SVN_ERR(svn_wc_text_modified_p2(&modified, entry_path, FALSE,
-                                            FALSE, adm_access, subpool));
+            SVN_ERR(svn_wc_text_modified_p(&modified, entry_path, FALSE,
+                                           adm_access, subpool));
         }
     }
   svn_pool_destroy(subpool);
