@@ -695,16 +695,25 @@ EOM
     assert_equal({}, Svn::Core::MergeInfo.parse(""))
 
     input = "/trunk: 5,7-9,10,11,13,14"
-    result = Svn::Core::MergeInfo.parse(line_input)
+    result = Svn::Core::MergeInfo.parse(input)
     assert_equal(["/trunk"], result.keys)
     assert_equal([[5, 5], [7, 11], [13, 14]],
                  result["/trunk"].collect {|range| range.to_a})
+  end
 
-    single_line_input = "/trunk: 5,7-9,10,11,13,14"
-    result = Svn::Core::MergeInfo.parse(single_line_input)
-    assert_equal(["/trunk"], result.keys)
-    assert_equal([[5, 5], [7, 11], [13, 14]],
-                 result["/trunk"].collect {|range| range.to_a})
+  def test_merge_info_diff
+    input1 = "/trunk: 5,7-9,10,11,13,14"
+    input2 = "/trunk: 5,6,7-9,10,11"
+
+    result = Svn::Core::MergeInfo.diff(Svn::Core::MergeInfo.parse(input1),
+                                       Svn::Core::MergeInfo.parse(input2))
+    deleted, added = result
+    assert_equal(["/trunk"], deleted.keys)
+    assert_equal(["/trunk"], added.keys)
+    assert_equal([[13, 14]],
+                 deleted["/trunk"].collect {|range| range.to_a})
+    assert_equal([[6, 6]],
+                 added["/trunk"].collect {|range| range.to_a})
   end
 
   private

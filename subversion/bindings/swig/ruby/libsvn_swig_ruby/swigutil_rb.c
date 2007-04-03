@@ -1069,6 +1069,21 @@ r2c_svn_err(VALUE rb_svn_err, void *ctx, apr_pool_t *pool)
   return (void *)err;
 }
 
+static void *
+r2c_revnum(VALUE value, void *ctx, apr_pool_t *pool)
+{
+  svn_revnum_t *revnum;
+  revnum = apr_palloc(pool, sizeof(svn_revnum_t));
+  *revnum = NUM2INT(value);
+  return revnum;
+}
+
+static void *
+r2c_merge_range(VALUE value, void *ctx, apr_pool_t *pool)
+{
+  return svn_swig_rb_array_to_apr_array_merge_range(value, pool);
+}
+
 
 /* apr_array_t -> Ruby Array */
 #define DEFINE_APR_ARRAY_TO_ARRAY(return_type, name, conv, amp, type, ctx)  \
@@ -1322,40 +1337,16 @@ svn_swig_rb_hash_to_apr_hash_swig_type(VALUE hash, const char *typename, apr_poo
   return r2c_hash(hash, r2c_swig_type, (void *)typename, pool);
 }
 
-static int
-r2c_hash_i_for_revnum(VALUE key, VALUE value, hash_to_apr_hash_data_t *data)
-{
-  if (key != Qundef) {
-    svn_revnum_t *revnum = apr_palloc(data->pool, sizeof(svn_revnum_t));
-    *revnum = NUM2INT(value);
-    apr_hash_set(data->apr_hash,
-                 apr_pstrdup(data->pool, StringValuePtr(key)),
-                 APR_HASH_KEY_STRING,
-                 (void *)revnum);
-  }
-  return ST_CONTINUE;
-}
-
 apr_hash_t *
 svn_swig_rb_hash_to_apr_hash_revnum(VALUE hash, apr_pool_t *pool)
 {
-  if (NIL_P(hash)) {
-    return NULL;
-  } else {
-    apr_hash_t *apr_hash;
-    hash_to_apr_hash_data_t data = {
-      NULL,
-      NULL,
-      NULL,
-      pool
-    };
+  return r2c_hash(hash, r2c_revnum, NULL, pool);
+}
 
-    apr_hash = apr_hash_make(pool);
-    data.apr_hash = apr_hash;
-    rb_hash_foreach(hash, r2c_hash_i_for_revnum, (VALUE)&data);
-    
-    return apr_hash;
-  }
+apr_hash_t *
+svn_swig_rb_hash_to_apr_hash_merge_range(VALUE hash, apr_pool_t *pool)
+{
+  return r2c_hash(hash, r2c_merge_range, NULL, pool);
 }
 
 
