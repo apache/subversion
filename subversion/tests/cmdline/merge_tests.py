@@ -4615,7 +4615,8 @@ def setup_branch(sbox):
 
   wc_dir = sbox.wc_dir
 
-  xout = ["A    " + os.path.join(wc_dir, "A_COPY", "B") + "\n",
+  expected = svntest.actions.UnorderedOutput(
+         ["A    " + os.path.join(wc_dir, "A_COPY", "B") + "\n",
           "A    " + os.path.join(wc_dir, "A_COPY", "B", "lambda") + "\n",
           "A    " + os.path.join(wc_dir, "A_COPY", "B", "E") + "\n",
           "A    " + os.path.join(wc_dir, "A_COPY", "B", "E", "alpha") + "\n",
@@ -4634,16 +4635,14 @@ def setup_branch(sbox):
           "A    " + os.path.join(wc_dir, "A_COPY", "D", "H", "omega") + "\n",
           "A    " + os.path.join(wc_dir, "A_COPY", "D", "H", "psi") + "\n",
           "Checked out revision 1.\n",
-          "A         " + os.path.join(wc_dir, "A_COPY") + "\n"]
+          "A         " + os.path.join(wc_dir, "A_COPY") + "\n"])
 
   # Make a branch A_COPY to merge into. Order of
   # output lines may vary so check separately.
-  output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'copy',
-                                                      sbox.repo_url + "/A",
-                                                      os.path.join(wc_dir,
-                                                                   "A_COPY"))
-
-  svntest.main.compare_unordered_output(xout, output)
+  svntest.actions.run_and_verify_svn(None, expected, [], 'copy',
+                                     sbox.repo_url + "/A",
+                                     os.path.join(wc_dir,
+                                                  "A_COPY"))
 
   expected_output = wc.State(wc_dir, {'A_COPY' : Item(verb='Adding')})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
