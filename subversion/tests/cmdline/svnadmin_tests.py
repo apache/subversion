@@ -435,6 +435,38 @@ def verify_windows_paths_in_repos(sbox):
                "* Verified revision 1.\n",
                "* Verified revision 2.\n"], errput)
 
+#----------------------------------------------------------------------
+
+def recover_fsfs(sbox):
+  "recover a repository (FSFS only)"
+
+  # Ideally, we'd include a variant of this in a Skip() condition, except
+  # that Skip() evaluates its value at construction, rather than accepting
+  # a lambda to evaluate later.  This pragma isn't available at test
+  # construction time.
+  if not svntest.main.is_fs_type_fsfs():
+    raise svntest.Skip
+
+  # Set up a repository containing the greek tree.
+  sbox.build(create_wc = False)
+
+  # Read the current contents of the current file.
+  current_path = os.path.join(sbox.repo_dir, 'db', 'current')
+  expected_current_contents = svntest.main.file_read(current_path)
+
+  # Remove the current file.
+  os.remove(current_path)
+
+  # Run 'svnadmin recover' and check that the current file is recreated.
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr
+
+  actual_current_contents = svntest.main.file_read(current_path)
+  svntest.actions.compare_and_display_lines(
+    "Contents of db/current is unexpected.",
+    'db/current', expected_current_contents, actual_current_contents)
+
 ########################################################################
 # Run the tests
 
@@ -452,6 +484,7 @@ test_list = [ None,
               hotcopy_format,
               setrevprop,
               verify_windows_paths_in_repos,
+              recover_fsfs,
              ]
 
 if __name__ == '__main__':
