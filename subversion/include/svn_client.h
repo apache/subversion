@@ -315,6 +315,8 @@ typedef struct svn_client_proplist_item_t
  * The callback invoked by svn_client_proplist3().  Each invocation
  * describes the property specified by @a item.  Use @a pool for all
  * temporary allocation.
+ *
+ * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_proplist_receiver_t)
   (void *baton,
