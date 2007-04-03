@@ -66,6 +66,10 @@
   apr_array_header_t *src_paths
 }
 
+%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  apr_array_header_t **paths
+}
+
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
@@ -184,6 +188,11 @@
                   ,
                   ,
                   svn_swig_rb_proplist_receiver)
+
+%callback_typemap(svn_changelist_receiver_t callback_func, void *callback_baton,
+                  ,
+                  ,
+                  svn_swig_rb_changelist_receiver)
 #endif
 
 /* -----------------------------------------------------------------------

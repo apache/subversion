@@ -3493,6 +3493,26 @@ svn_swig_rb_proplist_receiver(void *baton,
   return err;
 }
 
+svn_error_t *
+svn_swig_rb_changelist_receiver(void *baton, const char *path)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+  if (!NIL_P(proc)) {
+    callback_baton_t cbb;
+
+    cbb.receiver = proc;
+    cbb.message = rb_id_call();
+    cbb.args = rb_ary_new3(1,
+                           c2r_string2(path));
+    invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+  }
+
+  return err;
+}
+
 
 /* svn_ra_reporter3_t */
 static void
