@@ -62,9 +62,7 @@ def detect_extra_files(node, extra_files):
       if contents is None:
         return
       else:
-        fp = open(os.path.join(wc_dir, node.path))
-        real_contents = fp.read()  # suck up contents of a test .png file
-        fp.close()
+        real_contents = svntest.main.file_read(os.path.join(wc_dir, node.path))
         if real_contents == contents:
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
@@ -81,14 +79,12 @@ def update_binary_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a binary file to the project.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
-  theta_contents = fp.read()  # suck up contents of a test .png file
-  fp.close()
-
+  theta_contents = svntest.main.file_read(
+    os.path.join(sys.path[0], "theta.bin"), 'rb')
   # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  svntest.main.file_write(theta_path, theta_contents)
-  
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+
   svntest.main.run_svn(None, 'add', theta_path)  
 
   # Created expected output tree for 'svn ci'
@@ -192,9 +188,8 @@ def update_binary_file_2(sbox):
   wc_dir = sbox.wc_dir
 
   # Suck up contents of a test .png file.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
-  theta_contents = fp.read()  
-  fp.close()
+  theta_contents = svntest.main.file_read(
+    os.path.join(sys.path[0], "theta.bin"), 'rb')
 
   # 102400 is svn_txdelta_window_size.  We're going to make sure we
   # have at least 102401 bytes of data in our second binary file (for
@@ -208,9 +203,9 @@ def update_binary_file_2(sbox):
 
   # Write our two files' contents out to disk, in A/theta and A/zeta.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  svntest.main.file_write(theta_path, theta_contents)
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
   zeta_path = os.path.join(wc_dir, 'A', 'zeta')
-  svntest.main.file_write(zeta_path, zeta_contents)
+  svntest.main.file_write(zeta_path, zeta_contents, 'wb')
 
   # Now, `svn add' those two files.
   svntest.main.run_svn(None, 'add', theta_path, zeta_path)  

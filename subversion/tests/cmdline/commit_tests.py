@@ -1812,10 +1812,9 @@ def mods_in_schedule_delete(sbox):
                                         None, None, None, None, None, wc_dir)
 
   # Unversioned file still exists
-  fp = open(foo_path)
-  if fp.read() != foo_contents:
+  actual_contents = svntest.main.file_read(foo_path)
+  if actual_contents != foo_contents:
     raise svntest.Failure
-  fp.close()
 
 
 #----------------------------------------------------------------------

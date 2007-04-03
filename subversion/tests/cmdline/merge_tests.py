@@ -289,9 +289,7 @@ def textual_merges_galore(sbox):
   other_rho_text = ""
   for x in range(1,10):
     other_rho_text = other_rho_text + 'Unobtrusive line ' + `x` + ' in rho\n'
-  fp = open(other_rho_path, "r")
-  current_other_rho_text = fp.read()
-  fp.close()
+  current_other_rho_text = svntest.main.file_read(other_rho_path)
   svntest.main.file_write(other_rho_path,
                           other_rho_text + current_other_rho_text)
 
@@ -1433,14 +1431,12 @@ def merge_binary_file (sbox):
   wc_dir = sbox.wc_dir
 
   # Add a binary file to the project
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
-  theta_contents = fp.read()  # suck up contents of a test .png file
-  fp.close()
-
+  theta_contents = svntest.main.file_read(
+    os.path.join(sys.path[0], "theta.bin"), 'rb')
   # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  svntest.main.file_write(theta_path, theta_contents)
-  
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+
   svntest.main.run_svn(None, 'add', theta_path)  
 
   # Commit the new binary file, creating revision 2.
@@ -1527,14 +1523,12 @@ def three_way_merge_add_of_existing_binary_file(sbox):
                                      "-m", "Creating copy-of-A")
 
   # Add a binary file to the WC.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
-  theta_contents = fp.read()  # suck up contents of a test .png file
-  fp.close()
-
+  theta_contents = svntest.main.file_read(
+    os.path.join(sys.path[0], "theta.bin"), 'rb')
   # Write PNG file data into 'A/theta'.
-  theta_path = os.path.join(wc_dir, "A", "theta")
-  svntest.main.file_write(theta_path, theta_contents)
-  
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+
   svntest.main.run_svn(None, "add", theta_path)
 
   # Commit the new binary file to the repos, creating revision 3.
@@ -2144,9 +2138,8 @@ def merge_binary_with_common_ancestry(sbox):
   svntest.main.run_svn(None, 'mkdir', I_path)
 
   # Add a binary file to the common ancestry path
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
-  theta_contents = fp.read()
-  fp.close()
+  theta_contents = svntest.main.file_read(
+    os.path.join(sys.path[0], "theta.bin"), 'rb')
   theta_I_path = os.path.join(I_path, 'theta')
   svntest.main.file_write(theta_I_path, theta_contents)
   svntest.main.run_svn(None, 'add', theta_I_path)

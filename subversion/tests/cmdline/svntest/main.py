@@ -421,6 +421,15 @@ def file_write(path, contents, mode = 'w'):
   fp.write(contents)
   fp.close()
 
+# For reading the contents of a file
+def file_read(path, mode = 'r'):
+  """Return the contents of the file at PATH, opening file using MODE,
+  which is (r)ead by default."""
+  fp = open(path, mode)
+  contents = fp.read()
+  fp.close()
+  return contents
+
 # For creating blank new repositories
 def create_repos(path):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
