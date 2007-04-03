@@ -2402,9 +2402,9 @@ svn_client_merge_peg(const char *source,
  *
  * @a path_or_url is a WC path or repository URL.  If @a path_or_url
  * is a WC path, @a revision is ignored in preference to @a
- * path_or_url's @c BASE revision.  If @a path_or_url is a URL, @a
+ * path_or_url's @c WORKING revision.  If @a path_or_url is a URL, @a
  * revision is the revision at which to get its merge info.  @a
- * mergeinfo and any temporary allocations are made in @a pool.
+ * mergeinfo is allocated in @a pool.
  *
  * @since New in 1.5.
  */
