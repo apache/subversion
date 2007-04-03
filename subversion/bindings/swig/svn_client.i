@@ -62,6 +62,10 @@
 }
 #endif
 
+%apply const apr_array_header_t *STRINGLIST {
+  apr_array_header_t *src_paths
+}
+
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
