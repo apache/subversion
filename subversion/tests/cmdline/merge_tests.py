@@ -4637,8 +4637,7 @@ def setup_branch(sbox):
           "Checked out revision 1.\n",
           "A         " + os.path.join(wc_dir, "A_COPY") + "\n"])
 
-  # Make a branch A_COPY to merge into. Order of
-  # output lines may vary so check separately.
+  # Make a branch A_COPY to merge into.
   svntest.actions.run_and_verify_svn(None, expected, [], 'copy',
                                      sbox.repo_url + "/A",
                                      os.path.join(wc_dir,
