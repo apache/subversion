@@ -1219,6 +1219,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_is_single_path_component),
     SVN_TEST_PASS(test_compare_paths),
     SVN_TEST_PASS(test_get_longest_ancestor),
-    SVN_TEST_XFAIL(test_splitext),
+    SVN_TEST_PASS(test_splitext),
     SVN_TEST_NULL
   };
