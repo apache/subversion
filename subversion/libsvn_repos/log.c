@@ -289,6 +289,9 @@ get_history(struct path_info *info,
      don't fetch any more for this path. */
   if (info->history_rev < start)
     {
+      svn_pool_destroy(subpool);
+      if (info->oldpool)
+        svn_pool_destroy(info->oldpool);
       info->done = TRUE;
       return SVN_NO_ERROR;
     }

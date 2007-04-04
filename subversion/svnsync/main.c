@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2005-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1171,6 +1171,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
                                      NULL, subpool));
     }
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
