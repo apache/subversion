@@ -5,18 +5,27 @@ http://svn.collab.net/repos/svn/tags/1.4.4
  User-visible changes:
   - Client:
     * fixed: 'svn up' of replaced file without history fails (issue #2618)
+    * fixed: 'svn export' succeeds on non-existent URL (r23191, -3, -5, -200)
     * fixed: ra_dav litters empty transactions if initial setup fails (r23594)
+    * fixed: inconsistent expansion of revision number keywords (issue #1743)
 
   - Server:
+    * fixed: rare dirprop dataloss leading to BDB repo corruption (issue #2751)
     * fixed: 'svnadmin load' invents svn:date if none exists (issue #2729)
+    * fixed: svnserve can't commit locked file if root unwritable (issue #2700)
 
   - Client and Server:
+    * fixed: hang during character translation (r23491, r23492)
     * translation updates for Simplified Chinese, Japanese, and Norwegian
 
  Developer-visible changes:
  * new "make svnserveautocheck" testing target (r23558)
+ * fixed: ra_serf fails checkout if access to repos root is forbidden (r23846)
+ * fixed: svn_client_cat2() doesn't accept WORKING as a revision (r23556)
  * javahl bindings:
      - fixed: potential segfault in initialisation (r23383)
+     - fixed: SVNClientSynchronized.logMessages() isn't synchronised (r23978)
+     - fixed: SVNClient.info2() misreports itself as unlock in errors (r24219)
  * SWIG/python bindings:
      - fixed: memory leak whenever C APIs returned errors (r21453, r23468)
  * SWIG/ruby bindings:
