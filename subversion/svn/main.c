@@ -1331,10 +1331,7 @@ main(int argc, const char *argv[])
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Syntax error in native-eol argument '%s'"),
                  utf8_opt_arg);
-            svn_handle_error2(err, stderr, FALSE, "svn: ");
-            svn_error_clear(err);
-            svn_pool_destroy(pool);
-            return EXIT_FAILURE;
+            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
           }
         break;
       case svn_cl__no_unlock_opt:

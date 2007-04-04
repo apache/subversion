@@ -1468,19 +1468,13 @@ main(int argc, const char *argv[])
 
   err = check_lib_versions();
   if (err)
-    {
-      svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error(err, NULL, "svnsync: ");
 
   pool = svn_pool_create(NULL);
 
   err = svn_ra_initialize(pool);
   if (err)
-    {
-      svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
 
   memset(&opt_baton, 0, sizeof(opt_baton));
 
@@ -1737,10 +1731,8 @@ main(int argc, const char *argv[])
           err = svn_error_quick_wrap(err, 
                                      _("Try 'svnsync help' for more info"));
         }
-      svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-      svn_error_clear(err);
 
-      return EXIT_FAILURE;
+      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
     }
 
   svn_pool_destroy(pool);

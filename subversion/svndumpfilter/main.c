@@ -1307,9 +1307,7 @@ main(int argc, const char *argv[])
                                      _("Try 'svndumpfilter help' for more "
                                        "info"));
         }
-      svn_handle_error2(err, stderr, FALSE, "svndumpfilter: ");
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
+      return svn_cmdline_handle_exit_error(err, pool, "svndumpfilter: ");
     }
   else
     {
