@@ -234,7 +234,9 @@
   apr_array_header_t *to,
   apr_array_header_t *changes,
   apr_array_header_t *eraser,
-  apr_array_header_t *whiteboard
+  apr_array_header_t *whiteboard,
+  apr_array_header_t *rangelist1,
+  apr_array_header_t *rangelist2
 }
 
 /* -----------------------------------------------------------------------
