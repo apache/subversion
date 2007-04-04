@@ -660,6 +660,10 @@ module Svn
       def remove(eraser)
         self.class.new(*Core.rangelist_remove(eraser, self))
       end
+
+      def intersect(other)
+        self.class.new(*Core.rangelist_intersect(self, other))
+      end
     end
   end
 end

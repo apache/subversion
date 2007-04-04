@@ -768,6 +768,15 @@ EOM
     assert_equal([[10, 13]], removed.collect {|range| range.to_a})
   end
 
+  def test_range_list_intersect
+    range_list1 = Svn::Core::RangeList.new([5, 9])
+    range_list2 = Svn::Core::RangeList.new([5, 5], [7, 7], [9, 13])
+
+    intersected = range_list1.intersect(range_list2)
+    assert_equal([[5, 5], [7, 7], [9, 9]],
+                 intersected.collect {|range| range.to_a})
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new
