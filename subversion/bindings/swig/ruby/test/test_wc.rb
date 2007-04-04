@@ -515,11 +515,7 @@ EOE
         args = [method_name, src_path, crlf_path, Svn::Wc::TRANSLATE_FROM_NF]
         result = yield(access.send(*args), source)
         result ||= File.open(src_path, "rb") {|f| f.read}
-        if windows?
-          assert_equal(lf_source, result)
-        else
-          assert_equal(crlf_source, result)
-        end
+        assert_equal(crlf_source, result)
 
         File.open(src_path, "wb") {|f| f.print(source)}
         args = [method_name, src_path, cr_path, Svn::Wc::TRANSLATE_FROM_NF]
@@ -578,13 +574,13 @@ EOE
     ctx.ci(revision_path)
 
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
-      File.open(src_path, "w") {|f| f.print(source)}
+      File.open(src_path, "wb") {|f| f.print(source)}
       args = [method_name, src_path, revision_path, Svn::Wc::TRANSLATE_FROM_NF]
       result = yield(access.send(*args), source)
       result ||= File.open(src_path, "rb") {|f| f.read}
       assert_equal(revision_source, result)
 
-      File.open(src_path, "w") {|f| f.print(source)}
+      File.open(src_path, "wb") {|f| f.print(source)}
       args = [method_name, src_path, revision_path, Svn::Wc::TRANSLATE_TO_NF]
       assert_equal(source, yield(access.send(*args)))
     end
