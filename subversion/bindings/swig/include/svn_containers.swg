@@ -607,5 +607,14 @@
 %typemap(argout) apr_array_header_t **RANGELIST {
   %append_output(svn_swig_rb_apr_array_to_array_merge_range(*$1));
 }
+
+%typemap(in) apr_array_header_t **RANGELIST_INOUT ($*1_ltype temp)
+{
+  $1 = &temp;
+  *$1 = svn_swig_rb_array_to_apr_array_merge_range($input, _global_pool);
+}
+
+%typemap(argout) apr_array_header_t **RANGELIST_INOUT =
+   apr_array_header_t **RANGELIST;
 #endif
 

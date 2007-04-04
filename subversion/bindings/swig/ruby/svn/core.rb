@@ -652,6 +652,10 @@ module Svn
           self.class.new(*result)
         end
       end
+
+      def merge(changes)
+        self.class.new(*Core.swig_rb_rangelist_merge(self, changes))
+      end
     end
   end
 end
