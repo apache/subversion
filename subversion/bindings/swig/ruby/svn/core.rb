@@ -607,22 +607,32 @@ module Svn
       end
     end
 
-    module MergeInfo
-      module_function
-      def parse(input)
-        Core.mergeinfo_parse(input)
+    class MergeInfo < Hash
+      class << self
+        def parse(input)
+          new(Core.mergeinfo_parse(input))
+        end
       end
 
-      def diff(from, to)
-        Core.mergeinfo_diff(from, to)
+      def initialize(info)
+        super()
+        info.each do |key, value|
+          self[key] = value
+        end
       end
 
-      def merge(info, changes)
-        Core.swig_rb_mergeinfo_merge(info, changes)
+      def diff(to)
+        Core.mergeinfo_diff(self, to).collect do |result|
+          self.class.new(result)
+        end
       end
 
-      def remove(info, eraser)
-        Core.mergeinfo_remove(eraser, info)
+      def merge(changes)
+        self.class.new(Core.swig_rb_mergeinfo_merge(self, changes))
+      end
+
+      def remove(eraser)
+        self.class.new(Core.mergeinfo_remove(eraser, self))
       end
     end
   end

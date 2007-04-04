@@ -705,8 +705,9 @@ EOM
     input1 = "/trunk: 5,7-9,10,11,13,14"
     input2 = "/trunk: 5,6,7-9,10,11"
 
-    result = Svn::Core::MergeInfo.diff(Svn::Core::MergeInfo.parse(input1),
-                                       Svn::Core::MergeInfo.parse(input2))
+    info1 = Svn::Core::MergeInfo.parse(input1)
+    info2 = Svn::Core::MergeInfo.parse(input2)
+    result = info1.diff(info2)
     deleted, added = result
     assert_equal(["/trunk"], deleted.keys)
     assert_equal(["/trunk"], added.keys)
@@ -723,7 +724,7 @@ EOM
                  info["/trunk"].collect {|range| range.to_a})
 
     changes = Svn::Core::MergeInfo.parse("/trunk: 6-13")
-    merged = Svn::Core::MergeInfo.merge(info, changes)
+    merged = info.merge(changes)
     assert_equal(["/trunk"], merged.keys)
     assert_equal([[5, 13]],
                  merged["/trunk"].collect {|range| range.to_a})
@@ -736,7 +737,7 @@ EOM
                  info["/trunk"].collect {|range| range.to_a})
 
     eraser = Svn::Core::MergeInfo.parse("/trunk: 7,9-11")
-    removed = Svn::Core::MergeInfo.remove(info, eraser)
+    removed = info.remove(eraser)
     assert_equal(["/trunk"], removed.keys)
     assert_equal([[5, 6], [8, 8], [12, 13]],
                  removed["/trunk"].collect {|range| range.to_a})

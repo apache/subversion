@@ -247,7 +247,9 @@ module Svn
       def merge_info(paths, revision=nil, include_parents=true)
         paths = [paths] unless paths.is_a?(Array)
         revision ||= Svn::Core::INVALID_REVNUM
-        Ra.get_merge_info(self, paths, revision, include_parents)
+        info = Ra.get_merge_info(self, paths, revision, include_parents)
+        info = Core::MergeInfo.new(info) unless info.nil?
+        info
       end
 
       private
