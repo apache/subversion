@@ -785,6 +785,12 @@ EOM
                  reversed.collect {|range| range.to_a})
   end
 
+  def test_range_list_to_s
+    range_list = Svn::Core::RangeList.new([5, 5], [7, 7], [9, 13])
+    assert_equal("5,7,9-13", range_list.to_s)
+    assert_not_equal("5,7,9-13", range_list.inspect)
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new
