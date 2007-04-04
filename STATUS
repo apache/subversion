@@ -41,19 +41,6 @@ Candidate changes:
     Votes:
       +1: blair, cmpilato
 
-  * r24073, r24126, r24128
-    Fix issue #2751: Directory prop mods reverted in overlapping
-      commits scenario.
-    Justification:
-      At the root of it, its very unexpected behavior that allows a commit
-      to undo property changes without the committer being aware of it.
-      But in the BDB case (at least), it has the horrific side-effect of
-      setting the stage for a cycle in the representations table delta
-      chain.  In case you're wondering, that's oh-so-bad.
-    Votes:
-      +1: cmpilato, malcolm
-      +0: dlr
-
   * r23217, r23223, r23225, r23226, r23227, r23231, r23232
     Fix issue #2705, with tests: repos_replay failed
       on revisions with copy-with-modifications from
@@ -98,6 +85,7 @@ Candidate changes:
       Small fix.  Segfaults are bad.
     Votes:
       +1: hwright
+      +0: dlr
 
 
 Veto-blocked changes:
@@ -140,15 +128,6 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r23115,r23117-23118
-    Fix issue 2700: commit of locked file fails when no write access on root
-    Justification:
-      Fix for bug reported a few times on dev&users, includes test.
-    Branch: 1.4.x-issue-2700 (-r23124:HEAD)
-    Votes:
-      +1: lgo, cmpilato, malcolm
-      +0: dlr
-
   * r20667 (part), (r22311, already in 1.4.x)
     Make svn_ra_do_{update,switch,status} work with the SWIG/Perl bindings.
     Notes:
@@ -162,3 +141,23 @@ Approved changes:
       +1: cmpilato, clkao
       +0: malcolm, dlr
 
+  * r23115, r23117-23118
+    Fix issue 2700: commit of locked file fails when no write access on root
+    Justification:
+      Fix for bug reported a few times on dev&users, includes test.
+    Branch: 1.4.x-issue-2700 (-r23124:HEAD)
+    Votes:
+      +1: lgo, cmpilato, malcolm
+      +0: dlr
+
+  * r24073, r24126, r24128, r24391
+    Fix issue #2751: Directory prop mods reverted in overlapping
+      commits scenario.
+    Justification:
+      At the root of it, its very unexpected behavior that allows a commit
+      to undo property changes without the committer being aware of it.
+      But in the BDB case (at least), it has the horrific side-effect of
+      setting the stage for a cycle in the representations table delta
+      chain.  In case you're wondering, that's oh-so-bad.
+    Votes:
+      +1: cmpilato, malcolm, dlr
