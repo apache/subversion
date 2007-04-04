@@ -141,15 +141,6 @@ Approved changes:
       +1: cmpilato, clkao
       +0: malcolm, dlr
 
-  * r23115, r23117-23118
-    Fix issue 2700: commit of locked file fails when no write access on root
-    Justification:
-      Fix for bug reported a few times on dev&users, includes test.
-    Branch: 1.4.x-issue-2700 (-r23124:HEAD)
-    Votes:
-      +1: lgo, cmpilato, malcolm
-      +0: dlr
-
   * r24073, r24126, r24128, r24391
     Fix issue #2751: Directory prop mods reverted in overlapping
       commits scenario.
