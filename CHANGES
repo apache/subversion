@@ -27,8 +27,8 @@ http://svn.collab.net/repos/svn/tags/1.4.4
      - fixed: SVNClientSynchronized.logMessages() isn't synchronised (r23978)
      - fixed: SVNClient.info2() misreports itself as unlock in errors (r24219)
  * SWIG/perl bindings:
-     - fixed: ra_do_{update,switch,status} work with Perl delta editors
-       (r20667, r22311)
+     - fixed: ra_do_{update,switch,status} don't work with Perl delta editors
+           (r20667, r22311)
  * SWIG/python bindings:
      - fixed: memory leak whenever C APIs returned errors (r21453, r23468)
  * SWIG/ruby bindings:
