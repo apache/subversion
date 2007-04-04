@@ -620,6 +620,10 @@ module Svn
       def merge(info, changes)
         Core.swig_rb_mergeinfo_merge(info, changes)
       end
+
+      def remove(info, eraser)
+        Core.mergeinfo_remove(eraser, info)
+      end
     end
   end
 end

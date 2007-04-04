@@ -729,6 +729,19 @@ EOM
                  merged["/trunk"].collect {|range| range.to_a})
   end
 
+  def test_merge_info_remove
+    info = Svn::Core::MergeInfo.parse("/trunk: 5-13")
+    assert_equal(["/trunk"], info.keys)
+    assert_equal([[5, 13]],
+                 info["/trunk"].collect {|range| range.to_a})
+
+    eraser = Svn::Core::MergeInfo.parse("/trunk: 7,9-11")
+    removed = Svn::Core::MergeInfo.remove(info, eraser)
+    assert_equal(["/trunk"], removed.keys)
+    assert_equal([[5, 6], [8, 8], [12, 13]],
+                 removed["/trunk"].collect {|range| range.to_a})
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new
