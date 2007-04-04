@@ -777,6 +777,14 @@ EOM
                  intersected.collect {|range| range.to_a})
   end
 
+  def test_range_list_reverse
+    range_list = Svn::Core::RangeList.new([5, 5], [7, 7], [9, 13])
+
+    reversed = range_list.reverse
+    assert_equal([[13, 9], [7, 7], [5, 5]],
+                 reversed.collect {|range| range.to_a})
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new

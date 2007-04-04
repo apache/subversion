@@ -683,6 +683,7 @@ PyObject *svn_swig_py_exception_type(void);
 %ignore svn_commit_info_dup;
 %ignore svn_mergeinfo_merge;
 %ignore svn_rangelist_merge;
+%ignore svn_rangelist_reverse;
 #endif
 
 /* ----------------------------------------------------------------------- */
@@ -950,6 +951,13 @@ svn_swig_rb_rangelist_merge(apr_array_header_t **rangelist_inout,
                             apr_array_header_t *changes, apr_pool_t *pool)
 {
   return svn_rangelist_merge(rangelist_inout, changes, pool);
+}
+
+static svn_error_t *
+svn_swig_rb_rangelist_reverse(apr_array_header_t **rangelist_inout,
+                              apr_pool_t *pool)
+{
+  return svn_rangelist_reverse(*rangelist_inout, pool);
 }
 
 /* prompt providers return baton for protecting GC */
