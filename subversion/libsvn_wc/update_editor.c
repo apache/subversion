@@ -2282,16 +2282,27 @@ merge_file(svn_wc_notify_state_t *content_state,
             {                  
               /* Now we need to let loose svn_wc_merge2() to merge the
                  textual changes into the working file. */
-              const char *oldrev_str, *newrev_str;
+              const char *oldrev_str, *newrev_str, *mine_str;
               const char *merge_left;
+              const char *path_ext;
+
+              /* Get the path's extension, if any. */
+              svn_path_splitext(NULL, &path_ext, fb->path, pool);
               
               /* Create strings representing the revisions of the
                  old and new text-bases. */
-              oldrev_str = apr_psprintf(pool, ".r%ld",
-                                        entry->revision);
-              newrev_str = apr_psprintf(pool, ".r%ld",
-                                        *eb->target_revision);
-
+              oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
+                                        entry->revision,
+                                        *path_ext ? "." : "",
+                                        *path_ext ? path_ext : "");
+              newrev_str = apr_psprintf(pool, ".r%ld%s%s",
+                                        *eb->target_revision,
+                                        *path_ext ? "." : "",
+                                        *path_ext ? path_ext : "");
+              mine_str = apr_psprintf(pool, ".mine%s%s",
+                                      *path_ext ? "." : "",
+                                      *path_ext ? path_ext : "");
+              
               if (fb->add_existed && ! is_replaced)
                 {
                   SVN_ERR(svn_wc_create_tmp_file2(NULL, &merge_left,
@@ -2312,9 +2323,10 @@ merge_file(svn_wc_notify_state_t *content_state,
                        fb->new_text_base_path,
                        fb->path,
                        adm_access,
-                       oldrev_str, newrev_str, ".mine",
+                       oldrev_str, newrev_str, mine_str,
                        FALSE, eb->diff3_cmd, NULL, fb->propchanges,
                        pool));
+
               /* If we created a temporary left merge file, get rid of it. */
               if (merge_left != fb->text_base_path)
                 SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
