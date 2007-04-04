@@ -668,6 +668,10 @@ module Svn
       def reverse
         self.class.new(*Core.swig_rb_rangelist_reverse(self))
       end
+
+      def to_s
+        Core.rangelist_to_stringbuf(self)
+      end
     end
   end
 end
