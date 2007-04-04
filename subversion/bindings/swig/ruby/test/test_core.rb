@@ -743,6 +743,12 @@ EOM
                  removed["/trunk"].collect {|range| range.to_a})
   end
 
+  def test_merge_info_to_s
+    info = Svn::Core::MergeInfo.parse("/trunk: 5,7,9-13")
+    assert_equal("/trunk:5,7,9-13", info.to_s)
+    assert_not_equal("/trunk:5,7,9-13", info.inspect)
+  end
+
   def test_range_list_diff
     range_list1 = Svn::Core::RangeList.new([5, 5], [9, 13])
     range_list2 = Svn::Core::RangeList.new([7, 11])

@@ -634,6 +634,10 @@ module Svn
       def remove(eraser)
         self.class.new(Core.mergeinfo_remove(eraser, self))
       end
+
+      def to_s
+        Core.mergeinfo__to_string(self)
+      end
     end
 
     class RangeList < Array
