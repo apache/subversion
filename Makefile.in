@@ -78,7 +78,7 @@ contribdir = @bindir@/svn-contrib
 javahl_javadir = @libdir@/svn-javahl
 javahl_javahdir = @libdir@/svn-javahl/include
 javahl_libdir = @libdir@
-javahl_test_rootdir=$(abs_builddir)/subversion/bindings/java/javahl/test-work
+javahl_test_rootdir=$(abs_builddir)/subversion/bindings/javahl/test-work
 
 MSGFMT = @MSGFMT@
 MSGFMTFLAGS = @MSGFMTFLAGS@
