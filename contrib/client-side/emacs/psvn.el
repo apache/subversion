@@ -1887,20 +1887,35 @@ A and B must be line-info's."
     ["Prepare bug report" svn-prepare-bug-report t]
     ))
 
+(defvar svn-status-file-popup-menu-list
+  '(["open" svn-status-find-file-other-window t]
+    ["svn diff" svn-status-show-svn-diff t]
+    ["svn commit" svn-status-commit t]
+    ["svn log" svn-status-show-svn-log t]
+    ["svn blame" svn-status-blame t]
+    ["mark" svn-status-set-user-mark t]
+    ["unmark" svn-status-unset-user-mark t]
+    ["svn add" svn-status-add-file t]
+    ["svn add recursively" svn-status-add-file-recursively t]
+    ["svn mv..." svn-status-mv t]
+    ["svn rm..." svn-status-rm t]
+    ["svn lock" svn-status-lock t]
+    ["svn unlock" svn-status-unlock t]
+    ["svn info" svn-status-info t]
+    ) "A list of menu entries for `svn-status-popup-menu'")
+
+;; extend svn-status-file-popup-menu-list via:
+;; (add-to-list 'svn-status-file-popup-menu-list ["commit" svn-status-commit t])
 
 (defun svn-status-popup-menu (event)
+  "Display a file specific popup menu"
   (interactive "e")
   (mouse-set-point event)
   (let* ((line-info (svn-status-get-line-information))
          (name (svn-status-line-info->filename line-info)))
     (when line-info
       (easy-menu-define svn-status-actual-popup-menu nil nil
-        (list name
-               ["svn diff" svn-status-show-svn-diff t]
-               ["svn commit" svn-status-commit t]
-               ["svn log" svn-status-show-svn-log t]
-               ["svn info" svn-status-info t]
-               ["svn blame" svn-status-blame t]))
+        (append (list name) svn-status-file-popup-menu-list))
       (svn-status-face-set-temporary-during-popup
        'svn-status-marked-popup-face (svn-point-at-bol) (svn-point-at-eol)
        svn-status-actual-popup-menu))))
