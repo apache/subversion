@@ -14,7 +14,7 @@
 #undef PACKAGE_VERSION
 #undef _
 
-#include <svn_private_config.h>
+#include "svn_private_config.h"
 
 #ifndef RE_OPTION_IGNORECASE
 #  ifdef ONIG_OPTION_IGNORECASE
