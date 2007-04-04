@@ -120,15 +120,3 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r20667 (part), (r22311, already in 1.4.x)
-    Make svn_ra_do_{update,switch,status} work with the SWIG/Perl bindings.
-    Notes:
-      Backport of r22311 was originally attempted in r22694, but merge was
-      botched due to an incomplete listing in STATUS (r22311 depends upon
-      additional supporting code in r20667, which wasn't backported).
-    Justification:
-      Would be nice to fix something we already said we'd fixed in 1.4.3.
-    Branch: 1.4.x-r22311 (-c24188)
-    Votes:
-      +1: cmpilato, clkao
-      +0: malcolm, dlr

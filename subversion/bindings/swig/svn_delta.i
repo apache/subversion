@@ -71,7 +71,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              apr_pool_t *pool);
 #endif
 
-%typemap(perl5, in) (const svn_delta_editor_t *editor, void *edit_baton) {
+%typemap(perl5, in) (const svn_delta_editor_t *EDITOR, void *BATON) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 
