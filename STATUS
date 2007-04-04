@@ -140,15 +140,3 @@ Approved changes:
     Votes:
       +1: cmpilato, clkao
       +0: malcolm, dlr
-
-  * r24073, r24126, r24128, r24391
-    Fix issue #2751: Directory prop mods reverted in overlapping
-      commits scenario.
-    Justification:
-      At the root of it, its very unexpected behavior that allows a commit
-      to undo property changes without the committer being aware of it.
-      But in the BDB case (at least), it has the horrific side-effect of
-      setting the stage for a cycle in the representations table delta
-      chain.  In case you're wondering, that's oh-so-bad.
-    Votes:
-      +1: cmpilato, malcolm, dlr
