@@ -749,6 +749,20 @@ EOM
     assert_not_equal("/trunk:5,7,9-13", info.inspect)
   end
 
+  def test_merge_info_sort
+    info = Svn::Core::MergeInfo.parse("/trunk: 5,7,9-13")
+
+    info["/trunk"] = info["/trunk"].reverse
+    assert_equal(["/trunk"], info.keys)
+    assert_equal([[13, 9], [7, 7], [5, 5]],
+                 info["/trunk"].collect {|range| range.to_a})
+
+    sorted_info = info.sort
+    assert_equal(["/trunk"], sorted_info.keys)
+    assert_equal([[5, 5], [7, 7], [13, 9]],
+                 sorted_info["/trunk"].collect {|range| range.to_a})
+  end
+
   def test_range_list_diff
     range_list1 = Svn::Core::RangeList.new([5, 5], [9, 13])
     range_list2 = Svn::Core::RangeList.new([7, 11])
