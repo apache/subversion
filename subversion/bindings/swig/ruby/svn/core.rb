@@ -656,6 +656,10 @@ module Svn
       def merge(changes)
         self.class.new(*Core.swig_rb_rangelist_merge(self, changes))
       end
+
+      def remove(eraser)
+        self.class.new(*Core.rangelist_remove(eraser, self))
+      end
     end
   end
 end
