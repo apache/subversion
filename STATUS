@@ -9,6 +9,14 @@ Status of 1.1.5:
 
 Candidate changes:
 
+  * r24073, r24126, r24128
+    Branch: 1.1.x-issue-2751
+    Fix rare FS corruption in both bdb and FSFS filesystem implementations
+    Justification:
+      Well, *corruption*...
+    Votes:
+      +1: dionisos
+
   * r12694
     Fix use of incompatible pointer types in svndumpfilter.
     Justification:
@@ -45,7 +53,7 @@ Candidate changes:
     Justification:
       Trivial denial of service attack.
     Votes:
-     +1: ringstrom
+     +1: ringstrom, dionisos
 
   * r14536
     Make backend tests explicit and do them for both BDB and FSFS.
