@@ -220,6 +220,8 @@
 /* bad pool convention */
 %ignore svn_opt_print_generic_help;
 
+%ignore svn_opt_args_to_target_array;
+
 /* Ugliness because the constants are typedefed and SWIG ignores them
    as a result. */
 %constant svn_revnum_t SWIG_SVN_INVALID_REVNUM = -1;
@@ -685,6 +687,10 @@ PyObject *svn_swig_py_exception_type(void);
 %ignore svn_mergeinfo_sort;
 %ignore svn_rangelist_merge;
 %ignore svn_rangelist_reverse;
+
+%ignore svn_opt_args_to_target_array2;
+%ignore svn_opt_parse_num_args;
+%ignore svn_opt_parse_all_args;
 #endif
 
 /* ----------------------------------------------------------------------- */
