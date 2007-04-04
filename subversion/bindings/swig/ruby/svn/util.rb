@@ -94,7 +94,7 @@ EOC
     def filename_to_temp_file(filename)
       file = Tempfile.new("svn-ruby")
       file.binmode
-      file.print(File.read(filename))
+      file.print(File.open(filename, "rb") {|f| f.read})
       file.close
       file.open
       file.binmode
