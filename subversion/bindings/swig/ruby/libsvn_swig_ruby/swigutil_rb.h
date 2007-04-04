@@ -100,6 +100,8 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_apr_array_to_array_proplist_item(const apr_array_header_t *ary);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_apr_array_to_array_external_item2(const apr_array_header_t *ary);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+VALUE svn_swig_rb_apr_array_to_array_merge_range(const apr_array_header_t *ary);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_prop_apr_array_to_hash_prop(const apr_array_header_t *ary);

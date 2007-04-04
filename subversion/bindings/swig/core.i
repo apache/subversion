@@ -226,10 +226,20 @@
 %constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
 
 /* -----------------------------------------------------------------------
-   input rangelist to svn_rangelist_to_stringbuf
+   input rangelist
 */
 %apply apr_array_header_t *RANGELIST {
-   apr_array_header_t *rangeinput
+  apr_array_header_t *rangeinput,
+  apr_array_header_t *from,
+  apr_array_header_t *to
+}
+
+/* -----------------------------------------------------------------------
+   output rangelist
+*/
+%apply apr_array_header_t **RANGELIST {
+  apr_array_header_t **deleted,
+  apr_array_header_t **added
 }
 
 /* -----------------------------------------------------------------------
@@ -878,6 +888,24 @@ struct svn_auth_baton_t
 
   svn_commit_info_t *dup(apr_pool_t *pool) {
     return svn_commit_info_dup(self, pool);
+  };
+}
+
+%extend svn_merge_range_t
+{
+  svn_merge_range_t(svn_revnum_t start, svn_revnum_t end, apr_pool_t *pool) {
+    svn_merge_range_t *self;
+    self = apr_palloc(pool, sizeof(svn_merge_range_t));
+    self->start = start;
+    self->end = end;
+    return self;
+  };
+
+  ~svn_merge_range_t() {
+  };
+
+  svn_merge_range_t *dup(apr_pool_t *pool) {
+    return svn_merge_range_dup(self, pool);
   };
 }
 

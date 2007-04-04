@@ -635,5 +635,23 @@ module Svn
         self.class.new(Core.mergeinfo_remove(eraser, self))
       end
     end
+
+    class RangeList < Array
+      def initialize(*ranges)
+        super()
+        ranges.each do |range|
+          self << Svn::Core::MergeRange.new(*range.to_a)
+        end
+      end
+
+      def diff(to)
+        result = Core.rangelist_diff(self, to)
+        deleted = result.pop
+        added = result
+        [added, deleted].collect do |result|
+          self.class.new(*result)
+        end
+      end
+    end
   end
 end
