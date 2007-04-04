@@ -79,14 +79,6 @@ Candidate changes:
      +1: dionisos, dlr
      +0: malcolm
 
-  * r24385
-    Fix issue 2757: svnserve segfaults with extra arguments after --version.
-    Justification:
-      Small fix.  Segfaults are bad.
-    Votes:
-      +1: hwright
-      +0: dlr
-
 
 Veto-blocked changes:
 
