@@ -232,7 +232,9 @@
   apr_array_header_t *rangeinput,
   apr_array_header_t *from,
   apr_array_header_t *to,
-  apr_array_header_t *changes
+  apr_array_header_t *changes,
+  apr_array_header_t *eraser,
+  apr_array_header_t *whiteboard
 }
 
 /* -----------------------------------------------------------------------
@@ -240,7 +242,8 @@
 */
 %apply apr_array_header_t **RANGELIST {
   apr_array_header_t **deleted,
-  apr_array_header_t **added
+  apr_array_header_t **added,
+  apr_array_header_t **output
 }
 
 /* -----------------------------------------------------------------------
