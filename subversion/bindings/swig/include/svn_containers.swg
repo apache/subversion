@@ -577,6 +577,14 @@
 {
   %append_output(svn_swig_rb_apr_hash_to_hash_merge_range(*$1));
 }
+
+%typemap(in) apr_hash_t **MERGEHASH_INOUT ($*1_ltype temp)
+{
+  $1 = &temp;
+  *$1 = svn_swig_rb_hash_to_apr_hash_merge_range($input, _global_pool);
+}
+
+%typemap(argout) apr_hash_t **MERGEHASH_INOUT = apr_hash_t **MERGEHASH;
 #endif
 
 /* -----------------------------------------------------------------------

@@ -242,7 +242,8 @@
    apr_hash_t *mergein1,
    apr_hash_t *mergein2,
    apr_hash_t *eraser,
-   apr_hash_t *whiteboard
+   apr_hash_t *whiteboard,
+   apr_hash_t *changes
 }
 
 /* -----------------------------------------------------------------------
@@ -435,6 +436,16 @@
     apr_hash_t **added,
     apr_hash_t **mergeoutput
 }
+
+/* -----------------------------------------------------------------------
+   svn_mergeinfo_merge()
+*/
+
+#ifdef SWIGRUBY
+%apply apr_hash_t **MERGEHASH_INOUT {
+    apr_hash_t **mergeinfo_inout
+}
+#endif
 
 /* -----------------------------------------------------------------------
    svn_io_parse_mimetypes_file()
@@ -647,6 +658,7 @@ PyObject *svn_swig_py_exception_type(void);
 %ignore svn_diff_file_options_create;
 %ignore svn_create_commit_info;
 %ignore svn_commit_info_dup;
+%ignore svn_mergeinfo_merge;
 #endif
 
 /* ----------------------------------------------------------------------- */
@@ -882,6 +894,13 @@ static VALUE
 svn_locale_charset(void)
 {
   return INT2NUM((int)APR_LOCALE_CHARSET);
+}
+
+static svn_error_t *
+svn_swig_rb_mergeinfo_merge(apr_hash_t **mergeinfo_inout,
+                            apr_hash_t *changes, apr_pool_t *pool)
+{
+  return svn_mergeinfo_merge(mergeinfo_inout, changes, pool);
 }
 
 /* prompt providers return baton for protecting GC */

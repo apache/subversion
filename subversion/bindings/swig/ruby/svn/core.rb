@@ -616,6 +616,10 @@ module Svn
       def diff(from, to)
         Core.mergeinfo_diff(from, to)
       end
+
+      def merge(info, changes)
+        Core.swig_rb_mergeinfo_merge(info, changes)
+      end
     end
   end
 end
