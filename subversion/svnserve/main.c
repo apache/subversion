@@ -2,7 +2,7 @@
  * main.c :  Main control function for svnserve
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -201,7 +201,7 @@ static void help(apr_pool_t *pool)
   exit(0);
 }
 
-static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
+static svn_error_t * version(apr_pool_t *pool)
 {
   const char *fs_desc_start
     = _("The following repository back-end (FS) modules are available:\n\n");
@@ -211,7 +211,7 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
-  return svn_opt_print_help(os, "svnserve", TRUE, FALSE, version_footer->data,
+  return svn_opt_print_help(NULL, "svnserve", TRUE, FALSE, version_footer->data,
                             NULL, NULL, NULL, NULL, pool);
 }
 
@@ -378,7 +378,7 @@ int main(int argc, const char *argv[])
           break;
 
         case SVNSERVE_OPT_VERSION:
-          SVN_INT_ERR(version(NULL, pool));
+          SVN_INT_ERR(version(pool));
           exit(0);
           break;
           
