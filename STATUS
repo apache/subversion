@@ -15,7 +15,7 @@ Candidate changes:
     Justification:
       Well, *corruption*...
     Votes:
-      +1: dionisos
+      +1: dionisos, cmpilato
 
   * r12694
     Fix use of incompatible pointer types in svndumpfilter.
