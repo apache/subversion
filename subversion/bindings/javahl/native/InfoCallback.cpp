@@ -190,7 +190,6 @@ InfoCallback::createInfoEntry(info_entry &infoEntry, const char *path,
 jobject
 InfoCallback::createJavaInfo2(info_entry *infoEntry)
 {
-    const char *path = infoEntry->path;
     const svn_info_t *info = infoEntry->info;
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Info2");
@@ -207,11 +206,11 @@ InfoCallback::createJavaInfo2(info_entry *infoEntry)
              "Ljava/util/Date;Ljava/util/Date;"
              "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
              "Ljava/lang/String;Ljava/lang/String;ZZZZ)V");
-        if (JNIUtil::isJavaExceptionThrown())
+        if (mid == 0 || JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
 
-    jstring jpath = JNIUtil::makeJString(path);
+    jstring jpath = JNIUtil::makeJString(infoEntry->path);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
