@@ -1131,7 +1131,9 @@ test_splitext(const char **msg,
     { "file.ends-with/period.",    "file.ends-with/period.", "" },
     { "two-periods..txt",          "two-periods..",          "txt" },
     { ".dot-file",                 ".dot-file",              "" },
-    { ".dot-file.withext",         ".dot-file",              "withext" },
+    { "sub/.dot-file",             "sub/.dot-file",          "" },
+    { ".dot-file.withext",         ".dot-file.",             "withext" },
+    { "sub/.dot-file.withext",     "sub/.dot-file.",         "withext" },
     { "",                          "",                       "" },
   };
 
