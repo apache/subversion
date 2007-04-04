@@ -49,6 +49,7 @@ module Svn
     Util.set_methods(Ext::Core, self)
 
     nls_init
+    Util.reset_message_directory
 
     # for backward compatibility
     SWIG_INVALID_REVNUM = INVALID_REVNUM

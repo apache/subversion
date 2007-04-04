@@ -7,6 +7,15 @@
 #include "swigutil_rb.h"
 #include <st.h>
 
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
+#undef _
+
+#include <svn_private_config.h>
+
 #ifndef RE_OPTION_IGNORECASE
 #  ifdef ONIG_OPTION_IGNORECASE
 #    define RE_OPTION_IGNORECASE ONIG_OPTION_IGNORECASE
@@ -340,12 +349,31 @@ svn_swig_rb_locale_set(int argc, VALUE *argv, VALUE self)
   return result ? rb_str_new2(result) : Qnil;
 }
 
+static VALUE
+svn_swig_rb_gettext_bindtextdomain(VALUE self, VALUE path)
+{
+#ifdef ENABLE_NLS
+  bindtextdomain(PACKAGE_NAME, StringValueCStr(path));
+#endif
+  return Qnil;
+}
+
+static VALUE
+svn_swig_rb_gettext__(VALUE self, VALUE message)
+{
+#ifdef ENABLE_NLS
+  return rb_str_new2(_(StringValueCStr(message)));
+#else
+  return message;
+#endif
+}
+
 void
 svn_swig_rb_initialize(void)
 {
   apr_status_t status;
   apr_pool_t *pool;
-  VALUE mSvnConverter, mSvnLocale;
+  VALUE mSvnConverter, mSvnLocale, mSvnGetText;
 
   status = apr_initialize();
   if (status) {
@@ -376,6 +404,12 @@ svn_swig_rb_initialize(void)
   rb_define_const(mSvnLocale, "NUMERIC", INT2NUM(LC_NUMERIC));
   rb_define_const(mSvnLocale, "TIME", INT2NUM(LC_TIME));
   rb_define_module_function(mSvnLocale, "set", svn_swig_rb_locale_set, -1);
+
+  mSvnGetText = rb_define_module_under(rb_svn(), "GetText");
+  rb_define_module_function(mSvnGetText, "bindtextdomain",
+                            svn_swig_rb_gettext_bindtextdomain, 1);
+  rb_define_module_function(mSvnGetText, "_",
+                            svn_swig_rb_gettext__, 1);
 }
 
 
