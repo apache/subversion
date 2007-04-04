@@ -616,8 +616,8 @@ module Svn
 
       def initialize(info)
         super()
-        info.each do |key, value|
-          self[key] = value
+        info.each do |path, ranges|
+          self[path] = RangeList.new(*ranges)
         end
       end
 
@@ -633,6 +633,10 @@ module Svn
 
       def remove(eraser)
         self.class.new(Core.mergeinfo_remove(eraser, self))
+      end
+
+      def sort
+        self.class.new(Core.swig_rb_mergeinfo_sort(self))
       end
 
       def to_s

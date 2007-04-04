@@ -682,6 +682,7 @@ PyObject *svn_swig_py_exception_type(void);
 %ignore svn_create_commit_info;
 %ignore svn_commit_info_dup;
 %ignore svn_mergeinfo_merge;
+%ignore svn_mergeinfo_sort;
 %ignore svn_rangelist_merge;
 %ignore svn_rangelist_reverse;
 #endif
@@ -944,6 +945,12 @@ svn_swig_rb_mergeinfo_merge(apr_hash_t **mergeinfo_inout,
                             apr_hash_t *changes, apr_pool_t *pool)
 {
   return svn_mergeinfo_merge(mergeinfo_inout, changes, pool);
+}
+
+static svn_error_t *
+svn_swig_rb_mergeinfo_sort(apr_hash_t **mergeinfo_inout, apr_pool_t *pool)
+{
+  return svn_mergeinfo_sort(*mergeinfo_inout, pool);
 }
 
 static svn_error_t *
