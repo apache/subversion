@@ -1332,10 +1332,11 @@ svn_path_splitext(const char **path_root,
       /* If we have a period, we need to make sure it occurs in the
          final path component -- that there's no path separator
          between the last period and the end of the PATH -- otherwise,
-         it doesn't count.  If we have such a period, we've found our
-         separator. */
-      last_slash = strchr(last_dot, '/');
-      if (! last_slash)
+         it doesn't count.  Also, we want to make sure that our period
+         isn't the first character of the last component. */
+      last_slash = strrchr(path, '/');
+      if ((last_slash && (last_dot > (last_slash + 1)))
+          || ((! last_slash) && (last_dot > path + 1)))
         {
           if (path_root)
             *path_root = apr_pstrmemdup(pool, path, 
