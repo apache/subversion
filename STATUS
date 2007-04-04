@@ -93,3 +93,11 @@ Approved changes (further review is welcome, but not required):
       ViewCVS with remote repositories.
     Votes:
       +1: djames, dlr
+
+ * r24073, r24126 and r24128
+   Branch: 1.2.x-issue-2751
+   Fix rare FS corruption bug.
+   Justification:
+     Well, *corruption* ...
+   Votes:
+     +1: dionisos, cmpilato, dlr
