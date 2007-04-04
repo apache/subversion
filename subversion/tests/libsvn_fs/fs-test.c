@@ -4616,7 +4616,7 @@ unordered_txn_dirprops(const char **msg,
   /* Commit the second one first. */
   SVN_ERR(test_commit_txn(&new_rev, txn2, NULL, pool));
   
-  /* Then commit the first -- but expect an conflict due to the
+  /* Then commit the first -- but expect a conflict due to the
      propchanges made by the other txn. */
   SVN_ERR(test_commit_txn(&not_rev, txn, "/A/B", pool));
   SVN_ERR(svn_fs_abort_txn(txn, pool));
