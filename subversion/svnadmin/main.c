@@ -1204,6 +1204,7 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       svn_pool_clear(subpool);
     }
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
