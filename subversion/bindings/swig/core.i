@@ -231,7 +231,8 @@
 %apply apr_array_header_t *RANGELIST {
   apr_array_header_t *rangeinput,
   apr_array_header_t *from,
-  apr_array_header_t *to
+  apr_array_header_t *to,
+  apr_array_header_t *changes
 }
 
 /* -----------------------------------------------------------------------
@@ -240,6 +241,13 @@
 %apply apr_array_header_t **RANGELIST {
   apr_array_header_t **deleted,
   apr_array_header_t **added
+}
+
+/* -----------------------------------------------------------------------
+   input and output rangelist
+*/
+%apply apr_array_header_t **RANGELIST_INOUT {
+  apr_array_header_t **rangelist_inout
 }
 
 /* -----------------------------------------------------------------------
@@ -669,6 +677,7 @@ PyObject *svn_swig_py_exception_type(void);
 %ignore svn_create_commit_info;
 %ignore svn_commit_info_dup;
 %ignore svn_mergeinfo_merge;
+%ignore svn_rangelist_merge;
 #endif
 
 /* ----------------------------------------------------------------------- */
@@ -929,6 +938,13 @@ svn_swig_rb_mergeinfo_merge(apr_hash_t **mergeinfo_inout,
                             apr_hash_t *changes, apr_pool_t *pool)
 {
   return svn_mergeinfo_merge(mergeinfo_inout, changes, pool);
+}
+
+static svn_error_t *
+svn_swig_rb_rangelist_merge(apr_array_header_t **rangelist_inout,
+                            apr_array_header_t *changes, apr_pool_t *pool)
+{
+  return svn_rangelist_merge(rangelist_inout, changes, pool);
 }
 
 /* prompt providers return baton for protecting GC */
