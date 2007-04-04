@@ -745,16 +745,9 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
 
           if (path[i + 1] == '\0')  /* looking at empty peg revision */
             {
-              if (is_url)
-                {
-                  ret = svn_opt_parse_revision(&start_revision, &end_revision,
-                                               "head", pool);
-                }
-              else
-                {
-                  ret = svn_opt_parse_revision(&start_revision, &end_revision,
-                                               "base", pool);
-                }
+              ret = 0;
+              start_revision.kind = is_url ? svn_opt_revision_head 
+                                           : svn_opt_revision_base;
             }
           else  /* looking at non-empty peg revision */
             {
