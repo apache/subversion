@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2080,15 +2080,22 @@ merge (svn_stringbuf_t *conflict_p,
   /* Possible early merge failure: if target and ancestor have
      different property lists, then the merge should fail.
      Propchanges can *only* be committed on an up-to-date directory.
+     ### TODO: see issue #418 about the inelegance of this. 
 
-     ### TODO: Please see issue #418 about the inelegance of this. */
+     Another possible, similar, early merge failure: if source and
+     ancestor have different property lists (meaning someone else
+     changed directory properties while our commit transaction was
+     happening), the merge should fail.  See issue #2751.
+  */
   {
-    node_revision_t *tgt_nr, *anc_nr;
+    node_revision_t *tgt_nr, *anc_nr, *src_nr;
 
     /* Get node revisions for our id's. */
     SVN_ERR (svn_fs_bdb__get_node_revision (&tgt_nr, fs, target_id, 
                                             trail, pool));
     SVN_ERR (svn_fs_bdb__get_node_revision (&anc_nr, fs, ancestor_id, 
+                                            trail, pool));
+    SVN_ERR (svn_fs_bdb__get_node_revision (&src_nr, fs, source_id,
                                             trail, pool));
 
     /* Now compare the prop-keys of the skels.  Note that just because
@@ -2098,9 +2105,9 @@ merge (svn_stringbuf_t *conflict_p,
        it won't do that here either.  Checking to see if the propkey
        atoms are `equal' is enough. */
     if (! svn_fs_base__same_keys (tgt_nr->prop_key, anc_nr->prop_key))
-      {
-        return conflict_err (conflict_p, target_path);
-      }
+      return conflict_err (conflict_p, target_path);
+    if (! svn_fs_base__same_keys (src_nr->prop_key, anc_nr->prop_key))
+      return conflict_err (conflict_p, target_path);
   }
 
   /* ### todo: it would be more efficient to simply check for a NULL
