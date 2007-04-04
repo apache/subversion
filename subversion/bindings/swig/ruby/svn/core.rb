@@ -664,6 +664,10 @@ module Svn
       def intersect(other)
         self.class.new(*Core.rangelist_intersect(self, other))
       end
+
+      def reverse
+        self.class.new(*Core.swig_rb_rangelist_reverse(self))
+      end
     end
   end
 end
