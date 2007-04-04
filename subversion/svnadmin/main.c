@@ -1459,14 +1459,8 @@ main(int argc, const char *argv[])
       err = parse_local_repos_path(os, 
                                    &(opt_state.repository_path), 
                                    pool);
-      if(err)
-        {
-          svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
-          svn_error_clear(err);
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
-        }
-
+      if (err)
+        return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
     }
 
 
@@ -1477,13 +1471,8 @@ main(int argc, const char *argv[])
       err = parse_local_repos_path(os,
                                    &(opt_state.new_repository_path), 
                                    pool);
-      if(err)
-        {
-          svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
-          svn_error_clear(err);
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
-        }
+      if (err)
+        return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
@@ -1544,10 +1533,7 @@ main(int argc, const char *argv[])
           err = svn_error_quick_wrap(err, 
                                      _("Try 'svnadmin help' for more info"));
         }
-      svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
-      svn_error_clear(err);
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
+      return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
     }
   else
     {
