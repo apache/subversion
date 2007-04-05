@@ -20,6 +20,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <errno.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>
@@ -677,6 +678,103 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* SVN_ERR-like macros for dealing with ESTALE
+ *
+ * In NFS v3 and under, the server doesn't track opened files.  If you
+ * unlink(2) or rename(2) a file held open by another process *on the
+ * same host*, that host's kernel typically renames the file to
+ * .nfsXXXX and automatically deletes that when it's no longer open,
+ * but this behavior is not required.
+ *
+ * For obvious reasons, this does not work *across hosts*.  No one
+ * knows about the opened file; not the server, and not the deleting
+ * client.  So the file vanishes, and the reader gets stale NFS file
+ * handle.  We have this problem with revprops files and current.
+ *
+ * Wrap opens and reads of such files with SVN_RETRY_ESTALE and closes
+ * with SVN_IGNORE_ESTALE.  Call these macros within a loop of
+ * SVN_ESTALE_RETRY_COUNT iterations (though, realistically, the
+ * second try will succeed).  Make sure you put a break statement
+ * after the close, at the end of your loop.  Immediately after your
+ * loop loop, return err if err.
+ *
+ * You must initialize err to SVN_NO_ERROR, as these macros do not.
+ */
+
+#define SVN_ESTALE_RETRY_COUNT 10
+
+#ifdef ESTALE
+#define SVN_RETRY_ESTALE(err, expr)                   \
+  {                                                   \
+    /* Clear err here (svn_error_clear can safely be passed
+     * SVN_NO_ERROR) rather than after finding ESTALE so we can return
+     * the ESTALE error on the last iteration of the loop. */ \
+    svn_error_clear(err);                             \
+    err = (expr);                                     \
+    if (err)                                          \
+      {                                               \
+        if (APR_TO_OS_ERROR(err->apr_err) == ESTALE)  \
+          continue;                                   \
+        return err;                                   \
+      }                                               \
+  }
+#define SVN_IGNORE_ESTALE(err, expr)                  \
+  {                                                   \
+    svn_error_clear(err);                             \
+    err = (expr);                                     \
+    if (err)                                          \
+      {                                               \
+        if (APR_TO_OS_ERROR(err->apr_err) != ESTALE)  \
+          return err;                                 \
+      }                                               \
+  }
+#else
+#define SVN_RETRY_ESTALE(err, expr)  SVN_ERR(expr)
+#define SVN_IGNORE_ESTALE(err, expr) SVN_ERR(expr)
+#endif
+
+/* Long enough to hold: "<svn_revnum_t> <node id> <copy id>\0"
+ * 19 bytes for svn_revnum_t (room for 32 or 64 bit values)
+ * + 2 spaces
+ * + 26 bytes for each id (these are actually unbounded, so we just
+ *   have to pick something; 2^64 is 13 bytes in base-36)
+ * + 1 terminating null
+ */
+#define CURRENT_BUF_LEN 48
+
+/* Read the 'current' file FNAME and store the contents in *BUF.
+   Allocations are performed in POOL. */
+static svn_error_t *
+read_current(const char *fname, char **buf, apr_pool_t *pool)
+{
+  apr_file_t *revision_file;
+  apr_size_t len;
+  int i;
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_pool_t *iterpool;
+
+  *buf = apr_palloc(pool, CURRENT_BUF_LEN);
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < SVN_ESTALE_RETRY_COUNT; i++)
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_RETRY_ESTALE(err, svn_io_file_open(&revision_file, fname,
+                                             APR_READ | APR_BUFFERED,
+                                             APR_OS_DEFAULT, iterpool));
+
+      len = CURRENT_BUF_LEN;
+      SVN_RETRY_ESTALE(err, svn_io_read_length_line(revision_file,
+                                                    *buf, &len, iterpool));
+      SVN_IGNORE_ESTALE(err, svn_io_file_close(revision_file, iterpool));
+
+      break;
+    }
+  svn_pool_destroy(iterpool);
+
+  return err;
+}
+
 /* Find the youngest revision in a repository at path FS_PATH and
    return it in *YOUNGEST_P.  Perform temporary allocations in
    POOL. */
@@ -685,21 +783,11 @@ get_youngest(svn_revnum_t *youngest_p,
              const char *fs_path,
              apr_pool_t *pool)
 {
-  apr_file_t *current_file;
-  char buf[81];
-  apr_size_t len;
+  char *buf;
 
-  SVN_ERR(svn_io_file_open(&current_file,
-                           svn_path_join(fs_path, PATH_CURRENT, pool),
-                           APR_READ, APR_OS_DEFAULT, pool));
-
-  len = sizeof(buf) - 1;
-  SVN_ERR(svn_io_file_read(current_file, buf, &len, pool));
-  buf[len] = '\0';
+  SVN_ERR(read_current(svn_path_join(fs_path, PATH_CURRENT, pool), &buf, pool));
   
   *youngest_p = SVN_STR_TO_REV(buf);
-  
-  SVN_ERR(svn_io_file_close(current_file, pool));
   
   return SVN_NO_ERROR;
 }
@@ -1521,24 +1609,47 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
 {
   apr_file_t *revprop_file;
   apr_hash_t *proplist;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;;
+  int i;
+  apr_pool_t *iterpool;
 
-  err = svn_io_file_open(&revprop_file, path_revprops(fs, rev, pool),
-                         APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < SVN_ESTALE_RETRY_COUNT; i++)
     {
+      svn_pool_clear(iterpool);
+
+      /* Clear err here (svn_error_clear can safely be passed
+       * SVN_NO_ERROR) rather than after finding ESTALE so we can
+       * return the ESTALE error on the last iteration of the loop. */
       svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                               _("No such revision %ld"), rev);
+      err = svn_io_file_open(&revprop_file, path_revprops(fs, rev, iterpool),
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, iterpool);
+      if (err)
+        {
+          if (APR_STATUS_IS_ENOENT(err->apr_err))
+            {
+              svn_error_clear(err);
+              return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                       _("No such revision %ld"), rev);
+            }
+#ifdef ESTALE
+          else if (APR_TO_OS_ERROR(err->apr_err) == ESTALE)
+            continue;
+#endif
+          return err;
+        }
+
+      proplist = apr_hash_make(pool);
+
+      SVN_RETRY_ESTALE(err, svn_hash_read(proplist, revprop_file, pool));
+
+      SVN_IGNORE_ESTALE(err, svn_io_file_close(revprop_file, iterpool));
+
+      break;
     }
-  else if (err)
+  if (err)
     return err;
-
-  proplist = apr_hash_make(pool);
-
-  SVN_ERR(svn_hash_read(proplist, revprop_file, pool));
-
-  SVN_ERR(svn_io_file_close(revprop_file, pool));
+  svn_pool_destroy(iterpool);
 
   *proplist_p = proplist;
 
@@ -3766,16 +3877,10 @@ get_next_revision_ids(const char **node_id,
                       svn_fs_t *fs,
                       apr_pool_t *pool)
 {
-  apr_file_t *revision_file;
-  char buf[80];
-  apr_size_t len;
+  char *buf;
   char *str, *last_str;
 
-  SVN_ERR(svn_io_file_open(&revision_file, svn_fs_fs__path_current(fs, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  len = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(revision_file, buf, &len, pool));
+  SVN_ERR(read_current(svn_fs_fs__path_current(fs, pool), &buf, pool));
 
   str = apr_strtok(buf, " ", &last_str);
   if (! str)
@@ -3795,8 +3900,6 @@ get_next_revision_ids(const char **node_id,
                             _("Corrupt current file"));
 
   *copy_id = apr_pstrdup(pool, str);
-
-  SVN_ERR(svn_io_file_close(revision_file, pool));
 
   return SVN_NO_ERROR;
 }
