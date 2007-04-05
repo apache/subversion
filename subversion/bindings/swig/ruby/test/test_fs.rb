@@ -465,4 +465,53 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal(Svn::Core::INVALID_REVNUM,
                  @fs.deleted_revision(path_in_repos, rev4, rev4))
   end
+
+  def test_merge_info
+    log = "sample log"
+    file = "sample.txt"
+    src = "sample\n"
+    trunk = File.join(@wc_path, "trunk")
+    branch = File.join(@wc_path, "branch")
+    trunk_path = File.join(trunk, file)
+    branch_path = File.join(branch, file)
+    trunk_in_repos = "/trunk"
+    branch_in_repos = "/branch"
+
+    ctx = make_context(log)
+    ctx.mkdir(trunk, branch)
+    File.open(trunk_path, "w") {}
+    File.open(branch_path, "w") {}
+    ctx.add(trunk_path)
+    ctx.add(branch_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    File.open(branch_path, "w") {|f| f.print(src)}
+    rev2 = ctx.commit(@wc_path).revision
+
+    assert_equal({}, @fs.root.merge_info(trunk_in_repos))
+    ctx.merge(branch, rev1, branch, rev2, trunk)
+    assert_equal({}, @fs.root.merge_info(trunk_in_repos))
+
+    rev3 = ctx.commit(@wc_path).revision
+    assert_equal({trunk_in_repos => "#{branch_in_repos}:2"},
+                 @fs.root.merge_info(trunk_in_repos))
+
+    ctx.rm(branch_path)
+    rev4 = ctx.commit(@wc_path).revision
+
+    ctx.merge(branch, rev3, branch, rev4, trunk)
+    assert(!File.exist?(trunk_path))
+    rev5 = ctx.commit(@wc_path).revision
+    assert_equal({trunk_in_repos => "#{branch_in_repos}:2,4"},
+                 @fs.root.merge_info(trunk_in_repos))
+
+
+    new_merge_info_str = "#{branch_in_repos}:2"
+    @fs.transaction do |txn|
+      new_merge_info = Svn::Core::MergeInfo.parse(new_merge_info_str)
+      txn.root.change_merge_info(trunk_in_repos, new_merge_info)
+    end
+    assert_equal({trunk_in_repos => new_merge_info_str},
+                 @fs.root.merge_info(trunk_in_repos))
+  end
 end
