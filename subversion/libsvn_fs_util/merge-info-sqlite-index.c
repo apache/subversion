@@ -262,13 +262,10 @@ index_path_merge_info(svn_revnum_t new_rev, sqlite3 *db, const char *path,
 /* Create the index for any merge info in TXN (a no-op if TXN has no
    associated merge info). */
 static svn_error_t *
-index_txn_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev,
-                     sqlite3 *db, apr_pool_t *pool)
+index_txn_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev, 
+                     apr_hash_t *minfoprops, sqlite3 *db, apr_pool_t *pool)
 {
-  apr_hash_t *minfoprops;
   apr_hash_index_t *hi;
-
-  SVN_ERR(txn->vtable->get_mergeinfo(&minfoprops, txn, pool));
 
   for (hi = apr_hash_first(pool, minfoprops);
        hi != NULL;
@@ -295,8 +292,7 @@ index_txn_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev,
    merge info, record it. */
 svn_error_t *
 svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
-                                svn_boolean_t txn_contains_merge_info,
-                                apr_pool_t *pool)
+                                apr_hash_t *mergeinfo, apr_pool_t *pool)
 {
   const char *deletestring;
   sqlite3 *db;
@@ -317,8 +313,8 @@ svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   SVN_ERR(util_sqlite_exec(db, deletestring, NULL, NULL));
 
   /* Record any merge info from the current transaction. */
-  if (txn_contains_merge_info)
-    SVN_ERR(index_txn_merge_info(txn, new_rev, db, pool));
+  if (mergeinfo)
+    SVN_ERR(index_txn_merge_info(txn, new_rev, mergeinfo, db, pool));
 
   /* This is moved here from commit_txn, because we don't want to
    * write the final current file if the sqlite commit fails.

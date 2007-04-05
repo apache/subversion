@@ -4358,7 +4358,7 @@ commit_body(void *baton, apr_pool_t *pool)
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
-  svn_boolean_t txn_contains_merge_info = FALSE;
+  apr_hash_t *target_mergeinfo = NULL;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -4401,10 +4401,9 @@ commit_body(void *baton, apr_pool_t *pool)
                      changed_path_offset);
   SVN_ERR(svn_io_file_write_full(proto_file, buf, strlen(buf), NULL,
                                  pool));
-
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
-  
   SVN_ERR(svn_io_file_close(proto_file, pool));
+
   /* We don't unlock the prototype revision file immediately to avoid a
      race with another caller writing to the prototype revision file
      before we commit it. */
@@ -4418,7 +4417,6 @@ commit_body(void *baton, apr_pool_t *pool)
         SVN_ERR(svn_fs_fs__change_txn_prop 
                 (cb->txn, SVN_FS_PROP_TXN_CHECK_OOD,
                  NULL, pool));
-      
       if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
                        APR_HASH_KEY_STRING))
         SVN_ERR(svn_fs_fs__change_txn_prop 
@@ -4427,12 +4425,11 @@ commit_body(void *baton, apr_pool_t *pool)
       if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
                        APR_HASH_KEY_STRING))
         {
-          txn_contains_merge_info = TRUE;
+          SVN_ERR(svn_fs_fs__txn_mergeinfo(&target_mergeinfo, cb->txn, pool));
           SVN_ERR(svn_fs_fs__change_txn_prop
                   (cb->txn, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
                    NULL, pool));
         }
-      
     }
 
   /* Move the finished rev file into place. */
@@ -4460,9 +4457,10 @@ commit_body(void *baton, apr_pool_t *pool)
   final_revprop = path_revprops(cb->fs, new_rev, pool);
   SVN_ERR(svn_fs_fs__move_into_place(revprop_filename, final_revprop, 
                                      old_rev_filename, pool));
-  
+
+  /* Update the merge tracking information index. */
   SVN_ERR(svn_fs_merge_info__update_index(cb->txn, new_rev,
-                                          txn_contains_merge_info, pool));
+                                          target_mergeinfo, pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
