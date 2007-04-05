@@ -52,7 +52,7 @@ Candidate changes:
       glasser (nominating this) only tested that merge was clean and
       did not run tests.
     Votes:
-      +1: glasser
+      +1: glasser, malcolm
 
   * r23439, r23440
     Fix race condition in changing revprops under FSFS by requiring
