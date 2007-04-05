@@ -82,14 +82,6 @@ Candidate changes:
       commands without this patch.
     Votes:
       +1: jszakmeister
-                                         
-Approved changes (further review is welcome, but not required):  
 
-  * r24073, r24126, r24128
-    Branch: 1.1.x-issue-2751
-    Fix rare FS corruption in both bdb and FSFS filesystem implementations
-    Justification:
-      Well, *corruption*...
-    Votes:
-      +1: dionisos, cmpilato, jszakmeister
+Approved changes (further review is welcome, but not required):
 
