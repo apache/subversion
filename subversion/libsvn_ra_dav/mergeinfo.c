@@ -111,7 +111,7 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
         {
           apr_hash_t *path_mergeinfo;
 
-          mb->err = svn_mergeinfo_parse(mb->curr_info->data, &path_mergeinfo,
+          mb->err = svn_mergeinfo_parse(&path_mergeinfo, mb->curr_info->data,
                                         mb->pool);
           SVN_ERR(mb->err);
 

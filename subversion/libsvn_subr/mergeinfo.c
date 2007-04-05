@@ -217,11 +217,12 @@ parse_top(const char **input, const char *end, apr_hash_t *hash,
 
 /* Parse mergeinfo.  */
 svn_error_t *
-svn_mergeinfo_parse(const char *input, apr_hash_t **hash,
+svn_mergeinfo_parse(apr_hash_t **mergehash, 
+                    const char *input, 
                     apr_pool_t *pool)
 {
-  *hash = apr_hash_make(pool);
-  return parse_top(&input, input + strlen(input), *hash, pool);
+  *mergehash = apr_hash_make(pool);
+  return parse_top(&input, input + strlen(input), *mergehash, pool);
 }
 
 

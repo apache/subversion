@@ -492,8 +492,8 @@ diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
   else
     {
       apr_hash_t *from, *to;
-      SVN_ERR(svn_mergeinfo_parse(from_prop_val->data, &from, pool));
-      SVN_ERR(svn_mergeinfo_parse(to_prop_val->data, &to, pool));
+      SVN_ERR(svn_mergeinfo_parse(&from, from_prop_val->data, pool));
+      SVN_ERR(svn_mergeinfo_parse(&to, to_prop_val->data, pool));
       SVN_ERR(svn_mergeinfo_diff(deleted, added, from, to, pool));
     }
   return SVN_NO_ERROR;
@@ -510,8 +510,8 @@ combine_mergeinfo_props(const svn_string_t **output,
                         apr_pool_t *pool)
 {
   apr_hash_t *mergeinfo1, *mergeinfo2;
-  SVN_ERR(svn_mergeinfo_parse(prop_val1->data, &mergeinfo1, pool));
-  SVN_ERR(svn_mergeinfo_parse(prop_val2->data, &mergeinfo2, pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, pool));
   SVN_ERR(svn_mergeinfo_merge(&mergeinfo1, mergeinfo2,
                               pool));
   SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) output,
@@ -540,7 +540,7 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
   SVN_ERR(svn_mergeinfo_merge(&l_added, r_added, pool));
 
   /* Apply the combined deltas to the base. */
-  SVN_ERR(svn_mergeinfo_parse(from_prop_val->data, &from_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_parse(&from_mergeinfo, from_prop_val->data, pool));
   SVN_ERR(svn_mergeinfo_merge(&from_mergeinfo, l_added,
                               pool));
   SVN_ERR(svn_mergeinfo_remove(&from_mergeinfo, l_deleted,

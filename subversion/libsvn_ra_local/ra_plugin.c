@@ -670,7 +670,7 @@ svn_ra_local__get_merge_info(svn_ra_session_t *session,
           apr_hash_this(hi, &key, NULL, &value);
           path = key;
           info = value;
-          SVN_ERR(svn_mergeinfo_parse(info, &for_path, pool));
+          SVN_ERR(svn_mergeinfo_parse(&for_path, info, pool));
           apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
         }
     }

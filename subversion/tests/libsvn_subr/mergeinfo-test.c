@@ -54,7 +54,7 @@ verify_mergeinfo_parse(const char *input,
   apr_hash_index_t *hi;
 
   /* Test valid input. */
-  err = svn_mergeinfo_parse(input, &path_to_merge_ranges, pool);
+  err = svn_mergeinfo_parse(&path_to_merge_ranges, input, pool);
   if (err || apr_hash_count(path_to_merge_ranges) != 1)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "svn_mergeinfo_parse (%s) failed unexpectedly",
@@ -148,7 +148,7 @@ test_parse_combine_rangeinfo(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(single_mergeinfo, &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, single_mergeinfo, pool));
 
   if (apr_hash_count(info1) != 1)
     return fail(pool, "Wrong number of paths in parsed mergeinfo");
@@ -207,7 +207,7 @@ test_parse_broken_mergeinfo(const char **msg,
   /* Trigger some error(s) with mal-formed input. */
   for (i = 0; i < NBR_BROKEN_MERGEINFO_VALS; i++)
     {
-      err = svn_mergeinfo_parse(broken_mergeinfo_vals[i], &info1, pool);
+      err = svn_mergeinfo_parse(&info1, broken_mergeinfo_vals[i], pool);
       if (err == SVN_NO_ERROR)
         return fail(pool, "svn_mergeinfo_parse (%s) failed to detect an error",
                     broken_mergeinfo_vals[i]);
@@ -237,7 +237,7 @@ test_parse_multi_line_mergeinfo(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
   return SVN_NO_ERROR;
 }
 
@@ -317,8 +317,8 @@ test_diff_mergeinfo(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse("/trunk: 1,3-4,7,9,11-12,31-34", &from, pool));
-  SVN_ERR(svn_mergeinfo_parse("/trunk: 1-6,12-16,30-32", &to, pool));
+  SVN_ERR(svn_mergeinfo_parse(&from, "/trunk: 1,3-4,7,9,11-12,31-34", pool));
+  SVN_ERR(svn_mergeinfo_parse(&to, "/trunk: 1-6,12-16,30-32", pool));
   /* On /trunk: deleted (7, 9, 11, 33-34) and added (2, 5-6, 13-16, 30) */
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to, pool));
 
@@ -344,7 +344,7 @@ test_rangelist_reverse(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse("/trunk: 3,5-7,10", &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 3,5-7,10", pool));
   rangelist = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
 
   SVN_ERR(svn_rangelist_reverse(rangelist, pool));
@@ -367,8 +367,8 @@ test_rangelist_intersect(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse("/trunk: 1-6,12-16,30-32", &info1, pool));
-  SVN_ERR(svn_mergeinfo_parse("/trunk: 1,3-4,7,9,11-12,31-34", &info2, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32", pool));
+  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34", pool));
   rangelist1 = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   rangelist2 = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
   
@@ -392,8 +392,8 @@ test_merge_mergeinfo(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo2, &info2, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo2, pool));
 
   SVN_ERR(svn_mergeinfo_merge(&info1, info2, pool));
 
@@ -455,13 +455,13 @@ test_remove_rangelist(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo3, &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo3, pool));
   
   whiteboard = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   if (!whiteboard)
     return fail(pool, "Missing path in parsed mergeinfo");
 
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo4, &info2, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo4, pool));
   
   eraser = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
   if (!eraser)
@@ -474,7 +474,7 @@ test_remove_rangelist(const char **msg,
   if (svn_stringbuf_compare(expected1, outputstring) != TRUE)
     return fail(pool, "Rangelist string not what we expected");
 
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo5, &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo5, pool));
   
   whiteboard = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   if (!whiteboard)
@@ -487,7 +487,7 @@ test_remove_rangelist(const char **msg,
   if (svn_stringbuf_compare(expected2, outputstring) != TRUE)
     return fail(pool, "Rangelist string not what we expected");
   
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo6, &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo6, pool));
   
   eraser = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   if (!eraser)
@@ -518,9 +518,9 @@ test_remove_mergeinfo(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse("/trunk: 1,3-4,7,9,11-12,31-34", &whiteboard,
-                              pool));
-  SVN_ERR(svn_mergeinfo_parse("/trunk: 1-6,12-16,30-32", &eraser, pool));
+  SVN_ERR(svn_mergeinfo_parse(&whiteboard,
+                              "/trunk: 1,3-4,7,9,11-12,31-34", pool));
+  SVN_ERR(svn_mergeinfo_parse(&eraser, "/trunk: 1-6,12-16,30-32", pool));
 
   /* Leftover on /trunk should be the set (7, 9, 11, 33-34) */
   SVN_ERR(svn_mergeinfo_remove(&output, eraser, whiteboard, pool));
@@ -546,7 +546,7 @@ test_rangelist_to_string(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
   
   result = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   if (!result)
@@ -575,7 +575,7 @@ test_mergeinfo_to_string(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
   
   SVN_ERR(svn_mergeinfo__to_string(&output, info1, pool));
 

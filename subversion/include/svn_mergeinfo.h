@@ -44,7 +44,7 @@ extern "C" {
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_parse(const char *input, apr_hash_t **mergehash,
+svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input, 
                     apr_pool_t *pool);
 
 /** Calculate the delta between two hashes of merge info, @a mergefrom

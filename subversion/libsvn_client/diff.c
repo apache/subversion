@@ -94,30 +94,29 @@ file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
    human-readable form to FILE, using ENCODING.  Use POOL for temporary
    allocations. */
 static svn_error_t *
-display_mergeinfo_diff(const char *orig_mergeinfo_val,
+display_mergeinfo_diff(const char *old_mergeinfo_val,
                        const char *new_mergeinfo_val,
                        const char *encoding,
                        apr_file_t *file,
                        apr_pool_t *pool)
 {
-  apr_hash_t *orig_mergeinfo_hash, *new_mergeinfo_hash, *added, *deleted;
+  apr_hash_t *old_mergeinfo_hash, *new_mergeinfo_hash, *added, *deleted;
   apr_hash_index_t *hi;
   const char *from_path;
   apr_array_header_t *merge_revarray;
   svn_stringbuf_t *merge_revstr;
 
-  if (orig_mergeinfo_val)
-    SVN_ERR(svn_mergeinfo_parse(orig_mergeinfo_val, 
-                                &orig_mergeinfo_hash, pool));
+  if (old_mergeinfo_val)
+    SVN_ERR(svn_mergeinfo_parse(&old_mergeinfo_hash, old_mergeinfo_val, pool));
   else
-    orig_mergeinfo_hash = apr_hash_make(pool);
+    old_mergeinfo_hash = apr_hash_make(pool);
 
   if (new_mergeinfo_val)
-    SVN_ERR(svn_mergeinfo_parse(new_mergeinfo_val, &new_mergeinfo_hash, pool));
+    SVN_ERR(svn_mergeinfo_parse(&new_mergeinfo_hash, new_mergeinfo_val, pool));
   else
     new_mergeinfo_hash = apr_hash_make(pool);
 
-  SVN_ERR(svn_mergeinfo_diff(&deleted, &added, orig_mergeinfo_hash, 
+  SVN_ERR(svn_mergeinfo_diff(&deleted, &added, old_mergeinfo_hash, 
                              new_mergeinfo_hash, pool));
 
   for (hi = apr_hash_first(pool, deleted); 

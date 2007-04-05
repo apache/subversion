@@ -193,7 +193,7 @@ index_path_merge_info(svn_revnum_t new_rev, sqlite3 *db, const char *path,
   apr_hash_index_t *hi;
   sqlite3_stmt *stmt;
 
-  SVN_ERR(svn_mergeinfo_parse(minfostring->data, &minfo, pool));
+  SVN_ERR(svn_mergeinfo_parse(&minfo, minfostring->data, pool));
 
   for (hi = apr_hash_first(pool, minfo);
        hi != NULL;

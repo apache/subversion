@@ -4469,7 +4469,7 @@ get_merge_info(const char **msg,
   /* Create the greek tree. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   
-  SVN_ERR(svn_mergeinfo_parse("/A/E: 1-5", &mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, "/A/E: 1-5", pool));
   SVN_ERR(svn_fs_change_merge_info(txn_root, "/A/B", mergeinfo, pool));
 
   /* Commit it. */
