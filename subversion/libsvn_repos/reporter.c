@@ -1045,7 +1045,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
 /* --- COLLECTING THE REPORT INFORMATION --- */
 
 /* Record a report operation into the temporary file.  Return an error
-   if DEPTH is svn_depth_unknown. */
+   if both DEPTH and B->default_depth is svn_depth_unknown. */
 static svn_error_t *
 write_path_info(report_baton_t *b, const char *path, const char *lpath,
                 svn_revnum_t rev, svn_depth_t depth,
@@ -1055,9 +1055,15 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
   const char *lrep, *rrep, *drep, *ltrep, *rep;
 
   if (depth == svn_depth_unknown)
-    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
-                             _("Unsupported report depth '%s'"),
-                             svn_depth_to_word(depth));
+    {
+      depth = b->default_depth;
+
+      if (depth == svn_depth_unknown)
+        return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                                 _("Unsupported report depth '%s' for "
+                                   "path '%s'"),
+                                 svn_depth_to_word(depth), path);
+    }
 
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
