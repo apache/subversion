@@ -490,6 +490,9 @@ svn_repos_begin_report(void **report_baton,
  * @a path; this is used to set up the correct root revision for the editor
  * drive.
  *
+ * A depth of @c svn_depth_unknown is not allowed, and results in an
+ * error.
+ *
  * If @a start_empty is true and @a path is a directory, then require the
  * caller to explicitly provide all the children of @a path - do not assume
  * that the tree also contains all the children of @a path at @a revision.
@@ -538,6 +541,9 @@ svn_error_t *svn_repos_set_path(void *report_baton,
  * Given a @a report_baton constructed by svn_repos_begin_report2(), 
  * record the presence of @a path in the current tree, containing the contents
  * of @a link_path at @a revision with depth @a depth.
+ *
+ * A depth of @c svn_depth_unknown is not allowed, and results in an
+ * error.
  *
  * Note that while @a path is relative to the anchor/target used in the
  * creation of the @a report_baton, @a link_path is an absolute filesystem
