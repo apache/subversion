@@ -89,6 +89,13 @@ class SVNRepositoryCreateFailure(Failure):
   "Exception raised if unable to create a repository"
   pass
 
+# Define True and False if not provided by Python (<=2.1)
+try:
+  False
+except:
+  False = 0
+  True = 1
+
 # Windows specifics
 if sys.platform == 'win32':
   windows = True
