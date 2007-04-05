@@ -649,37 +649,24 @@ svn_fs_base__change_txn_prop(svn_fs_txn_t *txn,
 /* txn_vtable's get_mergeinfo hook.  Set TABLE_P to a merge info hash
    (possibly empty), or NULL if there are no transaction properties. */
 static svn_error_t *
-base_txn_merge_info(apr_hash_t **table_p,
-                    svn_fs_txn_t *txn,
-                    apr_pool_t *pool)
+svn_fs_base__txn_mergeinfo(apr_hash_t **table_p,
+                           svn_fs_txn_t *txn,
+                           apr_pool_t *pool)
 {
-  apr_hash_t *txnprops = NULL;
+  svn_string_t *serialized_str;
   apr_hash_t *target_mergeinfo = NULL;
-  struct txn_proplist_args args;
-  svn_fs_t *fs = txn->fs;
 
-  SVN_ERR(svn_fs_base__check_fs(fs));
-
-  args.table_p = &txnprops;
-  args.id = txn->id;
-  SVN_ERR(svn_fs_base__retry(fs, txn_body_txn_proplist, &args, pool));
-
-  if (txnprops)
+  SVN_ERR(svn_fs_base__txn_prop(&serialized_str, txn, 
+                                SVN_FS_PROP_TXN_MERGEINFO, pool));
+  if (serialized_str)
     {
-      const svn_string_t *serialized_str =
-        apr_hash_get(txnprops, SVN_FS_PROP_TXN_MERGEINFO, APR_HASH_KEY_STRING);
-      if (serialized_str)
-        {
-          svn_stringbuf_t *serialized_buf =
-            svn_stringbuf_create_from_string(serialized_str, pool);
-          svn_stream_t *stream = svn_stream_from_stringbuf(serialized_buf,
-                                                           pool);
-          target_mergeinfo = apr_hash_make(pool);
-          SVN_ERR(svn_hash_read2(target_mergeinfo, stream, NULL, pool));
-        }
+      svn_stringbuf_t *buf = 
+        svn_stringbuf_create_from_string(serialized_str, pool);
+      svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
+      target_mergeinfo = apr_hash_make(pool);
+      SVN_ERR(svn_hash_read2(target_mergeinfo, stream, NULL, pool));
     }
   *table_p = target_mergeinfo;
-
   return SVN_NO_ERROR;
 }
 
@@ -694,7 +681,7 @@ txn_vtable_t txn_vtable = {
   svn_fs_base__txn_proplist,
   svn_fs_base__change_txn_prop,
   svn_fs_base__txn_root,
-  base_txn_merge_info
+  svn_fs_base__txn_mergeinfo
 };
 
 
