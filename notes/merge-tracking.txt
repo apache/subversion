@@ -25,9 +25,12 @@ history index).
   * Default revision range (e.g. for -r/-c) to "all unmerged revisions",
     "oldest revision at merge source's path" thru HEAD.
 
-* Provide a libsvn_client API for merging arbitrary revision ranges
-  (-r 10,14,18-24).  Client tools will use this to best support
-  cherry-picking.  (dlr)
+* Provide an API for merging arbitrary revision ranges ('-c 3,5,7' or
+  '-r 2:3,9:12').  Client tools will use this to best support cherry-picking.
+
+  * Write libsvn_client API.  (lundblad)
+
+  * Write corresponding JavaHL bindings.  (dlr/markphip)
 
 * Provide a libsvn_client API capable of listing "all unmerged
   revisions".  Client tools will use this to allow the user to select
@@ -139,6 +142,9 @@ Implement auditing/reporting and other high-level features.
     unblock       Revert the effect of 'block'
 
   * Write up outcome in func-spec.html.
+
+* Expose the libsvn_client API for merging arbitrary revision ranges
+  ('-c 3,5,7' or '-r 2:3,9:12') via the command-line client's UI.
 
 * Handle three-way merges (e.g. 'svn merge URL1 URL2 WC_TARGET').
   We'll likely need to use a different method of calculating the set
