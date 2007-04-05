@@ -1609,7 +1609,7 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
 {
   apr_file_t *revprop_file;
   apr_hash_t *proplist;
-  svn_error_t *err = SVN_NO_ERROR;;
+  svn_error_t *err = SVN_NO_ERROR;
   int i;
   apr_pool_t *iterpool;
 
