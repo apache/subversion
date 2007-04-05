@@ -51,6 +51,7 @@ Candidate changes:
       +1: kou
 
  * r24073, r24126, r24128
+   Branch: 1.3.x-issue-2751
    Fix issue #2751: Directory prop mods reverted in overlapping
      commits scenario.
    Justification:
@@ -60,7 +61,7 @@ Candidate changes:
      setting the stage for a cycle in the representations table delta
      chain.  In case you're wondering, that's oh-so-bad.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, dionisos, dlr
 
 Veto-blocked changes:
 
