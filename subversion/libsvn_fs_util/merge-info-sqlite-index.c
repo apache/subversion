@@ -345,7 +345,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
   int sqlite_result;
 
   SQLITE_ERR(sqlite3_prepare(db,
-                             "SELECT mergedfrom, mergedrevstart,"
+                             "SELECT mergedfrom, mergedrevstart, "
                              "mergedrevend FROM mergeinfo "
                              "WHERE mergedto = ? AND revision = ? "
                              "ORDER BY mergedfrom;",
@@ -474,8 +474,8 @@ get_merge_info_for_path(sqlite3 *db,
   /* See if we have a mergeinfo_changed record for this path. If not,
      then it can't have mergeinfo.  */
   SQLITE_ERR(sqlite3_prepare(db, 
-                             "SELECT MAX(revision) FROM mergeinfo_changed"
-                             " WHERE path = ? AND revision <= ?;",
+                             "SELECT MAX(revision) FROM mergeinfo_changed "
+                             "WHERE path = ? AND revision <= ?;",
                              -1, &stmt, NULL), db);
 
   SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
