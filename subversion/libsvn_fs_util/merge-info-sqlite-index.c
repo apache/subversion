@@ -84,7 +84,7 @@ check_format(sqlite3 *db)
   svn_error_t *err = SVN_NO_ERROR;
   sqlite3_stmt *stmt;
 
-  SQLITE_ERR(sqlite3_prepare(db, "pragma user_version;", -1, &stmt, NULL), db);
+  SQLITE_ERR(sqlite3_prepare(db, "PRAGMA user_version;", -1, &stmt, NULL), db);
   if (sqlite3_step(stmt) == SQLITE_ROW)
     {
       /* Validate that the schema exists as expected and that the
@@ -119,25 +119,28 @@ check_format(sqlite3 *db)
   return err;
 }
 
-const char SVN_MTD_CREATE_SQL[] = "pragma auto_vacuum = 1;"
+const char SVN_MTD_CREATE_SQL[] = "PRAGMA auto_vacuum = 1;"
   APR_EOL_STR 
-  "create table mergeinfo (revision integer not null, mergedfrom text not null, mergedto text not null, mergedrevstart integer not null, mergedrevend integer not null);"
+  "CREATE TABLE mergeinfo (revision INTEGER NOT NULL, mergedfrom TEXT NOT "
+  "NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, "
+  "mergedrevend INTEGER NOT NULL);"
   APR_EOL_STR
-  "create index mi_mergedfrom_idx on mergeinfo (mergedfrom);"
+  "CREATE INDEX mi_mergedfrom_idx ON mergeinfo (mergedfrom);"
   APR_EOL_STR
-  "create index mi_mergedto_idx on mergeinfo (mergedto);"
+  "CREATE INDEX mi_mergedto_idx ON mergeinfo (mergedto);"
   APR_EOL_STR
-  "create index mi_revision_idx on mergeinfo (revision);"
+  "CREATE INDEX mi_revision_idx ON mergeinfo (revision);"
   APR_EOL_STR
-  "create table mergeinfo_changed (revision integer not null, path text not null);"
+  "CREATE TABLE mergeinfo_changed (revision INTEGER NOT NULL, path TEXT "
+  "NOT NULL);"
   APR_EOL_STR
-  "create unique index mi_c_revpath_idx on mergeinfo_changed (revision, path);"
+  "CREATE UNIQUE INDEX mi_c_revpath_idx ON mergeinfo_changed (revision, path);"
   APR_EOL_STR
-  "create index mi_c_path_idx on mergeinfo_changed (path);"
+  "CREATE INDEX mi_c_path_idx ON mergeinfo_changed (path);"
   APR_EOL_STR
-  "create index mi_c_revision_idx on mergeinfo_changed (revision);"
+  "CREATE INDEX mi_c_revision_idx ON mergeinfo_changed (revision);"
   APR_EOL_STR
-  "pragma user_version = " APR_STRINGIFY(MERGE_INFO_INDEX_SCHEMA_FORMAT) ";"
+  "PRAGMA user_version = " APR_STRINGIFY(MERGE_INFO_INDEX_SCHEMA_FORMAT) ";"
   APR_EOL_STR;
 
 /* Open a connection in *DB to the merge info database under
@@ -148,8 +151,8 @@ static svn_error_t *
 open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *db_path = svn_path_join(repos_path, SVN_FS_MERGE_INFO__DB_NAME,
-                                      pool);
+  const char *db_path = svn_path_join(repos_path, 
+                                      SVN_FS_MERGE_INFO__DB_NAME, pool);
   SQLITE_ERR(sqlite3_open(db_path, db), *db);
 #ifdef SQLITE3_DEBUG
   sqlite3_trace(*db, sqlite_tracer, *db);
@@ -208,9 +211,12 @@ index_path_merge_info(svn_revnum_t new_rev, sqlite3 *db, const char *path,
       if (from && revlist)
         {
           int i;
-          SQLITE_ERR(sqlite3_prepare(db,
-                                     "INSERT INTO mergeinfo (revision, mergedto, mergedfrom, mergedrevstart, mergedrevend) VALUES (?, ?, ?, ?, ?);",
-                                     -1, &stmt, NULL), db);
+          SQLITE_ERR(sqlite3_prepare
+                     (db, 
+                      "INSERT INTO mergeinfo (revision, mergedto, "
+                      "mergedfrom, mergedrevstart, mergedrevend) VALUES "
+                      "(?, ?, ?, ?, ?);",
+                      -1, &stmt, NULL), db);
           SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
           SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
                      db);
@@ -296,16 +302,17 @@ svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   sqlite3 *db;
 
   SVN_ERR(open_db(&db, txn->fs->path, pool));
-  SVN_ERR(util_sqlite_exec(db, "begin transaction;", NULL, NULL));
+  SVN_ERR(util_sqlite_exec(db, "BEGIN TRANSACTION;", NULL, NULL));
 
   /* Cleanup the leftovers of any previous, failed transactions
    * involving NEW_REV. */
   deletestring = apr_psprintf(pool,
-                              "delete from mergeinfo_changed where revision = %ld;",
+                              "DELETE FROM mergeinfo_changed WHERE "
+                              "revision = %ld;",
                               new_rev);
   SVN_ERR(util_sqlite_exec(db, deletestring, NULL, NULL));
   deletestring = apr_psprintf(pool,
-                              "delete from mergeinfo where revision = %ld;",
+                              "DELETE FROM mergeinfo WHERE revision = %ld;",
                               new_rev);
   SVN_ERR(util_sqlite_exec(db, deletestring, NULL, NULL));
 
@@ -318,7 +325,7 @@ svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
    * On the other hand, if we commit the transaction and end up failing
    * the current file, we just end up with inaccessible data in the
    * database, not a real problem.  */
-  SVN_ERR(util_sqlite_exec(db, "commit transaction;", NULL, NULL));
+  SVN_ERR(util_sqlite_exec(db, "COMMIT TRANSACTION;", NULL, NULL));
   SQLITE_ERR(sqlite3_close(db), db);
 
   return SVN_NO_ERROR;
@@ -339,9 +346,9 @@ parse_mergeinfo_from_db(sqlite3 *db,
 
   SQLITE_ERR(sqlite3_prepare(db,
                              "SELECT mergedfrom, mergedrevstart,"
-                             "mergedrevend from mergeinfo "
-                             "where mergedto = ? and revision = ? "
-                             "order by mergedfrom;",
+                             "mergedrevend FROM mergeinfo "
+                             "WHERE mergedto = ? AND revision = ? "
+                             "ORDER BY mergedfrom;",
                              -1, &stmt, NULL), db);
   SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
   SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastmerged_rev), db);
@@ -466,8 +473,9 @@ get_merge_info_for_path(sqlite3 *db,
 
   /* See if we have a mergeinfo_changed record for this path. If not,
      then it can't have mergeinfo.  */
-  SQLITE_ERR(sqlite3_prepare(db, "SELECT MAX(revision) from mergeinfo_changed"
-                             " where path = ? and revision <= ?;",
+  SQLITE_ERR(sqlite3_prepare(db, 
+                             "SELECT MAX(revision) FROM mergeinfo_changed"
+                             " WHERE path = ? AND revision <= ?;",
                              -1, &stmt, NULL), db);
 
   SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
