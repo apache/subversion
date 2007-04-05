@@ -140,7 +140,6 @@
 ;; * when editing the command line - offer help from the svn client
 ;; * finish svn-status-property-set
 ;; * Add repository browser
-;; * Improve support for svn blame
 ;; * Get rid of all byte-compiler warnings
 ;; * SVK working copy support
 ;; * multiple independent buffers in svn-status-mode
@@ -629,6 +628,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-ediff-windows)
 (defvar svn-ediff-result)
 (defvar svn-status-last-diff-options nil)
+(defvar svn-status-blame-file-name nil)
 (defvar svn-admin-last-repository-dir nil "The last repository url for various operations.")
 (defvar svn-last-cmd-ring (make-ring 30) "Ring that holds the last executed svn commands (for debugging purposes)")
 (defvar svn-status-cached-version-string nil)
@@ -743,6 +743,11 @@ the target of the link gets either `svn-status-filename-face' or
     (t
      (:bold t :italic t)))
   "Face for the phrase \"(switched)\" non-directories in svn status buffers."
+  :group 'psvn-faces)
+
+(defface svn-status-blame-highlight-face
+  '((t :inherit highlight))
+  "Default face for highlighting a line in svn status blame mode."
   :group 'psvn-faces)
 
 (defvar svn-highlight t)
@@ -1242,6 +1247,8 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                         (let ((src-line-number (svn-line-number-at-pos)))
                           (pop-to-buffer (get-buffer svn-status-last-output-buffer-name))
                           (goto-line src-line-number)))))
+                  (with-current-buffer (get-buffer svn-status-last-output-buffer-name)
+                    (svn-status-activate-blame-mode))
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
                   (svn-process-sentinel-fixup-path-seperators)
@@ -3374,8 +3381,8 @@ When called from a file buffer, go to the current line in the resulting blame ou
   (when current-prefix-arg
     (setq revision (svn-status-read-revision-string "Blame for version: " "BASE")))
   (unless revision (setq revision "BASE"))
-  (svn-run t t 'blame "blame" "-r" revision (svn-status-line-info->filename
-                                             (svn-status-get-file-information))))
+  (setq svn-status-blame-file-name (svn-status-line-info->filename (svn-status-get-file-information)))
+  (svn-run t t 'blame "blame" "-r" revision svn-status-blame-file-name))
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
@@ -3408,6 +3415,17 @@ If ARG then prompt for revision to diff against, else compare working copy with 
   (svn-status-show-svn-diff-internal (svn-status-marked-files)
                                      (not (svn-status-some-files-marked-p))
                                      (if arg :ask "BASE")))
+
+(defun svn-status-diff-show-changeset (rev &optional user-confirmation)
+  "Show the changeset for a given log entry.
+When called with a prefix argument, ask the user for the revision."
+  (let* ((upper-rev rev)
+         (lower-rev (number-to-string (- (string-to-number upper-rev) 1)))
+         (rev-arg (concat lower-rev ":" upper-rev)))
+    (when user-confirmation
+      (setq rev-arg (read-string "Revision for changeset: " rev-arg)))
+    (svn-run nil t 'diff "diff" (concat "-r" rev-arg))
+    (svn-status-activate-diff-mode)))
 
 (defun svn-status-show-svn-diff-internal (line-infos recursive revision)
   ;; REVISION must be one of:
@@ -4832,13 +4850,7 @@ Commands:
   "Show the changeset for a given log entry.
 When called with a prefix argument, ask the user for the revision."
   (interactive "P")
-  (let* ((upper-rev (svn-log-revision-at-point))
-        (lower-rev (number-to-string (- (string-to-number upper-rev) 1)))
-        (rev-arg (concat lower-rev ":" upper-rev)))
-    (when arg
-      (setq rev-arg (read-string "Revision for changeset: " rev-arg)))
-    (svn-run nil t 'diff "diff" (concat "-r" rev-arg))
-    (svn-status-activate-diff-mode)))
+  (svn-status-diff-show-changeset (svn-log-revision-at-point) arg))
 
 (defun svn-log-edit-log-entry ()
   "Edit the given log entry."
@@ -4904,6 +4916,159 @@ Currently is the output from the svn update command known."
            (when pos
              (svn-status-pop-to-new-partner-buffer svn-status-buffer-name)
              (goto-char pos))))))
+
+;; --------------------------------------------------------------------------------
+;; svn blame minor mode
+;; --------------------------------------------------------------------------------
+
+(unless (assq 'svn-blame-mode minor-mode-alist)
+  (setq minor-mode-alist
+	(cons (list 'svn-blame-mode " SvnBlame")
+          minor-mode-alist)))
+
+(defvar svn-blame-mode-map () "Keymap used in `svn-blame-mode' buffers.")
+(put 'svn-blame-mode-map 'risky-local-variable t) ;for Emacs 20.7
+
+(when (not svn-blame-mode-map)
+  (setq svn-blame-mode-map (make-sparse-keymap))
+  (define-key svn-blame-mode-map [?s] 'svn-status-pop-to-status-buffer)
+  (define-key svn-blame-mode-map (kbd "n") 'next-line)
+  (define-key svn-blame-mode-map (kbd "p") 'previous-line)
+  (define-key svn-blame-mode-map (kbd "RET") 'svn-blame-open-source-file)
+  (define-key svn-blame-mode-map (kbd "a") 'svn-blame-highlight-author)
+  (define-key svn-blame-mode-map (kbd "r") 'svn-blame-highlight-revision)
+  (define-key svn-blame-mode-map (kbd "=") 'svn-blame-show-changeset)
+  (define-key svn-blame-mode-map [?q] 'bury-buffer))
+
+(easy-menu-define svn-blame-mode-menu svn-blame-mode-map
+"svn blame minor mode menu"
+                  '("SvnBlame"
+                    ["Jump to source location" svn-blame-open-source-file t]
+                    ["Show changeset" svn-blame-show-changeset t]
+                    ["Highlight by author" svn-blame-highlight-author t]
+                    ["Highlight by revision" svn-blame-highlight-revision t]))
+
+(or (assq 'svn-blame-mode minor-mode-map-alist)
+    (setq minor-mode-map-alist
+	  (cons (cons 'svn-blame-mode svn-blame-mode-map) minor-mode-map-alist)))
+
+(make-variable-buffer-local 'svn-blame-mode)
+
+(defun svn-blame-mode (&optional arg)
+  "Toggle svn blame minor mode.
+With ARG, turn svn blame minor mode on if ARG is positive, off otherwise.
+
+Key bindings:
+\\{svn-blame-mode-map}"
+  (interactive "P")
+  (setq svn-blame-mode (if (null arg)
+                           (not svn-blame-mode)
+                         (> (prefix-numeric-value arg) 0)))
+  (if svn-blame-mode
+      (progn
+        (easy-menu-add svn-blame-mode-menu)
+        (toggle-read-only 1))
+    (easy-menu-remove svn-blame-mode-menu))
+  (force-mode-line-update))
+
+(defun svn-status-activate-blame-mode ()
+  "Activate the svn blame minor in the current buffer.
+The current buffer must contain a valid output from svn blame"
+  (save-excursion
+    (goto-char (point-min))
+    (let ((buffer-read-only nil)
+          (line (line-number-at-pos))
+          (limit (point-max))
+          (info-end-col (save-excursion (forward-word 2) (+ (current-column) 1)))
+          (s)
+          ov)
+      ;; remove the old overlays (only for testing)
+      ;; (dolist (ov (overlays-in (point) limit))
+      ;;   (when (overlay-get ov 'svn-blame-line-info)
+      ;;     (delete-overlay ov)))
+      (while (and (not (eobp)) (< (point) limit))
+        (setq ov (make-overlay (point) (point)))
+        (overlay-put ov 'svn-blame-line-info t)
+        (setq s (buffer-substring-no-properties (line-beginning-position) (+ (line-beginning-position) info-end-col)))
+        (overlay-put ov 'before-string (propertize s 'face font-lock-variable-name-face))
+        (overlay-put ov 'rev-info (delete "" (split-string s " ")))
+        (delete-region (line-beginning-position) (+ (line-beginning-position) info-end-col))
+        (forward-line)
+        (setq line (1+ line)))))
+  (let* ((buf-name (format "*svn-blame: %s*" (file-relative-name svn-status-blame-file-name)))
+         (buffer (get-buffer buf-name)))
+    (when buffer
+      (kill-buffer buffer))
+    (rename-buffer buf-name))
+  ;; use the correct mode for the displayed blame output
+  (let ((buffer-file-name svn-status-blame-file-name))
+    (normal-mode)
+    (set (make-local-variable 'svn-status-blame-file-name) svn-status-blame-file-name))
+  (font-lock-fontify-buffer)
+  (svn-blame-mode 1))
+
+(defun svn-blame-open-source-file ()
+  "Jump to the source file location for the current position in the svn blame buffer"
+  (interactive)
+  (let ((src-line-number (svn-line-number-at-pos))
+        (src-line-col (current-column)))
+    (find-file-other-window svn-status-blame-file-name)
+    (goto-line src-line-number)
+    (forward-char src-line-col)))
+
+(defun svn-blame-show-changeset (arg)
+  "Show a diff for the revision at point.
+When called with a prefix argument, allow the user to edit the revision."
+  (interactive "P")
+  (let ((rev))
+    (dolist (ov (overlays-in (line-beginning-position) (line-end-position)))
+      (when (overlay-get ov 'svn-blame-line-info)
+        (setq rev (car (overlay-get ov 'rev-info)))))
+    (svn-status-diff-show-changeset rev arg)))
+
+(defun svn-blame-highlight-line-maybe (compare-func)
+  (let ((reference-value)
+        (is-highlighted)
+        (consider-this-line)
+        (hl-ov))
+    (dolist (ov (overlays-in (line-beginning-position) (line-end-position)))
+      (when (overlay-get ov 'svn-blame-line-info)
+        (setq reference-value (funcall compare-func ov)))
+      (when (overlay-get ov 'svn-blame-highlighted)
+        (setq is-highlighted t)))
+    (save-excursion
+      (goto-char (point-min))
+      (while (not (eobp))
+        (setq consider-this-line nil)
+        (dolist (ov (overlays-in (line-beginning-position) (line-end-position)))
+          (when (overlay-get ov 'svn-blame-line-info)
+            (when (string= reference-value (funcall compare-func ov))
+              (setq consider-this-line t))))
+        (when consider-this-line
+          (dolist (ov (overlays-in (line-beginning-position) (line-end-position)))
+            (when (and (overlay-get ov 'svn-blame-highlighted) is-highlighted)
+              (delete-overlay ov))
+            (unless is-highlighted
+              (setq hl-ov (make-overlay (line-beginning-position) (line-end-position)))
+              (overlay-put hl-ov 'svn-blame-highlighted t)
+              (overlay-put hl-ov 'face 'svn-status-blame-highlight-face))))
+        (forward-line)))))
+
+(defun svn-blame-highlight-author-field (ov)
+  (cadr (overlay-get ov 'rev-info)))
+
+(defun svn-blame-highlight-author ()
+  "(Un)Highlight all lines with the same author."
+  (interactive)
+  (svn-blame-highlight-line-maybe 'svn-blame-highlight-author-field))
+
+(defun svn-blame-highlight-revision-field (ov)
+  (car (overlay-get ov 'rev-info)))
+
+(defun svn-blame-highlight-revision ()
+  "(Un)Highlight all lines with the same revision."
+  (interactive)
+  (svn-blame-highlight-line-maybe 'svn-blame-highlight-revision-field))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-process-mode
@@ -5415,7 +5580,7 @@ working directory."
                                                 svn-status-mode-property-map svn-status-mode-extension-map
                                                 svn-status-mode-options-map svn-status-mode-trac-map svn-status-mode-branch-map
                                                 svn-log-edit-mode-map svn-log-view-mode-map
-                                                svn-log-view-popup-menu-map svn-info-mode-map svn-process-mode-map)
+                                                svn-log-view-popup-menu-map svn-info-mode-map svn-blame-mode-map svn-process-mode-map)
   "A list of variables that should be set to nil via M-x `svn-prepare-for-reload'")
 (defun svn-prepare-for-reload ()
   "This function resets some psvn.el variables to nil.
