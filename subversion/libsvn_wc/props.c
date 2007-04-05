@@ -546,9 +546,8 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
   SVN_ERR(svn_mergeinfo_remove(&from_mergeinfo, l_deleted,
                                from_mergeinfo, pool));
 
-  SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) output,
-                                   from_mergeinfo, pool));
-  return SVN_NO_ERROR;
+  return svn_mergeinfo__to_string((svn_string_t **) output, from_mergeinfo,
+                                  pool);
 }
 
 
