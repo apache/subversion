@@ -812,15 +812,6 @@ typedef struct svn_client_ctx_t
    * @since New in 1.3. */
   void *log_msg_baton2;
 
-  /** Log message callback function. NULL means that Subversion
-   *   should try @c log_msg_func2, then @c log_msg_func.
-   * @since New in 1.5. */
-  svn_client_get_commit_log3_t log_msg_func3;
-
-  /** The callback baton for @c log_msg_func3.
-   * @since New in 1.5. */
-  void *log_msg_baton3;
-
   /** Notification callback for network progress information.
    * May be NULL if not used.
    * @since New in 1.3. */
@@ -829,6 +820,15 @@ typedef struct svn_client_ctx_t
   /** Callback baton for progress_func.
    * @since New in 1.3. */
   void *progress_baton;
+
+  /** Log message callback function. NULL means that Subversion
+   *   should try @c log_msg_func2, then @c log_msg_func.
+   * @since New in 1.5. */
+  svn_client_get_commit_log3_t log_msg_func3;
+
+  /** The callback baton for @c log_msg_func3.
+   * @since New in 1.5. */
+  void *log_msg_baton3;
 
   /** MIME types map.
    * @since New in 1.5. */
