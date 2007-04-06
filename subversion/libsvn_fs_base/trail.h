@@ -66,7 +66,7 @@ extern "C" {
      successfully or unsuccessfully.
 
    The `svn_fs_base__retry_txn' function and its friends help you manage
-   all of that, in one nice package.
+   some of that, in one nice package.
 
    To use it, write your code in a function like this:
 
@@ -114,23 +114,7 @@ extern "C" {
    SVN_NO_ERROR, `svn_fs_base__retry_txn' commits the trail's Berkeley DB
    transaction, thus making your DB changes permanent, leaves the
    trail's pool alone, so all the objects it contains are still
-   around, and returns SVN_NO_ERROR.
-
-   If you're making changes to in-memory data structures which should
-   be reverted if the transaction doesn't complete successfully, you
-   can call `svn_fs_base__record_undo' as you make your changes to register
-   functions that will undo them.  On failure (either due to deadlock
-   or a real error), `svn_fs_base__retry_txn' will invoke your undo
-   functions, youngest first, to restore your data structures to the
-   state they were in when you started the transaction.
-
-   If you're caching things in in-memory data structures, which may go
-   stale once the transaction is complete, you can call
-   `svn_fs_base__record_completion' to register functions that will clear
-   your caches.  When the trail completes, successfully or
-   unsuccessfully, `svn_fs_base__retry_txn' will invoke your completion
-   functions, youngest first, to remove whatever cached information
-   you like.  */
+   around, and returns SVN_NO_ERROR.  */
 
 struct trail_t
 {
