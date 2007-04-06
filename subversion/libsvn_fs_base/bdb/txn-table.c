@@ -55,7 +55,7 @@ svn_fs_bdb__open_transactions_table(DB **transactions_p,
                      "transactions", 0, DB_BTREE,
                      open_flags, 0666));
 
-  /* Create the `next-id' table entry.  */
+  /* Create the `next-key' table entry.  */
   if (create)
   {
     DBT key, value;
@@ -234,7 +234,7 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
                          apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  apr_size_t const next_id_key_len = strlen(NEXT_KEY_KEY);
+  apr_size_t const next_key_key_len = strlen(NEXT_KEY_KEY);
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_array_header_t *names;
   DBC *cursor;
@@ -274,9 +274,9 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
       svn_fs_base__track_dbt(&key, subpool);
       svn_fs_base__track_dbt(&value, subpool);
 
-      /* Ignore the "next-id" key. */
-      if (key.size == next_id_key_len
-          && 0 == memcmp(key.data, NEXT_KEY_KEY, next_id_key_len))
+      /* Ignore the "next-key" key. */
+      if (key.size == next_key_key_len
+          && 0 == memcmp(key.data, NEXT_KEY_KEY, next_key_key_len))
         continue;
 
       /* Parse TRANSACTION skel */
