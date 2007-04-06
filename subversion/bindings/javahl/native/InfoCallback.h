@@ -54,7 +54,7 @@ protected:
 
 private:
     /**
-     * this a local reference to the java object.
+     * A local reference to the corresponding Java object.
      */
     jobject m_callback;
     const char *wcPath;
