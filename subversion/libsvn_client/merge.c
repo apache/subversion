@@ -339,18 +339,12 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
                                 merge_b->merge_options, subpool));
         }
 
-      /* Philip asks "Why?"  Why does the notification depend on whether the
-         file had modifications before the merge?  If the merge didn't change
-         the file because the local mods already included the change why does
-         that result it "merged" notification?  That's information available
-         through the status command, while the fact that the merge didn't
-         change the file is lost :-( */
-
       if (content_state)
         {
           if (merge_outcome == svn_wc_merge_conflict)
             *content_state = svn_wc_notify_state_conflicted;
-          else if (has_local_mods)
+          else if (has_local_mods
+                   && merge_outcome != svn_wc_merge_unchanged)
             *content_state = svn_wc_notify_state_merged;
           else if (merge_outcome == svn_wc_merge_merged)
             *content_state = svn_wc_notify_state_changed;
