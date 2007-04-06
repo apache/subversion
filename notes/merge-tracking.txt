@@ -46,6 +46,8 @@ history index).
 
 * Handle notifications resulting from a merge.  (dlr)
 
+  * Handle property change notifications for "svn:mergeinfo".
+
   * Handle multiple notifications for single WC items. Possible
     solutions include:
 
