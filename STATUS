@@ -78,6 +78,13 @@ Veto-blocked changes:
       -1: djames (This list of revisions isn't complete. See
                   http://svn.haxx.se/dev/archive-2006-07/0227.shtml)
 
+ * r24483
+   Stop merge notifications for locally modified files unchanged by a merge. 
+   Justification:
+     Long standing bug effecting only the output of svn merge.
+   Votes:
+     +1: pburba, dlr (via dev list)
+
 Approved changes:
 
   * r18254
