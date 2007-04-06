@@ -95,7 +95,7 @@ svn_fs_bdb__new_node_id(svn_fs_id_t **id_p,
   svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY);
   svn_fs_base__trail_debug(trail, "nodes", "get");
   SVN_ERR(BDB_WRAP(fs, _("allocating new node ID (getting 'next-key')"),
-                   bfd->nodes->get(bfd->nodes, trail->db_txn,
+                   bfd->nodes->get(bfd->nodes, FS_DB_TXN(trail->fs),
                                    &query,
                                    svn_fs_base__result_dbt(&result),
                                    0)));
@@ -108,7 +108,7 @@ svn_fs_bdb__new_node_id(svn_fs_id_t **id_p,
   len = result.size;
   svn_fs_base__next_key(result.data, &len, next_key);
   svn_fs_base__trail_debug(trail, "nodes", "put");
-  db_err = bfd->nodes->put(bfd->nodes, trail->db_txn,
+  db_err = bfd->nodes->put(bfd->nodes, FS_DB_TXN(trail->fs),
                            svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY),
                            svn_fs_base__str_to_dbt(&result, next_key),
                            0);
@@ -177,7 +177,7 @@ svn_fs_bdb__delete_nodes_entry(svn_fs_t *fs,
   svn_fs_base__trail_debug(trail, "nodes", "del");
   SVN_ERR(BDB_WRAP(fs, _("deleting entry from 'nodes' table"),
                    bfd->nodes->del(bfd->nodes,
-                                   trail->db_txn,
+                                   FS_DB_TXN(trail->fs),
                                    svn_fs_base__id_to_dbt(&key, id, pool),
                                    0)));
 
@@ -204,7 +204,7 @@ svn_fs_bdb__get_node_revision(node_revision_t **noderev_p,
   DBT key, value;
 
   svn_fs_base__trail_debug(trail, "nodes", "get");
-  db_err = bfd->nodes->get(bfd->nodes, trail->db_txn,
+  db_err = bfd->nodes->get(bfd->nodes, FS_DB_TXN(trail->fs),
                            svn_fs_base__id_to_dbt(&key, id, pool),
                            svn_fs_base__result_dbt(&value),
                            0);
@@ -240,7 +240,7 @@ svn_fs_bdb__put_node_revision(svn_fs_t *fs,
                               apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  DB_TXN *db_txn = trail->db_txn;
+  DB_TXN *db_txn = FS_DB_TXN(trail->fs);
   DBT key, value;
   skel_t *skel;
 

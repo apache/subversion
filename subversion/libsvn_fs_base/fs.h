@@ -61,9 +61,14 @@ typedef struct
   DB *locks;
   DB *lock_tokens;
 
-  /* A boolean for tracking when we have a live Berkeley DB
-     transaction trail alive. */
-  svn_boolean_t in_txn_trail;
+  /* A Berkeley DB transaction (or NULL if no transaction is active).
+     It's cool that we keep this at such a high level because a) no
+     two processes should be sharing this structure, b) BDB really
+     hates when a single process tries to open more than one
+     transaction at a time, and c) we've no reason to interact with
+     BDB outside the scope of a transaction when we have a transaction
+     in progress.  */
+  DB_TXN *db_txn;
 
   /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
   const char *uuid;
@@ -72,6 +77,9 @@ typedef struct
   int format;
 
 } base_fs_data_t;
+
+
+#define FS_DB_TXN(fs) (((base_fs_data_t *)((fs)->fsap_data))->db_txn)
 
 
 /*** Filesystem Revision ***/

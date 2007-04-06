@@ -72,7 +72,7 @@ svn_fs_bdb__get_rev(revision_t **revision_p,
   db_recno_t recno = rev + 1;
 
   svn_fs_base__trail_debug(trail, "revisions", "get");
-  db_err = bfd->revisions->get(bfd->revisions, trail->db_txn,
+  db_err = bfd->revisions->get(bfd->revisions, FS_DB_TXN(trail->fs),
                                svn_fs_base__set_dbt(&key, &recno,
                                                     sizeof(recno)),
                                svn_fs_base__result_dbt(&value),
@@ -127,14 +127,14 @@ svn_fs_bdb__put_rev(svn_revnum_t *rev,
       recno = *rev + 1;
       svn_fs_base__trail_debug(trail, "revisions", "put");
       db_err = bfd->revisions->put
-        (bfd->revisions, trail->db_txn,
+        (bfd->revisions, FS_DB_TXN(trail->fs),
          svn_fs_base__set_dbt(&query, &recno, sizeof(recno)),
          svn_fs_base__skel_to_dbt(&result, skel, pool), 0);
       return BDB_WRAP(fs, "updating filesystem revision", db_err);
     }
 
   svn_fs_base__trail_debug(trail, "revisions", "put");
-  db_err = bfd->revisions->put(bfd->revisions, trail->db_txn,
+  db_err = bfd->revisions->put(bfd->revisions, FS_DB_TXN(trail->fs),
                                svn_fs_base__recno_dbt(&key, &recno),
                                svn_fs_base__skel_to_dbt(&value, skel, pool),
                                DB_APPEND);
@@ -169,7 +169,7 @@ svn_fs_bdb__youngest_rev(svn_revnum_t *youngest_p,
   /* Create a database cursor.  */
   svn_fs_base__trail_debug(trail, "revisions", "cursor");
   SVN_ERR(BDB_WRAP(fs, "getting youngest revision (creating cursor)",
-                   bfd->revisions->cursor(bfd->revisions, trail->db_txn,
+                   bfd->revisions->cursor(bfd->revisions, FS_DB_TXN(trail->fs),
                                           &cursor, 0)));
 
   /* Find the last entry in the `revisions' table.  */

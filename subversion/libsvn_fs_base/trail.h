@@ -118,9 +118,6 @@ extern "C" {
 
 struct trail_t
 {
-  /* A Berkeley DB transaction.  */
-  DB_TXN *db_txn;
-
   /* The filesystem object with which this trail is associated. */
   svn_fs_t *fs;
 

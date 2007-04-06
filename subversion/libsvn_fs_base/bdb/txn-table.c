@@ -90,7 +90,8 @@ svn_fs_bdb__put_txn(svn_fs_t *fs,
   svn_fs_base__skel_to_dbt(&value, txn_skel, pool);
   svn_fs_base__trail_debug(trail, "transactions", "put");
   SVN_ERR(BDB_WRAP(fs, _("storing transaction record"),
-                   bfd->transactions->put(bfd->transactions, trail->db_txn,
+                   bfd->transactions->put(bfd->transactions, 
+                                          FS_DB_TXN(trail->fs),
                                           &key, &value, 0)));
 
   return SVN_NO_ERROR;
@@ -116,7 +117,8 @@ allocate_txn_id(const char **id_p,
   /* Get the current value associated with the `next-key' key in the table.  */
   svn_fs_base__trail_debug(trail, "transactions", "get");
   SVN_ERR(BDB_WRAP(fs, "allocating new transaction ID (getting 'next-key')",
-                   bfd->transactions->get(bfd->transactions, trail->db_txn,
+                   bfd->transactions->get(bfd->transactions, 
+                                          FS_DB_TXN(trail->fs),
                                           &query,
                                           svn_fs_base__result_dbt(&result),
                                           0)));
@@ -131,7 +133,7 @@ allocate_txn_id(const char **id_p,
   svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY);
   svn_fs_base__str_to_dbt(&result, next_key);
   svn_fs_base__trail_debug(trail, "transactions", "put");
-  db_err = bfd->transactions->put(bfd->transactions, trail->db_txn,
+  db_err = bfd->transactions->put(bfd->transactions, FS_DB_TXN(trail->fs),
                                   &query, &result, 0);
 
   SVN_ERR(BDB_WRAP(fs, "bumping next transaction key", db_err));
@@ -183,7 +185,7 @@ svn_fs_bdb__delete_txn(svn_fs_t *fs,
   svn_fs_base__trail_debug(trail, "transactions", "del");
   SVN_ERR(BDB_WRAP(fs, "deleting entry from 'transactions' table",
                    bfd->transactions->del(bfd->transactions,
-                                          trail->db_txn, &key, 0)));
+                                          FS_DB_TXN(trail->fs), &key, 0)));
 
   return SVN_NO_ERROR;
 }
@@ -205,7 +207,7 @@ svn_fs_bdb__get_txn(transaction_t **txn_p,
   /* Only in the context of this function do we know that the DB call
      will not attempt to modify txn_name, so the cast belongs here.  */
   svn_fs_base__trail_debug(trail, "transactions", "get");
-  db_err = bfd->transactions->get(bfd->transactions, trail->db_txn,
+  db_err = bfd->transactions->get(bfd->transactions, FS_DB_TXN(trail->fs),
                                   svn_fs_base__str_to_dbt(&key, txn_name),
                                   svn_fs_base__result_dbt(&value),
                                   0);
@@ -248,7 +250,8 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
   svn_fs_base__trail_debug(trail, "transactions", "cursor");
   SVN_ERR(BDB_WRAP(fs, "reading transaction list (opening cursor)",
                    bfd->transactions->cursor(bfd->transactions,
-                                             trail->db_txn, &cursor, 0)));
+                                             FS_DB_TXN(trail->fs), 
+                                             &cursor, 0)));
 
   /* Build a null-terminated array of keys in the transactions table. */
   for (db_err = cursor->c_get(cursor,

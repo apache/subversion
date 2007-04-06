@@ -89,17 +89,12 @@ begin_trail(trail_t **trail_p,
       /* [*]
          If we're already inside a trail operation, abort() -- this is
          a coding problem (and will likely hang the repository anyway). */
-      if (bfd->in_txn_trail)
+      if (bfd->db_txn)
         abort();
 
       SVN_ERR(BDB_WRAP(fs, "beginning Berkeley DB transaction",
-                       bfd->bdb->env->txn_begin(bfd->bdb->env, 0,
-                                                &trail->db_txn, 0)));
-      bfd->in_txn_trail = TRUE;
-    }
-  else
-    {
-      trail->db_txn = NULL;
+                       bfd->bdb->env->txn_begin(bfd->bdb->env, 0, 
+                                                &(bfd->db_txn), 0)));
     }
 
   *trail_p = trail;
@@ -113,10 +108,10 @@ abort_trail(trail_t *trail)
   svn_fs_t *fs = trail->fs;
   base_fs_data_t *bfd = fs->fsap_data;
 
-  if (trail->db_txn)
+  if (bfd->db_txn)
     {
       /* [**]
-         We have to reset the in_txn_trail flag *before* calling
+         We have to NULL BFD->db_txn *before* calling
          DB_TXN->abort().  If we did it the other way around, the next
          call to begin_trail() (e.g., as part of a txn retry) would
          cause an abort, even though there's strictly speaking no
@@ -126,9 +121,10 @@ abort_trail(trail_t *trail)
          most likely fail for the same reason, and so it's better to
          see the returned error than to abort.  An obvious example is
          when DB_TXN->abort() returns DB_RUNRECOVERY. */
-      bfd->in_txn_trail = FALSE;
+      DB_TXN *db_txn = bfd->db_txn;
+      bfd->db_txn = NULL;
       SVN_ERR(BDB_WRAP(fs, "aborting Berkeley DB transaction",
-                       trail->db_txn->abort(trail->db_txn)));
+                       db_txn->abort(db_txn)));
     }
   svn_pool_destroy(trail->pool);
 
@@ -146,13 +142,14 @@ commit_trail(trail_t *trail)
   /* According to the example in the Berkeley DB manual, txn_commit
      doesn't return DB_LOCK_DEADLOCK --- all deadlocks are reported
      earlier.  */
-  if (trail->db_txn)
+  if (bfd->db_txn)
     {
       /* See comment [**] in abort_trail() above.
          An error during txn commit will abort the transaction anyway. */
-      bfd->in_txn_trail = FALSE;
+      DB_TXN *db_txn = bfd->db_txn;
+      bfd->db_txn = NULL;
       SVN_ERR(BDB_WRAP(fs, "committing Berkeley DB transaction",
-                       trail->db_txn->commit(trail->db_txn, 0)));
+                       db_txn->commit(db_txn, 0)));
     }
 
   /* Do a checkpoint here, if enough has gone on.

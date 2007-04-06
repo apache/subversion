@@ -85,7 +85,7 @@ svn_fs_bdb__changes_add(svn_fs_t *fs,
   svn_fs_base__skel_to_dbt(&value, skel, pool);
   svn_fs_base__trail_debug(trail, "changes", "put");
   SVN_ERR(BDB_WRAP(fs, _("creating change"),
-                   bfd->changes->put(bfd->changes, trail->db_txn,
+                   bfd->changes->put(bfd->changes, FS_DB_TXN(trail->fs),
                                      &query, &value, 0)));
 
   return SVN_NO_ERROR;
@@ -103,7 +103,7 @@ svn_fs_bdb__changes_delete(svn_fs_t *fs,
   base_fs_data_t *bfd = fs->fsap_data;
 
   svn_fs_base__trail_debug(trail, "changes", "del");
-  db_err = bfd->changes->del(bfd->changes, trail->db_txn,
+  db_err = bfd->changes->del(bfd->changes, FS_DB_TXN(trail->fs),
                              svn_fs_base__str_to_dbt(&query, key), 0);
 
   /* If there're no changes for KEY, that is acceptable.  Any other
@@ -254,7 +254,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
      the records, adding them to the return array. */
   svn_fs_base__trail_debug(trail, "changes", "cursor");
   SVN_ERR(BDB_WRAP(fs, _("creating cursor for reading changes"),
-                   bfd->changes->cursor(bfd->changes, trail->db_txn,
+                   bfd->changes->cursor(bfd->changes, FS_DB_TXN(trail->fs),
                                         &cursor, 0)));
 
   /* Advance the cursor to the key that we're looking for. */
@@ -378,7 +378,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
      the records, adding them to the return array. */
   svn_fs_base__trail_debug(trail, "changes", "cursor");
   SVN_ERR(BDB_WRAP(fs, _("creating cursor for reading changes"),
-                   bfd->changes->cursor(bfd->changes, trail->db_txn,
+                   bfd->changes->cursor(bfd->changes, FS_DB_TXN(trail->fs),
                                         &cursor, 0)));
 
   /* Advance the cursor to the key that we're looking for. */

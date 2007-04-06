@@ -81,7 +81,7 @@ svn_fs_bdb__read_rep(representation_t **rep_p,
 
   svn_fs_base__trail_debug(trail, "representations", "get");
   db_err = bfd->representations->get(bfd->representations,
-                                     trail->db_txn,
+                                     FS_DB_TXN(trail->fs),
                                      svn_fs_base__str_to_dbt(&query, key),
                                      svn_fs_base__result_dbt(&result), 0);
   svn_fs_base__track_dbt(&result, pool);
@@ -123,7 +123,7 @@ svn_fs_bdb__write_rep(svn_fs_t *fs,
   svn_fs_base__trail_debug(trail, "representations", "put");
   SVN_ERR(BDB_WRAP(fs, _("storing representation"),
                    bfd->representations->put
-                   (bfd->representations, trail->db_txn,
+                   (bfd->representations, FS_DB_TXN(trail->fs),
                     svn_fs_base__str_to_dbt(&query, key),
                     svn_fs_base__skel_to_dbt(&result, skel, pool),
                     0)));
@@ -153,7 +153,7 @@ svn_fs_bdb__write_new_rep(const char **key,
   svn_fs_base__trail_debug(trail, "representations", "get");
   SVN_ERR(BDB_WRAP(fs, _("allocating new representation (getting next-key)"),
                    bfd->representations->get
-                   (bfd->representations, trail->db_txn, &query,
+                   (bfd->representations, FS_DB_TXN(trail->fs), &query,
                     svn_fs_base__result_dbt(&result), 0)));
 
   svn_fs_base__track_dbt(&result, pool);
@@ -167,7 +167,7 @@ svn_fs_bdb__write_new_rep(const char **key,
   svn_fs_base__next_key(result.data, &len, next_key);
   svn_fs_base__trail_debug(trail, "representations", "put");
   db_err = bfd->representations->put
-    (bfd->representations, trail->db_txn,
+    (bfd->representations, FS_DB_TXN(trail->fs),
      svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY),
      svn_fs_base__str_to_dbt(&result, next_key),
      0);
@@ -190,7 +190,7 @@ svn_fs_bdb__delete_rep(svn_fs_t *fs,
 
   svn_fs_base__trail_debug(trail, "representations", "del");
   db_err = bfd->representations->del
-    (bfd->representations, trail->db_txn,
+    (bfd->representations, FS_DB_TXN(trail->fs),
      svn_fs_base__str_to_dbt(&query, key), 0);
 
   /* If there's no such node, return an appropriately specific error.  */

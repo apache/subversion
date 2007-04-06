@@ -83,7 +83,7 @@ put_copy(svn_fs_t *fs,
   svn_fs_base__skel_to_dbt(&value, copy_skel, pool);
   svn_fs_base__trail_debug(trail, "copies", "put");
   SVN_ERR(BDB_WRAP(fs, _("storing copy record"),
-                   bfd->copies->put(bfd->copies, trail->db_txn,
+                   bfd->copies->put(bfd->copies, FS_DB_TXN(trail->fs),
                                     &key, &value, 0)));
 
   return SVN_NO_ERROR;
@@ -108,7 +108,7 @@ svn_fs_bdb__reserve_copy_id(const char **id_p,
      copies table.  */
   svn_fs_base__trail_debug(trail, "copies", "get");
   SVN_ERR(BDB_WRAP(fs, _("allocating new copy ID (getting 'next-key')"),
-                   bfd->copies->get(bfd->copies, trail->db_txn, &query,
+                   bfd->copies->get(bfd->copies, FS_DB_TXN(trail->fs), &query,
                                     svn_fs_base__result_dbt(&result),
                                     0)));
   svn_fs_base__track_dbt(&result, pool);
@@ -120,7 +120,7 @@ svn_fs_bdb__reserve_copy_id(const char **id_p,
   len = result.size;
   svn_fs_base__next_key(result.data, &len, next_key);
   svn_fs_base__trail_debug(trail, "copies", "put");
-  db_err = bfd->copies->put(bfd->copies, trail->db_txn,
+  db_err = bfd->copies->put(bfd->copies, FS_DB_TXN(trail->fs),
                             svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY),
                             svn_fs_base__str_to_dbt(&result, next_key),
                             0);
@@ -161,7 +161,7 @@ svn_fs_bdb__delete_copy(svn_fs_t *fs,
 
   svn_fs_base__str_to_dbt(&key, copy_id);
   svn_fs_base__trail_debug(trail, "copies", "del");
-  db_err = bfd->copies->del(bfd->copies, trail->db_txn, &key, 0);
+  db_err = bfd->copies->del(bfd->copies, FS_DB_TXN(trail->fs), &key, 0);
   if (db_err == DB_NOTFOUND)
     return svn_fs_base__err_no_such_copy(fs, copy_id);
   return BDB_WRAP(fs, _("deleting entry from 'copies' table"), db_err);
@@ -184,7 +184,7 @@ svn_fs_bdb__get_copy(copy_t **copy_p,
   /* Only in the context of this function do we know that the DB call
      will not attempt to modify copy_id, so the cast belongs here.  */
   svn_fs_base__trail_debug(trail, "copies", "get");
-  db_err = bfd->copies->get(bfd->copies, trail->db_txn,
+  db_err = bfd->copies->get(bfd->copies, FS_DB_TXN(trail->fs),
                             svn_fs_base__str_to_dbt(&key, copy_id),
                             svn_fs_base__result_dbt(&value),
                             0);

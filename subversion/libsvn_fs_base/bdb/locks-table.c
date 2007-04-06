@@ -81,7 +81,7 @@ svn_fs_bdb__lock_add(svn_fs_t *fs,
   svn_fs_base__skel_to_dbt(&value, lock_skel, pool);
   svn_fs_base__trail_debug(trail, "lock", "add");
   SVN_ERR(BDB_WRAP(fs, "storing lock record",
-                   bfd->locks->put(bfd->locks, trail->db_txn,
+                   bfd->locks->put(bfd->locks, FS_DB_TXN(trail->fs),
                                    &key, &value, 0)));
 
   return SVN_NO_ERROR;
@@ -101,7 +101,7 @@ svn_fs_bdb__lock_delete(svn_fs_t *fs,
 
   svn_fs_base__str_to_dbt(&key, lock_token);
   svn_fs_base__trail_debug(trail, "locks", "del");
-  db_err = bfd->locks->del(bfd->locks, trail->db_txn, &key, 0);
+  db_err = bfd->locks->del(bfd->locks, FS_DB_TXN(trail->fs), &key, 0);
   
   if (db_err == DB_NOTFOUND)
     return svn_fs_base__err_bad_lock_token(fs, lock_token);
@@ -126,7 +126,7 @@ svn_fs_bdb__lock_get(svn_lock_t **lock_p,
   svn_lock_t *lock;
 
   svn_fs_base__trail_debug(trail, "lock", "get");
-  db_err = bfd->locks->get(bfd->locks, trail->db_txn,
+  db_err = bfd->locks->get(bfd->locks, FS_DB_TXN(trail->fs),
                            svn_fs_base__str_to_dbt(&key, lock_token),
                            svn_fs_base__result_dbt(&value),
                            0);
@@ -226,7 +226,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
     lookup_path = apr_pstrcat(pool, path, "/", NULL);
 
   svn_fs_base__trail_debug(trail, "lock-tokens", "cursor");
-  db_err = bfd->lock_tokens->cursor(bfd->lock_tokens, trail->db_txn,
+  db_err = bfd->lock_tokens->cursor(bfd->lock_tokens, FS_DB_TXN(trail->fs),
                                     &cursor, 0);  
   SVN_ERR(BDB_WRAP(fs, "creating cursor for reading lock tokens", db_err));
 

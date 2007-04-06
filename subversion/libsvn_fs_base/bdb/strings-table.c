@@ -87,7 +87,7 @@ locate_key(apr_size_t *length,
 
   svn_fs_base__trail_debug(trail, "strings", "cursor");
   SVN_ERR(BDB_WRAP(fs, _("creating cursor for reading a string"),
-                   bfd->strings->cursor(bfd->strings, trail->db_txn,
+                   bfd->strings->cursor(bfd->strings, FS_DB_TXN(trail->fs),
                                         cursor, 0)));
 
   /* Set up the DBT for reading the length of the record. */
@@ -293,7 +293,7 @@ get_key_and_bump(svn_fs_t *fs,
 
   svn_fs_base__trail_debug(trail, "strings", "cursor");
   SVN_ERR(BDB_WRAP(fs, "creating cursor for reading a string",
-                   bfd->strings->cursor(bfd->strings, trail->db_txn,
+                   bfd->strings->cursor(bfd->strings, FS_DB_TXN(trail->fs),
                                         &cursor, 0)));
 
   /* Advance the cursor to 'next-key' and read it. */
@@ -352,7 +352,7 @@ svn_fs_bdb__string_append(svn_fs_t *fs,
   svn_fs_base__trail_debug(trail, "strings", "put");
   SVN_ERR(BDB_WRAP(fs, "appending string",
                    bfd->strings->put
-                   (bfd->strings, trail->db_txn,
+                   (bfd->strings, FS_DB_TXN(trail->fs),
                     svn_fs_base__str_to_dbt(&query, *key),
                     svn_fs_base__set_dbt(&result, buf, len),
                     0)));
@@ -375,7 +375,7 @@ svn_fs_bdb__string_clear(svn_fs_t *fs,
 
   /* Torch the prior contents */
   svn_fs_base__trail_debug(trail, "strings", "del");
-  db_err = bfd->strings->del(bfd->strings, trail->db_txn, &query, 0);
+  db_err = bfd->strings->del(bfd->strings, FS_DB_TXN(trail->fs), &query, 0);
 
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
@@ -394,7 +394,7 @@ svn_fs_bdb__string_clear(svn_fs_t *fs,
 
   svn_fs_base__trail_debug(trail, "strings", "put");
   return BDB_WRAP(fs, "storing empty contents",
-                  bfd->strings->put(bfd->strings, trail->db_txn,
+                  bfd->strings->put(bfd->strings, FS_DB_TXN(trail->fs),
                                     &query, &result, 0));
 }
 
@@ -450,7 +450,7 @@ svn_fs_bdb__string_delete(svn_fs_t *fs,
   DBT query;
 
   svn_fs_base__trail_debug(trail, "strings", "del");
-  db_err = bfd->strings->del(bfd->strings, trail->db_txn,
+  db_err = bfd->strings->del(bfd->strings, FS_DB_TXN(trail->fs),
                              svn_fs_base__str_to_dbt(&query, key), 0);
 
   /* If there's no such node, return an appropriately specific error.  */
@@ -488,7 +488,7 @@ svn_fs_bdb__string_copy(svn_fs_t *fs,
 
   svn_fs_base__trail_debug(trail, "strings", "cursor");
   SVN_ERR(BDB_WRAP(fs, "creating cursor for reading a string",
-                   bfd->strings->cursor(bfd->strings, trail->db_txn,
+                   bfd->strings->cursor(bfd->strings, FS_DB_TXN(trail->fs),
                                         &cursor, 0)));
 
   svn_fs_base__str_to_dbt(&query, old_key);
@@ -515,7 +515,7 @@ svn_fs_bdb__string_copy(svn_fs_t *fs,
 
       /* Write the data to the database */
       svn_fs_base__trail_debug(trail, "strings", "put");
-      db_err = bfd->strings->put(bfd->strings, trail->db_txn,
+      db_err = bfd->strings->put(bfd->strings, FS_DB_TXN(trail->fs),
                                  &copykey, &result, 0);
       if (db_err)
         {
