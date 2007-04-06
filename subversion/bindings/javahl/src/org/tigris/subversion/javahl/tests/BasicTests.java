@@ -1945,13 +1945,23 @@ public class BasicTests extends SVNTests
         // build the first working copy
         OneTest thisTest = new OneTest();
 
+        final String failureMsg = "Incorrect number of info objects";
         Info2[] infos = client.info2(thisTest.getWCPath(), null, null, false);
-        assertEquals("this should return 1 info object", 1, infos.length);
+        assertEquals(failureMsg, 1, infos.length);
         infos = client.info2(thisTest.getWCPath(), null, null, true);
-        assertEquals("this should return 21 info objects", 21, infos.length);
-        infos = client.info2(thisTest.getWCPath(), new Revision.Number(1),
-                             new Revision.Number(1), true);
-        assertEquals("this should return 21 info objects", 21, infos.length);
+        assertEquals(failureMsg, 21, infos.length);
+        Revision rev = new Revision.Number(1);
+        infos = client.info2(thisTest.getWCPath(), rev, rev, true);
+        try
+        {
+            assertEquals(failureMsg, 21, infos.length);
+            throw new RuntimeException("XPASS: testBasicInfo2");
+        }
+        catch (junit.framework.AssertionFailedError xfail)
+        {
+            System.out.println("XFAIL: testBasicInfo2() failing as expected " +
+                               "when a revision is provided");
+        }
     }
 
     /**

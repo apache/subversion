@@ -26,16 +26,6 @@
 #include "svn_time.h"
 #include "svn_path.h"
 
-struct info_entry
-{
-    const char *path;
-    bool copied;
-    bool deleted;
-    bool absent;
-    bool incomplete;
-    svn_info_t *info;
-};
-
 /**
  * Create a InfoCallback object.  jcallback is the java callback object.
  */
@@ -102,9 +92,9 @@ InfoCallback::singleInfo(const char *path,
             return SVN_NO_ERROR;
     }
 
-    info_entry infoEntry;
-    SVN_JNI_ERR(createInfoEntry(infoEntry, path, info, pool), SVN_NO_ERROR);
-    jobject jinfo2 = createJavaInfo2(&infoEntry);
+    jobject jinfo2 = createJavaInfo2(path, info, pool);
+    if (jinfo2 == NULL || JNIUtil::isJavaExceptionThrown())
+        return SVN_NO_ERROR;
 
     env->CallVoidMethod(m_callback, mid, jinfo2);
     if (JNIUtil::isJavaExceptionThrown())
@@ -116,89 +106,24 @@ InfoCallback::singleInfo(const char *path,
     return SVN_NO_ERROR;
 }
 
-svn_error_t *
-InfoCallback::createInfoEntry(info_entry &infoEntry, const char *path,
-                              const svn_info_t *info, apr_pool_t *pool)
+jobject
+InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
+                              apr_pool_t *pool)
 {
     svn_wc_adm_access_t *adm_access;
     const svn_wc_entry_t *entry;
-    const char *full_path;
+    const char *fullPath = (wcPath ? svn_path_join(wcPath, path, pool) : path);
+    SVN_JNI_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, fullPath, FALSE, 0,
+                                       NULL, NULL, pool), NULL);
+    SVN_JNI_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool), NULL);
+    SVN_JNI_ERR(svn_wc_adm_close(adm_access), NULL);
 
-    // If we've cached the wcPath, it means that 
-    if (wcPath != NULL)
-        full_path = svn_path_join(wcPath, path, pool);
-    else
-        full_path = path;
-
-    SVN_ERR(svn_wc_adm_probe_open2(&adm_access, NULL, full_path, FALSE, 0,
-                                   pool));
-    SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-    SVN_ERR(svn_wc_adm_close(adm_access));
-
-    if (!entry)
-    {
-        // We want to store a NULL in the resulting array, but we can't put a
-        // NULL reference into the infoVect vector, so we just set the path to
-        // NULL, and use that later.
-        infoEntry.path = NULL;
-        return SVN_NO_ERROR;
-    }
-
-    infoEntry.copied = entry->copied;
-    infoEntry.deleted = entry->deleted;
-    infoEntry.absent = entry->absent;
-    infoEntry.incomplete = entry->incomplete;
-
-    // we don't create here java Status object as we don't want too many local
-    // references
-    infoEntry.path = apr_pstrdup(pool,path);
-    infoEntry.info = (svn_info_t*)apr_pcalloc(pool,
-                                              sizeof(svn_info_t));
-    infoEntry.info->URL = apr_pstrdup(pool,info->URL);
-    infoEntry.info->rev = info->rev;
-    infoEntry.info->kind = info->kind;
-    infoEntry.info->repos_root_URL = apr_pstrdup(pool,
-        info->repos_root_URL);
-    infoEntry.info->repos_UUID = apr_pstrdup(pool, info->repos_UUID);
-    infoEntry.info->last_changed_rev = info->last_changed_rev;
-    infoEntry.info->last_changed_date = info->last_changed_date;
-    infoEntry.info->last_changed_author = apr_pstrdup(pool,
-        info->last_changed_author);
-    if (info->lock != NULL)
-        infoEntry.info->lock = svn_lock_dup(info->lock, pool);
-    else
-        infoEntry.info->lock = NULL;
-    infoEntry.info->has_wc_info = info->has_wc_info;
-    infoEntry.info->schedule = info->schedule;
-    infoEntry.info->copyfrom_url = apr_pstrdup(pool,
-        info->copyfrom_url);
-    infoEntry.info->copyfrom_rev = info->copyfrom_rev;
-    infoEntry.info->text_time = info->text_time;
-    infoEntry.info->prop_time = info->prop_time;
-    infoEntry.info->checksum = apr_pstrdup(pool, info->checksum);
-    infoEntry.info->conflict_old = apr_pstrdup(pool,
-        info->conflict_old);
-    infoEntry.info->conflict_new = apr_pstrdup(pool,
-        info->conflict_new);
-    infoEntry.info->conflict_wrk = apr_pstrdup(pool,
-        info->conflict_wrk);
-    infoEntry.info->prejfile = apr_pstrdup(pool, info->prejfile);
-
-    return SVN_NO_ERROR;
-}
-
-jobject
-InfoCallback::createJavaInfo2(info_entry *infoEntry)
-{
-    // ### HACK: We happen to know that a null path means that our
-    // ### infoEntry is bogus.  We should fix or remove
-    // ### createInfoEntry() instead of using this hack.
-    if (infoEntry->path == NULL)
+    if (entry == NULL)
+        // Unable to fully flesh out a Java Info2 object.
         return NULL;
 
-    const svn_info_t *info = infoEntry->info;
     JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/Info2");
+    jclass clazz = env->FindClass(JAVA_PACKAGE "/Info2");
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -216,7 +141,7 @@ InfoCallback::createJavaInfo2(info_entry *infoEntry)
             return NULL;
     }
 
-    jstring jpath = JNIUtil::makeJString(infoEntry->path);
+    jstring jpath = JNIUtil::makeJString(path);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -280,12 +205,12 @@ InfoCallback::createJavaInfo2(info_entry *infoEntry)
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-    jboolean jcopied = infoEntry->copied ? JNI_TRUE : JNI_FALSE;
-    jboolean jdeleted = infoEntry->deleted ? JNI_TRUE : JNI_FALSE;
-    jboolean jabsent = infoEntry->absent ? JNI_TRUE : JNI_FALSE;
-    jboolean jincomplete = infoEntry->incomplete ? JNI_TRUE : JNI_FALSE;
+    jboolean jcopied = entry->copied ? JNI_TRUE : JNI_FALSE;
+    jboolean jdeleted = entry->deleted ? JNI_TRUE : JNI_FALSE;
+    jboolean jabsent = entry->absent ? JNI_TRUE : JNI_FALSE;
+    jboolean jincomplete = entry->incomplete ? JNI_TRUE : JNI_FALSE;
 
-    jobject ret = env->NewObject(clazz, mid, jpath, jurl, jrev, jnodeKind,
+    jobject jinfo2 = env->NewObject(clazz, mid, jpath, jurl, jrev, jnodeKind,
         jreposRootUrl, jreportUUID, jlastChangedRev, jlastChangedDate,
         jlastChangedAuthor, jlock, jhasWcInfo, jschedule, jcopyFromUrl,
         jcopyFromRev, jtextTime, jpropTime, jchecksum, jconflictOld,
@@ -354,5 +279,5 @@ InfoCallback::createJavaInfo2(info_entry *infoEntry)
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-    return ret;
+    return jinfo2;
 }

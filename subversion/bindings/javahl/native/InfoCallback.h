@@ -59,10 +59,9 @@ private:
     jobject m_callback;
     const char *wcPath;
 
-    svn_error_t *
-    createInfoEntry(info_entry &infoEntry, const char *path, 
-                    const svn_info_t *info, apr_pool_t *pool);
-    static jobject createJavaInfo2(info_entry *infoEntry);
+    jobject createJavaInfo2(const char *path,
+                            const svn_info_t *info,
+                            apr_pool_t *pool);
 };
 // !defined(_INFOCALLBACK_H__INCLUDED_)
 #endif
