@@ -190,6 +190,12 @@ InfoCallback::createInfoEntry(info_entry &infoEntry, const char *path,
 jobject
 InfoCallback::createJavaInfo2(info_entry *infoEntry)
 {
+    // ### HACK: We happen to know that a null path means that our
+    // ### infoEntry is bogus.  We should fix or remove
+    // ### createInfoEntry() instead of using this hack.
+    if (infoEntry->path == NULL)
+        return NULL;
+
     const svn_info_t *info = infoEntry->info;
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Info2");
