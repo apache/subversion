@@ -365,9 +365,9 @@ class Httpd:
       fp.write(self._sys_module('access_compat_module', 'mod_access_compat.so'))
       fp.write(self._sys_module('authz_core_module', 'mod_authz_core.so'))
       fp.write(self._sys_module('authz_user_module', 'mod_authz_user.so'))
+      fp.write(self._sys_module('authn_core_module', 'mod_authn_core.so'))
     if self.httpd_ver >= 2.2:
       fp.write(self._sys_module('auth_basic_module', 'mod_auth_basic.so'))
-      fp.write(self._sys_module('authn_core_module', 'mod_authn_core.so'))
       fp.write(self._sys_module('authn_file_module', 'mod_authn_file.so'))
     else:
       fp.write(self._sys_module('auth_module', 'mod_auth.so'))
