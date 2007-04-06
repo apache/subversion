@@ -216,7 +216,6 @@ def textual_merges_galore(sbox):
   # case 4, which we'll handle in a second pass.
   expected_output = wc.State(other_wc, {'A/B/lambda' : Item(status='U '),
                                         'A/D/G/rho'  : Item(status='U '),
-                                        'A/D/G/pi'   : Item(status='G '),
                                         'A/D/G/tau'  : Item(status='C '),
                                         })
 
@@ -4526,25 +4525,9 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
   # this file, to understand why we shorten and chdir() below.
   short_copy_of_A_D_path = shorten_path_kludge(copy_of_A_D_path)
 
-  # We still need to determine how we will handle notification
-  # callbacks for multiple merges into a single versioned resource.
-  # Currently every merge range applied to a target is reported
-  # separately...but eventually we'll probably change the expected
-  # output.
+  # All the file descendants of /A/copy-of-D/ have already been merged
+  # so the only notification we expect is for the added 'umlaut'.
   expected_output = wc.State(short_copy_of_A_D_path, {
-    'G/pi'    : Item(status='G '),
-    'G/rho'   : Item(status='G '),
-    'G/rho'   : Item(status='G '),
-    'G/tau'   : Item(status='G '),
-    'G/tau'   : Item(status='G '),
-    'H/chi'   : Item(status='G '),
-    'H/chi'   : Item(status='G '),
-    'H/omega' : Item(status='G '),
-    'H/omega' : Item(status='G '),
-    'H/psi'   : Item(status='G '),
-    'H/psi'   : Item(status='G '),
-    'gamma'   : Item(status='G '),
-    'gamma'   : Item(status='G '),
     'umlaut'  : Item(status='A '),
     })
 
