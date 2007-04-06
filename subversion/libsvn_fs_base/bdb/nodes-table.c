@@ -54,7 +54,7 @@ svn_fs_bdb__open_nodes_table(DB **nodes_p,
                       "nodes", 0, DB_BTREE,
                       open_flags, 0666));
 
-  /* Create the `next-id' table entry (use '1' because '0' is
+  /* Create the `next-key' table entry (use '1' because '0' is
      reserved for the root directory to use). */
   if (create)
   {
