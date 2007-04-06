@@ -1976,10 +1976,9 @@ void
 SVNClient::info(const char *path, Revision &revision, Revision &pegRevision,
                 bool recurse, InfoCallback *callback)
 {
-    Pool requestPool;
-
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
+    Pool requestPool;
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
         return;
@@ -1987,7 +1986,7 @@ SVNClient::info(const char *path, Revision &revision, Revision &pegRevision,
     Path checkedPath(path);
     SVN_JNI_ERR(checkedPath.error_occured(), );
 
-    // If either revision is not unspecified, we'll need to store the our
+    // If either revision or peg was specified, we'll need to store the our
     // directory, so that we can retreive the absolute path in the receiver
     if (revision.revision()->kind != svn_opt_revision_unspecified
             || pegRevision.revision()->kind != svn_opt_revision_unspecified)
@@ -2000,6 +1999,6 @@ SVNClient::info(const char *path, Revision &revision, Revision &pegRevision,
                                 revision.revision(),
                                 InfoCallback::callback,
                                 callback,
-                                recurse ? TRUE :FALSE,
+                                recurse ? TRUE : FALSE,
                                 ctx, requestPool.pool()), );
 }
