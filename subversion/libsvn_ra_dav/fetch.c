@@ -2788,11 +2788,9 @@ static svn_error_t * reporter_set_path(void *report_baton,
   report_baton_t *rb = report_baton;
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
-  const char *depthstring = "";
   const char *tokenstring = "";
-
-  if (depth != svn_depth_infinity)
-    depthstring = apr_psprintf(pool, "depth=\"%s\"", svn_depth_to_word(depth));
+  const char *depthstring = apr_psprintf(pool, "depth=\"%s\"",
+                                         svn_depth_to_word(depth));
     
   if (lock_token)
     tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
@@ -2826,11 +2824,9 @@ static svn_error_t * reporter_link_path(void *report_baton,
   const char *entry;
   svn_stringbuf_t *qpath = NULL, *qlinkpath = NULL;
   svn_string_t bc_relative;
-  const char *depthstring = "";
   const char *tokenstring = "";
-
-  if (depth != svn_depth_infinity)
-    depthstring = apr_psprintf(pool, "depth=\"%s\"", svn_depth_to_word(depth));
+  const char *depthstring = apr_psprintf(pool, "depth=\"%s\"",
+                                         svn_depth_to_word(depth));
     
   if (lock_token)
     tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
@@ -3105,7 +3101,8 @@ make_reporter(svn_ra_session_t *session,
       SVN_ERR(svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool));
     }
 
-  /* Old servers know "recursive" but not "depth"; help them DTRT. */
+  /* Old servers still pay attention to "recursive" here (modern
+     servers use the "depth" argument to link_path/set_path). */
   if (depth == svn_depth_files || depth == svn_depth_empty)
     {
       const char *data = "<S:recursive>no</S:recursive>" DEBUG_CR;
@@ -3113,13 +3110,6 @@ make_reporter(svn_ra_session_t *session,
                                      NULL, pool));
     }
 
-  /* mod_dav_svn defaults to svn_depth_infinity, but we always send anyway. */
-  {
-    s = apr_psprintf(pool, "<S:depth>%s</S:depth>" DEBUG_CR,
-                     svn_depth_to_word(depth));
-    SVN_ERR(svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool));
-  }
-  
   /* mod_dav_svn will use ancestry in diffs unless it finds this element. */
   if (ignore_ancestry)
     {
