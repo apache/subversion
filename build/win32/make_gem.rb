@@ -39,6 +39,7 @@ Dir.chdir(target_dir) do
     s.files = Dir.glob(File.join("**", "*")).delete_if {|x| /\.gem$/i =~ x}
     s.require_paths = ["ruby/ext", "ruby/lib"]
     s.platform = Gem::Platform::WIN32
+    s.required_ruby_version = '>= 1.8.2'
   end
 
   gem_file = File.expand_path(Gem::Builder.new(spec).build)
