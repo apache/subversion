@@ -17,8 +17,6 @@
  */
 package org.tigris.subversion.javahl;
 
-import java.util.Map;
-
 /**
  * this interface is used to retrieve info each result in a
  * SVNClientInterface.info2 call.
