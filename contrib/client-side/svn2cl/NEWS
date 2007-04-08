@@ -1,3 +1,12 @@
+changes from 0.8 to 0.9
+-----------------------
+
+* ignore files outside the base directory if --strip-prefix is specified
+  (the default with the wrapper shellscript)
+* add --ignore-message-starting option to ignore any log messages that
+  start with the specified string
+
+
 changes from 0.7 to 0.8
 -----------------------
 
