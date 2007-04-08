@@ -64,6 +64,16 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 %typemap(in) (const svn_delta_editor_t *EDITOR, void *BATON) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
+
+%inline %{
+/* helper for invoking txdelta window handler */
+void svn_delta_invoke_window_handler(svn_txdelta_window_handler_t handler,
+                                     void *baton,
+                                     svn_txdelta_window_t *window)
+{
+    handler(window, baton);
+}
+%}
 #endif
 
 #ifdef SWIGRUBY
