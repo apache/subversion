@@ -226,6 +226,11 @@ void svn_delta_make_editor(svn_delta_editor_t **editor,
                            SV *perl_editor,
                            apr_pool_t *pool);
 
+void svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
+                                   void **h_baton,
+                                   SV *callback,
+                                   apr_pool_t *pool);
+
 /* svn_stream_t helpers */
 svn_error_t *svn_swig_pl_make_stream(svn_stream_t **stream, SV *obj);
 SV *svn_swig_pl_from_stream(svn_stream_t *stream);

@@ -73,7 +73,14 @@ void svn_delta_invoke_window_handler(svn_txdelta_window_handler_t handler,
 {
     handler(window, baton);
 }
+
 %}
+
+void svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
+                                   void **handler_baton,
+                                   SV *callback,
+                                   apr_pool_t *pool);
+
 #endif
 
 #ifdef SWIGRUBY
