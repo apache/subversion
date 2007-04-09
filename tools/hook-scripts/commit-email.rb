@@ -7,7 +7,7 @@ require "tempfile"
 
 SENDMAIL = "/usr/sbin/sendmail"
 
-def parse(args)
+def parse_args(args)
   options = OpenStruct.new
   options.to = []
   options.error_to = []
@@ -19,53 +19,54 @@ def parse(args)
   options.name = nil
 
   opts = OptionParser.new do |opts|
+    opts.banner += " REPOSITORY_PATH REVISION TO"
+
     opts.separator ""
 
-    opts.on("-I", "--include [PATH]",
-            "Add [PATH] to load path") do |path|
+    opts.on("-IPATH", "--include=PATH",
+            "Add PATH to load path") do |path|
       $LOAD_PATH.unshift(path)
     end
-    
-    opts.on("-t", "--to [TO]",
-            "Add [TO] to to address") do |to|
+
+    opts.on("-tTO", "--to=TO",
+            "Add TO to to address") do |to|
       options.to << to unless to.nil?
     end
-    
-    opts.on("-e", "--error-to [TO]",
-            "Add [TO] to to address when error is occurred") do |to|
+
+    opts.on("-eTO", "--error-to=TO",
+            "Add TO to to address when error is occurred") do |to|
       options.error_to << to unless to.nil?
     end
-    
-    opts.on("-f", "--from [FROM]",
-            "Use [FROM] as from address") do |from|
+
+    opts.on("-fFROM", "--from=FROM",
+            "Use FROM as from address") do |from|
       options.from = from
     end
-    
-    opts.on("-n", "--no-diff",
-            "Don't add diffs") do |from|
+
+    opts.on("-n", "--no-diff", "Don't add diffs") do |diff|
       options.add_diff = false
     end
-    
-    opts.on("-r", "--repository-uri [URI]",
-            "Use [URI] as URI of repository") do |uri|
+
+    opts.on("-rURI", "--repository-uri=URI",
+            "Use URI as URI of repository") do |uri|
       options.repository_uri = uri
     end
-    
-    opts.on("--rss-path [PATH]",
-            "Use [PATH] as output RSS path") do |path|
+
+    opts.on("--rss-path=PATH",
+            "Use PATH as output RSS path") do |path|
       options.rss_path = path
     end
-    
-    opts.on("--rss-uri [URI]",
-            "Use [URI] as output RSS URI") do |uri|
+
+    opts.on("--rss-uri=URI",
+            "Use URI as output RSS URI") do |uri|
       options.rss_uri = uri
     end
-    
-    opts.on("--name [NAME]",
-            "Use [NAME] as repository name") do |name|
+
+    opts.on("--name=NAME",
+            "Use NAME as repository name") do |name|
       options.name = name
     end
-    
+
     opts.on_tail("--help", "Show this message") do
       puts opts
       exit!
@@ -75,6 +76,14 @@ def parse(args)
   opts.parse!(args)
 
   options
+end
+
+def parse
+  argv = ARGV.dup
+  options = parse_args(argv)
+  repos, revision, to, *rest = argv
+
+  [repos, revision, to, options]
 end
 
 def make_body(info, params)
@@ -378,17 +387,12 @@ def rss_items(items, info, repos_uri)
 end
 
 def main
-  if ARGV.find {|arg| arg == "--help"}
-    parse(ARGV)
-  else
-    repos, revision, to, *rest = ARGV
-    options = parse(rest)
-  end
-  
+  repos, revision, to, options = parse
+
   require "svn/info"
   info = Svn::Info.new(repos, revision)
   from = options.from || info.author
-  to = [to, *options.to]
+  to = [to, *options.to].compact
   params = {
     :repository_uri => options.repository_uri,
     :name => options.name,
@@ -414,22 +418,32 @@ end
 
 begin
   main
-rescue Exception
-  _, _, to, *rest = ARGV
-  to = [to]
+rescue Exception => error
   from = ENV["USER"]
   begin
-    options = parse(rest)
+    _, _, to, options = parse
+    to = [to]
     to = options.error_to unless options.error_to.empty?
-    from = options.from
-  rescue Exception
+    from = options.from || from
+  rescue OptionParser::ParseError
+    _, _, to, *_ = ARGV.reject {|arg| /^-/.match(arg)}
+    to = [to]
   end
-  sendmail(to, from, <<-MAIL)
+
+  detail = <<-EOM
+#{error.class}: #{error.message}
+#{error.backtrace.join("\n")}
+EOM
+  to = to.compact
+  if to.empty?
+    STDERR.puts detail
+  else
+    sendmail(to, from, <<-MAIL)
 From: #{from}
 To: #{to.join(', ')}
 Subject: Error
 
-#{$!.class}: #{$!.message}
-#{$@.join("\n")}
+#{detail}
 MAIL
+  end
 end
