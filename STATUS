@@ -86,6 +86,14 @@ Candidate changes:
    Votes:
      +1: pburba, dlr (via dev list)
 
+ * r24497, r24504
+   Make Perl-based txdelta_window_handler actually usable by editors
+   and related functions.
+   Justification:
+     Binding completeness.
+   Votes:
+     +1: clkao
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
