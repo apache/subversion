@@ -419,12 +419,14 @@ end
 begin
   main
 rescue Exception => error
+  subject = "Error"
   from = ENV["USER"]
   begin
     _, _, to, options = parse
     to = [to]
     to = options.error_to unless options.error_to.empty?
     from = options.from || from
+    subject = "#{options.name}: #{subject}" if options.name
   rescue OptionParser::ParseError
     _, _, to, *_ = ARGV.reject {|arg| /^-/.match(arg)}
     to = [to]
@@ -441,7 +443,7 @@ EOM
     sendmail(to, from, <<-MAIL)
 From: #{from}
 To: #{to.join(', ')}
-Subject: Error
+Subject: #{subject}
 
 #{detail}
 MAIL
