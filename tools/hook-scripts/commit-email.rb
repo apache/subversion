@@ -7,11 +7,18 @@ require "tempfile"
 
 SENDMAIL = "/usr/sbin/sendmail"
 
+class OptionParser
+  class CanNotCoexistOption < ParseError
+    const_set(:Reason, 'can not coexist option'.freeze)
+  end
+end
+
 def parse_args(args)
   options = OpenStruct.new
   options.to = []
   options.error_to = []
   options.from = nil
+  options.from_domain = nil
   options.add_diff = true
   options.repository_uri = nil
   options.rss_path = nil
@@ -40,7 +47,20 @@ def parse_args(args)
 
     opts.on("-fFROM", "--from=FROM",
             "Use FROM as from address") do |from|
+      if options.from_domain
+        raise OptionParser::CanNotCoexistOption,
+              "can't coexist with --from-domain"
+      end
       options.from = from
+    end
+
+    opts.on("--from-domain=DOMAIN",
+            "Use author@DOMAIN as from address") do |domain|
+      if options.from
+        raise OptionParser::CanNotCoexistOption,
+              "can't coexist with --from"
+      end
+      options.from_domain = domain
     end
 
     opts.on("-n", "--no-diff", "Don't add diffs") do |diff|
@@ -78,8 +98,8 @@ def parse_args(args)
   options
 end
 
-def parse
-  argv = ARGV.dup
+def parse(argv=ARGV)
+  argv = argv.dup
   options = parse_args(argv)
   repos, revision, to, *rest = argv
 
@@ -391,7 +411,8 @@ def main
 
   require "svn/info"
   info = Svn::Info.new(repos, revision)
-  from = options.from || info.author
+  from = options.from
+  from ||= "#{info.author}@#{options.from_domain}".sub(/@\z/, '')
   to = [to, *options.to].compact
   params = {
     :repository_uri => options.repository_uri,
@@ -419,17 +440,24 @@ end
 begin
   main
 rescue Exception => error
+  argv = ARGV.dup
+  to = []
   subject = "Error"
   from = ENV["USER"]
   begin
-    _, _, to, options = parse
-    to = [to]
+    _, _, _to, options = parse(argv)
+    to = [_to]
     to = options.error_to unless options.error_to.empty?
     from = options.from || from
     subject = "#{options.name}: #{subject}" if options.name
+  rescue OptionParser::MissingArgument
+    argv.delete_if {|arg| $!.args.include?(arg)}
+    retry
   rescue OptionParser::ParseError
-    _, _, to, *_ = ARGV.reject {|arg| /^-/.match(arg)}
-    to = [to]
+    if to.empty?
+      _, _, _to, *_ = ARGV.reject {|arg| /^-/.match(arg)}
+      to = [_to]
+    end
   end
 
   detail = <<-EOM
