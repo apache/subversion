@@ -559,6 +559,44 @@ def checkout_repo_with_unknown_special_type(sbox):
                                           expected_output,
                                           expected_wc)
 
+def replace_symlink_with_dir(sbox):
+  "replace a special file with a directory"
+
+  wc_dir = sbox.wc_dir
+  from_path = os.path.join(wc_dir, 'from')
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.safe_rmtree(sbox.wc_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  # Load the dumpfile into the repos.
+  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                          'special_tests_data')
+  dump_str = svntest.main.file_read(os.path.join(data_dir,
+                                                 "symlink.dump"), "rb")
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  svntest.main.run_svn(1, 'co', sbox.repo_url, wc_dir)
+                                                    
+  # Now replace the symlink with a directory and try to commit, we
+  # should get an error
+  os.remove(from_path);
+  os.mkdir(from_path);
+  
+  # Does status show the obstruction?
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn(None, [ "~      from\n" ], [], 'st')
+
+  # The commit shouldn't do anything.
+  # I'd expect a failed commit here, but replacing a file locally with a 
+  # directory seems to make svn thing the file is unchanged.
+  os.chdir(was_cwd)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
+                                                    'log msg', wc_dir)
+  if not (stdout_lines == [] or stderr_lines == []):
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -577,6 +615,7 @@ test_list = [ None,
               checkout_repo_with_symlinks,
               XFail(Skip(diff_symlink_to_dir, (os.name != 'posix'))),
               checkout_repo_with_unknown_special_type,
+              replace_symlink_with_dir
              ]
 
 if __name__ == '__main__':

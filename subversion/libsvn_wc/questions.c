@@ -386,10 +386,11 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                     APR_FINFO_SIZE | APR_FINFO_MTIME | APR_FINFO_TYPE
                     | APR_FINFO_LINK, pool);
   if ((err && APR_STATUS_IS_ENOENT(err->apr_err))
-      || !(finfo.filetype & (APR_REG | APR_LNK)))
+      || !(finfo.filetype == APR_REG ||
+           finfo.filetype == APR_LNK))
     {
-      /* There is no entity, or, the entity is not a regular file or link */
-      /* So, it can't be modified. */
+      /* There is no entity, or, the entity is not a regular file or link.
+         So, it can't be modified. */
       svn_error_clear(err);
       *modified_p = FALSE;
       return SVN_NO_ERROR;
