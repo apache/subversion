@@ -280,7 +280,7 @@ HEADER
     % svn #{command} #{link}@#{rev}
 CONTENT
         end
-      
+
         [desc, link]
       end
     ]
@@ -290,9 +290,9 @@ end
 def make_header(to, from, info, params)
   headers = []
   headers << x_author(info)
+  headers << x_revision(info)
   headers << x_repository(info)
   headers << x_id(info)
-  headers << x_sha256(info)
   headers << "Content-Type: text/plain; charset=UTF-8"
   headers << "Content-Transfer-Encoding: 8bit"
   headers << "From: #{from}"
@@ -315,6 +315,10 @@ def x_author(info)
   "X-SVN-Author: #{info.author}"
 end
 
+def x_revision(info)
+  "X-SVN-Revision: #{info.revision}"
+end
+
 def x_repository(info)
   # "X-SVN-Repository: #{info.path}"
   "X-SVN-Repository: XXX"
@@ -322,12 +326,6 @@ end
 
 def x_id(info)
   "X-SVN-Commit-Id: #{info.entire_sha256}"
-end
-
-def x_sha256(info)
-  info.sha256.collect do |name, inf|
-    "X-SVN-SHA256-Info: #{name}, #{inf[:revision]}, #{inf[:sha256]}"
-  end.join("\n")
 end
 
 def make_mail(to, from, info, params)
