@@ -133,7 +133,7 @@ jobjectArray SVNClient::list(const char *url, Revision &revision,
     SVN_JNI_ERR(urlPath.error_occured(), NULL);
 
     apr_hash_t *dirents;
-    SVN_JNI_ERR(svn_client_ls2(&dirents, urlPath.c_str(),
+    SVN_JNI_ERR(svn_client_ls3(&dirents, NULL, urlPath.c_str(),
                                pegRevision.revision(),
                                revision.revision (),
                                recurse, ctx, requestPool.pool()),
