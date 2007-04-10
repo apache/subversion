@@ -319,7 +319,7 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
         g_logStream << "Subversion JavaHL exception thrown, message:<";
         g_logStream << msg << ">";
         if (source)
-            g_logStream << " file:<" << source << ">";
+            g_logStream << " source:<" << source << ">";
         if (aprErr != -1)
             g_logStream << " apr-err:<" << aprErr << ">";
         g_logStream << std::endl;
