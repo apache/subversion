@@ -280,16 +280,16 @@ svn_client_list(const char *path_or_url,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  return svn_client_list(path_or_url,
-                         peg_revision,
-                         revision,
-                         SVN_DEPTH_FROM_RECURSE(recurse),
-                         dirent_fields,
-                         fetch_locks,
-                         list_func,
-                         baton,
-                         ctx,
-                         pool);
+  return svn_client_list2(path_or_url,
+                          peg_revision,
+                          revision,
+                          SVN_DEPTH_FROM_RECURSE(recurse),
+                          dirent_fields,
+                          fetch_locks,
+                          list_func,
+                          baton,
+                          ctx,
+                          pool);
 }
 
 /* Baton used by compatibility wrapper svn_client_ls3. */
