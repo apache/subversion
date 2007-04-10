@@ -745,10 +745,18 @@ the target of the link gets either `svn-status-filename-face' or
   "Face for the phrase \"(switched)\" non-directories in svn status buffers."
   :group 'psvn-faces)
 
-(defface svn-status-blame-highlight-face
-  '((t :inherit highlight))
-  "Default face for highlighting a line in svn status blame mode."
-  :group 'psvn-faces)
+(if svn-xemacsp
+    (defface svn-status-blame-highlight-face
+      '((((type tty) (class color)) (:foreground "green" :weight light))
+        (((class color) (background light)) (:foreground "green3"))
+        (((class color) (background dark)) (:foreground "palegreen2"))
+        (t (:weight bold)))
+      "Default face for highlighting a line in svn status blame mode."
+      :group 'psvn-faces)
+  (defface svn-status-blame-highlight-face
+    '((t :inherit highlight))
+    "Default face for highlighting a line in svn status blame mode."
+    :group 'psvn-faces))
 
 (defvar svn-highlight t)
 ;; stolen from PCL-CVS
@@ -4958,6 +4966,9 @@ Currently is the output from the svn update command known."
   "Toggle svn blame minor mode.
 With ARG, turn svn blame minor mode on if ARG is positive, off otherwise.
 
+Note: This mode does not yet work on XEmacs...
+It is probably because the revisions are in 'before-string properties of overlays
+
 Key bindings:
 \\{svn-blame-mode-map}"
   (interactive "P")
@@ -4977,7 +4988,7 @@ The current buffer must contain a valid output from svn blame"
   (save-excursion
     (goto-char (point-min))
     (let ((buffer-read-only nil)
-          (line (line-number-at-pos))
+          (line (svn-line-number-at-pos))
           (limit (point-max))
           (info-end-col (save-excursion (forward-word 2) (+ (current-column) 1)))
           (s)
