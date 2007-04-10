@@ -1737,19 +1737,20 @@ public class BasicTests extends SVNTests
 
         // list the repository root dir
         DirEntry[] entries = client.list(thisTest.getWCPath(), null, false);
-        thisTest.getWc().check(entries,"", false);
+        thisTest.getWc().check(entries, "", false);
 
         // list directory A
-        entries = client.list(thisTest.getWCPath()+"/A", null, false);
-        thisTest.getWc().check(entries,"A", false);
+        entries = client.list(thisTest.getWCPath() + "/A", null, false);
+        thisTest.getWc().check(entries, "A", false);
 
         // list directory A in BASE revision
-        entries = client.list(thisTest.getWCPath()+"/A", Revision.BASE, false);
-        thisTest.getWc().check(entries,"A", false);
+        entries = client.list(thisTest.getWCPath() + "/A", Revision.BASE,
+                              false);
+        thisTest.getWc().check(entries, "A", false);
 
         // list file A/mu
-        entries = client.list(thisTest.getWCPath()+"/A/mu", null, false);
-        thisTest.getWc().check(entries,"A/mu");
+        entries = client.list(thisTest.getWCPath() + "/A/mu", null, false);
+        thisTest.getWc().check(entries, "A/mu");
     }
 
     /**
