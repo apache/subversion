@@ -71,7 +71,8 @@ public class DirEntry
      * @param lastChanged           the date of the last change
      * @param lastAuthor            the author of the last change
      */
-    DirEntry(String path, int nodeKind, long size, boolean hasProps, long lastChangedRevision, long lastChanged, String lastAuthor)
+    DirEntry(String path, int nodeKind, long size, boolean hasProps,
+             long lastChangedRevision, long lastChanged, String lastAuthor)
     {
         this.path = path;
         this.nodeKind = nodeKind;
@@ -154,4 +155,11 @@ public class DirEntry
         return size;
     }
 
+    /**
+     * @return The path at its last changed revision.
+     */
+    public String toString()
+    {
+        return getPath() + '@' + getLastChangedRevision();
+    }
 }
