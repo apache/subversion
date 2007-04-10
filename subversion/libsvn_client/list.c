@@ -32,7 +32,13 @@
 /* Get the directory entries of DIR at REV (relative to the root of
    RA_SESSION), getting at least the fields specified by DIRENT_FIELDS.
    Use the cancellation function/baton of CTX to check for cancellation.
-   If RECURSE is TRUE, recurse into child directories.
+
+   If DEPTH is svn_depth_empty, return immediately.  If DEPTH is
+   svn_depth_files, invoke LIST_FUNC on the file entries with BATON;
+   if svn_depth_immediates, invoke it on file and directory entries;
+   if svn_depth_infinity, invoke it on file and directory entries and
+   recurse into the directory entries with the same depth.
+
    LOCKS, if non-NULL, is a hash mapping const char * paths to svn_lock_t
    objects and FS_PATH is the absolute filesystem path of the RA session.
    Use POOL for temporary allocations.
@@ -44,7 +50,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
                  svn_ra_session_t *ra_session,
                  apr_hash_t *locks,
                  const char *fs_path,
-                 svn_boolean_t recurse,
+                 svn_depth_t depth,
                  svn_client_ctx_t *ctx,
                  svn_client_list_func_t list_func,
                  void *baton,
@@ -54,6 +60,9 @@ get_dir_contents(apr_uint32_t dirent_fields,
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_array_header_t *array;
   int i;
+
+  if (depth == svn_depth_empty)
+    return;
 
   /* Get the directory's entries, but not its props. */
   SVN_ERR(svn_ra_get_dir2(ra_session, &tmpdirents, NULL, NULL,
@@ -83,11 +92,14 @@ get_dir_contents(apr_uint32_t dirent_fields,
       else
         lock = NULL;
 
-      SVN_ERR(list_func(baton, path, the_ent, lock, fs_path, iterpool));
+      if (the_ent->kind == svn_node_file
+          || depth == svn_depth_immediates 
+          || depth == svn_depth_infinity)
+        SVN_ERR(list_func(baton, path, the_ent, lock, fs_path, iterpool));
 
-      if (recurse && the_ent->kind == svn_node_dir)
+      if (depth == svn_depth_infinity && the_ent->kind == svn_node_dir)
         SVN_ERR(get_dir_contents(dirent_fields, path, rev,
-                                 ra_session, locks, fs_path, recurse, ctx,
+                                 ra_session, locks, fs_path, depth, ctx,
                                  list_func, baton, iterpool));
     }
 
@@ -96,16 +108,16 @@ get_dir_contents(apr_uint32_t dirent_fields,
 }
 
 svn_error_t *
-svn_client_list(const char *path_or_url,
-                const svn_opt_revision_t *peg_revision,
-                const svn_opt_revision_t *revision,
-                svn_boolean_t recurse,
-                apr_uint32_t dirent_fields,
-                svn_boolean_t fetch_locks,
-                svn_client_list_func_t list_func,
-                void *baton,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+svn_client_list2(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_client_list_func_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
   svn_revnum_t rev;
@@ -246,11 +258,38 @@ svn_client_list(const char *path_or_url,
                                     APR_HASH_KEY_STRING))
                     : NULL, fs_path, pool));
 
-  if (dirent->kind == svn_node_dir)
+  if (dirent->kind == svn_node_dir
+      && (depth == svn_depth_files
+          || depth == svn_depth_immediates
+          || depth == svn_depth_infinity))
     SVN_ERR(get_dir_contents(dirent_fields, "", rev, ra_session, locks,
-                             fs_path, recurse, ctx, list_func, baton, pool));
+                             fs_path, depth, ctx, list_func, baton, pool));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_list(const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_boolean_t recurse,
+                apr_uint32_t dirent_fields,
+                svn_boolean_t fetch_locks,
+                svn_client_list_func_t list_func,
+                void *baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_list(path_or_url,
+                         peg_revision,
+                         revision,
+                         SVN_DEPTH_FROM_RECURSE(recurse),
+                         dirent_fields,
+                         fetch_locks,
+                         list_func,
+                         baton,
+                         ctx,
+                         pool);
 }
 
 /* Baton used by compatibility wrapper svn_client_ls3. */
