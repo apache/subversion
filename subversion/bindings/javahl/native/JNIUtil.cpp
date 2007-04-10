@@ -362,10 +362,19 @@ void JNIUtil::handleSVNError(svn_error_t *err)
 {
     std::string msg;
     assembleErrorMessage(err, 0, APR_SUCCESS, msg);
-    std::ostringstream source;
-    source << err->file << ':' << err->line;
+    const char *source = NULL;
+#ifdef SVN_DEBUG
+    if (err->file)
+    {
+        std::ostringstream buf;
+        buf << err->file;
+        if (err->line > 0)
+            buf << ':' << err->line;
+        source = buf.str().c_str();
+    }
+#endif
     throwNativeException(JAVA_PACKAGE "/ClientException", msg.c_str(),
-                         source.str().c_str(), err->apr_err);
+                         source, err->apr_err);
     svn_error_clear(err);
 }
 
