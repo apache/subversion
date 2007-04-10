@@ -120,8 +120,8 @@ Contents
    The 'svn status' should list the depth status of the directories, in
    addition to whatever statuses are being currently listed.
    
-   The 'svn info' command should list the depth, IFF invoked on a directory.
-   [I believe it already does, on this branch.  -kfogel]
+   The 'svn info' command should list the depth, iff invoked on a
+   directory whose depth is not the default (depth infinity).
    
 3. Examples
 ===========
@@ -361,8 +361,9 @@ Contents
 
         ...to at least "fold up" A/ and save the disk space.
 
-      * I've put a lot of "### TODO" comments on the branch.  Do a
-        branch diff to see them.
+      * Throughout the code, "### TODO(sd)" comments mark questions
+        related to sparse directories.  There are about 60 of them.
+        Some are trivial, some are not.  We should review them.
 
       * Certain APIs need to behave specially when passed
         svn_depth_unknown: they need to treat it as meaning "go get
