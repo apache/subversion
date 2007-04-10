@@ -93,6 +93,7 @@ Candidate changes:
      Binding completeness.
    Votes:
      +1: clkao
+     +0: glasser (I don't grok SWIG, but having this available in Perl is good)
 
 Veto-blocked changes:
 
