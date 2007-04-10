@@ -590,7 +590,7 @@ def replace_symlink_with_dir(sbox):
 
   # The commit shouldn't do anything.
   # I'd expect a failed commit here, but replacing a file locally with a 
-  # directory seems to make svn thing the file is unchanged.
+  # directory seems to make svn think the file is unchanged.
   os.chdir(was_cwd)
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
                                                     'log msg', wc_dir)
