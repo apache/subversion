@@ -62,7 +62,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
   int i;
 
   if (depth == svn_depth_empty)
-    return;
+    return SVN_NO_ERROR;
 
   /* Get the directory's entries, but not its props. */
   SVN_ERR(svn_ra_get_dir2(ra_session, &tmpdirents, NULL, NULL,
