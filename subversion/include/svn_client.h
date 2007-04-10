@@ -3279,7 +3279,7 @@ svn_client_export(svn_revnum_t *result_rev,
  * @{
  */
 
-/** Invoked by svn_client_list() for each @a path with its @a dirent and,
+/** Invoked by svn_client_list2() for each @a path with its @a dirent and,
  * if @a path is locked, its @a lock.  @a abs_path is the filesystem path
  * to which @a path is relative.  @a baton is the baton passed to the
  * caller.  @a pool may be used for temporary allocations.
@@ -3314,18 +3314,38 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * Use authentication baton cached in @a ctx to authenticate against the 
  * repository.
  *
- * If @a recurse is true (and @a path_or_url is a directory) this will
- * be a recursive operation.
- *
- * ### TODO(sd): This really should take depth instead of recurse, but
- * ### one thing at a time, one thing at a time...
+ * If @a depth is @c svn_depth_empty, list just @a path_or_url itself.
+ * If @a depth is @c svn_depth_files, list @a path_or_url and its file
+ * entries.  If @c svn_depth_immediates, list its immediate file and
+ * directory entries.  If @c svn_depth_infinity, list file entries and
+ * recurse (with @c svn_depth_infinity) on directory entries.
  *
  * @a dirent_fields controls which fields in the @c svn_dirent_t's are
  * filled in.  To have them totally filled in use @c SVN_DIRENT_ALL, 
  * otherwise simply bitwise OR together the combination of @c SVN_DIRENT_
  * fields you care about.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_list2(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_client_list_func_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/* Like svn_client_list2(), but with @a recurse instead of @a depth.
+ * If @a recurse is true, pass @c svn_depth_files for @a depth; else
+ * pass @c svn_depth_infinity.
+ *
  * @since New in 1.4.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_list(const char *path_or_url,
