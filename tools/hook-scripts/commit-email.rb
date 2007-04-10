@@ -8,8 +8,8 @@ require "tempfile"
 SENDMAIL = "/usr/sbin/sendmail"
 
 class OptionParser
-  class CanNotCoexistOption < ParseError
-    const_set(:Reason, 'can not coexist option'.freeze)
+  class CannotCoexistOption < ParseError
+    const_set(:Reason, 'cannot coexist option'.freeze)
   end
 end
 
@@ -48,8 +48,8 @@ def parse_args(args)
     opts.on("-fFROM", "--from=FROM",
             "Use FROM as from address") do |from|
       if options.from_domain
-        raise OptionParser::CanNotCoexistOption,
-              "can't coexist with --from-domain"
+        raise OptionParser::CannotCoexistOption,
+              "cannot coexist with --from-domain"
       end
       options.from = from
     end
@@ -57,8 +57,8 @@ def parse_args(args)
     opts.on("--from-domain=DOMAIN",
             "Use author@DOMAIN as from address") do |domain|
       if options.from
-        raise OptionParser::CanNotCoexistOption,
-              "can't coexist with --from"
+        raise OptionParser::CannotCoexistOption,
+              "cannot coexist with --from"
       end
       options.from_domain = domain
     end
