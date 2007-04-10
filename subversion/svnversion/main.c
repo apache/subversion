@@ -26,9 +26,10 @@
 #define SVNVERSION_OPT_VERSION SVN_OPT_FIRST_LONGOPT_ID
 
 
-static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
+static svn_error_t *
+version(apr_pool_t *pool)
 {
-  return svn_opt_print_help(os, "svnversion", TRUE, FALSE, NULL, NULL,
+  return svn_opt_print_help(NULL, "svnversion", TRUE, FALSE, NULL, NULL,
                             NULL, NULL, NULL, pool);
 }
 
@@ -185,7 +186,7 @@ main(int argc, const char *argv[])
           help(options, pool);
           break;
         case SVNVERSION_OPT_VERSION:
-          SVN_INT_ERR(version(os, pool));
+          SVN_INT_ERR(version(pool));
           exit(0);
           break;
         default:
