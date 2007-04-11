@@ -758,6 +758,13 @@ the target of the link gets either `svn-status-filename-face' or
     "Default face for highlighting a line in svn status blame mode."
     :group 'psvn-faces))
 
+(defface svn-status-blame-rev-number-face
+  '((((class color) (background light)) (:foreground "DarkGoldenrod"))
+    (((class color) (background dark)) (:foreground "LightGoldenrod"))
+    (t (:weight bold :slant italic)))
+  "Face to highlight revision numbers in the svn-blame mode."
+  :group 'psvn-faces)
+
 (defvar svn-highlight t)
 ;; stolen from PCL-CVS
 (defun svn-add-face (str face &optional keymap)
@@ -2190,7 +2197,7 @@ If no file is at point, copy everything starting from ':' to the end of line."
   (if (svn-status-get-line-information)
       (svn-status-copy-filename-as-kill arg)
     (save-excursion
-      (goto-char (line-beginning-position))
+      (goto-char (svn-point-at-bol))
       (when (looking-at ".+?: *\\(.+\\)$")
         (kill-new (svn-match-string-no-properties 1))
         (message "Copied: %s" (svn-match-string-no-properties 1))))))
@@ -5000,10 +5007,10 @@ The current buffer must contain a valid output from svn blame"
       (while (and (not (eobp)) (< (point) limit))
         (setq ov (make-overlay (point) (point)))
         (overlay-put ov 'svn-blame-line-info t)
-        (setq s (buffer-substring-no-properties (line-beginning-position) (+ (line-beginning-position) info-end-col)))
-        (overlay-put ov 'before-string (propertize s 'face font-lock-variable-name-face))
+        (setq s (buffer-substring-no-properties (svn-point-at-bol) (+ (svn-point-at-bol) info-end-col)))
+        (overlay-put ov 'before-string (propertize s 'face 'svn-status-blame-rev-number-face))
         (overlay-put ov 'rev-info (delete "" (split-string s " ")))
-        (delete-region (line-beginning-position) (+ (line-beginning-position) info-end-col))
+        (delete-region (svn-point-at-bol) (+ (svn-point-at-bol) info-end-col))
         (forward-line)
         (setq line (1+ line)))))
   (let* ((buf-name (format "*svn-blame: %s*" (file-relative-name svn-status-blame-file-name)))
@@ -5032,7 +5039,7 @@ The current buffer must contain a valid output from svn blame"
 When called with a prefix argument, allow the user to edit the revision."
   (interactive "P")
   (let ((rev))
-    (dolist (ov (overlays-in (line-beginning-position) (line-end-position)))
+    (dolist (ov (overlays-in (svn-point-at-bol) (line-end-position)))
       (when (overlay-get ov 'svn-blame-line-info)
         (setq rev (car (overlay-get ov 'rev-info)))))
     (svn-status-diff-show-changeset rev arg)))
@@ -5042,7 +5049,7 @@ When called with a prefix argument, allow the user to edit the revision."
         (is-highlighted)
         (consider-this-line)
         (hl-ov))
-    (dolist (ov (overlays-in (line-beginning-position) (line-end-position)))
+    (dolist (ov (overlays-in (svn-point-at-bol) (line-end-position)))
       (when (overlay-get ov 'svn-blame-line-info)
         (setq reference-value (funcall compare-func ov)))
       (when (overlay-get ov 'svn-blame-highlighted)
@@ -5051,16 +5058,16 @@ When called with a prefix argument, allow the user to edit the revision."
       (goto-char (point-min))
       (while (not (eobp))
         (setq consider-this-line nil)
-        (dolist (ov (overlays-in (line-beginning-position) (line-end-position)))
+        (dolist (ov (overlays-in (svn-point-at-bol) (line-end-position)))
           (when (overlay-get ov 'svn-blame-line-info)
             (when (string= reference-value (funcall compare-func ov))
               (setq consider-this-line t))))
         (when consider-this-line
-          (dolist (ov (overlays-in (line-beginning-position) (line-end-position)))
+          (dolist (ov (overlays-in (svn-point-at-bol) (line-end-position)))
             (when (and (overlay-get ov 'svn-blame-highlighted) is-highlighted)
               (delete-overlay ov))
             (unless is-highlighted
-              (setq hl-ov (make-overlay (line-beginning-position) (line-end-position)))
+              (setq hl-ov (make-overlay (svn-point-at-bol) (line-end-position)))
               (overlay-put hl-ov 'svn-blame-highlighted t)
               (overlay-put hl-ov 'face 'svn-status-blame-highlight-face))))
         (forward-line)))))
