@@ -1290,14 +1290,14 @@ dav_svn__update_report(const dav_resource *resource,
         /* diff/merge don't ask for inline text-deltas. */
         if (!uc.send_all && strcmp(spath, dst_path) == 0)
           action = apr_psprintf(resource->pool,
-                                "diff-or-merge '%s' r%" SVN_REVNUM_T_FMT \
+                                "diff-or-merge '%s' r%" SVN_REVNUM_T_FMT
                                  ":%" SVN_REVNUM_T_FMT,
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
                                 revnum);
         else
           action = apr_psprintf(resource->pool,
-                                "%s '%s@%" SVN_REVNUM_T_FMT "'" \
+                                "%s '%s@%" SVN_REVNUM_T_FMT "'"
                                  " '%s@%" SVN_REVNUM_T_FMT "'",
                                 (uc.send_all ? "switch" : "diff-or-merge"),
                                 svn_path_uri_encode(spath, resource->pool),

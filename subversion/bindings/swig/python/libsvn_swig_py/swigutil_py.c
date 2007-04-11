@@ -2260,9 +2260,9 @@ svn_swig_py_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
           else
             {
               creds = apr_pcalloc(pool, sizeof(*creds));
-              creds->username = tmp_creds->username ? \
+              creds->username = tmp_creds->username ?
                 apr_pstrdup(pool, tmp_creds->username) : NULL;
-              creds->password = tmp_creds->password ? \
+              creds->password = tmp_creds->password ?
                 apr_pstrdup(pool, tmp_creds->password) : NULL;
               creds->may_save = tmp_creds->may_save;
             }
@@ -2311,7 +2311,7 @@ svn_swig_py_auth_username_prompt_func(svn_auth_cred_username_t **cred,
           else
             {
               creds = apr_pcalloc(pool, sizeof(*creds));
-              creds->username = tmp_creds->username ? \
+              creds->username = tmp_creds->username ?
                 apr_pstrdup(pool, tmp_creds->username) : NULL;
               creds->may_save = tmp_creds->may_save;
             }
@@ -2415,7 +2415,7 @@ svn_swig_py_auth_ssl_client_cert_prompt_func(
           else
             {
               creds = apr_pcalloc(pool, sizeof(*creds));
-              creds->cert_file = tmp_creds->cert_file ? \
+              creds->cert_file = tmp_creds->cert_file ?
                 apr_pstrdup(pool, tmp_creds->cert_file) : NULL;
               creds->may_save = tmp_creds->may_save;
             }
@@ -2467,7 +2467,7 @@ svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
           else
             {
               creds = apr_pcalloc(pool, sizeof(*creds));
-              creds->password = tmp_creds->password ? \
+              creds->password = tmp_creds->password ?
                 apr_pstrdup(pool, tmp_creds->password) : NULL;
               creds->may_save = tmp_creds->may_save;
             }

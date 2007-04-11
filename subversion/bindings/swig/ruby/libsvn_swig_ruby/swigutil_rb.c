@@ -782,7 +782,7 @@ svn_swig_rb_to_depth(VALUE value)
     return NUM2INT(value);
   } else {
     rb_raise(rb_eArgError,
-             "'%s' must be DEPTH_STRING (e.g. \"infinity\") " \
+             "'%s' must be DEPTH_STRING (e.g. \"infinity\") "
              "or Svn::Core::DEPTH_*",
              r2c_inspect(value));
   }
@@ -2033,7 +2033,7 @@ svn_swig_rb_get_commit_log_func(const char **log_msg,
 
     if (!err) {
       char error_message[] =
-        "log_msg_func should return an array not '%s': "                \
+        "log_msg_func should return an array not '%s': "
         "[TRUE_IF_IT_IS_MESSAGE, MESSAGE_OR_FILE_AS_STRING]";
 
       if (!RTEST(rb_obj_is_kind_of(result, rb_cArray)))
@@ -2689,9 +2689,9 @@ svn_swig_rb_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
       r2c_swig_type2(result, "svn_auth_cred_simple_t *", &result_cred);
       tmp_cred = (svn_auth_cred_simple_t *)result_cred;
       new_cred = apr_pcalloc(pool, sizeof(*new_cred));
-      new_cred->username = tmp_cred->username ? \
+      new_cred->username = tmp_cred->username ?
         apr_pstrdup(pool, tmp_cred->username) : NULL;
-      new_cred->password = tmp_cred->password ? \
+      new_cred->password = tmp_cred->password ?
         apr_pstrdup(pool, tmp_cred->password) : NULL;
       new_cred->may_save = tmp_cred->may_save;
     }
@@ -2732,7 +2732,7 @@ svn_swig_rb_auth_username_prompt_func(svn_auth_cred_username_t **cred,
       r2c_swig_type2(result, "svn_auth_cred_username_t *", &result_cred);
       tmp_cred = (svn_auth_cred_username_t *)result_cred;
       new_cred = apr_pcalloc(pool, sizeof(*new_cred));
-      new_cred->username = tmp_cred->username ? \
+      new_cred->username = tmp_cred->username ?
         apr_pstrdup(pool, tmp_cred->username) : NULL;
       new_cred->may_save = tmp_cred->may_save;
     }
@@ -2820,7 +2820,7 @@ svn_swig_rb_auth_ssl_client_cert_prompt_func(
                      &result_cred);
       tmp_cred = (svn_auth_cred_ssl_client_cert_t *)result_cred;
       new_cred = apr_pcalloc(pool, sizeof(*new_cred));
-      new_cred->cert_file = tmp_cred->cert_file ? \
+      new_cred->cert_file = tmp_cred->cert_file ?
         apr_pstrdup(pool, tmp_cred->cert_file) : NULL;
       new_cred->may_save = tmp_cred->may_save;
     }
@@ -2863,7 +2863,7 @@ svn_swig_rb_auth_ssl_client_cert_pw_prompt_func(
                      &result_cred);
       tmp_cred = (svn_auth_cred_ssl_client_cert_pw_t *)result_cred;
       new_cred = apr_pcalloc(pool, sizeof(*new_cred));
-      new_cred->password = tmp_cred->password ? \
+      new_cred->password = tmp_cred->password ?
         apr_pstrdup(pool, tmp_cred->password) : NULL;
       new_cred->may_save = tmp_cred->may_save;
     }

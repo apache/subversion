@@ -1597,7 +1597,7 @@ do_merge(const char *initial_URL1,
               if (svn_path_is_ancestor(target_wcpath, child_wcpath) &&
                   strcmp(child_wcpath, target_wcpath) != 0)
                 {
-                  child_repos_path = child_wcpath + \
+                  child_repos_path = child_wcpath +
                     (target_wcpath_len ? target_wcpath_len + 1 : 0);
                   SVN_ERR(reporter->set_path(report_baton, child_repos_path,
                                              is_revert ? r->end - 1 : r->end,
@@ -1981,7 +1981,7 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
         continue;
       SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath, adm_access,
                                       FALSE, pool));
-      child_repos_path = child_wcpath + \
+      child_repos_path = child_wcpath +
         (merge_target_len ? merge_target_len + 1 : 0);
       child_url = svn_path_join(parent_wc_url, child_repos_path, pool);
       if (child_entry->kind == svn_node_file)
