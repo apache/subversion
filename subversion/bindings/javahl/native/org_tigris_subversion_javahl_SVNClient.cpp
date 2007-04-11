@@ -1548,6 +1548,26 @@ Java_org_tigris_subversion_javahl_SVNClient_cancelOperation
     cl->cancelOperation();
 }
 
+JNIEXPORT jobject JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_info
+  (JNIEnv *env, jobject jthis, jstring jpath)
+{
+    JNIEntry(SVNClient, info);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError("bad c++ this");
+        return NULL;
+    }
+
+    JNIStringHolder path(jpath);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return NULL;
+    }
+    return cl->info(path);
+}
+
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_addToChangelist
   (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jchangelist)
@@ -1694,7 +1714,8 @@ Java_org_tigris_subversion_javahl_SVNClient_info2
         return;
     }
     InfoCallback callback(jinfoCallback);
-    cl->info(path, revision, pegRevision, jrecurse ? true : false, &callback);
+    cl->info2(path, revision, pegRevision, jrecurse ? true : false,
+              &callback);
 }
 
 JNIEXPORT jobject JNICALL

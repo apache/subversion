@@ -25,8 +25,43 @@ import java.util.Date;
  * @since 1.2
  */
 public class Info2
-    extends Info
 {
+    /**
+     * the path of the item
+     */
+    private String path;
+    /**
+     * the url of the item
+     */
+    private String url;
+    /**
+     * the revision of the item
+     */
+    private long rev;
+    /**
+     * the item kinds (see NodeKind)
+     */
+    private int kind;
+    /**
+     * the root URL of the repository
+     */
+    private String reposRootUrl;
+    /**
+     * the UUID of the repository
+     */
+    private String reposUUID;
+    /**
+     * the revision of the last change
+     */
+    private long lastChangedRev;
+    /**
+     * the date of the last change in ns
+     */
+    private long lastChangedDate;
+    /**
+     * the author of the last change
+     */
+    private String lastChangedAuthor;
     /**
      * the information about any lock (may be null)
      */
@@ -35,6 +70,26 @@ public class Info2
      * the flag if the remaining fields are set
      */
     private boolean hasWcInfo;
+    /**
+     * the scheduled operation at next commit (see ScheduleKind)
+     */
+    private int schedule;
+    /**
+     * if the item was copied, the source url
+     */
+    private String copyFromUrl;
+    /**
+     * if the item was copied, the source rev
+     */
+    private long copyFromRev;
+    /**
+     * the last time the item was changed in ns
+     */
+    private long textTime;
+    /**
+     * the last time the properties of the items were changed in ns
+     */
+    private long propTime;
     /**
      * the checksum of the item
      */
@@ -82,19 +137,28 @@ public class Info2
      * @param prejfile
      */
     Info2(String path, String url, long rev, int kind, String reposRootUrl,
-          String reposUUID, long lastChangedRev, Date lastChangedDate,
+          String reposUUID, long lastChangedRev, long lastChangedDate,
           String lastChangedAuthor, Lock lock, boolean hasWcInfo, int schedule,
-          String copyFromUrl, long copyFromRev, Date textTime, Date propTime,
+          String copyFromUrl, long copyFromRev, long textTime, long propTime,
           String checksum, String conflictOld, String conflictNew,
-          String conflictWrk, String prejfile, boolean copied, boolean deleted,
-          boolean absent, boolean incomplete)
+          String conflictWrk, String prejfile)
     {
-        super(path, url, reposUUID, reposRootUrl, schedule, kind,
-              lastChangedAuthor, rev, lastChangedRev, lastChangedDate,
-              textTime, propTime, copied, deleted, absent, incomplete,
-              copyFromRev, copyFromUrl);
+        this.path = path;
+        this.url = url;
+        this.rev = rev;
+        this.kind = kind;
+        this.reposRootUrl = reposRootUrl;
+        this.reposUUID = reposUUID;
+        this.lastChangedRev = lastChangedRev;
+        this.lastChangedDate = lastChangedDate;
+        this.lastChangedAuthor = lastChangedAuthor;
         this.lock = lock;
         this.hasWcInfo = hasWcInfo;
+        this.schedule = schedule;
+        this.copyFromUrl = copyFromUrl;
+        this.copyFromRev = copyFromRev;
+        this.textTime = textTime;
+        this.propTime = propTime;
         this.checksum = checksum;
         this.conflictOld = conflictOld;
         this.conflictNew = conflictNew;
@@ -107,7 +171,15 @@ public class Info2
      */
     public String getPath()
     {
-        return getName();
+        return path;
+    }
+
+    /**
+     * return the url of the item
+     */
+    public String getUrl()
+    {
+        return url;
     }
 
     /**
@@ -115,7 +187,7 @@ public class Info2
      */
     public long getRev()
     {
-        return getRevision();
+        return rev;
     }
 
     /**
@@ -123,7 +195,7 @@ public class Info2
      */
     public int getKind()
     {
-        return getNodeKind();
+        return kind;
     }
 
     /**
@@ -131,7 +203,7 @@ public class Info2
      */
     public String getReposRootUrl()
     {
-        return getRepository();
+        return reposRootUrl;
     }
 
     /**
@@ -139,7 +211,7 @@ public class Info2
      */
     public String getReposUUID()
     {
-        return getUuid();
+        return reposUUID;
     }
 
     /**
@@ -147,7 +219,18 @@ public class Info2
      */
     public long getLastChangedRev()
     {
-        return getLastChangedRevision();
+        return lastChangedRev;
+    }
+
+    /**
+     * return the date of the last change
+     */
+    public Date getLastChangedDate()
+    {
+        if (lastChangedDate == 0)
+            return null;
+        else
+            return new Date(lastChangedDate/1000);
     }
 
     /**
@@ -155,7 +238,7 @@ public class Info2
      */
     public String getLastChangedAuthor()
     {
-        return getAuthor();
+        return lastChangedAuthor;
     }
 
     /**
@@ -175,11 +258,19 @@ public class Info2
     }
 
     /**
+     * return the scheduled operation at next commit (see ScheduleKind)
+     */
+    public int getSchedule()
+    {
+        return schedule;
+    }
+
+    /**
      * return if the item was copied, the source url
      */
     public String getCopyFromUrl()
     {
-        return getCopyUrl();
+        return copyFromUrl;
     }
 
     /**
@@ -187,7 +278,7 @@ public class Info2
      */
     public long getCopyFromRev()
     {
-        return getCopyRev();
+        return copyFromRev;
     }
 
     /**
@@ -195,7 +286,10 @@ public class Info2
      */
     public Date getTextTime()
     {
-        return getLastDateTextUpdate();
+        if (textTime == 0)
+            return null;
+        else
+            return new Date(textTime/1000);
     }
 
     /**
@@ -203,7 +297,10 @@ public class Info2
      */
     public Date getPropTime()
     {
-        return getLastDatePropsUpdate();
+        if (propTime == 0)
+            return null;
+        else
+            return new Date(propTime/1000);
     }
 
     /**

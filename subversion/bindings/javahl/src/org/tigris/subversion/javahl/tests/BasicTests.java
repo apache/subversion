@@ -1953,16 +1953,7 @@ public class BasicTests extends SVNTests
         assertEquals(failureMsg, 21, infos.length);
         Revision rev = new Revision.Number(1);
         infos = client.info2(thisTest.getWCPath(), rev, rev, true);
-        try
-        {
-            assertEquals(failureMsg, 21, infos.length);
-            throw new RuntimeException("XPASS: testBasicInfo2");
-        }
-        catch (junit.framework.AssertionFailedError xfail)
-        {
-            System.out.println("XFAIL: testBasicInfo2() failing as expected " +
-                               "when a revision is provided");
-        }
+        assertEquals(failureMsg, 21, infos.length);
     }
 
     /**

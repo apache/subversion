@@ -40,8 +40,6 @@ public:
     InfoCallback(jobject jcallback);
     ~InfoCallback();
 
-    void setWcPath(const char *path);
-
     static svn_error_t *callback(void *baton,
                                  const char *path,
                                  const svn_info_t *info,
@@ -57,7 +55,6 @@ private:
      * A local reference to the corresponding Java object.
      */
     jobject m_callback;
-    const char *wcPath;
 
     jobject createJavaInfo2(const char *path,
                             const svn_info_t *info,
