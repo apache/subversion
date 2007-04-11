@@ -41,19 +41,6 @@ Candidate changes:
     Votes:
       +1: blair, cmpilato
 
-  * r23217, r23223, r23225, r23226, r23227, r23231, r23232
-    Fix issue #2705, with tests: repos_replay failed
-      on revisions with copy-with-modifications from
-      unreadable directories.
-    Justification:
-      Prevents ra_replay (svnsync, SVK) on real-world repositories,
-      like r120621 in the GCC repo if syncing trunk only.
-    Notes:
-      glasser (nominating this) only tested that merge was clean and
-      did not run tests.
-    Votes:
-      +1: glasser, malcolm
-
   * r23439, r23440
     Fix race condition in changing revprops under FSFS by requiring
       use of the FSFS write lock.  (r23440 is the fix itself; r23439
@@ -135,3 +122,15 @@ Veto-blocked changes:
 
 Approved changes:
 
+  * r23217, r23223, r23225, r23226, r23227, r23231, r23232
+    Fix issue #2705, with tests: repos_replay failed
+      on revisions with copy-with-modifications from
+      unreadable directories.
+    Justification:
+      Prevents ra_replay (svnsync, SVK) on real-world repositories,
+      like r120621 in the GCC repo if syncing trunk only.
+    Notes:
+      glasser (nominating this) only tested that merge was clean and
+      did not run tests.
+    Votes:
+      +1: glasser, malcolm, vgeorgescu
