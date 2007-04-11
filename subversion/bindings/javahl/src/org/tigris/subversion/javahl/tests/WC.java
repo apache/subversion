@@ -319,6 +319,7 @@ public class WC
                 tested[0].getNodeKind(),
                 item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
     }
+
     /**
      * Check the result of a directory SVNClient.list call
      * @param tested        the result array
@@ -339,7 +340,7 @@ public class WC
         // normalize directory path
         if (basePath != null && basePath.length() > 0)
         {
-            basePath = basePath + "/";
+            basePath += '/';
         }
         else
         {
@@ -350,16 +351,17 @@ public class WC
         {
             String name = basePath + tested[i].getPath();
             Item item = (Item) items.get(name);
-            Assert.assertNotNull("not found in working copy", item);
+            Assert.assertNotNull("null paths won't be found in working copy",
+                                 item);
             if (item.myContent != null)
             {
-                Assert.assertEquals("state says file, working copy not",
+                Assert.assertEquals("Expected '" + tested[i] + "' to be file",
                         tested[i].getNodeKind(),
                         item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
             }
             else
             {
-                Assert.assertEquals("state says dir, working copy not",
+                Assert.assertEquals("Expected '" + tested[i] + "' to be dir",
                         tested[i].getNodeKind(),
                         item.nodeKind == -1 ? NodeKind.dir : item.nodeKind);
             }
@@ -377,21 +379,27 @@ public class WC
                 if (item.myPath.startsWith(basePath) &&
                         !item.myPath.equals(basePath))
                 {
-                    Assert.assertFalse("not found in dir entries", recursive);
+                    // Non-recursive checks will fail here.
+                    Assert.assertFalse("Expected path '" + item.myPath +
+                                       "' not found in dir entries",
+                                       recursive);
+
+                    // Look deeper under the tree.
                     boolean found = false;
-                    for(int i = 0; i < tested.length; i++)
+                    for (int i = 0; i < tested.length; i++)
                     {
                         if (tested[i].getNodeKind() == NodeKind.dir)
                         {
-                            if (item.myPath.
-                                    startsWith(basePath+tested[i].getPath()))
+                            if (item.myPath.startsWith(basePath +
+                                                       tested[i].getPath()))
                             {
                                 found = true;
                                 break;
                             }
                         }
                     }
-                    Assert.assertTrue("not found in dir entries", found);
+                    Assert.assertTrue("Expected path '" + item.myPath +
+                                       "' not found in dir entries", !found);
                 }
             }
         }
