@@ -605,7 +605,7 @@ public class BasicTests extends SVNTests
         WC wc = thisTest.getWc();
 
         // Check getting properties the non-callback way
-        String itemPath = thisTest.getWCPath() + "/iota";
+        String itemPath = new File(thisTest.getWCPath(), "iota").getPath();
 
         client.propertySet(itemPath, "abc", "def", false);
         PropertyData[] properties =
@@ -619,7 +619,7 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // Check getting properties the callback way
-        itemPath = thisTest.getWCPath() + "/A/B/E/alpha";
+        itemPath = new File(thisTest.getWCPath(), "/A/B/E/alpha").getPath();
         client.propertySet(itemPath, "cqcq", "qrz", false);
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
 
