@@ -2132,19 +2132,20 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = new OneTest(true);
         File diffOutput = new File(super.localTmp, thisTest.testName);
+        final String NL = System.getProperty("line.separator");
         final String sepLine =
-            "===================================================================\n";
+            "===================================================================" + NL;
         final String expectedDiffBody =
-            "@@ -1 +1 @@\n" +
-            "-This is the file 'iota'.\n" +
-            "\\ No newline at end of file\n" +
-            "+This is the file 'mu'.\n" +
-            "\\ No newline at end of file\n";
+            "@@ -1 +1 @@" + NL +
+            "-This is the file 'iota'." + NL +
+            "\\ No newline at end of file" + NL +
+            "+This is the file 'mu'." + NL +
+            "\\ No newline at end of file" + NL;
 
         // Two-path diff of URLs.
-        String expectedDiffOutput = "Index: iota\n" + sepLine +
-            "--- iota\t(.../iota)\t(revision 1)\n" +
-            "+++ iota\t(.../A/mu)\t(revision 1)\n" +
+        String expectedDiffOutput = "Index: iota" + NL + sepLine +
+            "--- iota\t(.../iota)\t(revision 1)" + NL +
+            "+++ iota\t(.../A/mu)\t(revision 1)" + NL +
             expectedDiffBody;
         client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
                     thisTest.getUrl() + "/A/mu", Revision.HEAD,
@@ -2154,14 +2155,14 @@ public class BasicTests extends SVNTests
                                  expectedDiffOutput, diffOutput);
 
         // Two-path diff of WC paths.
-        String iotaPath = thisTest.getWCPath() + "/iota";
+        String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
         PrintWriter writer = new PrintWriter(new FileOutputStream(iotaPath));
         writer.print("This is the file 'mu'.");
         writer.flush();
         writer.close();
-        expectedDiffOutput = "Index: " + iotaPath + '\n' + sepLine +
-            "--- " + iotaPath + "\t(revision 1)\n" +
-            "+++ " + iotaPath + "\t(working copy)\n" +
+        expectedDiffOutput = "Index: " + iotaPath + NL + sepLine +
+            "--- " + iotaPath + "\t(revision 1)" + NL +
+            "+++ " + iotaPath + "\t(working copy)" + NL +
             expectedDiffBody;
         client.diff(iotaPath, Revision.BASE,
                     iotaPath, Revision.WORKING,
