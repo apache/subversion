@@ -5126,7 +5126,8 @@ You can send raw data to the process via \\[svn-process-send-string]."
 (defun svn-status-repo-for-path (directory)
   "Find the repository root for DIRECTORY."
   (let ((default-directory directory))
-    (svn-run nil t 'parse-info "info" (expand-file-name "."))
+    ;;(svn-run nil t 'parse-info "info" (expand-file-name ".")) ;; expand-file-name does not work in symlinked directories...
+    (svn-run nil t 'parse-info "info" ".")
     (with-current-buffer svn-process-buffer-name
       (goto-char (point-min))
       (let ((case-fold-search t))
