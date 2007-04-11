@@ -49,10 +49,6 @@ svn_error_t *svn_fs_fs__err_dangling_id(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__err_not_mutable(svn_fs_t *fs, svn_revnum_t rev,
                                         const char *path);
 
-/* SVN_ERR_FS_TRANSACTION_NOT_MUTABLE: trying to change the
-   unchangeable transaction named TXN in FS.  */
-svn_error_t *svn_fs_fs__err_txn_not_mutable(svn_fs_t *fs, const char *txn);
-
 /* SVN_ERR_FS_NOT_DIRECTORY: PATH does not refer to a directory in FS.  */
 svn_error_t *svn_fs_fs__err_not_directory(svn_fs_t *fs, const char *path);
 
