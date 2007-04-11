@@ -1972,9 +1972,191 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
     return ret;
 }
 
+struct info_baton
+{
+    std::vector<info_entry> infoVect;
+    int info_ver;
+    apr_pool_t *pool;
+};
+
+/**
+ * get information about a file or directory
+ */
+jobject SVNClient::info(const char *path)
+{
+    Pool requestPool;
+    svn_wc_adm_access_t *adm_access;
+    const svn_wc_entry_t *entry;
+
+    SVN_JNI_NULL_PTR_EX(path, "path", NULL);
+    Path intPath(path);
+    SVN_JNI_ERR(intPath.error_occured(), NULL);
+
+    SVN_JNI_ERR(svn_wc_adm_probe_open2(&adm_access, NULL, intPath.c_str(),
+                                       FALSE, 0, requestPool.pool()),
+                NULL);
+    SVN_JNI_ERR(svn_wc_entry(&entry, intPath.c_str(), adm_access, FALSE,
+                             requestPool.pool()),
+                NULL);
+
+    return createJavaInfo(entry);
+}
+jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
+{
+    if (entry == NULL)
+        return NULL;
+
+    JNIEnv *env = JNIUtil::getEnv();
+
+    jclass clazz = env->FindClass(JAVA_PACKAGE"/Info");
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    static jmethodID mid = 0;
+    if (mid == 0)
+    {
+        mid = env->GetMethodID(clazz, "<init>",
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
+            "Ljava/lang/String;IILjava/lang/String;JJLjava/util/Date;"
+            "Ljava/util/Date;Ljava/util/Date;ZZZZJLjava/lang/String;)V");
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+    }
+
+    jstring jName = JNIUtil::makeJString(entry->name);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jstring jUrl = JNIUtil::makeJString(entry->url);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jstring jUuid = JNIUtil::makeJString(entry->uuid);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jstring jRepository = JNIUtil::makeJString(entry->repos);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jint jSchedule = EnumMapper::mapScheduleKind(entry->schedule);
+    jint jNodeKind = EnumMapper::mapNodeKind(entry->kind);
+    jstring jAuthor = JNIUtil::makeJString(entry->cmt_author);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jlong jRevision = entry->revision;
+    jlong jLastChangedRevision = entry->cmt_rev;
+    jobject jLastChangedDate = JNIUtil::createDate(entry->cmt_date);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jobject jLastDateTextUpdate = JNIUtil::createDate(entry->text_time);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jobject jLastDatePropsUpdate = JNIUtil::createDate(entry->prop_time);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jboolean jCopied = entry->copied ? JNI_TRUE : JNI_FALSE;
+    jboolean jDeleted = entry->deleted ? JNI_TRUE : JNI_FALSE;
+    jboolean jAbsent = entry->absent ? JNI_TRUE : JNI_FALSE;
+    jboolean jIncomplete = entry->incomplete ? JNI_TRUE : JNI_FALSE;
+    jlong jCopyRev = entry->copyfrom_rev;
+    jstring jCopyUrl = JNIUtil::makeJString(entry->copyfrom_url);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    jobject ret = env->NewObject(clazz, mid, jName, jUrl, jUuid, jRepository,
+        jSchedule, jNodeKind, jAuthor, jRevision, jLastChangedRevision,
+        jLastChangedDate, jLastDateTextUpdate, jLastDatePropsUpdate, jCopied,
+        jDeleted, jAbsent, jIncomplete, jCopyRev, jCopyUrl);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(clazz);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jName);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jUrl);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jUuid);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jRepository);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jAuthor);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jLastChangedDate);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jLastDateTextUpdate);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jLastDatePropsUpdate);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    env->DeleteLocalRef(jCopyUrl);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    return ret;
+}
+
 void
-SVNClient::info(const char *path, Revision &revision, Revision &pegRevision,
-                bool recurse, InfoCallback *callback)
+SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
+                 bool recurse, InfoCallback *callback)
 {
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
@@ -1985,14 +2167,6 @@ SVNClient::info(const char *path, Revision &revision, Revision &pegRevision,
 
     Path checkedPath(path);
     SVN_JNI_ERR(checkedPath.error_occured(), );
-
-    // If either revision or peg was specified, we'll need to store the our
-    // directory, so that we can retreive the absolute path in the receiver
-    if (revision.revision()->kind != svn_opt_revision_unspecified
-            || pegRevision.revision()->kind != svn_opt_revision_unspecified)
-        callback->setWcPath(path);
-    else
-        callback->setWcPath(NULL);
 
     SVN_JNI_ERR(svn_client_info(checkedPath.c_str(),
                                 pegRevision.revision(),

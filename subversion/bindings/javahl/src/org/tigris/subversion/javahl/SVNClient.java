@@ -1670,11 +1670,8 @@ public class SVNClient implements SVNClientInterface
      * @return      the information object
      * @throws ClientException
      */
-    public Info info(String path)
-        throws ClientException
-    {
-        return info2(path, null, null, false)[0];
-    }
+    public native Info info(String path)
+        throws ClientException;
 
     /**
      * Add paths to a changelist

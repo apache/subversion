@@ -32,7 +32,6 @@
 InfoCallback::InfoCallback(jobject jcallback)
 {
     m_callback = jcallback;
-    wcPath = NULL;
 }
 
 /**
@@ -54,12 +53,6 @@ InfoCallback::callback(void *baton,
         return ((InfoCallback *)baton)->singleInfo(path, info, pool);
 
     return SVN_NO_ERROR;
-}
-
-void
-InfoCallback::setWcPath(const char *path)
-{
-    wcPath = path;
 }
 
 /**
@@ -110,18 +103,6 @@ jobject
 InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
                               apr_pool_t *pool)
 {
-    svn_wc_adm_access_t *adm_access;
-    const svn_wc_entry_t *entry;
-    const char *fullPath = (wcPath ? svn_path_join(wcPath, path, pool) : path);
-    SVN_JNI_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, fullPath, FALSE, 0,
-                                       NULL, NULL, pool), NULL);
-    SVN_JNI_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool), NULL);
-    SVN_JNI_ERR(svn_wc_adm_close(adm_access), NULL);
-
-    if (entry == NULL)
-        // Unable to fully flesh out a Java Info2 object.
-        return NULL;
-
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE "/Info2");
     if (JNIUtil::isJavaExceptionThrown())
@@ -132,11 +113,10 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
     {
         mid = env->GetMethodID(clazz, "<init>",
             "(Ljava/lang/String;Ljava/lang/String;JILjava/lang/String;"
-             "Ljava/lang/String;JLjava/util/Date;Ljava/lang/String;"
-             "Lorg/tigris/subversion/javahl/Lock;ZILjava/lang/String;J"
-             "Ljava/util/Date;Ljava/util/Date;"
+             "Ljava/lang/String;JJLjava/lang/String;"
+             "Lorg/tigris/subversion/javahl/Lock;ZILjava/lang/String;JJJ"
              "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
-             "Ljava/lang/String;Ljava/lang/String;ZZZZ)V");
+             "Ljava/lang/String;Ljava/lang/String;)V");
         if (mid == 0 || JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
@@ -160,9 +140,7 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
         return NULL;
 
     jlong jlastChangedRev = info->last_changed_rev;
-    jobject jlastChangedDate = JNIUtil::createDate(info->last_changed_date);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+    jlong jlastChangedDate = info->last_changed_date;
 
     jstring jlastChangedAuthor =
         JNIUtil::makeJString(info->last_changed_author);
@@ -177,13 +155,8 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
     jint jschedule = EnumMapper::mapScheduleKind(info->schedule);
     jstring jcopyFromUrl = JNIUtil::makeJString(info->copyfrom_url);
     jlong jcopyFromRev = info->copyfrom_rev;
-    jobject jtextTime = JNIUtil::createDate(info->text_time);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobject jpropTime = JNIUtil::createDate(info->prop_time);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+    jlong jtextTime = info->text_time;
+    jlong jpropTime = info->prop_time;
 
     jstring jchecksum = JNIUtil::makeJString(info->checksum);
     if (JNIUtil::isJavaExceptionThrown())
@@ -205,17 +178,11 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-    jboolean jcopied = entry->copied ? JNI_TRUE : JNI_FALSE;
-    jboolean jdeleted = entry->deleted ? JNI_TRUE : JNI_FALSE;
-    jboolean jabsent = entry->absent ? JNI_TRUE : JNI_FALSE;
-    jboolean jincomplete = entry->incomplete ? JNI_TRUE : JNI_FALSE;
-
     jobject jinfo2 = env->NewObject(clazz, mid, jpath, jurl, jrev, jnodeKind,
         jreposRootUrl, jreportUUID, jlastChangedRev, jlastChangedDate,
         jlastChangedAuthor, jlock, jhasWcInfo, jschedule, jcopyFromUrl,
         jcopyFromRev, jtextTime, jpropTime, jchecksum, jconflictOld,
-        jconflictNew, jconflictWrk, jprejfile, jcopied, jdeleted, jabsent,
-        jincomplete);
+        jconflictNew, jconflictWrk, jprejfile);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -235,10 +202,6 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-    env->DeleteLocalRef(jlastChangedDate);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
     env->DeleteLocalRef(jlastChangedAuthor);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
@@ -252,14 +215,6 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
         return NULL;
 
     env->DeleteLocalRef(jchecksum);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    env->DeleteLocalRef(jtextTime);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    env->DeleteLocalRef(jpropTime);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
