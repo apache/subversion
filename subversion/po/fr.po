@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-04-06 09:20+0800\n"
-"PO-Revision-Date: 2007-03-27 09:33+0200\n"
+"POT-Creation-Date: 2007-04-11 14:07+0200\n"
+"PO-Revision-Date: 2007-04-11 14:08+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1370,7 +1370,7 @@ msgstr "Sommes de contrôle différentes pour '%s' ; '%s' attendu, '%s' obtenu"
 msgid "URL '%s' non-existent in revision %ld"
 msgstr "L'URL '%s' n'existe pas à la révision %ld"
 
-#: libsvn_client/list.c:222
+#: libsvn_client/list.c:234
 #, c-format
 msgid "URL '%s' non-existent in that revision"
 msgstr "L'URL '%s' n'existe pas à cette révision"
@@ -1381,8 +1381,8 @@ msgstr ""
 "Aucun parent commun trouvé, impossible de travailler avec des arguments "
 "disjoints"
 
-#: libsvn_client/locking_commands.c:260 libsvn_client/merge.c:2062
-#: libsvn_client/merge.c:2068 libsvn_client/merge.c:2246
+#: libsvn_client/locking_commands.c:260 libsvn_client/merge.c:2059
+#: libsvn_client/merge.c:2065 libsvn_client/merge.c:2243
 #: libsvn_client/ra.c:375 libsvn_client/ra.c:741 libsvn_client/ra.c:878
 #, c-format
 msgid "'%s' has no URL"
@@ -1453,7 +1453,7 @@ msgstr ".fusion-gauche.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".fusion-droit.r%ld"
 
-#: libsvn_client/merge.c:1164
+#: libsvn_client/merge.c:1158
 #, c-format
 msgid ""
 "Path '%s' is in conflict, and must be resolved before the remainder of the "
@@ -1462,7 +1462,7 @@ msgstr ""
 "Le chemin '%s' est en conflit et doit être résolu (resolved) avant que la "
 "suite de la fusion soit appliquée"
 
-#: libsvn_client/merge.c:1457 libsvn_client/merge.c:1770
+#: libsvn_client/merge.c:1451 libsvn_client/merge.c:1765
 msgid "Use of two URLs is not compatible with merge info modification"
 msgstr ""
 "L'utilisation de deux URLs n'est pas compatible avec la modification des "
@@ -2054,7 +2054,7 @@ msgstr ""
 msgid "No transaction named '%s' in filesystem '%s'"
 msgstr "Aucune transaction appelée '%s' dans le système de fichier '%s'"
 
-#: libsvn_fs_base/err.c:128 libsvn_fs_fs/err.c:74
+#: libsvn_fs_base/err.c:128
 #, c-format
 msgid "Cannot modify transaction named '%s' in filesystem '%s'"
 msgstr ""
@@ -2066,12 +2066,12 @@ msgstr ""
 msgid "No copy with id '%s' in filesystem '%s'"
 msgstr "Aucune copie avec l'id '%s' dans le système de fichier '%s'"
 
-#: libsvn_fs_base/err.c:149 libsvn_fs_fs/err.c:85
+#: libsvn_fs_base/err.c:149 libsvn_fs_fs/err.c:74
 #, c-format
 msgid "'%s' is not a directory in filesystem '%s'"
 msgstr "'%s' n'est pas un répertoire dans le système de fichier '%s'"
 
-#: libsvn_fs_base/err.c:160 libsvn_fs_fs/err.c:96
+#: libsvn_fs_base/err.c:160 libsvn_fs_fs/err.c:85
 #, c-format
 msgid "'%s' is not a file in filesystem '%s'"
 msgstr "'%s' n'est pas un fichier dans le système de fichier '%s'"
@@ -2093,30 +2093,30 @@ msgstr ""
 "Verrou corrompu dans la table 'locks' pour '%s' dans le système de fichiers "
 "'%s'"
 
-#: libsvn_fs_base/err.c:200 libsvn_fs_fs/err.c:117
+#: libsvn_fs_base/err.c:200 libsvn_fs_fs/err.c:106
 #, c-format
 msgid "No lock on path '%s' in filesystem '%s'"
 msgstr "Pas de verrou pour '%s' dans le système de fichiers '%s'"
 
-#: libsvn_fs_base/err.c:211 libsvn_fs_fs/err.c:128
+#: libsvn_fs_base/err.c:211 libsvn_fs_fs/err.c:117
 #, c-format
 msgid "Lock has expired:  lock-token '%s' in filesystem '%s'"
 msgstr "Verrou expiré : nom '%s' dans le système de fichiers '%s'"
 
-#: libsvn_fs_base/err.c:222 libsvn_fs_fs/err.c:139
+#: libsvn_fs_base/err.c:222 libsvn_fs_fs/err.c:128
 #, c-format
 msgid "No username is currently associated with filesystem '%s'"
 msgstr ""
 "Aucun utilisateur n'est actuellement associé avec le système de fichiers '%s'"
 
-#: libsvn_fs_base/err.c:235 libsvn_fs_fs/err.c:152
+#: libsvn_fs_base/err.c:235 libsvn_fs_fs/err.c:141
 #, c-format
 msgid "User '%s' is trying to use a lock owned by '%s' in filesystem '%s'"
 msgstr ""
 "L'utilisateur '%s' essaie d'utiliser un verrou tenu par '%s' dans le système "
 "de fichier '%s'"
 
-#: libsvn_fs_base/err.c:247 libsvn_fs_fs/err.c:164
+#: libsvn_fs_base/err.c:247 libsvn_fs_fs/err.c:153
 #, c-format
 msgid "Path '%s' is already locked by user '%s' in filesystem '%s'"
 msgstr "Chemin '%s' déjà verrouillé par '%s' dans le système de fichiers '%s'"
@@ -2432,7 +2432,7 @@ msgstr ""
 "   attendu :  %s\n"
 "    obtenu :  %s\n"
 
-#: libsvn_fs_fs/err.c:107
+#: libsvn_fs_fs/err.c:96
 #, c-format
 msgid "Corrupt lockfile for path '%s' in filesystem '%s'"
 msgstr "Fichier de verrou corrompu pour '%s' dans le système de fichiers '%s'"
@@ -2873,7 +2873,7 @@ msgstr "Erreur d'écriture sur '%s' : fin de fichier (EOF) inattendue"
 msgid "Unknown XML encoding: '%s'"
 msgstr "Encodage XML inconnu : '%s'"
 
-#: libsvn_ra_dav/fetch.c:2952
+#: libsvn_ra_dav/fetch.c:2948
 #, c-format
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr "La gestion de la réponse au REPORT n'a pas clos le baton d'édition"
@@ -3304,7 +3304,7 @@ msgstr "Impossible de résoudre le nom d'hôte : %s://%s"
 msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Version %d du chargeur RA (accès dépôt) non supportée pour ra_serf"
 
-#: libsvn_ra_serf/update.c:2155
+#: libsvn_ra_serf/update.c:2146
 #, c-format
 msgid "Error retrieving REPORT (%d)"
 msgstr "Erreur à la récupération du REPORT (%d)"
@@ -3407,87 +3407,87 @@ msgstr "L'élément 'dirlist' n'est pas une liste"
 msgid "Merge info element is not a list"
 msgstr "L'élément d'information de fusion n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1219
+#: libsvn_ra_svn/client.c:1216
 msgid "Log entry not a list"
 msgstr "L'entrée 'log' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1232
+#: libsvn_ra_svn/client.c:1229
 msgid "Changed-path entry not a list"
 msgstr "L'entrée 'changed-path' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1308
+#: libsvn_ra_svn/client.c:1305
 msgid "'stat' not implemented"
 msgstr "'stat' non implémenté"
 
-#: libsvn_ra_svn/client.c:1365
+#: libsvn_ra_svn/client.c:1362
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' non implémenté"
 
-#: libsvn_ra_svn/client.c:1377
+#: libsvn_ra_svn/client.c:1374
 msgid "Location entry not a list"
 msgstr "L'entrée 'location' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1427
+#: libsvn_ra_svn/client.c:1424
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' non implémenté"
 
-#: libsvn_ra_svn/client.c:1440
+#: libsvn_ra_svn/client.c:1437
 msgid "Revision entry not a list"
 msgstr "L'entrée 'revision' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1453 libsvn_ra_svn/client.c:1478
+#: libsvn_ra_svn/client.c:1450 libsvn_ra_svn/client.c:1475
 msgid "Text delta chunk not a string"
 msgstr "La différence de texte n'est pas une chaîne de caractères"
 
-#: libsvn_ra_svn/client.c:1490
+#: libsvn_ra_svn/client.c:1487
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "La commande 'get-file-revs' n'a retourné aucune révision"
 
-#: libsvn_ra_svn/client.c:1538
+#: libsvn_ra_svn/client.c:1535
 msgid "Server doesn't support the lock command"
 msgstr "Commande lock non supportée par le serveur"
 
-#: libsvn_ra_svn/client.c:1602
+#: libsvn_ra_svn/client.c:1599
 msgid "Server doesn't support the unlock command"
 msgstr "Commande unlock non supportée par le serveur"
 
-#: libsvn_ra_svn/client.c:1699
+#: libsvn_ra_svn/client.c:1696
 msgid "Lock response not a list"
 msgstr "La réponse au verrouillage (lock) n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1713
+#: libsvn_ra_svn/client.c:1710
 msgid "Unknown status for lock command"
 msgstr "État inconnu pour la commande de verrouillage (lock)"
 
-#: libsvn_ra_svn/client.c:1735
+#: libsvn_ra_svn/client.c:1732
 msgid "Didn't receive end marker for lock responses"
 msgstr "Aucun marqueur de fin reçu dans les réponses aux verrouillages"
 
-#: libsvn_ra_svn/client.c:1822
+#: libsvn_ra_svn/client.c:1819
 msgid "Unlock response not a list"
 msgstr "La réponse au déverrouillage n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1836
+#: libsvn_ra_svn/client.c:1833
 msgid "Unknown status for unlock command"
 msgstr "État inconnu pour la commande de déverrouillage (unlock)"
 
-#: libsvn_ra_svn/client.c:1857
+#: libsvn_ra_svn/client.c:1854
 msgid "Didn't receive end marker for unlock responses"
 msgstr "Aucun marqueur de fin reçu dans les réponses aux déverrouillages"
 
-#: libsvn_ra_svn/client.c:1881 libsvn_ra_svn/client.c:1909
+#: libsvn_ra_svn/client.c:1878 libsvn_ra_svn/client.c:1906
 msgid "Server doesn't support the get-lock command"
 msgstr "Le serveur ne supporte pas la commande 'get-lock'"
 
-#: libsvn_ra_svn/client.c:1922
+#: libsvn_ra_svn/client.c:1919
 msgid "Lock element not a list"
 msgstr "L'élément 'lock' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1945
+#: libsvn_ra_svn/client.c:1942
 msgid "Server doesn't support the replay command"
 msgstr "Le serveur ne supporte pas la commande 'replay'"
 
-#: libsvn_ra_svn/client.c:2010
+#: libsvn_ra_svn/client.c:2007
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Version %d du chargeur RA (accès dépôt) non supporté pour ra_svn"
@@ -3968,9 +3968,9 @@ msgid "Two top-level reports with no target"
 msgstr "Deux rapports au sommet sans aucune cible"
 
 #: libsvn_repos/reporter.c:1063
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported report depth '%s' for path '%s'"
-msgstr "Type de noeud non supporté pour le chemin '%s'"
+msgstr "Profondeur de rapport non supportée '%s' pour le chemin '%s'"
 
 #: libsvn_repos/repos.c:176
 #, c-format
@@ -5665,11 +5665,11 @@ msgstr "L'URL source '%s' concerne un dépôt différent de '%s'"
 msgid "Unable to make any directories"
 msgstr "Impossible de créer des répertoires"
 
-#: svn/blame-cmd.c:206 svn/list-cmd.c:227
+#: svn/blame-cmd.c:206 svn/list-cmd.c:233
 msgid "'verbose' option invalid in XML mode"
 msgstr "Option 'verbose' invalide en mode XML"
 
-#: svn/blame-cmd.c:218 svn/info-cmd.c:511 svn/list-cmd.c:239
+#: svn/blame-cmd.c:218 svn/info-cmd.c:511 svn/list-cmd.c:245
 #: svn/status-cmd.c:249
 msgid "'incremental' option only valid in XML mode"
 msgstr "Option 'incremental' valide seulement en mode XML"
@@ -6099,7 +6099,7 @@ msgstr "interprète les caractères comme encodés en ARG"
 
 #: svn/main.c:92 svnadmin/main.c:236 svndumpfilter/main.c:786
 #: svnlook/main.c:129 svnserve/main.c:151 svnsync/main.c:133
-#: svnversion/main.c:125
+#: svnversion/main.c:126
 msgid "show program version information"
 msgstr "affiche la version du programme"
 
@@ -9012,7 +9012,7 @@ msgstr "nom ou adresse IP à écouter (en mode démon)"
 msgid "run in foreground (useful for debugging)"
 msgstr "lancement en avant-plan (foreground, utile pour le déboguage)"
 
-#: svnserve/main.c:149 svnversion/main.c:123
+#: svnserve/main.c:149 svnversion/main.c:124
 msgid "display this help"
 msgstr "affiche cet aide"
 
@@ -9403,12 +9403,12 @@ msgstr ""
 msgid "Try 'svnsync help' for more info"
 msgstr "Essayer 'svnsync help' pour plus d'information"
 
-#: svnversion/main.c:39
+#: svnversion/main.c:40
 #, c-format
 msgid "Type 'svnversion --help' for usage.\n"
 msgstr "Entrer 'svnversion --help' pour l'aide.\n"
 
-#: svnversion/main.c:50
+#: svnversion/main.c:51
 #, c-format
 msgid ""
 "usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
@@ -9466,54 +9466,54 @@ msgstr ""
 "\n"
 "Options disponibles :\n"
 
-#: svnversion/main.c:121
+#: svnversion/main.c:122
 msgid "do not output the trailing newline"
 msgstr "pas de fin de ligne"
 
-#: svnversion/main.c:122
+#: svnversion/main.c:123
 msgid "last changed rather than current revisions"
 msgstr "dernière révision modifiée plutôt que la courante"
 
-#: svnversion/main.c:221
+#: svnversion/main.c:222
 #, c-format
 msgid "exported%s"
 msgstr "exporté%s"
 
-#: svnversion/main.c:230
+#: svnversion/main.c:231
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' non versionné et non exporté\n"
 
-#~ msgid "Invalid depth (%"
-#~ msgstr "Profondeur invalide (%s)"
+#~ msgid "descend recursively"
+#~ msgstr "descend récursivement"
 
-#~ msgid "'%s' is not under version control or doesn't exist"
-#~ msgstr "'%s' n'est pas versionné ou n'existe pas"
-
-#~ msgid "Cannot read entry for '%s'"
-#~ msgstr "Impossible de lire l'entrée pour '%s'"
-
-#~ msgid "Can't find entry for '%s'"
-#~ msgstr "Pas d'entrée pour '%s'"
-
-#~ msgid "No entry for '%s'"
-#~ msgstr "Pas d'entrée pour '%s'"
-
-#~ msgid "Cannot revert: '%s' is not under version control"
+#~ msgid "This directory's entry has invalid or missing working-size"
 #~ msgstr ""
-#~ "Rétablissement impossible : '%s' n'est pas sous gestionnaire de version"
+#~ "L'entrée de ce répertoire a un taille (working-size) invalide ou manquante"
+
+#~ msgid "Entry '%s' has invalid or missing working-size"
+#~ msgstr "L'entrée '%s' a une taille (working-size) invalide ou manquante"
 
 #~ msgid "Cannot copy or move '%s': it's not under version control"
 #~ msgstr ""
 #~ "Copie ou déplacement de '%s' impossible : il n'est pas sous gestionnaire "
 #~ "de version"
 
-#~ msgid "Entry '%s' has invalid or missing working-size"
-#~ msgstr "L'entrée '%s' a une taille (working-size) invalide ou manquante"
-
-#~ msgid "This directory's entry has invalid or missing working-size"
+#~ msgid "Cannot revert: '%s' is not under version control"
 #~ msgstr ""
-#~ "L'entrée de ce répertoire a un taille (working-size) invalide ou manquante"
+#~ "Rétablissement impossible : '%s' n'est pas sous gestionnaire de version"
 
-#~ msgid "descend recursively"
-#~ msgstr "descend récursivement"
+#~ msgid "No entry for '%s'"
+#~ msgstr "Pas d'entrée pour '%s'"
+
+#~ msgid "Can't find entry for '%s'"
+#~ msgstr "Pas d'entrée pour '%s'"
+
+#~ msgid "Cannot read entry for '%s'"
+#~ msgstr "Impossible de lire l'entrée pour '%s'"
+
+#~ msgid "'%s' is not under version control or doesn't exist"
+#~ msgstr "'%s' n'est pas versionné ou n'existe pas"
+
+#~ msgid "Invalid depth (%"
+#~ msgstr "Profondeur invalide (%s)"
