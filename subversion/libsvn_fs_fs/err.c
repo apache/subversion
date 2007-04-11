@@ -66,17 +66,6 @@ svn_fs_fs__err_not_mutable(svn_fs_t *fs, svn_revnum_t rev, const char *path)
 
 
 svn_error_t *
-svn_fs_fs__err_txn_not_mutable(svn_fs_t *fs, const char *txn)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_TRANSACTION_NOT_MUTABLE, 0,
-     _("Cannot modify transaction named '%s' in filesystem '%s'"),
-     txn, fs->path);
-}
-
-
-svn_error_t *
 svn_fs_fs__err_not_directory(svn_fs_t *fs, const char *path)
 {
   return
