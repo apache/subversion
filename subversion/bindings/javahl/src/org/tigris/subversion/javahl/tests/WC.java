@@ -399,7 +399,7 @@ public class WC
                         }
                     }
                     Assert.assertTrue("Expected path '" + item.myPath +
-                                       "' not found in dir entries", !found);
+                                       "' not found in dir entries", found);
                 }
             }
         }
