@@ -1253,6 +1253,8 @@ public class SVNClient implements SVNClientInterface
         properties(path, revision, pegRevision, false, callback);
 
         Map propMap = callback.getProperties(path);
+        if (propMap == null)
+            return new PropertyData[0];
         PropertyData[] props = new PropertyData[propMap.size()];
 
         Iterator it = propMap.keySet().iterator();
