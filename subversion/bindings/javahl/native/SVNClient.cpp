@@ -653,14 +653,10 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
     apr_hash_t *mergeinfo;
     Path intLocalTarget(target);
     SVN_JNI_ERR(intLocalTarget.error_occured(), NULL);
-    svn_error_t *err = svn_client_get_mergeinfo(&mergeinfo, intLocalTarget,
-                                                rev, ctx,
-                                                requestPool);
-    if (err)
-    {
-        JNIUtil::handleSVNError(err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_client_get_mergeinfo(&mergeinfo, intLocalTarget,
+                                         rev, ctx,
+                                         requestPool),
+                NULL);
 
     // Transform mergeinfo into Java MergeInfo object.
     jclass clazz = env->FindClass(JAVA_PACKAGE "/MergeInfo");
