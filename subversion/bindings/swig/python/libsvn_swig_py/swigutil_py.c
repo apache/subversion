@@ -1873,6 +1873,42 @@ void svn_swig_py_status_func(void *baton,
 }
 
 
+svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
+                                                   void *parent_baton,
+                                                   void *callback_baton,
+                                                   const char *path,
+                                                   apr_pool_t *pool)
+{
+  PyObject *function = callback_baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return err;
+
+  svn_swig_py_acquire_py_lock();
+  result = PyObject_CallFunction(function, (char *)"OsO&",
+                                 svn_swig_NewPointerObjString(parent_baton,
+                                                              "void *",
+                                                          application_py_pool),
+                                 path, make_ob_pool, pool);
+  if (result == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      if (svn_swig_ConvertPtr(result, dir_baton, svn_swig_TypeQuery("void *")) == -1)
+        {
+          err = type_conversion_error("void *");
+        }
+    }
+
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+
 svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
 {
   PyObject *function = cancel_baton;

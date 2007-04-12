@@ -145,10 +145,10 @@ void svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
    handle svn_delta_path_driver().
 */
 
-#ifdef SWIGRUBY
+#ifndef SWIGPERL
 %callback_typemap(svn_delta_path_driver_cb_func_t callback_func,
                   void *callback_baton,
-                  ,
+                  svn_swig_py_delta_path_driver_cb_func,
                   ,
                   svn_swig_rb_delta_path_driver_cb_func)
 #endif
