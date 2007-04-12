@@ -421,7 +421,7 @@ Otherwise: Don't display a header line"
 
 ;;; default arguments to pass to svn commands
 ;; TODO: When customizing, an option menu or completion might be nice....
-(defcustom svn-status-default-log-arguments '()
+(defcustom svn-status-default-log-arguments '("-v")
   "*List of arguments to pass to svn log.
 \(used in `svn-status-show-svn-log'; override these by giving prefixes\)."
   :type '(repeat string)
@@ -890,11 +890,10 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "b") 'svn-status-via-bookmark)
   (define-key svn-global-keymap (kbd "h") 'svn-status-use-history)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
-  (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
   (define-key svn-global-keymap (kbd "f =") 'svn-file-show-svn-diff)
   (define-key svn-global-keymap (kbd "f e") 'svn-file-show-svn-ediff)
-  (define-key svn-global-keymap (kbd "f l") 'svn-file-show-svn-log)
+  (define-key svn-global-keymap (kbd "f l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "f b") 'svn-status-blame)
   (define-key svn-global-keymap (kbd "f a") 'svn-file-add-to-changelog)
   (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
@@ -1240,7 +1239,9 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (svn-status-show-process-output 'log t)
                   (pop-to-buffer svn-status-last-output-buffer-name)
                   (svn-log-view-mode)
-                  (forward-line 3)
+                  (forward-line 2)
+                  (unless (looking-at "Changed paths:")
+                    (forward-line 1))
                   (font-lock-fontify-buffer)
                   (message "svn log finished"))
                  ((eq svn-process-cmd 'info)
@@ -2919,7 +2920,9 @@ The result may be parsed with the various `svn-status-line-info->...' functions.
         svn-info)
     ;; different mode, means called not from the *svn-status* buffer
     (if svn-status-get-line-information-for-file
-        (svn-status-make-line-info (file-relative-name (buffer-file-name) (svn-status-base-dir)))
+        (svn-status-make-line-info (if (eq svn-status-get-line-information-for-file 'relative)
+                                       (file-relative-name (buffer-file-name) (svn-status-base-dir))
+                                     (buffer-file-name)))
       (svn-status-make-line-info "."))))
 
 
@@ -3225,16 +3228,23 @@ If the file is not found, return nil."
 (defun svn-status-marked-files ()
   "Return all files marked by `svn-status-set-user-mark',
 or (if no files were marked) the file under point."
-  (let* ((st-info svn-status-info)
-         (file-list))
-    (while st-info
-      (when (svn-status-line-info->has-usermark (car st-info))
-        (setq file-list (append file-list (list (car st-info)))))
-      (setq st-info (cdr st-info)))
-    (or file-list
-        (if (svn-status-get-line-information)
-            (list (svn-status-get-line-information))
-          nil))))
+  (if (eq major-mode 'svn-status-mode)
+      (let* ((st-info svn-status-info)
+             (file-list))
+        (while st-info
+          (when (svn-status-line-info->has-usermark (car st-info))
+            (setq file-list (append file-list (list (car st-info)))))
+          (setq st-info (cdr st-info)))
+        (or file-list
+            (if (svn-status-get-line-information)
+                (list (svn-status-get-line-information))
+              nil)))
+    ;; different mode, means called not from the *svn-status* buffer
+    (if svn-status-get-line-information-for-file
+        (list (svn-status-make-line-info (if (eq svn-status-get-line-information-for-file 'relative)
+                                             (file-relative-name (buffer-file-name) (svn-status-base-dir))
+                                           (buffer-file-name))))
+      (list (svn-status-make-line-info ".")))))
 
 (defun svn-status-marked-file-names ()
   (mapcar 'svn-status-line-info->filename (svn-status-marked-files)))
@@ -3316,30 +3326,23 @@ Consider svn-status-window-alist to choose the buffer name."
 The output is put into the *svn-log* buffer
 The optional prefix argument ARG determines which switches are passed to `svn log':
  no prefix               --- use whatever is in the list `svn-status-default-log-arguments'
- prefix argument of -1   --- use no arguments
- prefix argument of 0:   --- use the -q switch (quiet)
+ prefix argument of -1:  --- use the -q switch (quiet)
+ prefix argument of 0    --- use no arguments
  other prefix arguments: --- use the -v switch (verbose)
 
 See `svn-status-marked-files' for what counts as selected."
   (interactive "P")
-  (let ((switches (cond ((eq arg 0)  '("-q"))
-                        ((eq arg -1) '())
+  (let ((switches (cond ((eq arg 0)  '())
+                        ((or (eq arg -1) (eq arg '-)) '("-q"))
                         (arg         '("-v"))
-                        (t           svn-status-default-log-arguments))))
+                        (t           svn-status-default-log-arguments)))
+        (svn-status-get-line-information-for-file t))
+    ;; (message "svn-status-show-svn-log %S" arg)
     (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
     (svn-run t t 'log "log" "--targets" svn-status-temp-arg-file switches)
     (save-excursion
       (set-buffer svn-process-buffer-name)
       (svn-log-view-mode))))
-
-(defun svn-file-show-svn-log ()
-  "Run `svn log' on the current file."
-  (interactive)
-  (svn-status-create-arg-file svn-status-temp-arg-file "" (list (svn-status-make-line-info buffer-file-name)) "")
-  (svn-run t t 'log "log" "--targets" svn-status-temp-arg-file)
-  (save-excursion
-    (set-buffer svn-process-buffer-name)
-    (svn-log-view-mode)))
 
 (defun svn-status-version ()
   "Show the version numbers for psvn.el and the svn command line client.
@@ -4091,7 +4094,7 @@ If ARG then prompt for revision to diff against."
   "Run ediff on the current file with a previous revision.
 If ARG then prompt for revision to diff against."
   (interactive "P")
-  (let ((svn-status-get-line-information-for-file t)
+  (let ((svn-status-get-line-information-for-file 'relative)
         (default-directory (svn-status-base-dir)))
     (svn-status-ediff-with-revision arg)))
 
@@ -4848,12 +4851,16 @@ Commands:
 (defun svn-log-view-next ()
   (interactive)
   (when (re-search-forward "^r[0-9]+" nil t)
-    (beginning-of-line 3)))
+    (beginning-of-line 2)
+    (unless (looking-at "Changed paths:")
+      (beginning-of-line 1))))
 
 (defun svn-log-view-prev ()
   (interactive)
   (when (re-search-backward "^r[0-9]+" nil t 2)
-    (beginning-of-line 3)))
+    (beginning-of-line 2)
+    (unless (looking-at "Changed paths:")
+      (beginning-of-line 1))))
 
 (defun svn-log-revision-at-point ()
   (save-excursion
