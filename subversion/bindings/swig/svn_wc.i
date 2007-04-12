@@ -208,13 +208,13 @@
 }
 svn_error_t *
 _svn_wc_set_changelist(const apr_array_header_t *paths,
-                      const char *changelist_may_be_null,
-                      const char *matching_changelist_may_be_null,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      svn_wc_notify_func2_t notify_func,
-                      void *notify_baton,
-                      apr_pool_t *pool);
+                       const char *changelist_may_be_null,
+                       const char *matching_changelist_may_be_null,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *pool);
 #endif
 
 
