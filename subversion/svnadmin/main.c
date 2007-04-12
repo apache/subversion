@@ -619,7 +619,8 @@ recode_stream_create(FILE *std_stream, apr_pool_t *pool)
    whether to send the dump to stdout or an empty stream. */
 static svn_error_t *
 dump_repo(apr_getopt_t *os, void *baton,
-          apr_pool_t *pool, svn_boolean_t dump_contents)
+          apr_pool_t *pool, svn_boolean_t dump_contents,
+          svn_boolean_t incremental)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
@@ -666,7 +667,7 @@ dump_repo(apr_getopt_t *os, void *baton,
     stderr_stream = recode_stream_create(stderr, pool);
 
   SVN_ERR(svn_repos_dump_fs2(repos, stdout_stream, stderr_stream,
-                             lower, upper, opt_state->incremental,
+                             lower, upper, incremental,
                              opt_state->use_deltas, check_cancel, NULL,
                              pool));
 
@@ -678,7 +679,8 @@ dump_repo(apr_getopt_t *os, void *baton,
 static svn_error_t *
 subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  return dump_repo(os, baton, pool, TRUE);
+  struct svnadmin_opt_state *opt_state = baton;
+  return dump_repo(os, baton, pool, TRUE, opt_state->incremental);
 }
 
 
@@ -1061,7 +1063,9 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_error_t *
 subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  return dump_repo(os, baton, pool, FALSE);
+  struct svnadmin_opt_state *opt_state = baton;
+  return dump_repo(os, baton, pool, FALSE,
+               opt_state->start_revision.kind != svn_opt_revision_unspecified);
 }
 
 
