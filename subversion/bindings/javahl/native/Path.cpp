@@ -74,7 +74,7 @@ Path::init (const char *pi_path)
     else
     {
         m_error_occured = JNIUtil::preprocessPath(pi_path,
-            JNIUtil::getRequestPool()->pool() );
+            *JNIUtil::getRequestPool());
 
         m_path = pi_path;
     }
@@ -121,7 +121,7 @@ jboolean Path::isValid(const char *p)
     }
 
     Pool requestPool;
-    svn_error_t *err = svn_path_check_valid(p, requestPool.pool());
+    svn_error_t *err = svn_path_check_valid(p, requestPool);
     if (err == SVN_NO_ERROR)
     {
         return JNI_TRUE;
