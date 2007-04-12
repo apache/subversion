@@ -55,7 +55,7 @@ Path::Path (const std::string &pi_path)
  */
 Path::Path (const Path &pi_path)
 {
-    init (pi_path.c_str ());
+    init (pi_path);
 }
 
 /**
@@ -92,8 +92,7 @@ Path::path () const
 /**
  * @return Path string as c string
  */
-const char *
-Path::c_str() const
+Path::operator const char * () const
 {
     return m_path.c_str ();
 }
@@ -104,7 +103,7 @@ Path::c_str() const
 Path&
 Path::operator=(const Path &pi_path)
 {
-    init (pi_path.c_str ());
+    init (pi_path);
     return *this;
 }
 

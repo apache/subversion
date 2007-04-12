@@ -84,7 +84,7 @@ public:
     /**
      * @return Path string as c string
      */
-    const char *c_str() const;
+    operator const char * () const;
 
     svn_error_t *error_occured() const;
 

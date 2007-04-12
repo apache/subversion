@@ -105,7 +105,7 @@ const apr_array_header_t *Targets::array(const Pool &pool)
     for (it = m_targets.begin (); it != m_targets.end (); it++)
     {
       const Path &path = *it;
-      const char *target = apr_pstrdup (pool, path.c_str());
+      const char *target = apr_pstrdup (pool, path);
       (*((const char **) apr_array_push (apr_targets))) = target;
     }
 
