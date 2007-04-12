@@ -112,6 +112,7 @@ CopySources::array(Pool &pool)
             if (JNIUtil::isJavaExceptionThrown())
                 return NULL;
             src->path = apr_pstrdup(pool, (const char *) path);
+            SVN_JNI_ERR(JNIUtil::preprocessPath(src->path, pool), NULL);
             env->DeleteLocalRef(jpath);
 
             // Extract source revision from the copy source.
