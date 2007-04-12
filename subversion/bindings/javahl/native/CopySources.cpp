@@ -74,9 +74,8 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, Pool &pool)
 apr_array_header_t *
 CopySources::array(Pool &pool)
 {
-    apr_pool_t *p = pool.pool();
     if (m_copySources == NULL)
-        return apr_array_make(p, 0, sizeof(svn_client_copy_source_t *));
+        return apr_array_make(pool, 0, sizeof(svn_client_copy_source_t *));
 
     JNIEnv *env = JNIUtil::getEnv();
     jint nbrSources = env->GetArrayLength(m_copySources);
@@ -87,7 +86,7 @@ CopySources::array(Pool &pool)
         return NULL;
 
     apr_array_header_t *copySources =
-        apr_array_make(p, nbrSources, sizeof(svn_client_copy_source_t *));
+        apr_array_make(pool, nbrSources, sizeof(svn_client_copy_source_t *));
     for (int i = 0; i < nbrSources; i++)
     {
         jobject copySource = env->GetObjectArrayElement(m_copySources, i);
@@ -96,7 +95,7 @@ CopySources::array(Pool &pool)
         if (env->IsInstanceOf(copySource, clazz))
         {
             svn_client_copy_source_t *src =
-                (svn_client_copy_source_t *) apr_palloc(p, sizeof(*src));
+                (svn_client_copy_source_t *) apr_palloc(pool, sizeof(*src));
 
             // Extract the path or URL from the copy source.
             static jmethodID getPath = 0;
@@ -112,7 +111,7 @@ CopySources::array(Pool &pool)
             JNIStringHolder path(jpath);
             if (JNIUtil::isJavaExceptionThrown())
                 return NULL;
-            src->path = apr_pstrdup(p, (const char *) path);
+            src->path = apr_pstrdup(pool, (const char *) path);
             env->DeleteLocalRef(jpath);
 
             // Extract source revision from the copy source.
@@ -128,7 +127,7 @@ CopySources::array(Pool &pool)
             // TODO: Default this to svn_opt_revision_undefined (or HEAD)
             Revision rev(jrev);
             src->revision = (const svn_opt_revision_t *)
-                apr_palloc(p, sizeof(*src->revision));
+                apr_palloc(pool, sizeof(*src->revision));
             memcpy((void *) src->revision, rev.revision(),
                    sizeof(*src->revision));
             env->DeleteLocalRef(jrev);
@@ -146,7 +145,7 @@ CopySources::array(Pool &pool)
                                                     getPegRevision);
             Revision pegRev(jPegRev, true);
             src->peg_revision = (const svn_opt_revision_t *)
-                apr_palloc(p, sizeof(*src->peg_revision));
+                apr_palloc(pool, sizeof(*src->peg_revision));
             memcpy((void *) src->peg_revision, pegRev.revision(),
                    sizeof(*src->peg_revision));
             env->DeleteLocalRef(jPegRev);

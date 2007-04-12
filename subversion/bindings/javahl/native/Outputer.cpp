@@ -52,7 +52,7 @@ svn_stream_t *Outputer::getStream(const Pool &pool)
 {
     // create a stream with this as the baton and set the write and close
     // functions
-    svn_stream_t *ret = svn_stream_create(this, pool.pool());
+    svn_stream_t *ret = svn_stream_create(this, pool);
     svn_stream_set_write(ret, Outputer::write);
     svn_stream_set_close(ret, Outputer::close);
     return ret;
