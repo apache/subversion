@@ -129,7 +129,7 @@ CopySources::array(Pool &pool)
             Revision rev(jrev);
             src->revision = (const svn_opt_revision_t *)
                 apr_palloc(pool, sizeof(*src->revision));
-            memcpy((void *) src->revision, rev.revision(),
+            memcpy((void *) src->revision, (const svn_opt_revision_t *) rev,
                    sizeof(*src->revision));
             env->DeleteLocalRef(jrev);
 
@@ -147,7 +147,8 @@ CopySources::array(Pool &pool)
             Revision pegRev(jPegRev, true);
             src->peg_revision = (const svn_opt_revision_t *)
                 apr_palloc(pool, sizeof(*src->peg_revision));
-            memcpy((void *) src->peg_revision, pegRev.revision(),
+            memcpy((void *) src->peg_revision,
+                   (const svn_opt_revision_t *) pegRev,
                    sizeof(*src->peg_revision));
             env->DeleteLocalRef(jPegRev);
 

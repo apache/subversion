@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -102,17 +102,17 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
     fs = svn_repos_fs (repos);
     SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, fs, requestPool), );
 
-    if (revStart.revision()->kind == svn_opt_revision_number)
+    if (revStart.kind() == svn_opt_revision_number)
     /* ### We only handle revision numbers right now, not dates. */
-        start = revStart.revision()->value.number;
-    else if (revStart.revision()->kind == svn_opt_revision_head)
+        start = revStart.number();
+    else if (revStart.kind() == svn_opt_revision_head)
         start = youngest;
     else
         start = SVN_INVALID_REVNUM;
 
-    if (revEnd.revision()->kind == svn_opt_revision_number)
-        end = revEnd.revision()->value.number;
-    else if (revEnd.revision()->kind == svn_opt_revision_head)
+    if (revEnd.kind() == svn_opt_revision_number)
+        end = revEnd.number();
+    else if (revEnd.kind() == svn_opt_revision_head)
         end = youngest;
     else
         end = SVN_INVALID_REVNUM;
@@ -165,16 +165,16 @@ void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut,
     SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, fs, requestPool), );
 
     /* ### We only handle revision numbers right now, not dates. */
-    if (revsionStart.revision()->kind == svn_opt_revision_number)
-        lower = revsionStart.revision()->value.number;
-    else if (revsionStart.revision()->kind == svn_opt_revision_head)
+    if (revsionStart.kind() == svn_opt_revision_number)
+        lower = revsionStart.number();
+    else if (revsionStart.kind() == svn_opt_revision_head)
         lower = youngest;
     else
         lower = SVN_INVALID_REVNUM;
 
-    if (revisionEnd.revision()->kind == svn_opt_revision_number)
-        upper = revisionEnd.revision()->value.number;
-    else if (revisionEnd.revision()->kind == svn_opt_revision_head)
+    if (revisionEnd.kind() == svn_opt_revision_number)
+        upper = revisionEnd.number();
+    else if (revisionEnd.kind() == svn_opt_revision_head)
         upper = youngest;
     else
         upper = SVN_INVALID_REVNUM;
@@ -376,7 +376,7 @@ void SVNAdmin::setRevProp(const char *path, Revision &revision,
     SVN_JNI_NULL_PTR_EX(path, "path", );
     SVN_JNI_NULL_PTR_EX(propName, "propName", );
     SVN_JNI_NULL_PTR_EX(propValue, "propValue", );
-    if (revision.revision()->kind != svn_opt_revision_number)
+    if (revision.kind() != svn_opt_revision_number)
     {
         SVN_JNI_ERR(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                               _("Missing revision")), );
@@ -394,7 +394,7 @@ void SVNAdmin::setRevProp(const char *path, Revision &revision,
     if (usePreRevPropChangeHook || usePostRevPropChangeHook)
     {
         err = svn_repos_fs_change_rev_prop3
-            (repos, revision.revision()->value.number, NULL,
+            (repos, revision.number(), NULL,
              propName, propValStr, usePreRevPropChangeHook,
              usePostRevPropChangeHook, NULL, NULL, requestPool);
     }
@@ -402,8 +402,7 @@ void SVNAdmin::setRevProp(const char *path, Revision &revision,
     {
         svn_fs_t *fs = svn_repos_fs (repos);
         err = svn_fs_change_rev_prop
-            (fs, revision.revision()->value.number,
-             propName, propValStr, requestPool);
+            (fs, revision.number(), propName, propValStr, requestPool);
     }
     SVN_JNI_ERR(err, );
 }
