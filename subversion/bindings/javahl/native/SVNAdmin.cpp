@@ -96,7 +96,7 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
     svn_fs_t *fs;
     svn_revnum_t start = SVN_INVALID_REVNUM, end = SVN_INVALID_REVNUM;
     svn_revnum_t youngest, revision;
-    apr_pool_t *revisionPool = svn_pool_create(requestPool);
+    Pool revisionPool;
 
     SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool), );
     fs = svn_repos_fs (repos);
@@ -141,7 +141,7 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
        predecessor deltification on paths changed in each. */
     for (revision = start; revision <= end; revision++)
     {
-        svn_pool_clear(revisionPool);
+        revisionPool.clear();
         SVN_JNI_ERR(svn_fs_deltify_revision (fs, revision, revisionPool), );
     }
 
@@ -331,7 +331,7 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
     svn_fs_txn_t *txn;
     const apr_array_header_t *args;
     int i;
-    apr_pool_t *transactionPool = svn_pool_create(requestPool);
+    Pool transactionPool;
 
     SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool), );
     fs = svn_repos_fs (repos);
@@ -362,7 +362,7 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
            that error and just report to the user that we had an issue
            with this particular txn. */
         SVN_JNI_ERR(err, );
-        svn_pool_clear(transactionPool);
+        transactionPool.clear();
     }
 
 }
@@ -514,7 +514,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
     /* Attach the access context to the filesystem. */
     SVN_JNI_ERR(svn_fs_set_access(fs, access), );
 
-    apr_pool_t *subpool = svn_pool_create(requestPool);
+    Pool subpool;
     const apr_array_header_t *args = locks.array(requestPool);
     for (int i = 0; i < args->nelts; i++)
     {
@@ -536,7 +536,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
 
     move_on:
         svn_error_clear (err);
-        svn_pool_clear (subpool);
+        subpool.clear();
     }
 
     return;
