@@ -60,7 +60,7 @@ specify a linear layout.  Subversion 1.5 uses a default value of
 def incompatible_repos_format(repos_path, format):
   """Print an error saying that REPOS_PATH is a repository with an
   incompatible repository format FORMAT, then exit."""
-  print """error: unable to convert repository '%s'.
+  print >> sys.stderr, """error: unable to convert repository '%s'.
 
 This repository is not compatible with this tool.  Valid
 repository formats are '3' or '5'; this repository is
@@ -71,7 +71,7 @@ format '%s'.
 def incompatible_fs_format(repos_path, format):
   """Print an error saying that REPOS_PATH is a repository with an
   incompatible filesystem format FORMAT, then exit."""
-  print """error: unable to convert repository '%s'.
+  print >> sys.stderr, """error: unable to convert repository '%s'.
 
 This repository contains a filesystem that is not compatible with
 this tool.  Valid filesystem formats are '1', '2', or '3'; this
@@ -82,7 +82,7 @@ repository contains a filesystem with format '%s'.
 def unexpected_fs_format_options(repos_path):
   """Print an error saying that REPOS_PATH is a repository with
   unexpected filesystem format options, then exit."""
-  print """error: unable to convert repository '%s'.
+  print >> sys.stderr, """error: unable to convert repository '%s'.
 
 This repository contains a filesystem that appears to be invalid -
 there is unexpected data after the filesystem format number.
@@ -92,7 +92,7 @@ there is unexpected data after the filesystem format number.
 def incompatible_fs_format_option(repos_path, option):
   """Print an error saying that REPOS_PATH is a repository with an
   incompatible filesystem format option OPTION, then exit."""
-  print """error: unable to convert repository '%s'.
+  print >> sys.stderr, """error: unable to convert repository '%s'.
 
 This repository contains a filesystem that is not compatible with
 this tool.  This tool recognises the 'layout' option but the
@@ -103,7 +103,7 @@ filesystem uses the '%s' option.
 def warn_about_fs_format_1(repos_path, format_path):
   """Print a warning saying that REPOS_PATH contains a format 1 FSFS
   filesystem that we can't reconstruct, then exit."""
-  print """warning: conversion of '%s' will be one-way.
+  print >> sys.stderr, """warning: conversion of '%s' will be one-way.
 
 This repository is currently readable by Subversion 1.1 or later.
 This tool can convert this repository to one that is readable by
@@ -222,7 +222,8 @@ def linearise(path):
     if root_path == path:
       continue
     if len(dirnames) > 0:
-      print "error: directory '%s' contains other unexpected directories." \
+      print >> sys.stderr, \
+        "error: directory '%s' contains other unexpected directories." \
         % root_path
       sys.exit(1)
     for name in filenames:
@@ -242,7 +243,7 @@ def shard(path, max_files_per_shard):
     try:
       rev = int(name)
     except ValueError, OverflowError:
-      print "error: file '%s' does not represent a revision." \
+      print >> sys.stderr, "error: file '%s' does not represent a revision." \
         % os.path.join(path, name)
       sys.exit(1)
 
@@ -262,7 +263,7 @@ def shard(path, max_files_per_shard):
   # Now rename all the shards to remove the suffix.
   for name in os.listdir(path):
     if not name.endswith('.shard'):
-      print "warning: ignoring unexpected subdirectory '%s'." \
+      print >> sys.stderr, "warning: ignoring unexpected subdirectory '%s'." \
         % os.path.join(path, name)
       continue
     from_path = os.path.join(path, name)
@@ -280,19 +281,22 @@ def main():
   db_path = os.path.join(repos_path, 'db')
   current_path = os.path.join(db_path, 'current')
   if not os.path.exists(current_path):
-    print "error: '%s' doesn't appear to be a Subversion FSFS repository." \
+    print >> sys.stderr, \
+      "error: '%s' doesn't appear to be a Subversion FSFS repository." \
       % repos_path
     sys.exit(1)
 
   try:
     max_files_per_shard = int(max_files_per_shard)
   except ValueError, OverflowError:
-    print "error: maximum files per shard ('%s') is not a valid number." \
+    print >> sys.stderr, \
+      "error: maximum files per shard ('%s') is not a valid number." \
       % max_files_per_shard
     sys.exit(1)
 
   if max_files_per_shard < 0:
-    print "error: maximum files per shard ('%d') must not be negative." \
+    print >> sys.stderr, \
+      "error: maximum files per shard ('%d') must not be negative." \
       % max_files_per_shard
     sys.exit(1)
 
