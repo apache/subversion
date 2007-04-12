@@ -134,8 +134,8 @@ jobjectArray SVNClient::list(const char *url, Revision &revision,
 
     apr_hash_t *dirents;
     SVN_JNI_ERR(svn_client_ls3(&dirents, NULL, urlPath,
-                               pegRevision.revision(),
-                               revision.revision (),
+                               pegRevision,
+                               revision,
                                recurse, ctx, requestPool),
                 NULL);
 
@@ -241,9 +241,9 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
     SVN_JNI_ERR(svn_client_log3(targets,
-                                pegRevision.revision(),
-                                revisionStart.revision (),
-                                revisionEnd.revision (),
+                                pegRevision,
+                                revisionStart,
+                                revisionEnd,
                                 limit,
                                 discoverPaths,
                                 stopOnCopy,
@@ -273,8 +273,8 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
 
     SVN_JNI_ERR(svn_client_checkout3(&retval, url,
                                      path,
-                                     pegRevision.revision (),
-                                     revision.revision (),
+                                     pegRevision,
+                                     revision,
                                      depth,
                                      ignoreExternals,
                                      allowUnverObstructions,
@@ -366,7 +366,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
     const apr_array_header_t *array = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), NULL);
     SVN_JNI_ERR(svn_client_update3(&retval, array,
-                                   revision.revision(),
+                                   revision,
                                    depth,
                                    ignoreExternals,
                                    allowUnverObstructions,
@@ -522,8 +522,8 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
 
     SVN_JNI_ERR(svn_client_export4(&retval, sourcePath,
                                    destinationPath,
-                                   pegRevision.revision(),
-                                   revision.revision(), force,
+                                   pegRevision,
+                                   revision, force,
                                    ignoreExternals,
                                    depth,
                                    nativeEOL, ctx,
@@ -553,7 +553,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 
     SVN_JNI_ERR(svn_client_switch2(&retval, intPath,
                                    intUrl,
-                                   revision.revision (),
+                                   revision,
                                    depth,
                                    allowUnverObstructions,
                                    ctx,
@@ -605,8 +605,8 @@ void SVNClient::merge(const char *path1, Revision &revision1,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_merge3(srcPath1, revision1.revision(),
-                                  srcPath2, revision2.revision(),
+    SVN_JNI_ERR(svn_client_merge3(srcPath1, revision1,
+                                  srcPath2, revision2,
                                   intLocalPath,
                                   depth,
                                   ignoreAncestry, force, FALSE, dryRun, NULL,
@@ -631,9 +631,9 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_merge_peg3(srcPath, revision1.revision(),
-                                      revision2.revision(),
-                                      pegRevision.revision(),
+    SVN_JNI_ERR(svn_client_merge_peg3(srcPath, revision1,
+                                      revision2,
+                                      pegRevision,
                                       intLocalPath,
                                       depth,
                                       ignoreAncestry, force, FALSE, dryRun,
@@ -654,7 +654,7 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
     Path intLocalTarget(target);
     SVN_JNI_ERR(intLocalTarget.error_occured(), NULL);
     svn_error_t *err = svn_client_get_mergeinfo(&mergeinfo, intLocalTarget,
-                                                rev.revision(), ctx,
+                                                rev, ctx,
                                                 requestPool);
     if (err)
     {
@@ -777,8 +777,8 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
 
     apr_hash_t *props;
     SVN_JNI_ERR(svn_client_propget2(&props, name,
-                                    intPath, pegRevision.revision(),
-                                    revision.revision(), FALSE,
+                                    intPath, pegRevision,
+                                    revision, FALSE,
                                     ctx, requestPool),
                 NULL);
 
@@ -810,8 +810,8 @@ void SVNClient::properties(const char *path, Revision & revision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_proplist3(intPath, pegRevision.revision(),
-                                     revision.revision(), recurse,
+    SVN_JNI_ERR(svn_client_proplist3(intPath, pegRevision,
+                                     revision, recurse,
                                      ProplistCallback::callback, callback,
                                      ctx, requestPool), );
 
@@ -892,9 +892,9 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     {
         err = svn_client_diff_peg4(diffOptions,
                                    path1,
-                                   pegRevision->revision(),
-                                   revision1.revision(),
-                                   revision2.revision(),
+                                   *pegRevision,
+                                   revision1,
+                                   revision2,
                                    depth,
                                    ignoreAncestry,
                                    noDiffDelete,
@@ -920,9 +920,9 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 
         err = svn_client_diff4(diffOptions,
                                path1,
-                               revision1.revision(),
+                               revision1,
                                path2,
-                               revision2.revision(),
+                               revision2,
                                depth,
                                ignoreAncestry,
                                noDiffDelete,
@@ -985,8 +985,8 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
     Path path2(target2);
     SVN_JNI_ERR(path2.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_diff_summarize2(path1, revision1.revision(),
-                                           path2, revision2.revision(),
+    SVN_JNI_ERR(svn_client_diff_summarize2(path1, revision1,
+                                           path2, revision2,
                                            depth,
                                            ignoreAncestry,
                                            DiffSummaryReceiver::summarize,
@@ -1012,9 +1012,9 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
     SVN_JNI_ERR(path.error_occured(), );
 
     SVN_JNI_ERR(svn_client_diff_summarize_peg2(path,
-                                               pegRevision.revision(),
-                                               startRevision.revision(),
-                                               endRevision.revision(),
+                                               pegRevision,
+                                               startRevision,
+                                               endRevision,
                                                depth,
                                                ignoreAncestry,
                                                DiffSummaryReceiver::summarize,
@@ -1337,7 +1337,7 @@ svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
 {
     svn_stream_t *read_stream = NULL;
 
-    if (revision.revision()->kind == svn_opt_revision_working)
+    if (revision.kind() == svn_opt_revision_working)
     {
         // We want the working copy. Going back to the server returns
         // base instead (which is not what we want).
@@ -1366,8 +1366,8 @@ svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
 
         svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
         read_stream = svn_stream_from_stringbuf(buf, pool);
-        SVN_JNI_ERR(svn_client_cat2(read_stream, path, pegRevision.revision(),
-                                    revision.revision(), ctx, pool),
+        SVN_JNI_ERR(svn_client_cat2(read_stream, path, pegRevision,
+                                    revision, ctx, pool),
                     NULL);
         size = buf->len;
     }
@@ -1462,8 +1462,7 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
     }
 
     SVN_JNI_ERR(svn_client_revprop_get(name, &propval, URL,
-                                       rev.revision(), &set_rev, ctx,
-                                       requestPool),
+                                       rev, &set_rev, ctx, requestPool),
                 NULL);
     if (propval == NULL)
         return NULL;
@@ -1507,9 +1506,8 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_blame3(intPath, pegRevision.revision(),
-                                  revisionStart.revision(),
-                                  revisionEnd.revision(),
+    SVN_JNI_ERR(svn_client_blame3(intPath, pegRevision,
+                                  revisionStart, revisionEnd,
                                   svn_diff_file_options_create(requestPool),
                                   false, BlameCallback::callback, callback, ctx,
                                   requestPool),
@@ -1722,7 +1720,7 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
     svn_string_t *val = svn_string_create(value, requestPool);
 
     svn_revnum_t set_revision;
-    SVN_JNI_ERR(svn_client_revprop_set(name, val, URL, rev.revision(),
+    SVN_JNI_ERR(svn_client_revprop_set(name, val, URL, rev,
                                        &set_revision, force, ctx,
                                        requestPool), );
 }
@@ -1927,7 +1925,7 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
     if (ctx == NULL)
         return NULL;
 
-    SVN_JNI_ERR(svn_client_revprop_list(&props, URL, revision.revision(),
+    SVN_JNI_ERR(svn_client_revprop_list(&props, URL, revision,
                                         &set_rev, ctx, requestPool),
                 NULL);
 
@@ -2169,8 +2167,8 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
     SVN_JNI_ERR(checkedPath.error_occured(), );
 
     SVN_JNI_ERR(svn_client_info(checkedPath,
-                                pegRevision.revision(),
-                                revision.revision(),
+                                pegRevision,
+                                revision,
                                 InfoCallback::callback,
                                 callback,
                                 recurse ? TRUE : FALSE,
