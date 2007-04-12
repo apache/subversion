@@ -652,6 +652,7 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
         return NULL;
 
     apr_hash_t *mergeinfo;
+    SVN_JNI_ERR(JNIUtil::preprocessPath(target, requestPool), NULL);
     svn_error_t *err = svn_client_get_mergeinfo(&mergeinfo, target,
                                                 rev.revision(), ctx,
                                                 requestPool);
