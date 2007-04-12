@@ -1029,48 +1029,48 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     SVN_JNI_ERR(svn_client_create_context(&ctx, *pool), NULL);
 
     apr_array_header_t *providers
-      = apr_array_make(*pool, 10, sizeof (svn_auth_provider_object_t *));
+      = apr_array_make(*pool, 10, sizeof(svn_auth_provider_object_t *));
 
     /* The main disk-caching auth providers, for both
        'username/password' creds and 'username' creds.  */
     svn_auth_provider_object_t *provider;
 #ifdef WIN32
-    svn_client_get_windows_simple_provider (&provider, *pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+    svn_client_get_windows_simple_provider(&provider, *pool);
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
     svn_client_get_simple_provider (&provider, *pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     svn_client_get_username_provider (&provider, *pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     /* The server-cert, client-cert, and client-cert-password providers. */
-    svn_client_get_ssl_server_trust_file_provider (&provider, *pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_ssl_client_cert_file_provider (&provider, *pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_ssl_client_cert_pw_file_provider (&provider, *pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+    svn_client_get_ssl_server_trust_file_provider(&provider, *pool);
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+    svn_client_get_ssl_client_cert_file_provider(&provider, *pool);
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+    svn_client_get_ssl_client_cert_pw_file_provider(&provider, *pool);
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     if (m_prompter != NULL)
     {
          /* Two basic prompt providers: username/password, and just username.*/
         provider = m_prompter->getProviderSimple();
 
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
         provider = m_prompter->getProviderUsername();
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
         /* Three ssl prompt providers, for server-certs, client-certs,
            and client-cert-passphrases.  */
         provider = m_prompter->getProviderServerSSLTrust();
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
         provider = m_prompter->getProviderClientSSL();
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
         provider = m_prompter->getProviderClientSSLPassword();
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       }
 
 
@@ -1099,7 +1099,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     const char *configDir = m_configDir.c_str();
     if (m_configDir.length() == 0)
         configDir = NULL;
-    SVN_JNI_ERR(svn_config_get_config (&(ctx->config), configDir, *pool), NULL);
+    SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir, *pool), NULL);
     ctx->notify_func2= Notify2::notify;
     ctx->notify_baton2 = m_notify2;
 
