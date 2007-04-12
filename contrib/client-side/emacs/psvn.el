@@ -620,7 +620,6 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-operated-on-dot nil)
 (defvar svn-status-last-commit-author nil)
 (defvar svn-status-elided-list nil)
-(defvar svn-status-get-specific-revision-file-info)
 (defvar svn-status-last-output-buffer-name nil "The buffer name for the buffer that holds the output from the last executed svn command")
 (defvar svn-status-pre-run-svn-buffer nil)
 (defvar svn-status-update-list nil)
@@ -3986,8 +3985,8 @@ names are relative to the directory where `svn-status' was run."
   ;; In `svn-status-show-svn-diff-internal', there is a comment
   ;; that REVISION `nil' might mean omitting the -r option entirely.
   ;; That doesn't seem like a good idea with svn cat.
-  ;;
-  ;; TODO: Return the alist, instead of storing it in a variable.
+
+  ;; (message "svn-status-get-specific-revision-internal: %S %S" line-infos revision)
 
   (when (eq revision :ask)
     (setq revision (svn-status-read-revision-string
@@ -4008,57 +4007,61 @@ names are relative to the directory where `svn-status' was run."
                (if (eq revision :auto) "HEAD or BASE" revision)
                count)))
 
-  (setq svn-status-get-specific-revision-file-info '())
-  (dolist (line-info line-infos)
-    (let* ((revision (if (eq revision :auto)
-                         (if (svn-status-line-info->update-available line-info)
-                             "HEAD" "BASE")
-                       revision))       ;must be a string by this point
-           (file-name (svn-status-line-info->filename line-info))
-           ;; If REVISION is e.g. "HEAD", should we find out the actual
-           ;; revision number and save "foo.~123~" rather than "foo.~HEAD~"?
-           ;; OTOH, `auto-mode-alist' already ignores ".~HEAD~" suffixes,
-           ;; and if users often want to know the revision numbers of such
-           ;; files, they can use svn:keywords.
-           (file-name-with-revision (concat file-name ".~" revision "~")))
-      ;; `add-to-list' would unnecessarily check for duplicates.
-      (push (cons file-name file-name-with-revision)
-            svn-status-get-specific-revision-file-info)
-      (save-excursion
-        (let ((content
-               (with-temp-buffer
-                 (if (string= revision "BASE")
-                     (insert-file-contents (concat (file-name-directory file-name)
-                                                   (svn-wc-adm-dir-name)
-                                                   "/text-base/"
-                                                   (file-name-nondirectory file-name)
-                                                   ".svn-base"))
-                   (progn
-                     (svn-run nil t 'cat "cat" "-r" revision file-name)
-                     ;;todo: error processing
-                     ;;svn: Filesystem has no item
-                     ;;svn: file not found: revision `15', path `/trunk/file.txt'
-                     (insert-buffer-substring svn-process-buffer-name)))
-                 (buffer-string))))
-          (find-file file-name-with-revision)
-          (setq buffer-read-only nil)
-          (erase-buffer)  ;Widen, because we'll save the whole buffer.
-          (insert content)
-          (save-buffer)))))
-  (setq svn-status-get-specific-revision-file-info
-        (nreverse svn-status-get-specific-revision-file-info))
-  (message "svn-status-get-specific-revision-file-info: %S"
-           svn-status-get-specific-revision-file-info))
-
+  (let ((svn-status-get-specific-revision-file-info '()))
+    (dolist (line-info line-infos)
+      (let* ((revision (if (eq revision :auto)
+                           (if (svn-status-line-info->update-available line-info)
+                               "HEAD" "BASE")
+                         revision))    ;must be a string by this point
+             (file-name (svn-status-line-info->filename line-info))
+             ;; If REVISION is e.g. "HEAD", should we find out the actual
+             ;; revision number and save "foo.~123~" rather than "foo.~HEAD~"?
+             ;; OTOH, `auto-mode-alist' already ignores ".~HEAD~" suffixes,
+             ;; and if users often want to know the revision numbers of such
+             ;; files, they can use svn:keywords.
+             (file-name-with-revision (concat (file-name-nondirectory file-name) ".~" revision "~"))
+             (default-directory (concat (svn-status-base-dir) (file-name-directory file-name))))
+        ;; `add-to-list' would unnecessarily check for duplicates.
+        (push (cons file-name (concat (file-name-directory file-name) file-name-with-revision)) svn-status-get-specific-revision-file-info)
+        ;; (message "file-name-with-revision: %s %S" file-name-with-revision (file-exists-p file-name-with-revision))
+        (save-excursion
+          (if (or (not (file-exists-p file-name-with-revision)) ;; file does not exist
+                  (not (string= (number-to-string (string-to-number revision)) revision))) ;; revision is not a number
+              (progn
+                (message "getting revision %s for %s" revision file-name)
+                (let ((content
+                       (with-temp-buffer
+                         (if (string= revision "BASE")
+                             (insert-file-contents (concat (svn-wc-adm-dir-name)
+                                                           "/text-base/"
+                                                           (file-name-nondirectory file-name)
+                                                           ".svn-base"))
+                           (progn
+                             (svn-run nil t 'cat "cat" "-r" revision (file-name-nondirectory file-name))
+                             ;;todo: error processing
+                             ;;svn: Filesystem has no item
+                             ;;svn: file not found: revision `15', path `/trunk/file.txt'
+                             (insert-buffer-substring svn-process-buffer-name)))
+                         (buffer-string))))
+                  (find-file file-name-with-revision)
+                  (setq buffer-read-only nil)
+                  (erase-buffer) ;Widen, because we'll save the whole buffer.
+                  (insert content)
+                  (goto-char (point-min))
+                  (save-buffer)))
+            (find-file file-name-with-revision)))))
+    (message "default-directory: %s revision-file-info: %S" default-directory svn-status-get-specific-revision-file-info)
+    (nreverse svn-status-get-specific-revision-file-info)))
 
 (defun svn-status-ediff-with-revision (arg)
   "Run ediff on the current file with a previous revision.
 If ARG then prompt for revision to diff against."
   (interactive "P")
-  (svn-status-get-specific-revision-internal
-   (list (svn-status-get-line-information))
-   (if arg :ask :auto))
-  (let* ((ediff-after-quit-destination-buffer (current-buffer))
+  (let* ((svn-status-get-specific-revision-file-info
+          (svn-status-get-specific-revision-internal
+           (list (svn-status-get-line-information))
+           (if arg :ask :auto)))
+         (ediff-after-quit-destination-buffer (current-buffer))
          (my-buffer (find-file-noselect (caar svn-status-get-specific-revision-file-info)))
          (base-buff (find-file-noselect (cdar svn-status-get-specific-revision-file-info)))
          (svn-transient-buffers (list base-buff ))
@@ -4803,6 +4806,7 @@ entry for file with defun.
   (suppress-keymap svn-log-view-mode-map)
   (define-key svn-log-view-mode-map (kbd "p") 'svn-log-view-prev)
   (define-key svn-log-view-mode-map (kbd "n") 'svn-log-view-next)
+  (define-key svn-log-view-mode-map (kbd "~") 'svn-log-get-specific-revision)
   (define-key svn-log-view-mode-map (kbd "=") 'svn-log-view-diff)
   (define-key svn-log-view-mode-map (kbd "e") 'svn-log-edit-log-entry)
   (define-key svn-log-view-mode-map (kbd "q") 'bury-buffer))
@@ -4868,11 +4872,26 @@ Commands:
     (re-search-backward "^r\\([0-9]+\\)")
     (svn-match-string-no-properties 1)))
 
+(defun svn-log-file-name-at-point ()
+  (save-excursion
+    (beginning-of-line)
+    (when (looking-at "   M /\\(.+\\)$")
+      (svn-match-string-no-properties 1))))
+
 (defun svn-log-view-diff (arg)
   "Show the changeset for a given log entry.
 When called with a prefix argument, ask the user for the revision."
   (interactive "P")
   (svn-status-diff-show-changeset (svn-log-revision-at-point) arg))
+
+(defun svn-log-get-specific-revision ()
+  "Get an older revision of the file at point via svn cat."
+  (interactive)
+  ;; (message "%S" (svn-status-make-line-info (svn-log-file-name-at-point)))
+  (let ((default-directory (svn-status-base-dir)))
+    (svn-status-get-specific-revision-internal
+     (list (svn-status-make-line-info (svn-log-file-name-at-point)))
+     (svn-log-revision-at-point))))
 
 (defun svn-log-edit-log-entry ()
   "Edit the given log entry."
