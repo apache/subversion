@@ -39,7 +39,7 @@ struct svn_error_t;
 
 #define JAVA_PACKAGE "org/tigris/subversion/javahl"
 /**
- * class to hold a number of JNI relate utility methods. No Objects of this
+ * class to hold a number of JNI related utility methods. No Objects of this
  * class are ever created
  */
 class JNIUtil
