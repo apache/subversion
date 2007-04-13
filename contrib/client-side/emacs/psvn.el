@@ -4050,7 +4050,7 @@ names are relative to the directory where `svn-status' was run."
                   (goto-char (point-min))
                   (save-buffer)))
             (find-file file-name-with-revision)))))
-    (message "default-directory: %s revision-file-info: %S" default-directory svn-status-get-specific-revision-file-info)
+    ;;(message "default-directory: %s revision-file-info: %S" default-directory svn-status-get-specific-revision-file-info)
     (nreverse svn-status-get-specific-revision-file-info)))
 
 (defun svn-status-ediff-with-revision (arg)
@@ -4064,7 +4064,7 @@ If ARG then prompt for revision to diff against."
          (ediff-after-quit-destination-buffer (current-buffer))
          (my-buffer (find-file-noselect (caar svn-status-get-specific-revision-file-info)))
          (base-buff (find-file-noselect (cdar svn-status-get-specific-revision-file-info)))
-         (svn-transient-buffers (list base-buff ))
+         (svn-transient-buffers (list base-buff))
          (startup-hook '(svn-ediff-startup-hook)))
     (ediff-buffers base-buff my-buffer startup-hook)))
 
@@ -4807,7 +4807,9 @@ entry for file with defun.
   (define-key svn-log-view-mode-map (kbd "p") 'svn-log-view-prev)
   (define-key svn-log-view-mode-map (kbd "n") 'svn-log-view-next)
   (define-key svn-log-view-mode-map (kbd "~") 'svn-log-get-specific-revision)
+  (define-key svn-log-view-mode-map (kbd "E") 'svn-log-ediff-specific-revision)
   (define-key svn-log-view-mode-map (kbd "=") 'svn-log-view-diff)
+  (define-key svn-log-view-mode-map (kbd "RET") 'svn-log-find-file-at-point)
   (define-key svn-log-view-mode-map (kbd "e") 'svn-log-edit-log-entry)
   (define-key svn-log-view-mode-map (kbd "q") 'bury-buffer))
 
@@ -4823,6 +4825,8 @@ entry for file with defun.
 "'svn-log-view-mode' menu"
                   '("SVN-LogView"
                     ["Show Changeset" svn-log-view-diff t]
+                    ["Ediff file at point" svn-log-ediff-specific-revision t]
+                    ["Find file at point" svn-log-find-file-at-point t]
                     ["Edit log message" svn-log-edit-log-entry t]))
 
 (defun svn-log-view-popup-menu (event)
@@ -4878,6 +4882,13 @@ Commands:
     (when (looking-at "   M /\\(.+\\)$")
       (svn-match-string-no-properties 1))))
 
+(defun svn-log-find-file-at-point ()
+  (interactive)
+  (let ((file-name (svn-log-file-name-at-point)))
+    (when file-name
+      (let ((default-directory (svn-status-base-dir)))
+        (find-file file-name)))))
+
 (defun svn-log-view-diff (arg)
   "Show the changeset for a given log entry.
 When called with a prefix argument, ask the user for the revision."
@@ -4892,6 +4903,30 @@ When called with a prefix argument, ask the user for the revision."
     (svn-status-get-specific-revision-internal
      (list (svn-status-make-line-info (svn-log-file-name-at-point)))
      (svn-log-revision-at-point))))
+
+(defun svn-log-ediff-specific-revision ()
+  "Call ediff for the file at point to view a changeset"
+  (interactive)
+  (let* ((cur-buf (current-buffer))
+         (upper-rev (svn-log-revision-at-point))
+         (lower-rev (number-to-string (- (string-to-number upper-rev) 1)))
+         (file-name (svn-log-file-name-at-point))
+         (default-directory (svn-status-base-dir))
+         (upper-rev-file-name (when file-name
+                                (cdar (svn-status-get-specific-revision-internal
+                                       (list (svn-status-make-line-info file-name)) upper-rev))))
+         (lower-rev-file-name (when file-name
+                                (cdar (svn-status-get-specific-revision-internal
+                                       (list (svn-status-make-line-info file-name)) lower-rev)))))
+    ;;(message "%S %S" upper-rev-file-name lower-rev-file-name)
+    (if file-name
+        (let* ((ediff-after-quit-destination-buffer cur-buf)
+               (newer-buffer (find-file-noselect upper-rev-file-name))
+               (base-buff (find-file-noselect lower-rev-file-name))
+               (svn-transient-buffers (list newer-buffer))
+               (startup-hook '(svn-ediff-startup-hook)))
+          (ediff-buffers base-buff newer-buffer startup-hook))
+      (message "No file at point"))))
 
 (defun svn-log-edit-log-entry ()
   "Edit the given log entry."
