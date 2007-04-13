@@ -97,7 +97,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
     paths = ['trunk/newdir']
     def driver_cb(parent, path, pool):
-      self.assertTrue(path in paths)
+      self.assert_(path in paths)
       return editor.add_directory(path, parent, None, 0)
     delta.path_driver(editor, edit_baton, -1, paths, driver_cb)
     editor.close_edit(edit_baton)
