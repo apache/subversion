@@ -2792,6 +2792,7 @@ def mergeinfo_update_elision(sbox):
   alpha_COPY_path = os.path.join(wc_dir, "A", "B_COPY", "E", "alpha")
   alpha_path  = os.path.join(wc_dir, "A", "B", "E", "alpha")
   B_COPY_path = os.path.join(wc_dir, "A", "B_COPY")
+  E_COPY_path = os.path.join(wc_dir, "A", "B_COPY", "E")
   beta_path   = os.path.join(wc_dir, "A", "B", "E", "beta")
   lambda_path = os.path.join(wc_dir, "A", "B", "lambda")
 
@@ -2986,6 +2987,137 @@ def mergeinfo_update_elision(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+  # Now test that an updated target's mergeinfo can itself elide.
+  # r7 - modify and commit A/B/E/alpha
+  svntest.main.file_write(alpha_path, "More new content")
+  expected_output = wc.State(wc_dir, {'A/B/E/alpha' : Item(verb='Sending')})
+  expected_status.tweak('A/B/E/alpha', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Merge r6:7 into A/B_COPY/E
+  short_E_COPY_path = shorten_path_kludge(E_COPY_path)
+  expected_output = wc.State(short_E_COPY_path, {
+    'alpha' : Item(status='U '),
+    })
+  expected_merge_status = wc.State(short_E_COPY_path, {
+    ''        : Item(status=' M', wc_rev=6),
+    'alpha' : Item(status='M ', wc_rev=6),
+    'beta'  : Item(status='  ', wc_rev=6),
+    })
+  expected_merge_disk = wc.State('', {
+    ''        : Item(props={"svn:mergeinfo" : '/A/B/E:1,3-5,7'}),
+    'alpha' : Item("More new content"),
+    'beta'  : Item("New content"),
+    })
+  expected_skip = wc.State(short_E_COPY_path, { })
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_E_COPY_path, '6', '7',
+                                         sbox.repo_url + \
+                                         '/A/B/E',
+                                         expected_output,
+                                         expected_merge_disk,
+                                         expected_merge_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
+  # r8 - Commit the merge
+  expected_output = wc.State(wc_dir,
+                             {'A/B_COPY/E'       : Item(verb='Sending'),
+                              'A/B_COPY/E/alpha' : Item(verb='Sending')})
+  expected_status.tweak('A/B_COPY/E', wc_rev=8)
+  expected_status.tweak('A/B_COPY/E/alpha', wc_rev=8)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Update A/COPY_B/E back to r7
+  expected_output = wc.State(wc_dir, {
+    'A/B_COPY/E/alpha' : Item(status='U '),
+    'A/B_COPY/E'       : Item(status=' U'),
+    })
+  expected_status.tweak('A/B_COPY/E', wc_rev=7)
+  expected_status.tweak('A/B_COPY/E/alpha', wc_rev=7)
+  expected_status.tweak('A/B_COPY/E/beta', wc_rev=7)
+  expected_disk.tweak('A/B_COPY',
+                      props={'svn:mergeinfo' : '/A/B:1,3-5'})
+  expected_disk.tweak('A/B/E/alpha', contents="More new content")
+  expected_disk.tweak('A/B_COPY/E/alpha', contents="New content")
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '7', E_COPY_path)
+
+  # Merge r6:7 to A/B_COPY
+  short_B_COPY_path = shorten_path_kludge(B_COPY_path)
+  expected_output = wc.State(short_B_COPY_path, {
+    'E/alpha' : Item(status='U '),
+    })
+  expected_merge_status = wc.State(short_B_COPY_path, {
+    ''        : Item(status=' M', wc_rev=6),
+    'lambda'  : Item(status='  ', wc_rev=6),
+    'E'       : Item(status='  ', wc_rev=7),
+    'E/alpha' : Item(status='M ', wc_rev=7),
+    'E/beta'  : Item(status='  ', wc_rev=7),
+    'F'       : Item(status='  ', wc_rev=6),
+    })
+  expected_merge_disk = wc.State('', {
+    ''        : Item(props={"svn:mergeinfo" : '/A/B:1,3-5,7'}),
+    'lambda'  : Item("New content"),
+    'E'       : Item(),
+    'E/alpha' : Item("More new content"),
+    'E/beta'  : Item("New content"),
+    'F'       : Item(),
+    })
+  expected_skip = wc.State(short_B_COPY_path, { })
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_B_COPY_path, '6', '7',
+                                         sbox.repo_url + \
+                                         '/A/B',
+                                         expected_output,
+                                         expected_merge_disk,
+                                         expected_merge_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1,alpha_COPY_path)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Update just A/B_COPY/E.  The mergeinfo (r1,3-5,7) reset on
+  # A/B_COPY/E by the udpate is identical to the local info on
+  # A/B_COPY, so should elide, leaving no mereginfo on E.
+  #expected_output = svntest.wc.State(wc_dir, { })
+  expected_output = wc.State(wc_dir, {
+    'A/B_COPY/E/alpha' : Item(status='G '),
+    'A/B_COPY/E/'      : Item(status=' U'),
+    })
+  expected_status.tweak('A/B_COPY', status=' M', wc_rev=6)
+  expected_status.tweak('A/B_COPY/E', status=' M', wc_rev=8)
+  expected_status.tweak('A/B_COPY/E/alpha', wc_rev=8)
+  expected_status.tweak('A/B_COPY/E/beta', wc_rev=8)
+  expected_disk.tweak('A/B_COPY',
+                      props={'svn:mergeinfo' : '/A/B:1,3-5,7'})
+  expected_disk.tweak('A/B_COPY/E', props={})
+  expected_disk.tweak('A/B_COPY/E/alpha', contents="More new content")
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1, E_COPY_path)
+
 #######################################################################
 # Run the tests
 
@@ -3027,7 +3159,7 @@ test_list = [ None,
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
               update_conflicted,
-              XFail(mergeinfo_update_elision),
+              mergeinfo_update_elision,
              ]
 
 if __name__ == '__main__':
