@@ -39,12 +39,12 @@ public:
     ~ProplistCallback();
 
     static svn_error_t *callback(void *baton,
-                                 svn_stringbuf_t *path,
+                                 const char *path,
                                  apr_hash_t *prop_hash,
                                  apr_pool_t *pool);
 
 protected:
-    svn_error_t *singlePath(svn_stringbuf_t *path,
+    svn_error_t *singlePath(const char *path,
                             apr_hash_t *prop_hash,
                             apr_pool_t *pool);
 

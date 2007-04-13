@@ -44,9 +44,9 @@ ProplistCallback::~ProplistCallback()
 
 svn_error_t *
 ProplistCallback::callback(void *baton,
-                  svn_stringbuf_t *path,
-                  apr_hash_t *prop_hash,
-                  apr_pool_t *pool)
+                           const char *path,
+                           apr_hash_t *prop_hash,
+                           apr_pool_t *pool)
 {
     if (baton)
         return ((ProplistCallback *)baton)->singlePath(path, prop_hash, pool);
@@ -60,9 +60,9 @@ ProplistCallback::callback(void *baton,
  * @param prop_hash the hash of properties on this path
  * @param pool      memory pool for the use of this function
  */
-svn_error_t* ProplistCallback::singlePath(svn_stringbuf_t *path,
-                                         apr_hash_t *prop_hash,
-                                         apr_pool_t *pool)
+svn_error_t* ProplistCallback::singlePath(const char *path,
+                                          apr_hash_t *prop_hash,
+                                          apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
@@ -86,8 +86,7 @@ svn_error_t* ProplistCallback::singlePath(svn_stringbuf_t *path,
     }
 
     // convert the parameters to their java relatives
-    jstring jpath = JNIUtil::makeJString(svn_path_local_style(path->data,
-                                                              pool));
+    jstring jpath = JNIUtil::makeJString(svn_path_local_style(path, pool));
     if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
