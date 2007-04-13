@@ -1909,6 +1909,39 @@ svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
 }
 
 
+void svn_swig_py_status_func2(void *baton,
+                              const char *path,
+                              svn_wc_status2_t *status)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return;
+
+  svn_swig_py_acquire_py_lock();
+  if ((result = PyObject_CallFunction(function, (char *)"sO&", path,
+                                      make_ob_wc_status, status)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      /* The callback shouldn't be returning anything. */
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  /* Our error has no place to go. :-( */
+  if (err)
+    svn_error_clear(err);
+    
+  svn_swig_py_release_py_lock();
+}
+
+
 svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
 {
   PyObject *function = cancel_baton;

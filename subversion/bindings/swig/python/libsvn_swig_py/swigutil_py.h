@@ -263,6 +263,13 @@ svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
                                                    const char *path,
                                                    apr_pool_t *pool);
 
+/* a status function that executes a Python function that is passed in
+   via the baton argument */
+SVN_SWIG_SWIGUTIL_EXPORT
+void svn_swig_py_status_func2(void *baton,
+                              const char *path,
+                              svn_wc_status2_t *status);
+
 /* a cancel function that executes a Python function passed in via the
    cancel_baton argument. */
 SVN_SWIG_SWIGUTIL_EXPORT
