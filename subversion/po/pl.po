@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-04-06 09:20+0800\n"
-"PO-Revision-Date: 2006-10-30 14:18+0100\n"
+"PO-Revision-Date: 2007-04-12 14:28+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -445,9 +445,8 @@ msgid "Item is out of date"
 msgstr "Element jest nieaktualny"
 
 #: include/svn_error_codes.h:586
-#, fuzzy
 msgid "SQLite error"
-msgstr "Błąd zapisu"
+msgstr "Błąd SQLite"
 
 #: include/svn_error_codes.h:598
 msgid "Unsupported FS format"
@@ -574,9 +573,8 @@ msgid "Unable to extract data from response header"
 msgstr "Nie udało się zdekodować danych z nagłówka odpowiedzi"
 
 #: include/svn_error_codes.h:742
-#, fuzzy
 msgid "Repository has been moved"
-msgstr "Repozytorium nie ma UUID"
+msgstr "Repozytorium zostało przeniesione"
 
 #: include/svn_error_codes.h:748 include/svn_error_codes.h:777
 msgid "Couldn't find a repository"
@@ -668,9 +666,8 @@ msgid "Svndiff compressed data is invalid"
 msgstr "Błędny nagłówek skompresowanych danych svndiff"
 
 #: include/svn_error_codes.h:864
-#, fuzzy
 msgid "Diff data source modified unexpectedly"
-msgstr "Nieoczekiwany koniec danych svndiff"
+msgstr "Dane diff nieoczekiwane zostały zmodyfikowane"
 
 #: include/svn_error_codes.h:870
 msgid "Apache has no path to an SVN filesystem"
@@ -840,12 +837,10 @@ msgid "Incompatible library version"
 msgstr "Niekompatybilna wersja biblioteki"
 
 #: include/svn_error_codes.h:1046
-#, fuzzy
 msgid "Error parsing arguments"
-msgstr "Błąd klienta w trakcie parsowania parametrów"
+msgstr "Błąd w trakcie parsowania parametrów"
 
 #: include/svn_error_codes.h:1050
-#, fuzzy
 msgid "Not enough arguments provided"
 msgstr "Zbyt mało parametrów"
 
