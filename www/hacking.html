@@ -651,13 +651,13 @@ conventions:</p>
       library-private header file (such as libsvn_wc/wc.h) must be signified
       by two underscores after the library prefix (such as
       svn_wc__ensure_directory).  All declarations private to a single file
-      (such as the static function get_entry_url inside
-      libsvn_wc/update_editor.c) do not require any additional namespace
-      decorations.  Symbols that need to be used outside a library, but
-      still are not public are put in a public header, but use the
-      double underscore notation.  Such symbols may be used by
-      Subversion core code only, and we try to be restrictive
-      regarding the introduction of such entities.</p>
+      (such as the static function get_entry_url inside of
+      <tt>libsvn_wc/update_editor.c</tt>) do not require any
+      additional namespace decorations.  Symbols that need to be used
+      outside a library, but still are not public are put in a shared
+      header file in the <tt>include/private/</tt> directory, and use
+      the double underscore notation.  Such symbols may be used by
+      Subversion core code only.</p>
       
       <p>To recap:</p>
       <pre>
@@ -665,19 +665,26 @@ conventions:</p>
          svn_wc_adm_open()            
          #define SVN_WC_ADM_DIR_NAME ...
          typedef enum svn_wc_schedule_t ...
+
          /* For use within one library only: subversion/libsvn_wc/wc.h */
          svn_wc__ensure_directory()   
          #define SVN_WC__BASE_EXT ... 
          typedef struct svn_wc__compat_notify_baton_t ...
+
          /* For use within one file: subversion/libsvn_wc/update_editor.c */ 
          get_entry_url()
          struct handler_baton {
+
          /* For internal use in svn core code only:
-            subversion/include/svn_types.h */
-         #define SVN__STREAM_CHUNK_SIZE
-         /* subversion/include/svn_error.h */
-         void svn_error__locate(const char *file, long line);
+            subversion/include/private/svn_wc_private.h */
+         svn_wc__entry_versioned()
       </pre>
+
+     <p>Pre-Subversion 1.5, private symbols which needed to be used
+       outside of a library were put into into public header files,
+       using the double underscore notation.  This practice has been
+       abandoned, and any such symbols are legacy, maintained for <a
+       href="#release-numbering">backwards compatibility</a>.</p>
 </li>
 
 <li><p>In text strings that might be printed out (or otherwise made
