@@ -320,7 +320,7 @@ typedef struct svn_client_proplist_item_t
  */
 typedef svn_error_t *(*svn_proplist_receiver_t)
   (void *baton,
-   svn_stringbuf_t *path,
+   const char *path,
    apr_hash_t *prop_hash,
    apr_pool_t *pool);
 

@@ -891,8 +891,7 @@ call_receiver(const char *path,
               apr_pool_t *pool)
 {
   if (prop_hash && apr_hash_count(prop_hash))
-    SVN_ERR(receiver(receiver_baton, svn_stringbuf_create(path, pool),
-                     prop_hash, pool));
+    SVN_ERR(receiver(receiver_baton, path, prop_hash, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1173,7 +1172,7 @@ struct proplist_receiver_baton {
 /* Receiver function used by proplist2(). */
 static svn_error_t *
 proplist_receiver_cb(void *baton,
-                     svn_stringbuf_t *path,
+                     const char *path,
                      apr_hash_t *prop_hash,
                      apr_pool_t *pool)
 {
@@ -1185,7 +1184,7 @@ proplist_receiver_cb(void *baton,
   /* Because the pool passed to the receiver function is likely to be a 
      temporary pool of some kind, we need to make copies of *path and
      *prop_hash in the pool provided by the baton. */
-  tmp_item->node_name = path;
+  tmp_item->node_name = svn_stringbuf_create(path, pl_baton->pool);
   tmp_item->prop_hash = prop_hash;
 
   item = svn_client_proplist_item_dup(tmp_item, pl_baton->pool);
