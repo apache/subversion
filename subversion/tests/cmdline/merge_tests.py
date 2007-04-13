@@ -5134,7 +5134,6 @@ def mergeinfo_elision(sbox):
     'D/H/omega' : Item("This is the file 'omega'.\n"),
     })
   expected_skip = wc.State(short_A_COPY_path, { })
-  saved_cwd = os.getcwd()
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_A_COPY_path, '3', '5',
@@ -5148,6 +5147,58 @@ def mergeinfo_elision(sbox):
                                          None, 1)
   finally:
     os.chdir(saved_cwd)
+
+  # Reverse merge r5 out of A_COPY/B/E/beta.  The mergeinfo on
+  # A_COPY/B/E/beta which previously elided will now return,
+  # minus r5 of course.
+  expected_skip = wc.State(short_beta_COPY_path, { })
+  try:
+    os.chdir(svntest.main.work_dir)
+    # run_and_verify_merge doesn't support merging to a file WCPATH
+    # so use run_and_verify_svn.
+    svntest.actions.run_and_verify_svn(None,
+                                       ['U    ' + short_beta_COPY_path + \
+                                        '\n'], [], 'merge', '-c-5',
+                                       sbox.repo_url + '/A/B/E/beta',
+                                       short_beta_COPY_path)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Check beta's status and props.
+  expected_status = wc.State(beta_COPY_path, {
+    ''        : Item(status='MM', wc_rev=7),
+    })
+  svntest.actions.run_and_verify_status(beta_COPY_path, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, ["/A/B/E/beta:1,4\n"], [],
+                                     'propget', SVN_PROP_MERGE_INFO,
+                                     beta_COPY_path)
+
+  # Merge r5 back into A_COPY/B/E/beta.  Now the mergeinfo on the merge
+  # target (A_COPY/B/E/beta) is identical to it's nearest ancestor with
+  # mergeinfo (A_COPY) and so the former should elide.
+  try:
+    os.chdir(svntest.main.work_dir)
+    # run_and_verify_merge doesn't support merging to a file WCPATH
+    # so use run_and_verify_svn.
+    svntest.actions.run_and_verify_svn(None,
+                                       ['G    ' + short_beta_COPY_path + \
+                                        '\n'], [], 'merge', '-c5',
+                                       sbox.repo_url + '/A/B/E/beta',
+                                       short_beta_COPY_path)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Check beta's status and props.
+  expected_status = wc.State(beta_COPY_path, {
+    ''        : Item(status=' M', wc_rev=7),
+    })
+  svntest.actions.run_and_verify_status(beta_COPY_path, expected_status)
+
+  # Once again A_COPY/B/E/beta has no mergeinfo.
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'propget', SVN_PROP_MERGE_INFO,
+                                     beta_COPY_path)
 
 
 def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
