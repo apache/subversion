@@ -596,7 +596,12 @@ as you might think, and if you'd like to become one of them, then add
      to quote them (e.g. "Can't find '/path/to/repos/userfile'").</p></li>
 
 <li><p>When including path or filenames in the error string, be sure
-     to convert them using 'svn_path_local_style()' before inclusion.</p></li>
+     to convert them using <a
+     href="http://svn.collab.net/svn-doxygen/svn__path_8h.html#a1"
+     ><tt>svn_path_local_style()</tt></a> before inclusion (since
+     paths passed to and from Subversion APIs are assumed to be
+     in <a href="http://svn.collab.net/svn-doxygen/svn__path_8h.html#a0"
+     >canonical form</a>).</p></li>
 
 <li><p>Don't use Subversion-specific abbreviations (e.g. use "repository"
      instead of "repo", "working copy" instead of "wc").</p></li>
@@ -633,6 +638,16 @@ as you might think, and if you'd like to become one of them, then add
 conventions:</p>
 
 <ul>
+<li><p>When using a path or file name as input to most <a
+     href="http://svn.collab.net/svn-doxygen/">Subversion APIs</a>, be
+     sure to convert them to Subversion's internal/canonical form
+     using the <a href="http://svn.collab.net/svn-doxygen/svn__path_8h.html#a0"
+     ><tt>svn_path_internal_style()</tt></a> API.  Alternately, when
+     receiving a path or file name as output from a Subversion API,
+     convert them into the expected form for your platform using the 
+     <a href="http://svn.collab.net/svn-doxygen/svn__path_8h.html#a1"
+     ><tt>svn_path_local_style()</tt></a> API.</p></li>
+
 <li><p>Use only spaces for indenting code, never tabs.  Tab display
       width is not standardized enough, and anyway it's easier to
       manually adjust indentation that uses spaces.</p>
