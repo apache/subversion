@@ -11,6 +11,7 @@ class ClientSession(object):
 
         self.pool = Pool()
         self.iterpool = Pool()
+        self.url = url
 
         self.client = POINTER(svn_client_ctx_t)()
         svn_client_create_context(byref(self.client), self.pool)
@@ -63,4 +64,9 @@ class ClientSession(object):
             byref(editor_baton), message, commit_callback,
             commit_baton, NULL, FALSE, pool)
         return (editor, editor_baton)
+
+    # Private. Convert a repository-relative copyfrom path into a proper
+    # copyfrom URI
+    def _abs_copyfrom_path(self, path):
+        return "%s/%s" % (self.url.rstrip("/"), path)
 

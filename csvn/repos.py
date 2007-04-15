@@ -65,6 +65,11 @@ class Repos(object):
             None, pool)
         return (editor, editor_baton)
 
+    # Private. Convert a repository-relative copyfrom path into a proper
+    # copyfrom URI
+    def _abs_copyfrom_path(self, path):
+        return path
+
 
 class _fs_txn(object):
     """This class represents an open transaction to a Subversion repository.

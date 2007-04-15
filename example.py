@@ -12,15 +12,17 @@ print "Repos UUID: ", repos.uuid()
 txn = repos.txn()
 
 # You can create a file from a Python string
-txn.put("file1.txt", contents="Hello world one!", create=True)
+file("/tmp/contents.txt", "w").write("Hello world one!")
+txn.upload("file1.txt", local_path="/tmp/contents.txt")
 
 # ... or from a Python file
 file("/tmp/contents.txt", "w").write("Hello world two!")
-txn.put("file2.txt", contents=file("/tmp/contents.txt"), create=True)
+txn.upload("file2.txt", local_path="/tmp/contents.txt")
 
 # Create some directories
 txn.mkdir("a")
 txn.mkdir("a/b")
+txn.mkdir("a/d")
 
 # Commit the transaction
 new_rev = txn.commit("Create file1.txt and file2.txt. "
@@ -31,18 +33,17 @@ print "Committed revision %d" % new_rev
 # Transaction number 2
 txn = repos.txn()
 
-# Copy a to c, but remove the subdirectories
+# Copy a to c, but remove one of the subdirectories
 txn.copy(src_path="a", dest_path="c")
 txn.delete("c/b")
 
 # Copy files around in the repository
-txn.copy(src_path="file1.txt", src_rev=1,
-         dest_path="file3.txt")
-txn.copy(src_path="file2.txt", src_rev=1,
-         dest_path="file4.txt")
+txn.copy(src_path="file1.txt", dest_path="file3.txt")
+txn.copy(src_path="file2.txt", dest_path="file4.txt")
 
 # Modify some files while we're at it
-txn.put("file1.txt", contents="Hello world one and a half!")
+file("/tmp/contents.txt", "w").write("Hello world one and a half!")
+txn.upload("file1.txt", local_path="/tmp/contents.txt")
 
 # Commit our changes
 new_rev = txn.commit("Create copies of file1.txt, file2.txt, and some "
@@ -77,8 +78,25 @@ txn.mkdir("blahdir/dj/a/b/c/d")
 txn.mkdir("blahdir/dj/a/b/c/d/e")
 txn.mkdir("blahdir/dj/a/b/c/d/e/f")
 txn.mkdir("blahdir/dj/a/b/c/d/e/f/g")
-txn.put("blahdir/dj/a/b/c/d/e/f/g/h.txt", file("/tmp/contents.txt"),
-        create=True)
+txn.upload("blahdir/dj/a/b/c/d/e/f/g/h.txt", "/tmp/contents.txt")
 
 rev = txn.commit("create blahdir and descendents")
+print "Committed revision %d" % rev
+
+def ignore(path):
+    basename = os.path.basename(path)
+    _, ext = os.path.splitext(basename)
+    return (basename == ".svn" or basename.endswith("~") or
+            basename.startswith(".") or ext in (".pyc", ".pyo"))
+
+txn = session.txn()
+txn.ignore(ignore)
+txn.upload("csvn", local_path="csvn")
+rev = txn.commit("import csvn dir")
+print "Committed revision %d" % rev
+
+txn = session.txn()
+txn.copy(src_path="csvn", dest_path="csvn2")
+txn.upload("csvn2/core/functions.py","/tmp/contents.txt")
+rev = txn.commit("Copied csvn to csvn2, messing around with functions.py")
 print "Committed revision %d" % rev

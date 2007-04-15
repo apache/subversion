@@ -9,25 +9,21 @@ class Txn(object):
         self.session = session
         self.root = _txn_operation(None, "OPEN", svn_node_dir)
         self.commit_callback = None
+        self.ignore_func = None
+
+    def ignore(self, ignore_func):
+        self.ignore_func = ignore_func 
+
+    def check_path(self, path, rev=None):
+        """Check the status of PATH@REV. If PATH or any of its
+           parents have been modified in this transaction, take this
+           into consideration."""
+        return self._check_path(path, rev)[0]
 
     def delete(self, path, base_rev=None):
         """Delete PATH from the repository as of base_rev"""
 
-        path_components = os.path.normpath(path).split("/")
-        parent = self.root
-        copyfrom_path = None
-        total_path = path_components[0]
-        for path_component in path_components[1:]:
-            parent = parent.open(total_path)
-            if parent.copyfrom_path:
-                copyfrom_path = parent.copyfrom_path
-                base_rev = parent.copyfrom_rev
-
-            total_path = "%s/%s" % (total_path, path_component)
-            if copyfrom_path:
-                copyfrom_path = "%s/%s" % (copyfrom_path, path_component)
-
-        kind = self.session.check_path(copyfrom_path or total_path, base_rev)
+        kind, parent = self._check_path(path, base_rev)
 
         if kind == svn_node_none:
             if base_rev:
@@ -36,55 +32,98 @@ class Txn(object):
                 message = "'%s' not found" % (path)
             raise SubversionException(SVN_ERR_BAD_URL, message)
 
-        parent.open(total_path, "DELETE", kind)
+        parent.open(path, "DELETE", kind)
 
     def mkdir(self, path):
         """Create a directory at PATH""" 
 
-        path_components = os.path.normpath(path).split("/")
-        parent = self.root
-        total_path = path_components[0]
-        for path_component in path_components[1:]:
-            parent = parent.open(total_path)
-            total_path = "%s/%s" % (total_path, path_component)
-        parent.open(total_path, "ADD", svn_node_dir)
+        if self.ignore_func and self.ignore_func(path):
+            return
 
-    def copy(self, dest_path, src_path, src_rev=None, contents=None):
-        assert contents is None or isinstance(contents, (str, file))
+        kind, parent = self._check_path(path)
+        if svn_node_none == kind:
+            parent.open(path, "ADD", svn_node_dir)
+
+    def copy(self, src_path, dest_path, src_rev=None, local_path=None):
+        """Copy a file or directory from SRC_PATH@SRC_REV to DEST_PATH.
+           If SRC_REV is not supplied, use the latest revision of SRC_PATH.
+           If LOCAL_PATH is supplied, update """
+
+        if self.ignore_func and self.ignore_func(dest_path):
+            return
 
         if not src_rev:
             src_rev = self.session.latest_revnum()
 
         kind = self.session.check_path(src_path, src_rev)
-        path_components = os.path.normpath(dest_path).split("/")
-        parent = self.root
-        total_path = path_components[0]
-        for path_component in path_components[1:]:
-            parent = parent.open(total_path)
-            total_path = "%s/%s" % (total_path, path_component)
+        _, parent = self._check_path(dest_path)
 
-        parent.open(total_path, "ADD",
-                    kind, copyfrom_path=src_path,
-                    copyfrom_rev=src_rev, contents=contents)
+        if kind == svn_node_file or local_path is None:
+            # Mark the file or directory as copied
+            parent.open(dest_path, "ADD",
+                        kind, copyfrom_path=src_path,
+                        copyfrom_rev=src_rev,
+                        local_path=local_path)
+        else:
+            # Mark the directory as copied
+            parent.open(dest_path, "ADD",
+                        kind, copyfrom_path=src_path,
+                        copyfrom_rev=src_rev)
 
-    def put(self, path, contents, create=False):
-        assert isinstance(contents, (str, file))
-        path_components = os.path.normpath(path).split("/")
-        parent = self.root
-        total_path = path_components[0]
-        for path_component in path_components[1:]:
-            parent = parent.open(total_path)
-            total_path = "%s/%s" % (total_path, path_component)
-        parent.open(total_path, create and "ADD" or "OPEN",
-                    svn_node_file, contents=contents)
+            # Upload any changes from the supplied local path
+            # to the remote repository
+            self.upload(dest_path, local_path)
+
+    def upload(self, remote_path, local_path):
+        """Upload a local file or directory into the remote repository"""
+
+        # Don't add ignored files or directories
+        if self.ignore_func and self.ignore_func(remote_path):
+            return
+
+        if os.path.isfile(local_path):
+            self._upload_file(remote_path, local_path)
+        elif (os.path.isdir(local_path) and
+              self.check_path(remote_path) != svn_node_dir):
+            self.mkdir(remote_path)
+
+        ignores = []
+
+        for root, dirs, files in os.walk(local_path):
+
+            # Convert the local root into a remote root
+            remote_root = root.replace(local_path.rstrip(os.path.sep),
+                                       remote_path.rstrip("/"))
+            remote_root = remote_root.replace(os.path.sep, "/").rstrip("/")
+
+            # Don't process ignored subdirectories
+            if (self.ignore_func and self.ignore_func(root)
+                or root in ignores):
+
+                # Ignore children too
+                for name in dirs:
+                    ignores.append("%s/%s" % (remote_root, name))
+
+                # Skip to the next tuple
+                continue
+
+            # Add all subdirectories
+            for name in dirs:
+                remote_dir = "%s/%s" % (remote_root, name)
+                self.mkdir(remote_dir)
+
+            # Add all files in this directory
+            for name in files:
+                remote_file = "%s/%s" % (remote_root, name)
+                local_file = os.path.join(root, name)
+                self._upload_file(remote_file, local_file)
+
 
     def commit(self, message, base_rev = None):
+        """Commit all changes to the remote repository"""
 
         if base_rev is None:
             base_rev = self.session.latest_revnum()
-
-        editor = POINTER(svn_delta_editor_t)()
-        editor_baton = c_void_p()
 
         commit_baton = cast(id(self), c_void_p)
 
@@ -94,9 +133,7 @@ class Txn(object):
         
         child_baton = c_void_p()
         try:
-            SVN_ERR(editor[0].open_root(editor_baton, svn_revnum_t(base_rev),
-                                        self.pool, byref(child_baton)))
-            self.root.replay(editor[0], base_rev, editor_baton)
+            self.root.replay(editor[0], self.session, base_rev, editor_baton)
         except SubversionException:
             try:
                 SVN_ERR(editor[0].abort_edit(editor_baton, self.pool))
@@ -106,11 +143,54 @@ class Txn(object):
 
         return self.committed_rev
 
+    # This private function handles commits and saves
+    # information about them in this object
     def _txn_committed(self, info):
         self.committed_rev = info.revision
         self.committed_date = info.date
         self.committed_author = info.author
         self.post_commit_err = info.post_commit_err
+
+    # This private function uploads a single file to the
+    # remote repository. Don't use this function directly.
+    # Use 'upload' instead.
+    def _upload_file(self, remote_path, local_path):
+
+        if self.ignore_func and self.ignore_func(remote_path):
+            return
+
+        kind, parent = self._check_path(remote_path)
+        if svn_node_none == kind:
+            mode = "ADD"
+        else:
+            mode = "OPEN"
+
+        parent.open(remote_path, mode, svn_node_file,
+                    local_path=local_path)
+
+    # Calculate the kind of the specified file, and open a handle
+    # to its parent operation.
+    def _check_path(self, path, rev=None):
+        path_components = path.split("/")
+        parent = self.root
+        copyfrom_path = None
+        total_path = path_components[0]
+        for path_component in path_components[1:]:
+            parent = parent.open(total_path, "OPEN")
+            if parent.copyfrom_path:
+                copyfrom_path = parent.copyfrom_path
+                rev = parent.copyfrom_rev
+
+            total_path = "%s/%s" % (total_path, path_component)
+            if copyfrom_path:
+                copyfrom_path = "%s/%s" % (copyfrom_path, path_component)
+ 
+        if parent.ops.has_key(path):
+            kind = parent.open(path).kind
+        else:
+            kind = self.session.check_path(copyfrom_path or total_path, rev)
+
+        return (kind, parent)
 
 def _txn_commit_callback(info, baton, pool):
     client_txn = cast(baton, py_object).value
@@ -118,17 +198,17 @@ def _txn_commit_callback(info, baton, pool):
 
 class _txn_operation(object):
     def __init__(self, path, action, kind, copyfrom_path = None,
-                 copyfrom_rev = -1, contents = None):
+                 copyfrom_rev = -1, local_path = None):
         self.path = path
         self.action = action
         self.kind = kind
         self.copyfrom_path = copyfrom_path
         self.copyfrom_rev = copyfrom_rev
-        self.contents = contents
+        self.local_path = local_path
         self.ops = {}
 
     def open(self, path, action="OPEN", kind=svn_node_dir,
-             copyfrom_path = None, copyfrom_rev = -1, contents = None):
+             copyfrom_path = None, copyfrom_rev = -1, local_path = None):
         if self.ops.has_key(path):
             op = self.ops[path]
             if action == "OPEN" and op.kind in (svn_node_dir, svn_node_file):
@@ -147,10 +227,10 @@ class _txn_operation(object):
             self.ops[path] = _txn_operation(path, action, kind,
                                             copyfrom_path = copyfrom_path,
                                             copyfrom_rev = copyfrom_rev,
-                                            contents = contents)
+                                            local_path = local_path)
             return self.ops[path] 
 
-    def replay(self, editor, base_rev, baton):
+    def replay(self, editor, session, base_rev, baton):
         subpool = Pool()
         child_baton = c_void_p()
         file_baton = c_void_p()
@@ -164,45 +244,43 @@ class _txn_operation(object):
             elif self.action == "OPEN":
                 if self.kind == svn_node_dir:
                     SVN_ERR(editor.open_directory(self.path, baton,
-                                svn_revnum_t(base_rev), subpool,
-                                byref(child_baton)))
+                            svn_revnum_t(base_rev), subpool,
+                            byref(child_baton)))
                 else:
                     SVN_ERR(editor.open_file(self.path, baton,
                                 svn_revnum_t(base_rev), subpool,
                                 byref(file_baton)))
 
             if self.action in ("ADD", "REPLACE"):
+                copyfrom_path = None
+                if self.copyfrom_path:
+                    copyfrom_path = session._abs_copyfrom_path(
+                        self.copyfrom_path)
                 if self.kind == svn_node_dir:
-                    revnum = svn_revnum_t(-1)
-                    SVN_ERR(editor.add_directory(self.path, baton, None,
-                                                 revnum, subpool,
-                                                 byref(child_baton)))
+                    SVN_ERR(editor.add_directory(
+                        self.path, baton, copyfrom_path,
+                        svn_revnum_t(self.copyfrom_rev), subpool,
+                        byref(child_baton)))
                 else:
                     SVN_ERR(editor.add_file(self.path, baton,
-                                            self.copyfrom_path,
-                                            svn_revnum_t(self.copyfrom_rev),
-                                            subpool, byref(file_baton)))
+                        copyfrom_path, svn_revnum_t(self.copyfrom_rev),
+                        subpool, byref(file_baton)))
 
             # If there's a source file, and we opened a file to write,
             # write out the contents
-            if self.contents and file_baton:
+            if self.local_path and file_baton:
                 handler = svn_txdelta_window_handler_t()
                 handler_baton = c_void_p()
                 f = POINTER(apr_file_t)()
                 SVN_ERR(editor.apply_textdelta(file_baton, NULL, subpool,
                         byref(handler), byref(handler_baton)))
 
-                if isinstance(self.contents, file):
-                    svn_io_file_open(byref(f), self.contents.name, APR_READ,
-                                     APR_OS_DEFAULT, subpool)
-                    contents = svn_stream_from_aprfile(f, subpool)
-                    svn_txdelta_send_stream(contents, handler, handler_baton,
-                                            NULL, subpool)
-                    svn_io_file_close(f, subpool)
-                else:
-                    contents = svn_string_create(self.contents, subpool)
-                    svn_txdelta_send_string(contents, handler, handler_baton,
-                                            subpool)
+                svn_io_file_open(byref(f), self.local_path, APR_READ,
+                                 APR_OS_DEFAULT, subpool)
+                contents = svn_stream_from_aprfile(f, subpool)
+                svn_txdelta_send_stream(contents, handler, handler_baton,
+                                        NULL, subpool)
+                svn_io_file_close(f, subpool)
 
             # If we opened a file, we need to close it
             if file_baton:
@@ -213,7 +291,7 @@ class _txn_operation(object):
 
             # Look at the children
             for op in self.ops.values():
-                op.replay(editor, base_rev, child_baton)
+                op.replay(editor, session, base_rev, child_baton)
 
             if self.path:
                 # Close the directory
