@@ -1,0 +1,48 @@
+NOTE: For now, the instructions for building csvn are a bit complicated
+      because we haven't worked out all the kinks yet. Once we have done
+      more testing on different platforms, it should be possible to build
+      csvn without downloading ctypeslib or gccxml.
+
+I. Building dependencies:
+
+  1. Download and install the latest version of cmake (e.g. cmake 2.4.6)
+     from http://www.cmake.org/HTML/Download.html
+
+  2. Checkout and install the latest version of gccxml from CVS.
+
+       $ cvs -d :pserver:anoncvs@www.gccxml.org:/cvsroot/GCC_XML login
+       $ cvs -d :pserver:anoncvs@www.gccxml.org:/cvsroot/GCC_XML co gccxml
+       $ cd gccxml
+       $ mkdir gccxml-build
+       $ cd gccxml-build
+       $ cmake ../gccxml
+       $ make
+       $ make install
+
+  3. Install Python 2.5
+
+  4. Checkout and install the latest version of ctypeslib from svn.python.org:
+
+       $ svn co http://svn.python.org/projects/ctypes/trunk/ctypeslib
+       $ cd ctypeslib
+       $ python setup.py build install
+
+II. Building and testing csvn itself
+
+  1. Build csvn/core/defines.py
+       $ python generate-defines.py > csvn/core/defines.py
+
+  2. Build csvn/core/functions.py
+       $ python generate-functions.py
+
+  3. Check that defines.py and functions.py have been built correctly.
+
+       $ ls -l csvn/core
+
+          -rw-r--r--  1 djames svnadmin  20587 Apr 14 22:54 defines.py
+          -rw-r--r--  1 djames svnadmin 419460 Apr 14 22:54 functions.py
+          -rw-r--r--  1 djames svnadmin   2044 Apr 12 23:00 functions.py.in
+          -rw-r--r--  1 djames svnadmin   2523 Apr 12 23:04 __init__.py
+
+  4. Run example.py and see whether it works. If it works, the output
+     should look something like this.
