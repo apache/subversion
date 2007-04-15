@@ -45,4 +45,15 @@ II. Building and testing csvn itself
           -rw-r--r--  1 djames svnadmin   2523 Apr 12 23:04 __init__.py
 
   4. Run example.py and see whether it works. If it works, the output
-     should look something like this.
+     should look something like this:
+
+       $ python example.py
+
+       Repos UUID:  4419cd3e-282d-48c6-bf73-3fb589a7fb24
+       Committed revision 1
+       Committed revision 2
+       Committed revision 3
+       Committed revision 4
+       Committed revision 5
+       Committed revision 6
+
