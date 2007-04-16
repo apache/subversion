@@ -29,8 +29,8 @@
 #include "svn_client.h"
 
 /**
- * this class holds a java callback object, which will receive every line of
- * the file for which the callback information is requested.
+ * This class holds a java callback object, which will receive every
+ * property from a SVNClientInterface.properties call.
  */
 class ProplistCallback
 {

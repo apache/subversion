@@ -37,7 +37,7 @@ LogMessageCallback::LogMessageCallback(jobject jcallback)
 LogMessageCallback::~LogMessageCallback()
 {
     // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the java SVNClient.blame method.
+    // in parameter to the java SVNClient.log method.
 }
 
 svn_error_t *
@@ -56,14 +56,13 @@ LogMessageCallback::callback(void *baton, apr_hash_t *changed_paths,
 
 /**
  * Callback called for a single log message
- * @param revision  the revision number, when the line was last changed
- *                  or -1, if not changed during the request revision
- *                  interval
- *
- * @param author    the author, who performed the last change of the line
- * @param date      the date of the last change of the line
- * @param line      the content of the line
- * @param pool      memory pool for the use of this function
+ * @param changed_paths a hash containing the paths that were changed in
+ *                      the commit
+ * @param revision      the revision number for the commit
+ * @param author        the author of the commit
+ * @param date          the date of the commit
+ * @param msg           the log message for the commit
+ * @param pool          memory pool for the use of this function
  */
 svn_error_t *
 LogMessageCallback::singleMessage(apr_hash_t *changed_paths,

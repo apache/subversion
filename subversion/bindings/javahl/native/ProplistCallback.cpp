@@ -38,7 +38,7 @@ ProplistCallback::ProplistCallback(jobject jcallback)
 ProplistCallback::~ProplistCallback()
 {
     // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the java SVNClient.blame method.
+    // in parameter to the java SVNClient.properties method.
 }
 
 svn_error_t *

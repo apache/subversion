@@ -20,17 +20,19 @@ package org.tigris.subversion.javahl;
 import java.util.Date;
 
 /**
- * this interface is used to receive every single line for a file on a
- * the SVNClientinterface.blame call.
+ * This interface is used to receive every log message for the log
+ * messages found by a SVNClientInterface.log call.
  */
 public interface LogMessageCallback
 {
     /**
-     * the method will be called for every line in a file.
-     * @param changed   the date of the last change.
-     * @param revision  the revision of the last change.
-     * @param author    the author of the last change.
-     * @param line      the line in the file
+     * The method will be called for every log message
+     *
+     * @param changedPaths the paths that were changed
+     * @param revision     the revision of the commit
+     * @param author       the author of the commit
+     * @param date         the date of the commit
+     * @param message      the log message for the commit
      */
     public void singleMessage(ChangePath[] changedPaths, long revision,
                               String author, Date date, String message);
