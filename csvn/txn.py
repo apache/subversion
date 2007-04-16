@@ -83,17 +83,32 @@ class Txn(object):
             return
 
         kind, parent = self._check_path(path)
-        if svn_node_none == kind:
-            parent.open(path, "ADD", svn_node_dir)
 
-            # Trigger autoprop_func on new directory adds
-            if self.autoprop_func:
-                self.autoprop_func(self, path, svn_node_dir)
+        if kind != svn_node_none:
+            if kind == svn_node_dir:
+                message = ("Can't create directory '%s': "
+                           "Directory already exists" % path)
+            else:
+                message = ("Can't create directory '%s': "
+                           "Path obstructed by file" % path)
+            raise SubversionException(SVN_ERR_BAD_URL, message)
+            
+        parent.open(path, "ADD", svn_node_dir)
+
+        # Trigger autoprop_func on new directory adds
+        if self.autoprop_func:
+            self.autoprop_func(self, path, svn_node_dir)
 
     def propset(self, path, key, value):
         """Set the property named KEY to VALUE on the specified PATH"""
 
         kind, parent = self._check_path(path)
+
+        if kind == svn_node_none:
+            message = ("Can't set property on '%s': "
+                       "No such file or directory" % path)
+            raise SubversionException(SVN_ERR_BAD_URL, message)
+
         node = parent.open(path, "OPEN", kind)
         node.propset(key, value)
 
@@ -108,6 +123,11 @@ class Txn(object):
 
         kind = self.session.check_path(src_path, src_rev)
         _, parent = self._check_path(dest_path)
+
+        if kind == svn_node_none:
+            message = ("Can't copy '%s': "
+                       "No such file or directory" % path)
+            raise SubversionException(SVN_ERR_BAD_URL, message)
 
         if kind == svn_node_file or local_path is None:
             # Mark the file or directory as copied
