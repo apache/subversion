@@ -29,7 +29,7 @@
 #include "svn_client.h"
 
 /**
- * this class holds a java callback object, each status item
+ * This class holds a java callback object, each status item
  * for which the callback information is requested.
  */
 class StatusCallback
