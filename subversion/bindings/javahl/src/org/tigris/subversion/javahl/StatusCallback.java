@@ -18,7 +18,7 @@
 package org.tigris.subversion.javahl;
 
 /**
- * this interface is used to receive every status item for
+ * This interface is used to receive every status item for
  * the SVNClientInterface.status call.
  */
 public interface StatusCallback

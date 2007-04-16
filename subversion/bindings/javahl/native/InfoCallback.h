@@ -31,7 +31,7 @@
 struct info_entry;
 
 /**
- * this class holds a java callback object, which will receive every line of
+ * This class holds a java callback object, which will receive every line of
  * the file for which the callback information is requested.
  */
 class InfoCallback
