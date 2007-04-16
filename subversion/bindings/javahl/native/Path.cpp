@@ -55,7 +55,7 @@ Path::Path (const std::string &pi_path)
  */
 Path::Path (const Path &pi_path)
 {
-    init (pi_path);
+    init (pi_path.c_str ());
 }
 
 /**
@@ -74,7 +74,7 @@ Path::init (const char *pi_path)
     else
     {
         m_error_occured = JNIUtil::preprocessPath(pi_path,
-            *JNIUtil::getRequestPool());
+            JNIUtil::getRequestPool()->pool() );
 
         m_path = pi_path;
     }
@@ -92,7 +92,8 @@ Path::path () const
 /**
  * @return Path string as c string
  */
-Path::operator const char * () const
+const char *
+Path::c_str() const
 {
     return m_path.c_str ();
 }
@@ -103,7 +104,7 @@ Path::operator const char * () const
 Path&
 Path::operator=(const Path &pi_path)
 {
-    init (pi_path);
+    init (pi_path.c_str ());
     return *this;
 }
 
@@ -120,7 +121,7 @@ jboolean Path::isValid(const char *p)
     }
 
     Pool requestPool;
-    svn_error_t *err = svn_path_check_valid(p, requestPool);
+    svn_error_t *err = svn_path_check_valid(p, requestPool.pool());
     if (err == SVN_NO_ERROR)
     {
         return JNI_TRUE;
