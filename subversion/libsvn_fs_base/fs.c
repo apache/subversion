@@ -58,6 +58,7 @@
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_util.h"
 
 
 /* Checking for return values, and reporting errors.  */
@@ -310,7 +311,7 @@ base_bdb_set_errcall(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR(svn_fs_base__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
   bfd->bdb->error_info->user_callback = db_errcall_fcn;
 
   return SVN_NO_ERROR;
