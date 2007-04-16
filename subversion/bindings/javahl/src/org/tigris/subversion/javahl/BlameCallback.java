@@ -20,8 +20,8 @@ package org.tigris.subversion.javahl;
 import java.util.Date;
 
 /**
- * this interface is used to receive every single line for a file on a
- * the SVNClientinterface.blame call.
+ * This interface is used to receive every single line for a file on a
+ * the SVNClientInterface.blame call.
  */
 public interface BlameCallback
 {
