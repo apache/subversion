@@ -89,8 +89,20 @@ def ignore(path):
     return (basename == ".svn" or basename.endswith("~") or
             basename.startswith(".") or ext in (".pyc", ".pyo"))
 
+def autoprop(txn, path, kind):
+
+    # Ignore compiled/optimized python files
+    if kind == svn_node_dir:
+        txn.propset(path, "svn:ignore", "*.py[co]")
+
+    # Set eol-style to native for python files and text files
+    if kind == svn_node_file and (path.endswith(".py") or
+                                  path.endswith(".txt")):
+        txn.propset(path, "svn:eol-style", "native")
+
 txn = session.txn()
 txn.ignore(ignore)
+txn.autoprop(autoprop)
 txn.upload("csvn", local_path="csvn")
 rev = txn.commit("import csvn dir")
 print "Committed revision %d" % rev

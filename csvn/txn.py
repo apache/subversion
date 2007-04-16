@@ -10,9 +10,33 @@ class Txn(object):
         self.root = _txn_operation(None, "OPEN", svn_node_dir)
         self.commit_callback = None
         self.ignore_func = None
+        self.autoprop_func = None
 
     def ignore(self, ignore_func):
         self.ignore_func = ignore_func 
+
+    def autoprop(self, autoprop_func):
+        """Setup a callback function which automatically sets up
+           properties on new files or directories added to the
+           repository.
+
+           AUTOPROP_FUNC must be a function which accepts three
+           arguments: (txn, path, kind)
+
+           TXN is this transaction object.
+           PATH is the path which was just added to the repository.
+           KIND is either svn_node_file or svn_node_dir, depending
+           on whether the newly added path is a file or a directory.
+
+           If AUTOPROP_FUNC wants to set properties on PATH, it should
+           call TXN.propset with the appropriate arguments.
+
+           Note that AUTOPROP_FUNC is only called when new files or
+           directories are added to the repository. It is not called,
+           for example, when directories within the repository are moved
+           or copied, since these copies are not new."""
+
+        self.autoprop_func = autoprop_func
 
     def check_path(self, path, rev=None):
         """Check the status of PATH@REV. If PATH or any of its
@@ -43,6 +67,17 @@ class Txn(object):
         kind, parent = self._check_path(path)
         if svn_node_none == kind:
             parent.open(path, "ADD", svn_node_dir)
+
+            # Trigger autoprop_func on new directory adds
+            if self.autoprop_func:
+                self.autoprop_func(self, path, svn_node_dir)
+
+    def propset(self, path, key, value):
+        """Set the property named KEY to VALUE on the specified PATH"""
+
+        kind, parent = self._check_path(path)
+        node = parent.open(path, "OPEN", kind)
+        node.propset(key, value)
 
     def copy(self, src_path, dest_path, src_rev=None, local_path=None):
         """Copy a file or directory from SRC_PATH@SRC_REV to DEST_PATH.
@@ -168,6 +203,10 @@ class Txn(object):
         parent.open(remote_path, mode, svn_node_file,
                     local_path=local_path)
 
+        # Trigger autoprop_func on new file adds
+        if mode == "ADD" and self.autoprop_func:
+            self.autoprop_func(self, remote_path, svn_node_file)
+
     # Calculate the kind of the specified file, and open a handle
     # to its parent operation.
     def _check_path(self, path, rev=None):
@@ -206,6 +245,11 @@ class _txn_operation(object):
         self.copyfrom_rev = copyfrom_rev
         self.local_path = local_path
         self.ops = {}
+        self.properties = {}
+
+    def propset(self, key, value):
+        """Set the property named KEY to VALUE on this file/dir"""
+        self.properties[key] = value
 
     def open(self, path, action="OPEN", kind=svn_node_dir,
              copyfrom_path = None, copyfrom_rev = -1, local_path = None):
@@ -265,6 +309,17 @@ class _txn_operation(object):
                     SVN_ERR(editor.add_file(self.path, baton,
                         copyfrom_path, svn_revnum_t(self.copyfrom_rev),
                         subpool, byref(file_baton)))
+
+            # Write out changes to properties
+            for (name, value) in self.properties.items():
+                svn_value = svn_string_ncreate(value, len(value),
+                                               subpool)
+                if file_baton:
+                    SVN_ERR(editor.change_file_prop(file_baton, name,
+                            svn_value, subpool))
+                elif child_baton:
+                    SVN_ERR(editor.change_dir_prop(child_baton, name,
+                            svn_value, subpool))
 
             # If there's a source file, and we opened a file to write,
             # write out the contents
