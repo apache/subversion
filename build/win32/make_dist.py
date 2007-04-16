@@ -417,6 +417,15 @@ def _make_dist(cfg):
     _make_zip('_rb',     ('/README.txt', '/ruby', '/licenses', '/share/locale'),
               xpdb)
 
+    _stdout.write('make_dist: Creating ruby gem\n')
+    gem_script = os.path.join(_scriptdir, 'make_gem.rb')
+    rubycmd = '"%s" "%s" --output-dir="%s"' % (cfg.get('tools', 'ruby'),
+              gem_script, _distdir)
+    rubycmd += ' "' + distdir + '\\README.txt"'
+    rubycmd += ' "' + distdir + '\\ruby"'
+    rubycmd += ' "' + distdir + '\\licenses"'
+    rubycmd += ' "' + distdir + '\\share"'
+    _system(rubycmd)
   except:
     traceback.print_exc(None, _stderr)
     _exit(1)
