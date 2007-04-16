@@ -61,7 +61,6 @@ BlameCallback::callback(void *baton,
  * @param revision  the revision number, when the line was last changed
  *                  or -1, if not changed during the request revision
  *                  interval
- *
  * @param author    the author, who performed the last change of the line
  * @param date      the date of the last change of the line
  * @param line      the content of the line
