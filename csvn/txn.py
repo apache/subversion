@@ -13,6 +13,24 @@ class Txn(object):
         self.autoprop_func = None
 
     def ignore(self, ignore_func):
+        """Setup a callback function which decides whether a
+           new directory or path should be added to the repository.
+
+           IGNORE_FUNC must be a function which accepts two arguments:
+           (path, kind)
+
+           PATH is the path which is about to be added to the repository.
+           KIND is either svn_node_file or svn_node_dir, depending
+           on whether the proposed path is a file or a directory.
+
+           If IGNORE_FUNC returns True, the path will be ignored. Otherwise,
+           the path will be added.
+
+           Note that IGNORE_FUNC is only called when new files or
+           directories are added to the repository. It is not called,
+           for example, when directories within the repository are moved
+           or copied, since these copies are not new."""
+
         self.ignore_func = ignore_func 
 
     def autoprop(self, autoprop_func):
@@ -59,9 +77,9 @@ class Txn(object):
         parent.open(path, "DELETE", kind)
 
     def mkdir(self, path):
-        """Create a directory at PATH""" 
+        """Create a directory at PATH.""" 
 
-        if self.ignore_func and self.ignore_func(path):
+        if self.ignore_func and self.ignore_func(path, svn_node_dir):
             return
 
         kind, parent = self._check_path(path)
@@ -82,10 +100,8 @@ class Txn(object):
     def copy(self, src_path, dest_path, src_rev=None, local_path=None):
         """Copy a file or directory from SRC_PATH@SRC_REV to DEST_PATH.
            If SRC_REV is not supplied, use the latest revision of SRC_PATH.
-           If LOCAL_PATH is supplied, update """
-
-        if self.ignore_func and self.ignore_func(dest_path):
-            return
+           If LOCAL_PATH is supplied, update the new copy to match
+           LOCAL_PATH."""
 
         if not src_rev:
             src_rev = self.session.latest_revnum()
@@ -110,10 +126,21 @@ class Txn(object):
             self.upload(dest_path, local_path)
 
     def upload(self, remote_path, local_path):
-        """Upload a local file or directory into the remote repository"""
+        """Upload a local file or directory into the remote repository.
+           If the given file or directory already exists in the
+           repository, overwrite it.
+
+           This function does not add or update ignored files or
+           directories."""
+
+        kind = svn_node_none
+        if os.path.isfile(local_path):
+            kind = svn_node_file
+        elif os.path.isdir(local_path):
+            kind = svn_node_dir
 
         # Don't add ignored files or directories
-        if self.ignore_func and self.ignore_func(remote_path):
+        if self.ignore_func and self.ignore_func(remote_path, kind):
             return
 
         if os.path.isfile(local_path):
@@ -132,7 +159,7 @@ class Txn(object):
             remote_root = remote_root.replace(os.path.sep, "/").rstrip("/")
 
             # Don't process ignored subdirectories
-            if (self.ignore_func and self.ignore_func(root)
+            if (self.ignore_func and self.ignore_func(root, svn_node_dir)
                 or root in ignores):
 
                 # Ignore children too
@@ -191,7 +218,7 @@ class Txn(object):
     # Use 'upload' instead.
     def _upload_file(self, remote_path, local_path):
 
-        if self.ignore_func and self.ignore_func(remote_path):
+        if self.ignore_func and self.ignore_func(remote_path, svn_node_file):
             return
 
         kind, parent = self._check_path(remote_path)

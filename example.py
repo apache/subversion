@@ -83,7 +83,7 @@ txn.upload("blahdir/dj/a/b/c/d/e/f/g/h.txt", "/tmp/contents.txt")
 rev = txn.commit("create blahdir and descendents")
 print "Committed revision %d" % rev
 
-def ignore(path):
+def ignore(path, kind):
     basename = os.path.basename(path)
     _, ext = os.path.splitext(basename)
     return (basename == ".svn" or basename.endswith("~") or
