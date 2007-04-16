@@ -18,7 +18,7 @@
 package org.tigris.subversion.javahl;
 
 /**
- * this interface is used to retrieve info each result in a
+ * This interface is used to retrieve info each result in a
  * SVNClientInterface.info2 call.
  */
 public interface InfoCallback
