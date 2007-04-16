@@ -22,7 +22,6 @@
 #include "ProplistCallback.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
-#include "svn_path.h"
 
 /**
  * Create a ProplistCallback object
@@ -86,7 +85,7 @@ svn_error_t* ProplistCallback::singlePath(const char *path,
     }
 
     // convert the parameters to their java relatives
-    jstring jpath = JNIUtil::makeJString(svn_path_local_style(path, pool));
+    jstring jpath = JNIUtil::makeJString(path);
     if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 

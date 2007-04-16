@@ -605,7 +605,8 @@ public class BasicTests extends SVNTests
         WC wc = thisTest.getWc();
 
         // Check getting properties the non-callback way
-        String itemPath = new File(thisTest.getWCPath(), "iota").getPath();
+        String itemPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                                 "iota"), false);
 
         client.propertySet(itemPath, "abc", "def", false);
         PropertyData[] properties =
@@ -619,7 +620,8 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // Check getting properties the callback way
-        itemPath = new File(thisTest.getWCPath(), "/A/B/E/alpha").getPath();
+        itemPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                          "/A/B/E/alpha"), false);
         client.propertySet(itemPath, "cqcq", "qrz", false);
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
 
@@ -2502,6 +2504,32 @@ public class BasicTests extends SVNTests
             assertEquals("jrandom", line.getAuthor());
         }
     }
+    
+    /**
+     * @return <code>file</code> converted into a -- possibly
+     * <code>canonical</code>-ized -- Subversion-internal path
+     * representation.
+     */
+    private String fileToSVNPath(File file, boolean canonical)
+    {
+        // JavaHL need paths with '/' separators
+        if (canonical)
+        {
+            try
+            {
+                return file.getCanonicalPath().replace('\\', '/');
+            }
+            catch (IOException e)
+            {
+                return null;
+            }
+        }
+        else
+        {
+            return file.getPath().replace('\\', '/');
+        }
+    }
+    
 
     /**
      * A DiffSummaryReceiver implementation which collects all DiffSummary
