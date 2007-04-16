@@ -23,7 +23,7 @@ fi
 
 # We scan through the transaction diff, looking for things that look
 # like conflict markers.  If we find one, we abort the commit.
-SUSPICIOUS=$($SVNLOOK diff -t "$TXN" "$REPOS" | grep -E '^\+(<{7}|={7}|>{7})' | wc -l)
+SUSPICIOUS=$($SVNLOOK diff -t "$TXN" "$REPOS" | grep -E '^\+(<{7} \.|={7}$|>{7} \.)' | wc -l)
 
 if [ $SUSPICIOUS -ne 0 ]; then
   echo "Some parts of your commit look suspiciously like merge" >&2
