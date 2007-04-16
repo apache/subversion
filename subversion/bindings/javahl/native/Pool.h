@@ -38,15 +38,12 @@ class Pool
 public:
     Pool();
     ~Pool();
-
-    operator apr_pool_t * () const;
-
-    void clear();
+    apr_pool_t *pool() const;
 private:
     /**
      * the apr pool request pool
      */
-    apr_pool_t *pool;
+    apr_pool_t *m_pool;
 
     /**
      * We declare the copy constructor and assignment operator private

@@ -42,10 +42,7 @@ public:
     Revision(const svn_opt_revision_kind kind = svn_opt_revision_unspecified);
     ~Revision();
 
-    operator const svn_opt_revision_t * () const;
-
-    svn_revnum_t number() const;
-    svn_opt_revision_kind kind() const;
+    const svn_opt_revision_t *revision() const;
 
     /**
      * Make a Revision Java object.

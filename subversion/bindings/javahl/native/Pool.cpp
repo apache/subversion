@@ -32,7 +32,7 @@
 Pool::Pool()
 {
     JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
-    pool = svn_pool_create(JNIUtil::getPool());
+    m_pool = svn_pool_create(JNIUtil::getPool());
     JNIUtil::setRequestPool(this);
 }
 
@@ -43,25 +43,17 @@ Pool::~Pool()
 {
     JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
     JNIUtil::setRequestPool(NULL);
-    if (pool)
+    if (m_pool)
     {
-        svn_pool_destroy (pool);
+        svn_pool_destroy (m_pool);
     }
 
 }
-
 /**
  * Returns the apr pool.
+ * @return the apr pool
  */
-Pool::operator apr_pool_t * () const
+apr_pool_t *Pool::pool () const
 {
-    return pool;
-}
-
-/**
- * Clear the pool
- */
-void Pool::clear()
-{
-    svn_pool_clear(pool);
+    return m_pool;
 }

@@ -175,21 +175,9 @@ Revision::~Revision()
 
 }
 
-Revision::operator const svn_opt_revision_t * () const
+const svn_opt_revision_t *Revision::revision () const
 {
     return &m_revision;
-}
-
-svn_revnum_t
-Revision::number() const
-{
-    return m_revision.value.number;
-}
-
-svn_opt_revision_kind
-Revision::kind() const
-{
-    return m_revision.kind;
 }
 
 jobject
