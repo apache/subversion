@@ -947,6 +947,7 @@ main(int argc, const char *argv[])
   svn_auth_baton_t *ab;
   svn_config_t *cfg;
   svn_boolean_t used_change_arg = FALSE;
+  svn_boolean_t descend = TRUE;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -1184,7 +1185,7 @@ main(int argc, const char *argv[])
         opt_state.depth = SVN_DEPTH_FROM_RECURSE(TRUE);
         break;
       case 'N':
-        opt_state.depth = SVN_DEPTH_FROM_RECURSE(FALSE);
+        descend = FALSE;
         break;
       case svn_cl__depth_opt:
         err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
@@ -1552,6 +1553,14 @@ main(int argc, const char *argv[])
         }
     }
 
+  /* -N has a different meaning depending on the command */
+  if (descend == FALSE)
+    {
+      if (subcommand->cmd_func == svn_cl__status)
+        opt_state.depth = svn_depth_immediates;
+      else
+        opt_state.depth = SVN_DEPTH_FROM_RECURSE(FALSE);
+    }
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
   if ((err = svn_client_create_context(&ctx, pool)))

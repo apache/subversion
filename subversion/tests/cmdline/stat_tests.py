@@ -324,17 +324,21 @@ def status_for_unignored_file(sbox):
     os.remove('proptmp')
 
     # status on the directory with --no-ignore
+    expected = svntest.actions.UnorderedOutput(
+          ['I      newdir\n',
+           'I      newfile\n',
+           ' M     .\n'])
     svntest.actions.run_and_verify_svn(None,
-                                       ['I      newdir\n',
-                                        'I      newfile\n',
-                                        ' M     .\n'],
+                                       expected,
                                        [],
                                        'status', '--no-ignore', '.')
 
     # status specifying the file explicitly on the command line
+    expected = svntest.actions.UnorderedOutput(
+          ['I      newdir\n',
+           'I      newfile\n'])
     svntest.actions.run_and_verify_svn(None,
-                                       ['I      newdir\n',
-                                        'I      newfile\n'],
+                                       expected,
                                        [],
                                        'status', 'newdir', 'newfile')
   
@@ -965,13 +969,13 @@ def status_add_plus_conflict(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'merge',
                                      branch_url, '-r', '4:5', trunk_dir)
 
-  expected_output = [
+  expected_output = svntest.actions.UnorderedOutput([
     "?      " + os.path.join(wc_dir, "trunk", "file.merge-left.r4") + "\n",
     "?      " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
     "?      " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
     " M     " + os.path.join(wc_dir, "trunk") + "\n",
     "C  +   " + os.path.join(wc_dir, "trunk", "file") + "\n",
-  ]
+  ])
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'status', wc_dir)
@@ -1070,7 +1074,7 @@ def status_update_with_incoming_props(sbox):
   expected = svntest.actions.UnorderedOutput(
          ["                1        1 jrandom      " +
           os.path.join(wc_dir, "iota") + "\n",
-          "                1        1 jrandom      " + A_path + "\n",
+          "       *        1        1 jrandom      " + A_path + "\n",
           "       *        1        1 jrandom      " + wc_dir + "\n",
           "Status against revision:      2\n" ])
 
@@ -1095,6 +1099,23 @@ def status_update_with_incoming_props(sbox):
           "<status>\n",
           "<target\n",
           "   path=\"%s\">\n" % (wc_dir),
+          "<entry\n",
+          "   path=\"%s\">\n" % (A_path),
+          "<wc-status\n",
+          "   props=\"none\"\n",
+          "   item=\"normal\"\n",
+          "   revision=\"1\">\n",
+          "<commit\n",
+          "   revision=\"1\">\n",
+          "<author>%s</author>\n" % svntest.main.wc_author,
+          time_str,
+          "</commit>\n",
+          "</wc-status>\n",
+          "<repos-status\n",
+          "   props=\"modified\"\n",
+          "   item=\"none\">\n",
+          "</repos-status>\n",
+          "</entry>\n",
           "<entry\n",
           "   path=\"%s\">\n" % (wc_dir),
           "<wc-status\n",
@@ -1260,6 +1281,171 @@ def status_nonrecursive_update(sbox):
                                      [],
                                      "status", "-uN", A_path)
 
+def change_files(wc_dir, files):
+  """Make a basic change to the files.
+     files = a list of paths relative to the wc root directory
+  """
+
+  for file in files:
+    filepath = os.path.join(wc_dir, file)
+    svntest.main.file_append(filepath, "new line of text")
+
+def change_files_and_commit(wc_dir, files, baserev=1):
+  """Make a basic change to the files and commit them.
+     files = a list of paths relative to the wc root directory
+  """
+
+  change_files(wc_dir, files)
+
+  # Prepare expected trees for commit
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    'A/D/gamma' : Item(verb='Sending')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  commitrev = baserev + 1
+  for file in files:
+    expected_output.add({file : Item(verb='Sending')})
+    expected_status.tweak(file, wc_rev=commitrev, status='  ')
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+def status_depth_local(sbox):
+  "run 'status --depth=X' with local changes"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  D_path = os.path.join(A_path, 'D')
+
+  mu_path = os.path.join(A_path, 'mu')
+  gamma_path = os.path.join(D_path, 'gamma')
+
+  # make some changes to the greek tree
+  change_files(wc_dir, ['A/mu', 'A/D/gamma'])
+  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', A_path)
+  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', D_path)
+  
+  # for all the possible types of depth, check the status
+
+  # depth=empty
+  expected = svntest.actions.UnorderedOutput(
+                  [" M     %s\n" % A_path])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "--depth=empty", A_path)
+
+  # depth=files
+  expected = svntest.actions.UnorderedOutput(
+                  [" M     %s\n" % A_path,
+                   "M      %s\n" % mu_path])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "--depth=files", A_path)
+
+  # depth=immediates
+  expected = svntest.actions.UnorderedOutput(
+                  [" M     %s\n" % A_path,
+                   " M     %s\n" % D_path,
+                   "M      %s\n" % mu_path])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "--depth=immediates", A_path)
+
+  # depth=infinity (the default)
+  expected = svntest.actions.UnorderedOutput(
+                  [" M     %s\n" % A_path,
+                   " M     %s\n" % D_path,
+                   "M      %s\n" % mu_path,
+                   "M      %s\n" % gamma_path])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "--depth=infinity", A_path)
+
+def status_depth_update(sbox):
+  "run 'status --depth=X -u' with incoming changes"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  D_path = os.path.join(A_path, 'D')
+
+  mu_path = os.path.join(A_path, 'mu')
+  gamma_path = os.path.join(D_path, 'gamma')
+
+  # add some files, change directory properties
+  change_files_and_commit(wc_dir, ['A/mu', 'A/D/gamma'])
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', A_path)
+  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', D_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+
+  # update to r1
+  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
+
+  # for all the possible types of depth, check the status
+
+  # depth=empty
+  expected = svntest.actions.UnorderedOutput(
+                  ["       *        1   %s\n" % A_path,
+                   "Status against revision:      3\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=empty", A_path)
+
+  # depth=files
+  expected = svntest.actions.UnorderedOutput(
+                  ["       *        1   %s\n" % mu_path,
+                   "       *        1   %s\n" % A_path,
+                   "Status against revision:      3\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=files", 
+                                     A_path)
+
+  # depth=immediates
+  expected = svntest.actions.UnorderedOutput(
+                  ["       *        1   %s\n" % A_path,
+                   "       *        1   %s\n" % D_path,
+                   "       *        1   %s\n" % mu_path,
+                   "Status against revision:      3\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=immediates", 
+                                     A_path)
+
+  # depth=infinity (the default)
+  expected = svntest.actions.UnorderedOutput(
+                  ["       *        1   %s\n" % A_path,
+                   "       *        1   %s\n" % D_path,
+                   "       *        1   %s\n" % mu_path,
+                   "       *        1   %s\n" % gamma_path,
+                   "Status against revision:      3\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=infinity", 
+                                     A_path)
+
+
 #----------------------------------------------------------------------
 # Test for issue #2420
 def status_dash_u_deleted_directories(sbox):
@@ -1358,6 +1544,8 @@ test_list = [ None,
               status_update_verbose_with_incoming_props,
               status_nonrecursive_update,
               status_dash_u_deleted_directories,
+              status_depth_local,
+              status_depth_update
              ]
 
 if __name__ == '__main__':

@@ -208,12 +208,14 @@ enum svn_recurse_kind
  */
 typedef enum
 {
-  /* Depth undetermined or ignored.
-    ### TODO(sd): This depth may turn out to be unnecessary. ### */
+  /* The order of these depths is important: the higher the number,
+     the deeper it descends.  This allows us to compare two depths
+     numerically to decide which should govern. */
+
+  /* Depth undetermined or ignored. */
   svn_depth_unknown    = -2,
 
-  /* Exclude (remove, whatever) directory D.
-     ### TODO(sd): This depth may turn out to be unnecessary. ### */
+  /* Exclude (i.e., don't descend into) directory D. */
   svn_depth_exclude    = -1,
 
   /* Just the named directory D, no entries.  Updates will not pull in

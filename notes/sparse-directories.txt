@@ -393,7 +393,6 @@ Contents
          svn_client_info()      # I don't think this needs to take depth.
          svn_client_add3()      # I don't think this needs to take depth.
 
-         svn_wc_get_status_editor2() # Yes, probably should take depth.
          svn_wc_get_switch_editor3() # Yes, probably should take depth.
          svn_wc_revert2()            # Really not sure about this one.
          svn_wc_resolved_conflict2() # Really not sure about this one.
