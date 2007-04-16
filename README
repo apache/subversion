@@ -29,13 +29,11 @@ I. Building dependencies:
 
 II. Building and testing csvn itself
 
-  1. Build csvn/core/defines.py
-       $ python generate-defines.py > csvn/core/defines.py
+  1. Build csvn/core/defines.py and csvn/core/functions.py
 
-  2. Build csvn/core/functions.py
-       $ python generate-functions.py
+       $ python autogen.py
 
-  3. Check that defines.py and functions.py have been built correctly.
+  2. Check that defines.py and functions.py have been built correctly.
 
        $ ls -l csvn/core
 
@@ -44,7 +42,7 @@ II. Building and testing csvn itself
           -rw-r--r--  1 djames svnadmin   2044 Apr 12 23:00 functions.py.in
           -rw-r--r--  1 djames svnadmin   2523 Apr 12 23:04 __init__.py
 
-  4. Run example.py and see whether it works. If it works, the output
+  3. Run example.py and see whether it works. If it works, the output
      should look something like this:
 
        $ python example.py
