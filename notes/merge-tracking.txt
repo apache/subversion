@@ -34,7 +34,7 @@ history index).
 
 * Provide a libsvn_client API capable of listing "all unmerged
   revisions".  Client tools will use this to allow the user to select
-  the revisions to merge.
+  the revisions to merge.  (kamesh)
 
 * Allow for merge info which contains empty range lists, necessary for
   override of merge info by child paths which would otherwise inherit
