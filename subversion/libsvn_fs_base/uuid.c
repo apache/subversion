@@ -24,6 +24,8 @@
 #include "bdb/uuids-table.h"
 #include "../libsvn_fs/fs-loader.h"
 
+#include "private/svn_fs_util.h"
+
 
 struct get_uuid_args
 {
@@ -48,7 +50,7 @@ svn_fs_base__get_uuid(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR(svn_fs_base__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
 
   /* Check for a cached UUID first.  Failing that, we hit the
      database. */
@@ -96,7 +98,7 @@ svn_fs_base__set_uuid(svn_fs_t *fs,
   struct set_uuid_args args;
   base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR(svn_fs_base__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
 
   args.idx = 1;
   args.uuid = uuid;

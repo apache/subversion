@@ -289,7 +289,7 @@ svn_fs_fs__revision_root(svn_fs_root_t **root_p,
 {
   dag_node_t *root_dir;
 
-  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
 
   SVN_ERR(svn_fs_fs__dag_revision_root(&root_dir, fs, rev, pool));
 
@@ -389,7 +389,7 @@ mutable_root_node(dag_node_t **node_p,
     return svn_fs_fs__dag_clone_root(node_p, root->fs, root->txn, pool);
   else
     /* If it's not a transaction root, we can't change its contents.  */
-    return svn_fs_fs__err_not_mutable(root->fs, root->rev, error_path);
+    return svn_fs__err_not_mutable(root->fs, root->rev, error_path);
 }
 
 
@@ -752,7 +752,7 @@ open_path(parent_path_t **parent_path_p,
       
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_fs__dag_node_kind(child) != svn_node_dir)
-        SVN_ERR_W(svn_fs_fs__err_not_directory(fs, path_so_far),
+        SVN_ERR_W(svn_fs__err_not_directory(fs, path_so_far),
                   apr_psprintf(pool, _("Failure opening '%s'"), path));
       
       rest = next;
@@ -1313,7 +1313,7 @@ merge(svn_stringbuf_t *conflict_p,
     }
 
   /* We have the same fs, now check it. */
-  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
 
   source_id   = svn_fs_fs__dag_get_id(source);
   target_id   = svn_fs_fs__dag_get_id(target);
