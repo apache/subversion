@@ -99,7 +99,8 @@ public class BlameCallbackImpl implements BlameCallback
          * @param changed
          * @param line
          */
-        public BlameLine(long revision, String author, Date changed, String line)
+        public BlameLine(long revision, String author,
+                         Date changed, String line)
         {
             super();
             this.revision = revision;
