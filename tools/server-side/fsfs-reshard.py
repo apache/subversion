@@ -39,6 +39,11 @@
 # individuals.  For exact contribution history, see the revision
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
+#
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
 
 import os, stat, sys
 
