@@ -1,29 +1,56 @@
-# -*- ruby -*-
+#!/usr/bin/env ruby
 
-def usage
-  puts "#{$0} target_directory"
+require 'optparse'
+require 'ostruct'
+require 'tmpdir'
+require 'fileutils'
+
+options = OpenStruct.new
+options.output_dir = File.expand_path(Dir.pwd)
+
+opts = OptionParser.new do |opts|
+  opts.banner += " DIRECTORIES"
+  opts.on("-oDIRECTORY", "--output-dir=DIRECTORY",
+          "Output generated gem to DIRECTORY",
+          "[#{options.output_dir}]") do |dir|
+    options.output_dir = File.expand_path(dir)
+  end
+
+  opts.separator ""
+
+  opts.on("-h", "--help", "Show this message") do
+    puts opts
+    exit
+  end
 end
 
-if ARGV.size < 1
-  usage
+target_dirs = opts.parse!(ARGV)
+if target_dirs.empty?
+  puts opts
   exit 1
 end
 
-target_dir = ARGV.shift
-
-if target_dir == "--help"
-  usage
-  exit
+target_dirs.each do |dir|
+  next unless File.basename(dir) == "ruby"
+  base_dir = File.expand_path(dir)
+  $LOAD_PATH.unshift(File.join(base_dir, "ext"))
+  $LOAD_PATH.unshift(File.join(base_dir, "lib"))
 end
-
-base_dir = File.expand_path(File.join(target_dir, "ruby"))
-$LOAD_PATH.unshift(File.join(base_dir, "ext"))
-$LOAD_PATH.unshift(File.join(base_dir, "lib"))
 
 require 'svn/core'
 
-gem_file = nil
-Dir.chdir(target_dir) do
+
+archive_dir = File.join(Dir.tmpdir, "svn-ruby-gem-#{Process.pid}")
+FileUtils.mkdir(archive_dir)
+at_exit {FileUtils.rm_rf(archive_dir)}
+
+target_dirs.each do |dir|
+  FileUtils.cp_r(dir, archive_dir)
+end
+
+
+generated_gem_file = nil
+Dir.chdir(archive_dir) do
   require 'rubygems'
   Gem.manage_gems
 
@@ -42,6 +69,8 @@ Dir.chdir(target_dir) do
     s.required_ruby_version = '>= 1.8.2'
   end
 
-  gem_file = File.expand_path(Gem::Builder.new(spec).build)
+  generated_gem_file = File.expand_path(Gem::Builder.new(spec).build)
 end
-FileUtils.mv(gem_file, File.basename(gem_file))
+
+gem_file = File.join(options.output_dir, File.basename(generated_gem_file))
+FileUtils.mv(generated_gem_file, gem_file)
