@@ -186,11 +186,11 @@ commands</em>, are:</p>
   <li><code>svn status --show-updates</code></li>
 </ul>
 
-<p>Both <code>svn info</code> and <code>svn ls --verbose</code> are purposely
-not included in this list, on the grounds that one would typically need more
-information than they can reasonably provide.  Also, adding more output
-to these commands would clutter the interface, further reducing their utility.
-</p>
+<p>Both <code>svn info</code> and <code>svn ls --verbose</code> are
+purposely not included in this list, on the grounds that one would
+typically need more information than they can reasonably provide.
+Adding more output to these commands would clutter their interface,
+further reducing their utility.  </p>
 
 <p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
 single-character shortcut, will be introduced for the auditing commands.
@@ -202,7 +202,7 @@ as follows.</p>
 
 <dl>
   <dt><code>svn log</code></dt>
-  <dd><p>The original log message, in the current format, with the
+  <dd><p>The original log message(s), in the current format, with the
   addition of a list of revisions and merge source paths that have
   been merged into the target.  The output for <code>log</code> should
   be consistent with the <code>diff</code> output for the
@@ -235,9 +235,12 @@ as follows.</p>
   <li>How will <code>--merge-sensitive</code> behave for commits which remove
   merge info (e.g. reverts)?</li>
 
-  <li>In the case of <code>svn log</code>, would the user be better served if we
-  just included the original revision logs in line with the logs (i.e., no
+  <li>In the case of <code>svn log</code>, would the user be better served if
+  we just included the original revision logs in line with the logs (i.e., no
   special indentation, etc.)?</li>
+
+  <li>What happens when <code>svn status --show-updates</code> has
+  multiple original authors?</li>
 </ul>
 
 </div>  <!-- auditing-questions -->
