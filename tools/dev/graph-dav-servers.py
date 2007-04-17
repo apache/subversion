@@ -70,7 +70,8 @@ STATS = """1/1/2003       70
 12/1/2006              68988
 1/1/2007               77027
 2/1/2007               84813
-3/1/2007               95679"""
+3/1/2007               95679
+4/1/2007              103852"""
 
 
 def get_date(raw_date):
@@ -100,17 +101,19 @@ def parse_stats(str):
 def draw_graph(dates, counts):
   ###########################################################
   # Drawing takes place here.
+  figure(1, figsize=(6.5, 4.5))
+
   ax = subplot(111)
   ax.xaxis.set_major_formatter( DateFormatter('%b,%y') )
   ax.yaxis.set_major_formatter( FormatStrFormatter('%d') )
 
-  line = bar(dates, counts,  color='r', width=24)
+  plot(dates, counts, color='r', marker='o', markersize=3)
 
   ylabel('Total # of Public DAV Servers')
 
   lastdate = datetime.fromordinal(dates[len(dates) - 1]).strftime("%B %Y")
   xlabel("Data as of " + lastdate)
-  title('Security Space Survey of Public Subversion DAV Servers')
+  title('Security Space Survey of\nPublic Subversion DAV Servers')
   # End drawing
   ###########################################################
   png = open(OUTPUT_FILE, 'w')
