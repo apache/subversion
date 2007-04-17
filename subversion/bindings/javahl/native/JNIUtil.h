@@ -138,7 +138,7 @@ private:
     /**
      * global master pool. All other pool are subpools of this pool
      */
-    static apr_pool_t* g_pool;
+    static apr_pool_t *g_pool;
     /**
      * list of objects finalized, where the C++ peer has not yet be deleted
      */

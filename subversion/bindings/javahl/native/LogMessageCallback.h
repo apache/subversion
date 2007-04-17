@@ -38,10 +38,10 @@ public:
     LogMessageCallback(jobject jcallback);
     ~LogMessageCallback();
 
-    static svn_error_t * callback(void *baton, apr_hash_t *changed_paths,
-                                  svn_revnum_t rev, const char *author,
-                                  const char *date, const char *msg,
-                                  apr_pool_t *pool);
+    static svn_error_t *callback(void *baton, apr_hash_t *changed_paths,
+                                 svn_revnum_t rev, const char *author,
+                                 const char *date, const char *msg,
+                                 apr_pool_t *pool);
 protected:
     svn_error_t *singleMessage(apr_hash_t *changed_paths, svn_revnum_t rev,
                                const char *author, const char *date,

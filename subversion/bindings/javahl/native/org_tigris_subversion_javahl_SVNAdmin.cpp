@@ -56,7 +56,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_dispose
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNAdmin_finalize
-  (JNIEnv* env, jobject jthis)
+  (JNIEnv *env, jobject jthis)
 {
     JNIEntry(SVNAdmin, finalize);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);

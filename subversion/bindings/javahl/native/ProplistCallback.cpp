@@ -59,7 +59,7 @@ ProplistCallback::callback(void *baton,
  * @param prop_hash the hash of properties on this path
  * @param pool      memory pool for the use of this function
  */
-svn_error_t* ProplistCallback::singlePath(const char *path,
+svn_error_t *ProplistCallback::singlePath(const char *path,
                                           apr_hash_t *prop_hash,
                                           apr_pool_t *pool)
 {

@@ -180,7 +180,7 @@ private:
                                const char *name, svn_string_t *value);
     jobject createJavaDirEntry(const char *path, svn_dirent_t *dirent);
     svn_client_ctx_t *getContext(const char *message);
-    svn_stream_t *createReadStream(apr_pool_t* pool, const char *path,
+    svn_stream_t *createReadStream(apr_pool_t *pool, const char *path,
                                    Revision &revision, Revision &pegRevision,
                                    size_t& size);
     /**
