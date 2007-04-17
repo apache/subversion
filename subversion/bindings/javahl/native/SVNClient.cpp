@@ -794,7 +794,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     return createJavaProperty(jthis, path, name, propval);
 }
 
-void SVNClient::properties(const char *path, Revision & revision,
+void SVNClient::properties(const char *path, Revision &revision,
                            Revision &pegRevision, bool recurse,
                            ProplistCallback *callback)
 {
@@ -1329,8 +1329,8 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
 }
 
 svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
-                                          Revision& revision,
-                                          Revision &pegRevision, size_t& size)
+                                          Revision &revision,
+                                          Revision &pegRevision, size_t &size)
 {
     svn_stream_t *read_stream = NULL;
 

@@ -74,7 +74,7 @@ public:
     /**
      * Assignment operator
      */
-    Path& operator=(const Path&);
+    Path &operator=(const Path&);
 
     /**
      * @return Path string
