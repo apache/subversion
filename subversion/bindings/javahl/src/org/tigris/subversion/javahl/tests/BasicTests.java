@@ -1852,7 +1852,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.logMessage functionality
+     * Test the basic SVNClient.logMessages functionality.
      * @throws Throwable
      */
     public void testBasicLogMessage() throws Throwable
