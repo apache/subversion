@@ -186,9 +186,11 @@ commands</em>, are:</p>
   <li><code>svn status --show-updates</code></li>
 </ul>
 
-<p><code>svn info</code> is purposely not included in this list, on
-the grounds that one would typically need more information than it can
-reasonably provide.</p>
+<p>Both <code>svn info</code> and <code>svn ls --verbose</code> are purposely
+not included in this list, on the grounds that one would typically need more
+information than they can reasonably provide.  Also, adding more output
+to these commands would clutter the interface, further reducing their utility.
+</p>
 
 <p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
 single-character shortcut, will be introduced for the auditing commands.
@@ -236,9 +238,6 @@ as follows.</p>
   <li>In the case of <code>svn log</code>, would the user be better served if we
   just included the original revision logs in line with the logs (i.e., no
   special indentation, etc.)?</li>
-
-  <li>What about <code>svn ls --verbose</code>, which also shows revisions and
-  usernames?</li>
 </ul>
 
 </div>  <!-- auditing-questions -->
