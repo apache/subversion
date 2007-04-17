@@ -38,8 +38,9 @@ LogMessageCallback::LogMessageCallback(jobject jcallback)
  */
 LogMessageCallback::~LogMessageCallback()
 {
-    // The m_callback does not need to be destroyed, because it is the
-    // passed in parameter to the Java SVNClient.log method.
+    // The m_callback does not need to be destroyed because it is the
+    // passed in parameter to the Java SVNClientInterface.logMessages
+    // method.
 }
 
 svn_error_t *
