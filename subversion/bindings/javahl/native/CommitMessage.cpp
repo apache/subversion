@@ -32,8 +32,9 @@ CommitMessage::CommitMessage(jobject jcommitMessage)
 
 CommitMessage::~CommitMessage()
 {
-    // since the m_jcommitMessage is a global reference, it has to be deleted
-    // to allow the Java garbage collector to reclaim the object.
+    // Since the m_jcommitMessage is a global reference, it has to be
+    // deleted to allow the Java garbage collector to reclaim the
+    // object.
     if (m_jcommitMessage!= NULL)
     {
         JNIEnv *env = JNIUtil::getEnv();
@@ -43,12 +44,13 @@ CommitMessage::~CommitMessage()
 
 CommitMessage *CommitMessage::makeCCommitMessage(jobject jcommitMessage)
 {
-    // if there is no object passed into this method, there is no need for a
-    // C++ holding object
+    // If there is no object passed into this method, there is no need
+    // for a C++ holding object.
     if (jcommitMessage == NULL)
         return NULL;
 
-    // Sanity check, that the passed Java object implements the right interface
+    // Sanity check, that the passed Java object implements the right
+    // interface.
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitMessage");
     if (JNIUtil::isJavaExceptionThrown())
@@ -64,8 +66,8 @@ CommitMessage *CommitMessage::makeCCommitMessage(jobject jcommitMessage)
         return NULL;
 
     // Since the reference is longer needed then the duration of the
-    // SVNClient.commtMessage, the local reference has to be converted to a
-    // global reference
+    // SVNClient.commtMessage, the local reference has to be converted
+    // to a global reference.
     jobject myCommitMessage = env->NewGlobalRef(jcommitMessage);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
@@ -93,10 +95,10 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
     if (JNIUtil::isExceptionThrown())
         return NULL;
 
-    // Java method ids will not change during the time this library is loaded,
-    // so they can be cached.
+    // Java method ids will not change during the time this library is
+    // loaded, so they can be cached.
 
-    // get the method id for the CommitItem constructor
+    // Get the method id for the CommitItem constructor.
     static jmethodID midConstructor = 0;
     if (midConstructor == 0)
     {

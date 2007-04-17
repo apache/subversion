@@ -25,12 +25,13 @@
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
+
 #include <jni.h>
 #include "svn_client.h"
 
 /**
- * This class holds a Java callback object, which will receive every line of
- * the file for which the callback information is requested.
+ * This class holds a Java callback object, which will receive every
+ * line of the file for which the callback information is requested.
  */
 class BlameCallback
 {
@@ -53,9 +54,10 @@ protected:
 
 private:
     /**
-     * this a local reference to the Java object.
+     * This a local reference to the Java object.
      */
     jobject m_callback;
 };
+
 // !defined(AFX_BLAMECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
 #endif

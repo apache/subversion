@@ -37,7 +37,8 @@ Pool::Pool()
 }
 
 /**
- * Destructor to destroy the apr pool and to clear the request pool pointer
+ * Destructor to destroy the apr pool and to clear the request pool
+ * pointer.
  */
 Pool::~Pool()
 {
@@ -49,6 +50,7 @@ Pool::~Pool()
     }
 
 }
+
 /**
  * Returns the apr pool.
  * @return the apr pool

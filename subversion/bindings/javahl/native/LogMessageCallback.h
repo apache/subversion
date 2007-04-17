@@ -48,9 +48,10 @@ protected:
                                const char *msg, apr_pool_t *pool);
 private:
     /**
-     * this a local reference to the Java object.
+     * This a local reference to the Java object.
      */
     jobject m_callback;
 };
+
 // !defined(AFX_LOG_MESSAGECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
 #endif

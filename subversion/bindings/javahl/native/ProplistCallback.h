@@ -50,11 +50,12 @@ protected:
 
 private:
     /**
-     * this a local reference to the Java object.
+     * This a local reference to the Java object.
      */
     jobject m_callback;
 
     jobject makeMapFromHash(apr_hash_t *prop_hash, apr_pool_t *pool);
 };
+
 // !defined(_PROPLISTCALLBACK_H__INCLUDED_)
 #endif

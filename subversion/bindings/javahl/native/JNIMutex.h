@@ -25,11 +25,13 @@
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
+
 class JNICriticalSection;
 struct apr_pool_t;
 struct apr_thread_mutex_t;
+
 /**
- * This class holds a apr mutex for the use of JNICriticalSection
+ * This class holds a apr mutex for the use of JNICriticalSection.
  */
 class JNIMutex
 {
@@ -39,9 +41,10 @@ public:
     friend class JNICriticalSection;
 private:
     /**
-     * the apr mutex
+     * The apr mutex.
      */
     apr_thread_mutex_t *m_mutex;
 };
+
 // !defined(AFX_JNIMUTEX_H__958B52A6_00A3_458F_981F_0A3095D39EE8__INCLUDED_)
 #endif

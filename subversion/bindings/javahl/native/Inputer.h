@@ -31,13 +31,13 @@
 
 /**
  * This class contains a Java objects implementing the interface Inputer and
- * implements the functions read & close of svn_stream_t
+ * implements the functions read & close of svn_stream_t.
  */
 class Inputer
 {
 private:
     /**
-     * a local reference to the Java object
+     * A local reference to the Java object.
      */
     jobject m_jthis;
     static svn_error_t *read(void *baton, char *buffer, apr_size_t *len);
@@ -47,5 +47,6 @@ public:
     ~Inputer();
     svn_stream_t *getStream(const Pool &pool);
 };
+
 // !defined(AFX_INPUTER_H__6896EB42_07D2_406B_A4A5_F2908AFF4815__INCLUDED_)
 #endif

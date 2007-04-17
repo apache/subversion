@@ -29,9 +29,9 @@
 struct apr_pool_t;
 
 /**
- * this class manages one apr pool. Objects of this class are allocated on
- * the stack of the SVNClient & SVNAdmin methods as the request pool.
- * Leaving the methods will destroy the pool.
+ * This class manages one APR pool.  Objects of this class are
+ * allocated on the stack of the SVNClient and SVNAdmin methods as the
+ * request pool.  Leaving the methods will destroy the pool.
  */
 class Pool
 {
@@ -41,7 +41,7 @@ public:
     apr_pool_t *pool() const;
 private:
     /**
-     * the apr pool request pool
+     * The apr pool request pool.
      */
     apr_pool_t *m_pool;
 
@@ -56,5 +56,6 @@ private:
     Pool(Pool &that);
     Pool &operator= (Pool &that);
 };
+
 // !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)
 #endif

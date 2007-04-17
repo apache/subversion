@@ -18,6 +18,7 @@
  * @file EnumMapper.cpp
  * @brief Implementation of the class EnumMapper
  */
+
 #include "EnumMapper.h"
 #include "../include/org_tigris_subversion_javahl_CommitItemStateFlags.h"
 #include "../include/org_tigris_subversion_javahl_NotifyAction.h"
@@ -27,8 +28,9 @@
 #include "../include/org_tigris_subversion_javahl_StatusKind.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_ScheduleKind.h"
+
 /**
- * map a C commit state flag constant to the Java constant
+ * Map a C commit state flag constant to the Java constant.
  * @param state     the c commit state flage constant
  * @returns the Java constant
  */
@@ -52,8 +54,9 @@ jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
             org_tigris_subversion_javahl_CommitItemStateFlags_IsCopy;
     return jstateFlags;
 }
+
 /**
- * map a C notify state constant to the Java constant
+ * Map a C notify state constant to the Java constant.
  * @param state     the c notify state constant
  * @returns the Java constant
  */
@@ -88,16 +91,17 @@ jint EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
     }
 
 }
+
 /**
- * map a C notify action constant to the Java constant
+ * Map a C notify action constant to the Java constant.
  * @param state     the c notify action constant
  * @returns the Java constant
  */
 jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
 {
     jint jAction = -1;
-    // this is a switch to make the Java constants independent from the C
-    // constants
+    // This is a switch to make the Java constants independent from
+    // the C constants.
     switch(action)
     {
     case svn_wc_notify_add:
@@ -129,7 +133,8 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
         jAction = org_tigris_subversion_javahl_NotifyAction_resolved;
         break;
     case svn_wc_notify_status_completed:
-        /* The last notification in a status (including status on externals). */
+        /* The last notification in a status (including status on
+         * externals). */
         jAction = org_tigris_subversion_javahl_NotifyAction_status_completed;
         break;
     case svn_wc_notify_status_external:
@@ -153,7 +158,8 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
         jAction = org_tigris_subversion_javahl_NotifyAction_update_update;
         break;
     case svn_wc_notify_update_completed:
-        /* The last notification in an update (including updates of externals). */
+        /* The last notification in an update (including updates of
+         * externals). */
         jAction = org_tigris_subversion_javahl_NotifyAction_update_completed;
         break;
     case svn_wc_notify_update_external:
@@ -220,9 +226,10 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
     }
     return jAction;
 }
+
 /**
- * map a C node kind constant to the Java constant
- * @param state     the c node kind constant
+ * Map a C node kind constant to the Java constant.
+ * @param state     the C node kind constant
  * @returns the Java constant
  */
 jint EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
@@ -245,9 +252,10 @@ jint EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
     }
     return jKind;
 }
+
 /**
- * map a C notify lock state constant to the Java constant
- * @param state     the c notify lock state constant
+ * Map a C notify lock state constant to the Java constant.
+ * @param state     the C notify lock state constant
  * @returns the Java constant
  */
 jint EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
@@ -273,9 +281,10 @@ jint EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
     }
     return jState;
 }
+
 /**
- * map a C wc schedule constant to the Java constant
- * @param state     the c wc schedule constant
+ * Map a C wc schedule constant to the Java constant.
+ * @param state     the C wc schedule constant
  * @returns the Java constant
  */
 jint EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
@@ -302,9 +311,10 @@ jint EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
         return org_tigris_subversion_javahl_ScheduleKind_normal;
     }
 }
+
 /**
- * map a C wc state constant to the Java constant
- * @param state     the c wc state constant
+ * Map a C wc state constant to the Java constant.
+ * @param state     the C wc state constant
  * @returns the Java constant
  */
 jint EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)

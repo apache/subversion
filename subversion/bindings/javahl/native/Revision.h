@@ -49,5 +49,6 @@ public:
      */
     static jobject makeJRevision(svn_revnum_t rev);
 };
+
 // !defined(AFX_REVISION_H__BEAA0788_C9D9_4A67_B94E_761ABC68ACFE__INCLUDED_)
 #endif

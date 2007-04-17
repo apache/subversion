@@ -29,18 +29,13 @@
 #include "svn_path.h"
 #include "svn_utf.h"
 #include "svn_private_config.h"
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
 
 SVNAdmin::SVNAdmin()
 {
-
 }
 
 SVNAdmin::~SVNAdmin()
 {
-
 }
 
 SVNAdmin *SVNAdmin::getCppObject(jobject jthis)
@@ -138,7 +133,7 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
     }
 
     /* Loop over the requested revision range, performing the
-       predecessor deltification on paths changed in each. */
+     * predecessor deltification on paths changed in each. */
     for (revision = start; revision <= end; revision++)
     {
         svn_pool_clear (revisionPool);
@@ -235,8 +230,8 @@ list_dblogs (const char *path, MessageReceiver &receiver, bool only_unused)
                                       requestPool.pool()), );
 
     /* Loop, printing log files.  We append the log paths to the
-       repository path, making sure to return everything to the native
-       style and encoding before printing. */
+     * repository path, making sure to return everything to the native
+     * style and encoding before printing. */
     for (i = 0; i < logfiles->nelts; i++)
     {
         const char *log_utf8;
@@ -313,8 +308,8 @@ jlong SVNAdmin::recover(const char *path)
                 -1);
 
     /* Since db transactions may have been replayed, it's nice to tell
-       people what the latest revision is.  It also proves that the
-       recovery actually worked. */
+     * people what the latest revision is.  It also proves that the
+     * recovery actually worked. */
     SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), -1);
     SVN_JNI_ERR(svn_fs_youngest_rev(&youngest_rev, svn_repos_fs (repos),
                                     requestPool.pool()),
@@ -350,9 +345,9 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
             err = svn_fs_abort_txn (txn, transactionPool);
 
         /* If either the open or the abort of the txn fails because that
-           transaction is dead, just try to purge the thing.  Else,
-           there was either an error worth reporting, or not error at
-           all.  */
+         * transaction is dead, just try to purge the thing.  Else,
+         * there was either an error worth reporting, or not error at
+         * all.  */
         if (err && (err->apr_err == SVN_ERR_FS_TRANSACTION_DEAD))
         {
             svn_error_clear (err);
@@ -360,8 +355,8 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
         }
 
         /* If we had a real from the txn open, abort, or purge, we clear
-           that error and just report to the user that we had an issue
-           with this particular txn. */
+         * that error and just report to the user that we had an issue
+         * with this particular txn. */
         SVN_JNI_ERR(err, );
         svn_pool_clear (transactionPool);
     }
@@ -383,13 +378,13 @@ void SVNAdmin::setRevProp(const char *path, Revision &revision,
                               _("Missing revision")), );
     }
 
-    /* Open the filesystem  */
+    /* Open the filesystem. */
     svn_repos_t *repos;
     path = svn_path_internal_style(path, requestPool.pool());
     SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
 
     /* If we are bypassing the hooks system, we just hit the filesystem
-       directly. */
+     * directly. */
     svn_error_t *err;
     svn_string_t *propValStr = svn_string_create(propValue, requestPool.pool());
     if (usePreRevPropChangeHook || usePostRevPropChangeHook)
@@ -419,7 +414,7 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
     svn_revnum_t youngest;
 
     /* This whole process is basically just a dump of the repository
-       with no interest in the output. */
+     * with no interest in the output. */
     SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
     SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs (repos),
                                     requestPool.pool()), );
@@ -495,7 +490,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
     const char *username;
 
     /* svn_fs_unlock() demands that some username be associated with the
-       filesystem, so just use the UID of the person running 'svnadmin'.*/
+     * filesystem, so just use the UID of the person running 'svnadmin'.*/
     {
         apr_uid_t uid;
         apr_gid_t gid;

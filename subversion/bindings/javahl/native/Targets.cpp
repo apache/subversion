@@ -27,9 +27,6 @@
 #include <apr_strings.h>
 #include "svn_path.h"
 #include <iostream>
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
 
 Targets::~Targets()
 {
@@ -38,6 +35,7 @@ Targets::~Targets()
         JNIUtil::getEnv()->DeleteLocalRef(m_targetArray);
     }
 }
+
 Targets::Targets(const char *path)
 {
     m_targetArray = NULL;
@@ -45,6 +43,7 @@ Targets::Targets(const char *path)
     m_error_occured = NULL;
     m_doesNotContainsPath = false;
 }
+
 void Targets::add(const char *path)
 {
     m_targets.push_back (path);

@@ -25,12 +25,14 @@
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
+
 #include <jni.h>
 #include "JNIUtil.h"
 struct apr_threadkey_t;
 class Pool;
+
 /**
- * this class implements thread local storage for JNIUtil.
+ * This class implements thread local storage for JNIUtil.
  */
 class JNIThreadData
 {
@@ -42,31 +44,38 @@ public:
     static void popThreadData();
     JNIThreadData();
     ~JNIThreadData();
+
     /**
-     * the current JNI environment
+     * The current JNI environment.
      */
     JNIEnv *m_env;
+
     /**
-     * flag that a Java execption has been detected
+     * Flag that a Java execption has been detected.
      */
     bool m_exceptionThrown;
+
     /**
-     * a buffer used for formating messages
+     * A buffer used for formating messages.
      */
     char m_formatBuffer[JNIUtil::formatBufferSize];
+
     /**
-     * the pool for the current request (call)
+     * The pool for the current request (call).
      */
     Pool *m_requestPool;
 private:
    /**
-    * pointer to previous thread information to enable reentrent calls
+    * Pointer to previous thread information to enable reentrent
+    * calls.
     */
     JNIThreadData *m_previous;
+
     /**
-     * the key to address this thread local storage
+     * The key to address this thread local storage.
      */
     static apr_threadkey_t *g_key;
 };
+
 // !defined(AFX_JNITHREADDATA_H__2BF37407_7EA8_4F74_9080_C86696617F7F__INCLUDED_)
 #endif

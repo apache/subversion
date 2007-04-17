@@ -22,9 +22,7 @@
 #include "Revision.h"
 #include "../include/org_tigris_subversion_javahl_RevisionKind.h"
 #include "JNIUtil.h"
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
+
 const svn_opt_revision_kind Revision::START = svn_opt_revision_unspecified;
 const svn_opt_revision_kind Revision::HEAD = svn_opt_revision_head;
 
@@ -34,8 +32,8 @@ Revision::Revision (const svn_opt_revision_kind kind)
     m_revision.value.number = 0;
 }
 
-
-Revision::Revision(jobject jthis, bool headIfUnspecified, bool oneIfUnspecified)
+Revision::Revision(jobject jthis, bool headIfUnspecified,
+                   bool oneIfUnspecified)
 {
     if (jthis == NULL)
     {

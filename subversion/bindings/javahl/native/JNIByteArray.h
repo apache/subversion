@@ -27,23 +27,27 @@
 #endif // _MSC_VER > 1000
 
 #include <jni.h>
+
 /**
- * this class holds a Java byte array to give easy access to its bytes
+ * This class holds a Java byte array to give easy access to its
+ * bytes.
  */
 class JNIByteArray
 {
 private:
     /**
-     *  a local reference to the byte array
+     *  A local reference to the byte array.
      */
     jbyteArray m_array;
+
     /**
-     *  the cache bytes of the byte array
+     * The cache bytes of the byte array.
      */
     jbyte *m_data;
+
     /**
-     * flag that the underlying byte array reference should be deleted at
-     * destruction
+     * Flag that the underlying byte array reference should be deleted
+     * at destruction.
      */
     bool m_deleteByteArray;
 public:
@@ -52,7 +56,6 @@ public:
     int getLength();
     JNIByteArray(jbyteArray jba, bool deleteByteArray = false);
     ~JNIByteArray();
-
 };
 
 //!defined(AFX_JNIBYTEARRAY_H__FB74054F_CD5E_41D5_A4B0_25DE9A8574CF__INCLUDED_)

@@ -26,6 +26,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 class JNIMutex;
+
 /**
  * This class holds a mutex which will be locked during the constructor and
  * released during the destructor. If the object is created on the stack, this
@@ -40,9 +41,10 @@ public:
     ~JNICriticalSection();
 private:
     /**
-     * the mutex to be locked and released
+     * The mutex to be locked and released.
      */
     JNIMutex *m_mutex;
 };
+
 // !defined(AFX_JNICRITICALSECTION_H__601F33CC_3378_4B09_9917_6242857EF2B7__INCLUDED_)
 #endif

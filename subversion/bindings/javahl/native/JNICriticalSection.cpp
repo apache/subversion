@@ -26,6 +26,7 @@
 #include <apr_lib.h>
 #include "JNIUtil.h"
 #include "JNIMutex.h"
+
 /**
  * Create the critical section and lock the mutex
  * @param mutext    the underlying mutex
@@ -43,7 +44,7 @@ JNICriticalSection::JNICriticalSection(JNIMutex &mutex)
 }
 
 /**
- * Release the mutex and the destroy the critical section
+ * Release the mutex and the destroy the critical section.
  */
 JNICriticalSection::~JNICriticalSection()
 {
@@ -53,5 +54,4 @@ JNICriticalSection::~JNICriticalSection()
         JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_unlock");
         return;
     }
-
 }

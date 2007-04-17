@@ -60,5 +60,6 @@ private:
                             const svn_info_t *info,
                             apr_pool_t *pool);
 };
+
 // !defined(_INFOCALLBACK_H__INCLUDED_)
 #endif

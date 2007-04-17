@@ -40,19 +40,17 @@ Prompter::Prompter(jobject jprompter, bool v2, bool v3)
     m_version3 = v3;
 }
 
-/**
- * Destructor
- */
 Prompter::~Prompter()
 {
     if (m_prompter!= NULL)
     {
-        // since the reference to the Java object is a global one, it has to
-        // be deleted
+        // Since the reference to the Java object is a global one, it
+        // has to be deleted.
         JNIEnv *env = JNIUtil::getEnv();
         env->DeleteGlobalRef(m_prompter);
     }
 }
+
 /**
  * Create a C++ peer object for the Java callback object
  *
@@ -61,12 +59,13 @@ Prompter::~Prompter()
  */
 Prompter *Prompter::makeCPrompter(jobject jprompter)
 {
-    if (jprompter == NULL) // if we have no Java object -> we need no C++ object
+    // If we have no Java object, we need no C++ object.
+    if (jprompter == NULL)
         return NULL;
 
     JNIEnv *env = JNIUtil::getEnv();
 
-    // sanity check that the Java object implements PromptUserPassword
+    // Sanity check that the Java object implements PromptUserPassword.
     jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
@@ -80,7 +79,7 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-    // check if PromptUserPassword2 is implemented by the Java object
+    // Check if PromptUserPassword2 is implemented by the Java object.
     jclass clazz2 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
@@ -96,7 +95,7 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
     bool v3 = false;
     if (v2)
     {
-        // check if PromptUserPassword3 is implemented by the Java object
+        // Check if PromptUserPassword3 is implemented by the Java object.
         jclass clazz3 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
@@ -110,13 +109,13 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
             return NULL;
     }
 
-    // create a new global ref for the Java object, because it is longer used
-    // that this call
+    // Create a new global ref for the Java object, because it is
+    // longer used that this call.
     jobject myPrompt = env->NewGlobalRef(jprompter);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-    // create the C++ peer
+    // Create the C++ peer.
     return new Prompter(myPrompt, v2, v3);
 }
 
@@ -127,10 +126,11 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
 jstring Prompter::username()
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // the method id will not change during
-    // the time this library is loaded, so
-    // it can be cached.
+
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
     static jmethodID mid = 0;
+
     if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
@@ -160,10 +160,11 @@ jstring Prompter::username()
 jstring Prompter::password()
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // the method id will not change during
-    // the time this library is loaded, so
-    // it can be cached.
+
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
     static jmethodID mid = 0;
+
     if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
@@ -196,10 +197,11 @@ bool Prompter::askYesNo(const char *realm, const char *question,
                         bool yesIsDefault)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // the method id will not change during
-    // the time this library is loaded, so
-    // it can be cached.
+
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
     static jmethodID mid = 0;
+
     if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
@@ -243,9 +245,6 @@ bool Prompter::askYesNo(const char *realm, const char *question,
     return ret ? true:false;
 }
 
-/**
- *
- */
 const char *Prompter::askQuestion(const char *realm, const char *question,
                                   bool showAnswer, bool maySave)
 {
@@ -370,6 +369,7 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
         return m_answer.c_str();
     }
 }
+
 int Prompter::askTrust(const char *question, bool maySave)
 {
     if (m_version2)
@@ -529,6 +529,7 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
         return ret ? true:false;
     }
 }
+
 svn_auth_provider_object_t *Prompter::getProviderSimple()
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
@@ -541,6 +542,7 @@ svn_auth_provider_object_t *Prompter::getProviderSimple()
 
     return provider;
 }
+
 svn_auth_provider_object_t *Prompter::getProviderUsername()
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
@@ -553,6 +555,7 @@ svn_auth_provider_object_t *Prompter::getProviderUsername()
 
     return provider;
 }
+
 svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust()
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
@@ -562,6 +565,7 @@ svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust()
 
     return provider;
 }
+
 svn_auth_provider_object_t *Prompter::getProviderClientSSL()
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
@@ -571,6 +575,7 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSL()
 
     return provider;
 }
+
 svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword()
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
@@ -581,6 +586,7 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword()
 
     return provider;
 }
+
 svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p,
                                      void *baton,
                                      const char *realm, const char *username,
@@ -613,6 +619,7 @@ svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p,
 
     return SVN_NO_ERROR;
 }
+
 svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p,
                                        void *baton,
                                        const char *realm,
@@ -633,14 +640,15 @@ svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p,
 
     return SVN_NO_ERROR;
 }
-svn_error_t *Prompter::ssl_server_trust_prompt(
-                              svn_auth_cred_ssl_server_trust_t **cred_p,
-                              void *baton,
-                              const char *realm,
-                              apr_uint32_t failures,
-                              const svn_auth_ssl_server_cert_info_t *cert_info,
-                              svn_boolean_t may_save,
-                              apr_pool_t *pool)
+
+svn_error_t *
+Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
+                                  void *baton,
+                                  const char *realm,
+                                  apr_uint32_t failures,
+                                  const svn_auth_ssl_server_cert_info_t *cert_info,
+                                  svn_boolean_t may_save,
+                                  apr_pool_t *pool)
 {
     Prompter *that = (Prompter*)baton;
     svn_auth_cred_ssl_server_trust_t *ret =
@@ -700,12 +708,13 @@ svn_error_t *Prompter::ssl_server_trust_prompt(
     }
     return SVN_NO_ERROR;
 }
-svn_error_t *Prompter::ssl_client_cert_prompt(
-                                     svn_auth_cred_ssl_client_cert_t **cred_p,
-                                     void *baton,
-                                     const char *realm,
-                                     svn_boolean_t may_save,
-                                     apr_pool_t *pool)
+
+svn_error_t *
+Prompter::ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred_p,
+                                 void *baton,
+                                 const char *realm,
+                                 svn_boolean_t may_save,
+                                 apr_pool_t *pool)
 {
     Prompter *that = (Prompter*)baton;
     svn_auth_cred_ssl_client_cert_t *ret =
@@ -721,12 +730,13 @@ svn_error_t *Prompter::ssl_client_cert_prompt(
     *cred_p = ret;
     return SVN_NO_ERROR;
 }
-svn_error_t *Prompter::ssl_client_cert_pw_prompt(
-                                  svn_auth_cred_ssl_client_cert_pw_t **cred_p,
-                                  void *baton,
-                                  const char *realm,
-                                  svn_boolean_t may_save,
-                                  apr_pool_t *pool)
+
+svn_error_t *
+Prompter::ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+                                    void *baton,
+                                    const char *realm,
+                                    svn_boolean_t may_save,
+                                    apr_pool_t *pool)
 {
     Prompter *that = (Prompter*)baton;
     svn_auth_cred_ssl_client_cert_pw_t *ret =
@@ -742,4 +752,3 @@ svn_error_t *Prompter::ssl_client_cert_pw_prompt(
     *cred_p = ret;
     return SVN_NO_ERROR;
 }
-

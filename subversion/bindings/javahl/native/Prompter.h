@@ -29,6 +29,7 @@
 #include <jni.h>
 #include "svn_auth.h"
 #include <string>
+
 /**
  * This class requests username/password and informations about
  * ssl-certificates from the user. There are 3 Java interfaces for that.
@@ -39,24 +40,28 @@ class Prompter
 {
 private:
     /**
-     * the Java callback object
+     * The Java callback object.
      */
     jobject m_prompter;
+
     /**
-     * the callback objects implements PromptUserPassword2
+     * The callback objects implements PromptUserPassword2.
      */
     bool m_version2;
+
     /**
-     * the callback objects implements PromptUserPassword3
+     * The callback objects implements PromptUserPassword3.
      */
     bool m_version3;
+
     /**
-     * intermediate storage for an answer.
+     * Tntermediate storage for an answer.
      */
     std::string m_answer;
+
     /**
-     * flag is the user allowed, that the last answer is stored in
-     * the configuration
+     * Flag is the user allowed, that the last answer is stored in the
+     * configuration.
      */
     bool m_maySave;
 

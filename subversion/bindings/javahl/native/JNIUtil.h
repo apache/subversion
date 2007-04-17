@@ -38,9 +38,10 @@ class Pool;
 struct svn_error_t;
 
 #define JAVA_PACKAGE "org/tigris/subversion/javahl"
+
 /**
- * class to hold a number of JNI related utility methods. No Objects of this
- * class are ever created
+ * Class to hold a number of JNI related utility methods.  No Objects
+ * of this class are ever created.
  */
 class JNIUtil
 {
@@ -117,7 +118,9 @@ public:
      * @param message The message text of the JNIError.
      */
     static void throwError(const char *message)
-    { raiseThrowable(JAVA_PACKAGE"/JNIError", message); }
+    {
+        raiseThrowable(JAVA_PACKAGE"/JNIError", message);
+    }
 
     static apr_pool_t *getPool();
     static bool JNIGlobalInit(JNIEnv *env);
@@ -131,49 +134,61 @@ private:
                                      apr_status_t parent_apr_err,
                                      std::string &buffer);
     static void setExceptionThrown();
+
     /**
-     * the log level of this module
+     * The log level of this module.
      */
     static int g_logLevel;
+
     /**
-     * global master pool. All other pool are subpools of this pool
+     * Global master pool.  All other pool are subpools of this pool.
      */
     static apr_pool_t *g_pool;
+
     /**
-     * list of objects finalized, where the C++ peer has not yet be deleted
+     * List of objects finalized, where the C++ peer has not yet be
+     * deleted.
      */
     static std::list<SVNBase*> g_finalizedObjects;
+
     /**
-     * mutex to secure the g_finalizedObjects list
+     * Mutex to secure the g_finalizedObjects list.
      */
     static JNIMutex *g_finalizedObjectsMutex;
+
     /**
-     * mutex to secure the access to the log file
+     * Mutex to secure the access to the log file.
      */
     static JNIMutex *g_logMutex;
+
     /**
-     * flag, that an exception occured during our initialization
+     * Flag, that an exception occured during our initialization.
      */
     static bool g_initException;
+
     /**
-     * flag, that one thread is in the init code. Cannot use mutex here since
-     * apr is not initialized yes
+     * Flag, that one thread is in the init code.  Cannot use mutex
+     * here since apr is not initialized yet.
      */
     static bool g_inInit;
+
     /**
-     * the JNI environment used during initialization
+     * The JNI environment used during initialization.
      */
     static JNIEnv *g_initEnv;
+
     /**
-     * buffer the format error messages during initialization
+     * Fuffer the format error messages during initialization.
      */
     static char g_initFormatBuffer[formatBufferSize];
+
     /**
-     * the stream to write log messages to
+     * The stream to write log messages to.
      */
     static std::ofstream g_logStream;
+
     /**
-     * flag to secure our global pool
+     * Flag to secure our global pool.
      */
     static JNIMutex *g_globalPoolMutext;
 };

@@ -22,40 +22,40 @@
 #include "Inputer.h"
 #include "JNIUtil.h"
 #include "JNIByteArray.h"
+
 /**
- * create an Inputer object
+ * Create an Inputer object.
  * @param jthis the Java object to be stored
  */
 Inputer::Inputer(jobject jthis)
 {
     m_jthis = jthis;
 }
-/**
- * destroy an Inputer object
- */
+
 Inputer::~Inputer()
 {
-    // the m_jthis does not need to be destroyed, because it is the passed
-    // in parameter to the Java method.
-
+    // The m_jthis does not need to be destroyed, because it is the
+    // passed in parameter to the Java method.
 }
+
 /**
- * create a svn_stream_t structure for this object. This will be used as an
- * input stream by subversion
+ * Create a svn_stream_t structure for this object. This will be used
+ * as an input stream by Subversion.
  * @param pool  the pool, from which the structure is allocated
  * @return the input stream
  */
 svn_stream_t *Inputer::getStream(const Pool &pool)
 {
-    // create a stream with this as the baton and set the read and close
-    // functions
+    // Create a stream with this as the baton and set the read and
+    // close functions.
     svn_stream_t *ret = svn_stream_create(this, pool.pool());
     svn_stream_set_read(ret, Inputer::read);
     svn_stream_set_close(ret, Inputer::close);
     return ret;
 }
+
 /**
- * implements svn_read_fn_t to read to data into subversion
+ * Implements svn_read_fn_t to read to data into Subversion.
  * @param baton     an Inputer object for the callback
  * @param buffer    the buffer for the read data
  * @param len       on input the buffer len, on output the number of read bytes
@@ -64,12 +64,11 @@ svn_stream_t *Inputer::getStream(const Pool &pool)
 svn_error_t *Inputer::read(void *baton, char *buffer, apr_size_t *len)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // an object of our class is passed in as the baton
+    // An object of our class is passed in as the baton.
     Inputer *that = (Inputer*)baton;
 
-    // the method id will not change during
-    // the time this library is loaded, so
-    // it can be cached.
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
     static jmethodID mid = 0;
     if (mid == 0)
     {
@@ -90,55 +89,58 @@ svn_error_t *Inputer::read(void *baton, char *buffer, apr_size_t *len)
         }
     }
 
-    // allocate a Java byte array to read the data
-    jbyteArray data =
-        JNIUtil::makeJByteArray((const signed char*)buffer, *len);
+    // Allocate a Java byte array to read the data.
+    jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer,
+                                              *len);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
 
-    // read the data
+    // Read the data.
     jint jread = env->CallIntMethod(that->m_jthis, mid, data);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
 
-    // put the Java byte array into a helper object to retrieve the data bytes
+    // Put the Java byte array into a helper object to retrieve the
+    // data bytes.
     JNIByteArray outdata(data, true);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
 
-    // catch when the Java method tells us, it read to much data.
+    // Catch when the Java method tells us it read too much data.
     if (jread > (jint) *len)
         jread = -1;
 
-    // in the case of success, copy the data back to the subversion buffer
+    // In the case of success copy the data back to the Subversion
+    // buffer.
     if (jread > 0)
         memcpy(buffer, outdata.getBytes(), jread);
 
-    // copy the number of read bytes back to subversion
+    // Copy the number of read bytes back to Subversion.
     *len = jread;
 
     return SVN_NO_ERROR;
 }
+
 /**
- * implements svn_close_fn_t to close the input stream
+ * Implements svn_close_fn_t to close the input stream.
  * @param baton     an Inputer object for the callback
  * @return a subversion error or SVN_NO_ERROR
  */
 svn_error_t *Inputer::close(void *baton)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // an object of our class is passed in as the baton
+
+    // An object of our class is passed in as the baton
     Inputer *that = (Inputer*)baton;
 
-    // the method id will not change during
-    // the time this library is loaded, so
-    // it can be cached.
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
     static jmethodID mid = 0;
     if (mid == 0)
     {
@@ -159,7 +161,7 @@ svn_error_t *Inputer::close(void *baton)
         }
     }
 
-    // call the Java object, to close the stream
+    // Call the Java object, to close the stream.
     env->CallVoidMethod(that->m_jthis, mid);
     if (JNIUtil::isJavaExceptionThrown())
     {

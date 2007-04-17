@@ -25,6 +25,7 @@
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
+
 #include <jni.h>
 #include "SVNBase.h"
 #include "Revision.h"
@@ -65,5 +66,6 @@ public:
     static SVNAdmin *getCppObject(jobject jthis);
 
 };
+
 // !defined(AFX_SVNADMIN_H__9AD95B26_47BF_4430_8217_20B87ACCE87B__INCLUDED_)
 #endif

@@ -25,6 +25,7 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 #include "JNIUtil.h"
+
 /**
  * Create an object and allocate an apr mutex
  * @param pool  the pool from which the mutex is allocated
@@ -38,7 +39,7 @@ JNIMutex::JNIMutex(apr_pool_t *pool)
 }
 
 /**
- * Destroy the apr mutex and the object
+ * Destroy the apr mutex and the object.
  */
 JNIMutex::~JNIMutex()
 {

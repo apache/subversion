@@ -14,10 +14,10 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
+ *
+ * @file SVNClient.h
+ * @brief Interface for the SVNClient class
  */
-// SVNClient.h: interface for the SVNClient class.
-//
-//////////////////////////////////////////////////////////////////////
 
 #if !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
 #define AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_
@@ -25,6 +25,7 @@
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
+
 #include <jni.h>
 #include "Path.h"
 
@@ -222,5 +223,6 @@ private:
     std::string m_passWord;
     std::string m_configDir;
 };
+
 // !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
 #endif

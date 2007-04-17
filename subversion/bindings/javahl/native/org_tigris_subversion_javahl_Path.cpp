@@ -18,6 +18,7 @@
  * @file org_tigris_subversion_javahl_Path.cpp
  * @brief Implementation of the native methods in the Java class Path
  */
+
 #include <jni.h>
 #include "../include/org_tigris_subversion_javahl_Path.h"
 #include "JNIUtil.h"

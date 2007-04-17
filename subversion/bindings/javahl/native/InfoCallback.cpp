@@ -34,13 +34,10 @@ InfoCallback::InfoCallback(jobject jcallback)
     m_callback = jcallback;
 }
 
-/**
- * Destroy a InfoCallback object
- */
 InfoCallback::~InfoCallback()
 {
-    // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the Java SVNClient.info method.
+    // The m_callback does not need to be destroyed, because it is the
+    // passed in parameter to the Java SVNClient.info method.
 }
 
 svn_error_t *
@@ -56,8 +53,10 @@ InfoCallback::callback(void *baton,
 }
 
 /**
- * Callback called for a single path.  path is the path name, pool may be used
- * for memory allocation.
+ * Callback called for a single path.
+ * @param path is the path name
+ * @param info the information for the path
+ * @param pool to use for memory allocation.
  */
 svn_error_t *
 InfoCallback::singleInfo(const char *path,
@@ -66,9 +65,9 @@ InfoCallback::singleInfo(const char *path,
 {
     JNIEnv *env = JNIUtil::getEnv();
 
-    static jmethodID mid = 0; // the method id will not change during
-                              // the time this library is loaded, so
-                              // it can be cached.
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
+    static jmethodID mid = 0;
     if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/InfoCallback");

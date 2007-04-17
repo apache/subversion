@@ -27,16 +27,18 @@
 #endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_wc.h"
+
 /**
- *  this class passes notification from subversion to a Java object
- *  (1.2 version)
+ * This class passes notification from subversion to a Java object
+ * (1.2 version).
  */
 class Notify2
 {
 private:
     /**
-     * the Java object to receive the notifications. This is a global reference
-     * because it has to live longer than the SVNClient.notification call
+     * The Java object to receive the notifications.  This is a global
+     * reference because it has to live longer than the
+     * SVNClient.notification call.
      */
     jobject m_notify;
     Notify2(jobject p_notify);
@@ -64,7 +66,7 @@ public:
      */
     void onNotify(const svn_wc_notify_t *notify,
                   apr_pool_t *pool);
-
 };
+
 // !defined(AFX_NOTIFY2_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)
 #endif

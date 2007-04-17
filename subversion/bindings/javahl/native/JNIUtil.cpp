@@ -48,7 +48,7 @@ extern "C" {
 #include "JNIThreadData.h"
 #include "JNIStringHolder.h"
 
-// static members of JNIUtil are allocated here
+// Static members of JNIUtil are allocated here.
 apr_pool_t *JNIUtil::g_pool = NULL;
 std::list<SVNBase*> JNIUtil::g_finalizedObjects;
 JNIMutex *JNIUtil::g_finalizedObjectsMutex = NULL;
@@ -62,23 +62,23 @@ int JNIUtil::g_logLevel = JNIUtil::noLog;
 std::ofstream JNIUtil::g_logStream;
 
 /**
- * initialize the environment for all requests
+ * Initialize the environment for all requests.
  * @param env   the JNI environment for this request
  */
 bool JNIUtil::JNIInit(JNIEnv *env)
 {
-    // clear all standing exceptions.
+    // Clear all standing exceptions.
     env->ExceptionClear();
 
-    // remember the env paramater for the remainder of the request
+    // Remember the env paramater for the remainder of the request.
     setEnv(env);
 
-    // lock the list of finalized objects
+    // Lock the list of finalized objects.
     JNICriticalSection cs(*g_finalizedObjectsMutex) ;
     if (isExceptionThrown())
         return false;
 
-    // delete all finalized, but not yet deleted objects
+    // Delete all finalized, but not yet deleted objects.
     for(std::list<SVNBase*>::iterator it = g_finalizedObjects.begin();
         it != g_finalizedObjects.end(); it++)
     {
@@ -88,23 +88,24 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 
     return true;
 }
+
 /**
- * initialize the environment for all requests
+ * Initialize the environment for all requests.
  * @param env   the JNI environment for this request
  */
 bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 {
-    // this method has to be run only once during the run a
-    // programm
+    // This method has to be run only once during the run a program.
     static bool run = false;
     if (run) // already run
         return true;
 
     run = true;
-    // do not run this part more than one time.
-    // this leaves a small time window when two threads create their first
-    // SVNClient & SVNAdmin at the same time, but I do not see a better
-    // option without APR already initialized
+
+    // Do not run this part more than one time.  This leaves a small
+    // time window when two threads create their first SVNClient and
+    // SVNAdmin at the same time, but I do not see a better option
+    // without APR already initialized
     if (g_inInit)
         return false;
 
@@ -147,7 +148,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     }
 
     /* Initialize the APR subsystem, and register an atexit() function
-       to Uninitialize that subsystem at program exit. */
+     * to Uninitialize that subsystem at program exit. */
     status = apr_initialize();
     if (status)
     {
@@ -238,7 +239,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     }
 #endif
 
-    // build all mutexes
+    // Build all mutexes.
     g_finalizedObjectsMutex = new JNIMutex(g_pool);
     if (isExceptionThrown())
         return false;
@@ -263,22 +264,25 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     g_inInit = false;
     return true;
 }
+
 /**
- * returns the global (not request specific) pool
+ * Returns the global (not request specific) pool.
  * @return global pool
  */
 apr_pool_t *JNIUtil::getPool()
 {
     return g_pool;
 }
+
 /**
- * return the mutex securing the global pool
+ * Return the mutex securing the global pool.
  * @return the mutex for the global pool
  */
 JNIMutex *JNIUtil::getGlobalPoolMutex()
 {
     return g_globalPoolMutext;
 }
+
 void JNIUtil::raiseThrowable(const char *name, const char *message)
 {
     if (getLogLevel() >= errorLog)
@@ -296,6 +300,7 @@ void JNIUtil::raiseThrowable(const char *name, const char *message)
     setExceptionThrown();
     env->DeleteLocalRef(clazz);
 }
+
 jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
 {
     if (err == NULL)
@@ -391,7 +396,7 @@ void JNIUtil::enqueueForDeletion(SVNBase *object)
 }
 
 /**
- * Handle an apr error (those are not expected) by throwing an error
+ * Handle an apr error (those are not expected) by throwing an error.
  * @param error the apr error number
  * @param op the apr function returning the error
  */
@@ -407,21 +412,25 @@ void JNIUtil::handleAPRError(int error, const char *op)
 
     throwError(buffer);
 }
+
 /**
- * return is an exception has been detected
+ * Return if an exception has been detected.
  * @return a exception has been detected
  */
 bool JNIUtil::isExceptionThrown()
 {
-    if (g_inInit) // during init -> look in the global member
+    // During init -> look in the global member.
+    if (g_inInit)
         return g_initException;
 
-    // look in the thread local storage
+    // Look in the thread local storage.
     JNIThreadData *data = JNIThreadData::getThreadData();
     return data == NULL || data->m_exceptionThrown;
 }
+
 /**
- * store the JNI environment for this request in the thread local storage
+ * Store the JNI environment for this request in the thread local
+ * storage.
  * @param env   the JNI environment
  */
 void JNIUtil::setEnv(JNIEnv *env)
@@ -431,22 +440,24 @@ void JNIUtil::setEnv(JNIEnv *env)
     data->m_env = env;
     data->m_exceptionThrown = false;
 }
+
 /**
  * Return the JNI environment to use
  * @return the JNI environment
  */
 JNIEnv *JNIUtil::getEnv()
 {
-    // during init -> look into the global variable
+    // During init -> look into the global variable.
     if (g_inInit)
         return g_initEnv;
 
-    // look in the thread local storage
+    // Look in the thread local storage.
     JNIThreadData *data = JNIThreadData::getThreadData();
     return data->m_env;
 }
+
 /**
- * check in a Java exception has been thrown
+ * Check if a Java exception has been thrown.
  * @return is a Java exception has been thrown
  */
 bool JNIUtil::isJavaExceptionThrown()
@@ -454,8 +465,7 @@ bool JNIUtil::isJavaExceptionThrown()
     JNIEnv *env = getEnv();
     if (env->ExceptionCheck())
     {
-        // retrieving the exception removes it
-        // so we rethrow it here
+        // Retrieving the exception removes it so we rethrow it here.
         jthrowable exp = env->ExceptionOccurred();
         env->ExceptionDescribe();
         env->Throw(exp);
@@ -465,8 +475,9 @@ bool JNIUtil::isJavaExceptionThrown()
     }
     return false;
 }
+
 /**
- * create a Java string from a native UTF-8 string
+ * Create a Java string from a native UTF-8 string.
  * @param txt   native UTF-8 string
  * @return the Java string. It is a local reference, which should be deleted
  *         as soon a possible
@@ -480,8 +491,9 @@ jstring JNIUtil::makeJString(const char *txt)
     JNIEnv *env = getEnv();
     return env->NewStringUTF(txt);
 }
+
 /**
- * set the flag, that an exception has been thrown
+ * Set the flag that an exception has been thrown
  */
 void JNIUtil::setExceptionThrown()
 {
@@ -500,8 +512,9 @@ void JNIUtil::setExceptionThrown()
         data->m_exceptionThrown = true;
     }
 }
+
 /**
- * initialite the log file
+ * Initialite the log file.
  * @param level the log level
  * @param the name of the log file
  */
@@ -521,8 +534,9 @@ void JNIUtil::initLogFile(int level, jstring path)
         g_logStream.open(myPath, std::ios::app);
     }
 }
+
 /**
- * Returns a buffer to format error messages
+ * Returns a buffer to format error messages.
  * @return a buffer for formating error messages
  */
 char *JNIUtil::getFormatBuffer()
@@ -537,16 +551,18 @@ char *JNIUtil::getFormatBuffer()
 
     return data->m_formatBuffer;
 }
+
 /**
- * Returns the current log level
+ * Returns the current log level.
  * @return the log level
  */
 int JNIUtil::getLogLevel()
 {
     return g_logLevel;
 }
+
 /**
- * write a message to the log file if needed
+ * Write a message to the log file if needed.
  * @param the log message
  */
 void JNIUtil::logMessage(const char *message)
@@ -555,11 +571,12 @@ void JNIUtil::logMessage(const char *message)
     JNICriticalSection cs(*g_logMutex);
     g_logStream << message << std::endl;
 }
+
 /**
- * create a java.util.Date object from an apr time
+ * Create a java.util.Date object from an apr time.
  * @param time  the apr time
- * @return the java.util.Date. This is a local reference. Delete as soon as
- *          possible
+ * @return the java.util.Date. This is a local reference.  Delete as
+ *         soon as possible
  */
 jobject JNIUtil::createDate(apr_time_t time)
 {
@@ -587,17 +604,19 @@ jobject JNIUtil::createDate(apr_time_t time)
 
     return ret;
 }
+
 /**
  * Return the request pool. The request pool will be destroyed after each
- * request (call)
+ * request (call).
  * @return the pool to be used for this request
  */
 Pool *JNIUtil::getRequestPool()
 {
     return JNIThreadData::getThreadData()->m_requestPool;
 }
+
 /**
- * Set the request pool in thread local storage
+ * Set the request pool in thread local storage.
  * @param pool  the request pool
  */
 void JNIUtil::setRequestPool(Pool *pool)
@@ -606,7 +625,7 @@ void JNIUtil::setRequestPool(Pool *pool)
 }
 
 /**
- * create a Java byte array from an array of characters.
+ * Create a Java byte array from an array of characters.
  * @param data      the character array
  * @param length    the number of characters in the array
  */
@@ -618,29 +637,30 @@ jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 
     JNIEnv *env = getEnv();
 
-    // allocate the Java array
+    // Allocate the Java array.
     jbyteArray ret = env->NewByteArray(length);
     if (isJavaExceptionThrown())
         return NULL;
 
-    // access the bytes
+    // Access the bytes.
     jbyte *retdata = env->GetByteArrayElements(ret, NULL);
     if (isJavaExceptionThrown())
         return NULL;
 
-    // copy the bytes
+    // Copy the bytes.
     memcpy(retdata, data, length);
 
-    // release the bytes
+    // Release the bytes.
     env->ReleaseByteArrayElements(ret, retdata, 0);
     if (isJavaExceptionThrown())
         return NULL;
 
     return ret;
 }
+
 /**
- * build the error message from the svn error into buffer. This method calls
- * itselft recursivly for all the chained errors
+ * Build the error message from the svn error into buffer.  This
+ * method calls itselft recursively for all the chained errors
  *
  * @param err               the subversion error
  * @param depth             the depth of the call, used for formating
@@ -659,16 +679,16 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
     /* Note: we can also log errors here someday. */
 
     /* When we're recursing, don't repeat the top-level message if its
-       the same as before. */
+     * the same as before. */
     if (depth == 0 || err->apr_err != parent_apr_err)
     {
         /* Is this a Subversion-specific error code? */
         if ((err->apr_err > APR_OS_START_USEERR)
             && (err->apr_err <= APR_OS_START_CANONERR))
-            buffer.append(svn_strerror (err->apr_err, errbuf, sizeof (errbuf)));
+            buffer.append(svn_strerror (err->apr_err, errbuf, sizeof(errbuf)));
         /* Otherwise, this must be an APR error code. */
         else
-            buffer.append(apr_strerror (err->apr_err, errbuf, sizeof (errbuf)));
+            buffer.append(apr_strerror (err->apr_err, errbuf, sizeof(errbuf)));
         buffer.append("\n");
     }
     if (err->message)
@@ -678,9 +698,10 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
         assembleErrorMessage(err->child, depth + 1, err->apr_err, buffer);
 
 }
+
 /**
- * Throw a Java NullPointerException. Used when input parameters which should
- * not be null are that.
+ * Throw a Java NullPointerException.  Used when input parameters
+ * which should not be null are that.
  *
  * @param message   the name of the parameter that is null
  */
@@ -698,6 +719,7 @@ void JNIUtil::throwNullPointerException(const char *message)
     setExceptionThrown();
     env->DeleteLocalRef(clazz);
 }
+
 svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
 {
   /* URLs and wc-paths get treated differently. */
@@ -707,6 +729,7 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
 
       /* Convert to URI. */
       path = svn_path_uri_from_iri (path, pool);
+
       /* Auto-escape some ASCII characters. */
       path = svn_path_uri_autoescape (path, pool);
 
