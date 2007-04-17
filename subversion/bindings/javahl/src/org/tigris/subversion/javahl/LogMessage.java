@@ -19,37 +19,42 @@ import java.util.Date;
  * ====================================================================
  * @endcopyright
  */
+
 /**
- * this class describes a single subversion revision with log message,
- * author and date
+ * This class describes a single subversion revision with log message,
+ * author and date.
  */
 public class LogMessage
 {
     /**
-     * the log message for the revision
+     * The log message for the revision.
      */
     private String message;
+
     /**
-     * the date of the commit
+     * The date of the commit.
      */
     private Date date;
+
     /**
-     * the number of the revision
+     * The number of the revision.
      */
     private long revision;
+
     /**
-     * the author of the commit
+     * The author of the commit.
      */
     private String author;
 
     /**
-     * the items changed by this commit (only set when
-     * SVNClientInterface.logMessages is used with discoverPaths true.
+     * The items changed by this commit (only set when
+     * SVNClientInterface.logMessages is used with discoverPaths
+     * true).
      */
     private ChangePath[] changedPaths;
 
     /**
-     * this constructor is only called only from the thin wrapper
+     * This constructor is only called only from the thin wrapper.
      * @param m     the log message text
      * @param d     the date of the commit
      * @param r     the number of the revision
@@ -64,6 +69,7 @@ public class LogMessage
         author = a;
         changedPaths = cp;
     }
+
     /**
      * Return the log message text
      * @return the log message text
@@ -92,7 +98,7 @@ public class LogMessage
     }
 
     /**
-     * Returns the revision as a long  integer
+     * Returns the revision as a long integer
      * @return the revision number as a long integer
      */
     public long getRevisionNumber()
