@@ -30,13 +30,13 @@
 #include "Pool.h"
 
 /**
- * This class contains a java objects implementing the interface Outputer and
+ * This class contains a Java objects implementing the interface Outputer and
  * implements the functions write & close of svn_stream_t
  */
 class Outputer
 {
     /**
-     * a local reference to the java object
+     * a local reference to the Java object
      */
     jobject m_jthis;
     static svn_error_t *write(void *baton,

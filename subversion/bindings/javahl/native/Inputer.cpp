@@ -24,7 +24,7 @@
 #include "JNIByteArray.h"
 /**
  * create an Inputer object
- * @param jthis the java object to be stored
+ * @param jthis the Java object to be stored
  */
 Inputer::Inputer(jobject jthis)
 {
@@ -36,7 +36,7 @@ Inputer::Inputer(jobject jthis)
 Inputer::~Inputer()
 {
     // the m_jthis does not need to be destroyed, because it is the passed
-    // in parameter to the java method.
+    // in parameter to the Java method.
 
 }
 /**
@@ -90,7 +90,7 @@ svn_error_t *Inputer::read(void *baton, char *buffer, apr_size_t *len)
         }
     }
 
-    // allocate a java byte array to read the data
+    // allocate a Java byte array to read the data
     jbyteArray data =
         JNIUtil::makeJByteArray((const signed char*)buffer, *len);
     if (JNIUtil::isJavaExceptionThrown())
@@ -105,14 +105,14 @@ svn_error_t *Inputer::read(void *baton, char *buffer, apr_size_t *len)
         return SVN_NO_ERROR;
     }
 
-    // put the java byte array into a helper object to retrieve the data bytes
+    // put the Java byte array into a helper object to retrieve the data bytes
     JNIByteArray outdata(data, true);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
 
-    // catch when the java method tells us, it read to much data.
+    // catch when the Java method tells us, it read to much data.
     if (jread > (jint) *len)
         jread = -1;
 
@@ -159,7 +159,7 @@ svn_error_t *Inputer::close(void *baton)
         }
     }
 
-    // call the java object, to close the stream
+    // call the Java object, to close the stream
     env->CallVoidMethod(that->m_jthis, mid);
     if (JNIUtil::isJavaExceptionThrown())
     {

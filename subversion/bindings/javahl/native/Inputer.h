@@ -30,14 +30,14 @@
 #include "Pool.h"
 
 /**
- * This class contains a java objects implementing the interface Inputer and
+ * This class contains a Java objects implementing the interface Inputer and
  * implements the functions read & close of svn_stream_t
  */
 class Inputer
 {
 private:
     /**
-     * a local reference to the java object
+     * a local reference to the Java object
      */
     jobject m_jthis;
     static svn_error_t *read(void *baton, char *buffer, apr_size_t *len);

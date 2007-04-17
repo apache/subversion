@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file org_tigris_subversion_javahl_Version.cpp
- * @brief Implementation of the native methods in the java class Version.
+ * @brief Implementation of the native methods in the Java class Version.
  */
 #include "../include/org_tigris_subversion_javahl_Version.h"
 #include "JNIStackElement.h"

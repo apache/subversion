@@ -31,7 +31,7 @@
 #include "svn_types.h"
 /**
  * this class contains all the mappers between the C enum's and the matching
- * java int's.
+ * Java int's.
  */
 class EnumMapper
 {

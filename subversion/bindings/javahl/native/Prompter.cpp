@@ -29,7 +29,7 @@
 
 /**
  * Constructor
- * @param jprompter     a global reference to the java callback object
+ * @param jprompter     a global reference to the Java callback object
  * @param v2            the callback objects implements PromptUserPassword2
  * @param v3            the callback objects implements PromptUserPassword3
  */
@@ -47,26 +47,26 @@ Prompter::~Prompter()
 {
     if (m_prompter!= NULL)
     {
-        // since the reference to the java object is a global one, it has to
+        // since the reference to the Java object is a global one, it has to
         // be deleted
         JNIEnv *env = JNIUtil::getEnv();
         env->DeleteGlobalRef(m_prompter);
     }
 }
 /**
- * Create a C++ peer object for the java callback object
+ * Create a C++ peer object for the Java callback object
  *
- * @param jprompter     java callback object
+ * @param jprompter     Java callback object
  * @return              C++ peer object
  */
 Prompter *Prompter::makeCPrompter(jobject jprompter)
 {
-    if (jprompter == NULL) // if we have no java object -> we need no C++ object
+    if (jprompter == NULL) // if we have no Java object -> we need no C++ object
         return NULL;
 
     JNIEnv *env = JNIUtil::getEnv();
 
-    // sanity check that the java object implements PromptUserPassword
+    // sanity check that the Java object implements PromptUserPassword
     jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
@@ -80,7 +80,7 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-    // check if PromptUserPassword2 is implemented by the java object
+    // check if PromptUserPassword2 is implemented by the Java object
     jclass clazz2 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
@@ -96,7 +96,7 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
     bool v3 = false;
     if (v2)
     {
-        // check if PromptUserPassword3 is implemented by the java object
+        // check if PromptUserPassword3 is implemented by the Java object
         jclass clazz3 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
@@ -110,7 +110,7 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
             return NULL;
     }
 
-    // create a new global ref for the java object, because it is longer used
+    // create a new global ref for the Java object, because it is longer used
     // that this call
     jobject myPrompt = env->NewGlobalRef(jprompter);
     if (JNIUtil::isJavaExceptionThrown())
@@ -121,8 +121,8 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
 }
 
 /**
- * Retrieve the username from the java object
- * @return java string for the username or NULL
+ * Retrieve the username from the Java object
+ * @return Java string for the username or NULL
  */
 jstring Prompter::username()
 {
@@ -154,8 +154,8 @@ jstring Prompter::username()
 }
 
 /**
- * Retrieve the username from the java object
- * @return java string for the username or NULL
+ * Retrieve the username from the Java object
+ * @return Java string for the username or NULL
  */
 jstring Prompter::password()
 {
@@ -216,7 +216,7 @@ bool Prompter::askYesNo(const char *realm, const char *question,
             return false;
     }
 
-    // convert the texts to java strings
+    // convert the texts to Java strings
     jstring jrealm = JNIUtil::makeJString(realm);
     if (JNIUtil::isJavaExceptionThrown())
         return false;
@@ -231,7 +231,7 @@ bool Prompter::askYesNo(const char *realm, const char *question,
     if (JNIUtil::isJavaExceptionThrown())
         return false;
 
-    // delete the java strings
+    // delete the Java strings
     env->DeleteLocalRef(jquestion);
     if (JNIUtil::isJavaExceptionThrown())
         return false;

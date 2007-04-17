@@ -29,7 +29,7 @@
  * @param env       the JNI-environment
  * @param clazz     the class name of the method
  * @param method    the name of the method
- * @param jthis     the java object for which the method is call
+ * @param jthis     the Java object for which the method is call
  */
 JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
                                  const char *method, jobject jthis)
@@ -63,7 +63,7 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
         *m_objectID = 0;
         strncat(m_objectID, name, JNIUtil::formatBufferSize -1);
 
-        // release the java string
+        // release the Java string
         env->DeleteLocalRef(jlo);
         if (JNIUtil::isJavaExceptionThrown())
             return;

@@ -28,7 +28,7 @@
 
 #include <jni.h>
 /**
- * this class holds a java byte array to give easy access to its bytes
+ * this class holds a Java byte array to give easy access to its bytes
  */
 class JNIByteArray
 {

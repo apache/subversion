@@ -32,7 +32,7 @@
 class MessageReceiver
 {
     /**
-     * a local reference to the java object
+     * a local reference to the Java object
      */
     jobject m_jthis;
 public:

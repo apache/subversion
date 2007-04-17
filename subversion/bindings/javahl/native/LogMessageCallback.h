@@ -29,7 +29,7 @@
 #include "svn_client.h"
 
 /**
- * This class holds a java callback object, which will receive every
+ * This class holds a Java callback object, which will receive every
  * log message for which the callback information is requested.
  */
 class LogMessageCallback
@@ -48,7 +48,7 @@ protected:
                                const char *msg, apr_pool_t *pool);
 private:
     /**
-     * this a local reference to the java object.
+     * this a local reference to the Java object.
      */
     jobject m_callback;
 };

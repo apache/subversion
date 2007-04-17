@@ -31,7 +31,7 @@
 #include <string>
 /**
  * This class requests username/password and informations about
- * ssl-certificates from the user. There are 3 java interfaces for that.
+ * ssl-certificates from the user. There are 3 Java interfaces for that.
  * PromptUserPassword, PromptUserPassword2 and PromptUserPassword3
  * each following interface extends the previous interface.
  */
@@ -39,7 +39,7 @@ class Prompter
 {
 private:
     /**
-     * the java callback object
+     * the Java callback object
      */
     jobject m_prompter;
     /**

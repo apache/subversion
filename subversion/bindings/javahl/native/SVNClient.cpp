@@ -1374,7 +1374,7 @@ svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
 
 
 /**
- * create a DirEntry java object from svn_dirent_t structure
+ * create a DirEntry Java object from svn_dirent_t structure
  */
 jobject SVNClient::createJavaDirEntry(const char *path, svn_dirent_t *dirent)
 {

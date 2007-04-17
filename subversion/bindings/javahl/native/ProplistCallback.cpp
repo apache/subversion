@@ -25,7 +25,7 @@
 
 /**
  * Create a ProplistCallback object
- * @param jcallback the java callback object.
+ * @param jcallback the Java callback object.
  */
 ProplistCallback::ProplistCallback(jobject jcallback)
 {
@@ -38,7 +38,7 @@ ProplistCallback::ProplistCallback(jobject jcallback)
 ProplistCallback::~ProplistCallback()
 {
     // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the java SVNClient.properties method.
+    // in parameter to the Java SVNClient.properties method.
 }
 
 svn_error_t *
@@ -84,7 +84,7 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
             return SVN_NO_ERROR;
     }
 
-    // convert the parameters to their java relatives
+    // convert the parameters to their Java relatives
     jstring jpath = JNIUtil::makeJString(path);
     if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
@@ -94,12 +94,12 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
     if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
-    // call the java method
+    // call the Java method
     env->CallVoidMethod(m_callback, mid, jpath, jmap);
     if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
-    // cleanup the temporary java objects
+    // cleanup the temporary Java objects
     env->DeleteLocalRef(jpath);
     if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;

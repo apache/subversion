@@ -103,7 +103,7 @@ JNIThreadData *JNIThreadData::getThreadData()
     return data;
 }
 /**
- * Allocate a new ThreadData for the current call from java and push it on the
+ * Allocate a new ThreadData for the current call from Java and push it on the
  * stack
  */
 void JNIThreadData::pushNewThreadData()

@@ -28,9 +28,9 @@
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_ScheduleKind.h"
 /**
- * map a C commit state flag constant to the java constant
+ * map a C commit state flag constant to the Java constant
  * @param state     the c commit state flage constant
- * @returns the java constant
+ * @returns the Java constant
  */
 jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
 {
@@ -53,9 +53,9 @@ jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
     return jstateFlags;
 }
 /**
- * map a C notify state constant to the java constant
+ * map a C notify state constant to the Java constant
  * @param state     the c notify state constant
- * @returns the java constant
+ * @returns the Java constant
  */
 jint EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 {
@@ -89,14 +89,14 @@ jint EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 
 }
 /**
- * map a C notify action constant to the java constant
+ * map a C notify action constant to the Java constant
  * @param state     the c notify action constant
- * @returns the java constant
+ * @returns the Java constant
  */
 jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
 {
     jint jAction = -1;
-    // this is a switch to make the java constants independent from the C
+    // this is a switch to make the Java constants independent from the C
     // constants
     switch(action)
     {
@@ -221,9 +221,9 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
     return jAction;
 }
 /**
- * map a C node kind constant to the java constant
+ * map a C node kind constant to the Java constant
  * @param state     the c node kind constant
- * @returns the java constant
+ * @returns the Java constant
  */
 jint EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 {
@@ -246,9 +246,9 @@ jint EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
     return jKind;
 }
 /**
- * map a C notify lock state constant to the java constant
+ * map a C notify lock state constant to the Java constant
  * @param state     the c notify lock state constant
- * @returns the java constant
+ * @returns the Java constant
  */
 jint EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 {
@@ -274,9 +274,9 @@ jint EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
     return jState;
 }
 /**
- * map a C wc schedule constant to the java constant
+ * map a C wc schedule constant to the Java constant
  * @param state     the c wc schedule constant
- * @returns the java constant
+ * @returns the Java constant
  */
 jint EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
 {
@@ -303,9 +303,9 @@ jint EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
     }
 }
 /**
- * map a C wc state constant to the java constant
+ * map a C wc state constant to the Java constant
  * @param state     the c wc state constant
- * @returns the java constant
+ * @returns the Java constant
  */
 jint EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
 {

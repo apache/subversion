@@ -27,7 +27,7 @@
 #include "svn_path.h"
 
 /**
- * Create a InfoCallback object.  jcallback is the java callback object.
+ * Create a InfoCallback object.  jcallback is the Java callback object.
  */
 InfoCallback::InfoCallback(jobject jcallback)
 {
@@ -40,7 +40,7 @@ InfoCallback::InfoCallback(jobject jcallback)
 InfoCallback::~InfoCallback()
 {
     // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the java SVNClient.info method.
+    // in parameter to the Java SVNClient.info method.
 }
 
 svn_error_t *
