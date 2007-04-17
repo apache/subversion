@@ -28,19 +28,20 @@
 #include <string>
 #include <jni.h>
 struct svn_error_t;
+
 /**
  * Encapsulation for Subversion Path handling
  */
 class Path
 {
 private:
-    // the path to be stored
+    // The path to be stored.
     std::string m_path;
 
     svn_error_t *m_error_occured;
 
     /**
-     * initialize the class
+     * Initialize the class.
      *
      * @param pi_path Path string
      */

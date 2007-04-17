@@ -22,11 +22,9 @@
 #include "Notify.h"
 #include "JNIUtil.h"
 #include "EnumMapper.h"
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
+
 /**
- * Create a new object and store the Java object
+ * Create a new object and store the Java object.
  * @param notify    global reference to the Java object
  */
 Notify::Notify(jobject p_notify)
@@ -35,7 +33,8 @@ Notify::Notify(jobject p_notify)
 }
 
 /**
- * Destroy the object and delete the global reference to the Java object
+ * Destroy the object and delete the global reference to the Java
+ * object.
  */
 Notify::~Notify()
 {
@@ -47,17 +46,17 @@ Notify::~Notify()
 }
 
 /**
- * Create a C++ peer object for the Java object
+ * Create a C++ peer object for the Java object.
  * @param notify    a local reference to the Java object
  */
 Notify *Notify::makeCNotify(jobject notify)
 {
-    // if the Java object is null -> no C++ peer needed
+    // If the Java object is null -> no C++ peer needed.
     if (notify == NULL)
         return NULL;
     JNIEnv *env = JNIUtil::getEnv();
 
-    // sanity check, that the object implements Notify
+    // Sanity check, that the object implements Notify.
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Notify");
     if (JNIUtil::isJavaExceptionThrown())
     {
@@ -74,73 +73,71 @@ Notify *Notify::makeCNotify(jobject notify)
         return NULL;
     }
 
-    // make a global reference, because the reference is longer needed, than
-    // the call
+    // Make a global reference, because the reference is longer
+    // needed, than the call.
     jobject myNotify = env->NewGlobalRef(notify);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
-    // create the peer
+    // Create the peer.
     return new Notify(myNotify);
 }
-  /**
-   * notification function passed as svn_wc_notify_func_t
-   * @param baton notification instance is passed using this parameter
-   * @param path on which action happen
-   * @param action subversion action, see svn_wc_notify_action_t
-   * @param kind node kind of path after action occurred
-   * @param mime_type mime type of path after action occurred
-   * @param content_state state of content after action occurred
-   * @param prop_state state of properties after action occurred
-   * @param revision revision number after action occurred
-   */
 
-void
-Notify::notify (
-    void *baton,
-    const char *path,
-    svn_wc_notify_action_t action,
-    svn_node_kind_t kind,
-    const char *mime_type,
-    svn_wc_notify_state_t content_state,
-    svn_wc_notify_state_t prop_state,
-    svn_revnum_t revision)
+/**
+ * Notification function passed as svn_wc_notify_func_t.
+ * @param baton notification instance is passed using this parameter
+ * @param path on which action happen
+ * @param action subversion action, see svn_wc_notify_action_t
+ * @param kind node kind of path after action occurred
+ * @param mime_type mime type of path after action occurred
+ * @param content_state state of content after action occurred
+ * @param prop_state state of properties after action occurred
+ * @param revision revision number after action occurred
+ */
+void Notify::notify(void *baton,
+                    const char *path,
+                    svn_wc_notify_action_t action,
+                    svn_node_kind_t kind,
+                    const char *mime_type,
+                    svn_wc_notify_state_t content_state,
+                    svn_wc_notify_state_t prop_state,
+                    svn_revnum_t revision)
 {
-    // an Notify object is used as the baton
+    // A Notify object is used as the baton.
     Notify *notify = (Notify *) baton;
     if (notify) // sanity check
     {
         // call our method
         notify->onNotify(path, action, kind, mime_type,
-            content_state, prop_state, revision);
+                         content_state, prop_state, revision);
     }
 }
-  /**
-   * Handler for Subversion notifications.
-   *
-   * @param path on which action happen
-   * @param action subversion action, see svn_wc_notify_action_t
-   * @param kind node kind of path after action occurred
-   * @param mime_type mime type of path after action occurred
-   * @param content_state state of content after action occurred
-   * @param prop_state state of properties after action occurred
-   * @param revision revision number  after action occurred
-   */
-void
-Notify::onNotify (
-    const char *path,
-    svn_wc_notify_action_t action,
-    svn_node_kind_t kind,
-    const char *mime_type,
-    svn_wc_notify_state_t content_state,
-    svn_wc_notify_state_t prop_state,
-    svn_revnum_t revision)
+
+/**
+ * Handler for Subversion notifications.
+ *
+ * @param path on which action happen
+ * @param action subversion action, see svn_wc_notify_action_t
+ * @param kind node kind of path after action occurred
+ * @param mime_type mime type of path after action occurred
+ * @param content_state state of content after action occurred
+ * @param prop_state state of properties after action occurred
+ * @param revision revision number  after action occurred
+ */
+void Notify::onNotify(const char *path,
+                      svn_wc_notify_action_t action,
+                      svn_node_kind_t kind,
+                      const char *mime_type,
+                      svn_wc_notify_state_t content_state,
+                      svn_wc_notify_state_t prop_state,
+                      svn_revnum_t revision)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // Java method id will not change during the time this library is loaded,
-    // so it can be cached.
+
+    // Java method id will not change during the time this library is
+    // loaded, so it can be cached.
     static jmethodID mid = 0;
     if (mid == 0)
     {
@@ -162,7 +159,7 @@ Notify::onNotify (
         }
     }
 
-    // convert the parameter to their Java relatives
+    // Convert the parameters to their Java relatives.
     jstring jPath = JNIUtil::makeJString(path);
     if (JNIUtil::isJavaExceptionThrown())
     {
@@ -179,15 +176,15 @@ Notify::onNotify (
     jint jContentState = EnumMapper::mapNotifyState(content_state);
     jint jPropState = EnumMapper::mapNotifyState(prop_state);
 
-    // call the Java method
-    env->CallVoidMethod(m_notify, mid, jPath, jAction, jKind, jMimeType, jContentState, jPropState,
-        (jlong)revision);
+    // Call the Java method
+    env->CallVoidMethod(m_notify, mid, jPath, jAction, jKind, jMimeType,
+                        jContentState, jPropState, (jlong)revision);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
 
-    // release all the temporary Java objects
+    // Release all the temporary Java objects.
     env->DeleteLocalRef(jPath);
     if (JNIUtil::isJavaExceptionThrown())
     {

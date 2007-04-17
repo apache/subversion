@@ -18,6 +18,7 @@
  * @file MessageReceiver.h
  * @brief Interface of the class MessageReceiver
  */
+
 #if !defined(AFX_MESSAGERECEIVER_H__D30A4B70_A630_45B3_AB3E_402A5AD7E6BA__INCLUDED_)
 #define AFX_MESSAGERECEIVER_H__D30A4B70_A630_45B3_AB3E_402A5AD7E6BA__INCLUDED_
 
@@ -27,12 +28,13 @@
 #include <jni.h>
 
 /**
- * this class holds a SVNAdmin.MessageReceiver objects and sends messages to it
+ * This class holds a SVNAdmin.MessageReceiver objects and sends
+ * messages to it.
  */
 class MessageReceiver
 {
     /**
-     * a local reference to the Java object
+     * A local reference to the Java object.
      */
     jobject m_jthis;
 public:
@@ -41,5 +43,6 @@ public:
     void receiveMessage(const char *message);
 
 };
+
 // !defined(AFX_MESSAGERECEIVER_H__D30A4B70_A630_45B3_AB3E_402A5AD7E6BA__INCLUDED_)
 #endif

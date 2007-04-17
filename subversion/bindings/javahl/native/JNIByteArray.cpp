@@ -20,6 +20,7 @@
  */
 #include "JNIByteArray.h"
 #include "JNIUtil.h"
+
 /**
  * Create a new object
  * @param jba the local reference to the Java byte array
@@ -32,7 +33,7 @@ JNIByteArray::JNIByteArray(jbyteArray jba, bool deleteByteArray)
     m_deleteByteArray = deleteByteArray;
     if (jba != NULL)
     {
-        // get the bytes
+        // Get the bytes.
         JNIEnv *env = JNIUtil::getEnv();
         m_data = env->GetByteArrayElements(jba, NULL);
     }
@@ -41,22 +42,23 @@ JNIByteArray::JNIByteArray(jbyteArray jba, bool deleteByteArray)
         m_data = NULL;
     }
 }
-/**
- * destroy the object
- */
+
 JNIByteArray::~JNIByteArray()
 {
     if (m_array != NULL)
     {
-        // release the bytes
-        JNIUtil::getEnv()->ReleaseByteArrayElements(m_array, m_data, JNI_ABORT);
+        // Release the bytes
+        JNIUtil::getEnv()->ReleaseByteArrayElements(m_array,
+                                                    m_data,
+                                                    JNI_ABORT);
         if (m_deleteByteArray)
-            // and if needed the byte array
+            // And if needed the byte array.
             JNIUtil::getEnv()->DeleteLocalRef(m_array);
     }
 }
+
 /**
- * returns the number of bytes in the byte array
+ * Returns the number of bytes in the byte array.
  * @return the number of bytes
  */
 int JNIByteArray::getLength()
@@ -70,16 +72,18 @@ int JNIByteArray::getLength()
         return JNIUtil::getEnv()->GetArrayLength(m_array);
     }
 }
+
 /**
- * returns the bytes of the byte array
+ * Returns the bytes of the byte array.
  * @return the bytes
  */
 const signed char *JNIByteArray::getBytes()
 {
     return m_data;
 }
+
 /**
- * returns is the byte array was not set
+ * Returns if the byte array was not set.
  * @return if the byte array was not set
  */
 bool JNIByteArray::isNull()

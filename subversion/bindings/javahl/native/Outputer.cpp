@@ -24,7 +24,7 @@
 #include "JNIByteArray.h"
 
 /**
- * create an Outputer object
+ * Create an Outputer object.
  * @param jthis the Java object to be stored
  */
 Outputer::Outputer(jobject jthis)
@@ -33,25 +33,24 @@ Outputer::Outputer(jobject jthis)
 }
 
 /**
- * destroy an Inputer object
+ * Destroy an Inputer object.
  */
 Outputer::~Outputer()
 {
-    // the m_jthis does not need to be destroyed, because it is the passed
-    // in parameter to the Java method.
-
+    // The m_jthis does not need to be destroyed, because it is the
+    // passed in parameter to the Java method.
 }
 
 /**
- * create a svn_stream_t structure for this object. This will be used as an
- * output stream by subversion
+ * Create a svn_stream_t structure for this object.  This will be used
+ * as an output stream by Subversion.
  * @param pool  the pool, from which the structure is allocated
  * @return the output stream
  */
 svn_stream_t *Outputer::getStream(const Pool &pool)
 {
-    // create a stream with this as the baton and set the write and close
-    // functions
+    // Create a stream with this as the baton and set the write and
+    // close functions.
     svn_stream_t *ret = svn_stream_create(this, pool.pool());
     svn_stream_set_write(ret, Outputer::write);
     svn_stream_set_close(ret, Outputer::close);
@@ -59,7 +58,7 @@ svn_stream_t *Outputer::getStream(const Pool &pool)
 }
 
 /**
- * implements svn_write_fn_t to write data out from subversion
+ * Implements svn_write_fn_t to write data out from Subversion.
  * @param baton     an Outputer object for the callback
  * @param buffer    the buffer for the write data
  * @param len       on input the buffer len, on output the number of written
@@ -69,13 +68,13 @@ svn_stream_t *Outputer::getStream(const Pool &pool)
 svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // an object of our class is passed in as the baton
+
+    // An object of our class is passed in as the baton.
     Outputer *that = (Outputer*)baton;
 
-    // the method id will not change during
-    // the time this library is loaded, so
-    // it can be cached.
-   static jmethodID mid = 0;
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
+    static jmethodID mid = 0;
     if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
@@ -114,20 +113,21 @@ svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
 
     return SVN_NO_ERROR;
 }
+
 /**
- * implements svn_close_fn_t to close the output stream
+ * Implements svn_close_fn_t to close the output stream.
  * @param baton     an Outputer object for the callback
  * @return a subversion error or SVN_NO_ERROR
  */
 svn_error_t *Outputer::close(void *baton)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // an object of our class is passed in as the baton
+
+    // An object of our class is passed in as the baton
     Outputer *that = (Outputer*)baton;
 
-    // the method id will not change during
-    // the time this library is loaded, so
-    // it can be cached.
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
     static jmethodID mid = 0;
     if (mid == 0)
     {
@@ -148,7 +148,7 @@ svn_error_t *Outputer::close(void *baton)
         }
     }
 
-    // call the Java object, to close the stream
+    // Call the Java object, to close the stream.
     env->CallVoidMethod(that->m_jthis, mid);
     if (JNIUtil::isJavaExceptionThrown())
     {

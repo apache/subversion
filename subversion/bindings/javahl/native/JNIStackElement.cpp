@@ -24,6 +24,7 @@
 #include "JNIStringHolder.h"
 #include "JNIThreadData.h"
 #include <apr_strings.h>
+
 /**
  * Create a new object and generate a log message,if requested
  * @param env       the JNI-environment
@@ -35,16 +36,15 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
                                  const char *method, jobject jthis)
 {
     JNIUtil::JNIInit(env);
-    // generating a log message is expensive
+    // Generating a log message is expensive.
     if (JNIUtil::getLogLevel() >= JNIUtil::entryLog)
     {
         jclass jlo = env->FindClass("java/lang/Object");
         if (JNIUtil::isJavaExceptionThrown())
             return;
 
-        // the method id will not change during
-        // the time this library is loaded, so
-        // it can be cached.
+        // The method id will not change during the time this library
+        // is loaded, so it can be cached.
         static jmethodID mid = 0;
         if (mid == 0)
         {
@@ -53,17 +53,18 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
                 return;
         }
 
-        // this will call java.lang.Object.toString, even when it is overriden.
+        // This will call java.lang.Object.toString, even when it is
+        // overriden.
         jobject oStr = env->CallNonvirtualObjectMethod(jthis, jlo, mid);
         if (JNIUtil::isJavaExceptionThrown())
             return;
 
-        // copy the result to a buffer
+        // Copy the result to a buffer.
         JNIStringHolder name(reinterpret_cast<jstring>(oStr));
         *m_objectID = 0;
         strncat(m_objectID, name, JNIUtil::formatBufferSize -1);
 
-        // release the Java string
+        // Release the Java string.
         env->DeleteLocalRef(jlo);
         if (JNIUtil::isJavaExceptionThrown())
             return;
@@ -72,11 +73,11 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
         if (JNIUtil::isJavaExceptionThrown())
             return;
 
-        // remember the parameter for the exit of the method
+        // Remember the parameter for the exit of the method.
         m_clazz = clazz;
         m_method = method;
 
-        // generate the log message
+        // Generate the log message.
         char *buffer = JNIUtil::getFormatBuffer();
         apr_snprintf(buffer, JNIUtil::formatBufferSize,
             "entry class %s method %s object %s", m_clazz, m_method,
@@ -85,21 +86,22 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
     }
     else
     {
-        // initialize the object cleanly
+        // Initialize the object cleanly.
         m_clazz = NULL;
         m_method = NULL;
         *m_objectID = 0;
     }
 }
+
 /**
- * Destroy an object and create a log message for the exit of the method, if
- * one was create for the entry
+ * Destroy an object and create a log message for the exit of the
+ * method, if one was create for the entry.
  */
 JNIStackElement::~JNIStackElement()
 {
     if (m_clazz != NULL)
     {
-        // generate a log message
+        // Generate a log message.
         char *buffer = JNIUtil::getFormatBuffer();
         apr_snprintf(buffer, JNIUtil::formatBufferSize,
                      "exit class %s method %s object %s", m_clazz,

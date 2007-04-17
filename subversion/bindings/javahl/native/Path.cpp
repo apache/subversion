@@ -37,9 +37,9 @@ Path::Path (const char *pi_path)
 }
 
 /**
- * Constructor that takes a string as parameter.
- * The string is converted to subversion internal
- * representation. The string is copied.
+ * Constructor that takes a string as parameter.  The string is
+ * converted to subversion internal representation. The string is
+ * copied.
  *
  * @param path Path string
  */

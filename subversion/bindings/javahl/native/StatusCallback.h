@@ -47,12 +47,13 @@ protected:
 
 private:
     /**
-     * this a local reference to the Java object.
+     * This a local reference to the Java object.
      */
     jobject m_callback;
 
     jobject createJavaStatus(const char *path,
                              svn_wc_status2_t *status);
 };
+
 // !defined(AFX_STATUSCALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
 #endif

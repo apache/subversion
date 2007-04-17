@@ -23,11 +23,9 @@
 #include "JNIUtil.h"
 #include "SVNClient.h"
 #include "EnumMapper.h"
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
+
 /**
- * Create a new object and store the Java object
+ * Create a new object and store the Java object.
  * @param notify    global reference to the Java object
  */
 Notify2::Notify2(jobject p_notify)
@@ -36,7 +34,8 @@ Notify2::Notify2(jobject p_notify)
 }
 
 /**
- * Destroy the object and delete the global reference to the Java object
+ * Destroy the object and delete the global reference to the Java
+ * object.
  */
 Notify2::~Notify2()
 {
@@ -48,17 +47,17 @@ Notify2::~Notify2()
 }
 
 /**
- * Create a C++ peer object for the Java object
+ * Create a C++ peer object for the Java object.
  * @param notify    a local reference to the Java object
  */
 Notify2 *Notify2::makeCNotify(jobject notify)
 {
-    // if the Java object is null -> no C++ peer needed
+    // If the Java object is null -> no C++ peer needed.
     if (notify == NULL)
         return NULL;
     JNIEnv *env = JNIUtil::getEnv();
 
-    // sanity check, that the object implements Notify
+    // Sanity check, that the object implements Notify.
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Notify2");
     if (JNIUtil::isJavaExceptionThrown())
     {
@@ -75,47 +74,49 @@ Notify2 *Notify2::makeCNotify(jobject notify)
         return NULL;
     }
 
-    // make a global reference, because the reference is longer needed, than
-    // the call
+    // Make a global reference, because the reference is longer
+    // needed, than the call.
     jobject myNotify = env->NewGlobalRef(notify);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
-    // create the peer
+    // Create the peer.
     return new Notify2(myNotify);
 }
-  /**
-   * notification function passed as svn_wc_notify_func2_t
-   * @param baton notification instance is passed using this parameter
-   * @param notify all the information about the event
-   * @param pool an apr pool to allocated memory
-   */
 
+/**
+ * Notification function passed as svn_wc_notify_func2_t
+ * @param baton notification instance is passed using this parameter
+ * @param notify all the information about the event
+ * @param pool an apr pool to allocated memory
+ */
 void
 Notify2::notify(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool)
 {
-    // an Notify object is used as the baton
+    // A Notify object is used as the baton.
     Notify2 *that = (Notify2 *) baton;
     if (that) // sanity check
     {
-        // call our method
+        // Call our method.
         that->onNotify(notify, pool);
     }
 }
-  /**
-   * Handler for Subversion notifications.
-   *
-   * @param notify all the information about the event
-   * @param pool an apr pool to allocated memory
-   */
+
+/**
+ * Handler for Subversion notifications.
+ *
+ * @param notify all the information about the event
+ * @param pool an apr pool to allocated memory
+ */
 void
 Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // Java method id will not change during the time this library is loaded,
-    // so it can be cached.
+
+    // Java method id will not change during the time this library is
+    // loaded, so it can be cached.
     static jmethodID mid = 0;
     if (mid == 0)
     {

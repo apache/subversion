@@ -21,31 +21,36 @@
 
 #include "MessageReceiver.h"
 #include "JNIUtil.h"
+
 /**
- * create a new object and store the local reference to the Java object
+ * Create a new object and store the local reference to the Java
+ * object.
  */
 MessageReceiver::MessageReceiver(jobject jthis)
 {
     m_jthis = jthis;
 }
+
 /**
- * destroy the object
+ * Destroy the object.
  */
 MessageReceiver::~MessageReceiver()
 {
-    // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the Java method.
+    // The m_callback does not need to be destroyed, because it is the
+    // passed in parameter to the Java method.
 }
+
 /**
- * send a message to the Java object
+ * send a message to the Java object.
  * @param message   the message to be send
  */
 void MessageReceiver::receiveMessage(const char *message)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    static jmethodID mid = 0; // the method id will not change during
-                              // the time this library is loaded, so
-                              // it can be cached.
+
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
+    static jmethodID mid = 0;
     if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNAdmin$MessageReceiver");
@@ -61,17 +66,18 @@ void MessageReceiver::receiveMessage(const char *message)
         if (JNIUtil::isJavaExceptionThrown())
             return;
     }
-    // convert the message to a Java string
+
+    // Convert the message to a Java string.
     jstring jmsg = JNIUtil::makeJString(message);
     if (JNIUtil::isJavaExceptionThrown())
         return;
 
-    // call the Java method
+    // Call the Java method.
     env->CallVoidMethod(m_jthis, mid);
     if (JNIUtil::isJavaExceptionThrown())
         return;
 
-    // delete the Java string
+    // Delete the Java string.
     env->DeleteLocalRef(jmsg);
     if (JNIUtil::isJavaExceptionThrown())
         return;

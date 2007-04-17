@@ -27,21 +27,24 @@
 #endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_wc.h"
+
 /**
- *  this class passes notification from subversion to a Java object
+ * This class passes notification from Subversion to a Java object.
  */
 class Notify
 {
 private:
     /**
-     * the Java object to receive the notifications. This is a global reference
-     * because it has to live longer than the SVNClient.notification call
+     * The Java object to receive the notifications.  This is a global
+     * reference because it has to live longer than the
+     * SVNClient.notification call.
      */
     jobject m_notify;
     Notify(jobject p_notify);
 public:
     static Notify *makeCNotify(jobject notify);
     ~Notify();
+
     /**
      * notification function passed as svn_wc_notify_func_t
      * @param baton notification instance is passed using this parameter
@@ -61,6 +64,7 @@ public:
                        svn_wc_notify_state_t content_state,
                        svn_wc_notify_state_t prop_state,
                        svn_revnum_t revision);
+
     /**
      * Handler for Subversion notifications.
      *
@@ -79,7 +83,7 @@ public:
                   svn_wc_notify_state_t content_state,
                   svn_wc_notify_state_t prop_state,
                   svn_revnum_t revision);
-
 };
+
 // !defined(AFX_NOTIFY_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)
 #endif

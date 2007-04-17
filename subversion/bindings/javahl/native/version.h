@@ -15,6 +15,7 @@
  * ====================================================================
  * @endcopyright
  */
+
 #define JNI_VER_MAJOR    0
 #define JNI_VER_MINOR    9
 #define JNI_VER_MICRO    0

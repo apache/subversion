@@ -25,10 +25,13 @@
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
+
 #include <jni.h>
+
 struct apr_array_header_t;
 struct svn_error_t;
 class Pool;
+
 #include "Path.h"
 #include <vector>
 
@@ -48,5 +51,6 @@ public:
     svn_error_t *error_occured();
     void setDoesNotContainsPath();
 };
+
 // !defined(AFX_TARGETS_H__61202731_41A4_43FF_97C4_7E26DC255BF1__INCLUDED_)
 #endif

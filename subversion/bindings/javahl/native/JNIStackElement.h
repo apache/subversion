@@ -57,17 +57,22 @@ public:
 
 private:
     /**
-     * the name of the method
+     * The name of the method.
      */
     const char *m_method;
+
     /**
-     * the name of the clazz
+     * The name of the class.
      */
+
     const char *m_clazz;
+
     /**
-     * a buffer for the result for jthis.toString to identify the object
+     * A buffer for the result for jthis.toString to identify the
+     * object.
      */
     char m_objectID[JNIUtil::formatBufferSize];
 };
+
 // !defined(AFX_JNISTACKELEMENT_H__81945F80_D56F_4782_B8E7_6A82483E6463__INCLUDED_)
 #endif

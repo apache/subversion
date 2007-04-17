@@ -14,10 +14,10 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
+ *
+ * @file SVNClient.cpp
+ * @brief: Implementation of the SVNClient class
  */
-// SVNClient.cpp: implementation of the SVNClient class.
-//
-//////////////////////////////////////////////////////////////////////
 
 #include "SVNClient.h"
 #include "JNIUtil.h"
@@ -55,9 +55,7 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
+
 struct log_msg_baton
 {
     const char *message;
@@ -117,7 +115,7 @@ const char *SVNClient::getLastPath()
 }
 
 /**
- * List directory entries of a URL
+ * List directory entries of a URL.
  */
 jobjectArray SVNClient::list(const char *url, Revision &revision,
                              Revision &pegRevision, bool recurse)
@@ -756,7 +754,7 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
 }
 
 /**
- * Get a property
+ * Get a property.
  */
 jobject SVNClient::propertyGet(jobject jthis, const char *path,
                                const char *name, Revision &revision,
@@ -1030,7 +1028,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
       = apr_array_make (pool, 10, sizeof (svn_auth_provider_object_t *));
 
     /* The main disk-caching auth providers, for both
-       'username/password' creds and 'username' creds.  */
+     * 'username/password' creds and 'username' creds.  */
     svn_auth_provider_object_t *provider;
 #ifdef WIN32
     svn_client_get_windows_simple_provider (&provider, pool);
@@ -1060,7 +1058,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
         /* Three ssl prompt providers, for server-certs, client-certs,
-           and client-cert-passphrases.  */
+         * and client-cert-passphrases.  */
         provider = m_prompter->getProviderServerSSLTrust();
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
@@ -1077,7 +1075,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     svn_auth_open(&ab, providers, pool);
 
     /* Place any default --username or --password credentials into the
-       auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
+     * auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
     if (!m_userName.empty())
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
                              m_userName.c_str());
@@ -1374,7 +1372,7 @@ svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
 
 
 /**
- * create a DirEntry Java object from svn_dirent_t structure
+ * Create a DirEntry Java object from the svn_dirent_t structure.
  */
 jobject SVNClient::createJavaDirEntry(const char *path, svn_dirent_t *dirent)
 {
@@ -1727,15 +1725,15 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
 
 struct version_status_baton
 {
-  svn_revnum_t min_rev;   /* lowest revision found. */
-  svn_revnum_t max_rev;   /* highest revision found. */
-  svn_boolean_t switched; /* is anything switched? */
-  svn_boolean_t modified; /* is anything modified? */
+  svn_revnum_t min_rev;    /* lowest revision found. */
+  svn_revnum_t max_rev;    /* highest revision found. */
+  svn_boolean_t switched;  /* is anything switched? */
+  svn_boolean_t modified;  /* is anything modified? */
   svn_boolean_t committed; /* examine last committed revisions */
-  svn_boolean_t done;     /* note completion of our task. */
-  const char *wc_path;    /* path whose URL we're looking for. */
-  const char *wc_url;     /* URL for the path whose URL we're looking for. */
-  apr_pool_t *pool;       /* pool in which to store alloc-needy things. */
+  svn_boolean_t done;      /* note completion of our task. */
+  const char *wc_path;     /* path whose URL we're looking for. */
+  const char *wc_url;      /* URL for the path whose URL we're looking for. */
+  apr_pool_t *pool;        /* pool in which to store alloc-needy things. */
 };
 
 /* This implements `svn_cancel_func_t'. */
@@ -1750,7 +1748,7 @@ cancel (void *baton)
 }
 
 /* An svn_wc_status_func_t callback function for anaylyzing status
-   structures. */
+ * structures. */
 static void
 analyze_status(void *baton,
                const char *path,
@@ -1857,8 +1855,8 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     rev.kind = svn_opt_revision_unspecified;
     ctx.config = apr_hash_make (requestPool.pool());
 
-  /* Setup the notification and cancellation callbacks, and their
-     shared baton (which is also shared with the status function). */
+    /* Setup the notification and cancellation callbacks, and their
+     * shared baton (which is also shared with the status function). */
     ctx.notify_func = notify;
     ctx.notify_baton = &sb;
     ctx.cancel_func = cancel;
@@ -1876,8 +1874,8 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     if ((! sb.switched ) && (trailUrl))
     {
         /* If the trailing part of the URL of the working copy directory
-           does not match the given trailing URL then the whole working
-           copy is switched. */
+         * does not match the given trailing URL then the whole working
+         * copy is switched. */
         if (! sb.wc_url)
         {
             sb.switched = TRUE;
@@ -1978,7 +1976,7 @@ struct info_baton
 };
 
 /**
- * get information about a file or directory
+ * Get information about a file or directory.
  */
 jobject SVNClient::info(const char *path)
 {

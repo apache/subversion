@@ -18,12 +18,10 @@
  * @file JNIStringHolder.cpp
  * @brief Implementation of the class JNIStringHolder
  */
+
 #include <jni.h>
 #include "JNIStringHolder.h"
 #include "JNIUtil.h"
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
 
 JNIStringHolder::JNIStringHolder(jstring jtext)
 {

@@ -23,6 +23,7 @@
 #include "JNIUtil.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+
 /**
  * Create a LogMessageCallback object
  * @param jcallback the Java callback object.
@@ -31,13 +32,14 @@ LogMessageCallback::LogMessageCallback(jobject jcallback)
 {
     m_callback = jcallback;
 }
+
 /**
  * Destroy a LogMessageCallback object
  */
 LogMessageCallback::~LogMessageCallback()
 {
-    // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the Java SVNClient.log method.
+    // The m_callback does not need to be destroyed, because it is the
+    // passed in parameter to the Java SVNClient.log method.
 }
 
 svn_error_t *
@@ -72,9 +74,9 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
 {
     JNIEnv *env = JNIUtil::getEnv();
 
-    static jmethodID sm_mid = 0; // the method id will not change during
-                                 // the time this library is loaded, so
-                                 // it can be cached.
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
+    static jmethodID sm_mid = 0;
     if (sm_mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/LogMessageCallback");
@@ -143,7 +145,9 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
                                       svn_sort_compare_items_as_paths,
                                       pool);
 
-        jChangedPaths = env->NewObjectArray(sorted_paths->nelts, clazzCP, NULL);
+        jChangedPaths = env->NewObjectArray(sorted_paths->nelts,
+                                            clazzCP,
+                                            NULL);
 
         for (i = 0; i < sorted_paths->nelts; i++)
         {

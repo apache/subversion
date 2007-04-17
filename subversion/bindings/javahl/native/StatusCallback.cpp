@@ -27,6 +27,7 @@
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_StatusKind.h"
+
 /**
  * Create a StatusCallback object
  * @param jcallback the Java callback object.
@@ -35,6 +36,7 @@ StatusCallback::StatusCallback(jobject jcallback)
 {
     m_callback = jcallback;
 }
+
 /**
  * Destroy a StatusCallback object
  */

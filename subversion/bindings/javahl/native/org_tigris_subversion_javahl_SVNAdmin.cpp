@@ -18,6 +18,7 @@
  * @file org_tigris_subversion_javahl_SVNAdmin.cpp
  * @brief Implementation of the native methods in the Java class SVNAdmin
  */
+
 #include "../include/org_tigris_subversion_javahl_SVNAdmin.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
