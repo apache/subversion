@@ -427,7 +427,7 @@ svn_error_t *svn_swig_rb_client_list_func(void *baton,
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_rb_proplist_receiver(void *baton,
-                                           svn_stringbuf_t *path,
+                                           const char *path,
                                            apr_hash_t *prop_hash,
                                            apr_pool_t *pool);
 
