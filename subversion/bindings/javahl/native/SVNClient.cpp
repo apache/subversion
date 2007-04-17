@@ -1294,7 +1294,7 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
         return;
 
     size_t contentSize = 0;
-    svn_stream_t* read_stream = createReadStream(requestPool.pool(), path,
+    svn_stream_t *read_stream = createReadStream(requestPool.pool(), path,
                                                  revision, pegRevision,
                                                  contentSize);
     if (read_stream == NULL)
@@ -1328,7 +1328,7 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
     return;
 }
 
-svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
+svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
                                           Revision& revision,
                                           Revision &pegRevision, size_t& size)
 {
