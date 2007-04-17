@@ -3510,7 +3510,7 @@ svn_swig_rb_client_list_func(void *baton,
 
 svn_error_t *
 svn_swig_rb_proplist_receiver(void *baton,
-                              svn_stringbuf_t *path,
+                              const char *path,
                               apr_hash_t *prop_hash,
                               apr_pool_t *pool)
 {
@@ -3524,7 +3524,7 @@ svn_swig_rb_proplist_receiver(void *baton,
     cbb.receiver = proc;
     cbb.message = rb_id_call();
     cbb.args = rb_ary_new3(2,
-                           c2r_svn_stringbuf2(path),
+                           c2r_string2(path),
                            svn_swig_rb_prop_hash_to_hash(prop_hash));
     invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
   }
