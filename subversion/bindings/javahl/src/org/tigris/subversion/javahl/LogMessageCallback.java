@@ -26,7 +26,7 @@ import java.util.Date;
 public interface LogMessageCallback
 {
     /**
-     * The method will be called for every log message
+     * The method will be called for every log message.
      *
      * @param changedPaths the paths that were changed
      * @param revision     the revision of the commit
