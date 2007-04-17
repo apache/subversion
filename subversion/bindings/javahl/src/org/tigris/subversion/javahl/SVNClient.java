@@ -1881,6 +1881,8 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * A private statue callback implementation used by thin wrappers.
+     * Instances of this class are not thread-safe.
      */
     private class MyStatusCallback implements StatusCallback
     {
