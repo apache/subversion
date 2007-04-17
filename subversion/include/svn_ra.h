@@ -895,6 +895,8 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
  * directory represented by the @a session's URL, or empty if the
  * entire directory is meant to be switched.
  *
+ * ### TODO(sd): The recurse parameter should probably become a depth:
+ *
  * If @a recurse is true and the target is a directory, switch
  * recursively; otherwise, switch just the target and its immediate
  * entries, but not its child directories (if any).
