@@ -28,9 +28,10 @@ import java.util.Date;
 import java.util.Iterator;
 
 /**
- * This is the main interface class. All subversion commandline client svn &
- * svnversion operation are implemented in this class. This class is not
- * threadsafe. If you need threadsafe access, use SVNClientSynchronized
+ * This is the main interface class.  All subversion commandline client
+ * svn and svnversion operation are implemented in this class.  This
+ * class is not threadsafe.  If you need threadsafe access, use
+ * SVNClientSynchronized.
  */
 public class SVNClient implements SVNClientInterface
 {
@@ -271,8 +272,8 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native void status(String path, int depth, boolean onServer,
-                    boolean getAll, boolean noIgnore, boolean ignoreExternals,
-                    StatusCallback callback)
+                              boolean getAll, boolean noIgnore,
+                              boolean ignoreExternals, StatusCallback callback)
             throws ClientException;
 
     /**
