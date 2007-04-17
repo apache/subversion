@@ -466,7 +466,7 @@ class SVNTests extends TestCase
         /**
          * create a new object
          * @param inputName     the file from which the data is read
-         * @exception IOException If <code>inputName</code> is not
+         * @throws IOException If <code>inputName</code> is not
          * found.
          */
         public FileInputer(File inputName) throws IOException
@@ -534,9 +534,9 @@ class SVNTests extends TestCase
          *
          * @param createWC Whether to create the working copy on disk,
          * and initialize the expected working copy layout.
-         * @exception SubversionException If there is a problem
+         * @throws SubversionException If there is a problem
          * creating or loading the repository.
-         * @exception IOException If there is a problem finding the
+         * @throws IOException If there is a problem finding the
          * dump file.
          */
         protected OneTest(boolean createWC)
@@ -655,9 +655,9 @@ class SVNTests extends TestCase
          * Assumes that {@link #testName} has been set.
          *
          * @return  the repository directory
-         * @exception SubversionException If there is a problem
+         * @throws SubversionException If there is a problem
          * creating or loading the repository.
-         * @exception IOException If there is a problem finding the
+         * @throws IOException If there is a problem finding the
          * dump file.
          */
         protected File createInitialRepository()
@@ -700,9 +700,9 @@ class SVNTests extends TestCase
          * Check if the working copy has the expected status.  Does
          * not extract "out of date" information from the repository.
          *
-         * @exception SubversionException If there's a problem getting
+         * @throws SubversionException If there's a problem getting
          * WC status.
-         * @exception IOException If there's a problem comparing the
+         * @throws IOException If there's a problem comparing the
          * WC to the expected state.
          * @see #checkStatus(boolean)
          */
@@ -717,9 +717,9 @@ class SVNTests extends TestCase
          *
          * @param checkRepos Whether to check the repository's "out of
          * date" information.
-         * @exception SubversionException If there's a problem getting
+         * @throws SubversionException If there's a problem getting
          * WC status.
-         * @exception IOException If there's a problem comparing the
+         * @throws IOException If there's a problem comparing the
          * WC to the expected state.
          */
         public void checkStatus(boolean checkRepos)

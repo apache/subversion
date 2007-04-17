@@ -55,7 +55,7 @@ public class SVNInputStream extends PipedInputStream
      * <p> The <code>close</code> method of <code>InputStream</code> does
      * nothing.
      *
-     * @exception  IOException  if an I/O error occurs.
+     * @throws  IOException  if an I/O error occurs.
      */
     public void close() throws IOException
     {

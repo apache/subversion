@@ -307,7 +307,7 @@ public class WC
      * Check the result of a single file SVNClient.list call
      * @param tested            the result array
      * @param singleFilePath    the path to be checked
-     * @exception Exception
+     * @throws Exception
      */
     void check(DirEntry[] tested, String singleFilePath)
     {
@@ -412,7 +412,7 @@ public class WC
      *
      * @param tested            the result to be tested
      * @param workingCopyPath   the path of the working copy
-     * @exception IOException If there is a problem finding or reading
+     * @throws IOException If there is a problem finding or reading
      * the WC.
      * @see #check(Status[], String, boolean)
      */
@@ -428,7 +428,7 @@ public class WC
      * @param tested The result to be tested.
      * @param workingCopyPath The path of the working copy.
      * @param checkRepos Whether to compare the "out of date" statii.
-     * @exception IOException If there is a problem finding or reading
+     * @throws IOException If there is a problem finding or reading
      * the WC.
      */
     void check(Status[] tested, String workingCopyPath, boolean checkRepos)

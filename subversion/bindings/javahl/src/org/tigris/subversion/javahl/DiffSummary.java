@@ -111,7 +111,7 @@ public class DiffSummary extends EventObject
 
         /**
          * @return The appropriate instance.
-         * @exception IllegalArgumentException If the diff kind is not
+         * @throws IllegalArgumentException If the diff kind is not
          * recognized.
          */
         public static DiffKind getInstance(int diffKind)
