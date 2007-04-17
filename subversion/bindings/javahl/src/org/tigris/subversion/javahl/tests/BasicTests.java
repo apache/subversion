@@ -1864,7 +1864,7 @@ public class BasicTests extends SVNTests
 
         // get the commit message of the initial import and test it
         LogMessage lm[] = client.logMessages(thisTest.getWCPath(), null,
-                null, false, true);
+                                             null, false, true);
         assertEquals("wrong number of objects", 1, lm.length);
         assertEquals("wrong message", "Log Message", lm[0].getMessage());
         assertEquals("wrong revision", 1, lm[0].getRevisionNumber());
