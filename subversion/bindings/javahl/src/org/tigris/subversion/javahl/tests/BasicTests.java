@@ -38,13 +38,13 @@ import java.util.Map;
 public class BasicTests extends SVNTests
 {
     /**
-     * base name of all our tests
+     * Base name of all our tests.
      */
     public final static String testName = "basic_test";
 
     /**
-     * Initialize the testBaseName and the testCounter, if this is the first
-     * test of this class
+     * Initialize the testBaseName and the testCounter, if this is the
+     * first test of this class.
      */
     public BasicTests()
     {
@@ -120,7 +120,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.status functionality
+     * Test the basic SVNClient.status functionality.
      * @throws Throwable
      */
     public void testBasicStatus() throws Throwable
@@ -502,7 +502,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.checkout functionality
+     * Test the basic SVNClient.checkout functionality.
      * @throws Throwable
      */
     public void testBasicCheckout() throws Throwable
@@ -553,7 +553,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.commit functionality
+     * Test the basic SVNClient.commit functionality.
      * @throws Throwable
      */
     public void testBasicCommit() throws Throwable
@@ -596,7 +596,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic property setting/getting functionality
+     * Test the basic property setting/getting functionality.
      * @throws Throwable
      */
     public void testBasicProperties() throws Throwable
@@ -641,7 +641,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.update functionality
+     * Test the basic SVNClient.update functionality.
      * @throws Throwable
      */
     public void testBasicUpdate() throws Throwable
@@ -703,7 +703,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test basic SVNClient.mkdir with url parameter functionality
+     * Test basic SVNClient.mkdir with URL parameter functionality.
      * @throws Throwable
      */
     public void testBasicMkdirUrl() throws Throwable
@@ -819,8 +819,8 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.update functionality with concurrent changes
-     * in the repository and the working copy
+     * Test the basic SVNClient.update functionality with concurrent
+     * changes in the repository and the working copy.
      * @throws Throwable
      */
     public void testBasicMergingUpdate() throws Throwable
@@ -944,8 +944,9 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.update functionality with concurrent changes
-     * in the repository and the working copy that generate conflicts
+     * Test the basic SVNClient.update functionality with concurrent
+     * changes in the repository and the working copy that generate
+     * conflicts.
      * @throws Throwable
      */
     public void testBasicConflict() throws Throwable
@@ -1067,7 +1068,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.cleanup functionality
+     * Test the basic SVNClient.cleanup functionality.
      * @throws Throwable
      */
     public void testBasicCleanup() throws Throwable
@@ -1113,8 +1114,8 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the basic SVNClient.revert functionality
-      * @throws Throwable
+     * Test the basic SVNClient.revert functionality.
+     * @throws Throwable
      */
     public void testBasicRevert() throws Throwable
     {
@@ -1215,7 +1216,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * thest the basic SVNClient.switch functionality
+     * Test the basic SVNClient.switch functionality.
      * @throws Throwable
      */
     public void testBasicSwitch() throws Throwable
@@ -1254,7 +1255,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.remove functionality
+     * Test the basic SVNClient.remove functionality.
      * @throws Throwable
      */
     public void testBasicDelete() throws Throwable
@@ -1566,7 +1567,8 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test if Subversion will detect the change of a file to a direcory
+     * Test if Subversion will detect the change of a file to a
+     * direcory.
      * @throws Throwable
      */
     public void testBasicNodeKindChange() throws Throwable
@@ -1642,7 +1644,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the basic SVNClient.import functionality
+     * Test the basic SVNClient.import functionality.
      * @throws Throwable
      */
     public void testBasicImport() throws Throwable
@@ -1681,7 +1683,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.fileContent functionality
+     * Test the basic SVNClient.fileContent functionality.
      * @throws Throwable
      */
     public void testBasicCat() throws Throwable
@@ -1703,7 +1705,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.fileContent functionality
+     * Test the basic SVNClient.fileContent functionality.
      * @throws Throwable
      */
     public void testBasicCatStream() throws Throwable
@@ -1729,7 +1731,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.list functionality
+     * Test the basic SVNClient.list functionality.
      * @throws Throwable
      */
     public void testBasicLs() throws Throwable
@@ -1756,8 +1758,8 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basis SVNClient.add functionality with files that should be
-     * ignored
+     * Test the basis SVNClient.add functionality with files that
+     * should be ignored.
      * @throws Throwable
      */
     public void testBasicAddIgnores() throws Throwable
@@ -1792,8 +1794,8 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basis SVNClient.import functionality with files that should be
-     * ignored
+     * Test the basis SVNClient.import functionality with files that
+     * should be ignored.
      * @throws Throwable
      */
     public void testBasicImportIgnores() throws Throwable
@@ -1833,7 +1835,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.info functionality
+     * Test the basic SVNClient.info functionality.
      * @throws Throwable
      */
     public void testBasicInfo() throws Throwable
@@ -1877,7 +1879,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClient.getVersionInfo functionality
+     * Test the basic SVNClient.getVersionInfo functionality.
      * @throws Throwable
      * @since 1.2
      */
@@ -1890,7 +1892,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the baisc SVNClient locking functionality
+     * Test the baisc SVNClient locking functionality.
      * @throws Throwable
      * @since 1.2
      */
@@ -1939,7 +1941,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the baisc SVNClient.info2 functionality
+     * Test the baisc SVNClient.info2 functionality.
      * @throws Throwable
      * @since 1.2
      */
@@ -1959,7 +1961,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test basic changelist functionality
+     * Test basic changelist functionality.
      * @throws Throwable
      * @since 1.5
      */
