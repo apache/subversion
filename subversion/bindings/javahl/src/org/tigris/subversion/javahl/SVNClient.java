@@ -211,7 +211,8 @@ public class SVNClient implements SVNClientInterface
      * @return Array of Status entries.
      */
     public Status[] status(String path, boolean descend, boolean onServer,
-                           boolean getAll) throws ClientException
+                           boolean getAll)
+            throws ClientException
     {
         return status(path, descend, onServer, getAll, false);
     }
@@ -228,7 +229,8 @@ public class SVNClient implements SVNClientInterface
      */
     public Status[] status(String path, boolean descend,
                            boolean onServer, boolean getAll,
-                           boolean noIgnore) throws ClientException
+                           boolean noIgnore)
+            throws ClientException
     {
         return status(path, descend, onServer, getAll, noIgnore, false);
     }
@@ -430,7 +432,8 @@ public class SVNClient implements SVNClientInterface
      * @return array of LogMessages
      * @since 1.5
      */
-    public native void logMessages(String path, Revision pegRevision,
+    public native void logMessages(String path,
+                                   Revision pegRevision,
                                    Revision revisionStart,
                                    Revision revisionEnd,
                                    boolean stopOnCopy,
@@ -570,7 +573,8 @@ public class SVNClient implements SVNClientInterface
      * @param recurse   recurse into subdirectories
      * @exception ClientException
      */
-    public void add(String path, boolean recurse) throws ClientException
+    public void add(String path, boolean recurse)
+            throws ClientException
     {
         add(path, recurse, false);
     }
@@ -693,7 +697,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void copy(CopySource[] sources, String destPath,
                             String message, boolean copyAsChild)
-        throws ClientException;
+            throws ClientException;
 
     /**
      * Copy versioned paths with the history preserved (with
@@ -707,7 +711,7 @@ public class SVNClient implements SVNClientInterface
      */
     public void copy(String srcPath, String destPath, String message,
                      Revision revision)
-        throws ClientException
+            throws ClientException
     {
         copy(new CopySource[] { new CopySource(srcPath, revision,
                                                Revision.HEAD) },
@@ -731,7 +735,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void move(String[] srcPaths, String destPath, String message,
                             boolean force, boolean moveAsChild)
-        throws ClientException;
+            throws ClientException;
 
     /**
      * @deprecated Use move() without a Revision parameter.
@@ -758,7 +762,7 @@ public class SVNClient implements SVNClientInterface
      */
     public void move(String srcPath, String destPath, String message,
                      boolean force)
-        throws ClientException
+            throws ClientException
     {
         move(new String[] { srcPath }, destPath, message, force, true);
     }
@@ -779,7 +783,8 @@ public class SVNClient implements SVNClientInterface
      * @param path a local directory.
      * @exception ClientException
      */
-    public native void cleanup(String path) throws ClientException;
+    public native void cleanup(String path)
+            throws ClientException;
 
     /**
      * Removes the 'conflicted' state on a file.
@@ -880,7 +885,8 @@ public class SVNClient implements SVNClientInterface
      * @exception ClientException
      */
     public long doSwitch(String path, String url, Revision revision,
-                         boolean recurse) throws ClientException
+                         boolean recurse)
+            throws ClientException
     {
         return doSwitch(path, url, revision, Depth.fromRecurse(recurse), false);
     }
@@ -895,7 +901,8 @@ public class SVNClient implements SVNClientInterface
      * @exception ClientException
      */
     public native void doImport(String path, String url, String message,
-                                boolean recurse) throws ClientException;
+                                boolean recurse)
+            throws ClientException;
 
     /**
      * Merge changes from two paths into a new local path.
@@ -1039,7 +1046,7 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native MergeInfo getMergeInfo(String path, Revision revision)
-        throws SubversionException;
+            throws SubversionException;
 
     /**
      * Display the differences between two paths
@@ -1177,7 +1184,7 @@ public class SVNClient implements SVNClientInterface
                                      String target2, Revision revision2,
                                      int depth, boolean ignoreAncestry,
                                      DiffSummaryReceiver receiver)
-        throws ClientException;
+            throws ClientException;
 
     /**
      * Produce a diff summary which lists the items changed between
@@ -1211,7 +1218,7 @@ public class SVNClient implements SVNClientInterface
                                      Revision endRevision,
                                      int depth, boolean ignoreAncestry,
                                      DiffSummaryReceiver receiver)
-        throws ClientException;
+            throws ClientException;
 
     /**
      * Retrieves the properties of an item
@@ -1659,13 +1666,15 @@ public class SVNClient implements SVNClientInterface
      * @return  the directory
      * @throws ClientException
      */
-    public native String getConfigDirectory() throws ClientException;
+    public native String getConfigDirectory()
+            throws ClientException;
 
     /**
      * cancel the active operation
      * @throws ClientException
      */
-    public native void cancelOperation() throws ClientException;
+    public native void cancelOperation()
+            throws ClientException;
 
     /**
      * Retrieves the working copy information for an item
@@ -1674,7 +1683,7 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      */
     public native Info info(String path)
-        throws ClientException;
+            throws ClientException;
 
     /**
      * Add paths to a changelist
@@ -1831,7 +1840,7 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native CopySource getCopySource(String path, Revision revision)
-        throws SubversionException;
+            throws SubversionException;
 
     /**
      * Internal method to initialize the native layer. Only to be called by
