@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file org_tigris_subversion_javahl_SVNClient.cpp
- * @brief Implementation of the native methods in the java class SVNClient
+ * @brief Implementation of the native methods in the Java class SVNClient
  */
 #include "../include/org_tigris_subversion_javahl_SVNClient.h"
 #include "../include/org_tigris_subversion_javahl_SVNClientLogLevel.h"

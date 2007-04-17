@@ -22,7 +22,7 @@
 #include "MessageReceiver.h"
 #include "JNIUtil.h"
 /**
- * create a new object and store the local reference to the java object
+ * create a new object and store the local reference to the Java object
  */
 MessageReceiver::MessageReceiver(jobject jthis)
 {
@@ -34,10 +34,10 @@ MessageReceiver::MessageReceiver(jobject jthis)
 MessageReceiver::~MessageReceiver()
 {
     // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the java method.
+    // in parameter to the Java method.
 }
 /**
- * send a message to the java object
+ * send a message to the Java object
  * @param message   the message to be send
  */
 void MessageReceiver::receiveMessage(const char *message)
@@ -61,17 +61,17 @@ void MessageReceiver::receiveMessage(const char *message)
         if (JNIUtil::isJavaExceptionThrown())
             return;
     }
-    // convert the message to a java string
+    // convert the message to a Java string
     jstring jmsg = JNIUtil::makeJString(message);
     if (JNIUtil::isJavaExceptionThrown())
         return;
 
-    // call the java method
+    // call the Java method
     env->CallVoidMethod(m_jthis, mid);
     if (JNIUtil::isJavaExceptionThrown())
         return;
 
-    // delete the java string
+    // delete the Java string
     env->DeleteLocalRef(jmsg);
     if (JNIUtil::isJavaExceptionThrown())
         return;

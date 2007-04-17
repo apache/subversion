@@ -24,7 +24,7 @@
 #include "svn_time.h"
 /**
  * Create a BlameCallback object
- * @param jcallback the java callback object.
+ * @param jcallback the Java callback object.
  */
 BlameCallback::BlameCallback(jobject jcallback)
 {
@@ -36,7 +36,7 @@ BlameCallback::BlameCallback(jobject jcallback)
 BlameCallback::~BlameCallback()
 {
     // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the java SVNClient.blame method.
+    // in parameter to the Java SVNClient.blame method.
 }
 
 svn_error_t *
@@ -96,7 +96,7 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
         }
     }
 
-    // convert the parameters to their java relatives
+    // convert the parameters to their Java relatives
     jstring jauthor = JNIUtil::makeJString(author);
     if (JNIUtil::isJavaExceptionThrown())
     {
@@ -122,7 +122,7 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
         return SVN_NO_ERROR;
     }
 
-    // call the java method
+    // call the Java method
     env->CallVoidMethod(m_callback, mid, jdate,
                         (jlong)revision, jauthor, jline);
     if (JNIUtil::isJavaExceptionThrown())
@@ -130,7 +130,7 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
         return SVN_NO_ERROR;
     }
 
-    // cleanup the temporary java objects
+    // cleanup the temporary Java objects
     env->DeleteLocalRef(jline);
     if (JNIUtil::isJavaExceptionThrown())
     {

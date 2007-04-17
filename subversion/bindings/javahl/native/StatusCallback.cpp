@@ -29,7 +29,7 @@
 #include "../include/org_tigris_subversion_javahl_StatusKind.h"
 /**
  * Create a StatusCallback object
- * @param jcallback the java callback object.
+ * @param jcallback the Java callback object.
  */
 StatusCallback::StatusCallback(jobject jcallback)
 {
@@ -41,7 +41,7 @@ StatusCallback::StatusCallback(jobject jcallback)
 StatusCallback::~StatusCallback()
 {
     // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the java SVNClient.status method.
+    // in parameter to the Java SVNClient.status method.
 }
 
 void

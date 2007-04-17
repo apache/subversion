@@ -26,8 +26,8 @@
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 /**
- * Create a new object and store the java object
- * @param notify    global reference to the java object
+ * Create a new object and store the Java object
+ * @param notify    global reference to the Java object
  */
 Notify::Notify(jobject p_notify)
 {
@@ -35,7 +35,7 @@ Notify::Notify(jobject p_notify)
 }
 
 /**
- * Destroy the object and delete the global reference to the java object
+ * Destroy the object and delete the global reference to the Java object
  */
 Notify::~Notify()
 {
@@ -47,12 +47,12 @@ Notify::~Notify()
 }
 
 /**
- * Create a C++ peer object for the java object
- * @param notify    a local reference to the java object
+ * Create a C++ peer object for the Java object
+ * @param notify    a local reference to the Java object
  */
 Notify *Notify::makeCNotify(jobject notify)
 {
-    // if the java object is null -> no C++ peer needed
+    // if the Java object is null -> no C++ peer needed
     if (notify == NULL)
         return NULL;
     JNIEnv *env = JNIUtil::getEnv();
@@ -139,7 +139,7 @@ Notify::onNotify (
     svn_revnum_t revision)
 {
     JNIEnv *env = JNIUtil::getEnv();
-    // java method id will not change during the time this library is loaded,
+    // Java method id will not change during the time this library is loaded,
     // so it can be cached.
     static jmethodID mid = 0;
     if (mid == 0)
@@ -162,7 +162,7 @@ Notify::onNotify (
         }
     }
 
-    // convert the parameter to their java relatives
+    // convert the parameter to their Java relatives
     jstring jPath = JNIUtil::makeJString(path);
     if (JNIUtil::isJavaExceptionThrown())
     {
@@ -179,7 +179,7 @@ Notify::onNotify (
     jint jContentState = EnumMapper::mapNotifyState(content_state);
     jint jPropState = EnumMapper::mapNotifyState(prop_state);
 
-    // call the java method
+    // call the Java method
     env->CallVoidMethod(m_notify, mid, jPath, jAction, jKind, jMimeType, jContentState, jPropState,
         (jlong)revision);
     if (JNIUtil::isJavaExceptionThrown())
@@ -187,7 +187,7 @@ Notify::onNotify (
         return;
     }
 
-    // release all the temporary java objects
+    // release all the temporary Java objects
     env->DeleteLocalRef(jPath);
     if (JNIUtil::isJavaExceptionThrown())
     {

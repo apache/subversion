@@ -28,14 +28,14 @@
 #include <jni.h>
 #include "svn_wc.h"
 /**
- *  this class passes notification from subversion to a java object
+ *  this class passes notification from subversion to a Java object
  *  (1.2 version)
  */
 class Notify2
 {
 private:
     /**
-     * the java object to receive the notifications. This is a global reference
+     * the Java object to receive the notifications. This is a global reference
      * because it has to live longer than the SVNClient.notification call
      */
     jobject m_notify;

@@ -25,7 +25,7 @@
 #include "svn_sorts.h"
 /**
  * Create a LogMessageCallback object
- * @param jcallback the java callback object.
+ * @param jcallback the Java callback object.
  */
 LogMessageCallback::LogMessageCallback(jobject jcallback)
 {
@@ -37,7 +37,7 @@ LogMessageCallback::LogMessageCallback(jobject jcallback)
 LogMessageCallback::~LogMessageCallback()
 {
     // the m_callback does not need to be destroyed, because it is the passed
-    // in parameter to the java SVNClient.log method.
+    // in parameter to the Java SVNClient.log method.
 }
 
 svn_error_t *

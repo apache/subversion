@@ -25,7 +25,7 @@
 
 /**
  * create an Outputer object
- * @param jthis the java object to be stored
+ * @param jthis the Java object to be stored
  */
 Outputer::Outputer(jobject jthis)
 {
@@ -38,7 +38,7 @@ Outputer::Outputer(jobject jthis)
 Outputer::~Outputer()
 {
     // the m_jthis does not need to be destroyed, because it is the passed
-    // in parameter to the java method.
+    // in parameter to the Java method.
 
 }
 
@@ -95,7 +95,7 @@ svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
         }
     }
 
-    // convert the data to a java byte array
+    // convert the data to a Java byte array
     jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer, *len);
     if (JNIUtil::isJavaExceptionThrown())
     {
@@ -148,7 +148,7 @@ svn_error_t *Outputer::close(void *baton)
         }
     }
 
-    // call the java object, to close the stream
+    // call the Java object, to close the stream
     env->CallVoidMethod(that->m_jthis, mid);
     if (JNIUtil::isJavaExceptionThrown())
     {

@@ -446,8 +446,8 @@ JNIEnv *JNIUtil::getEnv()
     return data->m_env;
 }
 /**
- * check in a java exception has been thrown
- * @return is a java exception has been thrown
+ * check in a Java exception has been thrown
+ * @return is a Java exception has been thrown
  */
 bool JNIUtil::isJavaExceptionThrown()
 {
@@ -466,9 +466,9 @@ bool JNIUtil::isJavaExceptionThrown()
     return false;
 }
 /**
- * create a java string from a native UTF-8 string
+ * create a Java string from a native UTF-8 string
  * @param txt   native UTF-8 string
- * @return the java string. It is a local reference, which should be deleted
+ * @return the Java string. It is a local reference, which should be deleted
  *         as soon a possible
  */
 jstring JNIUtil::makeJString(const char *txt)
@@ -606,19 +606,19 @@ void JNIUtil::setRequestPool(Pool *pool)
 }
 
 /**
- * create a java byte array from an array of characters.
+ * create a Java byte array from an array of characters.
  * @param data      the character array
  * @param length    the number of characters in the array
  */
 jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 {
     if (data == NULL || length == 0)
-        // a NULL or empty will create no java array
+        // a NULL or empty will create no Java array
         return NULL;
 
     JNIEnv *env = getEnv();
 
-    // allocate the java array
+    // allocate the Java array
     jbyteArray ret = env->NewByteArray(length);
     if (isJavaExceptionThrown())
         return NULL;
@@ -679,7 +679,7 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
 
 }
 /**
- * Throw a java NullPointerException. Used when input parameters which should
+ * Throw a Java NullPointerException. Used when input parameters which should
  * not be null are that.
  *
  * @param message   the name of the parameter that is null

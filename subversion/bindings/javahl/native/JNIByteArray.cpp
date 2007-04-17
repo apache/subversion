@@ -22,7 +22,7 @@
 #include "JNIUtil.h"
 /**
  * Create a new object
- * @param jba the local reference to the java byte array
+ * @param jba the local reference to the Java byte array
  * @param flag that the underlying byte array reference should be deleted at
  *        destruction
  */

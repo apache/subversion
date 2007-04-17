@@ -29,7 +29,7 @@
 #include <jni.h>
 struct apr_array_header_t;
 /**
- * this class stores a java object implementing the CommitMessage interface
+ * this class stores a Java object implementing the CommitMessage interface
  */
 class CommitMessage
 {
@@ -53,7 +53,7 @@ public:
 
 private:
     /**
-     * a global reference to the java object, because the reference
+     * a global reference to the Java object, because the reference
      * must be valid longer than the SVNClient.commitMessage call
      */
     jobject m_jcommitMessage;
@@ -61,7 +61,7 @@ private:
     /**
      * Create a commit message object.
      *
-     * @param jcommitMessage The java object to receive the callback.
+     * @param jcommitMessage The Java object to receive the callback.
      */
     CommitMessage(jobject jcommitMessage);
 };

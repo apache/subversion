@@ -47,7 +47,7 @@ public:
      */
     JNIEnv *m_env;
     /**
-     * flag that a java execption has been detected
+     * flag that a Java execption has been detected
      */
     bool m_exceptionThrown;
     /**
