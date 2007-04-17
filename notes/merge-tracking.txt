@@ -44,6 +44,8 @@ history index).
     make it all the way through to the FS and into the merge info
     index in a meaningful fashion yet.
 
+    * Fix issue #2769.  (dlr)
+
 * Handle notifications resulting from a merge.  (dlr)
 
   * Handle property change notifications for "svn:mergeinfo".
