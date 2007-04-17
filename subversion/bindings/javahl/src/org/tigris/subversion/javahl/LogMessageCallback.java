@@ -21,7 +21,7 @@ import java.util.Date;
 
 /**
  * This interface is used to receive every log message for the log
- * messages found by a SVNClientInterface.log call.
+ * messages found by a SVNClientInterface.logMessages call.
  */
 public interface LogMessageCallback
 {

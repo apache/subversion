@@ -44,7 +44,7 @@ public class LogMessage
 
     /**
      * the items changed by this commit (only set when
-     * SVNClientInterface.logmessage is used with discoverPaths true.
+     * SVNClientInterface.logMessages is used with discoverPaths true.
      */
     private ChangePath[] changedPaths;
 
