@@ -225,7 +225,7 @@ public class SVNAdmin
      * <i>pre-revprop-change</i> hook script.
      * @param usePostRevPropChangeHook Whether to run the
      * <i>post-revprop-change</i> hook script.
-     * @exception SubversionException If a problem occurs.
+     * @throws SubversionException If a problem occurs.
      * @since 1.5.0
      */
     public native void setRevProp(String path, Revision rev,

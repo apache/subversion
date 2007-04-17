@@ -136,8 +136,8 @@ public class BasicTests extends SVNTests
      * Test the "out of date" info from {@link
      * org.tigris.subversion.javahl.SVNClient#status()}.
      *
-     * @exception SubversionException
-     * @exception IOException
+     * @throws SubversionException
+     * @throws IOException
      */
     public void testOODStatus() throws SubversionException, IOException
     {

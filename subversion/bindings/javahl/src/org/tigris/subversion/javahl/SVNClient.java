@@ -451,7 +451,7 @@ public class SVNClient implements SVNClientInterface
      * @param depth how deep to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.5
      */
     public native long checkout(String moduleName, String destPath,
@@ -468,7 +468,7 @@ public class SVNClient implements SVNClientInterface
      * @param pegRevision the peg revision to interpret the path
      * @param recurse whether you want it to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.2
      */
     public long checkout(String moduleName, String destPath,
@@ -487,7 +487,7 @@ public class SVNClient implements SVNClientInterface
      * @param destPath destination directory for checkout.
      * @param revision the revision to checkout.
      * @param recurse whether you want it to checkout files recursively.
-     * @exception ClientException
+     * @throws ClientException
      */
     public long checkout(String moduleName, String destPath,
                          Revision revision, boolean recurse)
@@ -537,7 +537,7 @@ public class SVNClient implements SVNClientInterface
      * @param path      path or url to be deleted
      * @param message   if path is a url, this will be the commit message.
      * @param force     delete even when there are local modifications.
-     * @exception ClientException
+     * @throws ClientException
      */
     public void remove(String[] path, String message, boolean force)
             throws ClientException
@@ -551,7 +551,7 @@ public class SVNClient implements SVNClientInterface
      * @param message   if path is a url, this will be the commit message.
      * @param force     delete even when there are local modifications.
      * @param keepLocal only remove the paths from the repository.
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.5
      */
     public native void remove(String[] path, String message, boolean force,
@@ -562,7 +562,7 @@ public class SVNClient implements SVNClientInterface
      * Reverts a file to a pristine state.
      * @param path      path of the file.
      * @param recurse   recurse into subdirectories
-     * @exception ClientException
+     * @throws ClientException
      */
     public native void revert(String path, boolean recurse)
             throws ClientException;
@@ -571,7 +571,7 @@ public class SVNClient implements SVNClientInterface
      * Adds a file to the repository.
      * @param path      path to be added.
      * @param recurse   recurse into subdirectories
-     * @exception ClientException
+     * @throws ClientException
      */
     public void add(String path, boolean recurse)
             throws ClientException
@@ -585,7 +585,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse   recurse into subdirectories
      * @param force     if adding a directory and recurse true and path is a
      *                  directory, all not already managed files are added.
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.2
      */
     public native void add(String path, boolean recurse, boolean force)
@@ -598,7 +598,7 @@ public class SVNClient implements SVNClientInterface
      *                 Revision.HEAD will update to the
      *                 latest revision.
      * @param recurse recursively update.
-     * @exception ClientException
+     * @throws ClientException
      */
     public long update(String path, Revision revision, boolean recurse)
             throws ClientException
@@ -615,7 +615,7 @@ public class SVNClient implements SVNClientInterface
      *                 latest revision.
      * @param recurse recursively update.
      * @param ignoreExternals externals will be ignore during update
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.2
      */
     public long[] update(String[] path, Revision revision,
@@ -635,7 +635,7 @@ public class SVNClient implements SVNClientInterface
      * @param depth  the depth to recursively update.
      * @param ignoreExternals externals will be ignore during update
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.5
      */
     public long update(String path, Revision revision, int depth,
@@ -656,7 +656,7 @@ public class SVNClient implements SVNClientInterface
      * @param depth  the depth to recursively update.
      * @param ignoreExternals externals will be ignore during update
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.5
      */
     public native long[] update(String[] path, Revision revision,
@@ -691,7 +691,7 @@ public class SVNClient implements SVNClientInterface
      * <code>destPath</code> is not a URL.
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
-     * @exception ClientException If the copy operation fails.
+     * @throws ClientException If the copy operation fails.
      * @since 1.5
      * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
      */
@@ -707,7 +707,7 @@ public class SVNClient implements SVNClientInterface
      * @param destPath  destination path or url
      * @param message   commit message if destPath is an url
      * @param revision  source revision
-     * @exception ClientException
+     * @throws ClientException
      */
     public void copy(String srcPath, String destPath, String message,
                      Revision revision)
@@ -729,7 +729,7 @@ public class SVNClient implements SVNClientInterface
      * modifications exist.
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
-     * @exception ClientException If the move operation fails.
+     * @throws ClientException If the move operation fails.
      * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
      * @since 1.5
      */
@@ -772,7 +772,7 @@ public class SVNClient implements SVNClientInterface
      * directory on disk and schedules it for addition.
      * @param path      directories to be created
      * @param message   commit message to used if path contains urls
-     * @exception ClientException
+     * @throws ClientException
      */
     public native void mkdir(String[] path, String message)
             throws ClientException;
@@ -781,7 +781,7 @@ public class SVNClient implements SVNClientInterface
      * Recursively cleans up a local directory, finishing any
      * incomplete operations, removing lockfiles, etc.
      * @param path a local directory.
-     * @exception ClientException
+     * @throws ClientException
      */
     public native void cleanup(String path)
             throws ClientException;
@@ -790,7 +790,7 @@ public class SVNClient implements SVNClientInterface
      * Removes the 'conflicted' state on a file.
      * @param path      path to cleanup
      * @param recurse   recurce into subdirectories
-     * @exception ClientException
+     * @throws ClientException
      */
     public native void resolved(String path, boolean recurse)
             throws ClientException;
@@ -803,7 +803,7 @@ public class SVNClient implements SVNClientInterface
      * @param destPath  a destination path that must not already exist.
      * @param revision  the revsion to be exported
      * @param force     set if it is ok to overwrite local files
-     * @exception ClientException
+     * @throws ClientException
      */
     public long doExport(String srcPath, String destPath,
                                 Revision revision, boolean force)
@@ -868,7 +868,7 @@ public class SVNClient implements SVNClientInterface
      * @param revision  the new base revision of working copy
      * @param depth     how deep to traverse into subdirectories
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.5
      */
     public native long doSwitch(String path, String url, Revision revision,
@@ -882,7 +882,7 @@ public class SVNClient implements SVNClientInterface
      * @param url       the new url for the working copy
      * @param revision  the new base revision of working copy
      * @param recurse   traverse into subdirectories
-     * @exception ClientException
+     * @throws ClientException
      */
     public long doSwitch(String path, String url, Revision revision,
                          boolean recurse)
@@ -898,7 +898,7 @@ public class SVNClient implements SVNClientInterface
      * @param url       the target url
      * @param message   the log message.
      * @param recurse   traverse into subdirectories
-     * @exception ClientException
+     * @throws ClientException
      */
     public native void doImport(String path, String url, String message,
                                 boolean recurse)
@@ -913,7 +913,7 @@ public class SVNClient implements SVNClientInterface
      * @param localPath     target local path
      * @param force         overwrite local changes
      * @param recurse       traverse into subdirectories
-     * @exception ClientException
+     * @throws ClientException
      */
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath,
@@ -1024,7 +1024,7 @@ public class SVNClient implements SVNClientInterface
      * @param depth         how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun        do not change anything
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.5
      */
     public void merge(String path, Revision pegRevision,
@@ -1056,7 +1056,7 @@ public class SVNClient implements SVNClientInterface
      * @param revision2     second revision
      * @param outFileName   file name where difference are written
      * @param recurse       traverse into subdirectories
-     * @exception ClientException
+     * @throws ClientException
      */
     public void diff(String target1, Revision revision1, String target2,
                      Revision revision2, String outFileName,
@@ -1104,7 +1104,7 @@ public class SVNClient implements SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param noDiffDeleted no output on deleted files
      * @param force         diff even on binary files
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.5
      */
     public native void diff(String target1, Revision revision1, String target2,
@@ -1150,7 +1150,7 @@ public class SVNClient implements SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param noDiffDeleted no output on deleted files
      * @param force         diff even on binary files
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.5
      */
     public native void diff(String target, Revision pegRevision,
@@ -1177,7 +1177,7 @@ public class SVNClient implements SVNClientInterface
      * @param receiver As each is difference is found, this callback
      * is invoked with a description of the difference.
      *
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.5
      */
     public native void diffSummarize(String target1, Revision revision1,
@@ -1210,7 +1210,7 @@ public class SVNClient implements SVNClientInterface
      * @param receiver As each is difference is found, this callback
      * is invoked with a description of the difference.
      *
-     * @exception ClientException
+     * @throws ClientException
      * @since 1.5
      */
     public native void diffSummarize(String target, Revision pegRevision,

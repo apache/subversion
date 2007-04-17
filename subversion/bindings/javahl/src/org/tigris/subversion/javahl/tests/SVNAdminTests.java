@@ -31,7 +31,7 @@ public class SVNAdminTests extends SVNTests
 {
     /**
      * Test the basic SVNAdmin.create functionality
-     * @exception SubversionException
+     * @throws SubversionException
      */
     public void testCreate()
         throws SubversionException, IOException

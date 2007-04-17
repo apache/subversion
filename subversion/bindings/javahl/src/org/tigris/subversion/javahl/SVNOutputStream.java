@@ -44,7 +44,7 @@ public class SVNOutputStream extends PipedOutputStream
      * associated with this stream. This stream may no longer be used for
      * writing bytes.
      *
-     * @exception  IOException  if an I/O error occurs.
+     * @throws  IOException  if an I/O error occurs.
      */
     public void close() throws IOException
     {
