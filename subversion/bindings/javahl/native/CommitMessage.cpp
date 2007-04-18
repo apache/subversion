@@ -103,7 +103,9 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
     if (midConstructor == 0)
     {
         midConstructor = env->GetMethodID(clazz, "<init>",
-            "(Ljava/lang/String;IILjava/lang/String;Ljava/lang/String;J)V");
+                                          "(Ljava/lang/String;"
+                                          "IILjava/lang/String;"
+                                          "Ljava/lang/String;J)V");
         if (JNIUtil::isExceptionThrown())
             return NULL;
     }
@@ -117,7 +119,8 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
             return NULL;
 
         midCallback = env->GetMethodID(clazz2, "getLogMessage",
-            "([L"JAVA_PACKAGE"/CommitItem;)Ljava/lang/String;");
+                                       "([L"JAVA_PACKAGE"/CommitItem;)"
+                                       "Ljava/lang/String;");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
 

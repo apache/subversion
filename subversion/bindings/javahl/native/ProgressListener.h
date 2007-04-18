@@ -85,5 +85,6 @@ protected:
                     apr_off_t total,
                     apr_pool_t *pool);
 };
+
 // !defined(AFX_PROGRESS_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)
 #endif

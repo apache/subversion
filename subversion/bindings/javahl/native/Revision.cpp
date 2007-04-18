@@ -170,7 +170,6 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
 
 Revision::~Revision()
 {
-
 }
 
 const svn_opt_revision_t *Revision::revision () const

@@ -96,7 +96,8 @@ void SVNClient::dispose(jobject jthis)
 jstring SVNClient::getAdminDirectoryName()
 {
     Pool requestPool;
-    jstring name = JNIUtil::makeJString(svn_wc_get_adm_dir(requestPool.pool()));
+    jstring name =
+        JNIUtil::makeJString(svn_wc_get_adm_dir(requestPool.pool()));
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -502,9 +503,9 @@ void SVNClient::resolved(const char *path, bool recurse)
 }
 
 jlong SVNClient::doExport(const char *srcPath, const char *destPath,
-                          Revision &revision, Revision &pegRevision, bool force,
-                          bool ignoreExternals, svn_depth_t depth,
-                          const char *nativeEOL)
+                          Revision &revision, Revision &pegRevision,
+                          bool force, bool ignoreExternals,
+                          svn_depth_t depth, const char *nativeEOL)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(srcPath, "srcPath", -1);
@@ -577,8 +578,9 @@ void SVNClient::doImport(const char *path, const char *url,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_import(&commit_info, intPath.c_str(), intUrl.c_str(),
-                                  !recurse, ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_import(&commit_info, intPath.c_str(),
+                                  intUrl.c_str(), !recurse, ctx,
+                                  requestPool.pool()), );
 }
 
 void SVNClient::merge(const char *path1, Revision &revision1,
@@ -1068,8 +1070,6 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       }
 
-
-
     /* Build an authentication baton to give to libsvn_client. */
     svn_auth_open(&ab, providers, pool);
 
@@ -1081,7 +1081,6 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     if (!m_passWord.empty())
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                              m_passWord.c_str());
-
 
     ctx->auth_baton = ab;
     ctx->notify_func = Notify::notify;
@@ -1133,6 +1132,7 @@ SVNClient::getCommitMessage(const char **log_msg,
 
     return SVN_NO_ERROR;
 }
+
 void *SVNClient::getCommitMessageBaton(const char *message)
 {
     if (message != NULL || m_commitMessage)
@@ -1160,8 +1160,8 @@ jobject SVNClient::createJavaProperty(jobject jthis, const char *path,
     if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>",
-                  "(L"JAVA_PACKAGE"/SVNClient;Ljava/lang/String;"
-                   "Ljava/lang/String;Ljava/lang/String;[B)V");
+                               "(L"JAVA_PACKAGE"/SVNClient;Ljava/lang/String;"
+                               "Ljava/lang/String;Ljava/lang/String;[B)V");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
@@ -1507,7 +1507,8 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
                                   revisionStart.revision(),
                                   revisionEnd.revision(),
                                   svn_diff_file_options_create(pool), false,
-                                  BlameCallback::callback, callback, ctx, pool),
+                                  BlameCallback::callback, callback, ctx,
+                                  pool),
                 );
 }
 
@@ -1616,8 +1617,9 @@ jobject SVNClient::createJavaLock(const svn_lock_t *lock)
     if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>",
-            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
-            "Ljava/lang/String;JJ)V");
+                               "(Ljava/lang/String;Ljava/lang/String;"
+                               "Ljava/lang/String;"
+                               "Ljava/lang/String;JJ)V");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
@@ -1641,7 +1643,7 @@ jobject SVNClient::createJavaLock(const svn_lock_t *lock)
     jlong jCreationDate = lock->creation_date;
     jlong jExpirationDate = lock->expiration_date;
     jobject ret = env->NewObject(clazz, mid, jOwner, jPath, jToken, jComment,
-        jCreationDate, jExpirationDate);
+                                 jCreationDate, jExpirationDate);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -1996,6 +1998,7 @@ jobject SVNClient::info(const char *path)
 
     return createJavaInfo(entry);
 }
+
 jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
 {
     if (entry == NULL)
@@ -2013,9 +2016,11 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
     if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>",
-            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
-            "Ljava/lang/String;IILjava/lang/String;JJLjava/util/Date;"
-            "Ljava/util/Date;Ljava/util/Date;ZZZZJLjava/lang/String;)V");
+                               "(Ljava/lang/String;Ljava/lang/String;"
+                               "Ljava/lang/String;Ljava/lang/String;"
+                               "IILjava/lang/String;JJLjava/util/Date;"
+                               "Ljava/util/Date;Ljava/util/Date;"
+                               "ZZZZJLjava/lang/String;)V");
         if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
@@ -2078,9 +2083,11 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
     }
 
     jobject ret = env->NewObject(clazz, mid, jName, jUrl, jUuid, jRepository,
-        jSchedule, jNodeKind, jAuthor, jRevision, jLastChangedRevision,
-        jLastChangedDate, jLastDateTextUpdate, jLastDatePropsUpdate, jCopied,
-        jDeleted, jAbsent, jIncomplete, jCopyRev, jCopyUrl);
+                                 jSchedule, jNodeKind, jAuthor, jRevision,
+                                 jLastChangedRevision, jLastChangedDate,
+                                 jLastDateTextUpdate, jLastDatePropsUpdate,
+                                 jCopied, jDeleted, jAbsent, jIncomplete,
+                                 jCopyRev, jCopyUrl);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;

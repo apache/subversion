@@ -65,9 +65,9 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
 {
     JNIEnv *env = JNIUtil::getEnv();
 
-    static jmethodID mid = 0; // the method id will not change during
-                              // the time this library is loaded, so
-                              // it can be cached.
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
+    static jmethodID mid = 0;
     if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/ProplistCallback");
@@ -75,7 +75,7 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
             return SVN_NO_ERROR;
 
         mid = env->GetMethodID(clazz, "singlePath",
-            "(Ljava/lang/String;Ljava/util/Map;)V");
+                               "(Ljava/lang/String;Ljava/util/Map;)V");
         if (JNIUtil::isJavaExceptionThrown() || mid == 0)
             return SVN_NO_ERROR;
 
@@ -130,7 +130,8 @@ jobject ProplistCallback::makeMapFromHash(apr_hash_t *prop_hash,
     if (put_mid == 0)
     {
         put_mid = env->GetMethodID(clazz, "put",
-            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
+                                   "(Ljava/lang/Object;Ljava/lang/Object;)"
+                                   "Ljava/lang/Object;");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }

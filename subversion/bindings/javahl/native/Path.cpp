@@ -28,12 +28,12 @@
 /**
  * Constructor
  *
- * @see Path::Path (const std::string &)
+ * @see Path::Path(const std::string &)
  * @param path Path string
  */
-Path::Path (const char *pi_path)
+Path::Path(const char *pi_path)
 {
-    init (pi_path);
+    init(pi_path);
 }
 
 /**
@@ -43,9 +43,9 @@ Path::Path (const char *pi_path)
  *
  * @param path Path string
  */
-Path::Path (const std::string &pi_path)
+Path::Path(const std::string &pi_path)
 {
-    init (pi_path.c_str ());
+    init(pi_path.c_str());
 }
 
 /**
@@ -53,9 +53,9 @@ Path::Path (const std::string &pi_path)
  *
  * @param path Path to be copied
  */
-Path::Path (const Path &pi_path)
+Path::Path(const Path &pi_path)
 {
-    init (pi_path.c_str ());
+    init(pi_path.c_str());
 }
 
 /**
@@ -64,7 +64,7 @@ Path::Path (const Path &pi_path)
  * @param path Path string
  */
 void
-Path::init (const char *pi_path)
+Path::init(const char *pi_path)
 {
     if (*pi_path == 0)
     {
@@ -73,8 +73,9 @@ Path::init (const char *pi_path)
     }
     else
     {
-        m_error_occured = JNIUtil::preprocessPath(pi_path,
-            JNIUtil::getRequestPool()->pool() );
+        m_error_occured =
+            JNIUtil::preprocessPath(pi_path,
+                                    JNIUtil::getRequestPool()->pool() );
 
         m_path = pi_path;
     }
@@ -84,7 +85,7 @@ Path::init (const char *pi_path)
  * @return Path string
  */
 const std::string &
-Path::path () const
+Path::path() const
 {
     return m_path;
 }
@@ -95,7 +96,7 @@ Path::path () const
 const char *
 Path::c_str() const
 {
-    return m_path.c_str ();
+    return m_path.c_str();
 }
 
 /**
@@ -104,7 +105,7 @@ Path::c_str() const
 Path&
 Path::operator=(const Path &pi_path)
 {
-    init (pi_path.c_str ());
+    init(pi_path.c_str());
     return *this;
 }
 

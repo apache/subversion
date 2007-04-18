@@ -111,11 +111,14 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
     if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>",
-            "(Ljava/lang/String;Ljava/lang/String;JILjava/lang/String;"
-             "Ljava/lang/String;JJLjava/lang/String;"
-             "Lorg/tigris/subversion/javahl/Lock;ZILjava/lang/String;JJJ"
-             "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
-             "Ljava/lang/String;Ljava/lang/String;)V");
+                               "(Ljava/lang/String;Ljava/lang/String;"
+                               "JILjava/lang/String;Ljava/lang/String;"
+                               "JJLjava/lang/String;"
+                               "Lorg/tigris/subversion/javahl/Lock;"
+                               "ZILjava/lang/String;JJJ"
+                               "Ljava/lang/String;Ljava/lang/String;"
+                               "Ljava/lang/String;Ljava/lang/String;"
+                               "Ljava/lang/String;)V");
         if (mid == 0 || JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
@@ -178,10 +181,13 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
         return NULL;
 
     jobject jinfo2 = env->NewObject(clazz, mid, jpath, jurl, jrev, jnodeKind,
-        jreposRootUrl, jreportUUID, jlastChangedRev, jlastChangedDate,
-        jlastChangedAuthor, jlock, jhasWcInfo, jschedule, jcopyFromUrl,
-        jcopyFromRev, jtextTime, jpropTime, jchecksum, jconflictOld,
-        jconflictNew, jconflictWrk, jprejfile);
+                                    jreposRootUrl, jreportUUID,
+                                    jlastChangedRev, jlastChangedDate,
+                                    jlastChangedAuthor, jlock, jhasWcInfo,
+                                    jschedule, jcopyFromUrl, jcopyFromRev,
+                                    jtextTime, jpropTime, jchecksum,
+                                    jconflictOld, jconflictNew, jconflictWrk,
+                                    jprejfile);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 

@@ -286,8 +286,8 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
     }
     LogMessageCallback callback(jlogMessageCallback);
     cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
-        jstopOnCopy ? true: false, jdisoverPaths ? true : false, jlimit,
-        &callback);
+                    jstopOnCopy ? true: false, jdisoverPaths ? true : false,
+                    jlimit, &callback);
 }
 
 JNIEXPORT jlong JNICALL
@@ -521,8 +521,8 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
         return -1;
     }
     return cl->commit(targets, message, jrecurse ? true : false,
-        jnoUnlock ? true : false, jkeepChangelist ? true : false,
-        changelistName);
+                      jnoUnlock ? true : false, jkeepChangelist ? true : false,
+                      changelistName);
 }
 
 JNIEXPORT void JNICALL
@@ -674,8 +674,8 @@ Java_org_tigris_subversion_javahl_SVNClient_doExport
         return -1;
     }
     return cl->doExport(srcPath, destPath, revision, pegRevision,
-        jforce ? true : false, jignoreExternals ? true : false,
-        (svn_depth_t)jdepth, nativeEOL);
+                        jforce ? true : false, jignoreExternals ? true : false,
+                        (svn_depth_t)jdepth, nativeEOL);
 }
 
 JNIEXPORT jlong JNICALL
@@ -779,8 +779,8 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
         return;
     }
     cl->merge(path1, revision1, path2, revision2, localPath,
-        jforce ? true:false, (svn_depth_t)jdepth,
-        jignoreAncestry ? true:false, jdryRun ? true:false);
+              jforce ? true:false, (svn_depth_t)jdepth,
+              jignoreAncestry ? true:false, jdryRun ? true:false);
 }
 
 JNIEXPORT void JNICALL
@@ -822,8 +822,8 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
         return;
     }
     cl->merge(path, pegRevision, revision1, revision2, localPath,
-        jforce ? true:false, (svn_depth_t)jdepth,
-        jignoreAncestry ? true:false, jdryRun ? true:false);
+              jforce ? true:false, (svn_depth_t)jdepth,
+              jignoreAncestry ? true:false, jdryRun ? true:false);
 }
 
 JNIEXPORT void JNICALL
@@ -855,7 +855,7 @@ Java_org_tigris_subversion_javahl_SVNClient_properties
     }
     ProplistCallback callback(jproplistCallback);
     cl->properties(path, revision, pegRevision, jrecurse ? true : false,
-        &callback);
+                   &callback);
 }
 
 JNIEXPORT void JNICALL
@@ -886,7 +886,7 @@ Java_org_tigris_subversion_javahl_SVNClient_propertySet
         return;
     }
     cl->propertySet(path, name, value, jrecurse ? true:false,
-        jforce ? true:false);
+                    jforce ? true:false);
 }
 
 JNIEXPORT void JNICALL
@@ -941,7 +941,7 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyCreate__Ljava_lang_String_2L
         return;
     }
     cl->propertyCreate(path, name, value, jrecurse ? true:false,
-        jforce ? true:false);
+                       jforce ? true:false);
 }
 
 JNIEXPORT void JNICALL
@@ -972,8 +972,8 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyCreate__Ljava_lang_String_2L
         return;
     }
     cl->propertyCreate(path, name, (const char *)value.getBytes(),
-        jrecurse ? true:false,
-        jforce ? true:false);
+                       jrecurse ? true:false,
+                       jforce ? true:false);
 }
 
 JNIEXPORT jobject JNICALL
@@ -1160,9 +1160,9 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
         return;
     }
     cl->diff(target1, revision1, target2, revision2, outfileName,
-        (svn_depth_t)jdepth,
-        jignoreAncestry ? true:false,
-        jnoDiffDeleted ? true:false, jforce ? true:false);
+             (svn_depth_t)jdepth,
+             jignoreAncestry ? true:false,
+             jnoDiffDeleted ? true:false, jforce ? true:false);
 }
 
 JNIEXPORT void JNICALL
@@ -1205,9 +1205,9 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
         return;
     }
     cl->diff(target, pegRevision, startRevision, endRevision, outfileName,
-        (svn_depth_t)jdepth,
-        jignoreAncestry ? true:false,
-        jnoDiffDeleted ? true:false, jforce ? true:false);
+             (svn_depth_t)jdepth,
+             jignoreAncestry ? true:false,
+             jnoDiffDeleted ? true:false, jforce ? true:false);
 }
 
 JNIEXPORT void JNICALL
@@ -1495,7 +1495,7 @@ Java_org_tigris_subversion_javahl_SVNClient_blame
     }
     BlameCallback callback(jblameCallback);
     cl->blame(path, pegRevision, revisionStart, revisionEnd,
-        jignoreMimeType ? true : false, &callback);
+              jignoreMimeType ? true : false, &callback);
 }
 
 JNIEXPORT void JNICALL

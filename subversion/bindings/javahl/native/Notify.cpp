@@ -147,7 +147,9 @@ void Notify::onNotify(const char *path,
         {
             return;
         }
-        mid = env->GetMethodID(clazz, "onNotify", "(Ljava/lang/String;IILjava/lang/String;IIJ)V");
+        mid = env->GetMethodID(clazz,
+                               "onNotify",
+                               "(Ljava/lang/String;IILjava/lang/String;IIJ)V");
         if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
             return;

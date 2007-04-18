@@ -27,8 +27,9 @@
 #include "Path.h"
 
 JNIEXPORT jboolean JNICALL
-Java_org_tigris_subversion_javahl_Path_isValid
-  (JNIEnv *env, jclass jthis, jstring jpath)
+Java_org_tigris_subversion_javahl_Path_isValid(JNIEnv *env,
+                                               jclass jthis,
+                                               jstring jpath)
 {
     JNIEntry(Path, isValid);
     JNIStringHolder path(jpath);

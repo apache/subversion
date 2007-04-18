@@ -108,11 +108,14 @@ StatusCallback::createJavaStatus(const char *path,
     if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>",
-            "(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZ"
-             "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
-             "Ljava/lang/String;JZLjava/lang/String;Ljava/lang/String;"
-             "Ljava/lang/String;JLorg/tigris/subversion/javahl/Lock;"
-             "JJILjava/lang/String;)V");
+                               "(Ljava/lang/String;Ljava/lang/String;"
+                               "IJJJLjava/lang/String;IIIIZZ"
+                               "Ljava/lang/String;Ljava/lang/String;"
+                               "Ljava/lang/String;Ljava/lang/String;"
+                               "JZLjava/lang/String;Ljava/lang/String;"
+                               "Ljava/lang/String;"
+                               "JLorg/tigris/subversion/javahl/Lock;"
+                               "JJILjava/lang/String;)V");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
@@ -221,12 +224,16 @@ StatusCallback::createJavaStatus(const char *path,
     }
 
     jobject ret = env->NewObject(clazz, mid, jPath, jUrl, jNodeKind, jRevision,
-        jLastChangedRevision, jLastChangedDate, jLastCommitAuthor,
-        jTextType, jPropType, jRepositoryTextType, jRepositoryPropType,
-        jIsLocked, jIsCopied, jConflictOld, jConflictNew, jConflictWorking,
-        jURLCopiedFrom, jRevisionCopiedFrom, jIsSwitched, jLockToken,
-        jLockOwner, jLockComment, jLockCreationDate, jLock,
-        jOODLastCmtRevision, jOODLastCmtDate, jOODKind, jOODLastCmtAuthor);
+                                 jLastChangedRevision, jLastChangedDate,
+                                 jLastCommitAuthor, jTextType, jPropType,
+                                 jRepositoryTextType, jRepositoryPropType,
+                                 jIsLocked, jIsCopied, jConflictOld,
+                                 jConflictNew, jConflictWorking,
+                                 jURLCopiedFrom, jRevisionCopiedFrom,
+                                 jIsSwitched, jLockToken, jLockOwner,
+                                 jLockComment, jLockCreationDate, jLock,
+                                 jOODLastCmtRevision, jOODLastCmtDate,
+                                 jOODKind, jOODLastCmtAuthor);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 

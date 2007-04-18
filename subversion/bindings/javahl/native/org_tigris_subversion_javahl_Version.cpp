@@ -48,8 +48,7 @@ JNIEXPORT jstring JNICALL
 Java_org_tigris_subversion_javahl_Version_getTag(JNIEnv *env, jobject jthis)
 {
     JNIEntry(Version, getTag);
-    jstring tag =
-        JNIUtil::makeJString(SVN_VER_TAG);
+    jstring tag = JNIUtil::makeJString(SVN_VER_TAG);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
@@ -62,8 +61,7 @@ Java_org_tigris_subversion_javahl_Version_getNumberTag(JNIEnv *env,
                                                        jobject jthis)
 {
     JNIEntry(Version, getNumberTag);
-    jstring numtag =
-        JNIUtil::makeJString(SVN_VER_NUMTAG);
+    jstring numtag = JNIUtil::makeJString(SVN_VER_NUMTAG);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
