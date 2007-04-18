@@ -122,7 +122,7 @@ parse_revlist(const char **input, const char *end,
 
   if (curr == end)
     return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            _("No revision list found "));
+                            _("No revision list found"));
 
   while (curr < end)
     {
