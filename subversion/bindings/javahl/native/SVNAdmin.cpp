@@ -466,8 +466,9 @@ jobjectArray SVNAdmin::lslocks(const char *path)
         return NULL;
 
     int i = 0;
-    for (hi = apr_hash_first (requestPool.pool(), locks); hi;
-            hi = apr_hash_next (hi), ++i)
+    for (hi = apr_hash_first (requestPool.pool(), locks);
+         hi;
+         hi = apr_hash_next (hi), ++i)
     {
         void *val;
         apr_hash_this (hi, NULL, NULL, &val);
