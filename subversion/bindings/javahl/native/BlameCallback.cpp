@@ -80,29 +80,24 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/BlameCallback");
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       mid = env->GetMethodID(clazz, "singleLine",
                              "(Ljava/util/Date;JLjava/lang/String;"
                              "Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       env->DeleteLocalRef(clazz);
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
 
   // convert the parameters to their Java relatives
   jstring jauthor = JNIUtil::makeJString(author);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
+
   jobject jdate = NULL;
   if (date != NULL && *date != '\0')
     {
@@ -113,39 +108,29 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
 
       jdate = JNIUtil::createDate(timeTemp);
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
   jstring jline = JNIUtil::makeJString(line);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   // call the Java method
   env->CallVoidMethod(m_callback, mid, jdate,
                       (jlong)revision, jauthor, jline);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   // cleanup the temporary Java objects
   env->DeleteLocalRef(jline);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
+
   env->DeleteLocalRef(jauthor);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
+
   env->DeleteLocalRef(jdate);
-  if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+  // No need to check for an exception here, because we return anyway.
+
   return SVN_NO_ERROR;
 }

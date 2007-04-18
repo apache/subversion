@@ -117,9 +117,7 @@ Path::operator=(const Path &pi_path)
 jboolean Path::isValid(const char *p)
 {
   if (p == NULL)
-    {
-      return JNI_FALSE;
-    }
+    return JNI_FALSE;
 
   Pool requestPool;
   svn_error_t *err = svn_path_check_valid(p, requestPool.pool());

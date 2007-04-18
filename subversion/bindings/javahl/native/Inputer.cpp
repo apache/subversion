@@ -74,43 +74,33 @@ svn_error_t *Inputer::read(void *baton, char *buffer, apr_size_t *len)
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/InputInterface");
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       mid = env->GetMethodID(clazz, "read", "([B)I");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       env->DeleteLocalRef(clazz);
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
 
   // Allocate a Java byte array to read the data.
   jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer,
                                             *len);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   // Read the data.
   jint jread = env->CallIntMethod(that->m_jthis, mid, data);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   // Put the Java byte array into a helper object to retrieve the
   // data bytes.
   JNIByteArray outdata(data, true);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   // Catch when the Java method tells us it read too much data.
   if (jread > (jint) *len)
@@ -146,27 +136,20 @@ svn_error_t *Inputer::close(void *baton)
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/InputInterface");
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       mid = env->GetMethodID(clazz, "close", "()V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       env->DeleteLocalRef(clazz);
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
 
   // Call the Java object, to close the stream.
   env->CallVoidMethod(that->m_jthis, mid);
-  if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+  // We don't need to check for an exception here because we return anyway.
 
   return SVN_NO_ERROR;
 }

@@ -59,9 +59,8 @@ Notify *Notify::makeCNotify(jobject notify)
   // Sanity check, that the object implements Notify.
   jclass clazz = env->FindClass(JAVA_PACKAGE"/Notify");
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   if (!env->IsInstanceOf(notify, clazz))
     {
       env->DeleteLocalRef(clazz);
@@ -69,17 +68,13 @@ Notify *Notify::makeCNotify(jobject notify)
     }
   env->DeleteLocalRef(clazz);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
 
   // Make a global reference, because the reference is longer
   // needed, than the call.
   jobject myNotify = env->NewGlobalRef(notify);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
 
   // Create the peer.
   return new Notify(myNotify);
@@ -144,37 +139,30 @@ void Notify::onNotify(const char *path,
       jclass clazz = env->FindClass(JAVA_PACKAGE"/Notify");
       //jclass clazz = env->GetObjectClass(m_notify);
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return;
-        }
+        return;
+
       mid = env->GetMethodID(clazz,
                              "onNotify",
                              "(Ljava/lang/String;IILjava/lang/String;IIJ)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        {
-          return;
-        }
+        return;
+
       env->DeleteLocalRef(clazz);
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return;
-        }
+        return;
     }
 
   // Convert the parameters to their Java relatives.
   jstring jPath = JNIUtil::makeJString(path);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   jint jAction = EnumMapper::mapNotifyAction(action);
   jint jKind = EnumMapper::mapNodeKind(kind);
   jstring jMimeType = JNIUtil::makeJString(mime_type);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   jint jContentState = EnumMapper::mapNotifyState(content_state);
   jint jPropState = EnumMapper::mapNotifyState(prop_state);
 
@@ -182,19 +170,14 @@ void Notify::onNotify(const char *path,
   env->CallVoidMethod(m_notify, mid, jPath, jAction, jKind, jMimeType,
                       jContentState, jPropState, (jlong)revision);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   // Release all the temporary Java objects.
   env->DeleteLocalRef(jPath);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   env->DeleteLocalRef(jMimeType);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return;
-    }
+    return;
 }

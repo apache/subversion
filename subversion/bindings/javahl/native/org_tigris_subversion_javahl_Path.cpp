@@ -34,8 +34,7 @@ Java_org_tigris_subversion_javahl_Path_isValid(JNIEnv *env,
   JNIEntry(Path, isValid);
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return JNI_FALSE;
-    }
+    return JNI_FALSE;
+
   return Path::isValid(path);
 }

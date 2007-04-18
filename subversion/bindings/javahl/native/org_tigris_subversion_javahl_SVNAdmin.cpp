@@ -62,9 +62,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_finalize
   JNIEntry(SVNAdmin, finalize);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
   if (cl != NULL)
-    {
-      cl->finalize();
-    }
+    cl->finalize();
 }
 
 JNIEXPORT void JNICALL
@@ -82,21 +80,15 @@ Java_org_tigris_subversion_javahl_SVNAdmin_create
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   JNIStringHolder configpath(jconfigpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   JNIStringHolder fstype(jfstype);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   cl->create(path, jdisableFsyncCommit? true : false, jkeepLog? true : false,
              configpath, fstype);
@@ -117,21 +109,16 @@ Java_org_tigris_subversion_javahl_SVNAdmin_deltify
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Revision revisionStart(jrevisionStart);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Revision revisionEnd(jrevisionStop);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->deltify(path, revisionStart, revisionEnd);
 }
 
@@ -151,32 +138,23 @@ Java_org_tigris_subversion_javahl_SVNAdmin_dump
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Outputer dataOut(jdataout);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Outputer messageOut(jmessageout);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Revision revisionStart(jrevisionStart);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Revision revisionEnd(jrevisionEnd);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   cl->dump(path, dataOut, messageOut, revisionStart, revisionEnd,
            jincremental ? true : false);
@@ -197,15 +175,11 @@ Java_org_tigris_subversion_javahl_SVNAdmin_hotcopy
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   JNIStringHolder targetPath(jtargetPath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   cl->hotcopy(path, targetPath, jcleanLogs ? true : false);
 }
@@ -224,15 +198,11 @@ Java_org_tigris_subversion_javahl_SVNAdmin_listDBLogs
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   MessageReceiver mr(jreceiver);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   cl->listDBLogs(path, mr);
 }
@@ -251,15 +221,11 @@ Java_org_tigris_subversion_javahl_SVNAdmin_listUnusedDBLogs
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   MessageReceiver mr(jreceiver);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   cl->listUnusedDBLogs(path, mr);
 }
@@ -280,27 +246,20 @@ Java_org_tigris_subversion_javahl_SVNAdmin_load
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Inputer inputData(jinputData);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
 
   Outputer outputMsg(joutputMsg);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   JNIStringHolder relativePath(jrelativePath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   cl->load(path, inputData, outputMsg, jignoreUUID ? true : false,
            jforceUUID ? true : false, relativePath);
@@ -320,15 +279,11 @@ Java_org_tigris_subversion_javahl_SVNAdmin_lstxns
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   MessageReceiver mr(jmessageReceiver);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   cl->lstxns(path, mr);
 }
@@ -347,9 +302,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_recover
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
 
   return cl->recover(path);
 }
@@ -368,15 +321,12 @@ Java_org_tigris_subversion_javahl_SVNAdmin_rmtxns
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Targets transactions(jtransactions);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   transactions.setDoesNotContainsPath();
   cl->rmtxns(path, transactions);
 }
@@ -397,27 +347,19 @@ setRevProp(jobject jthis, jstring jpath, jobject jrevision,
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   JNIStringHolder propName(jpropName);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   JNIStringHolder propValue(jpropValue);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   cl->setRevProp(path, revision, propName, propValue,
                  jusePreRevPropChangeHook ? true : false,
@@ -434,10 +376,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_setLog
   setRevProp(jthis, jpath, jrevision, jlogPropName, jmessage,
              !jbypassHooks, !jbypassHooks);
   env->DeleteLocalRef(jlogPropName);
-  if (JNIUtil::isJavaExceptionThrown())
-    {
-      return;
-    }
+  // No need to check for an exception here, because we return anyway
 }
 
 JNIEXPORT void JNICALL
@@ -466,27 +405,19 @@ Java_org_tigris_subversion_javahl_SVNAdmin_verify
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Outputer messageOut(jmessageout);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Revision revisionStart(jrevisionStart);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Revision revisionEnd(jrevisionEnd);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   cl->verify(path, messageOut, revisionStart, revisionEnd);
 }
@@ -505,9 +436,8 @@ Java_org_tigris_subversion_javahl_SVNAdmin_lslocks
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   return cl->lslocks(path);
 }
 
@@ -525,15 +455,12 @@ Java_org_tigris_subversion_javahl_SVNAdmin_rmlocks
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   Targets locks(jlocks);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   locks.setDoesNotContainsPath();
   cl->rmlocks(path, locks);
 }
