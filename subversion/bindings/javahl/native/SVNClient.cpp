@@ -156,7 +156,7 @@ jobjectArray SVNClient::list(const char *url, Revision &revision,
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-    for (int i = 0; i < array->nelts; i++)
+    for (int i = 0; i < array->nelts; ++i)
     {
         const svn_sort__item_t *item;
         svn_dirent_t *dirent = NULL;
@@ -379,7 +379,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
     jlong *retArray = env->GetLongArrayElements(ret, NULL);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
-    for(int i = 0; i < retval->nelts; i++)
+    for(int i = 0; i < retval->nelts; ++i)
     {
         jlong rev = APR_ARRAY_IDX(retval, i, svn_revnum_t);
         retArray[i] = rev;
@@ -713,7 +713,7 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
         jstring jpath = JNIUtil::makeJString((const char *) path);
         apr_array_header_t *ranges = (apr_array_header_t *) val;
         jobject jranges = env->NewObject(clazz, listCtor, ranges->nelts);
-        for (int i = 0; i < ranges->nelts; i++)
+        for (int i = 0; i < ranges->nelts; ++i)
         {
             // Convert svn_merge_range_t *'s to Java RevisionRange objects.
             jclass rangeClazz = env->FindClass(JAVA_PACKAGE "/RevisionRange");
@@ -1590,7 +1590,7 @@ jobjectArray SVNClient::getChangelist(const char *changelist,
 
     jobjectArray ret = env->NewObjectArray(paths->nelts, clazz, NULL);
 
-    for (int i = 0; i < paths->nelts; i++)
+    for (int i = 0; i < paths->nelts; ++i)
     {
         const char *path = APR_ARRAY_IDX(paths, i, const char *);
         jstring jpath = JNIUtil::makeJString(path);
@@ -1947,7 +1947,7 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
 
     int i = 0;
     for (hi = apr_hash_first(requestPool.pool(), props); hi;
-         hi = apr_hash_next(hi), i++)
+         hi = apr_hash_next(hi), ++i)
     {
         const char *key;
         svn_string_t *val;

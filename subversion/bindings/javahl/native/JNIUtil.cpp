@@ -80,7 +80,7 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 
     // Delete all finalized, but not yet deleted objects.
     for(std::list<SVNBase*>::iterator it = g_finalizedObjects.begin();
-        it != g_finalizedObjects.end(); it++)
+        it != g_finalizedObjects.end(); ++it)
     {
         delete *it;
     }

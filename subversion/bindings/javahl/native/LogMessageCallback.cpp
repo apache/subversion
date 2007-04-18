@@ -146,7 +146,7 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
                                             clazzCP,
                                             NULL);
 
-        for (i = 0; i < sorted_paths->nelts; i++)
+        for (i = 0; i < sorted_paths->nelts; ++i)
         {
             svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
                                                      svn_sort__item_t));

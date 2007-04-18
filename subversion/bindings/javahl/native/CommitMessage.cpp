@@ -130,7 +130,7 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
     }
 
     // create a Java CommitItem for each of the passed in commit items
-    for(int i = 0; i < count; i++)
+    for(int i = 0; i < count; ++i)
     {
         svn_client_commit_item3_t *item =
             APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);

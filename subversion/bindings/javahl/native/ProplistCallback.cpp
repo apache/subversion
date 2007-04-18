@@ -142,7 +142,7 @@ jobject ProplistCallback::makeMapFromHash(apr_hash_t *prop_hash,
 
     apr_hash_index_t *hi;
     int i = 0;
-    for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi), i++)
+    for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi), ++i)
     {
         const char *key;
         svn_string_t *val;
