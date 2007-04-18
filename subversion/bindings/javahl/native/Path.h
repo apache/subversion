@@ -83,7 +83,7 @@ public:
     const std::string &path() const;
 
     /**
-     * @return Path string as c string
+     * @return Path string as a C string
      */
     const char *c_str() const;
 

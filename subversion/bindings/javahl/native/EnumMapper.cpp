@@ -31,7 +31,7 @@
 
 /**
  * Map a C commit state flag constant to the Java constant.
- * @param state     the c commit state flage constant
+ * @param state     the C commit state flage constant
  * @returns the Java constant
  */
 jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
@@ -57,7 +57,7 @@ jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
 
 /**
  * Map a C notify state constant to the Java constant.
- * @param state     the c notify state constant
+ * @param state     the C notify state constant
  * @returns the Java constant
  */
 jint EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
@@ -94,7 +94,7 @@ jint EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 
 /**
  * Map a C notify action constant to the Java constant.
- * @param state     the c notify action constant
+ * @param state     the C notify action constant
  * @returns the Java constant
  */
 jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
