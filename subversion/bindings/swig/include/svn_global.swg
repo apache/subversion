@@ -146,6 +146,27 @@ static PyObject * _global_py_pool = NULL;
 
 
 #ifdef SWIGRUBY
+%clear long long;
+
+%typemap (in) long long
+{
+  $1 = ($1_ltype)NUM2LL($input);
+}
+
+%typemap (in) unsigned long long
+{
+  $1 = ($1_ltype)NUM2ULL($input);
+}
+
+%typemap (out) long long
+{
+  $result = LL2NUM((apr_int64_t)($1));
+}
+
+%typemap(argout) long long *OUTPUT {
+  %append_output(LL2NUM(*$1));
+}
+
 /* Ruby has strict capitalization conventions - 
    tell SWIG to not warn as it renames things to follow these. */
 #pragma SWIG nowarn=801
