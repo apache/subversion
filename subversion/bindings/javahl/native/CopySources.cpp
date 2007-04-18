@@ -48,6 +48,7 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, Pool &pool)
   jobject jpath = JNIUtil::makeJString(path);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+
   jobject jrevision = Revision::makeJRevision(rev);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
@@ -55,6 +56,7 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, Pool &pool)
   jclass clazz = env->FindClass(JAVA_PACKAGE "/CopySource");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+
   static jmethodID ctor = 0;
   if (ctor == 0)
     {
@@ -67,8 +69,17 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, Pool &pool)
     }
 
   jobject jcopySource = env->NewObject(clazz, ctor, jpath, jrevision, NULL);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   env->DeleteLocalRef(jpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   env->DeleteLocalRef(jrevision);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   return jcopySource;
 }
 
@@ -83,6 +94,7 @@ CopySources::array(Pool &pool)
   jint nbrSources = env->GetArrayLength(m_copySources);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+
   jclass clazz = env->FindClass(JAVA_PACKAGE "/CopySource");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
@@ -94,6 +106,7 @@ CopySources::array(Pool &pool)
       jobject copySource = env->GetObjectArrayElement(m_copySources, i);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
+
       if (env->IsInstanceOf(copySource, clazz))
         {
           svn_client_copy_source_t *src =
@@ -110,13 +123,19 @@ CopySources::array(Pool &pool)
             }
           jstring jpath = (jstring)
             env->CallObjectMethod(copySource, getPath);
+          if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
+
           JNIStringHolder path(jpath);
           if (JNIUtil::isJavaExceptionThrown())
             return NULL;
+
           src->path = apr_pstrdup(p, (const char *) path);
           SVN_JNI_ERR(JNIUtil::preprocessPath(src->path, pool.pool()),
                       NULL);
           env->DeleteLocalRef(jpath);
+          if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
 
           // Extract source revision from the copy source.
           static jmethodID getRevision = 0;
@@ -128,6 +147,9 @@ CopySources::array(Pool &pool)
                 return NULL;
             }
           jobject jrev = env->CallObjectMethod(copySource, getRevision);
+          if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
+
           // TODO: Default this to svn_opt_revision_undefined (or HEAD)
           Revision rev(jrev);
           src->revision = (const svn_opt_revision_t *)
@@ -135,6 +157,8 @@ CopySources::array(Pool &pool)
           memcpy((void *) src->revision, rev.revision(),
                  sizeof(*src->revision));
           env->DeleteLocalRef(jrev);
+          if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
 
           // Extract pegRevision from the copy source.
           static jmethodID getPegRevision = 0;
@@ -147,19 +171,28 @@ CopySources::array(Pool &pool)
             }
           jobject jPegRev = env->CallObjectMethod(copySource,
                                                   getPegRevision);
+          if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
+
           Revision pegRev(jPegRev, true);
           src->peg_revision = (const svn_opt_revision_t *)
             apr_palloc(p, sizeof(*src->peg_revision));
           memcpy((void *) src->peg_revision, pegRev.revision(),
                  sizeof(*src->peg_revision));
           env->DeleteLocalRef(jPegRev);
+          if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
 
           APR_ARRAY_PUSH(copySources, svn_client_copy_source_t *) = src;
         }
       env->DeleteLocalRef(copySource);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
     }
 
   env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   return copySources;
 }
