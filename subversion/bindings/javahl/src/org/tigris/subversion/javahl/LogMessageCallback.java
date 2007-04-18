@@ -17,8 +17,6 @@
  */
 package org.tigris.subversion.javahl;
 
-import java.util.Date;
-
 /**
  * This interface is used to receive every log message for the log
  * messages found by a SVNClientInterface.logMessages call.
@@ -31,9 +29,14 @@ public interface LogMessageCallback
      * @param changedPaths the paths that were changed
      * @param revision     the revision of the commit
      * @param author       the author of the commit
-     * @param date         the date of the commit
+     * @param timeMicros   the time of the commit measured in the
+     *                     number of microseconds since 00:00:00
+     *                     January 1, 1970 UTC
      * @param message      the log message for the commit
      */
-    public void singleMessage(ChangePath[] changedPaths, long revision,
-                              String author, Date date, String message);
+    public void singleMessage(ChangePath[] changedPaths,
+                              long revision,
+                              String author,
+                              long timeMicros,
+                              String message);
 }
