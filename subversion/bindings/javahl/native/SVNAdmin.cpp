@@ -135,7 +135,7 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
 
     /* Loop over the requested revision range, performing the
      * predecessor deltification on paths changed in each. */
-    for (revision = start; revision <= end; revision++)
+    for (revision = start; revision <= end; ++revision)
     {
         svn_pool_clear (revisionPool);
         SVN_JNI_ERR(svn_fs_deltify_revision (fs, revision, revisionPool), );
@@ -233,7 +233,7 @@ list_dblogs (const char *path, MessageReceiver &receiver, bool only_unused)
     /* Loop, printing log files.  We append the log paths to the
      * repository path, making sure to return everything to the native
      * style and encoding before printing. */
-    for (i = 0; i < logfiles->nelts; i++)
+    for (i = 0; i < logfiles->nelts; ++i)
     {
         const char *log_utf8;
         log_utf8 = svn_path_join(path,
@@ -294,7 +294,7 @@ void SVNAdmin::lstxns(const char *path, MessageReceiver &messageReceiver)
     SVN_JNI_ERR(svn_fs_list_transactions(&txns, fs, requestPool.pool()), );
 
     /* Loop, printing revisions. */
-    for (i = 0; i < txns->nelts; i++)
+    for (i = 0; i < txns->nelts; ++i)
     {
         messageReceiver.receiveMessage(APR_ARRAY_IDX (txns, i, const char *));
     }
@@ -341,7 +341,7 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
 
     args = transactions.array(requestPool);
     /* All the rest of the arguments are transaction names. */
-    for (i = 0; i < args->nelts; i++)
+    for (i = 0; i < args->nelts; ++i)
     {
         const char *txn_name = APR_ARRAY_IDX (args, i, const char *);
         svn_error_t *err;
@@ -467,7 +467,7 @@ jobjectArray SVNAdmin::lslocks(const char *path)
 
     int i = 0;
     for (hi = apr_hash_first (requestPool.pool(), locks); hi;
-            hi = apr_hash_next (hi),i++)
+            hi = apr_hash_next (hi), ++i)
     {
         void *val;
         apr_hash_this (hi, NULL, NULL, &val);
@@ -523,7 +523,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
 
     apr_pool_t *subpool = svn_pool_create (pool);
     const apr_array_header_t *args = locks.array(requestPool);
-    for (int i = 0; i < args->nelts; i++)
+    for (int i = 0; i < args->nelts; ++i)
     {
         const char *lock_path = APR_ARRAY_IDX (args, i, const char *);
         svn_lock_t *lock;

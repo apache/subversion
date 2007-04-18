@@ -89,7 +89,7 @@ CopySources::array(Pool &pool)
 
     apr_array_header_t *copySources =
         apr_array_make(p, nbrSources, sizeof(svn_client_copy_source_t *));
-    for (int i = 0; i < nbrSources; i++)
+    for (int i = 0; i < nbrSources; ++i)
     {
         jobject copySource = env->GetObjectArrayElement(m_copySources, i);
         if (JNIUtil::isJavaExceptionThrown())

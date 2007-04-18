@@ -62,7 +62,7 @@ const apr_array_header_t *Targets::array(const Pool &pool)
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
 
-        for( int i = 0; i < arraySize; i++)
+        for( int i = 0; i < arraySize; ++i)
         {
             jobject elem = env->GetObjectArrayElement(m_targetArray, i);
             if (JNIUtil::isJavaExceptionThrown())
