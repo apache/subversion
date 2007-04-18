@@ -85,9 +85,11 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
         {
            return SVN_NO_ERROR;
         }
-        sm_mid = env->GetMethodID(clazz, "singleMessage",
-            "([L"JAVA_PACKAGE"/ChangePath;JLjava/lang/String;"
-            "Ljava/util/Date;Ljava/lang/String;)V");
+        sm_mid = env->GetMethodID(clazz,
+                                  "singleMessage",
+                                  "([L"JAVA_PACKAGE"/ChangePath;"
+                                  "JLjava/lang/String;"
+                                  "Ljava/util/Date;Ljava/lang/String;)V");
         if (JNIUtil::isJavaExceptionThrown())
         {
            return SVN_NO_ERROR;
@@ -108,8 +110,9 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
     static jmethodID midCP = 0;
     if (midCP == 0)
     {
-        midCP = env->GetMethodID(clazzCP, "<init>",
-            "(Ljava/lang/String;JLjava/lang/String;C)V");
+        midCP = env->GetMethodID(clazzCP,
+                                 "<init>",
+                                 "(Ljava/lang/String;JLjava/lang/String;C)V");
         if (JNIUtil::isJavaExceptionThrown())
         {
            return SVN_NO_ERROR;
