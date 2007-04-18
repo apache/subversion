@@ -48,7 +48,6 @@ Pool::~Pool()
     {
         svn_pool_destroy (m_pool);
     }
-
 }
 
 /**
