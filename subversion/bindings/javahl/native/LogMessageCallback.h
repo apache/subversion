@@ -34,23 +34,23 @@
  */
 class LogMessageCallback
 {
-public:
-    LogMessageCallback(jobject jcallback);
-    ~LogMessageCallback();
+ public:
+  LogMessageCallback(jobject jcallback);
+  ~LogMessageCallback();
 
-    static svn_error_t *callback(void *baton, apr_hash_t *changed_paths,
-                                 svn_revnum_t rev, const char *author,
-                                 const char *date, const char *msg,
-                                 apr_pool_t *pool);
-protected:
-    svn_error_t *singleMessage(apr_hash_t *changed_paths, svn_revnum_t rev,
-                               const char *author, const char *date,
-                               const char *msg, apr_pool_t *pool);
-private:
-    /**
-     * This a local reference to the Java object.
-     */
-    jobject m_callback;
+  static svn_error_t *callback(void *baton, apr_hash_t *changed_paths,
+                               svn_revnum_t rev, const char *author,
+                               const char *date, const char *msg,
+                               apr_pool_t *pool);
+ protected:
+  svn_error_t *singleMessage(apr_hash_t *changed_paths, svn_revnum_t rev,
+                             const char *author, const char *date,
+                             const char *msg, apr_pool_t *pool);
+ private:
+  /**
+   * This a local reference to the Java object.
+   */
+  jobject m_callback;
 };
 
 // !defined(AFX_LOG_MESSAGECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)

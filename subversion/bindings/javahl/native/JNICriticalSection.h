@@ -36,14 +36,14 @@ class JNIMutex;
  */
 class JNICriticalSection
 {
-public:
-    JNICriticalSection(JNIMutex &mutex);
-    ~JNICriticalSection();
-private:
-    /**
-     * The mutex to be locked and released.
-     */
-    JNIMutex *m_mutex;
+ public:
+  JNICriticalSection(JNIMutex &mutex);
+  ~JNICriticalSection();
+ private:
+  /**
+   * The mutex to be locked and released.
+   */
+  JNIMutex *m_mutex;
 };
 
 // !defined(AFX_JNICRITICALSECTION_H__601F33CC_3378_4B09_9917_6242857EF2B7__INCLUDED_)

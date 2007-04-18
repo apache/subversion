@@ -34,27 +34,27 @@
  */
 class ProplistCallback
 {
-public:
-    ProplistCallback(jobject jcallback);
-    ~ProplistCallback();
+ public:
+  ProplistCallback(jobject jcallback);
+  ~ProplistCallback();
 
-    static svn_error_t *callback(void *baton,
-                                 const char *path,
-                                 apr_hash_t *prop_hash,
-                                 apr_pool_t *pool);
+  static svn_error_t *callback(void *baton,
+                               const char *path,
+                               apr_hash_t *prop_hash,
+                               apr_pool_t *pool);
 
-protected:
-    svn_error_t *singlePath(const char *path,
-                            apr_hash_t *prop_hash,
-                            apr_pool_t *pool);
+ protected:
+  svn_error_t *singlePath(const char *path,
+                          apr_hash_t *prop_hash,
+                          apr_pool_t *pool);
 
-private:
-    /**
-     * This a local reference to the Java object.
-     */
-    jobject m_callback;
+ private:
+  /**
+   * This a local reference to the Java object.
+   */
+  jobject m_callback;
 
-    jobject makeMapFromHash(apr_hash_t *prop_hash, apr_pool_t *pool);
+  jobject makeMapFromHash(apr_hash_t *prop_hash, apr_pool_t *pool);
 };
 
 // !defined(_PROPLISTCALLBACK_H__INCLUDED_)

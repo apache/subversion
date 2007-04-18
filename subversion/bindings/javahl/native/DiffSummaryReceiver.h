@@ -33,44 +33,44 @@
  */
 class DiffSummaryReceiver
 {
-public:
-    /**
-     * Create a DiffSummaryReceiver object.
-     * @param jreceiver The Java callback object.
-     */
-    DiffSummaryReceiver(jobject jreceiver);
+ public:
+  /**
+   * Create a DiffSummaryReceiver object.
+   * @param jreceiver The Java callback object.
+   */
+  DiffSummaryReceiver(jobject jreceiver);
 
-    /**
-     * Destroy a DiffSummaryReceiver object
-     */
-    ~DiffSummaryReceiver();
+  /**
+   * Destroy a DiffSummaryReceiver object
+   */
+  ~DiffSummaryReceiver();
 
-    /**
-     * Implementation of the svn_client_diff_summarize_func_t API.
-     *
-     * @param diff The diff summary.
-     * @param baton A reference to the DiffSummaryReceiver instance.
-     * @param pool An APR pool from which to allocate memory.
-     */
-    static svn_error_t *summarize(const svn_client_diff_summarize_t *diff,
-                                  void *baton,
-                                  apr_pool_t *pool);
+  /**
+   * Implementation of the svn_client_diff_summarize_func_t API.
+   *
+   * @param diff The diff summary.
+   * @param baton A reference to the DiffSummaryReceiver instance.
+   * @param pool An APR pool from which to allocate memory.
+   */
+  static svn_error_t *summarize(const svn_client_diff_summarize_t *diff,
+                                void *baton,
+                                apr_pool_t *pool);
 
-protected:
-    /**
-     * Callback invoked for every diff summary.
-     *
-     * @param diff The diff summary.
-     * @param pool An APR pool from which to allocate memory.
-     */
-    svn_error_t *onSummary(const svn_client_diff_summarize_t *diff,
-                           apr_pool_t *pool);
+ protected:
+  /**
+   * Callback invoked for every diff summary.
+   *
+   * @param diff The diff summary.
+   * @param pool An APR pool from which to allocate memory.
+   */
+  svn_error_t *onSummary(const svn_client_diff_summarize_t *diff,
+                         apr_pool_t *pool);
 
-private:
-    /**
-     * A local reference to the Java DiffSummaryReceiver peer.
-     */
-    jobject m_receiver;
+ private:
+  /**
+   * A local reference to the Java DiffSummaryReceiver peer.
+   */
+  jobject m_receiver;
 };
 
 #endif  /* DIFF_SUMMARY_RECEIVER_H */

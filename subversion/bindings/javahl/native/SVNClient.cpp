@@ -139,8 +139,8 @@ jobjectArray SVNClient::list(const char *url, Revision &revision,
                 NULL);
 
     apr_array_header_t *array =
-           svn_sort__hash(dirents, svn_sort_compare_items_as_paths,
-                          requestPool.pool());
+        svn_sort__hash(dirents, svn_sort_compare_items_as_paths,
+                       requestPool.pool());
 
     // create the array of DirEntry
     JNIEnv *env = JNIUtil::getEnv();
@@ -408,7 +408,7 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
                 SVN_INVALID_REVNUM);
 
     if (commit_info && SVN_IS_VALID_REVNUM(commit_info->revision))
-      return commit_info->revision;
+        return commit_info->revision;
 
     return SVN_INVALID_REVNUM;
 }
@@ -930,7 +930,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                requestPool.pool());
     }
 
- cleanup:
+cleanup:
     rv = apr_file_close(outfile);
     if (rv != APR_SUCCESS)
     {
@@ -1026,7 +1026,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
 
     apr_array_header_t *providers
-      = apr_array_make(pool, 10, sizeof(svn_auth_provider_object_t *));
+        = apr_array_make(pool, 10, sizeof(svn_auth_provider_object_t *));
 
     /* The main disk-caching auth providers, for both
      * 'username/password' creds and 'username' creds.  */
@@ -1050,7 +1050,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
 
     if (m_prompter != NULL)
     {
-         /* Two basic prompt providers: username/password, and just username.*/
+        /* Two basic prompt providers: username/password, and just username.*/
         provider = m_prompter->getProviderSimple();
 
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -1068,7 +1068,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
 
         provider = m_prompter->getProviderClientSSLPassword();
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-      }
+    }
 
     /* Build an authentication baton to give to libsvn_client. */
     svn_auth_open(&ab, providers, pool);
@@ -1076,11 +1076,11 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     /* Place any default --username or --password credentials into the
      * auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
     if (!m_userName.empty())
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                             m_userName.c_str());
+        svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                               m_userName.c_str());
     if (!m_passWord.empty())
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-                             m_passWord.c_str());
+        svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                               m_passWord.c_str());
 
     ctx->auth_baton = ab;
     ctx->notify_func = Notify::notify;
@@ -1451,7 +1451,7 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
     if (URL == NULL)
     {
         SVN_JNI_ERR(svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                            _("Either a URL or versioned item is required.")),
+                                     _("Either a URL or versioned item is required.")),
                     NULL);
     }
 
@@ -1509,7 +1509,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
                                   svn_diff_file_options_create(pool), false,
                                   BlameCallback::callback, callback, ctx,
                                   pool),
-                );
+        );
 }
 
 void SVNClient::setConfigDirectory(const char *configDir)
@@ -1712,8 +1712,8 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
     if (URL == NULL)
     {
         SVN_JNI_ERR(svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                            _("Either a URL or versioned item is required.")),
-                    );
+                                     _("Either a URL or versioned item is required.")),
+            );
     }
 
     svn_string_t *val = svn_string_create(value, requestPool.pool());
@@ -1726,26 +1726,26 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
 
 struct version_status_baton
 {
-  svn_revnum_t min_rev;    /* lowest revision found. */
-  svn_revnum_t max_rev;    /* highest revision found. */
-  svn_boolean_t switched;  /* is anything switched? */
-  svn_boolean_t modified;  /* is anything modified? */
-  svn_boolean_t committed; /* examine last committed revisions */
-  svn_boolean_t done;      /* note completion of our task. */
-  const char *wc_path;     /* path whose URL we're looking for. */
-  const char *wc_url;      /* URL for the path whose URL we're looking for. */
-  apr_pool_t *pool;        /* pool in which to store alloc-needy things. */
+    svn_revnum_t min_rev;    /* lowest revision found. */
+    svn_revnum_t max_rev;    /* highest revision found. */
+    svn_boolean_t switched;  /* is anything switched? */
+    svn_boolean_t modified;  /* is anything modified? */
+    svn_boolean_t committed; /* examine last committed revisions */
+    svn_boolean_t done;      /* note completion of our task. */
+    const char *wc_path;     /* path whose URL we're looking for. */
+    const char *wc_url;      /* URL for the path whose URL we're looking for. */
+    apr_pool_t *pool;        /* pool in which to store alloc-needy things. */
 };
 
 /* This implements `svn_cancel_func_t'. */
 static svn_error_t *
 cancel(void *baton)
 {
-  struct version_status_baton *sb = (version_status_baton *)baton;
-  if (sb->done)
-    return svn_error_create(SVN_ERR_CANCELLED, NULL, "Finished");
-  else
-    return SVN_NO_ERROR;
+    struct version_status_baton *sb = (version_status_baton *)baton;
+    if (sb->done)
+        return svn_error_create(SVN_ERR_CANCELLED, NULL, "Finished");
+    else
+        return SVN_NO_ERROR;
 }
 
 /* An svn_wc_status_func_t callback function for anaylyzing status
@@ -1755,38 +1755,38 @@ analyze_status(void *baton,
                const char *path,
                svn_wc_status_t *status)
 {
-  struct version_status_baton *sb = (version_status_baton *)baton;
+    struct version_status_baton *sb = (version_status_baton *)baton;
 
-  if (sb->done)
-    return;
+    if (sb->done)
+        return;
 
-  if (! status->entry)
-    return;
+    if (! status->entry)
+        return;
 
-  /* Added files have a revision of no interest */
-  if (status->text_status != svn_wc_status_added)
+    /* Added files have a revision of no interest */
+    if (status->text_status != svn_wc_status_added)
     {
-      svn_revnum_t item_rev = (sb->committed
-                               ? status->entry->cmt_rev
-                               : status->entry->revision);
+        svn_revnum_t item_rev = (sb->committed
+                                 ? status->entry->cmt_rev
+                                 : status->entry->revision);
 
-      if (sb->min_rev == SVN_INVALID_REVNUM || item_rev < sb->min_rev)
-        sb->min_rev = item_rev;
+        if (sb->min_rev == SVN_INVALID_REVNUM || item_rev < sb->min_rev)
+            sb->min_rev = item_rev;
 
-      if (sb->max_rev == SVN_INVALID_REVNUM || item_rev > sb->max_rev)
-        sb->max_rev = item_rev;
+        if (sb->max_rev == SVN_INVALID_REVNUM || item_rev > sb->max_rev)
+            sb->max_rev = item_rev;
     }
 
-  sb->switched |= status->switched;
-  sb->modified |= (status->text_status != svn_wc_status_normal);
-  sb->modified |= (status->prop_status != svn_wc_status_normal
-                   && status->prop_status != svn_wc_status_none);
+    sb->switched |= status->switched;
+    sb->modified |= (status->text_status != svn_wc_status_normal);
+    sb->modified |= (status->prop_status != svn_wc_status_normal
+                     && status->prop_status != svn_wc_status_none);
 
-  if (sb->wc_path
-      && (! sb->wc_url)
-      && (strcmp(path, sb->wc_path) == 0)
-      && (status->entry))
-    sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
+    if (sb->wc_path
+        && (! sb->wc_url)
+        && (strcmp(path, sb->wc_path) == 0)
+        && (status->entry))
+        sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
 }
 
 
@@ -1801,10 +1801,10 @@ notify(void *baton,
        svn_wc_notify_state_t prop_state,
        svn_revnum_t revision)
 {
-  struct version_status_baton *sb = (version_status_baton *)baton;
-  if ((action == svn_wc_notify_status_external)
-      || (action == svn_wc_notify_status_completed))
-    sb->done = TRUE;
+    struct version_status_baton *sb = (version_status_baton *)baton;
+    if ((action == svn_wc_notify_status_external)
+        || (action == svn_wc_notify_status_completed))
+        sb->done = TRUE;
 }
 
 jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
@@ -1846,7 +1846,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
         {
             char *message = JNIUtil::getFormatBuffer();
             apr_snprintf(message, JNIUtil::formatBufferSize,
-                _("'%s' not versioned, and not exported\n"), path);
+                         _("'%s' not versioned, and not exported\n"), path);
             return JNIUtil::makeJString(message);
         }
     }

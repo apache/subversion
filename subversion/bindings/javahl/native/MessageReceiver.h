@@ -33,14 +33,14 @@
  */
 class MessageReceiver
 {
-    /**
-     * A local reference to the Java object.
-     */
-    jobject m_jthis;
-public:
-    MessageReceiver(jobject jthis);
-    ~MessageReceiver();
-    void receiveMessage(const char *message);
+  /**
+   * A local reference to the Java object.
+   */
+  jobject m_jthis;
+ public:
+  MessageReceiver(jobject jthis);
+  ~MessageReceiver();
+  void receiveMessage(const char *message);
 };
 
 // !defined(AFX_MESSAGERECEIVER_H__D30A4B70_A630_45B3_AB3E_402A5AD7E6BA__INCLUDED_)

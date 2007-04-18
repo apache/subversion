@@ -31,11 +31,11 @@ Java_org_tigris_subversion_javahl_Path_isValid(JNIEnv *env,
                                                jclass jthis,
                                                jstring jpath)
 {
-    JNIEntry(Path, isValid);
-    JNIStringHolder path(jpath);
-    if (JNIUtil::isExceptionThrown())
+  JNIEntry(Path, isValid);
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
     {
-        return JNI_FALSE;
+      return JNI_FALSE;
     }
-    return Path::isValid(path);
+  return Path::isValid(path);
 }

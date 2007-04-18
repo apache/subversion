@@ -37,14 +37,14 @@
  */
 class EnumMapper
 {
-public:
-    static jint mapCommitMessageStateFlags(apr_byte_t flags);
-    static jint mapNotifyState(svn_wc_notify_state_t state);
-    static jint mapNotifyAction(svn_wc_notify_action_t action);
-    static jint mapNodeKind(svn_node_kind_t nodeKind);
-    static jint mapNotifyLockState(svn_wc_notify_lock_state_t state);
-    static jint mapStatusKind(svn_wc_status_kind svnKind);
-    static jint mapScheduleKind(svn_wc_schedule_t schedule);
+ public:
+  static jint mapCommitMessageStateFlags(apr_byte_t flags);
+  static jint mapNotifyState(svn_wc_notify_state_t state);
+  static jint mapNotifyAction(svn_wc_notify_action_t action);
+  static jint mapNodeKind(svn_node_kind_t nodeKind);
+  static jint mapNotifyLockState(svn_wc_notify_lock_state_t state);
+  static jint mapStatusKind(svn_wc_status_kind svnKind);
+  static jint mapScheduleKind(svn_wc_schedule_t schedule);
 };
 
 #endif // !defined(AFX_ENUMMAPPER_H__35D135AE_08C8_4722_8BF2_361449BC2FF9__INCLUDED_)

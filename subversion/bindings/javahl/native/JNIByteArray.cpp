@@ -29,31 +29,31 @@
  */
 JNIByteArray::JNIByteArray(jbyteArray jba, bool deleteByteArray)
 {
-    m_array = jba;
-    m_deleteByteArray = deleteByteArray;
-    if (jba != NULL)
+  m_array = jba;
+  m_deleteByteArray = deleteByteArray;
+  if (jba != NULL)
     {
-        // Get the bytes.
-        JNIEnv *env = JNIUtil::getEnv();
-        m_data = env->GetByteArrayElements(jba, NULL);
+      // Get the bytes.
+      JNIEnv *env = JNIUtil::getEnv();
+      m_data = env->GetByteArrayElements(jba, NULL);
     }
-    else
+  else
     {
-        m_data = NULL;
+      m_data = NULL;
     }
 }
 
 JNIByteArray::~JNIByteArray()
 {
-    if (m_array != NULL)
+  if (m_array != NULL)
     {
-        // Release the bytes
-        JNIUtil::getEnv()->ReleaseByteArrayElements(m_array,
-                                                    m_data,
-                                                    JNI_ABORT);
-        if (m_deleteByteArray)
-            // And if needed the byte array.
-            JNIUtil::getEnv()->DeleteLocalRef(m_array);
+      // Release the bytes
+      JNIUtil::getEnv()->ReleaseByteArrayElements(m_array,
+                                                  m_data,
+                                                  JNI_ABORT);
+      if (m_deleteByteArray)
+        // And if needed the byte array.
+        JNIUtil::getEnv()->DeleteLocalRef(m_array);
     }
 }
 
@@ -63,13 +63,13 @@ JNIByteArray::~JNIByteArray()
  */
 int JNIByteArray::getLength()
 {
-    if (m_data == NULL)
+  if (m_data == NULL)
     {
-        return 0;
+      return 0;
     }
-    else
+  else
     {
-        return JNIUtil::getEnv()->GetArrayLength(m_array);
+      return JNIUtil::getEnv()->GetArrayLength(m_array);
     }
 }
 
@@ -79,7 +79,7 @@ int JNIByteArray::getLength()
  */
 const signed char *JNIByteArray::getBytes()
 {
-    return m_data;
+  return m_data;
 }
 
 /**
@@ -88,5 +88,5 @@ const signed char *JNIByteArray::getBytes()
  */
 bool JNIByteArray::isNull()
 {
-    return m_data == NULL;
+  return m_data == NULL;
 }

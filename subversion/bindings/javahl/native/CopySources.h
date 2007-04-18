@@ -33,38 +33,38 @@ class Pool;
  */
 class CopySources
 {
-public:
-    /**
-     * Create a CopySources object.
-     * @param jobjectArray An array of CopySource Java objects.
-     */
-    CopySources(jobjectArray copySources);
+ public:
+  /**
+   * Create a CopySources object.
+   * @param jobjectArray An array of CopySource Java objects.
+   */
+  CopySources(jobjectArray copySources);
 
-    /**
-     * Destroy a CopySources object
-     */
-    ~CopySources();
+  /**
+   * Destroy a CopySources object
+   */
+  ~CopySources();
 
-    /**
-     * Converts the array of CopySources to an apr_array_header_t of
-     * svn_client_copy_source_t *'s.
-     *
-     * @param pool The pool from which to perform allocations.
-     * @return A pointer to the new array.
-     */
-    apr_array_header_t *array(Pool &pool);
+  /**
+   * Converts the array of CopySources to an apr_array_header_t of
+   * svn_client_copy_source_t *'s.
+   *
+   * @param pool The pool from which to perform allocations.
+   * @return A pointer to the new array.
+   */
+  apr_array_header_t *array(Pool &pool);
 
-    /**
-     * Make a (single) CopySource Java object.
-     */
-    static jobject makeJCopySource(const char *path, svn_revnum_t rev,
-                                   Pool &pool);
+  /**
+   * Make a (single) CopySource Java object.
+   */
+  static jobject makeJCopySource(const char *path, svn_revnum_t rev,
+                                 Pool &pool);
 
-private:
-    /**
-     * A local reference to the Java CopySources peer.
-     */
-    jobjectArray m_copySources;
+ private:
+  /**
+   * A local reference to the Java CopySources peer.
+   */
+  jobjectArray m_copySources;
 };
 
 #endif  /* COPY_SOURCES_H */

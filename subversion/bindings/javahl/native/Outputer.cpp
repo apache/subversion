@@ -29,7 +29,7 @@
  */
 Outputer::Outputer(jobject jthis)
 {
-    m_jthis = jthis;
+  m_jthis = jthis;
 }
 
 /**
@@ -37,8 +37,8 @@ Outputer::Outputer(jobject jthis)
  */
 Outputer::~Outputer()
 {
-    // The m_jthis does not need to be destroyed, because it is the
-    // passed in parameter to the Java method.
+  // The m_jthis does not need to be destroyed, because it is the
+  // passed in parameter to the Java method.
 }
 
 /**
@@ -49,12 +49,12 @@ Outputer::~Outputer()
  */
 svn_stream_t *Outputer::getStream(const Pool &pool)
 {
-    // Create a stream with this as the baton and set the write and
-    // close functions.
-    svn_stream_t *ret = svn_stream_create(this, pool.pool());
-    svn_stream_set_write(ret, Outputer::write);
-    svn_stream_set_close(ret, Outputer::close);
-    return ret;
+  // Create a stream with this as the baton and set the write and
+  // close functions.
+  svn_stream_t *ret = svn_stream_create(this, pool.pool());
+  svn_stream_set_write(ret, Outputer::write);
+  svn_stream_set_close(ret, Outputer::close);
+  return ret;
 }
 
 /**
@@ -67,52 +67,52 @@ svn_stream_t *Outputer::getStream(const Pool &pool)
  */
 svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
 {
-    JNIEnv *env = JNIUtil::getEnv();
+  JNIEnv *env = JNIUtil::getEnv();
 
-    // An object of our class is passed in as the baton.
-    Outputer *that = (Outputer*)baton;
+  // An object of our class is passed in as the baton.
+  Outputer *that = (Outputer*)baton;
 
-    // The method id will not change during the time this library is
-    // loaded, so it can be cached.
-    static jmethodID mid = 0;
-    if (mid == 0)
+  // The method id will not change during the time this library is
+  // loaded, so it can be cached.
+  static jmethodID mid = 0;
+  if (mid == 0)
     {
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
-        if (JNIUtil::isJavaExceptionThrown())
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
+      if (JNIUtil::isJavaExceptionThrown())
         {
-            return SVN_NO_ERROR;
+          return SVN_NO_ERROR;
         }
-        mid = env->GetMethodID(clazz, "write", "([B)I");
-        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
+      mid = env->GetMethodID(clazz, "write", "([B)I");
+      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
-            return SVN_NO_ERROR;
+          return SVN_NO_ERROR;
         }
-        env->DeleteLocalRef(clazz);
-        if (JNIUtil::isJavaExceptionThrown())
+      env->DeleteLocalRef(clazz);
+      if (JNIUtil::isJavaExceptionThrown())
         {
-            return SVN_NO_ERROR;
+          return SVN_NO_ERROR;
         }
     }
 
-    // convert the data to a Java byte array
-    jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer,
-                                              *len);
-    if (JNIUtil::isJavaExceptionThrown())
+  // convert the data to a Java byte array
+  jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer,
+                                            *len);
+  if (JNIUtil::isJavaExceptionThrown())
     {
-        return SVN_NO_ERROR;
+      return SVN_NO_ERROR;
     }
 
-    // write the data
-    jint written = env->CallIntMethod(that->m_jthis, mid, data);
-    if (JNIUtil::isJavaExceptionThrown())
+  // write the data
+  jint written = env->CallIntMethod(that->m_jthis, mid, data);
+  if (JNIUtil::isJavaExceptionThrown())
     {
-        return SVN_NO_ERROR;
+      return SVN_NO_ERROR;
     }
 
-    // return the number of bytes written
-    *len = written;
+  // return the number of bytes written
+  *len = written;
 
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 /**
@@ -122,39 +122,39 @@ svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
  */
 svn_error_t *Outputer::close(void *baton)
 {
-    JNIEnv *env = JNIUtil::getEnv();
+  JNIEnv *env = JNIUtil::getEnv();
 
-    // An object of our class is passed in as the baton
-    Outputer *that = (Outputer*)baton;
+  // An object of our class is passed in as the baton
+  Outputer *that = (Outputer*)baton;
 
-    // The method id will not change during the time this library is
-    // loaded, so it can be cached.
-    static jmethodID mid = 0;
-    if (mid == 0)
+  // The method id will not change during the time this library is
+  // loaded, so it can be cached.
+  static jmethodID mid = 0;
+  if (mid == 0)
     {
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
-        if (JNIUtil::isJavaExceptionThrown())
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
+      if (JNIUtil::isJavaExceptionThrown())
         {
-            return SVN_NO_ERROR;
+          return SVN_NO_ERROR;
         }
-        mid = env->GetMethodID(clazz, "close", "()V");
-        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
+      mid = env->GetMethodID(clazz, "close", "()V");
+      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
-            return SVN_NO_ERROR;
+          return SVN_NO_ERROR;
         }
-        env->DeleteLocalRef(clazz);
-        if (JNIUtil::isJavaExceptionThrown())
+      env->DeleteLocalRef(clazz);
+      if (JNIUtil::isJavaExceptionThrown())
         {
-            return SVN_NO_ERROR;
+          return SVN_NO_ERROR;
         }
     }
 
-    // Call the Java object, to close the stream.
-    env->CallVoidMethod(that->m_jthis, mid);
-    if (JNIUtil::isJavaExceptionThrown())
+  // Call the Java object, to close the stream.
+  env->CallVoidMethod(that->m_jthis, mid);
+  if (JNIUtil::isJavaExceptionThrown())
     {
-        return SVN_NO_ERROR;
+      return SVN_NO_ERROR;
     }
 
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }

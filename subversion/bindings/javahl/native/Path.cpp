@@ -33,7 +33,7 @@
  */
 Path::Path(const char *pi_path)
 {
-    init(pi_path);
+  init(pi_path);
 }
 
 /**
@@ -45,7 +45,7 @@ Path::Path(const char *pi_path)
  */
 Path::Path(const std::string &pi_path)
 {
-    init(pi_path.c_str());
+  init(pi_path.c_str());
 }
 
 /**
@@ -55,7 +55,7 @@ Path::Path(const std::string &pi_path)
  */
 Path::Path(const Path &pi_path)
 {
-    init(pi_path.c_str());
+  init(pi_path.c_str());
 }
 
 /**
@@ -66,18 +66,18 @@ Path::Path(const Path &pi_path)
 void
 Path::init(const char *pi_path)
 {
-    if (*pi_path == 0)
+  if (*pi_path == 0)
     {
-        m_error_occured = NULL;
-        m_path = "";
+      m_error_occured = NULL;
+      m_path = "";
     }
-    else
+  else
     {
-        m_error_occured =
-            JNIUtil::preprocessPath(pi_path,
-                                    JNIUtil::getRequestPool()->pool() );
+      m_error_occured =
+        JNIUtil::preprocessPath(pi_path,
+                                JNIUtil::getRequestPool()->pool() );
 
-        m_path = pi_path;
+      m_path = pi_path;
     }
 }
 
@@ -87,7 +87,7 @@ Path::init(const char *pi_path)
 const std::string &
 Path::path() const
 {
-    return m_path;
+  return m_path;
 }
 
 /**
@@ -96,7 +96,7 @@ Path::path() const
 const char *
 Path::c_str() const
 {
-    return m_path.c_str();
+  return m_path.c_str();
 }
 
 /**
@@ -105,31 +105,31 @@ Path::c_str() const
 Path&
 Path::operator=(const Path &pi_path)
 {
-    init(pi_path.c_str());
-    return *this;
+  init(pi_path.c_str());
+  return *this;
 }
 
-svn_error_t *Path::error_occured() const
+  svn_error_t *Path::error_occured() const
 {
-    return m_error_occured;
+  return m_error_occured;
 }
 
 jboolean Path::isValid(const char *p)
 {
-    if (p == NULL)
+  if (p == NULL)
     {
-        return JNI_FALSE;
+      return JNI_FALSE;
     }
 
-    Pool requestPool;
-    svn_error_t *err = svn_path_check_valid(p, requestPool.pool());
-    if (err == SVN_NO_ERROR)
+  Pool requestPool;
+  svn_error_t *err = svn_path_check_valid(p, requestPool.pool());
+  if (err == SVN_NO_ERROR)
     {
-        return JNI_TRUE;
+      return JNI_TRUE;
     }
-    else
+  else
     {
-        svn_error_clear(err);
-        return JNI_FALSE;
+      svn_error_clear(err);
+      return JNI_FALSE;
     }
 }

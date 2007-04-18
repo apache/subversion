@@ -34,38 +34,38 @@
  */
 class Notify2
 {
-private:
-    /**
-     * The Java object to receive the notifications.  This is a global
-     * reference because it has to live longer than the
-     * SVNClient.notification call.
-     */
-    jobject m_notify;
-    Notify2(jobject p_notify);
+ private:
+  /**
+   * The Java object to receive the notifications.  This is a global
+   * reference because it has to live longer than the
+   * SVNClient.notification call.
+   */
+  jobject m_notify;
+  Notify2(jobject p_notify);
 
-public:
-    static Notify2 *makeCNotify(jobject notify);
-    ~Notify2();
+ public:
+  static Notify2 *makeCNotify(jobject notify);
+  ~Notify2();
 
-    /**
-     * Implementation of the svn_wc_notify_func_t API.
-     *
-     * @param baton notification instance is passed using this parameter
-     * @param notify all the information about the event
-     * @param pool An APR pool from which to allocate memory.
-     */
-    static void notify(void *baton,
-                       const svn_wc_notify_t *notify,
-                       apr_pool_t *pool);
+  /**
+   * Implementation of the svn_wc_notify_func_t API.
+   *
+   * @param baton notification instance is passed using this parameter
+   * @param notify all the information about the event
+   * @param pool An APR pool from which to allocate memory.
+   */
+  static void notify(void *baton,
+                     const svn_wc_notify_t *notify,
+                     apr_pool_t *pool);
 
-    /**
-     * Handler for Subversion notifications.
-     *
-     * @param notify all the information about the event
-     * @param pool An APR pool from which to allocate memory.
-     */
-    void onNotify(const svn_wc_notify_t *notify,
-                  apr_pool_t *pool);
+  /**
+   * Handler for Subversion notifications.
+   *
+   * @param notify all the information about the event
+   * @param pool An APR pool from which to allocate memory.
+   */
+  void onNotify(const svn_wc_notify_t *notify,
+                apr_pool_t *pool);
 };
 
 // !defined(AFX_NOTIFY2_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)

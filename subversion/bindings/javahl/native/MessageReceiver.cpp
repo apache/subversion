@@ -28,7 +28,7 @@
  */
 MessageReceiver::MessageReceiver(jobject jthis)
 {
-    m_jthis = jthis;
+  m_jthis = jthis;
 }
 
 /**
@@ -36,8 +36,8 @@ MessageReceiver::MessageReceiver(jobject jthis)
  */
 MessageReceiver::~MessageReceiver()
 {
-    // The m_callback does not need to be destroyed, because it is the
-    // passed in parameter to the Java method.
+  // The m_callback does not need to be destroyed, because it is the
+  // passed in parameter to the Java method.
 }
 
 /**
@@ -46,39 +46,39 @@ MessageReceiver::~MessageReceiver()
  */
 void MessageReceiver::receiveMessage(const char *message)
 {
-    JNIEnv *env = JNIUtil::getEnv();
+  JNIEnv *env = JNIUtil::getEnv();
 
-    // The method id will not change during the time this library is
-    // loaded, so it can be cached.
-    static jmethodID mid = 0;
-    if (mid == 0)
+  // The method id will not change during the time this library is
+  // loaded, so it can be cached.
+  static jmethodID mid = 0;
+  if (mid == 0)
     {
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNAdmin$MessageReceiver");
-        if (JNIUtil::isJavaExceptionThrown())
-            return;
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNAdmin$MessageReceiver");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
 
-        mid = env->GetMethodID(clazz, "receiveMessageLine",
-                               "(Ljava/lang/String;)V");
-        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-            return;
+      mid = env->GetMethodID(clazz, "receiveMessageLine",
+                             "(Ljava/lang/String;)V");
+      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
+        return;
 
-        env->DeleteLocalRef(clazz);
-        if (JNIUtil::isJavaExceptionThrown())
-            return;
+      env->DeleteLocalRef(clazz);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
     }
 
-    // Convert the message to a Java string.
-    jstring jmsg = JNIUtil::makeJString(message);
-    if (JNIUtil::isJavaExceptionThrown())
-        return;
+  // Convert the message to a Java string.
+  jstring jmsg = JNIUtil::makeJString(message);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 
-    // Call the Java method.
-    env->CallVoidMethod(m_jthis, mid);
-    if (JNIUtil::isJavaExceptionThrown())
-        return;
+  // Call the Java method.
+  env->CallVoidMethod(m_jthis, mid);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 
-    // Delete the Java string.
-    env->DeleteLocalRef(jmsg);
-    if (JNIUtil::isJavaExceptionThrown())
-        return;
+  // Delete the Java string.
+  env->DeleteLocalRef(jmsg);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 }
