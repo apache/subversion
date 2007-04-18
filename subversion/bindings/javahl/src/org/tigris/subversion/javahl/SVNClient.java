@@ -24,7 +24,6 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 
 /**
@@ -1856,11 +1855,19 @@ public class SVNClient implements SVNClientInterface
     {
         private List messages = new ArrayList();
 
-        public void singleMessage(ChangePath[] changedPaths, long revision,
-                                  String author, Date date, String message)
+        public void singleMessage(ChangePath[] changedPaths,
+                                  long revision,
+                                  String author,
+                                  long timeMicros,
+                                  String message)
         {
-            LogMessage msg = new LogMessage(changedPaths, revision, author,
-                                            date, message);
+            java.util.Date date = new java.util.Date(timeMicros/1000);
+
+            LogMessage msg = new LogMessage(changedPaths,
+                                            revision,
+                                            author,
+                                            date,
+                                            message);
             messages.add(msg);
         }
 

@@ -89,7 +89,7 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
                                   "singleMessage",
                                   "([L"JAVA_PACKAGE"/ChangePath;"
                                   "JLjava/lang/String;"
-                                  "Ljava/util/Date;Ljava/lang/String;)V");
+                                  "JLjava/lang/String;)V");
         if (JNIUtil::isJavaExceptionThrown())
         {
            return SVN_NO_ERROR;
@@ -119,17 +119,10 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
         }
     }
 
-    jobject jdate = NULL;
+    apr_time_t commit_time = -1;
     if (date != NULL && *date != '\0')
     {
-        apr_time_t timeTemp;
-
-        SVN_ERR(svn_time_from_cstring(&timeTemp, date, pool));
-        jdate = JNIUtil::createDate(timeTemp);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-           return SVN_NO_ERROR;
-        }
+        SVN_ERR(svn_time_from_cstring(&commit_time, date, pool));
     }
 
     jstring jauthor = JNIUtil::makeJString(author);
@@ -213,8 +206,13 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
        return SVN_NO_ERROR;
     }
 
-    env->CallVoidMethod(m_callback, sm_mid, jChangedPaths, (jlong)rev, jauthor,
-                        jdate, jmessage);
+    env->CallVoidMethod(m_callback,
+                        sm_mid,
+                        jChangedPaths,
+                        (jlong)rev,
+                        jauthor,
+                        (jlong)commit_time,
+                        jmessage);
     if (JNIUtil::isJavaExceptionThrown())
     {
        return SVN_NO_ERROR;
