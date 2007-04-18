@@ -126,7 +126,7 @@ SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
 SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
 SWIG_RB_RI_DATADIR = $(DESTDIR)$(datadir)/ri/$(RUBY_MAJOR).$(RUBY_MINOR)/site
 
-JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/java/javahl/include
+JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/include
 
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APR_PREFIX = @SVN_APR_PREFIX@
@@ -239,8 +239,8 @@ SWIG_RB_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/ruby
 ### Automate JAR creation using Makefile generator's javahl-java.jar
 ### property.  Enhance generator to support JAR installation.
 INSTALL_EXTRA_JAVAHL_JAVA=\
-	$(JAR) cf subversion/bindings/java/javahl/svn-javahl.jar -C subversion/bindings/java/javahl/classes org; \
-	$(INSTALL_DATA) subversion/bindings/java/javahl/svn-javahl.jar $(DESTDIR)$(javahl_javadir);
+	$(JAR) cf subversion/bindings/javahl/svn-javahl.jar -C subversion/bindings/java/javahl/classes org; \
+	$(INSTALL_DATA) subversion/bindings/javahl/svn-javahl.jar $(DESTDIR)$(javahl_javadir);
 
 INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
 
