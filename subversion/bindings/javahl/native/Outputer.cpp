@@ -79,35 +79,27 @@ svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       mid = env->GetMethodID(clazz, "write", "([B)I");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       env->DeleteLocalRef(clazz);
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
 
   // convert the data to a Java byte array
   jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer,
                                             *len);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   // write the data
   jint written = env->CallIntMethod(that->m_jthis, mid, data);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   // return the number of bytes written
   *len = written;
@@ -134,27 +126,20 @@ svn_error_t *Outputer::close(void *baton)
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       mid = env->GetMethodID(clazz, "close", "()V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       env->DeleteLocalRef(clazz);
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
 
   // Call the Java object, to close the stream.
   env->CallVoidMethod(that->m_jthis, mid);
-  if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+  // No need to check for exception here because we return anyway.
 
   return SVN_NO_ERROR;
 }

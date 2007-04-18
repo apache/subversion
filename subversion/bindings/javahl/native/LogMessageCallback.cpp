@@ -82,30 +82,24 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/LogMessageCallback");
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       sm_mid = env->GetMethodID(clazz,
                                 "singleMessage",
                                 "([L"JAVA_PACKAGE"/ChangePath;"
                                 "JLjava/lang/String;"
                                 "JLjava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
+
       env->DeleteLocalRef(clazz);
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
 
   jclass clazzCP = env->FindClass(JAVA_PACKAGE"/ChangePath");
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   static jmethodID midCP = 0;
   if (midCP == 0)
@@ -114,22 +108,16 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
                                "<init>",
                                "(Ljava/lang/String;JLjava/lang/String;C)V");
       if (JNIUtil::isJavaExceptionThrown())
-        {
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
 
   apr_time_t commit_time = -1;
   if (date != NULL && *date != '\0')
-    {
-      SVN_ERR(svn_time_from_cstring(&commit_time, date, pool));
-    }
+    SVN_ERR(svn_time_from_cstring(&commit_time, date, pool));
 
   jstring jauthor = JNIUtil::makeJString(author);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   jobjectArray jChangedPaths = NULL;
   if (changed_paths)
@@ -157,54 +145,42 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
 
           jstring jpath = JNIUtil::makeJString(path);
           if (JNIUtil::isJavaExceptionThrown())
-            {
-              return SVN_NO_ERROR;
-            }
+            return SVN_NO_ERROR;
+
           jstring jcopyFromPath =
             JNIUtil::makeJString(log_item->copyfrom_path);
           if (JNIUtil::isJavaExceptionThrown())
-            {
-              return SVN_NO_ERROR;
-            }
+            return SVN_NO_ERROR;
+
           jlong jcopyFromRev = log_item->copyfrom_rev;
           jchar jaction = log_item->action;
 
           jobject cp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
                                       jcopyFromPath, jaction);
           if (JNIUtil::isJavaExceptionThrown())
-            {
-              return SVN_NO_ERROR;
-            }
+            return SVN_NO_ERROR;
 
           env->SetObjectArrayElement(jChangedPaths, i, cp);
           if (JNIUtil::isJavaExceptionThrown())
-            {
-              return SVN_NO_ERROR;
-            }
+            return SVN_NO_ERROR;
 
           env->DeleteLocalRef(cp);
           if (JNIUtil::isJavaExceptionThrown())
-            {
-              return SVN_NO_ERROR;
-            }
+            return SVN_NO_ERROR;
+
           env->DeleteLocalRef(jpath);
           if (JNIUtil::isJavaExceptionThrown())
-            {
-              return SVN_NO_ERROR;
-            }
+            return SVN_NO_ERROR;
+
           env->DeleteLocalRef(jcopyFromPath);
           if (JNIUtil::isJavaExceptionThrown())
-            {
-              return SVN_NO_ERROR;
-            }
+            return SVN_NO_ERROR;
         }
     }
 
   jstring jmessage = JNIUtil::makeJString(msg);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   env->CallVoidMethod(m_callback,
                       sm_mid,
@@ -214,20 +190,14 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
                       (jlong)commit_time,
                       jmessage);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   env->DeleteLocalRef(jauthor);
   if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
+
   env->DeleteLocalRef(jmessage);
-  if (JNIUtil::isJavaExceptionThrown())
-    {
-      return SVN_NO_ERROR;
-    }
+  // No need to check for an exception here, because we return anyway.
 
   return SVN_NO_ERROR;
 }

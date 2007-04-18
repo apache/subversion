@@ -31,9 +31,7 @@
 Targets::~Targets()
 {
   if (m_targetArray != NULL)
-    {
-      JNIUtil::getEnv()->DeleteLocalRef(m_targetArray);
-    }
+    JNIUtil::getEnv()->DeleteLocalRef(m_targetArray);
 }
 
 Targets::Targets(const char *path)

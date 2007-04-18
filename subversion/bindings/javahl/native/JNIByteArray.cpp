@@ -64,13 +64,9 @@ JNIByteArray::~JNIByteArray()
 int JNIByteArray::getLength()
 {
   if (m_data == NULL)
-    {
-      return 0;
-    }
+    return 0;
   else
-    {
-      return JNIUtil::getEnv()->GetArrayLength(m_array);
-    }
+    return JNIUtil::getEnv()->GetArrayLength(m_array);
 }
 
 /**

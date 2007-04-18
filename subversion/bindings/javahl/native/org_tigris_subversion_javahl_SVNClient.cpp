@@ -76,9 +76,7 @@ Java_org_tigris_subversion_javahl_SVNClient_finalize
   JNIEntry(SVNClient, finalize);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl != NULL)
-    {
-      cl->finalize();
-    }
+    cl->finalize();
 }
 
 JNIEXPORT jstring JNICALL
@@ -108,9 +106,8 @@ Java_org_tigris_subversion_javahl_SVNClient_isAdminDirectory
     }
   JNIStringHolder name(jname);
   if (JNIUtil::isExceptionThrown())
-    {
-      return JNI_FALSE;
-    }
+    return JNI_FALSE;
+
   return cl->isAdminDirectory(name);
 }
 
@@ -137,24 +134,20 @@ Java_org_tigris_subversion_javahl_SVNClient_list
   JNIEntry(SVNClient, list);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
-    {
-      return NULL;
-    }
+    return NULL;
+
   JNIStringHolder url(jurl);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   return cl->list(url, revision, pegRevision, jrecurse ? true:false);
 }
 
@@ -167,14 +160,12 @@ Java_org_tigris_subversion_javahl_SVNClient_status
   JNIEntry(SVNClient, status);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   StatusCallback callback(jstatusCallback);
   cl->status(path, (svn_depth_t)jdepth,
              jonServer ? true:false,
@@ -201,9 +192,8 @@ Java_org_tigris_subversion_javahl_SVNClient_username
     }
   JNIStringHolder username(jusername);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->username(username);
 }
 
@@ -226,9 +216,8 @@ Java_org_tigris_subversion_javahl_SVNClient_password
     }
   JNIStringHolder password(jpassword);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->password(password);
 }
 
@@ -245,9 +234,8 @@ Java_org_tigris_subversion_javahl_SVNClient_setPrompt
     }
   Prompter *prompter = Prompter::makeCPrompter(jprompter);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->setPrompt(prompter);
 }
 
@@ -266,24 +254,20 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
     }
   Revision pegRevision(jpegRevision, true);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revisionStart(jrevisionStart, false, true);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revisionEnd(jrevisionEnd, true);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   LogMessageCallback callback(jlogMessageCallback);
   cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
@@ -305,24 +289,20 @@ Java_org_tigris_subversion_javahl_SVNClient_checkout
     }
   Revision revision(jrevision, true);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   Revision pegRevision(jpegRevision, true);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   JNIStringHolder moduleName(jmoduleName);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   JNIStringHolder destPath(jdestPath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   return cl->checkout(moduleName, destPath, revision, pegRevision,
                       (svn_depth_t)jdepth,
                       jignoreExternals ? true : false,
@@ -342,9 +322,8 @@ Java_org_tigris_subversion_javahl_SVNClient_notification
     }
   Notify *notify = Notify::makeCNotify(jnotify);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->notification(notify);
 }
 
@@ -361,9 +340,8 @@ Java_org_tigris_subversion_javahl_SVNClient_notification2
     }
   Notify2 *notify2 = Notify2::makeCNotify(jnotify2);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->notification2(notify2);
 }
 
@@ -381,9 +359,8 @@ Java_org_tigris_subversion_javahl_SVNClient_setProgressListener
   ProgressListener *listener =
     ProgressListener::makeCProgressListener(jprogressListener);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->setProgressListener(listener);
 }
 
@@ -401,9 +378,8 @@ Java_org_tigris_subversion_javahl_SVNClient_commitMessageHandler
   CommitMessage *commitMessage =
     CommitMessage::makeCCommitMessage(jcommitMessage);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->commitMessageHandler(commitMessage);
 }
 
@@ -422,9 +398,8 @@ Java_org_tigris_subversion_javahl_SVNClient_remove
   Targets targets(jtargets);
   JNIStringHolder message(jmessage);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->remove(targets, message, jforce ? true : false,
              keepLocal ? true : false);
 }
@@ -442,9 +417,8 @@ Java_org_tigris_subversion_javahl_SVNClient_revert
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->revert(path, jrecurse ? true : false);
 }
 
@@ -462,9 +436,8 @@ Java_org_tigris_subversion_javahl_SVNClient_add
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->add(path, jrecurse ? true : false, jforce ? true : false);
 }
 
@@ -483,14 +456,12 @@ Java_org_tigris_subversion_javahl_SVNClient_update
     }
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   Targets targets(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   return cl->update(targets, revision, (svn_depth_t)jdepth,
                     jignoreExternals ? true : false,
                     jallowUnverObstructions ? true : false);
@@ -512,14 +483,12 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
   Targets targets(jtargets);
   JNIStringHolder message(jmessage);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   JNIStringHolder changelistName(jchangelistName);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   return cl->commit(targets, message, jrecurse ? true : false,
                     jnoUnlock ? true : false, jkeepChangelist ? true : false,
                     changelistName);
@@ -591,9 +560,8 @@ Java_org_tigris_subversion_javahl_SVNClient_mkdir
   Targets targets(jtargets);
   JNIStringHolder message(jmessage);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->mkdir(targets, message);
 }
 
@@ -610,9 +578,8 @@ Java_org_tigris_subversion_javahl_SVNClient_cleanup
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->cleanup(path);
 }
 
@@ -629,9 +596,8 @@ Java_org_tigris_subversion_javahl_SVNClient_resolved
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->resolved(path, jrecurse ? true: false);
 }
 
@@ -650,29 +616,24 @@ Java_org_tigris_subversion_javahl_SVNClient_doExport
     }
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   JNIStringHolder srcPath(jsrcPath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   JNIStringHolder destPath(jdestPath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   JNIStringHolder nativeEOL(jnativeEOL);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   return cl->doExport(srcPath, destPath, revision, pegRevision,
                       jforce ? true : false, jignoreExternals ? true : false,
                       (svn_depth_t)jdepth, nativeEOL);
@@ -692,19 +653,16 @@ Java_org_tigris_subversion_javahl_SVNClient_doSwitch
     }
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   JNIStringHolder url(jurl);
   if (JNIUtil::isExceptionThrown())
-    {
-      return -1;
-    }
+    return -1;
+
   return cl->doSwitch(path, url, revision,
                       (svn_depth_t)jdepth,
                       jallowUnverObstructions ? true : false);
@@ -724,19 +682,16 @@ Java_org_tigris_subversion_javahl_SVNClient_doImport
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder url(jurl);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder message(jmessage);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->doImport(path, url, message, jrecurse ? true : false);
 }
 
@@ -755,29 +710,24 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
     }
   Revision revision1(jrevision1);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder path1(jpath1);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revision2(jrevision2);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder path2(jpath2);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder localPath(jlocalPath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->merge(path1, revision1, path2, revision2, localPath,
             jforce ? true:false, (svn_depth_t)jdepth,
             jignoreAncestry ? true:false, jdryRun ? true:false);
@@ -798,29 +748,24 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
     }
   Revision revision1(jrevision1);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revision2(jrevision2);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder localPath(jlocalPath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->merge(path, pegRevision, revision1, revision2, localPath,
             jforce ? true:false, (svn_depth_t)jdepth,
             jignoreAncestry ? true:false, jdryRun ? true:false);
@@ -840,19 +785,16 @@ Java_org_tigris_subversion_javahl_SVNClient_properties
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   ProplistCallback callback(jproplistCallback);
   cl->properties(path, revision, pegRevision, jrecurse ? true : false,
                  &callback);
@@ -872,19 +814,16 @@ Java_org_tigris_subversion_javahl_SVNClient_propertySet
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder name(jname);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder value(jvalue);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->propertySet(path, name, value, jrecurse ? true:false,
                   jforce ? true:false);
 }
@@ -902,14 +841,12 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyRemove
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder name(jname);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->propertyRemove(path, name, jrecurse ? true:false);
 }
 
@@ -927,19 +864,16 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyCreate__Ljava_lang_String_2L
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder name(jname);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder value(jvalue);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->propertyCreate(path, name, value, jrecurse ? true:false,
                      jforce ? true:false);
 }
@@ -958,19 +892,16 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyCreate__Ljava_lang_String_2L
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder name(jname);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIByteArray value(jvalue);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->propertyCreate(path, name, (const char *)value.getBytes(),
                      jrecurse ? true:false,
                      jforce ? true:false);
@@ -989,19 +920,16 @@ Java_org_tigris_subversion_javahl_SVNClient_revProperty
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   JNIStringHolder name(jname);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   return cl->revProperty(jthis, path, name, revision);
 }
 
@@ -1018,14 +946,12 @@ Java_org_tigris_subversion_javahl_SVNClient_revProperties
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   return cl->revProperties(jthis, path, revision);
 }
 
@@ -1043,24 +969,20 @@ Java_org_tigris_subversion_javahl_SVNClient_setRevProperty
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder name(jname);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder value(jvalue);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->setRevProperty(jthis, path, name, revision, value,
                      jforce ? true: false);
 }
@@ -1079,24 +1001,20 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyGet
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   JNIStringHolder name(jname);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   return cl->propertyGet(jthis, path, name, revision, pegRevision);
 }
 
@@ -1136,29 +1054,24 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
     }
   JNIStringHolder target1(jtarget1);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revision1(jrevision1);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder target2(jtarget2);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revision2(jrevision2);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder outfileName(joutfileName);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->diff(target1, revision1, target2, revision2, outfileName,
            (svn_depth_t)jdepth,
            jignoreAncestry ? true:false,
@@ -1181,29 +1094,24 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
     }
   JNIStringHolder target(jtarget);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision startRevision(jstartRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision endRevision(jendRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder outfileName(joutfileName);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->diff(target, pegRevision, startRevision, endRevision, outfileName,
            (svn_depth_t)jdepth,
            jignoreAncestry ? true:false,
@@ -1226,29 +1134,24 @@ Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
     }
   JNIStringHolder target1(jtarget1);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revision1(jrevision1);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder target2(jtarget2);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revision2(jrevision2);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   DiffSummaryReceiver receiver(jdiffSummaryReceiver);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
 
   cl->diffSummarize(target1, revision1, target2, revision2,
                     (svn_depth_t)jdepth,
@@ -1304,19 +1207,16 @@ Java_org_tigris_subversion_javahl_SVNClient_fileContent
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   return cl->fileContent(path, revision, pegRevision);
 }
 
@@ -1334,19 +1234,16 @@ Java_org_tigris_subversion_javahl_SVNClient_streamFileContent
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->streamFileContent(path, revision, pegRevision, jstream, bufSize);
 }
 
@@ -1364,9 +1261,8 @@ Java_org_tigris_subversion_javahl_SVNClient_getVersionInfo
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   JNIStringHolder trailUrl(jtrailUrl);
   return cl->getVersionInfo(path, trailUrl, jlastChanged ? true:false);
 }
@@ -1443,19 +1339,16 @@ Java_org_tigris_subversion_javahl_SVNClient_relocate
     }
   JNIStringHolder from(jfrom);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder to(jto);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->relocate(from, to, path, jrecurse ? true: false);
   return;
 }
@@ -1475,24 +1368,20 @@ Java_org_tigris_subversion_javahl_SVNClient_blame
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision pegRevision(jpegRevision, false, true);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revisionStart(jrevisionStart, false, true);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revisionEnd(jrevisionEnd, true);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   BlameCallback callback(jblameCallback);
   cl->blame(path, pegRevision, revisionStart, revisionEnd,
             jignoreMimeType ? true : false, &callback);
@@ -1512,9 +1401,7 @@ Java_org_tigris_subversion_javahl_SVNClient_setConfigDirectory
 
   JNIStringHolder configDir(jconfigDir);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
 
   cl->setConfigDirectory(configDir);
 }
@@ -1563,9 +1450,8 @@ Java_org_tigris_subversion_javahl_SVNClient_info
 
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   return cl->info(path);
 }
 
@@ -1582,14 +1468,12 @@ Java_org_tigris_subversion_javahl_SVNClient_addToChangelist
     }
   Targets targets(jtargets);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder changelist_name(jchangelist);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->addToChangelist(targets, changelist_name);
 }
 
@@ -1606,14 +1490,12 @@ Java_org_tigris_subversion_javahl_SVNClient_removeFromChangelist
     }
   Targets targets(jtargets);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder changelist_name(jchangelist);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->removeFromChangelist(targets, changelist_name);
 }
 
@@ -1630,14 +1512,12 @@ Java_org_tigris_subversion_javahl_SVNClient_getChangelist
     }
   JNIStringHolder changelist_name(jchangelist);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   JNIStringHolder root_path(jroot_path);
   if (JNIUtil::isExceptionThrown())
-    {
-      return NULL;
-    }
+    return NULL;
+
   return cl->getChangelist(changelist_name, root_path);
 }
 
@@ -1655,14 +1535,12 @@ Java_org_tigris_subversion_javahl_SVNClient_lock
     }
   Targets targets(jtargets);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   JNIStringHolder comment(jcomment);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   cl->lock(targets, comment, jforce ? true : false);
 }
 
@@ -1680,9 +1558,8 @@ Java_org_tigris_subversion_javahl_SVNClient_unlock
 
   Targets targets(jtargets);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
 
   cl->unlock(targets, jforce ? true : false);
 }
@@ -1701,19 +1578,16 @@ Java_org_tigris_subversion_javahl_SVNClient_info2
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return;
+
   InfoCallback callback(jinfoCallback);
   cl->info2(path, revision, pegRevision, jrecurse ? true : false,
             &callback);
