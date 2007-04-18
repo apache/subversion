@@ -146,8 +146,9 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
     if (midCT == 0)
     {
         midCT = env->GetMethodID(clazz, "<init>",
-            "(Ljava/lang/String;IILjava/lang/String;"
-            "Lorg/tigris/subversion/javahl/Lock;Ljava/lang/String;IIIJ)V");
+                                 "(Ljava/lang/String;IILjava/lang/String;"
+                                 "Lorg/tigris/subversion/javahl/Lock;"
+                                 "Ljava/lang/String;IIIJ)V");
         if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         {
             return;

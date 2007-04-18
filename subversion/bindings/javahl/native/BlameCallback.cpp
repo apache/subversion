@@ -73,9 +73,9 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
 {
     JNIEnv *env = JNIUtil::getEnv();
 
-    static jmethodID mid = 0; // the method id will not change during
-                              // the time this library is loaded, so
-                              // it can be cached.
+    // The method id will not change during the time this library is
+    // loaded, so it can be cached.
+    static jmethodID mid = 0;
     if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/BlameCallback");
@@ -84,7 +84,8 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
             return SVN_NO_ERROR;
         }
         mid = env->GetMethodID(clazz, "singleLine",
-            "(Ljava/util/Date;JLjava/lang/String;Ljava/lang/String;)V");
+                               "(Ljava/util/Date;JLjava/lang/String;"
+                               "Ljava/lang/String;)V");
         if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
             return SVN_NO_ERROR;

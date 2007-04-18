@@ -139,10 +139,11 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
             }
 
             fprintf(stderr,
-                  "%s: error: cannot set LC_ALL locale\n"
-                  "%s: error: environment variable %s is %s\n"
-                  "%s: error: please check that your locale name is correct\n",
-                  "svnjavahl", "svnjavahl", *env_var, env_val, "svnjavahl");
+                    "%s: error: cannot set LC_ALL locale\n"
+                    "%s: error: environment variable %s is %s\n"
+                    "%s: error: please check that your locale name is "
+                    "correct\n",
+                    "svnjavahl", "svnjavahl", *env_var, env_val, "svnjavahl");
         }
         return FALSE;
     }
@@ -157,8 +158,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
             char buf[1024];
             apr_strerror(status, buf, sizeof(buf) - 1);
             fprintf(stderr,
-                  "%s: error: cannot initialize APR: %s\n",
-                  "svnjavahl", buf);
+                    "%s: error: cannot initialize APR: %s\n",
+                    "svnjavahl", buf);
         }
         return FALSE;
     }
@@ -167,8 +168,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     {
         if (stderr)
             fprintf(stderr,
-                "%s: error: atexit registration failed\n",
-                "svnjavahl");
+                    "%s: error: atexit registration failed\n",
+                    "svnjavahl");
         return FALSE;
     }
 
@@ -182,32 +183,32 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
         apr_status_t apr_err;
         unsigned int inwords, outbytes, outlength;
 
-        apr_pool_create (&pool, 0);
+        apr_pool_create(&pool, 0);
         /* get dll name - our locale info will be in '../share/locale' */
-        inwords = sizeof (ucs2_path) / sizeof(ucs2_path[0]);
+        inwords = sizeof(ucs2_path) / sizeof(ucs2_path[0]);
         HINSTANCE moduleHandle = GetModuleHandle("libsvnjavahl-1");
-        GetModuleFileNameW (moduleHandle, ucs2_path, inwords);
-        inwords = lstrlenW (ucs2_path);
+        GetModuleFileNameW(moduleHandle, ucs2_path, inwords);
+        inwords = lstrlenW(ucs2_path);
         outbytes = outlength = 3 * (inwords + 1);
-        utf8_path = (char *)apr_palloc (pool, outlength);
-        apr_err = apr_conv_ucs2_to_utf8 ((const apr_wchar_t *) ucs2_path,
-                                         &inwords, utf8_path, &outbytes);
+        utf8_path = (char *)apr_palloc(pool, outlength);
+        apr_err = apr_conv_ucs2_to_utf8((const apr_wchar_t *) ucs2_path,
+                                        &inwords, utf8_path, &outbytes);
         if (!apr_err && (inwords > 0 || outbytes == 0))
           apr_err = APR_INCOMPLETE;
         if (apr_err)
         {
           if (stderr)
-            fprintf (stderr, "Can't convert module path to UTF-8");
+            fprintf(stderr, "Can't convert module path to UTF-8");
           return FALSE;
         }
         utf8_path[outlength - outbytes] = '\0';
-        internal_path = svn_path_internal_style (utf8_path, pool);
+        internal_path = svn_path_internal_style(utf8_path, pool);
         /* get base path name */
-        internal_path = svn_path_dirname (internal_path, pool);
-        internal_path = svn_path_join (internal_path, SVN_LOCALE_RELATIVE_PATH,
-                                       pool);
-        bindtextdomain (PACKAGE_NAME, internal_path);
-        apr_pool_destroy (pool);
+        internal_path = svn_path_dirname(internal_path, pool);
+        internal_path = svn_path_join(internal_path, SVN_LOCALE_RELATIVE_PATH,
+                                      pool);
+        bindtextdomain(PACKAGE_NAME, internal_path);
+        apr_pool_destroy(pool);
     }
 #else
     bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
@@ -216,7 +217,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 #endif
 
     /* Create our top-level pool. */
-    g_pool = svn_pool_create (NULL);
+    g_pool = svn_pool_create(NULL);
 
 #if defined(WIN32) || defined(__CYGWIN__)
     /* See http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt */
@@ -685,10 +686,10 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
         /* Is this a Subversion-specific error code? */
         if ((err->apr_err > APR_OS_START_USEERR)
             && (err->apr_err <= APR_OS_START_CANONERR))
-            buffer.append(svn_strerror (err->apr_err, errbuf, sizeof(errbuf)));
+            buffer.append(svn_strerror(err->apr_err, errbuf, sizeof(errbuf)));
         /* Otherwise, this must be an APR error code. */
         else
-            buffer.append(apr_strerror (err->apr_err, errbuf, sizeof(errbuf)));
+            buffer.append(apr_strerror(err->apr_err, errbuf, sizeof(errbuf)));
         buffer.append("\n");
     }
     if (err->message)
@@ -723,30 +724,30 @@ void JNIUtil::throwNullPointerException(const char *message)
 svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
 {
   /* URLs and wc-paths get treated differently. */
-  if (svn_path_is_url (path))
+  if (svn_path_is_url(path))
     {
       /* No need to canonicalize a URL's case or path separators. */
 
       /* Convert to URI. */
-      path = svn_path_uri_from_iri (path, pool);
+      path = svn_path_uri_from_iri(path, pool);
 
       /* Auto-escape some ASCII characters. */
-      path = svn_path_uri_autoescape (path, pool);
+      path = svn_path_uri_autoescape(path, pool);
 
       /* The above doesn't guarantee a valid URI. */
-      if (! svn_path_is_uri_safe (path))
-        return svn_error_createf (SVN_ERR_BAD_URL, NULL,
-                                  _("URL '%s' is not properly URI-encoded"),
-                                  path);
+      if (! svn_path_is_uri_safe(path))
+        return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                                 _("URL '%s' is not properly URI-encoded"),
+                                 path);
 
       /* Verify that no backpaths are present in the URL. */
-      if (svn_path_is_backpath_present (path))
-        return svn_error_createf (SVN_ERR_BAD_URL, NULL,
-                                  _("URL '%s' contains a '..' element"),
-                                  path);
+      if (svn_path_is_backpath_present(path))
+        return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                                 _("URL '%s' contains a '..' element"),
+                                 path);
 
       /* strip any trailing '/' */
-      path = svn_path_canonicalize (path, pool);
+      path = svn_path_canonicalize(path, pool);
     }
   else  /* not a url, so treat as a path */
     {
@@ -755,28 +756,26 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
       apr_status_t apr_err;
 
       /* canonicalize case, and change all separators to '/'. */
-      SVN_ERR (svn_path_cstring_from_utf8 (&apr_target, path,
-                                           pool));
-      apr_err = apr_filepath_merge (&truenamed_target, "", apr_target,
-                                    APR_FILEPATH_TRUENAME, pool);
+      SVN_ERR(svn_path_cstring_from_utf8(&apr_target, path, pool));
+      apr_err = apr_filepath_merge(&truenamed_target, "", apr_target,
+                                   APR_FILEPATH_TRUENAME, pool);
 
       if (!apr_err)
         /* We have a canonicalized APR-encoded target now. */
         apr_target = truenamed_target;
-      else if (APR_STATUS_IS_ENOENT (apr_err))
+      else if (APR_STATUS_IS_ENOENT(apr_err))
         /* It's okay for the file to not exist, that just means we
            have to accept the case given to the client. We'll use
            the original APR-encoded target. */
         ;
       else
-        return svn_error_createf (apr_err, NULL,
-                                  _("Error resolving case of '%s'"),
-                                  svn_path_local_style (path,
-                                                        pool));
+        return svn_error_createf(apr_err, NULL,
+                                 _("Error resolving case of '%s'"),
+                                 svn_path_local_style(path, pool));
 
       /* convert back to UTF-8. */
-      SVN_ERR (svn_path_cstring_to_utf8 (&path, apr_target, pool));
-      path = svn_path_canonicalize (path, pool);
+      SVN_ERR(svn_path_cstring_to_utf8(&path, apr_target, pool));
+      path = svn_path_canonicalize(path, pool);
 
     }
   return NULL;

@@ -463,7 +463,8 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
             return false;
 
         jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm,
-                                    jusername, maySave ? JNI_TRUE: JNI_FALSE);
+                                              jusername,
+                                              maySave ? JNI_TRUE: JNI_FALSE);
         if (JNIUtil::isJavaExceptionThrown())
             return false;
 
@@ -570,8 +571,11 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSL()
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
     svn_auth_provider_object_t *provider;
-    svn_client_get_ssl_client_cert_prompt_provider
-          (&provider, ssl_client_cert_prompt, this, 2, /* retry limit */pool);
+    svn_client_get_ssl_client_cert_prompt_provider(&provider,
+                                                   ssl_client_cert_prompt,
+                                                   this,
+                                                   2 /* retry limit */,
+                                                   pool);
 
     return provider;
 }
@@ -582,7 +586,7 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword()
     svn_auth_provider_object_t *provider;
     svn_client_get_ssl_client_cert_pw_prompt_provider
           (&provider, ssl_client_cert_pw_prompt, this, 2 /* retry limit */,
-                                                         pool);
+           pool);
 
     return provider;
 }
@@ -594,22 +598,22 @@ svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p,
                                      apr_pool_t *pool)
 {
     Prompter *that = (Prompter*)baton;
-    svn_auth_cred_simple_t *ret = (svn_auth_cred_simple_t*)apr_pcalloc(pool,
-                                                                sizeof(*ret));
+    svn_auth_cred_simple_t *ret =
+        (svn_auth_cred_simple_t*)apr_pcalloc(pool, sizeof(*ret));
     if (!that->prompt(realm, username, may_save ? true : false))
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                        _("User canceled dialog"));
+                                _("User canceled dialog"));
     jstring juser = that->username();
     JNIStringHolder user(juser);
     if (user == NULL)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                        _("User canceled dialog"));
+                                _("User canceled dialog"));
     ret->username = apr_pstrdup(pool,user);
     jstring jpass = that->password();
     JNIStringHolder pass(jpass);
     if (pass == NULL)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            _("User canceled dialog"));
+                                _("User canceled dialog"));
     else
     {
         ret->password  = apr_pstrdup(pool, pass);
@@ -719,12 +723,12 @@ Prompter::ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred_p,
     Prompter *that = (Prompter*)baton;
     svn_auth_cred_ssl_client_cert_t *ret =
         (svn_auth_cred_ssl_client_cert_t*)apr_pcalloc(pool, sizeof(*ret));
-    const char *cert_file = that->askQuestion(realm,
-                                _("client certificate filename: "), true,
-                                may_save ? true : false);
+    const char *cert_file =
+        that->askQuestion(realm, _("client certificate filename: "), true,
+                          may_save ? true : false);
     if (cert_file == NULL)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                        _("User canceled dialog"));
+                                _("User canceled dialog"));
     ret->cert_file = apr_pstrdup(pool, cert_file);
     ret->may_save = that->m_maySave;
     *cred_p = ret;
@@ -746,7 +750,7 @@ Prompter::ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred_p,
                                          false, may_save ? true : false);
     if (info == NULL)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                        _("User canceled dialog"));
+                                _("User canceled dialog"));
     ret->password = apr_pstrdup(pool, info);
     ret->may_save = that->m_maySave;
     *cred_p = ret;

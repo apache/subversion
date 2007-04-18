@@ -123,10 +123,10 @@ public:
                    Revision &revision, Revision &pegRevsion, svn_depth_t depth,
                    bool ignoreExternals, bool allowUnverObstructions);
     void logMessages(const char *path, Revision &pegRevision,
-                             Revision &revisionStart,
-                             Revision &revisionEnd, bool stopOnCopy,
-                             bool discoverPaths, long limit,
-                             LogMessageCallback *callback);
+                     Revision &revisionStart,
+                     Revision &revisionEnd, bool stopOnCopy,
+                     bool discoverPaths, long limit,
+                     LogMessageCallback *callback);
     void setPrompt(Prompter *prompter);
     void password(const char *pi_password);
     void username(const char *pi_username);
