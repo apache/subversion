@@ -4986,7 +4986,7 @@ def mergeinfo_inheritance(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      ["/A/D/H/omega:1,3-4,6\n"],
                                      [],
-                                     'propget', 'svn:mergeinfo',
+                                     'propget', SVN_PROP_MERGE_INFO,
                                      omega_COPY_path)
 
 
