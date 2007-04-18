@@ -379,7 +379,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
     jlong *retArray = env->GetLongArrayElements(ret, NULL);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
-    for(int i = 0; i < retval->nelts; ++i)
+    for (int i = 0; i < retval->nelts; ++i)
     {
         jlong rev = APR_ARRAY_IDX(retval, i, svn_revnum_t);
         retArray[i] = rev;
@@ -1946,7 +1946,8 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
         return NULL;
 
     int i = 0;
-    for (hi = apr_hash_first(requestPool.pool(), props); hi;
+    for (hi = apr_hash_first(requestPool.pool(), props);
+         hi;
          hi = apr_hash_next(hi), ++i)
     {
         const char *key;
