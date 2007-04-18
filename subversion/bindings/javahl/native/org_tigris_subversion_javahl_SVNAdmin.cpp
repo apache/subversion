@@ -49,7 +49,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_dispose
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
     cl->dispose(jthis);
@@ -76,7 +76,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_create
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -111,7 +111,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_deltify
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -145,7 +145,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_dump
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -191,7 +191,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_hotcopy
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -218,7 +218,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_listDBLogs
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -245,7 +245,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_listUnusedDBLogs
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -274,7 +274,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_load
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -314,7 +314,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_lstxns
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -341,7 +341,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_recover
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return -1;
     }
 
@@ -362,7 +362,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_rmtxns
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -391,7 +391,7 @@ setRevProp(jobject jthis, jstring jpath, jobject jrevision,
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -460,7 +460,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_verify
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
@@ -499,7 +499,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_lslocks
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return NULL;
     }
 
@@ -519,7 +519,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_rmlocks
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if (cl == NULL)
     {
-        JNIUtil::throwError(_("bad c++ this"));
+        JNIUtil::throwError(_("bad C++ this"));
         return;
     }
 
