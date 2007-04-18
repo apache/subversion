@@ -50,28 +50,28 @@
  */
 class JNIStackElement
 {
-public:
-    JNIStackElement(JNIEnv *env, const char *clazz,
-                    const char *method, jobject jthis);
-    virtual ~JNIStackElement();
+ public:
+  JNIStackElement(JNIEnv *env, const char *clazz,
+                  const char *method, jobject jthis);
+  virtual ~JNIStackElement();
 
-private:
-    /**
-     * The name of the method.
-     */
-    const char *m_method;
+ private:
+  /**
+   * The name of the method.
+   */
+  const char *m_method;
 
-    /**
-     * The name of the class.
-     */
+  /**
+   * The name of the class.
+   */
 
-    const char *m_clazz;
+  const char *m_clazz;
 
-    /**
-     * A buffer for the result for jthis.toString to identify the
-     * object.
-     */
-    char m_objectID[JNIUtil::formatBufferSize];
+  /**
+   * A buffer for the result for jthis.toString to identify the
+   * object.
+   */
+  char m_objectID[JNIUtil::formatBufferSize];
 };
 
 // !defined(AFX_JNISTACKELEMENT_H__81945F80_D56F_4782_B8E7_6A82483E6463__INCLUDED_)

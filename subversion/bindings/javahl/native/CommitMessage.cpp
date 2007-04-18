@@ -27,53 +27,53 @@
 
 CommitMessage::CommitMessage(jobject jcommitMessage)
 {
-    m_jcommitMessage = jcommitMessage;
+  m_jcommitMessage = jcommitMessage;
 }
 
 CommitMessage::~CommitMessage()
 {
-    // Since the m_jcommitMessage is a global reference, it has to be
-    // deleted to allow the Java garbage collector to reclaim the
-    // object.
-    if (m_jcommitMessage!= NULL)
+  // Since the m_jcommitMessage is a global reference, it has to be
+  // deleted to allow the Java garbage collector to reclaim the
+  // object.
+  if (m_jcommitMessage!= NULL)
     {
-        JNIEnv *env = JNIUtil::getEnv();
-        env->DeleteGlobalRef(m_jcommitMessage);
+      JNIEnv *env = JNIUtil::getEnv();
+      env->DeleteGlobalRef(m_jcommitMessage);
     }
 }
 
 CommitMessage *CommitMessage::makeCCommitMessage(jobject jcommitMessage)
 {
-    // If there is no object passed into this method, there is no need
-    // for a C++ holding object.
-    if (jcommitMessage == NULL)
-        return NULL;
+  // If there is no object passed into this method, there is no need
+  // for a C++ holding object.
+  if (jcommitMessage == NULL)
+    return NULL;
 
-    // Sanity check, that the passed Java object implements the right
-    // interface.
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitMessage");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+  // Sanity check, that the passed Java object implements the right
+  // interface.
+  JNIEnv *env = JNIUtil::getEnv();
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitMessage");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-    if (!env->IsInstanceOf(jcommitMessage, clazz))
+  if (!env->IsInstanceOf(jcommitMessage, clazz))
     {
-        env->DeleteLocalRef(clazz);
-        return NULL;
+      env->DeleteLocalRef(clazz);
+      return NULL;
     }
-    env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-    // Since the reference is longer needed then the duration of the
-    // SVNClient.commtMessage, the local reference has to be converted
-    // to a global reference.
-    jobject myCommitMessage = env->NewGlobalRef(jcommitMessage);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+  // Since the reference is longer needed then the duration of the
+  // SVNClient.commtMessage, the local reference has to be converted
+  // to a global reference.
+  jobject myCommitMessage = env->NewGlobalRef(jcommitMessage);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-    // create & return the holding object
-    return new CommitMessage(myCommitMessage);
+  // create & return the holding object
+  return new CommitMessage(myCommitMessage);
 }
 
 /**
@@ -84,126 +84,126 @@ CommitMessage *CommitMessage::makeCCommitMessage(jobject jcommitMessage)
 jstring
 CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
 {
-    JNIEnv *env = JNIUtil::getEnv();
-    // create an Java array for the commit items
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitItem");
-    if (JNIUtil::isExceptionThrown())
-        return NULL;
+  JNIEnv *env = JNIUtil::getEnv();
+  // create an Java array for the commit items
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitItem");
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
 
-    int count = commit_items->nelts;
-    jobjectArray jitems = env->NewObjectArray(count, clazz, NULL);
-    if (JNIUtil::isExceptionThrown())
-        return NULL;
+  int count = commit_items->nelts;
+  jobjectArray jitems = env->NewObjectArray(count, clazz, NULL);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
 
-    // Java method ids will not change during the time this library is
-    // loaded, so they can be cached.
+  // Java method ids will not change during the time this library is
+  // loaded, so they can be cached.
 
-    // Get the method id for the CommitItem constructor.
-    static jmethodID midConstructor = 0;
-    if (midConstructor == 0)
+  // Get the method id for the CommitItem constructor.
+  static jmethodID midConstructor = 0;
+  if (midConstructor == 0)
     {
-        midConstructor = env->GetMethodID(clazz, "<init>",
-                                          "(Ljava/lang/String;"
-                                          "IILjava/lang/String;"
-                                          "Ljava/lang/String;J)V");
-        if (JNIUtil::isExceptionThrown())
-            return NULL;
+      midConstructor = env->GetMethodID(clazz, "<init>",
+                                        "(Ljava/lang/String;"
+                                        "IILjava/lang/String;"
+                                        "Ljava/lang/String;J)V");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
     }
 
-    // get the method if for the CommitMessage callback method
-    static jmethodID midCallback = 0;
-    if (midCallback == 0)
+  // get the method if for the CommitMessage callback method
+  static jmethodID midCallback = 0;
+  if (midCallback == 0)
     {
-        jclass clazz2 = env->FindClass(JAVA_PACKAGE"/CommitMessage");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+      jclass clazz2 = env->FindClass(JAVA_PACKAGE"/CommitMessage");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
-        midCallback = env->GetMethodID(clazz2, "getLogMessage",
-                                       "([L"JAVA_PACKAGE"/CommitItem;)"
-                                       "Ljava/lang/String;");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+      midCallback = env->GetMethodID(clazz2, "getLogMessage",
+                                     "([L"JAVA_PACKAGE"/CommitItem;)"
+                                     "Ljava/lang/String;");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
-        env->DeleteLocalRef(clazz2);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+      env->DeleteLocalRef(clazz2);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
     }
 
-    // create a Java CommitItem for each of the passed in commit items
-    for (int i = 0; i < count; ++i)
+  // create a Java CommitItem for each of the passed in commit items
+  for (int i = 0; i < count; ++i)
     {
-        svn_client_commit_item3_t *item =
-            APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+      svn_client_commit_item3_t *item =
+        APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
 
-        // convert the commit item members to the match Java members
-        jstring jpath = JNIUtil::makeJString(item->path);
+      // convert the commit item members to the match Java members
+      jstring jpath = JNIUtil::makeJString(item->path);
 
-        jint jnodeKind = item->kind;
+      jint jnodeKind = item->kind;
 
-        jint jstateFlags = 0;
-        if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
-            jstateFlags |=
-                org_tigris_subversion_javahl_CommitItemStateFlags_Add;
-        if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-            jstateFlags |=
-                org_tigris_subversion_javahl_CommitItemStateFlags_Delete;
-        if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
-            jstateFlags |=
-                org_tigris_subversion_javahl_CommitItemStateFlags_TextMods;
-        if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
-            jstateFlags |=
-                org_tigris_subversion_javahl_CommitItemStateFlags_PropMods;
-        if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            jstateFlags |=
-                org_tigris_subversion_javahl_CommitItemStateFlags_IsCopy;
+      jint jstateFlags = 0;
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+        jstateFlags |=
+          org_tigris_subversion_javahl_CommitItemStateFlags_Add;
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+        jstateFlags |=
+          org_tigris_subversion_javahl_CommitItemStateFlags_Delete;
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
+        jstateFlags |=
+          org_tigris_subversion_javahl_CommitItemStateFlags_TextMods;
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
+        jstateFlags |=
+          org_tigris_subversion_javahl_CommitItemStateFlags_PropMods;
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+        jstateFlags |=
+          org_tigris_subversion_javahl_CommitItemStateFlags_IsCopy;
 
-        jstring jurl = JNIUtil::makeJString(item->url);
+      jstring jurl = JNIUtil::makeJString(item->url);
 
-        jstring jcopyUrl = JNIUtil::makeJString(item->copyfrom_url);
+      jstring jcopyUrl = JNIUtil::makeJString(item->copyfrom_url);
 
-        jlong jcopyRevision = item->revision;
+      jlong jcopyRevision = item->revision;
 
-        // create the Java object
-        jobject jitem = env->NewObject(clazz, midConstructor, jpath,
-                                       jnodeKind, jstateFlags, jurl,
-                                       jcopyUrl, jcopyRevision);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+      // create the Java object
+      jobject jitem = env->NewObject(clazz, midConstructor, jpath,
+                                     jnodeKind, jstateFlags, jurl,
+                                     jcopyUrl, jcopyRevision);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
-        // release the tempory Java objects
-        env->DeleteLocalRef(jpath);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+      // release the tempory Java objects
+      env->DeleteLocalRef(jpath);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
 
-        env->DeleteLocalRef(jurl);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+      env->DeleteLocalRef(jurl);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
-        env->DeleteLocalRef(jcopyUrl);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+      env->DeleteLocalRef(jcopyUrl);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
-        // store the Java object into the array
-        env->SetObjectArrayElement(jitems, i, jitem);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+      // store the Java object into the array
+      env->SetObjectArrayElement(jitems, i, jitem);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
     }
-    env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-    // call the Java callback method
-    jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage,
-                                                      midCallback,
-                                                      jitems);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+  // call the Java callback method
+  jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage,
+                                                    midCallback,
+                                                    jitems);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-    // release the Java object array
-    env->DeleteLocalRef(jitems);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+  // release the Java object array
+  env->DeleteLocalRef(jitems);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-    return jmessage;
+  return jmessage;
 }

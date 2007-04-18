@@ -33,56 +33,56 @@
  */
 class Notify
 {
-private:
-    /**
-     * The Java object to receive the notifications.  This is a global
-     * reference because it has to live longer than the
-     * SVNClient.notification call.
-     */
-    jobject m_notify;
-    Notify(jobject p_notify);
-public:
-    static Notify *makeCNotify(jobject notify);
-    ~Notify();
+ private:
+  /**
+   * The Java object to receive the notifications.  This is a global
+   * reference because it has to live longer than the
+   * SVNClient.notification call.
+   */
+  jobject m_notify;
+  Notify(jobject p_notify);
+ public:
+  static Notify *makeCNotify(jobject notify);
+  ~Notify();
 
-    /**
-     * notification function passed as svn_wc_notify_func_t
-     * @param baton notification instance is passed using this parameter
-     * @param path on which action happen
-     * @param action subversion action, see svn_wc_notify_action_t
-     * @param kind node kind of path after action occurred
-     * @param mime_type mime type of path after action occurred
-     * @param content_state state of content after action occurred
-     * @param prop_state state of properties after action occurred
-     * @param revision revision number after action occurred
-     */
-    static void notify(void *baton,
-                       const char *path,
-                       svn_wc_notify_action_t action,
-                       svn_node_kind_t kind,
-                       const char *mime_type,
-                       svn_wc_notify_state_t content_state,
-                       svn_wc_notify_state_t prop_state,
-                       svn_revnum_t revision);
+  /**
+   * notification function passed as svn_wc_notify_func_t
+   * @param baton notification instance is passed using this parameter
+   * @param path on which action happen
+   * @param action subversion action, see svn_wc_notify_action_t
+   * @param kind node kind of path after action occurred
+   * @param mime_type mime type of path after action occurred
+   * @param content_state state of content after action occurred
+   * @param prop_state state of properties after action occurred
+   * @param revision revision number after action occurred
+   */
+  static void notify(void *baton,
+                     const char *path,
+                     svn_wc_notify_action_t action,
+                     svn_node_kind_t kind,
+                     const char *mime_type,
+                     svn_wc_notify_state_t content_state,
+                     svn_wc_notify_state_t prop_state,
+                     svn_revnum_t revision);
 
-    /**
-     * Handler for Subversion notifications.
-     *
-     * @param path on which action happen
-     * @param action subversion action, see svn_wc_notify_action_t
-     * @param kind node kind of path after action occurred
-     * @param mime_type mime type of path after action occurred
-     * @param content_state state of content after action occurred
-     * @param prop_state state of properties after action occurred
-     * @param revision revision number  after action occurred
-     */
-    void onNotify(const char *path,
-                  svn_wc_notify_action_t action,
-                  svn_node_kind_t kind,
-                  const char *mime_type,
-                  svn_wc_notify_state_t content_state,
-                  svn_wc_notify_state_t prop_state,
-                  svn_revnum_t revision);
+  /**
+   * Handler for Subversion notifications.
+   *
+   * @param path on which action happen
+   * @param action subversion action, see svn_wc_notify_action_t
+   * @param kind node kind of path after action occurred
+   * @param mime_type mime type of path after action occurred
+   * @param content_state state of content after action occurred
+   * @param prop_state state of properties after action occurred
+   * @param revision revision number  after action occurred
+   */
+  void onNotify(const char *path,
+                svn_wc_notify_action_t action,
+                svn_node_kind_t kind,
+                const char *mime_type,
+                svn_wc_notify_state_t content_state,
+                svn_wc_notify_state_t prop_state,
+                svn_revnum_t revision);
 };
 
 // !defined(AFX_NOTIFY_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)

@@ -30,24 +30,24 @@
 
 class Revision
 {
-private:
-    svn_opt_revision_t m_revision;
+ private:
+  svn_opt_revision_t m_revision;
 
-public:
-    static const svn_opt_revision_kind START;
-    static const svn_opt_revision_kind HEAD;
+ public:
+  static const svn_opt_revision_kind START;
+  static const svn_opt_revision_kind HEAD;
 
-    Revision(jobject jthis, bool headIfUnspecified = false,
-             bool oneIfUnspecified = false);
-    Revision(const svn_opt_revision_kind kind = svn_opt_revision_unspecified);
-    ~Revision();
+  Revision(jobject jthis, bool headIfUnspecified = false,
+           bool oneIfUnspecified = false);
+  Revision(const svn_opt_revision_kind kind = svn_opt_revision_unspecified);
+  ~Revision();
 
-    const svn_opt_revision_t *revision() const;
+  const svn_opt_revision_t *revision() const;
 
-    /**
-     * Make a Revision Java object.
-     */
-    static jobject makeJRevision(svn_revnum_t rev);
+  /**
+   * Make a Revision Java object.
+   */
+  static jobject makeJRevision(svn_revnum_t rev);
 };
 
 // !defined(AFX_REVISION_H__BEAA0788_C9D9_4A67_B94E_761ABC68ACFE__INCLUDED_)

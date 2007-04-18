@@ -34,25 +34,25 @@
  */
 class StatusCallback
 {
-public:
-    StatusCallback(jobject jcallback);
-    ~StatusCallback();
+ public:
+  StatusCallback(jobject jcallback);
+  ~StatusCallback();
 
-    static void callback(void *baton,
-                         const char *path,
-                         svn_wc_status2_t *status);
+  static void callback(void *baton,
+                       const char *path,
+                       svn_wc_status2_t *status);
 
-protected:
-    void doStatus(const char *path, svn_wc_status2_t *status);
+ protected:
+  void doStatus(const char *path, svn_wc_status2_t *status);
 
-private:
-    /**
-     * This a local reference to the Java object.
-     */
-    jobject m_callback;
+ private:
+  /**
+   * This a local reference to the Java object.
+   */
+  jobject m_callback;
 
-    jobject createJavaStatus(const char *path,
-                             svn_wc_status2_t *status);
+  jobject createJavaStatus(const char *path,
+                           svn_wc_status2_t *status);
 };
 
 // !defined(AFX_STATUSCALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)

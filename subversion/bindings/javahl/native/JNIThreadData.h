@@ -36,45 +36,45 @@ class Pool;
  */
 class JNIThreadData
 {
-public:
-    static void del(void *);
-    static JNIThreadData *getThreadData();
-    static bool initThreadData();
-    static void pushNewThreadData();
-    static void popThreadData();
-    JNIThreadData();
-    ~JNIThreadData();
+ public:
+  static void del(void *);
+  static JNIThreadData *getThreadData();
+  static bool initThreadData();
+  static void pushNewThreadData();
+  static void popThreadData();
+  JNIThreadData();
+  ~JNIThreadData();
 
-    /**
-     * The current JNI environment.
-     */
-    JNIEnv *m_env;
+  /**
+   * The current JNI environment.
+   */
+  JNIEnv *m_env;
 
-    /**
-     * Flag that a Java execption has been detected.
-     */
-    bool m_exceptionThrown;
+  /**
+   * Flag that a Java execption has been detected.
+   */
+  bool m_exceptionThrown;
 
-    /**
-     * A buffer used for formating messages.
-     */
-    char m_formatBuffer[JNIUtil::formatBufferSize];
+  /**
+   * A buffer used for formating messages.
+   */
+  char m_formatBuffer[JNIUtil::formatBufferSize];
 
-    /**
-     * The pool for the current request (call).
-     */
-    Pool *m_requestPool;
-private:
-   /**
-    * Pointer to previous thread information to enable reentrent
-    * calls.
-    */
-    JNIThreadData *m_previous;
+  /**
+   * The pool for the current request (call).
+   */
+  Pool *m_requestPool;
+ private:
+  /**
+   * Pointer to previous thread information to enable reentrent
+   * calls.
+   */
+  JNIThreadData *m_previous;
 
-    /**
-     * The key to address this thread local storage.
-     */
-    static apr_threadkey_t *g_key;
+  /**
+   * The key to address this thread local storage.
+   */
+  static apr_threadkey_t *g_key;
 };
 
 // !defined(AFX_JNITHREADDATA_H__2BF37407_7EA8_4F74_9080_C86696617F7F__INCLUDED_)

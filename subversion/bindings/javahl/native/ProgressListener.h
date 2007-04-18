@@ -34,56 +34,56 @@
  */
 class ProgressListener
 {
-private:
-    /**
-     * The Java object which handles the progress event. This is a
-     * global reference, because it has to live longer than the
-     * SVNClient.onProgress() call.
-     */
-    jobject m_progressListener;
+ private:
+  /**
+   * The Java object which handles the progress event. This is a
+   * global reference, because it has to live longer than the
+   * SVNClient.onProgress() call.
+   */
+  jobject m_progressListener;
 
-    /**
-     * Create a new instance, storing a global reference to the
-     * corresponding Java object.
-     *
-     * @param jprogressListener Reference to the Java peer.
-     */
-    ProgressListener(jobject jprogressListener);
+  /**
+   * Create a new instance, storing a global reference to the
+   * corresponding Java object.
+   *
+   * @param jprogressListener Reference to the Java peer.
+   */
+  ProgressListener(jobject jprogressListener);
 
-public:
-    /**
-     * Destroy the instance, and delete the global reference to the
-     * Java object.
-     */
-    ~ProgressListener();
+ public:
+  /**
+   * Destroy the instance, and delete the global reference to the
+   * Java object.
+   */
+  ~ProgressListener();
 
-    /** Constructor function called from C JNI glue code. */
-    static ProgressListener *makeCProgressListener(jobject jprogressListener);
+  /** Constructor function called from C JNI glue code. */
+  static ProgressListener *makeCProgressListener(jobject jprogressListener);
 
-    /**
-     * Implementation of the svn_ra_progress_notify_func_t API.
-     *
-     * @param nbrBytes The number of bytes already transferred.
-     * @param total The total number of bytes.
-     * @param baton A reference to the ProgressListener instance.
-     * @param pool An APR pool from which to allocate memory.
-     */
-    static void progress(apr_off_t nbrBytes,
-                         apr_off_t total,
-                         void *baton,
-                         apr_pool_t *pool);
+  /**
+   * Implementation of the svn_ra_progress_notify_func_t API.
+   *
+   * @param nbrBytes The number of bytes already transferred.
+   * @param total The total number of bytes.
+   * @param baton A reference to the ProgressListener instance.
+   * @param pool An APR pool from which to allocate memory.
+   */
+  static void progress(apr_off_t nbrBytes,
+                       apr_off_t total,
+                       void *baton,
+                       apr_pool_t *pool);
 
-protected:
-    /**
-     * Handler for Subversion progress events.
-     *
-     * @param progress The number of bytes already transferred.
-     * @param total The total number of bytes.
-     * @param pool An APR pool from which to allocate memory.
-     */
-    void onProgress(apr_off_t progress,
-                    apr_off_t total,
-                    apr_pool_t *pool);
+ protected:
+  /**
+   * Handler for Subversion progress events.
+   *
+   * @param progress The number of bytes already transferred.
+   * @param total The total number of bytes.
+   * @param pool An APR pool from which to allocate memory.
+   */
+  void onProgress(apr_off_t progress,
+                  apr_off_t total,
+                  apr_pool_t *pool);
 };
 
 // !defined(AFX_PROGRESS_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)

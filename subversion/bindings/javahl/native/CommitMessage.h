@@ -35,37 +35,37 @@ struct apr_array_header_t;
  */
 class CommitMessage
 {
-public:
-    /**
-     * Deletes the global reference to m_jcommitMessage.
-     */
-    ~CommitMessage();
+ public:
+  /**
+   * Deletes the global reference to m_jcommitMessage.
+   */
+  ~CommitMessage();
 
-    jstring getCommitMessage(const apr_array_header_t *commit_items);
+  jstring getCommitMessage(const apr_array_header_t *commit_items);
 
-    /**
-     * Create a C++ holding object for the Java object passed into the
-     * native code.
-     *
-     * @param jcommitMessage The local reference to a
-     * org.tigris.subversion.javahl.CommitMessage Java commit message
-     * object.
-     */
-    static CommitMessage *makeCCommitMessage(jobject jcommitMessage);
+  /**
+   * Create a C++ holding object for the Java object passed into the
+   * native code.
+   *
+   * @param jcommitMessage The local reference to a
+   * org.tigris.subversion.javahl.CommitMessage Java commit message
+   * object.
+   */
+  static CommitMessage *makeCCommitMessage(jobject jcommitMessage);
 
-private:
-    /**
-     * A global reference to the Java object, because the reference
-     * must be valid longer than the SVNClient.commitMessage call.
-     */
-    jobject m_jcommitMessage;
+ private:
+  /**
+   * A global reference to the Java object, because the reference
+   * must be valid longer than the SVNClient.commitMessage call.
+   */
+  jobject m_jcommitMessage;
 
-    /**
-     * Create a commit message object.
-     *
-     * @param jcommitMessage The Java object to receive the callback.
-     */
-    CommitMessage(jobject jcommitMessage);
+  /**
+   * Create a commit message object.
+   *
+   * @param jcommitMessage The Java object to receive the callback.
+   */
+  CommitMessage(jobject jcommitMessage);
 };
 
 // !defined(AFX_COMMITMESSAGE_H__9AD3F0B0_9DBB_4701_9EE7_3BE0AEB51EDB__INCLUDED_)

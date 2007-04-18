@@ -32,58 +32,58 @@ SVNBase::~SVNBase()
 
 jlong SVNBase::getCppAddr()
 {
-    return reinterpret_cast<jlong>(this);
+  return reinterpret_cast<jlong>(this);
 }
 
 jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
                                      const char *className)
 {
-    JNIEnv *env = JNIUtil::getEnv();
-    findCppAddrFieldID(fid, className, env);
-    if (*fid == 0)
+  JNIEnv *env = JNIUtil::getEnv();
+  findCppAddrFieldID(fid, className, env);
+  if (*fid == 0)
     {
-        return 0;
+      return 0;
     }
-    else
+  else
     {
-        jlong cppAddr = env->GetLongField(jthis, *fid);
-        return (JNIUtil::isJavaExceptionThrown() ? 0 : cppAddr);
+      jlong cppAddr = env->GetLongField(jthis, *fid);
+      return (JNIUtil::isJavaExceptionThrown() ? 0 : cppAddr);
     }
 }
 
 void SVNBase::finalize()
 {
-    // This object should've already been disposed of!
-    if (JNIUtil::getLogLevel() >= JNIUtil::errorLog)
-        JNIUtil::logMessage("An SVNBase object escaped disposal");
+  // This object should've already been disposed of!
+  if (JNIUtil::getLogLevel() >= JNIUtil::errorLog)
+    JNIUtil::logMessage("An SVNBase object escaped disposal");
 
-    JNIUtil::enqueueForDeletion(this);
+  JNIUtil::enqueueForDeletion(this);
 }
 
 void SVNBase::dispose(jobject jthis, jfieldID *fid, const char *className)
 {
-    delete this;
-    JNIEnv *env = JNIUtil::getEnv();
-    SVNBase::findCppAddrFieldID(fid, className, env);
-    if (*fid == 0)
-        return;
+  delete this;
+  JNIEnv *env = JNIUtil::getEnv();
+  SVNBase::findCppAddrFieldID(fid, className, env);
+  if (*fid == 0)
+    return;
 
-    env->SetLongField(jthis, *fid, 0);
-    if (JNIUtil::isJavaExceptionThrown())
-        return;
+  env->SetLongField(jthis, *fid, 0);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 }
 
 inline void SVNBase::findCppAddrFieldID(jfieldID *fid, const char *className,
                                         JNIEnv *env)
 {
-    if (*fid == 0)
+  if (*fid == 0)
     {
-        jclass clazz = env->FindClass(className);
-        if (!JNIUtil::isJavaExceptionThrown())
+      jclass clazz = env->FindClass(className);
+      if (!JNIUtil::isJavaExceptionThrown())
         {
-            *fid = env->GetFieldID(clazz, "cppAddr", "J");
-            if (JNIUtil::isJavaExceptionThrown())
-                *fid = 0;
+          *fid = env->GetFieldID(clazz, "cppAddr", "J");
+          if (JNIUtil::isJavaExceptionThrown())
+            *fid = 0;
         }
     }
 }

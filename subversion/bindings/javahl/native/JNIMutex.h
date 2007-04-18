@@ -35,15 +35,15 @@ struct apr_thread_mutex_t;
  */
 class JNIMutex
 {
-public:
-    JNIMutex(apr_pool_t *pool);
-    ~JNIMutex();
-    friend class JNICriticalSection;
-private:
-    /**
-     * The apr mutex.
-     */
-    apr_thread_mutex_t *m_mutex;
+ public:
+  JNIMutex(apr_pool_t *pool);
+  ~JNIMutex();
+  friend class JNICriticalSection;
+ private:
+  /**
+   * The apr mutex.
+   */
+  apr_thread_mutex_t *m_mutex;
 };
 
 // !defined(AFX_JNIMUTEX_H__958B52A6_00A3_458F_981F_0A3095D39EE8__INCLUDED_)

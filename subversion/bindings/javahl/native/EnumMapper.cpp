@@ -36,23 +36,23 @@
  */
 jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
 {
-    jint jstateFlags = 0;
-    if (flags & SVN_CLIENT_COMMIT_ITEM_ADD)
-        jstateFlags |=
-            org_tigris_subversion_javahl_CommitItemStateFlags_Add;
-    if (flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-        jstateFlags |=
-            org_tigris_subversion_javahl_CommitItemStateFlags_Delete;
-    if (flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
-        jstateFlags |=
-            org_tigris_subversion_javahl_CommitItemStateFlags_TextMods;
-    if (flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
-        jstateFlags |=
-            org_tigris_subversion_javahl_CommitItemStateFlags_PropMods;
-    if (flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-        jstateFlags |=
-            org_tigris_subversion_javahl_CommitItemStateFlags_IsCopy;
-    return jstateFlags;
+  jint jstateFlags = 0;
+  if (flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+    jstateFlags |=
+      org_tigris_subversion_javahl_CommitItemStateFlags_Add;
+  if (flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+    jstateFlags |=
+      org_tigris_subversion_javahl_CommitItemStateFlags_Delete;
+  if (flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
+    jstateFlags |=
+      org_tigris_subversion_javahl_CommitItemStateFlags_TextMods;
+  if (flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
+    jstateFlags |=
+      org_tigris_subversion_javahl_CommitItemStateFlags_PropMods;
+  if (flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+    jstateFlags |=
+      org_tigris_subversion_javahl_CommitItemStateFlags_IsCopy;
+  return jstateFlags;
 }
 
 /**
@@ -62,32 +62,32 @@ jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
  */
 jint EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 {
-    switch(state)
+  switch(state)
     {
     default:
     case svn_wc_notify_state_inapplicable:
-        return org_tigris_subversion_javahl_NotifyStatus_inapplicable;
+      return org_tigris_subversion_javahl_NotifyStatus_inapplicable;
 
     case svn_wc_notify_state_unknown:
-        return org_tigris_subversion_javahl_NotifyStatus_unknown;
+      return org_tigris_subversion_javahl_NotifyStatus_unknown;
 
     case svn_wc_notify_state_unchanged:
-        return org_tigris_subversion_javahl_NotifyStatus_unchanged;
+      return org_tigris_subversion_javahl_NotifyStatus_unchanged;
 
     case svn_wc_notify_state_missing:
-        return org_tigris_subversion_javahl_NotifyStatus_missing;
+      return org_tigris_subversion_javahl_NotifyStatus_missing;
 
     case svn_wc_notify_state_obstructed:
-        return org_tigris_subversion_javahl_NotifyStatus_obstructed;
+      return org_tigris_subversion_javahl_NotifyStatus_obstructed;
 
     case svn_wc_notify_state_changed:
-        return org_tigris_subversion_javahl_NotifyStatus_changed;
+      return org_tigris_subversion_javahl_NotifyStatus_changed;
 
     case svn_wc_notify_state_merged:
-        return org_tigris_subversion_javahl_NotifyStatus_merged;
+      return org_tigris_subversion_javahl_NotifyStatus_merged;
 
     case svn_wc_notify_state_conflicted:
-        return org_tigris_subversion_javahl_NotifyStatus_conflicted;
+      return org_tigris_subversion_javahl_NotifyStatus_conflicted;
     }
 
 }
@@ -99,132 +99,132 @@ jint EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
  */
 jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
 {
-    jint jAction = -1;
-    // This is a switch to make the Java constants independent from
-    // the C constants.
-    switch(action)
+  jint jAction = -1;
+  // This is a switch to make the Java constants independent from
+  // the C constants.
+  switch(action)
     {
     case svn_wc_notify_add:
-        /* Adding a path to revision control. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_add;
-        break;
+      /* Adding a path to revision control. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_add;
+      break;
     case svn_wc_notify_copy:
-        /* Copying a versioned path. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_copy;
-        break;
+      /* Copying a versioned path. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_copy;
+      break;
     case svn_wc_notify_delete:
-        /* Deleting a versioned path. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_delete;
-        break;
+      /* Deleting a versioned path. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_delete;
+      break;
     case svn_wc_notify_restore:
-        /* Restoring a missing path from the pristine text-base. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_restore;
-        break;
+      /* Restoring a missing path from the pristine text-base. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_restore;
+      break;
     case svn_wc_notify_revert:
-        /* Reverting a modified path. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_revert;
-        break;
+      /* Reverting a modified path. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_revert;
+      break;
     case svn_wc_notify_failed_revert:
-        /* A revert operation has failed. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_failed_revert;
-        break;
+      /* A revert operation has failed. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_failed_revert;
+      break;
     case svn_wc_notify_resolved:
-        /* Resolving a conflict. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_resolved;
-        break;
+      /* Resolving a conflict. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_resolved;
+      break;
     case svn_wc_notify_status_completed:
-        /* The last notification in a status (including status on
-         * externals). */
-        jAction = org_tigris_subversion_javahl_NotifyAction_status_completed;
-        break;
+      /* The last notification in a status (including status on
+       * externals). */
+      jAction = org_tigris_subversion_javahl_NotifyAction_status_completed;
+      break;
     case svn_wc_notify_status_external:
-        /* Running status on an external module. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_status_external;
-        break;
+      /* Running status on an external module. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_status_external;
+      break;
     case svn_wc_notify_skip:
-        /* Skipping a path. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_skip;
-        break;
+      /* Skipping a path. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_skip;
+      break;
     case svn_wc_notify_update_delete:
-        /* Got a delete in an update. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_update_delete;
-        break;
+      /* Got a delete in an update. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_update_delete;
+      break;
     case svn_wc_notify_update_add:
-        /* Got an add in an update. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_update_add;
-        break;
+      /* Got an add in an update. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_update_add;
+      break;
     case svn_wc_notify_update_update:
-        /* Got any other action in an update. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_update_update;
-        break;
+      /* Got any other action in an update. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_update_update;
+      break;
     case svn_wc_notify_update_completed:
-        /* The last notification in an update (including updates of
-         * externals). */
-        jAction = org_tigris_subversion_javahl_NotifyAction_update_completed;
-        break;
+      /* The last notification in an update (including updates of
+       * externals). */
+      jAction = org_tigris_subversion_javahl_NotifyAction_update_completed;
+      break;
     case svn_wc_notify_update_external:
-        /* Updating an external module. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_update_external;
-        break;
+      /* Updating an external module. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_update_external;
+      break;
     case svn_wc_notify_commit_modified:
-        /* Committing a modification. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_commit_modified;
-        break;
+      /* Committing a modification. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_commit_modified;
+      break;
     case svn_wc_notify_commit_added:
-        /* Committing an addition. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_commit_added;
-        break;
+      /* Committing an addition. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_commit_added;
+      break;
     case svn_wc_notify_commit_deleted:
-        /* Committing a deletion. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_commit_deleted;
-        break;
+      /* Committing a deletion. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_commit_deleted;
+      break;
     case svn_wc_notify_commit_replaced:
-        /* Committing a replacement. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_commit_replaced;
-        break;
+      /* Committing a replacement. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_commit_replaced;
+      break;
     case svn_wc_notify_commit_postfix_txdelta:
-        /* Transmitting post-fix text-delta data for a file. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_commit_postfix_txdelta;
-        break;
+      /* Transmitting post-fix text-delta data for a file. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_commit_postfix_txdelta;
+      break;
     case svn_wc_notify_blame_revision:
-        /* Processed a single revision's blame. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_blame_revision;
-        break;
+      /* Processed a single revision's blame. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_blame_revision;
+      break;
     case svn_wc_notify_locked:
-        /* Lock a path */
-        jAction = org_tigris_subversion_javahl_NotifyAction_locked;
-        break;
+      /* Lock a path */
+      jAction = org_tigris_subversion_javahl_NotifyAction_locked;
+      break;
     case svn_wc_notify_unlocked:
-        /* Unlock a path */
-        jAction = org_tigris_subversion_javahl_NotifyAction_unlocked;
-        break;
+      /* Unlock a path */
+      jAction = org_tigris_subversion_javahl_NotifyAction_unlocked;
+      break;
     case svn_wc_notify_failed_lock:
-        /* Lock failed */
-        jAction = org_tigris_subversion_javahl_NotifyAction_failed_lock;
-        break;
+      /* Lock failed */
+      jAction = org_tigris_subversion_javahl_NotifyAction_failed_lock;
+      break;
     case svn_wc_notify_failed_unlock:
-        /* Unlock failed */
-        jAction = org_tigris_subversion_javahl_NotifyAction_failed_unlock;
-        break;
+      /* Unlock failed */
+      jAction = org_tigris_subversion_javahl_NotifyAction_failed_unlock;
+      break;
     case svn_wc_notify_exists:
-        /* Tried adding a path that already exists. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_exists;
-        break;
+      /* Tried adding a path that already exists. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_exists;
+      break;
     case svn_wc_notify_changelist_set:
-        /* Changelist name set. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_changelist_set;
-        break;
+      /* Changelist name set. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_changelist_set;
+      break;
     case svn_wc_notify_changelist_clear:
-        /* Changelist name cleared. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_changelist_clear;
-        break;
+      /* Changelist name cleared. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_changelist_clear;
+      break;
 
     case svn_wc_notify_changelist_failed:
-        /* Changelist operation failed. */
-        jAction = org_tigris_subversion_javahl_NotifyAction_changelist_failed;
-        break;
+      /* Changelist operation failed. */
+      jAction = org_tigris_subversion_javahl_NotifyAction_changelist_failed;
+      break;
     }
-    return jAction;
+  return jAction;
 }
 
 /**
@@ -234,23 +234,23 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
  */
 jint EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 {
-    jint jKind = org_tigris_subversion_javahl_NodeKind_unknown;
-    switch(nodeKind)
+  jint jKind = org_tigris_subversion_javahl_NodeKind_unknown;
+  switch(nodeKind)
     {
     case svn_node_none:
-        jKind = org_tigris_subversion_javahl_NodeKind_none;
-        break;
+      jKind = org_tigris_subversion_javahl_NodeKind_none;
+      break;
     case svn_node_file:
-        jKind = org_tigris_subversion_javahl_NodeKind_file;
-        break;
+      jKind = org_tigris_subversion_javahl_NodeKind_file;
+      break;
     case svn_node_dir:
-        jKind = org_tigris_subversion_javahl_NodeKind_dir;
-        break;
+      jKind = org_tigris_subversion_javahl_NodeKind_dir;
+      break;
     case svn_node_unknown:
-        jKind = org_tigris_subversion_javahl_NodeKind_unknown;
-        break;
+      jKind = org_tigris_subversion_javahl_NodeKind_unknown;
+      break;
     }
-    return jKind;
+  return jKind;
 }
 
 /**
@@ -260,26 +260,26 @@ jint EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
  */
 jint EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 {
-    jint jState = org_tigris_subversion_javahl_LockStatus_inapplicable;
-    switch(state)
+  jint jState = org_tigris_subversion_javahl_LockStatus_inapplicable;
+  switch(state)
     {
     case svn_wc_notify_lock_state_inapplicable:
-        jState = org_tigris_subversion_javahl_LockStatus_inapplicable;
-        break;
+      jState = org_tigris_subversion_javahl_LockStatus_inapplicable;
+      break;
     case svn_wc_notify_lock_state_unknown:
-        jState = org_tigris_subversion_javahl_LockStatus_unknown;
-        break;
+      jState = org_tigris_subversion_javahl_LockStatus_unknown;
+      break;
     case svn_wc_notify_lock_state_unchanged:
-        jState = org_tigris_subversion_javahl_LockStatus_unchanged;
-        break;
+      jState = org_tigris_subversion_javahl_LockStatus_unchanged;
+      break;
     case svn_wc_notify_lock_state_locked:
-        jState = org_tigris_subversion_javahl_LockStatus_locked;
-        break;
+      jState = org_tigris_subversion_javahl_LockStatus_locked;
+      break;
     case svn_wc_notify_lock_state_unlocked:
-        jState = org_tigris_subversion_javahl_LockStatus_unlocked;
-        break;
+      jState = org_tigris_subversion_javahl_LockStatus_unlocked;
+      break;
     }
-    return jState;
+  return jState;
 }
 
 /**
@@ -289,26 +289,26 @@ jint EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
  */
 jint EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
 {
-    switch(schedule)
+  switch(schedule)
     {
-    /** Nothing special here */
+      /** Nothing special here */
     case svn_wc_schedule_normal:
-        return org_tigris_subversion_javahl_ScheduleKind_normal;
+      return org_tigris_subversion_javahl_ScheduleKind_normal;
 
-    /** Slated for addition */
+      /** Slated for addition */
     case svn_wc_schedule_add:
-        return org_tigris_subversion_javahl_ScheduleKind_add;
+      return org_tigris_subversion_javahl_ScheduleKind_add;
 
-    /** Slated for deletion */
+      /** Slated for deletion */
     case svn_wc_schedule_delete:
-        return org_tigris_subversion_javahl_ScheduleKind_delete;
+      return org_tigris_subversion_javahl_ScheduleKind_delete;
 
-    /** Slated for replacement (delete + add) */
+      /** Slated for replacement (delete + add) */
     case svn_wc_schedule_replace:
-        return org_tigris_subversion_javahl_ScheduleKind_replace;
+      return org_tigris_subversion_javahl_ScheduleKind_replace;
 
     default:
-        return org_tigris_subversion_javahl_ScheduleKind_normal;
+      return org_tigris_subversion_javahl_ScheduleKind_normal;
     }
 }
 
@@ -319,36 +319,36 @@ jint EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
  */
 jint EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
 {
-    switch(svnKind)
+  switch(svnKind)
     {
     case svn_wc_status_none:
     default:
-        return org_tigris_subversion_javahl_StatusKind_none;
+      return org_tigris_subversion_javahl_StatusKind_none;
     case svn_wc_status_unversioned:
-        return org_tigris_subversion_javahl_StatusKind_unversioned;
+      return org_tigris_subversion_javahl_StatusKind_unversioned;
     case svn_wc_status_normal:
-        return org_tigris_subversion_javahl_StatusKind_normal;
+      return org_tigris_subversion_javahl_StatusKind_normal;
     case svn_wc_status_added:
-        return org_tigris_subversion_javahl_StatusKind_added;
+      return org_tigris_subversion_javahl_StatusKind_added;
     case svn_wc_status_missing:
-        return org_tigris_subversion_javahl_StatusKind_missing;
+      return org_tigris_subversion_javahl_StatusKind_missing;
     case svn_wc_status_deleted:
-        return org_tigris_subversion_javahl_StatusKind_deleted;
+      return org_tigris_subversion_javahl_StatusKind_deleted;
     case svn_wc_status_replaced:
-        return org_tigris_subversion_javahl_StatusKind_replaced;
+      return org_tigris_subversion_javahl_StatusKind_replaced;
     case svn_wc_status_modified:
-        return org_tigris_subversion_javahl_StatusKind_modified;
+      return org_tigris_subversion_javahl_StatusKind_modified;
     case svn_wc_status_merged:
-        return org_tigris_subversion_javahl_StatusKind_merged;
+      return org_tigris_subversion_javahl_StatusKind_merged;
     case svn_wc_status_conflicted:
-        return org_tigris_subversion_javahl_StatusKind_conflicted;
+      return org_tigris_subversion_javahl_StatusKind_conflicted;
     case svn_wc_status_ignored:
-        return org_tigris_subversion_javahl_StatusKind_ignored;
+      return org_tigris_subversion_javahl_StatusKind_ignored;
     case svn_wc_status_obstructed:
-        return org_tigris_subversion_javahl_StatusKind_obstructed;
+      return org_tigris_subversion_javahl_StatusKind_obstructed;
     case svn_wc_status_external:
-        return org_tigris_subversion_javahl_StatusKind_external;
+      return org_tigris_subversion_javahl_StatusKind_external;
     case svn_wc_status_incomplete:
-        return org_tigris_subversion_javahl_StatusKind_incomplete;
+      return org_tigris_subversion_javahl_StatusKind_incomplete;
     }
 }

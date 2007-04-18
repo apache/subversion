@@ -36,29 +36,29 @@ struct info_entry;
  */
 class InfoCallback
 {
-public:
-    InfoCallback(jobject jcallback);
-    ~InfoCallback();
+ public:
+  InfoCallback(jobject jcallback);
+  ~InfoCallback();
 
-    static svn_error_t *callback(void *baton,
-                                 const char *path,
-                                 const svn_info_t *info,
-                                 apr_pool_t *pool);
+  static svn_error_t *callback(void *baton,
+                               const char *path,
+                               const svn_info_t *info,
+                               apr_pool_t *pool);
 
-protected:
-    svn_error_t *singleInfo(const char *path,
-                            const svn_info_t *info,
-                            apr_pool_t *pool);
+ protected:
+  svn_error_t *singleInfo(const char *path,
+                          const svn_info_t *info,
+                          apr_pool_t *pool);
 
-private:
-    /**
-     * A local reference to the corresponding Java object.
-     */
-    jobject m_callback;
+ private:
+  /**
+   * A local reference to the corresponding Java object.
+   */
+  jobject m_callback;
 
-    jobject createJavaInfo2(const char *path,
-                            const svn_info_t *info,
-                            apr_pool_t *pool);
+  jobject createJavaInfo2(const char *path,
+                          const svn_info_t *info,
+                          apr_pool_t *pool);
 };
 
 // !defined(_INFOCALLBACK_H__INCLUDED_)

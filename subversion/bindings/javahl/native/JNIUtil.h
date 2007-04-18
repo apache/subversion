@@ -45,152 +45,152 @@ struct svn_error_t;
  */
 class JNIUtil
 {
-public:
-    static svn_error_t *preprocessPath(const char *&path, apr_pool_t *pool);
+ public:
+  static svn_error_t *preprocessPath(const char *&path, apr_pool_t *pool);
 
-    /**
-     * Throw the Java NativeException instance named by
-     * exceptionClassName.  A NativeException sub-class must supply a
-     * 3-arg constructor identical to that of NativeException.  @a
-     * source is any file name and line number information.
-     */
-    static void throwNativeException(const char *exceptionClassName,
-                                     const char *msg,
-                                     const char *source = NULL,
-                                     int aprErr = -1);
+  /**
+   * Throw the Java NativeException instance named by
+   * exceptionClassName.  A NativeException sub-class must supply a
+   * 3-arg constructor identical to that of NativeException.  @a
+   * source is any file name and line number information.
+   */
+  static void throwNativeException(const char *exceptionClassName,
+                                   const char *msg,
+                                   const char *source = NULL,
+                                   int aprErr = -1);
 
-    static void throwNullPointerException(const char *message);
-    static jbyteArray makeJByteArray(const signed char *data, int length);
-    static void setRequestPool(Pool *pool);
-    static Pool *getRequestPool();
-    static jobject createDate(apr_time_t time);
-    static void logMessage(const char *message);
-    static int getLogLevel();
-    static char *getFormatBuffer();
-    static void initLogFile(int level, jstring path);
-    static jstring makeJString(const char *txt);
-    static bool isJavaExceptionThrown();
-    static JNIEnv *getEnv();
-    static void setEnv(JNIEnv *);
+  static void throwNullPointerException(const char *message);
+  static jbyteArray makeJByteArray(const signed char *data, int length);
+  static void setRequestPool(Pool *pool);
+  static Pool *getRequestPool();
+  static jobject createDate(apr_time_t time);
+  static void logMessage(const char *message);
+  static int getLogLevel();
+  static char *getFormatBuffer();
+  static void initLogFile(int level, jstring path);
+  static jstring makeJString(const char *txt);
+  static bool isJavaExceptionThrown();
+  static JNIEnv *getEnv();
+  static void setEnv(JNIEnv *);
 
-    /**
-     * @return Whether any Throwable has been raised.
-     */
-    static bool isExceptionThrown();
+  /**
+   * @return Whether any Throwable has been raised.
+   */
+  static bool isExceptionThrown();
 
-    static void handleAPRError(int error, const char *op);
+  static void handleAPRError(int error, const char *op);
 
-    /**
-     * Put @a object in the list of finalized objects queued up to be
-     * deleted (by another thread) during the next operation.
-     *
-     * @param object The C++ peer of the finalized (Java) object.
-     * @since 1.4.0
-     */
-    static void enqueueForDeletion(SVNBase *object);
+  /**
+   * Put @a object in the list of finalized objects queued up to be
+   * deleted (by another thread) during the next operation.
+   *
+   * @param object The C++ peer of the finalized (Java) object.
+   * @since 1.4.0
+   */
+  static void enqueueForDeletion(SVNBase *object);
 
-    /**
-     * @deprecated Use the more appropriately named
-     * enqueueForDeletion() instead.
-     */
-    static void putFinalizedClient(SVNBase *cl);
+  /**
+   * @deprecated Use the more appropriately named
+   * enqueueForDeletion() instead.
+   */
+  static void putFinalizedClient(SVNBase *cl);
 
-    /**
-     * Throw a Java exception corresponding to err, and run
-     * svn_error_clear() on err.
-     */
-    static void handleSVNError(svn_error_t *err);
+  /**
+   * Throw a Java exception corresponding to err, and run
+   * svn_error_clear() on err.
+   */
+  static void handleSVNError(svn_error_t *err);
 
-    static jstring makeSVNErrorMessage(svn_error_t *err);
+  static jstring makeSVNErrorMessage(svn_error_t *err);
 
-    /**
-     * Create and throw a java.lang.Throwable instance.
-     *
-     * @param name The class name (in path form, with slashes in lieu
-     * of dots) of the Throwable to create and raise.
-     * @param message The message text of the Throwable.
-     */
-    static void raiseThrowable(const char *name, const char *message);
+  /**
+   * Create and throw a java.lang.Throwable instance.
+   *
+   * @param name The class name (in path form, with slashes in lieu
+   * of dots) of the Throwable to create and raise.
+   * @param message The message text of the Throwable.
+   */
+  static void raiseThrowable(const char *name, const char *message);
 
-    /**
-     * Creates and throws a JNIError.
-     *
-     * @param message The message text of the JNIError.
-     */
-    static void throwError(const char *message)
+  /**
+   * Creates and throws a JNIError.
+   *
+   * @param message The message text of the JNIError.
+   */
+  static void throwError(const char *message)
     {
-        raiseThrowable(JAVA_PACKAGE"/JNIError", message);
+      raiseThrowable(JAVA_PACKAGE"/JNIError", message);
     }
 
-    static apr_pool_t *getPool();
-    static bool JNIGlobalInit(JNIEnv *env);
-    static bool JNIInit(JNIEnv *env);
-    static JNIMutex *getGlobalPoolMutex();
-    enum { formatBufferSize = 2048 };
-    enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
+  static apr_pool_t *getPool();
+  static bool JNIGlobalInit(JNIEnv *env);
+  static bool JNIInit(JNIEnv *env);
+  static JNIMutex *getGlobalPoolMutex();
+  enum { formatBufferSize = 2048 };
+  enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 
-private:
-    static void assembleErrorMessage(svn_error_t *err, int depth,
-                                     apr_status_t parent_apr_err,
-                                     std::string &buffer);
-    static void setExceptionThrown();
+ private:
+  static void assembleErrorMessage(svn_error_t *err, int depth,
+                                   apr_status_t parent_apr_err,
+                                   std::string &buffer);
+  static void setExceptionThrown();
 
-    /**
-     * The log level of this module.
-     */
-    static int g_logLevel;
+  /**
+   * The log level of this module.
+   */
+  static int g_logLevel;
 
-    /**
-     * Global master pool.  All other pool are subpools of this pool.
-     */
-    static apr_pool_t *g_pool;
+  /**
+   * Global master pool.  All other pool are subpools of this pool.
+   */
+  static apr_pool_t *g_pool;
 
-    /**
-     * List of objects finalized, where the C++ peer has not yet be
-     * deleted.
-     */
-    static std::list<SVNBase*> g_finalizedObjects;
+  /**
+   * List of objects finalized, where the C++ peer has not yet be
+   * deleted.
+   */
+  static std::list<SVNBase*> g_finalizedObjects;
 
-    /**
-     * Mutex to secure the g_finalizedObjects list.
-     */
-    static JNIMutex *g_finalizedObjectsMutex;
+  /**
+   * Mutex to secure the g_finalizedObjects list.
+   */
+  static JNIMutex *g_finalizedObjectsMutex;
 
-    /**
-     * Mutex to secure the access to the log file.
-     */
-    static JNIMutex *g_logMutex;
+  /**
+   * Mutex to secure the access to the log file.
+   */
+  static JNIMutex *g_logMutex;
 
-    /**
-     * Flag, that an exception occured during our initialization.
-     */
-    static bool g_initException;
+  /**
+   * Flag, that an exception occured during our initialization.
+   */
+  static bool g_initException;
 
-    /**
-     * Flag, that one thread is in the init code.  Cannot use mutex
-     * here since apr is not initialized yet.
-     */
-    static bool g_inInit;
+  /**
+   * Flag, that one thread is in the init code.  Cannot use mutex
+   * here since apr is not initialized yet.
+   */
+  static bool g_inInit;
 
-    /**
-     * The JNI environment used during initialization.
-     */
-    static JNIEnv *g_initEnv;
+  /**
+   * The JNI environment used during initialization.
+   */
+  static JNIEnv *g_initEnv;
 
-    /**
-     * Fuffer the format error messages during initialization.
-     */
-    static char g_initFormatBuffer[formatBufferSize];
+  /**
+   * Fuffer the format error messages during initialization.
+   */
+  static char g_initFormatBuffer[formatBufferSize];
 
-    /**
-     * The stream to write log messages to.
-     */
-    static std::ofstream g_logStream;
+  /**
+   * The stream to write log messages to.
+   */
+  static std::ofstream g_logStream;
 
-    /**
-     * Flag to secure our global pool.
-     */
-    static JNIMutex *g_globalPoolMutext;
+  /**
+   * Flag to secure our global pool.
+   */
+  static JNIMutex *g_globalPoolMutext;
 };
 
 /**
@@ -204,10 +204,10 @@ private:
  * be blank.
  */
 
-#define SVN_JNI_NULL_PTR_EX(expr, str, ret_val)         \
-  if (expr == NULL) {                                   \
-    JNIUtil::throwNullPointerException(str);            \
-    return ret_val ;                                    \
+#define SVN_JNI_NULL_PTR_EX(expr, str, ret_val) \
+  if (expr == NULL) {                           \
+    JNIUtil::throwNullPointerException(str);    \
+    return ret_val ;                            \
   }
 
 /**

@@ -35,28 +35,28 @@
  */
 class BlameCallback
 {
-public:
-    BlameCallback(jobject jcallback);
-    ~BlameCallback();
+ public:
+  BlameCallback(jobject jcallback);
+  ~BlameCallback();
 
-    static svn_error_t *callback(void *baton,
-                                 apr_int64_t line_no,
-                                 svn_revnum_t revision,
-                                 const char *author,
-                                 const char *date,
-                                 const char *line,
-                                 apr_pool_t *pool);
+  static svn_error_t *callback(void *baton,
+                               apr_int64_t line_no,
+                               svn_revnum_t revision,
+                               const char *author,
+                               const char *date,
+                               const char *line,
+                               apr_pool_t *pool);
 
-protected:
-    svn_error_t *singleLine(svn_revnum_t revision, const char *author,
-                            const char *date, const char *line,
-                            apr_pool_t *pool);
+ protected:
+  svn_error_t *singleLine(svn_revnum_t revision, const char *author,
+                          const char *date, const char *line,
+                          apr_pool_t *pool);
 
-private:
-    /**
-     * This a local reference to the Java object.
-     */
-    jobject m_callback;
+ private:
+  /**
+   * This a local reference to the Java object.
+   */
+  jobject m_callback;
 };
 
 // !defined(AFX_BLAMECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)

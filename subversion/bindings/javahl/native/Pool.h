@@ -35,26 +35,26 @@ struct apr_pool_t;
  */
 class Pool
 {
-public:
-    Pool();
-    ~Pool();
-    apr_pool_t *pool() const;
-private:
-    /**
-     * The apr pool request pool.
-     */
-    apr_pool_t *m_pool;
+ public:
+  Pool();
+  ~Pool();
+  apr_pool_t *pool() const;
+ private:
+  /**
+   * The apr pool request pool.
+   */
+  apr_pool_t *m_pool;
 
-    /**
-     * We declare the copy constructor and assignment operator private
-     * here, so that the compiler won't inadvertently use them for us.
-     * The default copy constructor just copies all the data members,
-     * which would create two pointers to the same pool, one of which
-     * would get destroyed while the other thought it was still
-     * valid...and BOOM!  Hence the private declaration.
-     */
-    Pool(Pool &that);
-    Pool &operator= (Pool &that);
+  /**
+   * We declare the copy constructor and assignment operator private
+   * here, so that the compiler won't inadvertently use them for us.
+   * The default copy constructor just copies all the data members,
+   * which would create two pointers to the same pool, one of which
+   * would get destroyed while the other thought it was still
+   * valid...and BOOM!  Hence the private declaration.
+   */
+  Pool(Pool &that);
+  Pool &operator= (Pool &that);
 };
 
 // !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)

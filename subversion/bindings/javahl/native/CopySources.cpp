@@ -30,136 +30,136 @@
 
 CopySources::CopySources(jobjectArray jcopySources)
 {
-    m_copySources = jcopySources;
+  m_copySources = jcopySources;
 }
 
 CopySources::~CopySources()
 {
-    // m_copySources does not need to be destroyed, because it is a
-    // parameter to the Java SVNClient.copy() method, and thus not
-    // explicitly managed.
+  // m_copySources does not need to be destroyed, because it is a
+  // parameter to the Java SVNClient.copy() method, and thus not
+  // explicitly managed.
 }
 
 jobject
 CopySources::makeJCopySource(const char *path, svn_revnum_t rev, Pool &pool)
 {
-    JNIEnv *env = JNIUtil::getEnv();
+  JNIEnv *env = JNIUtil::getEnv();
 
-    jobject jpath = JNIUtil::makeJString(path);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    jobject jrevision = Revision::makeJRevision(rev);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+  jobject jpath = JNIUtil::makeJString(path);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  jobject jrevision = Revision::makeJRevision(rev);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-    jclass clazz = env->FindClass(JAVA_PACKAGE "/CopySource");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    static jmethodID ctor = 0;
-    if (ctor == 0)
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/CopySource");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  static jmethodID ctor = 0;
+  if (ctor == 0)
     {
-        ctor = env->GetMethodID(clazz, "<init>",
-                                "(Ljava/lang/String;"
-                                "L" JAVA_PACKAGE "/Revision;"
-                                "L" JAVA_PACKAGE "/Revision;)V");
-        if (JNIUtil::isExceptionThrown())
-            return NULL;
+      ctor = env->GetMethodID(clazz, "<init>",
+                              "(Ljava/lang/String;"
+                              "L" JAVA_PACKAGE "/Revision;"
+                              "L" JAVA_PACKAGE "/Revision;)V");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
     }
 
-    jobject jcopySource = env->NewObject(clazz, ctor, jpath, jrevision, NULL);
-    env->DeleteLocalRef(jpath);
-    env->DeleteLocalRef(jrevision);
-    return jcopySource;
+  jobject jcopySource = env->NewObject(clazz, ctor, jpath, jrevision, NULL);
+  env->DeleteLocalRef(jpath);
+  env->DeleteLocalRef(jrevision);
+  return jcopySource;
 }
 
 apr_array_header_t *
 CopySources::array(Pool &pool)
 {
-    apr_pool_t *p = pool.pool();
-    if (m_copySources == NULL)
-        return apr_array_make(p, 0, sizeof(svn_client_copy_source_t *));
+  apr_pool_t *p = pool.pool();
+  if (m_copySources == NULL)
+    return apr_array_make(p, 0, sizeof(svn_client_copy_source_t *));
 
-    JNIEnv *env = JNIUtil::getEnv();
-    jint nbrSources = env->GetArrayLength(m_copySources);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    jclass clazz = env->FindClass(JAVA_PACKAGE "/CopySource");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+  JNIEnv *env = JNIUtil::getEnv();
+  jint nbrSources = env->GetArrayLength(m_copySources);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/CopySource");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-    apr_array_header_t *copySources =
-        apr_array_make(p, nbrSources, sizeof(svn_client_copy_source_t *));
-    for (int i = 0; i < nbrSources; ++i)
+  apr_array_header_t *copySources =
+    apr_array_make(p, nbrSources, sizeof(svn_client_copy_source_t *));
+  for (int i = 0; i < nbrSources; ++i)
     {
-        jobject copySource = env->GetObjectArrayElement(m_copySources, i);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-        if (env->IsInstanceOf(copySource, clazz))
+      jobject copySource = env->GetObjectArrayElement(m_copySources, i);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+      if (env->IsInstanceOf(copySource, clazz))
         {
-            svn_client_copy_source_t *src =
-                (svn_client_copy_source_t *) apr_palloc(p, sizeof(*src));
+          svn_client_copy_source_t *src =
+            (svn_client_copy_source_t *) apr_palloc(p, sizeof(*src));
 
-            // Extract the path or URL from the copy source.
-            static jmethodID getPath = 0;
-            if (getPath == 0)
+          // Extract the path or URL from the copy source.
+          static jmethodID getPath = 0;
+          if (getPath == 0)
             {
-                getPath = env->GetMethodID(clazz, "getPath",
-                                           "()Ljava/lang/String;");
-                if (JNIUtil::isJavaExceptionThrown() || getPath == 0)
-                    return NULL;
-            }
-            jstring jpath = (jstring)
-                env->CallObjectMethod(copySource, getPath);
-            JNIStringHolder path(jpath);
-            if (JNIUtil::isJavaExceptionThrown())
+              getPath = env->GetMethodID(clazz, "getPath",
+                                         "()Ljava/lang/String;");
+              if (JNIUtil::isJavaExceptionThrown() || getPath == 0)
                 return NULL;
-            src->path = apr_pstrdup(p, (const char *) path);
-            SVN_JNI_ERR(JNIUtil::preprocessPath(src->path, pool.pool()),
-                        NULL);
-            env->DeleteLocalRef(jpath);
-
-            // Extract source revision from the copy source.
-            static jmethodID getRevision = 0;
-            if (getRevision == 0)
-            {
-                getRevision = env->GetMethodID(clazz, "getRevision",
-                                               "()L"JAVA_PACKAGE"/Revision;");
-                if (JNIUtil::isJavaExceptionThrown() || getRevision == 0)
-                    return NULL;
             }
-            jobject jrev = env->CallObjectMethod(copySource, getRevision);
-            // TODO: Default this to svn_opt_revision_undefined (or HEAD)
-            Revision rev(jrev);
-            src->revision = (const svn_opt_revision_t *)
-                apr_palloc(p, sizeof(*src->revision));
-            memcpy((void *) src->revision, rev.revision(),
-                   sizeof(*src->revision));
-            env->DeleteLocalRef(jrev);
+          jstring jpath = (jstring)
+            env->CallObjectMethod(copySource, getPath);
+          JNIStringHolder path(jpath);
+          if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
+          src->path = apr_pstrdup(p, (const char *) path);
+          SVN_JNI_ERR(JNIUtil::preprocessPath(src->path, pool.pool()),
+                      NULL);
+          env->DeleteLocalRef(jpath);
 
-            // Extract pegRevision from the copy source.
-            static jmethodID getPegRevision = 0;
-            if (getPegRevision == 0)
+          // Extract source revision from the copy source.
+          static jmethodID getRevision = 0;
+          if (getRevision == 0)
             {
-                getPegRevision = env->GetMethodID(clazz, "getRevision",
-                                                  "()L"JAVA_PACKAGE"/Revision;");
-                if (JNIUtil::isJavaExceptionThrown() || getPegRevision == 0)
-                    return NULL;
+              getRevision = env->GetMethodID(clazz, "getRevision",
+                                             "()L"JAVA_PACKAGE"/Revision;");
+              if (JNIUtil::isJavaExceptionThrown() || getRevision == 0)
+                return NULL;
             }
-            jobject jPegRev = env->CallObjectMethod(copySource,
-                                                    getPegRevision);
-            Revision pegRev(jPegRev, true);
-            src->peg_revision = (const svn_opt_revision_t *)
-                apr_palloc(p, sizeof(*src->peg_revision));
-            memcpy((void *) src->peg_revision, pegRev.revision(),
-                   sizeof(*src->peg_revision));
-            env->DeleteLocalRef(jPegRev);
+          jobject jrev = env->CallObjectMethod(copySource, getRevision);
+          // TODO: Default this to svn_opt_revision_undefined (or HEAD)
+          Revision rev(jrev);
+          src->revision = (const svn_opt_revision_t *)
+            apr_palloc(p, sizeof(*src->revision));
+          memcpy((void *) src->revision, rev.revision(),
+                 sizeof(*src->revision));
+          env->DeleteLocalRef(jrev);
 
-            APR_ARRAY_PUSH(copySources, svn_client_copy_source_t *) = src;
+          // Extract pegRevision from the copy source.
+          static jmethodID getPegRevision = 0;
+          if (getPegRevision == 0)
+            {
+              getPegRevision = env->GetMethodID(clazz, "getRevision",
+                                                "()L"JAVA_PACKAGE"/Revision;");
+              if (JNIUtil::isJavaExceptionThrown() || getPegRevision == 0)
+                return NULL;
+            }
+          jobject jPegRev = env->CallObjectMethod(copySource,
+                                                  getPegRevision);
+          Revision pegRev(jPegRev, true);
+          src->peg_revision = (const svn_opt_revision_t *)
+            apr_palloc(p, sizeof(*src->peg_revision));
+          memcpy((void *) src->peg_revision, pegRev.revision(),
+                 sizeof(*src->peg_revision));
+          env->DeleteLocalRef(jPegRev);
+
+          APR_ARRAY_PUSH(copySources, svn_client_copy_source_t *) = src;
         }
-        env->DeleteLocalRef(copySource);
+      env->DeleteLocalRef(copySource);
     }
 
-    env->DeleteLocalRef(clazz);
+  env->DeleteLocalRef(clazz);
 
-    return copySources;
+  return copySources;
 }

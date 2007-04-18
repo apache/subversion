@@ -35,17 +35,17 @@
  */
 class Outputer
 {
-    /**
-     * A local reference to the Java object.
-     */
-    jobject m_jthis;
-    static svn_error_t *write(void *baton,
-                              const char *buffer, apr_size_t *len);
-    static svn_error_t *close(void *baton);
-public:
-    Outputer(jobject jthis);
-    ~Outputer();
-    svn_stream_t *getStream(const Pool &pool);
+  /**
+   * A local reference to the Java object.
+   */
+  jobject m_jthis;
+  static svn_error_t *write(void *baton,
+                            const char *buffer, apr_size_t *len);
+  static svn_error_t *close(void *baton);
+ public:
+  Outputer(jobject jthis);
+  ~Outputer();
+  svn_stream_t *getStream(const Pool &pool);
 };
 
 // !defined(AFX_OUTPUTER_H__C4342EBB_BD8A_4DA3_A6B8_BC28CF9B3DF1__INCLUDED_)

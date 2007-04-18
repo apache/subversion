@@ -28,14 +28,14 @@
 
 class JNIStringHolder
 {
-public:
-    JNIStringHolder(jstring jtext);
-    ~JNIStringHolder();
-    operator const char *() { return m_str; }
-protected:
-    const char *m_str;
-    JNIEnv *m_env;
-    jstring m_jtext;
+ public:
+  JNIStringHolder(jstring jtext);
+  ~JNIStringHolder();
+  operator const char *() { return m_str; }
+ protected:
+  const char *m_str;
+  JNIEnv *m_env;
+  jstring m_jtext;
 };
 
 #endif // !defined(AFX_JNISTRINGHOLDER_H__66F98D96_0371_471D_9E5C_EE5D45954C75__INCLUDED_)

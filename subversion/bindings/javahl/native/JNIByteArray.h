@@ -34,28 +34,28 @@
  */
 class JNIByteArray
 {
-private:
-    /**
-     *  A local reference to the byte array.
-     */
-    jbyteArray m_array;
+ private:
+  /**
+   *  A local reference to the byte array.
+   */
+  jbyteArray m_array;
 
-    /**
-     * The cache bytes of the byte array.
-     */
-    jbyte *m_data;
+  /**
+   * The cache bytes of the byte array.
+   */
+  jbyte *m_data;
 
-    /**
-     * Flag that the underlying byte array reference should be deleted
-     * at destruction.
-     */
-    bool m_deleteByteArray;
-public:
-    bool isNull();
-    const signed char *getBytes();
-    int getLength();
-    JNIByteArray(jbyteArray jba, bool deleteByteArray = false);
-    ~JNIByteArray();
+  /**
+   * Flag that the underlying byte array reference should be deleted
+   * at destruction.
+   */
+  bool m_deleteByteArray;
+ public:
+  bool isNull();
+  const signed char *getBytes();
+  int getLength();
+  JNIByteArray(jbyteArray jba, bool deleteByteArray = false);
+  ~JNIByteArray();
 };
 
 //!defined(AFX_JNIBYTEARRAY_H__FB74054F_CD5E_41D5_A4B0_25DE9A8574CF__INCLUDED_)
