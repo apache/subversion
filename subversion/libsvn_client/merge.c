@@ -1724,6 +1724,11 @@ do_single_file_merge(const char *initial_URL1,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
+      /* ### FIXME: This dies with SVN_ERR_CLIENT_UNRELATED_RESOURCES
+         ### for the record_only case when one of the URLs doesn't
+         ### exist at the specified revision.  This can occur
+         ### (validly) during an attempt to wipe the memory of the
+         ### implied merge info for a copy. */
       SVN_ERR(svn_client__repos_locations(&URL1, &revision1,
                                           &URL2, &revision2,
                                           NULL,
