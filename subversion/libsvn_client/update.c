@@ -32,9 +32,11 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_io.h"
+#include "svn_sorts.h"
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_mergeinfo_private.h"
 
 
 /*** Code. ***/
@@ -69,6 +71,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *diff3_cmd;
   svn_ra_session_t *ra_session;
   svn_wc_adm_access_t *dir_access;
+  svn_wc_adm_access_t *path_adm_access;
+  apr_array_header_t *children_with_mergeinfo;
+  apr_hash_t *children_with_mergeinfo_hash;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config, 
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -234,7 +239,64 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   if (sleep_here)
     svn_sleep_for_timestamps();
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
+  if (adm_open_depth)
+    {
+      SVN_ERR(svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path,
+                                        pool));  
+    }
+  else
+    {
+      /* A depth other than infinity means we need to open a new
+         access to lock PATH's children for possible elision. */
+      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_open3(&path_adm_access, NULL, path, TRUE, -1,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+    }
+
+    /* Check if any mergeinfo on PATH or any its children elides as a
+     result of the update. */
+  children_with_mergeinfo_hash = apr_hash_make(pool);  
+  err = svn_client__get_prop_from_wc(children_with_mergeinfo_hash,
+                                     SVN_PROP_MERGE_INFO, path, FALSE,
+                                     entry, path_adm_access, TRUE, ctx,
+                                     pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+      else
+        {
+          return err;
+        }
+    }
+  else
+    {
+      int i;
+      children_with_mergeinfo = svn_sort__hash(children_with_mergeinfo_hash,
+                                               svn_sort_compare_items_as_paths,
+                                               pool);
+
+      /* children_with_mergeinfo is sorted in depth first order.
+         To minimize svn_client__elide_mergeinfo()'s crawls up the
+         working copy from each child, run through the array backwards,
+         effectively doing a right-left post-order traversal. */
+      for (i = children_with_mergeinfo->nelts -1; i >= 0; i--)
+        {
+          const char *child_wcpath;
+          svn_sort__item_t *item = &APR_ARRAY_IDX(children_with_mergeinfo,
+                                                  i,
+                                                  svn_sort__item_t);
+          child_wcpath = item->key;
+          SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL, entry,
+                                              adm_access, ctx, pool));
+        }
+    }
+
+  SVN_ERR(svn_wc_adm_close(adm_open_depth ? path_adm_access : adm_access));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

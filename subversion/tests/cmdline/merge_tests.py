@@ -4373,7 +4373,7 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
     })
   expected_disk = wc.State('', {
     ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5-8'}),
-    'F/E'        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F/E:5-8'}),
+    'F/E'        : Item(),
     'F/E/alpha'  : Item(new_content_for_alpha),
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
@@ -4531,17 +4531,19 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
     'umlaut'  : Item(status='A '),
     })
 
+  # All the local svn:mergeinfo under A/copy-of-D elides
+  # to A/copy-of-D.
   expected_status = wc.State(short_copy_of_A_D_path, {
     ''        : Item(status=' M', wc_rev=copy_of_A_D_wc_rev),
     'G'       : Item(status='  ', wc_rev=copy_of_A_D_wc_rev),
-    'G/pi'    : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
-    'G/rho'   : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
-    'G/tau'   : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
+    'G/pi'    : Item(status='M ', wc_rev=copy_of_A_D_wc_rev),
+    'G/rho'   : Item(status='M ', wc_rev=copy_of_A_D_wc_rev),
+    'G/tau'   : Item(status='M ', wc_rev=copy_of_A_D_wc_rev),
     'H'       : Item(status='  ', wc_rev=copy_of_A_D_wc_rev),
-    'H/chi'   : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
-    'H/omega' : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
-    'H/psi'   : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
-    'gamma'   : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
+    'H/chi'   : Item(status='M ', wc_rev=copy_of_A_D_wc_rev),
+    'H/omega' : Item(status='M ', wc_rev=copy_of_A_D_wc_rev),
+    'H/psi'   : Item(status='M ', wc_rev=copy_of_A_D_wc_rev),
+    'gamma'   : Item(status='M ', wc_rev=copy_of_A_D_wc_rev),
     'umlaut'  : Item(status='A ', copied='+', wc_rev='-'),
     })
 
@@ -4551,21 +4553,14 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:' + merged_rangelist}),
     'G'       : Item(),
-    'G/pi'    : Item(new_content_for_pi,
-                     props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:' + merged_rangelist}),
-    'G/rho'   : Item(new_content_for_rho,
-                     props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:' + merged_rangelist}),
-    'G/tau'   : Item(new_content_for_tau,
-                     props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:' + merged_rangelist}),
+    'G/pi'    : Item(new_content_for_pi),
+    'G/rho'   : Item(new_content_for_rho),
+    'G/tau'   : Item(new_content_for_tau),
     'H'       : Item(),
-    'H/chi'   : Item(new_content_for_chi,
-                     props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:' + merged_rangelist}),
-    'H/omega' : Item(new_content_for_omega,
-                     props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:' + merged_rangelist}),
-    'H/psi'   : Item(new_content_for_psi,
-                     props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:' + merged_rangelist}),
-    'gamma'   : Item(new_content_for_gamma,
-                     props={SVN_PROP_MERGE_INFO : '/A/D/gamma:' + merged_rangelist}),
+    'H/chi'   : Item(new_content_for_chi,),
+    'H/omega' : Item(new_content_for_omega,),
+    'H/psi'   : Item(new_content_for_psi,),
+    'gamma'   : Item(new_content_for_gamma,),
     'umlaut'  : Item(),
     })
   expected_skip = wc.State(short_copy_of_A_D_path, { })
@@ -5458,7 +5453,7 @@ test_list = [ None,
               avoid_repeated_merge_on_subtree_with_merge_info,
               obey_reporter_api_semantics_while_doing_subtree_merges,
               mergeinfo_inheritance,
-              XFail(mergeinfo_elision),
+              mergeinfo_elision,
               mergeinfo_inheritance_and_discontinuous_ranges,
               XFail(merge_to_target_with_copied_children),
              ]

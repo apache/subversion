@@ -22,8 +22,6 @@
 #ifndef SVN_MERGEINFO_PRIVATE_H
 #define SVN_MERGEINFO_PRIVATE_H
 
-#include "svn_wc.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -37,6 +35,17 @@ extern "C" {
 svn_error_t *
 svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *mergeinput,
                          apr_pool_t *pool);
+
+/** Return whether @a info1 and @a info2 are equal in @a *is_equal.
+ * Use @a pool for temporary allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_mergeinfo__equals(svn_boolean_t *is_equal,
+                      apr_hash_t *info1, 
+                      apr_hash_t *info2,
+                      apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

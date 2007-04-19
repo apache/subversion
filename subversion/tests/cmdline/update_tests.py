@@ -3159,7 +3159,7 @@ test_list = [ None,
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
               update_conflicted,
-              XFail(mergeinfo_update_elision),
+              mergeinfo_update_elision,
              ]
 
 if __name__ == '__main__':
