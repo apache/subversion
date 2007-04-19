@@ -226,15 +226,20 @@ as follows.</p>
   revisions.</dd>
 </dl>
 
+<p>For commits which remove merge info (e.g. reverts),
+<code>--merge-sensitive</code> will trace back to the original author.  For
+example if Alice makes a commit to code previously modified by Bob (committed
+with no merge history), and Alice's commit is subsequently reverted by Chris,
+we should show Bob as the author.  If Bob's commit was itself the result of a
+merge, we should recurse until we find a commit which did not add merge info
+(the leaf node), and assume its author.</p>
+
 </div>  <!-- auditing-scope -->
 
 <div class="h5" id="auditing-questions">
 <h5>Pending Questions</h5>
 
 <ul>
-  <li>How will <code>--merge-sensitive</code> behave for commits which remove
-  merge info (e.g. reverts)?</li>
-
   <li>In the case of <code>svn log</code>, would the user be better served if
   we just included the original revision logs in line with the logs (i.e., no
   special indentation, etc.)?</li>
