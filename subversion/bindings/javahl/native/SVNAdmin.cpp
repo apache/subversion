@@ -92,7 +92,7 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
   svn_fs_t *fs;
   svn_revnum_t start = SVN_INVALID_REVNUM, end = SVN_INVALID_REVNUM;
   svn_revnum_t youngest, revision;
-  apr_pool_t *revisionPool = svn_pool_create (requestPool.pool());
+  Pool revisionPool;
 
   SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
   fs = svn_repos_fs (repos);
@@ -137,10 +137,10 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
    * predecessor deltification on paths changed in each. */
   for (revision = start; revision <= end; ++revision)
     {
-      svn_pool_clear (revisionPool);
-      SVN_JNI_ERR(svn_fs_deltify_revision (fs, revision, revisionPool), );
+      revisionPool.clear();
+      SVN_JNI_ERR(svn_fs_deltify_revision (fs, revision, revisionPool.pool()),
+                  );
     }
-  svn_pool_destroy (revisionPool);
 
   return;
 }
@@ -334,7 +334,7 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
   svn_fs_txn_t *txn;
   const apr_array_header_t *args;
   int i;
-  apr_pool_t *transactionPool = svn_pool_create (requestPool.pool());
+  Pool transactionPool;
 
   SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
   fs = svn_repos_fs (repos);
@@ -347,9 +347,9 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
       svn_error_t *err;
 
       /* Try to open the txn.  If that succeeds, try to abort it. */
-      err = svn_fs_open_txn (&txn, fs, txn_name, transactionPool);
+      err = svn_fs_open_txn(&txn, fs, txn_name, transactionPool.pool());
       if (! err)
-        err = svn_fs_abort_txn (txn, transactionPool);
+        err = svn_fs_abort_txn(txn, transactionPool.pool());
 
       /* If either the open or the abort of the txn fails because that
        * transaction is dead, just try to purge the thing.  Else,
@@ -358,14 +358,14 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
       if (err && (err->apr_err == SVN_ERR_FS_TRANSACTION_DEAD))
         {
           svn_error_clear (err);
-          err = svn_fs_purge_txn (fs, txn_name, transactionPool);
+          err = svn_fs_purge_txn(fs, txn_name, transactionPool.pool());
         }
 
       /* If we had a real from the txn open, abort, or purge, we clear
        * that error and just report to the user that we had an issue
        * with this particular txn. */
       SVN_JNI_ERR(err, );
-      svn_pool_clear (transactionPool);
+      transactionPool.clear();
     }
 
 }
@@ -522,7 +522,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
   /* Attach the access context to the filesystem. */
   SVN_JNI_ERR(svn_fs_set_access(fs, access), );
 
-  apr_pool_t *subpool = svn_pool_create (pool);
+  Pool subpool;
   const apr_array_header_t *args = locks.array(requestPool);
   for (int i = 0; i < args->nelts; ++i)
     {
@@ -530,7 +530,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
       svn_lock_t *lock;
 
       /* Fetch the path's svn_lock_t. */
-      svn_error_t *err = svn_fs_get_lock(&lock, fs, lock_path, subpool);
+      svn_error_t *err = svn_fs_get_lock(&lock, fs, lock_path, subpool.pool());
       if (err)
         goto move_on;
       if (! lock)
@@ -538,13 +538,13 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
 
       /* Now forcibly destroy the lock. */
       err = svn_fs_unlock (fs, lock_path,
-                           lock->token, 1 /* force */, subpool);
+                           lock->token, 1 /* force */, subpool.pool());
       if (err)
         goto move_on;
 
     move_on:
       svn_error_clear (err);
-      svn_pool_clear(subpool);
+      subpool.clear();
     }
 
   return;

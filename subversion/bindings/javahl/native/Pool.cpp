@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -55,4 +55,9 @@ Pool::~Pool()
 apr_pool_t *Pool::pool () const
 {
   return m_pool;
+}
+
+void Pool::clear() const
+{
+  svn_pool_clear(m_pool);
 }
