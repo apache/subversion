@@ -23,6 +23,7 @@
 
 #include "svn_types.h"
 #include "svn_mergeinfo.h"
+#include "private/svn_mergeinfo_private.h"
 #include "../svn_test.h"
 
 /* A quick way to create error messages.  */

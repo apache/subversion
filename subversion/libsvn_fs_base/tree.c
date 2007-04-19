@@ -59,6 +59,7 @@
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_merge_info.h"
 #include "private/svn_fs_util.h"
+#include "private/svn_mergeinfo_private.h"
 
 
 /* ### I believe this constant will become internal to reps-strings.c.
