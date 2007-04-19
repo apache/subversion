@@ -267,6 +267,10 @@ get_readability(int *can_read,
         found_readable = TRUE;
       else
         found_unreadable = TRUE;
+
+      /* If we've found one of each, we don't need to keep looking. */
+      if (found_readable && found_unreadable)
+        break;
     }
 
   svn_pool_destroy(subpool);
