@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-04-19 11:34+0800\n"
-"PO-Revision-Date: 2007-04-06 09:23+0800\n"
+"PO-Revision-Date: 2007-04-19 12:24+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2225,24 +2225,24 @@ msgid "Can't get exclusive lock on file '%s'"
 msgstr "不能获取文件“%s”的排它锁"
 
 #: libsvn_fs_fs/fs_fs.c:673
-#, fuzzy, c-format
+#, c-format
 msgid "Format file '%s' contains an unexpected non-digit"
-msgstr "“%s”的第一行包含了非数字"
+msgstr "格式文件“%s”包含一个意外的非数字字符"
 
 #: libsvn_fs_fs/fs_fs.c:721
-#, fuzzy, c-format
+#, c-format
 msgid "Can't read first line of format file '%s'"
-msgstr "不能从文件“%s”读取长度行"
+msgstr "不能读取格式文件“%s”的首行"
 
 #: libsvn_fs_fs/fs_fs.c:765
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' contains invalid filesystem format option '%s'"
-msgstr "“%s”不是文件系统“%s”的文件"
+msgstr "“%s”包含非法文件系统格式选项“%s”"
 
 #: libsvn_fs_fs/fs_fs.c:826
-#, fuzzy, c-format
+#, c-format
 msgid "Expected FS format between '1' and '%d'; found format '%d'"
-msgstr "期望文件系统格式“%d”；发现格式“%d”"
+msgstr "期望文件系统格式在“1”到“%d”之间；发现格式“%d”"
 
 #: libsvn_fs_fs/fs_fs.c:1134 libsvn_fs_fs/fs_fs.c:1148
 msgid "Found malformed header in revision file"
@@ -4197,7 +4197,6 @@ msgid "Invalid revision number"
 msgstr "无效版本号"
 
 #: libsvn_subr/mergeinfo.c:125
-#, fuzzy
 msgid "No revision list found"
 msgstr "没有发现版本列表"
 
@@ -7425,11 +7424,10 @@ msgid ""
 msgstr "使用与1.4之前版本兼容的格式"
 
 #: svnadmin/main.c:300
-#, fuzzy
 msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.5"
-msgstr "使用与1.4之前版本兼容的格式"
+msgstr "使用 Subversion 1.5 之前版本的格式"
 
 #: svnadmin/main.c:313
 msgid ""
