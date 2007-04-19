@@ -89,13 +89,14 @@ svn_client__can_delete(const char *path,
   revision.kind = svn_opt_revision_unspecified;
   sb.err = SVN_NO_ERROR;
   sb.pool = pool;
+
+  /* Use an infinite-depth status check to see if there's anything in
+     or under PATH which would make it unsafe for deletion.  The
+     status callback function find_undeletables() makes the
+     determination, setting sb.err if it finds anything that shouldn't
+     be deleted. */
   SVN_ERR(svn_client_status3
           (NULL, path, &revision, find_undeletables, &sb,
-           /* ### TODO(sd): It's not urgent, but it would be nice to
-              ### understand why the code was originally passing a
-              ### hardcoded TRUE for recurse when this call was to
-              ### svn_client_status2 (hence the hardcoded
-              ### svn_depth_infinity now that it's svn_client_status3). */
            svn_depth_infinity, FALSE, FALSE, FALSE, FALSE, ctx, pool));
   return sb.err;
 }
