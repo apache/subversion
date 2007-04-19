@@ -162,16 +162,6 @@ svn_error_t *
 svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, apr_hash_t *mergeinput,
                            apr_pool_t *pool);
 
-/** Take a hash of mergeinfo in @a mergeinput, and convert it back to
- * a text format mergeinfo in @a output.  If @a input contains no
- * elements, return the empty string.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *mergeinput,
-                         apr_pool_t *pool);
-
 /** Take a hash of mergeinfo in @a mergeinput, and sort the rangelists
  * associated with each key.
  * Note: This does not sort the hash, only the range lists in the
