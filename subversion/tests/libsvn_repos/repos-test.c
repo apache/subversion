@@ -1404,10 +1404,10 @@ commit_authz_cb(svn_repos_authz_access_t required,
 /* Test that the commit editor is taking authz into account
    properly */
 static svn_error_t *
-commit_editor_authz  (const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
+commit_editor_authz(const char **msg,
+                    svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
+                    apr_pool_t *pool)
 {
   svn_repos_t *repos;
   svn_fs_t *fs;
