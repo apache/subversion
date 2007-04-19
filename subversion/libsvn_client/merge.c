@@ -1600,11 +1600,10 @@ grok_range_info_from_opt_revisions(svn_merge_range_t *range,
 
    CHILDREN_WITH_MERGEINFO may contain child paths with merge info
    which differs from that of the merge target root (it may be empty,
-   but not NULL). CHILDREN_WITH_MERGEINFO list should have entries sorted in 
-   depth first order as mandated by the reporter API. 
-   Because of this, we drive the diff editor in such a
-   way that it avoids merging child paths when a merge is driven for
-   their parent path.
+   or NULL). CHILDREN_WITH_MERGEINFO list should have entries sorted
+   in depth first order as mandated by the reporter API. Because of
+   this, we drive the diff editor in such a way that it avoids merging
+   child paths when a merge is driven for their parent path.
 
    ### TODO(sd): document DEPTH (as RECURSE should have been documented!)
 */
@@ -1815,7 +1814,7 @@ do_merge(const char *initial_URL1,
       SVN_ERR(reporter->set_path(report_baton, "",
                                  is_revert ? r->start : r->start - 1,
                                  depth, FALSE, NULL, pool));
-      if (notify_b.same_urls)
+      if (notify_b.same_urls && children_with_mergeinfo)
         {
           /* Describe children with merge info overlapping this merge
              operation such that no diff is retrieved for them from
@@ -1986,15 +1985,24 @@ do_single_file_merge(const char *initial_URL1,
          ### exist at the specified revision.  This can occur
          ### (validly) during an attempt to wipe the memory of the
          ### implied merge info for a copy. */
-      SVN_ERR(svn_client__repos_locations(&URL1, &revision1,
-                                          &URL2, &revision2,
-                                          NULL,
-                                          initial_path2 ? initial_path2
-                                          : initial_URL2,
-                                          peg_revision,
-                                          initial_revision1,
-                                          initial_revision2,
-                                          ctx, pool));
+      err = svn_client__repos_locations(&URL1, &revision1,
+                                        &URL2, &revision2,
+                                        NULL,
+                                        initial_path2 ? initial_path2
+                                        : initial_URL2,
+                                        peg_revision,
+                                        initial_revision1,
+                                        initial_revision2,
+                                        ctx, pool);
+      if (err)
+        {
+          /* ### Do something like this, perhaps? */
+          if (merge_b->record_only &&
+              err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
+            svn_error_clear(err);
+          else
+            return err;
+        }
 
       merge_b->url = URL2;
       merge_b->path = NULL;
@@ -2425,6 +2433,10 @@ svn_client_merge3(const char *source1,
                                               adm_access,
                                               &merge_cmd_baton,
                                               pool));
+        }
+      else
+        {
+          children_with_mergeinfo = NULL;
         }
 
       /* Merge of the actual target.*/
