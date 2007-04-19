@@ -46,18 +46,12 @@ import subprocess
 import shutil
 import sys
 import getopt
+import logging
+import string
 from StringIO import StringIO
 # lxml module can be found here : http://codespeak.net/lxml/
 from lxml import etree
 import types
-
-class _VerboseWriter:
-    def __init__(self, verbose=0):
-        self.verbose = verbose
-    
-    def write(self, data):
-        if self.verbose:
-            sys.stderr.write(data)
 
 prog_name = os.path.basename(sys.argv[0])
 orig_svn_subroot = None
@@ -67,19 +61,23 @@ r_to = None
 log_tree = None
 entries_to_treat = []
 entries_to_delete = []
+added_paths = []
+logger = None
 
 def del_temp_tree(tmpdir):
     """Delete tree, standring in the root"""
-    print >>sys.stderr, "Deleting tmpdir "+tmpdir
+    global logger
+    logger.info("Deleting tmpdir "+tmpdir)
     os.chdir("/")
     try:
         shutil.rmtree(tmpdir)
     except OSError:
-        print >>sys.stderr, "  ! Couldn't delete tmpdir %s. Don't forget to remove it manually." % (tmpdir)
+        print logger.warn("Couldn't delete tmpdir %s. Don't forget to remove it manually." % (tmpdir))
 
 
 def checkout(url, revision=None):
     """Checks out the given URL at the given revision, using HEAD if not defined. Returns the working copy directory"""
+    global logger
     # Create a temp dir to hold our working copy
     wc_dir = tempfile.mkdtemp(prefix=prog_name)
     atexit.register(del_temp_tree, wc_dir)
@@ -88,7 +86,7 @@ def checkout(url, revision=None):
         url += "@"+revision
 
     # Check out
-    print >>sys.stderr, "Checking out "+url+" to "+wc_dir
+    logger.info("Checking out "+url+" to "+wc_dir)
     returncode = call_cmd(["svn", "checkout", url, wc_dir])
     
     if (returncode == 1):
@@ -98,13 +96,15 @@ def checkout(url, revision=None):
 
 def merge(wc_dir, revision_from, revision_to):
     """Merges repo_url from revision revision_from to revision revision_to into wc_dir"""
-    print >>sys.stderr, "Merging between revisions %s and %s into %s" % (wc_dir, revision_from, revision_to)
+    global logger
+    logger.info("Merging between revisions %s and %s into %s" % (wc_dir, revision_from, revision_to))
     os.chdir(wc_dir)
     return call_cmd(["svn", "merge", "-r", revision_from+":"+revision_to, wc_dir])
 
 def treat_status(wc_dir_orig, wc_dir):
     """Copies modification from official vendor branch to wc"""
-    print >>sys.stderr, "Copying modification from official vendor branch %s to wc %s" % (wc_dir_orig, wc_dir)
+    global logger
+    logger.info("Copying modification from official vendor branch %s to wc %s" % (wc_dir_orig, wc_dir))
     os.chdir(wc_dir_orig)
     status_tree = call_cmd_xml_tree_out(["svn", "status", "--xml"])
     global entries_to_treat, entries_to_delete
@@ -125,7 +125,7 @@ def treat_status(wc_dir_orig, wc_dir):
         elif entry_type == 'modified':
             check_exit(update(wc_dir_orig, wc_dir, file), "Error during update")
         else:
-            print >> sys.stderr, "  Status not understood : '%s' not supported (file : %s)" % (entry_type, file)
+            logger.warn("Status not understood : '%s' not supported (file : %s)" % (entry_type, file))
 
     # We then treat the left deletions
     for entry in entries_to_delete:
@@ -143,7 +143,8 @@ def is_entry_copied(entry):
     return get_xml_text_content(entry, "wc-status/@copied") == 'true'
 
 def copy(wc_dir_orig, wc_dir, file):
-    print >>sys.stderr, "A+ %s" % (file)
+    global logger
+    logger.info("A+ %s" % (file))
     
     # Retreiving the original URL
     os.chdir(wc_dir_orig)
@@ -164,36 +165,45 @@ def copy(wc_dir_orig, wc_dir, file):
         orig_svn_subroot = '/'+sub_url.split(file)[0].replace(os.path.sep, '/')
         #print >>sys.stderr, "orig_svn_subroot : %s" % (orig_svn_subroot)
     
-    global log_tree
+    global log_tree, logger
     if not log_tree:
         # Detecting original file copy path
         os.chdir(wc_dir_orig)
         orig_svn_root_subroot = get_xml_text_content(info_tree, "/info/entry/repository/root") + orig_svn_subroot
         real_from = str(int(r_from)+1)
-        print >>sys.stderr, "Retreiving log of the original trunk %s between revisions %s and %s ..." % (orig_svn_root_subroot, real_from, r_to)
+        logger.info("Retreiving log of the original trunk %s between revisions %s and %s ..." % (orig_svn_root_subroot, real_from, r_to))
         log_tree = call_cmd_xml_tree_out(["svn", "log", "--xml", "-v", "-r", "%s:%s" % (real_from, r_to), orig_svn_root_subroot])
 
+    # Detecting the path of the original moved or copied file
     orig_url_file = orig_svn_subroot+file.replace(os.path.sep, '/')
-    #print >>sys.stderr, "  orig_url_file : %s" % (orig_url_file)
-    while orig_url_file and not os.path.exists(os.path.join(wc_dir, convert_relative_url_to_path(orig_url_file))):
+    orig_url_file_old = None
+    #print >>sys.stderr, "  orig_url_file : %s" % (orig_url_file)    
+    while orig_url_file:
+        orig_url_file_old = orig_url_file
         orig_url_file = get_xml_text_content(log_tree, "//path[(@action='R' or @action='A') and text()='%s']/@copyfrom-path" % (orig_url_file))
-        #print >>sys.stderr, "  orig_url_file : %s" % (orig_url_file)
-
-    global base_copied_paths
-    if not orig_url_file or convert_relative_url_to_path(orig_url_file) == file:
+        logger.debug("orig_url_file : %s" % (orig_url_file))
+    orig_url_file = orig_url_file_old
+    
+    # Getting the relative url for the original url file
+    if orig_url_file:
+        orig_file = convert_relative_url_to_path(orig_url_file)
+    else:
+        orig_file = None
+    global base_copied_paths, added_paths
+    # If there is no "moved origin" for that file, or the origin doesn't exist in the working directory, or the origin is the same as the given file, or the origin is an added file
+    if not orig_url_file or (orig_file and (not os.path.exists(os.path.join(wc_dir, orig_file)) or orig_file == file or orig_file in added_paths)):
         # Check if the file is within a recently copied path
         for path in base_copied_paths:
             if file.startswith(path):
-                print >>sys.stderr, "  ! The path to add is a sub-path of recently copied %s. Ignoring the A+." % (path)
+                logger.warn("The path %s to add is a sub-path of recently copied %s. Ignoring the A+." % (file, path))
                 return 0
         # Simple add the file
-        print >>sys.stderr, "  ! Log paths for the given file not correspond with any file in the wc. Will do a simple A."
+        logger.warn("Log paths for the file %s don't correspond with any file in the wc. Will do a simple A." % (file))
         return add(wc_dir_orig, wc_dir, file)
 
     # We catch the relative URL for the original file
     orig_file = convert_relative_url_to_path(orig_url_file)
-    #print >>sys.stderr, "  svn copy %s %s" % (os.path.join(wc_dir, orig_file), os.path.join(wc_dir, file))
-    
+
     # Detect if it's a move
     cmd = 'copy'
     global entries_to_treat, entries_to_delete
@@ -201,7 +211,7 @@ def copy(wc_dir_orig, wc_dir, file):
         # It's a move, removing the delete, and treating it as a move
         cmd = 'move'
 
-    print >>sys.stderr, "  %s from %s" % (cmd, orig_url_file)
+    logger.info("%s from %s" % (cmd, orig_url_file))
     returncode = call_cmd(["svn", cmd, os.path.join(wc_dir, orig_file), os.path.join(wc_dir, file)])
     if returncode == 0:
         if os.path.isdir(os.path.join(wc_dir, orig_file)):
@@ -222,30 +232,42 @@ def convert_relative_url_to_path(url):
     global orig_svn_subroot
     return os.path.normpath(url.split(orig_svn_subroot)[-1])
 
+def new_added_path(returncode, file):
+    if not is_returncode_bad(returncode):
+        global added_paths
+        added_paths.append(file)
+
 def add(wc_dir_orig, wc_dir, file):
-    print >>sys.stderr, "A  %s" % (file)
+    global logger
+    logger.info("A  %s" % (file))
     if os.path.exists(os.path.join(wc_dir, file)):
-        print >>sys.stderr, "  ! Target file already exists. Will do a simple M"
+        logger.warn("Target file %s already exists. Will do a simple M" % (file))
         return update(wc_dir_orig, wc_dir, file)
     os.chdir(wc_dir)
     if os.path.isdir(os.path.join(wc_dir_orig, file)):
-        return call_cmd(["svn", "mkdir", file])
+        returncode = call_cmd(["svn", "mkdir", file])
+        new_added_path(returncode, file)
+        return returncode
     else:
         shutil.copy(os.path.join(wc_dir_orig, file), os.path.join(wc_dir, file))
-        return call_cmd(["svn", "add", file])
+        returncode = call_cmd(["svn", "add", file])
+        new_added_path(returncode, file)
+        return returncode
 
 def delete(wc_dir_orig, wc_dir, file):
-    print >>sys.stderr, "D  %s" % (file)
+    global logger
+    logger.info("D  %s" % (file))
     os.chdir(wc_dir)
     if not os.path.exists(file):
-        print >>sys.stderr, "  ! Target file doesn't exist. Ignoring D."
+        logger.warn("File %s doesn't exist. Ignoring D." % (file))
         return 0
     return call_cmd(["svn", "delete", file])
 
 def update(wc_dir_orig, wc_dir, file):
-    print >>sys.stderr, "M  %s" % (file)
+    global logger
+    logger.info("M  %s" % (file))
     if os.path.isdir(os.path.join(wc_dir_orig, file)):
-        print >>sys.stderr, "  ! Target is a directory. Ignoring M."
+        logger.warn("%s is a directory. Ignoring M." % (file))
         return 0
     shutil.copy(os.path.join(wc_dir_orig, file), os.path.join(wc_dir, file))
     return 0
@@ -280,10 +302,13 @@ def tag_wc(repo_url, current, tag, message):
     return call_cmd(cmd + [repo_url+"/"+current, repo_url+"/"+tag])
 
 def call_cmd(cmd):
+    global logger
+    logger.debug(string.join(cmd, ' '))
     return subprocess.call(cmd, stdout=DEVNULL, stderr=sys.stderr)#subprocess.STDOUT)
 
 def call_cmd_out(cmd):
-    #print >>sys.stderr, "  > "+" ".join(cmd)
+    global logger
+    logger.debug(string.join(cmd, ' '))
     return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=sys.stderr).stdout
 
 def call_cmd_str_out(cmd):
@@ -353,11 +378,18 @@ def main():
     tag = None
     message = None
     interactive = 1
-    global verbosew
-    verbosew = _VerboseWriter()
     revision_to_parse = None
     merged_vendor = None
     wc_dir = None
+
+    # Initializing logger
+    global logger
+    logger = logging.getLogger('svn-merge-vendor')
+    hdlr = logging.StreamHandler(sys.stderr)
+    formatter = logging.Formatter('%(levelname)-8s %(message)s')
+    hdlr.setFormatter(formatter)
+    logger.addHandler(hdlr)
+    logger.setLevel(logging.INFO)
 
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "ht:m:vr:c:w:",
@@ -376,7 +408,7 @@ def main():
         if o in ("--non-interactive"):
             interactive = 0
         if o in ("-v", "--verbose"):
-            verbosew.verbose = 1
+            logger.setLevel(logging.DEBUG)
         if o in ("-r", "--revision"):
             revision_to_parse = a
         if o in ("-c", "--merged-vendor"):
@@ -440,11 +472,15 @@ def main():
                 "Press Enter to tag, or Ctrl-C to abort."])
         check_exit(tag_wc(repo_url, current_path, tag, message), "Error during tag")
     
-    print >>sys.stderr, "Vendor branch merged, passed from %s to %s !" % (r_from, r_to)
+    logger.info("Vendor branch merged, passed from %s to %s !" % (r_from, r_to))
+
+def is_returncode_bad(returncode):
+    return returncode is None or returncode == 1
 
 def check_exit(returncode, message):
-    if (returncode is None or returncode == 1):
-        print >>sys.stderr, message
+    global logger
+    if is_returncode_bad(returncode):
+        logger.error(message)
         sys.exit(1)
 
 if __name__ == "__main__":
