@@ -1676,7 +1676,7 @@ test_list = [ None,
               forced_switch,
               forced_switch_failures,
               switch_scheduled_add,
-              XFail(mergeinfo_switch_elision),
+              mergeinfo_switch_elision,
              ]
 
 if __name__ == '__main__':

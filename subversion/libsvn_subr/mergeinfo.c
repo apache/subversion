@@ -626,6 +626,25 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
 }
 
 svn_error_t *
+svn_mergeinfo__equals(svn_boolean_t *is_equal,
+                      apr_hash_t *info1, 
+                      apr_hash_t *info2,
+                      apr_pool_t *pool)
+{
+  if (apr_hash_count(info1) == apr_hash_count(info2))
+    {
+      apr_hash_t *deleted, *added;
+      SVN_ERR(svn_mergeinfo_diff(&deleted, &added, info1, info2, pool));
+      *is_equal = apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0;
+    }
+  else
+    {
+      *is_equal = FALSE;
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
                     apr_pool_t *pool)
 {
