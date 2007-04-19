@@ -1212,7 +1212,9 @@ main(int argc, const char *argv[])
         else
           return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a valid depth; try 0, 1, or 2"),
+                               _("'%s' is not a valid depth; try "
+                                 "'empty', 'files', 'immediates', "
+                                 "or 'infinity'"),
                                utf8_opt_arg), pool, "svn: ");
         break;
       case svn_cl__version_opt:
