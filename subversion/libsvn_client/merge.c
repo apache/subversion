@@ -1598,14 +1598,14 @@ grok_range_info_from_opt_revisions(svn_merge_range_t *range,
    copy history from this peg path to INITIAL_REVISION2 and
    INITIAL_REVISION1.
 
+   Handle DEPTH as documented for svn_client_merge3().
+
    CHILDREN_WITH_MERGEINFO may contain child paths with merge info
    which differs from that of the merge target root (it may be empty,
    or NULL). CHILDREN_WITH_MERGEINFO list should have entries sorted
    in depth first order as mandated by the reporter API. Because of
    this, we drive the diff editor in such a way that it avoids merging
    child paths when a merge is driven for their parent path.
-
-   ### TODO(sd): document DEPTH (as RECURSE should have been documented!)
 */
 static svn_error_t *
 do_merge(const char *initial_URL1,
