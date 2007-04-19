@@ -47,17 +47,3 @@ Pool::~Pool()
   if (m_pool)
     svn_pool_destroy (m_pool);
 }
-
-/**
- * Returns the apr pool.
- * @return the apr pool
- */
-apr_pool_t *Pool::pool () const
-{
-  return m_pool;
-}
-
-void Pool::clear() const
-{
-  svn_pool_clear(m_pool);
-}

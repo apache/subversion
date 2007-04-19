@@ -26,7 +26,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-struct apr_pool_t;
+#include "svn_pools.h"
 
 /**
  * This class manages one APR pool.  Objects of this class are
@@ -58,6 +58,22 @@ class Pool
   Pool(Pool &that);
   Pool &operator= (Pool &that);
 };
+
+// The following one-line functions are best inlined by the compiler, and
+// need to be implemented in the header file for that to happen.
+
+APR_INLINE
+apr_pool_t *Pool::pool () const
+{
+  return m_pool;
+}
+
+APR_INLINE
+void Pool::clear() const
+{
+  svn_pool_clear(m_pool);
+}
+
 
 // !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)
 #endif
