@@ -13,6 +13,15 @@ stdout = PyFile_AsFile(sys.stdout)
 stderr = PyFile_AsFile(sys.stderr)
 stdin = PyFile_AsFile(sys.stdin)
 
+def svn_pool_create(pool):
+    return svn_pool_create_ex(pool, NULL)
+
+def svn_pool_destroy(pool):
+    return apr_pool_destroy(pool)
+
+def svn_pool_clear(pool):
+    return apr_pool_clear(pool)
+
 # Initialize everything
 svn_cmdline_init("", stderr)
 

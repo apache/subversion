@@ -1,57 +1,29 @@
-NOTE: For now, the instructions for building csvn are a bit complicated
-      because we haven't worked out all the kinks yet. Once we have done
-      more testing on different platforms, it should be possible to build
-      csvn without downloading ctypeslib or gccxml.
+-------------
+BUILDING CSVN
+-------------
 
-I. Building dependencies:
+Before building csvn, first verify that you have all the required software
+installed:
 
-  1. Download and install the latest version of cmake (e.g. cmake 2.4.6)
-     from http://www.cmake.org/HTML/Download.html
+  - Python 2.3 or later
+  - ctypes 1.0 or later (NOTE: ctypes is included by default with Python 2.5)
+  - Subversion 1.4.3 or later (including header files)
+  - APR and APR-util (including header files, and the
+                      apr-1-config / apr-config script)
 
-  2. Checkout and install the latest version of gccxml from CVS.
+Once you have all of the above software installed, you can build the
+ctypes Python bindings by running "python autogen.py". If that works,
+then you can test the bindings by running the example.py script.
 
-       $ cvs -d :pserver:anoncvs@www.gccxml.org:/cvsroot/GCC_XML login
-       $ cvs -d :pserver:anoncvs@www.gccxml.org:/cvsroot/GCC_XML co gccxml
-       $ cd gccxml
-       $ mkdir gccxml-build
-       $ cd gccxml-build
-       $ cmake ../gccxml
-       $ make
-       $ make install
+The output of example.py should look something like this:
 
-  3. Install Python 2.5
+    $ python example.py
 
-  4. Checkout and install the latest version of ctypeslib from svn.python.org:
-
-       $ svn co http://svn.python.org/projects/ctypes/trunk/ctypeslib
-       $ cd ctypeslib
-       $ python setup.py build install
-
-II. Building and testing csvn itself
-
-  1. Build csvn/core/defines.py and csvn/core/functions.py
-
-       $ python autogen.py
-
-  2. Check that defines.py and functions.py have been built correctly.
-
-       $ ls -l csvn/core
-
-          -rw-r--r--  1 djames svnadmin  20587 Apr 14 22:54 defines.py
-          -rw-r--r--  1 djames svnadmin 419460 Apr 14 22:54 functions.py
-          -rw-r--r--  1 djames svnadmin   2044 Apr 12 23:00 functions.py.in
-          -rw-r--r--  1 djames svnadmin   2523 Apr 12 23:04 __init__.py
-
-  3. Run example.py and see whether it works. If it works, the output
-     should look something like this:
-
-       $ python example.py
-
-       Repos UUID:  4419cd3e-282d-48c6-bf73-3fb589a7fb24
-       Committed revision 1
-       Committed revision 2
-       Committed revision 3
-       Committed revision 4
-       Committed revision 5
-       Committed revision 6
+    Repos UUID:  4419cd3e-282d-48c6-bf73-3fb589a7fb24
+    Committed revision 1
+    Committed revision 2
+    Committed revision 3
+    Committed revision 4
+    Committed revision 5
+    Committed revision 6
 
