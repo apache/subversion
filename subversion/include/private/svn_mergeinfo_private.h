@@ -16,17 +16,7 @@
  * @endcopyright
  *
  * @file svn_mergeinfo_private.h
- * @brief The Subversion Working Copy Library - Internal routines
- *
- * Requires:  
- *            - A working copy
- * 
- * Provides: 
- *            - Ability to manipulate working copy's versioned data.
- *            - Ability to manipulate working copy's administrative files.
- *
- * Used By:   
- *            - Clients.
+ * @brief Subversion-internal mergeinfo APIs.
  */
 
 #ifndef SVN_MERGEINFO_PRIVATE_H
