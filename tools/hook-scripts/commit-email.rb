@@ -4,8 +4,11 @@ require "optparse"
 require "ostruct"
 require "stringio"
 require "tempfile"
+require "time"
+require "net/smtp"
+require "socket"
 
-SENDMAIL = "/usr/sbin/sendmail"
+SMTP_PORT = 25
 
 class OptionParser
   class CannotCoexistOption < ParseError
@@ -25,12 +28,24 @@ def parse_args(args)
   options.rss_uri = nil
   options.name = nil
   options.use_utf8 = false
+  options.server = "localhost"
+  options.port = SMTP_PORT
 
   opts = OptionParser.new do |opts|
     opts.banner += " REPOSITORY_PATH REVISION TO"
 
     opts.separator ""
     opts.separator "E-mail related options:"
+
+    opts.on("-sSERVER", "--server=SERVER",
+            "Use SERVER as SMTP server (#{options.server})") do |server|
+      options.server = server
+    end
+
+    opts.on("-pPORT", "--port=PORT", Integer,
+            "Use PORT as SMTP port (#{options.port})") do |port|
+      options.port = port
+    end
 
     opts.on("-tTO", "--to=TO", "Add TO to to address") do |to|
       options.to << to unless to.nil?
@@ -311,6 +326,7 @@ def make_header(to, from, info, params, body_encoding, body_encoding_bit)
   headers << "From: #{from}"
   headers << "To: #{to.join(' ')}"
   headers << "Subject: #{make_subject(params[:name], info)}"
+  headers << "Date: #{Time.now.rfc2822}"
   headers.find_all do |header|
     /\A\s*\z/ !~ header
   end.join("\n")
@@ -370,10 +386,13 @@ def make_mail(to, from, info, params)
   make_header(to, from, info, params, encoding, bit) + "\n" + body
 end
 
-def sendmail(to, from, mail)
-  args = to.collect {|address| address.dump}.join(' ')
-  open("| #{SENDMAIL} #{args}", "w") do |f|
-    f.print(mail)
+def sendmail(to, from, mail, server=nil, port=nil)
+  server ||= "localhost"
+  port ||= SMTP_PORT
+  Net::SMTP.start(server, port) do |smtp|
+    smtp.open_message_stream(from, to) do |f|
+      f.print(mail)
+    end
   end
 end
 
@@ -456,7 +475,8 @@ def main
     :add_diff => options.add_diff,
     :use_utf8 => options.use_utf8,
   }
-  sendmail(to, from, make_mail(to, from, info, params))
+  sendmail(to, from, make_mail(to, from, info, params),
+           options.server, options.port)
 
   if options.repository_uri and
       options.rss_path and
@@ -480,13 +500,17 @@ rescue Exception => error
   argv = ARGV.dup
   to = []
   subject = "Error"
-  from = ENV["USER"]
+  from = "#{ENV['USER']}@#{Socket.gethostname}"
+  server = nil
+  port = nil
   begin
     _, _, _to, options = parse(argv)
     to = [_to]
     to = options.error_to unless options.error_to.empty?
     from = options.from || from
     subject = "#{options.name}: #{subject}" if options.name
+    server = options.server
+    port = options.port
   rescue OptionParser::MissingArgument
     argv.delete_if {|arg| $!.args.include?(arg)}
     retry
@@ -505,10 +529,13 @@ EOM
   if to.empty?
     STDERR.puts detail
   else
-    sendmail(to, from, <<-MAIL)
+    sendmail(to, from, <<-MAIL, server, port)
+Content-Type: text/plain; charset=ascii
+Content-Transfer-Encoding: 7bit
 From: #{from}
 To: #{to.join(', ')}
 Subject: #{subject}
+Date: #{Time.now.rfc2822}
 
 #{detail}
 MAIL
