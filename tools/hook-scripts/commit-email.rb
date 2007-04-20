@@ -530,6 +530,7 @@ EOM
     STDERR.puts detail
   else
     sendmail(to, from, <<-MAIL, server, port)
+MIME-Version: 1.0
 Content-Type: text/plain; charset=ascii
 Content-Transfer-Encoding: 7bit
 From: #{from}
