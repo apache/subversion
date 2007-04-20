@@ -4059,9 +4059,13 @@ If ARG then prompt for revision to diff against."
   (interactive "P")
   (let* ((svn-status-get-specific-revision-file-info
           (svn-status-get-specific-revision-internal
-           (list (svn-status-get-line-information))
+           (list (svn-status-make-line-info
+                  (file-relative-name
+                   (svn-status-line-info->full-path (svn-status-get-line-information))
+                   (svn-status-base-dir))))
            (if arg :ask :auto)))
          (ediff-after-quit-destination-buffer (current-buffer))
+         (default-directory (svn-status-base-dir))
          (my-buffer (find-file-noselect (caar svn-status-get-specific-revision-file-info)))
          (base-buff (find-file-noselect (cdar svn-status-get-specific-revision-file-info)))
          (svn-transient-buffers (list base-buff))
