@@ -1601,7 +1601,7 @@ grok_range_info_from_opt_revisions(svn_merge_range_t *range,
    Handle DEPTH as documented for svn_client_merge3().
 
    CHILDREN_WITH_MERGEINFO may contain child paths with merge info
-   which differs from that of the merge target root (it may be empty,
+   which differs from that of the merge target root (ignored if empty
    or NULL). CHILDREN_WITH_MERGEINFO list should have entries sorted
    in depth first order as mandated by the reporter API. Because of
    this, we drive the diff editor in such a way that it avoids merging
@@ -1814,7 +1814,8 @@ do_merge(const char *initial_URL1,
       SVN_ERR(reporter->set_path(report_baton, "",
                                  is_revert ? r->start : r->start - 1,
                                  depth, FALSE, NULL, pool));
-      if (notify_b.same_urls && children_with_mergeinfo)
+      if (notify_b.same_urls &&
+          children_with_mergeinfo && children_with_mergeinfo->nelts > 0)
         {
           /* Describe children with merge info overlapping this merge
              operation such that no diff is retrieved for them from
