@@ -30,14 +30,9 @@ def parse_args(args)
     opts.banner += " REPOSITORY_PATH REVISION TO"
 
     opts.separator ""
+    opts.separator "E-mail related options:"
 
-    opts.on("-IPATH", "--include=PATH",
-            "Add PATH to load path") do |path|
-      $LOAD_PATH.unshift(path)
-    end
-
-    opts.on("-tTO", "--to=TO",
-            "Add TO to to address") do |to|
+    opts.on("-tTO", "--to=TO", "Add TO to to address") do |to|
       options.to << to unless to.nil?
     end
 
@@ -47,8 +42,7 @@ def parse_args(args)
       options.error_to << to unless to.nil?
     end
 
-    opts.on("-fFROM", "--from=FROM",
-            "Use FROM as from address") do |from|
+    opts.on("-fFROM", "--from=FROM", "Use FROM as from address") do |from|
       if options.from_domain
         raise OptionParser::CannotCoexistOption,
               "cannot coexist with --from-domain"
@@ -65,8 +59,11 @@ def parse_args(args)
       options.from_domain = domain
     end
 
-    opts.on("-n", "--no-diff", "Don't add diffs") do |diff|
-      options.add_diff = false
+    opts.separator ""
+    opts.separator "Output related options:"
+
+    opts.on("--name=NAME", "Use NAME as repository name") do |name|
+      options.name = name
     end
 
     opts.on("-rURI", "--repository-uri=URI",
@@ -74,25 +71,32 @@ def parse_args(args)
       options.repository_uri = uri
     end
 
-    opts.on("--rss-path=PATH",
-            "Use PATH as output RSS path") do |path|
-      options.rss_path = path
-    end
-
-    opts.on("--rss-uri=URI",
-            "Use URI as output RSS URI") do |uri|
-      options.rss_uri = uri
-    end
-
-    opts.on("--name=NAME",
-            "Use NAME as repository name") do |name|
-      options.name = name
+    opts.on("-n", "--no-diff", "Don't add diffs") do |diff|
+      options.add_diff = false
     end
 
     opts.on("--[no-]utf8",
             "Use UTF-8 encoding for mail body instead",
             "of UTF-7 (#{options.use_utf8})") do |use_utf8|
       options.use_utf8 = use_utf8
+    end
+
+    opts.separator ""
+    opts.separator "RSS related options:"
+
+    opts.on("--rss-path=PATH", "Use PATH as output RSS path") do |path|
+      options.rss_path = path
+    end
+
+    opts.on("--rss-uri=URI", "Use URI as output RSS URI") do |uri|
+      options.rss_uri = uri
+    end
+
+    opts.separator ""
+    opts.separator "Other options:"
+
+    opts.on("-IPATH", "--include=PATH", "Add PATH to load path") do |path|
+      $LOAD_PATH.unshift(path)
     end
 
     opts.on_tail("--help", "Show this message") do
