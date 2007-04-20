@@ -793,9 +793,16 @@ svn_error_t *
 svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *input,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *mergeinfo_buf;
-  SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
-  *output = svn_string_create_from_buf(mergeinfo_buf, pool);
+  if (apr_hash_count(input) > 0)
+    {
+      svn_stringbuf_t *mergeinfo_buf;
+      SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
+      *output = svn_string_create_from_buf(mergeinfo_buf, pool);
+    }
+  else
+    {
+      *output = svn_string_create("", pool);
+    }
   return SVN_NO_ERROR;
 }
 
