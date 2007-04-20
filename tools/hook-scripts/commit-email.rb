@@ -27,7 +27,7 @@ def parse_args(args)
   options.rss_path = nil
   options.rss_uri = nil
   options.name = nil
-  options.use_utf8 = false
+  options.use_utf7 = false
   options.server = "localhost"
   options.port = SMTP_PORT
 
@@ -89,10 +89,10 @@ def parse_args(args)
       options.add_diff = false
     end
 
-    opts.on("--[no-]utf8",
-            "Use UTF-8 encoding for mail body instead",
-            "of UTF-7 (#{options.use_utf8})") do |use_utf8|
-      options.use_utf8 = use_utf8
+    opts.on("--[no-]utf7",
+            "Use UTF-7 encoding for mail body instead",
+            "of UTF-8 (#{options.use_utf7})") do |use_utf7|
+      options.use_utf7 = use_utf7
     end
 
     opts.separator ""
@@ -372,7 +372,7 @@ end
 def make_mail(to, from, info, params)
   utf8_body = make_body(info, params)
   utf7_body = nil
-  utf7_body = utf8_to_utf7(utf8_body) unless params[:use_utf8]
+  utf7_body = utf8_to_utf7(utf8_body) if params[:use_utf7]
   if utf7_body
     body = utf7_body
     encoding = "utf-7"
@@ -472,7 +472,7 @@ def main
     :repository_uri => options.repository_uri,
     :name => options.name,
     :add_diff => options.add_diff,
-    :use_utf8 => options.use_utf8,
+    :use_utf7 => options.use_utf7,
   }
   sendmail(to, from, make_mail(to, from, info, params),
            options.server, options.port)
