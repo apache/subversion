@@ -52,8 +52,7 @@ def parse_args(args)
     end
 
     opts.on("-eTO", "--error-to=TO",
-            "Add TO to To: address when an error is",
-            "occurred") do |to|
+            "Add TO to To: address when an error occurs") do |to|
       options.error_to << to unless to.nil?
     end
 
