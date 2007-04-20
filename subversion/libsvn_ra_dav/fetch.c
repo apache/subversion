@@ -141,9 +141,12 @@ typedef struct {
   const svn_delta_editor_t *editor;
   void *edit_baton;
 
-  apr_array_header_t *dirs;  /* stack of directory batons/vsn_urls */
-#define TOP_DIR(rb) (APR_ARRAY_IDX((rb)->dirs, (rb)->dirs->nelts - 1, \
-                                   dir_item_t))
+  /* Stack of directory batons/vsn_urls. */
+  apr_array_header_t *dirs;  
+
+#define TOP_DIR(rb)      (APR_ARRAY_IDX((rb)->dirs, (rb)->dirs->nelts - 1, \
+                          dir_item_t))
+#define DIR_DEPTH(rb)    ((rb)->dirs->nelts)
 #define PUSH_BATON(rb,b) (APR_ARRAY_PUSH((rb)->dirs, void *) = (b))
 
   /* These items are only valid inside add- and open-file tags! */
@@ -2068,7 +2071,8 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       att = svn_xml_get_attr_value("rev", atts);
       /* ### verify we got it. punt on error. */
       base = SVN_STR_TO_REV(att);
-      if (rb->dirs->nelts == 0)
+
+      if (DIR_DEPTH(rb) == 0)
         {
           /* pathbuf has to live for the whole edit! */
           pathbuf = svn_stringbuf_create("", rb->pool);
@@ -2555,7 +2559,7 @@ end_element(void *userdata, int state,
 
       /* fetch node props, unless this is the top dir and the real
          target of the operation is not the top dir. */
-      if (! ((rb->dirs->nelts == 1) && *rb->target))
+      if (! ((DIR_DEPTH(rb) == 1) && *rb->target))
         SVN_ERR(add_node_props(rb, TOP_DIR(rb).pool));
 
       /* Close the directory on top of the stack, and pop it.  Also,
@@ -2717,7 +2721,7 @@ end_element(void *userdata, int state,
           /* Update the wcprop here, unless this is the top directory
              and the real target of this operation is something other
              than the top directory. */
-          if (! ((rb->dirs->nelts == 1) && *rb->target))
+          if (! ((DIR_DEPTH(rb) == 1) && *rb->target))
             {
               SVN_ERR(simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
                                            rb->editor->change_dir_prop,
