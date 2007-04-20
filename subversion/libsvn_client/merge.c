@@ -1827,8 +1827,7 @@ do_merge(const char *initial_URL1,
               const char *child_wcpath;
 
               svn_sort__item_t *item = &APR_ARRAY_IDX(children_with_mergeinfo,
-                                                      j,
-                                                      svn_sort__item_t);
+                                                      j, svn_sort__item_t);
               child_wcpath = item->key;
               /* svn_path_is_ancestor returns true if paths are same,
                  so make sure paths are not same. */
