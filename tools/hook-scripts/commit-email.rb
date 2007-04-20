@@ -24,6 +24,7 @@ def parse_args(args)
   options.rss_path = nil
   options.rss_uri = nil
   options.name = nil
+  options.use_utf8 = false
 
   opts = OptionParser.new do |opts|
     opts.banner += " REPOSITORY_PATH REVISION TO"
@@ -41,7 +42,8 @@ def parse_args(args)
     end
 
     opts.on("-eTO", "--error-to=TO",
-            "Add TO to to address when error is occurred") do |to|
+            "Add TO to to address when an error is",
+            "occurred") do |to|
       options.error_to << to unless to.nil?
     end
 
@@ -85,6 +87,12 @@ def parse_args(args)
     opts.on("--name=NAME",
             "Use NAME as repository name") do |name|
       options.name = name
+    end
+
+    opts.on("--[no-]utf8",
+            "Use UTF-8 encoding for mail body instead",
+            "of UTF-7 (#{options.use_utf8})") do |use_utf8|
+      options.use_utf8 = use_utf8
     end
 
     opts.on_tail("--help", "Show this message") do
@@ -287,14 +295,15 @@ CONTENT
   end
 end
 
-def make_header(to, from, info, params)
+def make_header(to, from, info, params, body_encoding, body_encoding_bit)
   headers = []
   headers << x_author(info)
   headers << x_revision(info)
   headers << x_repository(info)
   headers << x_id(info)
-  headers << "Content-Type: text/plain; charset=UTF-8"
-  headers << "Content-Transfer-Encoding: 8bit"
+  headers << "MIME-Version: 1.0"
+  headers << "Content-Type: text/plain; charset=#{body_encoding}"
+  headers << "Content-Transfer-Encoding: #{body_encoding_bit}"
   headers << "From: #{from}"
   headers << "To: #{to.join(' ')}"
   headers << "Subject: #{make_subject(params[:name], info)}"
@@ -328,8 +337,33 @@ def x_id(info)
   "X-SVN-Commit-Id: #{info.entire_sha256}"
 end
 
+def utf8_to_utf7(utf8)
+  require 'iconv'
+  Iconv.conv("UTF-7", "UTF-8", utf8)
+rescue InvalidEncoding
+  begin
+    Iconv.conv("UTF7", "UTF8", utf8)
+  rescue Exception
+    nil
+  end
+rescue Exception
+  nil
+end
+
 def make_mail(to, from, info, params)
-  make_header(to, from, info, params) + "\n" + make_body(info, params)
+  utf8_body = make_body(info, params)
+  utf7_body = nil
+  utf7_body = utf8_to_utf7(utf8_body) unless params[:use_utf8]
+  if utf7_body
+    body = utf7_body
+    encoding = "utf-7"
+    bit = "7bit"
+  else
+    body = utf8_body
+    encoding = "utf-8"
+    bit = "8bit"
+  end
+  make_header(to, from, info, params, encoding, bit) + "\n" + body
 end
 
 def sendmail(to, from, mail)
@@ -367,10 +401,10 @@ def make_rss(base_rss, name, rss_uri, repos_uri, info)
 
     if base_rss
       base_rss.items.each do |item|
-        item.setup_maker(maker) 
+        item.setup_maker(maker)
       end
     end
-    
+
     diff_info(info, repos_uri, true).each do |name, infos|
       infos.each do |desc, link|
         item = maker.items.new_item
@@ -398,7 +432,7 @@ def rss_items(items, info, repos_uri)
       items << [link, name, desc, info.date]
     end
   end
-  
+
   items.sort_by do |uri, title, desc, date|
     date
   end.reverse
@@ -416,6 +450,7 @@ def main
     :repository_uri => options.repository_uri,
     :name => options.name,
     :add_diff => options.add_diff,
+    :use_utf8 => options.use_utf8,
   }
   sendmail(to, from, make_mail(to, from, info, params))
 
