@@ -412,5 +412,3 @@ Contents
            svn_ra_do_switch2()  # Ditto.
            svn_ra_do_status2()  # Ditto.
            svn_ra_do_diff3()    # Ditto.
-
-      * Get rid of depth parameter to svn_repos_begin_report2().
