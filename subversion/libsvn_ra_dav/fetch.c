@@ -141,9 +141,13 @@ typedef struct {
   const svn_delta_editor_t *editor;
   void *edit_baton;
 
-  apr_array_header_t *dirs;  /* stack of directory batons/vsn_urls */
-#define TOP_DIR(rb) (APR_ARRAY_IDX((rb)->dirs, (rb)->dirs->nelts - 1, \
-                                   dir_item_t))
+  /* Stack of directory batons/vsn_urls. */
+  apr_array_header_t *dirs;  
+
+#define TOP_DIR(rb)      (APR_ARRAY_IDX((rb)->dirs, (rb)->dirs->nelts - 1, \
+                          dir_item_t))
+#define IS_ROOT_DIR(rb)  ((rb)->dirs->nelts == 0)
+#define DIR_DEPTH(rb)    ((rb)->dirs->nelts - ((rb)->target ? 1 : 0))
 #define PUSH_BATON(rb,b) (APR_ARRAY_PUSH((rb)->dirs, void *) = (b))
 
   /* These items are only valid inside add- and open-file tags! */
@@ -197,6 +201,16 @@ typedef struct {
      its response.  If we see that attribute, we set this to true,
      otherwise, it stays false (i.e., it's not a modern server). */
   svn_boolean_t receiving_all;
+
+  /* The requested depth of the operation. */
+  svn_depth_t depth;
+
+  /* Whether or not our current location in the editor drive is deeper
+     than the requested depth.  This will happen if a depth-aware
+     client is talking to an older recursive/non-recursive server --
+     the server might send too much information because its depth
+     resolution is less precise. */
+  svn_boolean_t in_too_deep;
 
 } report_baton_t;
 
@@ -1988,6 +2002,29 @@ static void push_dir(report_baton_t *rb,
   di->pool = pool;
 }
 
+static svn_boolean_t
+within_depth(report_baton_t *rb,
+             svn_node_kind_t kind)
+{
+  switch (rb->depth)
+    {
+    case svn_depth_empty:
+      return (kind == svn_node_dir && DIR_DEPTH(rb) <= 0);
+    case svn_depth_files:
+      return (DIR_DEPTH(rb) <= 0);
+    case svn_depth_immediates:
+      return ((DIR_DEPTH(rb) <= 0) 
+              || (kind == svn_node_dir && DIR_DEPTH(rb) == 1));
+    case svn_depth_infinity:
+      return TRUE;
+    default:
+      abort();
+    }
+  /* we should never get here */
+  return FALSE;
+}
+            
+
 /* This implements the `ne_xml_startelm_cb' prototype. */
 static svn_error_t *
 start_element(int *elem, void *userdata, int parent, const char *nspace,
@@ -2001,7 +2038,7 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
   svn_stringbuf_t *cpath = NULL;
   svn_revnum_t crev = SVN_INVALID_REVNUM;
   dir_item_t *parent_dir;
-  void *new_dir_baton;
+  void *new_dir_baton = NULL;
   svn_stringbuf_t *pathbuf;
   apr_pool_t *subpool;
   const char *base_checksum = NULL;
@@ -2039,9 +2076,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, parent_dir->pool);
       svn_path_add_component(pathbuf, name);
 
-      SVN_ERR((*rb->editor->absent_directory)(pathbuf->data,
-                                              parent_dir->baton,
-                                              parent_dir->pool));
+      if (within_depth(rb, svn_node_dir))
+        SVN_ERR((*rb->editor->absent_directory)(pathbuf->data,
+                                                parent_dir->baton,
+                                                parent_dir->pool));
       break;
 
     case ELEM_absent_file:
@@ -2052,9 +2090,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, parent_dir->pool);
       svn_path_add_component(pathbuf, name);
 
-      SVN_ERR((*rb->editor->absent_file)(pathbuf->data,
-                                         parent_dir->baton,
-                                         parent_dir->pool));
+      if (within_depth(rb, svn_node_file))
+        SVN_ERR((*rb->editor->absent_file)(pathbuf->data,
+                                           parent_dir->baton,
+                                           parent_dir->pool));
       break;
 
     case ELEM_resource:
@@ -2068,7 +2107,7 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       att = svn_xml_get_attr_value("rev", atts);
       /* ### verify we got it. punt on error. */
       base = SVN_STR_TO_REV(att);
-      if (rb->dirs->nelts == 0)
+      if (IS_ROOT_DIR(rb))
         {
           /* pathbuf has to live for the whole edit! */
           pathbuf = svn_stringbuf_create("", rb->pool);
@@ -2102,10 +2141,11 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
           pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
           svn_path_add_component(pathbuf, rb->namestr->data);
 
-          SVN_ERR((*rb->editor->open_directory)(pathbuf->data,
-                                                parent_dir->baton, base,
-                                                subpool, 
-                                                &new_dir_baton));
+          if (within_depth(rb, svn_node_dir))
+            SVN_ERR((*rb->editor->open_directory)(pathbuf->data,
+                                                  parent_dir->baton, base,
+                                                  subpool, 
+                                                  &new_dir_baton));
 
           /* push the new baton onto the directory baton stack */
           push_dir(rb, new_dir_baton, pathbuf, subpool);
@@ -2137,10 +2177,11 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
       svn_path_add_component(pathbuf, rb->namestr->data);
 
-      SVN_ERR((*rb->editor->add_directory)(pathbuf->data, parent_dir->baton,
-                                           cpath ? cpath->data : NULL, 
-                                           crev, subpool,
-                                           &new_dir_baton));
+      if (within_depth(rb, svn_node_dir))
+        SVN_ERR((*rb->editor->add_directory)(pathbuf->data, parent_dir->baton,
+                                             cpath ? cpath->data : NULL, 
+                                             crev, subpool,
+                                             &new_dir_baton));
 
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton, pathbuf, subpool);
@@ -2158,7 +2199,8 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
          individual propfinds on added-files later on, thus reducing
          the number of network turnarounds (though not by as much as
          simply getting a modern report response!).  */
-      if ((! rb->receiving_all) && bc_url)
+      if ((within_depth(rb, svn_node_dir))
+          && ((! rb->receiving_all) && bc_url))
         {
           apr_hash_t *bc_children;
           SVN_ERR(svn_ra_dav__get_props(&bc_children,
@@ -2216,10 +2258,11 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
          removed in end_element() */
       svn_path_add_component(parent_dir->pathbuf, rb->namestr->data);
 
-      SVN_ERR((*rb->editor->open_file)(parent_dir->pathbuf->data, 
-                                       parent_dir->baton, base,
-                                       rb->file_pool,
-                                       &rb->file_baton));
+      if (within_depth(rb, svn_node_file))
+        SVN_ERR((*rb->editor->open_file)(parent_dir->pathbuf->data, 
+                                         parent_dir->baton, base,
+                                         rb->file_pool,
+                                         &rb->file_baton));
 
       /* Property fetching is NOT implied in replacement. */
       rb->fetch_props = FALSE;
@@ -2555,7 +2598,7 @@ end_element(void *userdata, int state,
 
       /* fetch node props, unless this is the top dir and the real
          target of the operation is not the top dir. */
-      if (! ((rb->dirs->nelts == 1) && *rb->target))
+      if (! ((DIR_DEPTH(rb) == 1) && *rb->target))
         SVN_ERR(add_node_props(rb, TOP_DIR(rb).pool));
 
       /* Close the directory on top of the stack, and pop it.  Also,
@@ -2717,7 +2760,7 @@ end_element(void *userdata, int state,
           /* Update the wcprop here, unless this is the top directory
              and the real target of this operation is something other
              than the top directory. */
-          if (! ((rb->dirs->nelts == 1) && *rb->target))
+          if (! ((DIR_DEPTH(rb) == 1) && *rb->target))
             {
               SVN_ERR(simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
                                            rb->editor->change_dir_prop,
@@ -3036,6 +3079,8 @@ make_reporter(svn_ra_session_t *session,
   rb->svndiff_decoder = NULL;
   rb->base64_decoder = NULL;
   rb->cdata_accum = svn_stringbuf_create("", pool);
+  rb->depth = depth;
+  rb->in_too_deep = FALSE;
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use

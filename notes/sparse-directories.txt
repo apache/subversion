@@ -334,6 +334,13 @@ Contents
         would still make the client behave "correctly" (if slowly)
         even against old servers.  Therefore, it's still needed.
 
+        COMPLICATION: the editor vtable's delete_entry() function is
+        path-kind ignorant, which means that client-side editors
+        trying to compensate for over-informative server-side editor
+        drivers don't have enough information to correctly distinguish
+        whether a deletion of an immediate child should be allowed to
+        pass thru when using svn_depth_files.
+
       * I haven't done anything with 'svn status' yet, don't know if
         it would behave correctly w.r.t. depths out of the box or not.
         Clearly, this needs investigation.
