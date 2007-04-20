@@ -47,12 +47,12 @@ def parse_args(args)
       options.port = port
     end
 
-    opts.on("-tTO", "--to=TO", "Add TO to to address") do |to|
+    opts.on("-tTO", "--to=TO", "Add TO to To: address") do |to|
       options.to << to unless to.nil?
     end
 
     opts.on("-eTO", "--error-to=TO",
-            "Add TO to to address when an error is",
+            "Add TO to To: address when an error is",
             "occurred") do |to|
       options.error_to << to unless to.nil?
     end
