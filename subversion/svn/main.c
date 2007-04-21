@@ -388,7 +388,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
      svn_cl__depth_opt, svn_cl__diff_cmd_opt, 'x', svn_cl__no_diff_deleted,
-     svn_cl__notice_ancestry_opt, svn_cl__summarize,
+     svn_cl__notice_ancestry_opt, svn_cl__summarize, svn_cl__changelist_opt,
      svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
@@ -475,7 +475,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Use --force to steal the lock from another user or working copy.\n"),
     { svn_cl__targets_opt, 'm', 'F', svn_cl__force_log_opt,
       svn_cl__encoding_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
-      svn_cl__force_opt },
+      svn_cl__force_opt, svn_cl__changelist_opt },
     {{'F', N_("read lock comment from file ARG")},
      {'m', N_("specify lock comment ARG")}} },
 
@@ -582,7 +582,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Removes unversioned remote prop on repos revision.\n"
      "     TARGET only determines which repository to access.\n"),
     {'q', 'R', svn_cl__depth_opt, 'r', svn_cl__revprop_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__changelist_opt} },
 
 #ifndef AS400
   { "propedit", svn_cl__propedit, {"pedit", "pe"}, N_
@@ -615,7 +615,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the --strict option to disable these beautifications (useful,\n"
      "  for example, when redirecting binary property values to a file).\n"),
     {'R', svn_cl__depth_opt, 'r', svn_cl__revprop_opt, svn_cl__strict_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__xml_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__xml_opt,
+     svn_cl__changelist_opt } },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
     ("List all properties on files, dirs, or revisions.\n"
@@ -627,7 +628,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Lists unversioned remote props on repos revision.\n"
      "     TARGET only determines which repository to access.\n"),
     {'v', 'R', svn_cl__depth_opt, 'r', 'q', svn_cl__revprop_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__xml_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__xml_opt,
+     svn_cl__changelist_opt } },
 
   { "propset", svn_cl__propset, {"pset", "ps"}, N_
     ("Set the value of a property on files, dirs, or revisions.\n"
@@ -671,7 +673,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  only on the file children of the directory.\n"),
     {'F', svn_cl__encoding_opt, 'q', 'r', svn_cl__targets_opt, 'R',
      svn_cl__depth_opt, svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__force_opt, svn_cl__config_dir_opt},
+     svn_cl__force_opt, svn_cl__config_dir_opt, svn_cl__changelist_opt },
     {{'F', N_("read property value from file ARG")}} },
 
   { "resolved", svn_cl__resolved, {0}, N_
@@ -767,7 +769,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    Status against revision:   981\n"),
     { 'u', 'v', 'N', svn_cl__depth_opt, 'q', svn_cl__no_ignore_opt,
       svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
-      svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
+      svn_cl__config_dir_opt, svn_cl__ignore_externals_opt,
+      svn_cl__changelist_opt} },
 
   { "switch", svn_cl__switch, {"sw"}, N_
     ("Update the working copy to a different URL.\n"
@@ -803,7 +806,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Use --force to break the lock.\n"),
     { svn_cl__targets_opt, SVN_CL__AUTH_OPTIONS,
-      svn_cl__config_dir_opt, svn_cl__force_opt } },
+      svn_cl__config_dir_opt, svn_cl__force_opt, svn_cl__changelist_opt } },
 
   { "update", svn_cl__update, {"up"},  N_
     ("Bring changes from the repository into the working copy.\n"
@@ -840,7 +843,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  in the first column with code 'E'.\n"),
     {'r', 'N', svn_cl__depth_opt, 'q', svn_cl__merge_cmd_opt,
      svn_cl__force_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
-     svn_cl__ignore_externals_opt} },
+     svn_cl__ignore_externals_opt, svn_cl__changelist_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
