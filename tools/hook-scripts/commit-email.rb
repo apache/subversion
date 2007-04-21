@@ -373,7 +373,7 @@ def make_header(to, from, info, params, body_encoding, body_encoding_bit)
   headers << "Content-Type: text/plain; charset=#{body_encoding}"
   headers << "Content-Transfer-Encoding: #{body_encoding_bit}"
   headers << "From: #{from}"
-  headers << "To: #{to.join(' ')}"
+  headers << "To: #{to.join(', ')}"
   headers << "Subject: #{make_subject(params[:name], info)}"
   headers << "Date: #{Time.now.rfc2822}"
   headers.find_all do |header|
