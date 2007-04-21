@@ -1,6 +1,5 @@
 from ctypes import *
 from tempfile import TemporaryFile
-from defines import *
 import weakref, sys
 
 # General macros

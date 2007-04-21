@@ -11,6 +11,10 @@ installed:
   - APR and APR-util (including header files, and the
                       apr-1-config / apr-config script)
 
+Next, checkout the latest version of ctypesgen from ctypesgen.googlecode.com
+to a "ctypesgen" subdirectory under the ctypes python bindings.
+   $ svn co http://ctypesgen.googlecode.com/svn/trunk ctypesgen
+
 Once you have all of the above software installed, you can build the
 ctypes Python bindings by running "python autogen.py". If that works,
 then you can test the bindings by running the example.py script.

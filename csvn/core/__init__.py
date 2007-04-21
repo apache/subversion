@@ -2,9 +2,6 @@
 
 from ctypes import *
 from functions import *
-from functions import PyFile_AsFile, NULL, TRUE, FALSE, SubversionException, \
-                      SVN_ERR
-from defines import *
 from tempfile import TemporaryFile
 import sys
 
