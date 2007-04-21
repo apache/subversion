@@ -48,6 +48,7 @@ struct status_baton
   apr_pool_t *pool;
 
   apr_hash_t *cached_changelists;
+  apr_pool_t *cl_pool;          /* where cached changelists are allocated */
 
   svn_boolean_t had_print_error;  /* To avoid printing lots of errors if we get
                                      errors while printing to stdout */
@@ -146,16 +147,16 @@ print_status(void *baton,
       /* The hash maps a changelist name to an array of status_cache
          structures. */
       apr_array_header_t *path_array;
-      const char *cl_key = apr_pstrdup(sb->pool, status->entry->changelist);
-      struct status_cache *scache = apr_pcalloc(sb->pool, sizeof(*scache));
-      scache->path = apr_pstrdup(sb->pool, path);
-      scache->status = svn_wc_dup_status2(status, sb->pool);
+      const char *cl_key = apr_pstrdup(sb->cl_pool, status->entry->changelist);
+      struct status_cache *scache = apr_pcalloc(sb->cl_pool, sizeof(*scache));
+      scache->path = apr_pstrdup(sb->cl_pool, path);
+      scache->status = svn_wc_dup_status2(status, sb->cl_pool);
 
       path_array = (apr_array_header_t *)
         apr_hash_get(sb->cached_changelists, cl_key, APR_HASH_KEY_STRING);
       if (path_array == NULL)
         {
-          path_array = apr_array_make(sb->pool, 1,
+          path_array = apr_array_make(sb->cl_pool, 1,
                                       sizeof(struct status_cache *));
           apr_hash_set(sb->cached_changelists, cl_key,
                        APR_HASH_KEY_STRING, path_array);
@@ -206,13 +207,39 @@ svn_cl__status(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_pool_t * subpool;
+  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
+  apr_pool_t *subpool;
+  apr_hash_t *master_cl_hash = apr_hash_make(pool);
   int i;
   svn_opt_revision_t rev;
   struct status_baton sb;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
-                                        opt_state->targets, pool));
+  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+     all the targets, we need to build a list of targets made of both
+     ones the user typed, as well as any specified by --changelist.  */
+  if (opt_state->changelist)
+    {
+      SVN_ERR(svn_client_get_changelist(&changelist_targets,
+                                        opt_state->changelist,
+                                        "",
+                                        ctx,
+                                        pool));
+      if (apr_is_empty_array(changelist_targets))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("no such changelist '%s'"),
+                                 opt_state->changelist);
+    }
+
+  if (opt_state->targets && changelist_targets)
+    combined_targets = apr_array_append(pool, opt_state->targets,
+                                        changelist_targets);
+  else if (opt_state->targets)
+    combined_targets = opt_state->targets;
+  else if (changelist_targets)
+    combined_targets = changelist_targets;
+
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+                                        combined_targets, pool));
 
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;
@@ -250,6 +277,15 @@ svn_cl__status(apr_getopt_t *os,
                                   "mode"));
     }
 
+  sb.detailed = (opt_state->verbose || opt_state->update);
+  sb.show_last_committed = opt_state->verbose;
+  sb.skip_unrecognized = opt_state->quiet;
+  sb.repos_locks = opt_state->update;
+  sb.xml_mode = opt_state->xml;
+  sb.pool = subpool;
+  sb.cached_changelists = master_cl_hash;
+  sb.cl_pool = pool;
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
@@ -260,50 +296,40 @@ svn_cl__status(apr_getopt_t *os,
 
       /* Retrieve a hash of status structures with the information
          requested by the user. */
-
-      sb.detailed = (opt_state->verbose || opt_state->update);
-      sb.show_last_committed = opt_state->verbose;
-      sb.skip_unrecognized = opt_state->quiet;
-      sb.repos_locks = opt_state->update;
-      sb.xml_mode = opt_state->xml;
-      sb.pool = subpool;
-      sb.cached_changelists = apr_hash_make(sb.pool);
-
       SVN_ERR(svn_cl__try(do_status(opt_state, target, &rev, &sb, ctx,
                                     subpool),
                           NULL, opt_state->quiet,
                           SVN_ERR_WC_NOT_DIRECTORY, /* not versioned */
                           SVN_NO_ERROR));
+    }
 
-      /* If any paths were cached as changelists, we can now display
-         them as groups. */
-      if (apr_hash_count(sb.cached_changelists) > 0)
+  /* If any paths were cached because they were associatied with
+     changelists, we can now display them as grouped changelists. */
+  if (apr_hash_count(master_cl_hash) > 0)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(pool, master_cl_hash); hi;
+           hi = apr_hash_next(hi))
         {
-          apr_hash_index_t *hi;
-          for (hi = apr_hash_first(subpool, sb.cached_changelists); hi;
-               hi = apr_hash_next(hi))
+          const char *changelist_name;
+          apr_array_header_t *path_array;
+          const void *key;
+          void *val;
+          int j;
+
+          apr_hash_this(hi, &key, NULL, &val);
+          changelist_name = key;
+          path_array = val;
+
+          /* ### TODO(sussman): should this be able to output XML too? */
+          SVN_ERR(svn_cmdline_printf(pool, _("\n--- Changelist '%s':\n"),
+                                     changelist_name));
+
+          for (j = 0; j < path_array->nelts; j++)
             {
-              const char *changelist_name;
-              apr_array_header_t *path_array;
-              const void *key;
-              void *val;
-              int j;
-
-              apr_hash_this(hi, &key, NULL, &val);
-              changelist_name = key;
-              path_array = val;
-
-              /* ### TODO(sussman): should be able to output XML too: */
-              SVN_ERR(svn_cmdline_printf(subpool,
-                                         _("\n--- Changelist '%s':\n"),
-                                         changelist_name));
-
-              for (j = 0; j < path_array->nelts; j++)
-                {
-                  struct status_cache *scache =
-                    APR_ARRAY_IDX(path_array, j, struct status_cache *);
-                  print_status_normal_or_xml(&sb, scache->path, scache->status);
-                }
+              struct status_cache *scache =
+                APR_ARRAY_IDX(path_array, j, struct status_cache *);
+              print_status_normal_or_xml(&sb, scache->path, scache->status);
             }
         }
     }
