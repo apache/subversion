@@ -50,6 +50,7 @@
 #include "id.h"
 
 #include "private/svn_fs_merge_info.h"
+#include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
