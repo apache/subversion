@@ -51,6 +51,11 @@
 #   zip file can be downloaded from the Subversion site.  The bindings depend
 #   on dll's shipped as part of the Subversion binaries, if the script cannot
 #   load the _fs dll it is because it cannot find the other Subversion dll's.
+#
+# $HeadURL$
+# $LastChangedRevision$
+# $LastChangedDate$
+# $LastChangedBy$
 
 import sys, locale
 sys.path.append('/usr/local/subversion/lib/svn-python')
