@@ -1264,6 +1264,7 @@ def props_on_replaced_file(sbox):
 
   # check that the replaced file has no properties
   expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents="some mod")
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
 
@@ -1272,7 +1273,6 @@ def props_on_replaced_file(sbox):
   svntest.main.run_svn(None, 'propset', 'groovy', 'baby', iota_path)
 
   # What we expect the disk tree to look like:
-  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', props={'red' : 'mojo', 'groovy' : 'baby'})
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
