@@ -9,6 +9,8 @@ require "net/smtp"
 require "socket"
 
 SMTP_PORT = 25
+KILO_SIZE = 1000
+DEFAULT_MAX_SIZE = "500M"
 
 class OptionParser
   class CannotCoexistOption < ParseError
@@ -23,6 +25,7 @@ def parse_args(args)
   options.from = nil
   options.from_domain = nil
   options.add_diff = true
+  options.max_size = parse_size(DEFAULT_MAX_SIZE)
   options.repository_uri = nil
   options.rss_path = nil
   options.rss_uri = nil
@@ -89,6 +92,23 @@ def parse_args(args)
       options.add_diff = false
     end
 
+    opts.on("--max-size=SIZE",
+            "Limit mail body size to SIZE",
+            "G/GB/M/MB/K/KB/B units are available",
+            "(#{format_size(options.max_size)})") do |max_size|
+      begin
+        options.max_size = parse_size(max_size)
+      rescue ArgumentError
+        raise OptionParser::InvalidArgument, max_size
+      end
+    end
+
+    opts.on("--no-limit-size",
+            "Don't limit mail body size",
+            "(#{limited_size?(options.max_size)})") do |not_limit_size|
+      options.max_size = -1
+    end
+
     opts.on("--[no-]utf7",
             "Use UTF-7 encoding for mail body instead",
             "of UTF-8 (#{options.use_utf7})") do |use_utf7|
@@ -122,6 +142,36 @@ def parse_args(args)
   opts.parse!(args)
 
   options
+end
+
+def limited_size?(size)
+  size > 0
+end
+
+def format_size(size)
+  return "no limit" unless limited_size?(size)
+  return "#{size}B" if size < KILO_SIZE
+  size /= KILO_SIZE.to_f
+  return "#{size}KB" if size < KILO_SIZE
+  size /= KILO_SIZE.to_f
+  return "#{size}MB" if size < KILO_SIZE
+  size /= KILO_SIZE.to_f
+  "#{size}GB"
+end
+
+def parse_size(size)
+  case size
+  when /\A(.+?)GB?\z/i
+    Float($1) * KILO_SIZE ** 3
+  when /\A(.+?)MB?\z/i
+    Float($1) * KILO_SIZE ** 2
+  when /\A(.+?)KB?\z/i
+    Float($1) * KILO_SIZE
+  when /\A(.+?)B?\z/i
+    Float($1)
+  else
+    raise ArgumentError, "invalid size: #{size.inspect}"
+  end
 end
 
 def parse(argv=ARGV)
@@ -369,6 +419,27 @@ rescue Exception
   nil
 end
 
+def truncate_body(body, max_size, use_utf7)
+  return body if body.size < max_size
+
+  truncated_body = body[0, max_size]
+  truncated_message = "... truncated to #{format_size(max_size)}\n"
+  truncated_message = utf8_to_utf7(truncated_message) if use_utf7
+  truncated_message_size = truncated_message.size
+
+  lf_index = truncated_body.rindex(/(?:\r|\r\n|\n)/)
+  while lf_index
+    if lf_index + truncated_message_size < max_size
+      truncated_body[lf_index, max_size] = "\n#{truncated_message}"
+      break
+    else
+      lf_index = truncated_body.rindex(/(?:\r|\r\n|\n)/, lf_index - 1)
+    end
+  end
+
+  truncated_body
+end
+
 def make_mail(to, from, info, params)
   utf8_body = make_body(info, params)
   utf7_body = nil
@@ -382,6 +453,12 @@ def make_mail(to, from, info, params)
     encoding = "utf-8"
     bit = "8bit"
   end
+
+  max_size = params[:max_size]
+  if limited_size?(max_size)
+    body = truncate_body(body, max_size, !utf7_body.nil?)
+  end
+
   make_header(to, from, info, params, encoding, bit) + "\n" + body
 end
 
@@ -473,6 +550,7 @@ def main
     :name => options.name,
     :add_diff => options.add_diff,
     :use_utf7 => options.use_utf7,
+    :max_size => options.max_size,
   }
   sendmail(to, from, make_mail(to, from, info, params),
            options.server, options.port)
