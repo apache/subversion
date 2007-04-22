@@ -407,8 +407,41 @@ def depth_immediates_bring_in_dir(sbox):
 #----------------------------------------------------------------------
 def depth_immediates_fill_in_dir(sbox):
   "bring a dir into a depth-immediates working copy"
+
   # Run 'svn up A' to fill in A as a depth-infinity subdir.
-  raise svntest.Failure("<test not yet written>")
+  ign_a, ign_b, wc_immediates, wc \
+                        = set_up_depthy_working_copies(sbox, immediates=True)
+  A_path = os.path.join(wc_immediates, 'A')
+  expected_output = svntest.wc.State(wc_immediates, {
+    'A/mu'           : Item(status='A '),
+    'A/B'            : Item(status='A '),
+    'A/B/lambda'     : Item(status='A '),
+    'A/B/E'          : Item(status='A '),
+    'A/B/E/alpha'    : Item(status='A '),
+    'A/B/E/beta'     : Item(status='A '),
+    'A/B/F'          : Item(status='A '),
+    'A/C'            : Item(status='A '),
+    'A/D'            : Item(status='A '),
+    'A/D/gamma'      : Item(status='A '),
+    'A/D/G'          : Item(status='A '),
+    'A/D/G/pi'       : Item(status='A '),
+    'A/D/G/rho'      : Item(status='A '),
+    'A/D/G/tau'      : Item(status='A '),
+    'A/D/H'          : Item(status='A '),
+    'A/D/H/chi'      : Item(status='A '),
+    'A/D/H/psi'      : Item(status='A '),
+    'A/D/H/omega'    : Item(status='A ')
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_immediates, 1)
+  svntest.actions.run_and_verify_update(wc_immediates,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--depth', 'infinity', 
+                                        A_path)
 
 #----------------------------------------------------------------------
 def depth_mixed_bring_in_dir(sbox):
