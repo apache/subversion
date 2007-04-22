@@ -110,18 +110,13 @@ def run_cmd(cmd):
 
 tempdir = mkdtemp()
 
-f = file("%s/svn_all.h" % tempdir, "w")
-
-for filename in glob("%s/include/subversion-1/svn_*.h" % svn_prefix):
-    print >>f, "#include <%s>" % filename
-f.close()
+includes = ('%s/include/subversion-1/svn_*.h '
+            '%s/include/apr-1/ap[ru]_*.h' % (apr_prefix, svn_prefix))
 
 os.environ["LD_LIBRARY_PATH"] = ld_library_path
 os.system("cd %s && python %s/ctypesgen/wrap.py %s %s "
-          "--include-symbols 'svn|apr|APR|SVN' "
-          "--exclude-symbols '.*va_list.*' "
-          "svn_all.h -o svn_all.py" % (tempdir, os.getcwd(),
-                                       flags, ldflags))
+          "%s -o svn_all.py" % (tempdir, os.getcwd(),
+                                flags, ldflags, includes))
 
 func_re = re.compile(r"CFUNCTYPE\(POINTER\((\w+)\)")
 out = file("%s/svn_all2.py" % tempdir, "w")

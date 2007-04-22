@@ -2,11 +2,6 @@ from ctypes import *
 from tempfile import TemporaryFile
 import weakref, sys
 
-# General macros
-NULL = None
-FALSE = 0
-TRUE = 1
-
 class FILE(Structure):
     pass
 
@@ -54,14 +49,13 @@ def SVN_ERR(ret):
 
 # As of ctypes 1.0, ctypes does not support custom error-checking
 # functions on callbacks, nor does it support custom datatypes on
-# callbacks, so we must set the datatype for callbacks to c_void_p.
+# callbacks, so ctypesgen sets the return values for callbacks
+# to c_void_p.
 #
-# Functions marked with SVN_ERR_UNCHECKED won't have their errors
-# checked automatically. Users who call these functions should wrap
+# Callback functions, therefore, won't have their errors checked
+# automatically. Users who call these functions should wrap
 # their function call using SVN_ERR so as to ensure that any
 # exceptions are thrown appropriately.
-SVN_ERR_UNCHECKED = c_void_p
 
-def POINTER_UNCHECKED(type): return c_void_p
 
 ###########################
