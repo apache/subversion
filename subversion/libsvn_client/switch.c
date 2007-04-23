@@ -202,13 +202,16 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
              effectively doing a right-left post-order traversal. */
           for (i = children_with_mergeinfo->nelts -1; i >= 0; i--)
             {
+              const svn_wc_entry_t *child_entry;
               const char *child_wcpath;
               svn_sort__item_t *item =
                 &APR_ARRAY_IDX(children_with_mergeinfo, i,
                                svn_sort__item_t);
               child_wcpath = item->key;
+              SVN_ERR(svn_wc_entry(&child_entry, child_wcpath,
+                      adm_access, FALSE, pool));
               SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL,
-                                                  entry, adm_access, ctx,
+                                                  child_entry, adm_access, ctx,
                                                   pool));
             }
         }
