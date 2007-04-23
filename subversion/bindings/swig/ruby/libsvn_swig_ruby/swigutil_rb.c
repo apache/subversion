@@ -38,8 +38,11 @@
 #include "svn_utf.h"
 
 
-#define AOFF2NUM(num) \
-  (sizeof(apr_off_t) == SIZEOF_LONG_LONG ? LL2NUM(num) : LONG2NUM(num))
+#if APR_HAS_LARGE_FILES
+#  define AOFF2NUM(num) LL2NUM(num)
+#else
+#  define AOFF2NUM(num) LONG2NUM(num)
+#endif
 
 #if SIZEOF_LONG_LONG == 8
 #  define AI642NUM(num) LL2NUM(num)
