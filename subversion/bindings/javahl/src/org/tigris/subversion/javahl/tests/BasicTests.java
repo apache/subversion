@@ -1893,6 +1893,18 @@ public class BasicTests extends SVNTests
         assertEquals("wrong copy source rev", -1, cp[0].getCopySrcRevision());
         assertNull("wrong copy source path", cp[0].getCopySrcPath());
         assertEquals("wrong action", 'A', cp[0].getAction());
+        assertEquals("wrong time with getTimeMicros()",
+                     lm[0].getTimeMicros()/1000,
+                     lm[0].getDate().getTime());
+        assertEquals("wrong time with getTimeMillis()",
+                     lm[0].getTimeMillis(),
+                     lm[0].getDate().getTime());
+        assertEquals("wrong date with getTimeMicros()",
+                     lm[0].getDate(),
+                     new java.util.Date(lm[0].getTimeMicros()/1000));
+        assertEquals("wrong date with getTimeMillis()",
+                     lm[0].getDate(),
+                     new java.util.Date(lm[0].getTimeMillis()));
     }
 
     /**

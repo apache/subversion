@@ -1886,12 +1886,10 @@ public class SVNClient implements SVNClientInterface
                                   long timeMicros,
                                   String message)
         {
-            java.util.Date date = new java.util.Date(timeMicros/1000);
-
             LogMessage msg = new LogMessage(changedPaths,
                                             revision,
                                             author,
-                                            date,
+                                            timeMicros,
                                             message);
             messages.add(msg);
         }
