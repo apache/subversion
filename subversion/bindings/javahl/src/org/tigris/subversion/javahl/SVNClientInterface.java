@@ -145,16 +145,18 @@ public interface SVNClientInterface
 
     /**
      * Lists the directory entries of an url on the server.
-     * @param url       the url to list
-     * @param revision  the revision to list
-     * @param pegRevision the revision to interpret url
-     * @param depth     the depth to recurse into subdirectories
-     * @param fetchLocks whether to fetch lock information
-     * @param callback  the callback to receive the directory entries
+     * @param url             the url to list
+     * @param revision        the revision to list
+     * @param pegRevision     the revision to interpret url
+     * @param depth           the depth to recurse into subdirectories
+     * @param direntFields    the fields to retrieve
+     * @param fetchLocks      whether to fetch lock information
+     * @param callback        the callback to receive the directory entries
      * @since 1.5
      */
     void list(String url, Revision revision, Revision pegRevision,
-              int depth, boolean fetchLocks, ListCallback callback)
+              int depth, int direntFields, boolean fetchLocks,
+              ListCallback callback)
             throws ClientException;
 
     /**
