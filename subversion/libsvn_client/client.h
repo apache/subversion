@@ -239,15 +239,6 @@ svn_client__record_wc_merge_info(const char *wcpath,
                                  svn_wc_adm_access_t *adm_access,
                                  apr_pool_t *pool);
 
-/* Collapse WC merge info towards the root of the WC. */
-svn_error_t *
-svn_client__elide_mergeinfo(const char *target_wcpath,
-                            const char *elision_limit_path,
-                            const svn_wc_entry_t *entry,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool);
-
 /* ---------------------------------------------------------------- */
 
 /*** RA callbacks ***/

@@ -31,6 +31,7 @@
 #include "svn_config.h"
 #include "svn_sorts.h"
 #include "client.h"
+#include "mergeinfo.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
