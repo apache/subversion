@@ -32,6 +32,7 @@
 #include "private/svn_mergeinfo_private.h"
 
 #include "client.h"
+#include "mergeinfo.h"
 
 #include "svn_private_config.h"
 
