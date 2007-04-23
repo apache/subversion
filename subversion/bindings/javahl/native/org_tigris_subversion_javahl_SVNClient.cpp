@@ -40,6 +40,7 @@
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
 #include "StatusCallback.h"
+#include "ListCallback.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -126,29 +127,32 @@ Java_org_tigris_subversion_javahl_SVNClient_getLastPath
   return JNIUtil::makeJString(ret);
 }
 
-JNIEXPORT jobjectArray JNICALL
+JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_list
 (JNIEnv *env, jobject jthis, jstring jurl, jobject jrevision,
- jobject jpegRevision, jboolean jrecurse)
+ jobject jpegRevision, jint jdepth, jboolean jfetchLocks,
+ jobject jcallback)
 {
   JNIEntry(SVNClient, list);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
-    return NULL;
+    return;
 
   JNIStringHolder url(jurl);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
+    return;
 
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
+    return;
 
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
+    return;
 
-  return cl->list(url, revision, pegRevision, jrecurse ? true:false);
+  ListCallback callback(jcallback);
+  cl->list(url, revision, pegRevision, (svn_depth_t)jdepth,
+           jfetchLocks ? true : false, &callback);
 }
 
 JNIEXPORT void JNICALL

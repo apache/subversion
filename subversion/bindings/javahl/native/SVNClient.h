@@ -42,6 +42,7 @@ class BlameCallback;
 class ProplistCallback;
 class LogMessageCallback;
 class InfoCallback;
+class ListCallback;
 class StatusCallback;
 class CommitMessage;
 #include "svn_client.h"
@@ -139,8 +140,8 @@ class SVNClient :public SVNBase
   void status(const char *path, svn_depth_t depth, bool onServer,
               bool getAll, bool noIgnore, bool ignoreExternals,
               StatusCallback *callback);
-  jobjectArray list(const char *url, Revision &revision,
-                    Revision &pegRevision, bool recurse);
+  void list(const char *url, Revision &revision, Revision &pegRevision,
+            svn_depth_t depth, bool fetchLocks, ListCallback *callback);
   jobject revProperty(jobject jthis, const char *path, const char *name,
                       Revision &rev);
   void setRevProperty(jobject jthis, const char *path, const char *name,
@@ -179,7 +180,6 @@ class SVNClient :public SVNBase
                    svn_revnum_t baseRevisionForURL);
   jobject createJavaProperty(jobject jthis, const char *path,
                              const char *name, svn_string_t *value);
-  jobject createJavaDirEntry(const char *path, svn_dirent_t *dirent);
   svn_client_ctx_t *getContext(const char *message);
   svn_stream_t *createReadStream(apr_pool_t *pool, const char *path,
                                  Revision &revision, Revision &pegRevision,

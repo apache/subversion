@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -59,10 +59,15 @@ public class DirEntry
      * the pathname of the entry
      */
     private String path;
+    /**
+     * the absolute path of the entry
+     */
+    private String absPath;
 
     /**
      * this constructor is only called from the JNI code
      * @param path                  the pathname of the entry
+     * @param absPath               the absolute path of the entry
      * @param nodeKind              the kind of entry (file or directory)
      * @param size                  the size of the file
      * @param hasProps              if the entry has properties managed by
@@ -71,10 +76,12 @@ public class DirEntry
      * @param lastChanged           the date of the last change
      * @param lastAuthor            the author of the last change
      */
-    DirEntry(String path, int nodeKind, long size, boolean hasProps,
-             long lastChangedRevision, long lastChanged, String lastAuthor)
+    DirEntry(String path, String absPath, int nodeKind, long size,
+             boolean hasProps, long lastChangedRevision, long lastChanged,
+             String lastAuthor)
     {
         this.path = path;
+        this.absPath = absPath;
         this.nodeKind = nodeKind;
         this.size = size;
         this.hasProps = hasProps;
@@ -90,6 +97,15 @@ public class DirEntry
     public String getPath()
     {
         return path;
+    }
+
+    /**
+     * Returns the absolute path of the entry.
+     * @return the absolute path of the entry.
+     */
+    public String getAbsPath()
+    {
+        return absPath;
     }
 
     /**
@@ -153,6 +169,14 @@ public class DirEntry
     public long getSize()
     {
         return size;
+    }
+
+    /**
+     * Set the path.  This should only be used by compatibility wrapper.
+     */
+    public void setPath(String path)
+    {
+        this.path = path;
     }
 
     /**

@@ -232,6 +232,28 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Lists the directory entries of an url on the server.
+     * @param url       the url to list
+     * @param revision  the revision to list
+     * @param pegRevision the revision to interpret url
+     * @param depth     the depth to recurse into subdirectories
+     * @param fetchLocks whether to fetch lock information
+     * @param callback  the callback to receive the directory entries
+     * @since 1.5
+     */
+    public void list(String url, Revision revision, Revision pegRevision,
+                     int depth, boolean fetchLocks,
+                     ListCallback callback)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.list(url, revision, pegRevision, depth, fetchLocks,
+                        callback);
+        }
+    }
+
+    /**
      * Returns the status of a single file in the path.
      *
      * @param path      File to gather status.
