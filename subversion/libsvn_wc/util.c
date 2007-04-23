@@ -261,12 +261,9 @@ svn_wc__path_switched(const char *wc_path,
           svn_error_clear(err);
           err = SVN_NO_ERROR;
           *switched = FALSE;
-          return SVN_NO_ERROR;
         }
-      else
-        {
-          return err;
-        }
+
+      return err;
     }
 
   SVN_ERR(svn_wc_entry(&parent_entry, wc_parent_path, parent_adm_access,
