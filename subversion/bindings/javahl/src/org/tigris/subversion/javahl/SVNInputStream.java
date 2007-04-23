@@ -24,8 +24,8 @@ import java.io.PipedOutputStream;
 
 /**
  * This class connects a java.io.PipedInputStream to a OutputInterface.
- * The outherside of the Pipe must read by another thread, or deadlocks
- * will occure
+ * The other side of the Pipe must read by another thread, or deadlocks
+ * will occur.
  */
 public class SVNInputStream extends PipedInputStream
 {
@@ -46,7 +46,7 @@ public class SVNInputStream extends PipedInputStream
 
     /**
      * Get the Interface to connect to SVNAdmin
-     * @return the connetion interface
+     * @return the connection interface
      */
     public OutputInterface getOutputer()
     {
@@ -95,7 +95,7 @@ public class SVNInputStream extends PipedInputStream
 
         /**
          * write the bytes in data to java
-         * @param data          the data to be writtem
+         * @param data          the data to be written
          * @throws IOException  throw in case of problems.
          */
         public int write(byte[] data) throws IOException

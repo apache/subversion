@@ -22,8 +22,8 @@ import java.io.*;
 
 /**
  * This class connects a java.io.PipedOutputStream to a InputInterface.
- * The outherside of the Pipe must written by another thread, or deadlocks
- * will occure
+ * The other side of the Pipe must written by another thread, or deadlocks
+ * will occur.
  */
 public class SVNOutputStream extends PipedOutputStream
 {
@@ -57,7 +57,7 @@ public class SVNOutputStream extends PipedOutputStream
 
     /**
      * Get the Interface to connect to SVNAdmin
-     * @return the connetion interface
+     * @return the connection interface
      */
     public InputInterface getInputer()
     {
