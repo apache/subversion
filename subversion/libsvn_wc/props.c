@@ -719,6 +719,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                     {
                       SVN_ERR(combine_mergeinfo_props(&to_val, working_val,
                                                       to_val, pool));
+                      *state = svn_wc_notify_state_merged;
                     }
                   else
                     {
@@ -831,6 +832,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                       SVN_ERR(combine_forked_mergeinfo_props(&to_val, from_val,
                                                              working_val,
                                                              to_val, pool));
+                      *state = svn_wc_notify_state_merged;
                     }
                   else
                     {
