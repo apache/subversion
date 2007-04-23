@@ -715,8 +715,6 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   if (t_entry->kind == svn_node_dir)
     {
-      svn_depth_t depth_beneath_here = depth;
-
       if (related)
         SVN_ERR(b->editor->open_directory(e_path, dir_baton, s_rev, pool, 
                                           &new_baton));
@@ -725,14 +723,9 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                                          SVN_INVALID_REVNUM, pool,
                                          &new_baton));
 
-      /* If we're descending to update a subdir because its parent
-         is depth-immediates, then the subdir is just depth-empty. */
-      if (depth == svn_depth_immediates)
-        depth_beneath_here = svn_depth_empty;
-
       SVN_ERR(delta_dirs(b, s_rev, s_path, t_path, new_baton, e_path,
                          info ? info->start_empty : FALSE,
-                         depth_beneath_here, pool));
+                         depth, pool));
       return b->editor->close_directory(new_baton, pool);
     }
   else
@@ -1030,6 +1023,12 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
       if (!*b->s_operand)
         return svn_error_create(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
                                 _("Two top-level reports with no target"));
+      /* If the client issued a set-path followed by a delete-path, we need
+         to respect the depth set by the initial set-path. */
+      if (! SVN_IS_VALID_REVNUM(b->lookahead->rev))
+        {
+          b->lookahead->depth = info->depth;
+        }
       info = b->lookahead;
       SVN_ERR(read_path_info(&b->lookahead, b->tempfile, subpool));
     }
