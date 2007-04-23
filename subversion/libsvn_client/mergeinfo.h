@@ -19,6 +19,34 @@
 #ifndef SVN_LIBSVN_CLIENT_MERGEINFO_H
 #define SVN_LIBSVN_CLIENT_MERGEINFO_H
 
+/* Obtain any inherited/direct merge info for the session-relative
+   path REL_PATH from the repository, and set it in *TARGET_MERGEINFO.
+   If there is no merge info available for REL_PATH, set
+   *TARGET_MERGEINFO to NULL. */
+svn_error_t *
+svn_client__get_repos_merge_info(svn_ra_session_t *ra_session,
+                                 apr_hash_t **target_mergeinfo,
+                                 const char *rel_path,
+                                 svn_revnum_t rev,
+                                 apr_pool_t *pool);
+
+/* Parse any merge info from WCPATH's ENTRY and store it in MERGEINFO.
+   If no merge info is available, set MERGEINFO to an empty hash. */
+svn_error_t *
+svn_client__parse_merge_info(apr_hash_t **mergeinfo,
+                             const svn_wc_entry_t *entry,
+                             const char *wcpath,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
+
+/* Write MERGEINFO into the WC for WCPATH. */
+svn_error_t *
+svn_client__record_wc_merge_info(const char *wcpath,
+                                 apr_hash_t *mergeinfo,
+                                 svn_wc_adm_access_t *adm_access,
+                                 apr_pool_t *pool);
+
 /* Elide any svn:mergeinfo set on TARGET_PATH to its nearest working
    copy ancestor with equivalent mergeinfo.  If ELISION_LIMIT_PATH is NULL
    check up to the root of the working copy for elidable mergeinfo,

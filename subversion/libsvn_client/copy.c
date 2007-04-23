@@ -35,6 +35,7 @@
 #include "svn_pools.h"
 
 #include "client.h"
+#include "mergeinfo.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
