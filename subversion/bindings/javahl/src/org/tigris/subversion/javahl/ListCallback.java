@@ -26,5 +26,5 @@ public interface ListCallback
     /**
      * This method will be called for each directory entry.
      */
-    public void doEntry(DirEntry dirent);
+    public void doEntry(DirEntry dirent, Lock lock);
 }

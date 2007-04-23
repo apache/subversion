@@ -21,6 +21,7 @@
 
 #include "ListCallback.h"
 #include "EnumMapper.h"
+#include "SVNClient.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
 
@@ -79,7 +80,8 @@ ListCallback::doList(const char *path,
         return SVN_NO_ERROR;
 
       mid = env->GetMethodID(clazz, "doEntry",
-                             "(L"JAVA_PACKAGE"/DirEntry;)V");
+                             "(L"JAVA_PACKAGE"/DirEntry;"
+                             "L"JAVA_PACKAGE"/Lock;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         return SVN_NO_ERROR;
 
@@ -90,9 +92,23 @@ ListCallback::doList(const char *path,
 
   // convert the parameters to their Java relatives
   jobject jdirentry = createJavaDirEntry(path, abs_path, dirent);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  jobject jlock;
+  if (lock != NULL)
+    {
+      jlock = SVNClient::createJavaLock(lock);
+      if (JNIUtil::isJavaExceptionThrown())
+        return SVN_NO_ERROR;
+    }
+  else
+    {
+      jlock = NULL;
+    }
 
   // call the Java method
-  env->CallVoidMethod(m_callback, mid, jdirentry);
+  env->CallVoidMethod(m_callback, mid, jdirentry, jlock);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 

@@ -1947,7 +1947,7 @@ public class SVNClient implements SVNClientInterface
     {
         private List dirents = new ArrayList();
 
-        public void doEntry(DirEntry dirent)
+        public void doEntry(DirEntry dirent, Lock lock)
         {
             // All of this is meant to retain backward compatibility with
             // the old svn_client_ls-style API.  For further information about
