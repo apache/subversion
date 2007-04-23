@@ -877,6 +877,7 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
 {
   const char *walk_path = "";
   apr_hash_t *wc_mergeinfo;
+  svn_boolean_t switched;
 
   if (limit_path)
     SVN_ERR(svn_path_get_absolute(&limit_path, limit_path, pool));
@@ -898,6 +899,13 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
              use that inherited merge info as our baseline. */
           SVN_ERR(svn_client__parse_merge_info(&wc_mergeinfo, entry, wcpath,
                                                adm_access, ctx, pool));
+
+          /* If WCPATH is switched, don't look any higher for inherited
+             mergeinfoinfo. */
+          SVN_ERR(svn_wc__path_switched(wcpath, &switched, entry, adm_access,
+                                        pool));
+          if (switched)
+            break;
         }
 
       /* Subsequent svn_wc_adm_access_t need to be opened with
@@ -1238,42 +1246,50 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
+  /* Check for first easy out: We are already at the limit path. */
   if (!elision_limit_path || strcmp(target_wcpath, elision_limit_path) != 0)
     {
       apr_hash_t *target_mergeinfo;
       apr_hash_t *mergeinfo = NULL;
-      svn_boolean_t inherited, elides;
+      svn_boolean_t inherited, elides, switched;
       const char *walk_path;
+      svn_wc_revision_status_t *revision_status;
 
-      /* Get the TARGET_WCPATH's explicit mergeinfo. */
-      SVN_ERR(get_wc_merge_info(&target_mergeinfo, &inherited, FALSE, entry,
-                                target_wcpath,
-                                elision_limit_path
-                                ? elision_limit_path : NULL,
-                                &walk_path, adm_access, ctx, pool));
+      /* Check for second easy out: TARGET_WCPATH is switched. */
+      SVN_ERR(svn_wc__path_switched(target_wcpath, &switched, entry,
+                                    adm_access, pool));
+      if (!switched)
+        {
+          /* Get the TARGET_WCPATH's explicit mergeinfo. */
+          SVN_ERR(get_wc_merge_info(&target_mergeinfo, &inherited, FALSE,
+                                    entry, target_wcpath,
+                                    elision_limit_path
+                                    ? elision_limit_path : NULL,
+                                    &walk_path, adm_access, ctx, pool));
 
-      /* If TARGET_WCPATH has no explicit mergeinfo, there's nothing to
-         elide, we're done. */
-      if (inherited || apr_hash_count(target_mergeinfo) == 0)
-        return SVN_NO_ERROR;
+         /* If TARGET_WCPATH has no explicit mergeinfo, there's nothing to
+             elide, we're done. */
+          if (inherited || apr_hash_count(target_mergeinfo) == 0)
+            return SVN_NO_ERROR;
 
-      /* Get TARGET_WCPATH's inherited mergeinfo. */
-      SVN_ERR(get_wc_merge_info(&mergeinfo, &inherited, TRUE, entry,
-                                target_wcpath,
-                                elision_limit_path
-                                ? elision_limit_path : NULL,
-                                &walk_path, adm_access, ctx, pool));
+          /* Get TARGET_WCPATH's inherited mergeinfo. */
+          SVN_ERR(get_wc_merge_info(&mergeinfo, &inherited, TRUE, entry,
+                                    target_wcpath,
+                                    elision_limit_path
+                                    ? elision_limit_path : NULL,
+                                    &walk_path, adm_access, ctx, pool));
 
-      /* If TARGET_WCPATH has no inherited mergeinfo, there's
-         nowhere to elide to, we're done. */
-      if (apr_hash_count(mergeinfo) == 0)
-        return SVN_NO_ERROR;
+          /* If TARGET_WCPATH has no inherited mergeinfo, there's
+             nowhere to elide to, we're done. */
+          if (apr_hash_count(mergeinfo) == 0)
+            return SVN_NO_ERROR;
 
-      SVN_ERR(mergeinfo_elides(&elides, mergeinfo, target_mergeinfo,
-                               NULL, pool));
-      if (elides)
-        SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGE_INFO, NULL,
-                                 target_wcpath, adm_access, TRUE, pool));
+          SVN_ERR(mergeinfo_elides(&elides, mergeinfo, target_mergeinfo,
+                                   NULL, pool));
+          if (elides)
+            SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGE_INFO, NULL,
+                                     target_wcpath, adm_access, TRUE, pool));
+        }
     }
   return SVN_NO_ERROR;
 }

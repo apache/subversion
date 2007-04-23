@@ -29,6 +29,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "wc.h"   /* just for prototypes of things in this .c file */
+#include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
 
@@ -227,4 +228,52 @@ svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
      it. */
 
   return svn_cstring_match_glob_list(str, list);
+}
+
+svn_error_t *
+svn_wc__path_switched(const char *wc_path,
+                      svn_boolean_t *switched,
+                      const svn_wc_entry_t *entry,
+                      svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *pool)
+{
+  const char *wc_parent_path, *parent_child_url;
+  const svn_wc_entry_t *parent_entry;
+  svn_wc_adm_access_t *parent_adm_access;
+  svn_error_t *err;
+
+  SVN_ERR(svn_path_get_absolute(&wc_path, wc_path, pool));
+
+  if (svn_dirent_is_root(wc_path, strlen(wc_path)))
+    {
+      *switched = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  wc_parent_path = svn_path_dirname(wc_path, pool);
+  err = svn_wc_adm_open3(&parent_adm_access, NULL, wc_parent_path, FALSE, 0,
+                         NULL, NULL, pool);
+
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          *switched = FALSE;
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          return err;
+        }
+    }
+
+  SVN_ERR(svn_wc_entry(&parent_entry, wc_parent_path, parent_adm_access,
+                       FALSE, pool));
+  parent_child_url = svn_path_join(parent_entry->url,
+                                   svn_path_basename(wc_path, pool), pool);
+  *switched = strcmp(parent_child_url, entry->url);
+
+  return SVN_NO_ERROR;
 }

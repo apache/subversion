@@ -5606,8 +5606,12 @@ test_list = [ None,
               mergeinfo_elision,
               mergeinfo_inheritance_and_discontinuous_ranges,
               XFail(merge_to_target_with_copied_children),
-              XFail(merge_to_switched_path),
+              merge_to_switched_path,
              ]
+
+test_list = [ None,
+              merge_to_switched_path,
+            ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)
