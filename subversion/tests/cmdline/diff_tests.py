@@ -2473,6 +2473,16 @@ def basic_diff_summarize(sbox):
                                         None, None, None, None,
                                         wc_dir)
 
+  # Get the differences between two files.
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status=' M'),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
+                                                None, None, None, None,
+                                                os.path.join(wc_dir, 'iota'),
+                                                '-c2')
+
+  # Get the differences between two versions of an entire directory.
   expected_diff = svntest.wc.State(wc_dir, {
     'A/mu': Item(status='M '),
     'iota': Item(status=' M'),
@@ -2714,7 +2724,7 @@ test_list = [ None,
               diff_repos_working_added_dir,
               diff_base_repos_moved,
               diff_added_subtree,
-              basic_diff_summarize,
+              XFail(basic_diff_summarize),
               diff_weird_author,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
