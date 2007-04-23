@@ -15,7 +15,9 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
+
 /**
  * The schedule states an entry can be in.
  */

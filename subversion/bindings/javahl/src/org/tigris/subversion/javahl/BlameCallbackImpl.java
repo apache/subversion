@@ -15,6 +15,7 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
 
 import java.util.ArrayList;
@@ -41,7 +42,6 @@ public class BlameCallbackImpl implements BlameCallback
                            String line)
     {
         addBlameLine(new BlameLine(revision, author, changed, line));
-
     }
 
     /**

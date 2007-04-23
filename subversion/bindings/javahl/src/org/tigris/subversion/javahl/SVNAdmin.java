@@ -15,9 +15,12 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
+
 /**
- * This class offers the same commands as the svnadmin commandline client
+ * This class offers the same commands as the svnadmin commandline
+ * client.
  */
 public class SVNAdmin
 {

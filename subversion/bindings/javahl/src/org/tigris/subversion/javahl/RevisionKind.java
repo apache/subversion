@@ -15,7 +15,9 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
+
 /**
  * Various ways of specifying revisions.
  *
@@ -51,5 +53,4 @@ public interface RevisionKind
 
     /** repository youngest */
     public static final int head = 7;
-
 }

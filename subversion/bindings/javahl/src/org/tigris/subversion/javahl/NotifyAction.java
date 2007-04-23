@@ -15,7 +15,9 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
+
 /**
  * The type of action triggering the notification
  */

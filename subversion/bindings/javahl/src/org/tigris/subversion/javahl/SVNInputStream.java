@@ -15,11 +15,13 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
 
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+
 /**
  * This class connects a java.io.PipedInputStream to a OutputInterface.
  * The outherside of the Pipe must read by another thread, or deadlocks
@@ -31,6 +33,7 @@ public class SVNInputStream extends PipedInputStream
      * my connection to put data into subversion
      */
     Outputer myOutputer;
+
     /**
      * Creates a SVNInputStream so that it is connected with an internal
      * PipedOutputStream
@@ -40,6 +43,7 @@ public class SVNInputStream extends PipedInputStream
     {
         myOutputer = new Outputer(this);
     }
+
     /**
      * Get the Interface to connect to SVNAdmin
      * @return the connetion interface
@@ -48,6 +52,7 @@ public class SVNInputStream extends PipedInputStream
     {
         return myOutputer;
     }
+
     /**
      * Closes this input stream and releases any system resources associated
      * with the stream.
@@ -72,10 +77,12 @@ public class SVNInputStream extends PipedInputStream
          * my side of the pipe
          */
         PipedOutputStream myStream;
+
         /**
          * flag that the other side of the pipe has been closed
          */
         boolean closed;
+
         /**
          * build a new connection object
          * @param myMaster  the other side of the pipe
@@ -85,6 +92,7 @@ public class SVNInputStream extends PipedInputStream
         {
             myStream =new PipedOutputStream(myMaster);
         }
+
         /**
          * write the bytes in data to java
          * @param data          the data to be writtem

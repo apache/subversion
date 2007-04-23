@@ -1,5 +1,3 @@
-package org.tigris.subversion.javahl;
-
 /**
  * @copyright
  * ====================================================================
@@ -17,6 +15,8 @@ package org.tigris.subversion.javahl;
  * ====================================================================
  * @endcopyright
  */
+
+package org.tigris.subversion.javahl;
 
 /**
  * Subversion path validation and manipulation.

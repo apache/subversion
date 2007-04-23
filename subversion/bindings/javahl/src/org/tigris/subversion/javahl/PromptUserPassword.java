@@ -15,6 +15,7 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
 
 /**
@@ -39,7 +40,8 @@ public interface PromptUserPassword
 
     /**
      * ask the user a yes/no question
-     * @param realm         for which server realm this information is requested.
+     * @param realm         for which server realm this information is
+     *                      requested.
      * @param question      question to be asked
      * @param yesIsDefault  if yes should be the default
      * @return              the answer
@@ -49,7 +51,8 @@ public interface PromptUserPassword
 
     /**
      * ask the user a question where she answers with a text.
-     * @param realm         for which server realm this information is requested.
+     * @param realm         for which server realm this information is
+     *                      requested.
      * @param question      question to be asked
      * @param showAnswer    if the answer is shown or hidden
      * @return              the entered text or null if canceled

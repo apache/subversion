@@ -1,7 +1,3 @@
-package org.tigris.subversion.javahl;
-
-import java.io.IOException;
-
 /**
  * @copyright
  * ====================================================================
@@ -19,6 +15,11 @@ import java.io.IOException;
  * ====================================================================
  * @endcopyright
  */
+
+package org.tigris.subversion.javahl;
+
+import java.io.IOException;
+
 /**
  * Interface for data to be received from subversion
  * used for SVNAdmin.load and SVNAdmin.dump

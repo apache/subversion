@@ -15,9 +15,12 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
+
 /**
- *  status of the text or the property of the item triggering the notification
+ * Status of the text or the property of the item triggering the
+ * notification.
  */
 public interface NotifyStatus
 {

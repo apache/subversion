@@ -15,10 +15,12 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
+
 /**
- * the constants in this interface describe the changes to an item
- * to be commited
+ * The constants in this interface describe the changes to an item to
+ * be commited.
  */
 public interface CommitItemStateFlags
 {
@@ -26,21 +28,24 @@ public interface CommitItemStateFlags
      * the item has been added
      */
     public static final int Add=1;
+
     /**
      * the item has been deleted
      */
     public static final int Delete=2;
+
     /**
      * the item has text modifications
      */
     public static final int TextMods=4;
+
     /**
      * the item has property modifications
      */
     public static final int PropMods=8;
+
     /**
      * the item has been copied
      */
     public static final int IsCopy=16;
-
 }

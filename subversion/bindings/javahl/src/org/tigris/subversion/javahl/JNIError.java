@@ -15,10 +15,11 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
 
 /**
- * This error is thrown by error in the native library
+ * This error is thrown by error in the native library.
  */
 public class JNIError extends Error
 {

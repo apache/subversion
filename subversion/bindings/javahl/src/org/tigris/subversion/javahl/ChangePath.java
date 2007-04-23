@@ -15,7 +15,9 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
+
 public class ChangePath
 {
     /**
@@ -25,7 +27,8 @@ public class ChangePath
      * @param copySrcPath       copy source path (if any)
      * @param action            action performed
      */
-    ChangePath(String path, long copySrcRevision, String copySrcPath, char action)
+    ChangePath(String path, long copySrcRevision, String copySrcPath,
+               char action)
     {
         this.path = path;
         this.copySrcRevision = copySrcRevision;

@@ -15,6 +15,7 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
 
 /**
@@ -42,11 +43,12 @@ public interface Notify
      * @param propState state of properties after action occurred
      * @param revision revision number  after action occurred
      */
-    public void onNotify(String path, int action, int kind, String mimeType, int contentState, int propState, long revision);
+    public void onNotify(String path, int action, int kind, String mimeType,
+                         int contentState, int propState, long revision);
 
     /**
-     * The type of action occuring.
-     * The values are defined in the interface NotifyAction for building reasons.
+     * The type of action occuring.  The values are defined in the
+     * interface NotifyAction for building reasons.
      */
     public static final class Action implements NotifyAction
     {
@@ -62,8 +64,8 @@ public interface Notify
 
     }
     /**
-     * The type of notification that is occuring.
-     * The values are defined in the interface NotifyStatus for building reasons.
+     * The type of notification that is occuring.  The values are
+     * defined in the interface NotifyStatus for building reasons.
      */
     public static final class Status implements NotifyStatus
    {

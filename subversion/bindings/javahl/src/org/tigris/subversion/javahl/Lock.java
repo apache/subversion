@@ -16,11 +16,13 @@
  *
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
 
 import java.util.Date;
+
 /**
- * class to describe a lock. It is return by the lock operation
+ * Class to describe a lock.  It is returned by the lock operation.
  * @since 1.2
  */
 public class Lock
@@ -29,26 +31,32 @@ public class Lock
      * the owner of the lock
      */
     private String owner;
+
     /**
      * the path of the locked item
      */
     private String path;
+
     /**
      * the token provided during the lock operation
      */
     private String token;
+
     /**
      * the comment provided during the lock operation
      */
     private String comment;
+
     /**
      * the date when the lock was created
      */
     private long creationDate;
+
     /**
      * the date when the lock will expire
      */
     private long expirationDate;
+
     /**
      * this constructor should only called from JNI code
      * @param owner             the owner of the lock
@@ -68,6 +76,7 @@ public class Lock
         this.creationDate = creationDate;
         this.expirationDate = expirationDate;
     }
+
     /**
      * @return the owner of the lock
      */
