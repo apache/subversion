@@ -239,7 +239,7 @@ SWIG_RB_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/ruby
 ### Automate JAR creation using Makefile generator's javahl-java.jar
 ### property.  Enhance generator to support JAR installation.
 INSTALL_EXTRA_JAVAHL_JAVA=\
-	$(JAR) cf subversion/bindings/javahl/svn-javahl.jar -C subversion/bindings/java/javahl/classes org; \
+	$(JAR) cf subversion/bindings/javahl/svn-javahl.jar -C subversion/bindings/javahl/classes org; \
 	$(INSTALL_DATA) subversion/bindings/javahl/svn-javahl.jar $(DESTDIR)$(javahl_javadir);
 
 INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
