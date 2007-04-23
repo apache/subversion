@@ -15,9 +15,11 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
+
 /**
- * this class describes a item which will be commited.
+ * This class describes a item which will be commited.
  */
 public class CommitItem
 {
@@ -25,26 +27,32 @@ public class CommitItem
      * the pathname of the item to be commit
      */
     String path;
+
     /**
      * the kind node (file or directory)
      */
     int nodeKind;
+
     /**
      * the kind of change to be commited (See CommitItemStateFlages)
      */
     int stateFlags;
+
     /**
      * the url of the item
      */
     String url;
+
     /**
      * the source of the copy
      */
     String copyUrl;
+
     /**
      * the revision
      */
     long revision;
+
     /**
      * This constructor will be only called from the jni code.
      * @param p     path to the commit item
@@ -63,14 +71,16 @@ public class CommitItem
         copyUrl = cu;
         revision = r;
     }
+
     /**
      *  retrieve the path of the commit item
-     * @return the path.
+     * @return the path
      */
     public String getPath()
     {
         return path;
     }
+
     /**
      * return the node kind of the commit item
      * @return the node kind. Look at the NodeKind class.
@@ -79,6 +89,7 @@ public class CommitItem
     {
         return nodeKind;
     }
+
     /**
      * return the kind of change for the commit item.
      * @return  the state flags. Look at the CommitItemStateFlags interface.
@@ -87,6 +98,7 @@ public class CommitItem
     {
         return stateFlags;
     }
+
     /**
      * the class for the commit item state flags. The values are ored together
      * the values are CommitItemStateFlags for building reasons.
@@ -94,6 +106,7 @@ public class CommitItem
     public static class StateFlags implements CommitItemStateFlags
     {
     }
+
     /**
      * Returns the url of the item
      * @return url
@@ -102,6 +115,7 @@ public class CommitItem
     {
         return url;
     }
+
     /**
      * Returns the source url if the item is copied
      * @return source url
@@ -110,6 +124,7 @@ public class CommitItem
     {
         return copyUrl;
     }
+
     /**
      * Returns the revision number
      * @return revision number

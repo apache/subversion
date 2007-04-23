@@ -15,9 +15,11 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
 
 import java.util.Date;
+
 /**
  * Subversion status API.
  * This describes the status of one subversion item (file or directory) in
@@ -30,126 +32,153 @@ public class Status
      * the url for accessing the item
      */
     private String url;
+
     /**
      * the path in the working copy
      */
     private String path;
+
     /**
      * kind of the item (file, directory or unknonw)
      */
     private int nodeKind;
+
     /**
      * the base revision of the working copy
      */
     private long revision;
+
     /**
      * the last revision the item was changed before base
      */
     private long lastChangedRevision;
+
     /**
      * the last date the item was changed before base (represented in
      * microseconds since the epoch)
      */
     private long lastChangedDate;
+
     /**
      * the last author of the last change before base
      */
     private String lastCommitAuthor;
+
     /**
      * the file or directory status (See StatusKind)
      */
     private int textStatus;
+
     /**
      * the status of the properties (See StatusKind)
      */
     private int propStatus;
+
     /**
      * flag is this item is locked locally by subversion
      * (running or aborted operation)
      */
     private boolean locked;
+
     /**
      * has this item be copied from another item
      */
     private boolean copied;
+
     /**
      * has the url of the item be switch
      */
     private boolean switched;
+
     /**
      * the file or directory status of base (See StatusKind)
      */
     private int repositoryTextStatus;
+
     /**
      * the status of the properties base (See StatusKind)
      */
     private int repositoryPropStatus;
+
     /**
      * if there is a conflict, the filename of the new version
      * from the repository
      */
     private String conflictNew;
+
     /**
      * if there is a conflict, the filename of the common base version
      * from the repository
      */
     private String conflictOld;
+
     /**
      * if there is a conflict, the filename of the former working copy
      * version
      */
     private String conflictWorking;
+
     /**
      * if copied, the url of the copy source
      */
     private String urlCopiedFrom;
+
     /**
      * if copied, the revision number of the copy source
      */
     private long revisionCopiedFrom;
+
     /**
      * @since 1.2
      * token specified for the lock (null if not locked)
      */
     private String lockToken;
+
     /**
      * @since 1.2
      * owner of the lock (null if not locked)
      */
     private String lockOwner;
+
     /**
      * @since 1.2
      * comment specified for the lock (null if not locked)
      */
     private String lockComment;
+
     /**
      * @since 1.2
      * date of the creation of the lock (represented in microseconds
      * since the epoch)
      */
     private long lockCreationDate;
+
     /**
      * @since 1.2
      * the lock in the repository
      */
     private Lock reposLock;
+
     /**
      * @since 1.3
      * Set to the youngest committed revision, or {@link
      * Revision#SVN_INVALID_REVNUM} if not out of date.
      */
     private long reposLastCmtRevision = Revision.SVN_INVALID_REVNUM;
+
     /**
      * @since 1.3
      * Set to the most recent commit date, or 0 if not out of date.
      */
     private long reposLastCmtDate = 0;
+
     /**
      * @since 1.3
      * Set to the node kind of the youngest commit, or {@link
      * NodeKind#none} if not out of date.
      */
     private int reposKind = NodeKind.none;
+
     /**
      * @since 1.3
      * Set to the user name of the youngest commit, or

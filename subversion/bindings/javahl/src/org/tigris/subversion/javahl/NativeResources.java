@@ -1,5 +1,3 @@
-package org.tigris.subversion.javahl;
-
 /**
  * @copyright
  * ====================================================================
@@ -17,6 +15,8 @@ package org.tigris.subversion.javahl;
  * ====================================================================
  * @endcopyright
  */
+
+package org.tigris.subversion.javahl;
 
 /**
  * Handles activities related to management of native resouces

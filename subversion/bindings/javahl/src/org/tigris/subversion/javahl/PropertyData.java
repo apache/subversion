@@ -1,5 +1,3 @@
-package org.tigris.subversion.javahl;
-
 /**
  * @copyright
  * ====================================================================
@@ -18,8 +16,10 @@ package org.tigris.subversion.javahl;
  * @endcopyright
  */
 
+package org.tigris.subversion.javahl;
+
 /**
- * this class describes one property managed by subversion
+ * This class describes one property managed by Subversion.
  */
 public class PropertyData
 {
@@ -27,67 +27,83 @@ public class PropertyData
      * the name of the property
      */
     private String name;
+
     /**
      * the string value of the property
      */
     private String value;
+
     /**
      * the byte array value of the property
      */
     private byte[] data;
+
     /**
      * path of the subversion to change or delete this property
      */
     private String path;
+
     /**
      * reference to the creating SVNClient object to change or delete this
      * property
      */
     private SVNClient client;
+
     /**
      * Standard subversion known properties
      */
+
     /**
      * mime type of the entry, used to flag binary files
      */
     public static final String MIME_TYPE = "svn:mime-type";
+
     /**
      * list of filenames with wildcards which should be ignored by add and
      * status
      */
     public static final String IGNORE = "svn:ignore";
+
     /**
      * how the end of line code should be treated during retrieval
      */
     public static final String EOL_STYLE = "svn:eol-style";
+
     /**
      * list of keywords to be expanded during retrieval
      */
     public static final String KEYWORDS = "svn:keywords";
+
     /**
      * flag if the file should be made excutable during retrieval
      */
     public static final String EXECUTABLE = "svn:executable";
+
     /**
      * value for svn:executable
      */
     public static final String EXECUTABLE_VALUE = "*";
+
     /**
      * list of directory managed outside of this working copy
      */
     public static final String EXTERNALS = "svn:externals";
+
     /**
      * the author of the revision
      */
     public static final String REV_AUTHOR = "svn:author";
+
     /**
      * the log message of the revision
      */
     public static final String REV_LOG = "svn:log";
+
     /**
      * the date of the revision
      */
     public static final String REV_DATE = "svn:date";
+
     /**
      * the original date of the revision
      */
@@ -188,7 +204,8 @@ public class PropertyData
      * @param recurse           if operation should recurse directories
      * @throws ClientException
      */
-    public void setValue(byte[] newValue, boolean recurse) throws ClientException
+    public void setValue(byte[] newValue, boolean recurse)
+            throws ClientException
     {
         client.propertySet(path, name, newValue, recurse);
         data = newValue;

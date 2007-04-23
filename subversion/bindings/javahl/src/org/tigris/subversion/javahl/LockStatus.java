@@ -15,7 +15,9 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
+
 /**
  * @since 1.2
  * what happened to a lock during an operation
@@ -26,18 +28,22 @@ public interface LockStatus
      * does not make sense for this operation
      */
     public static final int inapplicable = 0;
+
     /**
      * unknown lock state
      */
     public static final int unknown = 1;
+
     /**
      * the lock change did not change
      */
     public static final int unchanged = 2;
+
     /**
      * the item was locked
      */
     public static final int locked = 3;
+
     /**
      * the item was unlocked
      */

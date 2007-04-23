@@ -1,7 +1,3 @@
-package org.tigris.subversion.javahl;
-
-import java.util.Date;
-
 /**
  * @copyright
  * ====================================================================
@@ -19,6 +15,10 @@ import java.util.Date;
  * ====================================================================
  * @endcopyright
  */
+
+package org.tigris.subversion.javahl;
+
+import java.util.Date;
 
 /**
  * This class describes a single subversion revision with log message,

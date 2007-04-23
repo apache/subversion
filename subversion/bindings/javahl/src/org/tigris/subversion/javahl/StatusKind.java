@@ -15,7 +15,9 @@
  * ====================================================================
  * @endcopyright
  */
+
 package org.tigris.subversion.javahl;
+
 /**
  * class for kind status of the item or its properties
  */
@@ -62,5 +64,4 @@ public interface StatusKind
 
     /** an unversioned path populated by an svn:externals property */
     public static final int external = 13;
-
 }
