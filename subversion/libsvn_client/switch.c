@@ -208,8 +208,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                 &APR_ARRAY_IDX(children_with_mergeinfo, i,
                                svn_sort__item_t);
               child_wcpath = item->key;
-              SVN_ERR(svn_wc_entry(&child_entry, child_wcpath,
-                      adm_access, FALSE, pool));
+              SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath,
+                                              adm_access, FALSE, pool));
               SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL,
                                                   child_entry, adm_access, ctx,
                                                   pool));
