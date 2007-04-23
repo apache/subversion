@@ -53,12 +53,6 @@ history index).
 
 * Handle notifications resulting from a merge.  (sussman)
 
-  * Send property change notifications for merges to the
-    "svn:mergeinfo" property (as we're currently failing to send
-    any).  See dev@ mailing list thread:
-
-      Subject: Property change notifications for "svn:mergeinfo"
-
   * Handle multiple notifications for single WC items.
 
     * Output multiple notifications, but print divider lines
