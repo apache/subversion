@@ -48,7 +48,8 @@ public class Revision
     /**
      * Internally create a new revision
      * @param kind    kind of revision
-     * @param marker  marker to differentiate from the public deprecated version
+     * @param marker  marker to differentiate from the public deprecated
+     *                version
      */
     protected Revision(int kind, boolean marker)
     {
@@ -147,26 +148,33 @@ public class Revision
      * last commited revision
      */
     public static final Revision HEAD = new Revision(Kind.head, true);
+
     /**
      * first existing revision
      */
     public static final Revision START = new Revision(Kind.unspecified, true);
+
     /**
      * last committed revision, needs working copy
      */
-    public static final Revision COMMITTED = new Revision(Kind.committed, true);
+    public static final Revision COMMITTED = new Revision(Kind.committed,
+                                                          true);
+
     /**
      * previous committed revision, needs working copy
      */
     public static final Revision PREVIOUS = new Revision(Kind.previous, true);
+
     /**
      * base revision of working copy
      */
     public static final Revision BASE = new Revision(Kind.base, true);
+
     /**
      * working version in working copy
      */
     public static final Revision WORKING = new Revision(Kind.working, true);
+
     /**
      * Marker revision number for no real revision
      */
@@ -273,7 +281,7 @@ public class Revision
 
             SimpleDateFormat dateFormat =
                     new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z",
-                            Locale.US);
+                                         Locale.US);
             return '{'+dateFormat.format(revDate)+'}';
         }
 
