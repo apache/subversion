@@ -67,6 +67,8 @@ summarize_func(const svn_client_diff_summarize_t *summary,
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
+  /* ### FIXME (issue #2765): Only append summary->path to the
+     ### original path if the original is of kind svn_node_dir. */
   path = svn_path_join(path, summary->path, pool);
 
   /* Convert non-urls to local style, so that things like "" show up as "." */
