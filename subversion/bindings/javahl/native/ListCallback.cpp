@@ -23,6 +23,7 @@
 #include "EnumMapper.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
+
 /**
  * Create a ListCallback object
  * @param jcallback the Java callback object.
@@ -31,12 +32,13 @@ ListCallback::ListCallback(jobject jcallback)
 {
   m_callback = jcallback;
 }
+
 /**
  * Destroy a ListCallback object
  */
 ListCallback::~ListCallback()
 {
-  // the m_callback does not need to be destroyed, because it is the passed
+  // The m_callback does not need to be destroyed, because it is the passed
   // in parameter to the Java SVNClient.list method.
 }
 
@@ -67,9 +69,9 @@ ListCallback::doList(const char *path,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
-  static jmethodID mid = 0; // the method id will not change during
-                            // the time this library is loaded, so
-                            // it can be cached.
+  // The method id will not change during the time this library is
+  // loaded, so it can be cached.
+  static jmethodID mid = 0;
   if (mid == 0)
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/ListCallback");
@@ -117,8 +119,8 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
   if (mid == 0)
     {
       mid = env->GetMethodID(clazz, "<init>",
-                               "(Ljava/lang/String;Ljava/lang/String;"
-                               "IJZJJLjava/lang/String;)V");
+                             "(Ljava/lang/String;Ljava/lang/String;"
+                             "IJZJJLjava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
