@@ -307,23 +307,25 @@ public class SVNClient implements SVNClientInterface
         MyListCallback callback = new MyListCallback();
 
         list(url, revision, pegRevision,
-             recurse ? Depth.infinity : Depth.immediates, false, callback);
+             recurse ? Depth.infinity : Depth.immediates, 
+             DirEntry.Fields.all, false, callback);
 
         return callback.getDirEntryArray();
     }
 
     /**
      * Lists the directory entries of an url on the server.
-     * @param url       the url to list
-     * @param revision  the revision to list
-     * @param pegRevision the revision to interpret url
-     * @param depth     the depth to recurse into subdirectories
-     * @param fetchLocks whether to fetch lock information
-     * @param callback  the callback to receive the directory entries
+     * @param url             the url to list
+     * @param revision        the revision to list
+     * @param pegRevision     the revision to interpret url
+     * @param depth           the depth to recurse into subdirectories
+     * @param direntFields    the fields to retrieve
+     * @param fetchLocks      whether to fetch lock information
+     * @param callback        the callback to receive the directory entries
      * @since 1.5
      */
     public native void list(String url, Revision revision,
-                            Revision pegRevision, int depth,
+                            Revision pegRevision, int depth, int direntFields,
                             boolean fetchLocks, ListCallback callback)
             throws ClientException;
 

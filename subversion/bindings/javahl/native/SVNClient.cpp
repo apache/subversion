@@ -120,8 +120,9 @@ const char *SVNClient::getLastPath()
  * List directory entries of a URL.
  */
 void SVNClient::list(const char *url, Revision &revision,
-                             Revision &pegRevision, svn_depth_t depth,
-                             bool fetchLocks, ListCallback *callback)
+                     Revision &pegRevision, svn_depth_t depth,
+                     int direntFields, bool fetchLocks,
+                     ListCallback *callback)
 {
     Pool requestPool;
     svn_client_ctx_t *ctx = getContext(NULL);
@@ -137,7 +138,7 @@ void SVNClient::list(const char *url, Revision &revision,
                                  pegRevision.revision(),
                                  revision.revision(),
                                  depth,
-                                 SVN_DIRENT_ALL,
+                                 direntFields,
                                  fetchLocks,
                                  ListCallback::callback,
                                  callback,

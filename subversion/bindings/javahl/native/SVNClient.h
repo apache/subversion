@@ -141,7 +141,8 @@ class SVNClient :public SVNBase
               bool getAll, bool noIgnore, bool ignoreExternals,
               StatusCallback *callback);
   void list(const char *url, Revision &revision, Revision &pegRevision,
-            svn_depth_t depth, bool fetchLocks, ListCallback *callback);
+            svn_depth_t depth, int direntFields, bool fetchLocks,
+            ListCallback *callback);
   jobject revProperty(jobject jthis, const char *path, const char *name,
                       Revision &rev);
   void setRevProperty(jobject jthis, const char *path, const char *name,

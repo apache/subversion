@@ -130,8 +130,8 @@ Java_org_tigris_subversion_javahl_SVNClient_getLastPath
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_list
 (JNIEnv *env, jobject jthis, jstring jurl, jobject jrevision,
- jobject jpegRevision, jint jdepth, jboolean jfetchLocks,
- jobject jcallback)
+ jobject jpegRevision, jint jdepth, jint jdirentFields,
+ jboolean jfetchLocks, jobject jcallback)
 {
   JNIEntry(SVNClient, list);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -152,7 +152,7 @@ Java_org_tigris_subversion_javahl_SVNClient_list
 
   ListCallback callback(jcallback);
   cl->list(url, revision, pegRevision, (svn_depth_t)jdepth,
-           jfetchLocks ? true : false, &callback);
+           (int)jdirentFields, jfetchLocks ? true : false, &callback);
 }
 
 JNIEXPORT void JNICALL
