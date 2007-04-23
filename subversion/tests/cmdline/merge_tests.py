@@ -5609,10 +5609,6 @@ test_list = [ None,
               merge_to_switched_path,
              ]
 
-test_list = [ None,
-              merge_to_switched_path,
-            ]
-
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)
   # NOTREACHED
