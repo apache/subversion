@@ -2561,6 +2561,10 @@ public class BasicTests extends SVNTests
     private static class DiffSummaries extends HashMap
         implements DiffSummaryReceiver
     {
+        // Update the serialVersionUID when there is a incompatible
+        // change made to this class.
+        private static final long serialVersionUID = 1L;
+
         public void onSummary(DiffSummary descriptor)
         {
             super.put(descriptor.getPath(), descriptor);
