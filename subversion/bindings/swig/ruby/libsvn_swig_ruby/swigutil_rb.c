@@ -822,7 +822,7 @@ svn_swig_rb_svn_date_string_to_time(const char *date)
     svn_pool_destroy(pool);
     if (error)
       svn_swig_rb_handle_svn_error(error);
-    return rb_time_new(apr_time_sec(tm), apr_time_usec(tm));
+    return rb_time_new((time_t)apr_time_sec(tm), (time_t)apr_time_usec(tm));
   } else {
     return Qnil;
   }
