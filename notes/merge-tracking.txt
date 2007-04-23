@@ -26,7 +26,8 @@ history index).
     "oldest revision at merge source's path" thru HEAD.
 
 * Provide an API for merging arbitrary revision ranges ('-c 3,5,7' or
-  '-r 2:3,9:12').  Client tools will use this to best support cherry-picking.
+  '-r 2:3,9:12').  Client tools will use this to best support
+  cherry-picking.  Command-line client UI to follow post-1.5.
 
   * Write libsvn_client API.  (lundblad)
 
@@ -35,6 +36,10 @@ history index).
 * Provide a libsvn_client API capable of listing "all unmerged
   revisions".  Client tools will use this to allow the user to select
   the revisions to merge.  (kamesh)
+
+  * Always recurse, but provide flag.
+
+  * Need new RA call.
 
 * Allow for merge info which contains empty range lists, necessary for
   override of merge info by child paths which would otherwise inherit
@@ -46,21 +51,27 @@ history index).
 
     * Fix issue #2769.  (dlr)
 
-* Handle notifications resulting from a merge.  (dlr)
+* Handle notifications resulting from a merge.  (sussman)
 
-  * Handle property change notifications for "svn:mergeinfo".
+  * Send property change notifications for merges to the
+    "svn:mergeinfo" property (as we're currently failing to send
+    any).  See dev@ mailing list thread:
 
-  * Handle multiple notifications for single WC items. Possible
-    solutions include:
+      Subject: Property change notifications for "svn:mergeinfo"
+
+  * Handle multiple notifications for single WC items.
 
     * Output multiple notifications, but print divider lines
       indicating the revisions range to which a set of notifications
-      applies.  Introduce a new type of "skipped" notification for WC
-      items which are already in conflict.
+      applies.  This will require enhancing the notification API to
+      include enough context to indicate which revision range is
+      currently being merged.  Introduce a new type of "skipped"
+      notification for WC items which are already in conflict.
 
-    * Collate changes as merge ranges are applied.  Detect and handle
-      collisions (multiple notifications to the same WC item), giving
-      preference to later notifications (?).
+    * Document potential wrapper for the above API, something which we
+      won't be implementing: Collate changes as merge ranges are
+      applied.  Detect and handle collisions (multiple notifications
+      to the same WC item), giving preference to later notifications.
 
   * Handle skips.
 
@@ -83,6 +94,12 @@ history index).
       overlapping conflict makers, or apply a merge inside a conflict
       marker!), being sure to record partial application of merge
       ranges.
+
+      Update (2007/04/23): Discussion with some Subversion dev
+      Googlers indicate that they'd prefer a more comprehensive
+      solution which allows interactivity to be deferred until all
+      possible merging has occurred.  (They are not alone in a desire
+      to see this use case handled.)
       
     * Add a notification message or perhaps a notification callback so
       that a client may provide detailed information about the state of
@@ -94,16 +111,11 @@ history index).
   is necessary).  (pburba/dlr)
 
   * Fix bug on merge to target with moved/copied children,
-    issue #2754 (pburba).
+    issue #2754.  (pburba)
 
   * Improve merge algorithm used for target trees with child paths
     that contain differing merge info, per Peter Lundblad's
     suggestions. (lundblad)
-
-  * When a tree with inherited merge info contains a child with
-    differing merge info, lookup of the merge info for this child must
-    reflect that of the parent (except for where they differ).
-    (pburba/dlr)
 
 * Treat all revisions from a 'copy' source as merge info for the
   destination.  This equates to turning all those revs into actual
@@ -113,6 +125,26 @@ history index).
 
   * Handle WC -> WC 'copy'/'move' operations.  (dlr)
     http://subversion.tigris.org/merge-tracking/func-spec.html#wc-wc-copy-move
+
+    Update (2007/04/23): Discussion with some Subversion dev Googlers
+    indicates that we should purposely break command-line UI
+    compatibility here, and instead require an explicit option to
+    avoid contacting the repos.
+
+* Account for merge info differences for switched directories when
+  gathering and setting merge info.  (pburba)
+
+* Handle sparsely-populated directories, or portions of a tree not
+  checked out due to lack of authorization.
+
+  * Inheritance of merge info throug sparsely-populated directories
+    could potentially be handled via explicit merge info (e.g. to
+    avoid recording merge info for paths not checked out).
+
+  * There's little we can do about paths not checked out because of
+    insufficient authorization.  Since the client isn't allowed to
+    know these paths exist, we can't avoid potentially inherited merge
+    info!
 
 * Update design.html with the latest content from the "BASIC DESIGN"
   section below.
