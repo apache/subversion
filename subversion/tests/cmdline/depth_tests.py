@@ -477,31 +477,6 @@ def depth_mixed_bring_in_dir(sbox):
                                         '--depth', 'immediates', 
                                         A_path)
 
-  # Then run 'svn up A/B' to fill out B.
-  B_path = os.path.join(A_path, 'B')
-  expected_output = svntest.wc.State(wc_empty, {
-    'A/B/lambda'     : Item(status='A '),
-    'A/B/E'          : Item(status='A '),
-    'A/B/E/alpha'    : Item(status='A '),
-    'A/B/E/beta'     : Item(status='A '),
-    'A/B/F'          : Item(status='A '),
-    })
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('iota', 'A/D/gamma', 'A/D/G', 
-                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H', 
-                       'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
-  expected_status = svntest.actions.get_virginal_state(wc_empty, 1)
-  expected_status.remove('iota', 'A/D/gamma', 'A/D/G', 
-                         'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H', 
-                         'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
-  svntest.actions.run_and_verify_update(wc_empty,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        None, None,
-                                        None, None, None, None,
-                                        B_path)
-
 #----------------------------------------------------------------------
 def depth_empty_unreceive_delete(sbox):
   "depth-empty working copy ignores a deletion"
@@ -563,7 +538,7 @@ test_list = [ None,
               XFail(depth_immediates_bring_in_file),
               XFail(depth_immediates_bring_in_dir),
               XFail(depth_immediates_fill_in_dir),
-              XFail(depth_mixed_bring_in_dir),
+              depth_mixed_bring_in_dir,
               depth_empty_unreceive_delete,
               XFail(depth_immediates_unreceive_delete),
               XFail(depth_immediates_receive_delete),
