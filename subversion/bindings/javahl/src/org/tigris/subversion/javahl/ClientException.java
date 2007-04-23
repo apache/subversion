@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -24,6 +24,15 @@ package org.tigris.subversion.javahl;
  */
 public class ClientException extends NativeException
 {
+    // Update the serialVersionUID when there is a incompatible change
+    // made to this class.  See any of the following, depending upon
+    // the Java release.
+    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
+    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
+    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
+    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+    private static final long serialVersionUID = 1L;
+
     /**
      * This constructor is only used by the native library.
      *
