@@ -5404,6 +5404,156 @@ def merge_to_target_with_copied_children(sbox):
   finally:
     os.chdir(saved_cwd)
 
+def merge_to_switched_path(sbox):
+  "merge to switched path does not inherit or elide"
+
+  # When the target of a merge is a switched path we don't inherit WC
+  # mergeinfo from above the target or attempt to elide the mergeinfo
+  # set on the target as a result of the merge.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox)
+
+  # Some paths we'll care about
+  A_COPY_D_path = os.path.join(wc_dir, "A_COPY", "D")
+  G_COPY_path = os.path.join(wc_dir, "A", "D", "G_COPY")
+  A_COPY_D_G_path = os.path.join(wc_dir, "A_COPY", "D", "G")
+  A_COPY_D_G_rho_path = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
+  
+  expected = svntest.actions.UnorderedOutput(
+         ["A    " + os.path.join(G_COPY_path, "pi") + "\n",
+          "A    " + os.path.join(G_COPY_path, "rho") + "\n",
+          "A    " + os.path.join(G_COPY_path, "tau") + "\n",
+          "Checked out revision 6.\n",
+          "A         " + G_COPY_path + "\n"])
+  
+  # r7 - Copy A/D/G to A/D/G_COPY and commit.
+  svntest.actions.run_and_verify_svn(None, expected, [], 'copy',
+                                     sbox.repo_url + "/A/D/G",
+                                     G_COPY_path)
+
+  expected_output = wc.State(wc_dir, {'A/D/G_COPY' : Item(verb='Adding')})
+  wc_status.add({
+    "A/D/G_COPY"     : Item(status='  ', wc_rev=7),
+    "A/D/G_COPY/pi"  : Item(status='  ', wc_rev=7),
+    "A/D/G_COPY/rho" : Item(status='  ', wc_rev=7),
+    "A/D/G_COPY/tau" : Item(status='  ', wc_rev=7),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # r8 - modify and commit A/D/G_COPY/rho
+  svntest.main.file_write(os.path.join(wc_dir, "A", "D", "G_COPY", "rho"),
+                          "New *and* improved rho content")
+  expected_output = wc.State(wc_dir, {'A/D/G_COPY/rho' : Item(verb='Sending')})
+  wc_status.tweak('A/D/G_COPY/rho', wc_rev=8)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Switch A_COPY/D/G to A/D/G.
+  wc_disk.add({
+    "A"  : Item(),
+    "A/D/G_COPY"     : Item(props={SVN_PROP_MERGE_INFO :
+                                   '/A/D/G:1-6'}),
+    "A/D/G_COPY/pi"  : Item("This is the file 'pi'.\n"),
+    "A/D/G_COPY/rho" : Item("New *and* improved rho content"),
+    "A/D/G_COPY/tau" : Item("This is the file 'tau'.\n"),
+    })
+  wc_disk.tweak('A_COPY/D/G/rho',contents="New content")
+  wc_status.tweak("A_COPY/D/G", wc_rev=8, switched='S')
+  wc_status.tweak("A_COPY/D/G/pi", wc_rev=8)
+  wc_status.tweak("A_COPY/D/G/rho", wc_rev=8)
+  wc_status.tweak("A_COPY/D/G/tau", wc_rev=8)
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    "A_COPY/D/G/rho"         : Item(status='U '),
+    })
+  svntest.actions.run_and_verify_switch(sbox.wc_dir, A_COPY_D_G_path,
+                                        sbox.repo_url + "/A/D/G",
+                                        expected_output, wc_disk, wc_status,
+                                        None, None, None, None, None, 1)
+
+  # Merge r8 from A/D/G_COPY into our switched target A_COPY/D/G.
+  # A_COPY/D/G should get mergeinfo for r8 as a result of the merge,
+  # but because it's switched should not inherit the mergeinfo from
+  # its nearest WC ancestor with mergeinfo (A_COPY: svn:mergeinfo : /A:1)
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_G_COPY_path = shorten_path_kludge(A_COPY_D_G_path)
+  expected_output = wc.State(short_G_COPY_path, {
+    'rho' : Item(status='U ')
+    })
+  # Note: A_COPY/D/G won't show as switched because of the Merge Kluge.
+  expected_status = wc.State(short_G_COPY_path, {
+    ''         : Item(status=' M', wc_rev=8),
+    'pi'       : Item(status='  ', wc_rev=8),
+    'rho'      : Item(status='M ', wc_rev=8),
+    'tau'      : Item(status='  ', wc_rev=8),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G_COPY:8'}),
+    'pi'       : Item("This is the file 'pi'.\n"),
+    'rho'      : Item("New *and* improved rho content"),
+    'tau'      : Item("This is the file 'tau'.\n"),
+    })
+  expected_skip = wc.State(short_G_COPY_path, { })
+  saved_cwd = os.getcwd()
+
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_G_COPY_path, '7', '8',
+                                         sbox.repo_url + '/A/D/G_COPY',
+                                         expected_output, expected_disk,
+                                         expected_status, expected_skip,
+                                         None, None, None, None, None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Check that the mergeinfo set on a target doesn't elide when that
+  # target is switched.
+  #
+  # Revert the previous merge and manually set 'svn:mergeinfo : /A/D/:4'
+  # on 'merge_tests-1\A_COPY\D'.  Now merge r4 from /A/D/G into A_COPY/D/G.
+  # This is a no-op merge but that's not important, it still sets
+  # 'svn:mergeinfo : /A/D/G:4' on 'merge_tests-1\A_COPY\D\G'.  This would
+  # normally elide to A_COPY/D, but since A_COPY/D/G is switched it should
+  # not.
+  svntest.actions.run_and_verify_svn(None,
+                                     ["Reverted '" + A_COPY_D_G_path+ "'\n",
+                                      "Reverted '" + A_COPY_D_G_rho_path +
+                                      "'\n"],
+                                     [], 'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property '" + SVN_PROP_MERGE_INFO +
+                                      "' set on '" + A_COPY_D_path+ "'" +
+                                      "\n"], [], 'ps', SVN_PROP_MERGE_INFO,
+                                     '/A/D/:4', A_COPY_D_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [], [], 'merge', '-c4',
+                                     sbox.repo_url + '/A/D/G_COPY',
+                                     A_COPY_D_G_path)
+  wc_status.tweak("A_COPY/D", status=' M')
+  wc_status.tweak("A_COPY/D/G", status=' M')
+  svntest.actions.run_and_verify_status(wc_dir, wc_status)
+  expected = svntest.actions.UnorderedOutput(
+    ["A    " + os.path.join(G_COPY_path, "pi") + "\n",
+     "A    " + os.path.join(G_COPY_path, "rho") + "\n",
+     "A    " + os.path.join(G_COPY_path, "tau") + "\n",
+     "Checked out revision 6.\n",
+     "A         " + G_COPY_path + "\n"])
+  expected = svntest.actions.UnorderedOutput(
+    ["Properties on '" + A_COPY_D_path + "':\n",
+     "  svn:mergeinfo : /A/D/:4\n",
+     "Properties on '" + A_COPY_D_G_path + "':\n",
+     "  svn:mergeinfo : /A/D/G:4\n"])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected, [],
+                                     'pl', '-vR', A_COPY_D_path)
+
 ########################################################################
 # Run the tests
 
@@ -5456,6 +5606,7 @@ test_list = [ None,
               mergeinfo_elision,
               mergeinfo_inheritance_and_discontinuous_ranges,
               XFail(merge_to_target_with_copied_children),
+              XFail(merge_to_switched_path),
              ]
 
 if __name__ == '__main__':
