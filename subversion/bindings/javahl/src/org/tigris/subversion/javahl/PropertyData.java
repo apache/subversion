@@ -175,6 +175,7 @@ public class PropertyData
     {
         return path;
     }
+
     /**
      * Returns the byte array value of the property
      * There is no protocol if a property is a string or a binary value
@@ -184,6 +185,7 @@ public class PropertyData
     {
         return data;
     }
+
     /**
      * modify the string value of a property
      * The byte array value is cleared
@@ -191,12 +193,14 @@ public class PropertyData
      * @param recurse           if operation should recurse directories
      * @throws ClientException
      */
-    public void setValue(String newValue, boolean recurse) throws ClientException
+    public void setValue(String newValue, boolean recurse)
+            throws ClientException
     {
         client.propertySet(path, name, newValue, recurse);
         value = newValue;
         data = null;
     }
+
     /**
      * modify the byte array value of a property
      * The string array value is cleared
