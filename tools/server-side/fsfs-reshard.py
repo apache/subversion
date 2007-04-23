@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#  -*- coding: utf-8 -*-
 #
 # fsfs-reshard.py REPOS_PATH MAX_FILES_PER_SHARD
 #
