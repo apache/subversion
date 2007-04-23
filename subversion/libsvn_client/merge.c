@@ -901,7 +901,7 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
                                                adm_access, ctx, pool));
 
           /* If WCPATH is switched, don't look any higher for inherited
-             mergeinfoinfo. */
+             merge info. */
           SVN_ERR(svn_wc__path_switched(wcpath, &switched, entry, adm_access,
                                         pool));
           if (switched)
