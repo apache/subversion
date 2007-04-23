@@ -55,19 +55,19 @@ public class LogMessage
 
     /**
      * This constructor is only called only from the thin wrapper.
-     * @param m     the log message text
-     * @param d     the date of the commit
-     * @param r     the number of the revision
-     * @param a     the author of the commit
-     * @param cp    the items changed by this commit
+     * @param changedPaths the items changed by this commit
+     * @param revision     the number of the revision
+     * @param author       the author of the commit
+     * @param date         the date of the commit
+     * @param message      the log message text
      */
     LogMessage(ChangePath[] cp, long r, String a, Date d, String m)
     {
-        message = m;
-        date = d;
+        changedPaths = cp;
         revision = r;
         author = a;
-        changedPaths = cp;
+        date = d;
+        message = m;
     }
 
     /**
