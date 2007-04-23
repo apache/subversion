@@ -41,6 +41,7 @@
 #include "svn_time.h"
 #include "svn_sorts.h"
 #include "client.h"
+#include "mergeinfo.h"
 #include <assert.h>
 
 #include "private/svn_wc_private.h"
