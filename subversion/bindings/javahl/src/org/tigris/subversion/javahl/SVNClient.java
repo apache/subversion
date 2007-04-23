@@ -300,8 +300,31 @@ public class SVNClient implements SVNClientInterface
      * @return Array of DirEntry objects.
      * @since 1.2
      */
-    public native DirEntry[] list(String url, Revision revision,
+    public DirEntry[] list(String url, Revision revision,
                                   Revision pegRevision, boolean recurse)
+            throws ClientException
+    {
+        MyListCallback callback = new MyListCallback();
+
+        list(url, revision, pegRevision,
+             recurse ? Depth.infinity : Depth.immediates, false, callback);
+
+        return callback.getDirEntryArray();
+    }
+
+    /**
+     * Lists the directory entries of an url on the server.
+     * @param url       the url to list
+     * @param revision  the revision to list
+     * @param pegRevision the revision to interpret url
+     * @param depth     the depth to recurse into subdirectories
+     * @param fetchLocks whether to fetch lock information
+     * @param callback  the callback to receive the directory entries
+     * @since 1.5
+     */
+    public native void list(String url, Revision revision,
+                            Revision pegRevision, int depth,
+                            boolean fetchLocks, ListCallback callback)
             throws ClientException;
 
     /**
@@ -1913,6 +1936,48 @@ public class SVNClient implements SVNClientInterface
         public Status[] getStatusArray()
         {
             return (Status[]) statuses.toArray(new Status[statuses.size()]);
+        }
+    }
+
+    /**
+     * A private list callback implementation used by thin wrappers.
+     * Instances of this class are not thread-safe.
+     */
+    private class MyListCallback implements ListCallback
+    {
+        private List dirents = new ArrayList();
+
+        public void doEntry(DirEntry dirent)
+        {
+            // All of this is meant to retain backward compatibility with
+            // the old svn_client_ls-style API.  For further information about
+            // what is going on here, see the comments in
+            // libsvn_client/list.c:store_dirent().
+
+            if (dirent.getPath().length() == 0)
+            {
+                if (dirent.getNodeKind() == NodeKind.file)
+                {
+                    String absPath = dirent.getAbsPath();
+                    int lastSeparator = absPath.lastIndexOf('/');
+                    String path = absPath.substring(lastSeparator,
+                                                    absPath.length());
+                    dirent.setPath(path);
+                }
+                else
+                {
+                    // It's the requested directory, which we don't want
+                    // to add.
+                    return;
+                }
+            }
+
+            dirents.add(dirent);
+        }
+
+        public DirEntry[] getDirEntryArray()
+        {
+            return (DirEntry[]) dirents.toArray(new DirEntry[dirents.size()]);
         }
     }
 }

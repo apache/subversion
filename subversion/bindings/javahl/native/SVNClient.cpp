@@ -35,6 +35,7 @@
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
 #include "StatusCallback.h"
+#include "ListCallback.h"
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
 #include "EnumMapper.h"
@@ -118,63 +119,29 @@ const char *SVNClient::getLastPath()
 /**
  * List directory entries of a URL.
  */
-jobjectArray SVNClient::list(const char *url, Revision &revision,
-                             Revision &pegRevision, bool recurse)
+void SVNClient::list(const char *url, Revision &revision,
+                             Revision &pegRevision, svn_depth_t depth,
+                             bool fetchLocks, ListCallback *callback)
 {
     Pool requestPool;
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
-        return NULL;
+        return;
 
-    SVN_JNI_NULL_PTR_EX(url, "path or url", NULL);
+    SVN_JNI_NULL_PTR_EX(url, "path or url", );
 
     Path urlPath(url);
-    SVN_JNI_ERR(urlPath.error_occured(), NULL);
+    SVN_JNI_ERR(urlPath.error_occured(), );
 
-    apr_hash_t *dirents;
-    SVN_JNI_ERR(svn_client_ls3(&dirents, NULL, urlPath.c_str(),
-                               pegRevision.revision(),
-                               revision.revision(),
-                               recurse, ctx, requestPool.pool()),
-                NULL);
-
-    apr_array_header_t *array =
-        svn_sort__hash(dirents, svn_sort_compare_items_as_paths,
-                       requestPool.pool());
-
-    // create the array of DirEntry
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/DirEntry");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobjectArray ret = env->NewObjectArray(array->nelts, clazz, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    for (int i = 0; i < array->nelts; ++i)
-    {
-        const svn_sort__item_t *item;
-        svn_dirent_t *dirent = NULL;
-
-        item = &APR_ARRAY_IDX(array, i, const svn_sort__item_t);
-        dirent = (svn_dirent_t *) item->value;
-
-        jobject obj = createJavaDirEntry((const char *)item->key, dirent);
-        env->SetObjectArrayElement(ret, i, obj);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-        env->DeleteLocalRef(obj);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    return ret;
+    SVN_JNI_ERR(svn_client_list2(urlPath.c_str(),
+                                 pegRevision.revision(),
+                                 revision.revision(),
+                                 depth,
+                                 SVN_DIRENT_ALL,
+                                 fetchLocks,
+                                 ListCallback::callback,
+                                 callback,
+                                 ctx, requestPool.pool()), );
 }
 
 void
@@ -1367,65 +1334,6 @@ svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
     }
 
     return read_stream;
-}
-
-
-/**
- * Create a DirEntry Java object from the svn_dirent_t structure.
- */
-jobject SVNClient::createJavaDirEntry(const char *path, svn_dirent_t *dirent)
-{
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/DirEntry");
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    static jmethodID mid = 0;
-    if (mid == 0)
-    {
-        mid = env->GetMethodID(clazz, "<init>",
-                               "(Ljava/lang/String;IJZJJLjava/lang/String;)V");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-    }
-
-    jstring jPath = JNIUtil::makeJString(path);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jint jNodeKind = EnumMapper::mapNodeKind(dirent->kind);
-    jlong jSize = dirent->size;
-    jboolean jHasProps = (dirent->has_props? JNI_TRUE : JNI_FALSE);
-    jlong jLastChangedRevision = dirent->created_rev;
-    jlong jLastChanged = dirent->time;
-    jstring jLastAuthor = JNIUtil::makeJString(dirent->last_author);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobject ret = env->NewObject(clazz, mid, jPath, jNodeKind, jSize,
-                                 jHasProps, jLastChangedRevision,
-                                 jLastChanged, jLastAuthor);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    env->DeleteLocalRef(jPath);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    if (jLastAuthor != NULL)
-    {
-        env->DeleteLocalRef(jLastAuthor);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    return ret;
 }
 
 jobject SVNClient::revProperty(jobject jthis, const char *path,
