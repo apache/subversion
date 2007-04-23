@@ -15,19 +15,13 @@
  * ====================================================================
  * @endcopyright
  */
-/*
- * Created on 7 avr. 2003
- *
- */
+
 package org.tigris.subversion.javahl;
 
 import java.util.Date;
 
 /**
  * A general subversion directory entry. Used for SVNClientInterface.list
- * @author C&eacute;dric Chabanois
- *         <a href="mailto:cchabanois@ifrance.com">cchabanois@ifrance.com</a>
- *
  */
 public class DirEntry
 {
@@ -35,30 +29,37 @@ public class DirEntry
      * the date of the last change in nanoseconds since 01/01/1970
      */
     private long lastChanged;
+
     /**
      * the revision number of the last change
      */
     private long lastChangedRevision;
+
     /**
      * flag if the item has properties managed by subversion
      */
     private boolean hasProps;
+
     /**
      * the name of the author of the last change
      */
     private String lastAuthor;
+
     /**
      * the kind of the node (directory or file)
      */
     private int nodeKind;
+
     /**
      * the size of the file
      */
     private long size;
+
     /**
      * the pathname of the entry
      */
     private String path;
+
     /**
      * the absolute path of the entry
      */
