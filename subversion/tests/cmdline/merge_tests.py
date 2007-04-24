@@ -215,7 +215,6 @@ def textual_merges_galore(sbox):
   # case 4, which we'll handle in a second pass.
   expected_output = wc.State(other_wc, {'A/B/lambda' : Item(status='U '),
                                         'A/D/G/rho'  : Item(status='U '),
-                                        'A/D/G/pi'   : Item(status='G '),
                                         'A/D/G/tau'  : Item(status='C '),
                                         })
 
