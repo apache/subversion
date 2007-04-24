@@ -89,6 +89,7 @@ struct svn_ra_svn__session_baton_t {
   int protocol_version;
   svn_boolean_t is_tunneled;
   const char *user;
+  const char *hostname; /* The remote hostname. */
   const char *realm_prefix;
   const char **tunnel_argv;
   const svn_ra_callbacks2_t *callbacks;
