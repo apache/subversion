@@ -1800,11 +1800,8 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
                 {
                   SVN_ERR(svn_io_remove_dir2(fullpath, FALSE, subpool));
                 }
-              else if (this_entry.filetype == APR_REG)
+              else
                 {
-                  /* ### Do we really need the check for APR_REG here?
-                     Shouldn't we remove symlinks, pipes and whatnot, too?
-                     --xbc */
                   svn_error_t *err = svn_io_remove_file(fullpath, subpool);
                   if (err)
                     return svn_error_createf
