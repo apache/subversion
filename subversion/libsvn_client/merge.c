@@ -1253,7 +1253,6 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
       apr_hash_t *mergeinfo = NULL;
       svn_boolean_t inherited, elides, switched;
       const char *walk_path;
-      svn_wc_revision_status_t *revision_status;
 
       /* Check for second easy out: TARGET_WCPATH is switched. */
       SVN_ERR(svn_wc__path_switched(target_wcpath, &switched, entry,
