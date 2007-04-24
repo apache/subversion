@@ -82,6 +82,16 @@ Candidate changes:
      +1: clkao
      +0: glasser (I don't grok SWIG, but having this available in Perl is good)
 
+ * r24755
+   Fix a path comparison / sort ordering bug which affects certain non-ASCII
+   path sets.
+   Justification:
+     This bug has the affect of causing dumpfiles generated from affected datasets 
+     to be unloadable (if a child of a directory sorts above the directory, and
+     both are to be added in the same revision, e.g.).
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
