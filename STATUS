@@ -116,8 +116,9 @@ Approved changes:
    Stop merge notifications for locally modified files unchanged by a merge. 
    Justification:
      Long standing bug effecting only the output of svn merge.
+   Branch: 1.4.x-r24483
    Votes:
-     +1: pburba, dlr (via dev list), cmpilato
+     +1: pburba, dlr, cmpilato
 
  * r24755
    Fix a path comparison / sort ordering bug which affects certain non-ASCII
@@ -126,6 +127,5 @@ Approved changes:
      This bug has the affect of causing dumpfiles generated from affected
      datasets to be unloadable (e.g. if a child of a directory sorts above
      the directory, and both are to be added in the same revision).
-   Branch: 1.4.x-r24755
    Votes:
      +1: cmpilato, dlr, hwright
