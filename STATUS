@@ -63,11 +63,11 @@ Candidate changes:
    Fix a path comparison / sort ordering bug which affects certain non-ASCII
    path sets.
    Justification:
-     This bug has the affect of causing dumpfiles generated from affected datasets 
-     to be unloadable (if a child of a directory sorts above the directory, and
-     both are to be added in the same revision, e.g.).
+     This bug has the affect of causing dumpfiles generated from affected
+     datasets to be unloadable (e.g. if a child of a directory sorts above
+     the directory, and both are to be added in the same revision).
    Votes:
-     +1: cmpilato
+     +1: cmpilato, dlr
 
 Veto-blocked changes:
 
