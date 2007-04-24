@@ -1428,7 +1428,8 @@ structure."
                                   locked-mark
                                   with-history-mark
                                   switched-mark
-                                  locked-repo-mark)
+                                  locked-repo-mark
+                                  psvn-extra-info)
   "Create a new line-info from the given arguments
 Anything left nil gets a sensible default.
 nb: LOCKED-MARK refers to the kind of locks you get after an error,
@@ -1444,7 +1445,8 @@ nb: LOCKED-MARK refers to the kind of locks you get after an error,
         locked-mark
         with-history-mark
         switched-mark
-        locked-repo-mark))
+        locked-repo-mark
+        psvn-extra-info))
 
 (defvar svn-user-names-including-blanks nil "A list of svn user names that include blanks.")
 ;;(setq svn-user-names-including-blanks '("feng shui" "mister blank"))
@@ -1588,7 +1590,8 @@ The results are used to build the `svn-status-info' variable."
                                                    svn-wc-locked-mark
                                                    svn-with-history-mark
                                                    svn-switched-mark
-                                                   svn-repo-locked-mark)
+                                                   svn-repo-locked-mark
+                                                   nil) ;;psvn-extra-info
                         svn-status-info)))
           (when (eq svn-file-mark ?X)
             (svn-puthash (match-string 1) (car svn-status-info) externals-map)
@@ -1682,7 +1685,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "g") 'svn-status-update)
   (define-key svn-status-mode-map (kbd "M-s") 'svn-status-update) ;; PCL-CVS compatibility
   (define-key svn-status-mode-map (kbd "q") 'svn-status-bury-buffer)
-  (define-key svn-status-mode-map (kbd "x") 'svn-status-update-buffer)
+  (define-key svn-status-mode-map (kbd "x") 'svn-status-redraw-status-buffer)
   (define-key svn-status-mode-map (kbd "H") 'svn-status-use-history)
   (define-key svn-status-mode-map (kbd "m") 'svn-status-set-user-mark)
   (define-key svn-status-mode-map (kbd "u") 'svn-status-unset-user-mark)
@@ -2140,12 +2143,21 @@ The result will be nil or \"S\"."
 This is column six of the output from `svn status'.
 The result will be \"K\", \"O\", \"T\", \"B\" or nil."
   (nth 11 line-info))
+(defun svn-status-line-info->psvn-extra-info (line-info)
+  "Return a list of extra information for psvn associated with LINE-INFO.
+This list holds currently only one element:
+* The action after a commit or update."
+  (nth 12 line-info))
 
 (defun svn-status-line-info->is-visiblep (line-info)
-  (not (or (svn-status-line-info->hide-because-unknown line-info)
-           (svn-status-line-info->hide-because-unmodified line-info)
-           (svn-status-line-info->hide-because-custom-hide-function line-info)
-           (svn-status-line-info->hide-because-user-elide line-info))))
+  "Return whether the line is visible or not"
+  (or (not (or (svn-status-line-info->hide-because-unknown line-info)
+               (svn-status-line-info->hide-because-unmodified line-info)
+               (svn-status-line-info->hide-because-custom-hide-function line-info)
+               (svn-status-line-info->hide-because-user-elide line-info)))
+      (svn-status-line-info->update-available line-info) ;; show the line, if an update is available
+      (svn-status-line-info->psvn-extra-info line-info)  ;; show the line, if there is some extra info displayed on this line
+      ))
 
 (defun svn-status-line-info->hide-because-unknown (line-info)
   (and svn-status-hide-unknown
@@ -2189,6 +2201,9 @@ The result will be \"K\", \"O\", \"T\", \"B\" or nil."
 
 (defun svn-status-line-info->set-repo-locked (line-info value)
   (setcar (nthcdr 11 line-info) value))
+
+(defun svn-status-line-info->set-psvn-extra-info (line-info value)
+  (setcar (nthcdr 12 line-info) value))
 
 (defun svn-status-copy-current-line-info (arg)
   "Copy the current file name at point, using `svn-status-copy-filename-as-kill'.
@@ -2350,6 +2365,7 @@ When called with a prefix argument, toggle the hiding of all subdirectories for 
       (svn-status-line-info->set-lastchangerev line-info svn-status-commit-rev-number))
     (when svn-status-last-commit-author
       (svn-status-line-info->set-author line-info svn-status-last-commit-author))
+    (svn-status-line-info->set-psvn-extra-info line-info (list action))
     (cond ((equal action 'committed)
            (setq tag-string " <committed>")
            (when (member (svn-status-line-info->repo-locked line-info) '(?K))
@@ -2653,6 +2669,14 @@ Symbolic links to directories count as directories (see `file-directory-p')."
              'svn-status-marked-face)
             "\n")))
 
+(defun svn-status-redraw-status-buffer ()
+  "Redraw the `svn-status-buffer-name' buffer.
+Additionally clear the psvn-extra-info field in all line-info lists."
+  (interactive)
+  (dolist (line-info svn-status-info)
+    (svn-status-line-info->set-psvn-extra-info line-info nil))
+  (svn-status-update-buffer))
+
 (defun svn-status-update-buffer ()
   "Update the `svn-status-buffer-name' buffer, using `svn-status-info'.
   This function does not access the repository."
@@ -2953,8 +2977,9 @@ When called from a file buffer provide a structure that contains the filename."
   (interactive)
   (let ((info (svn-status-get-line-information)))
     (if info
-        (message "%S %S %S" info (svn-status-line-info->hide-because-unknown info)
-                                 (svn-status-line-info->hide-because-unmodified info))
+        (message "%S hide-because-unknown: %S hide-because-unmodified: %S" info
+                 (svn-status-line-info->hide-because-unknown info)
+                 (svn-status-line-info->hide-because-unmodified info))
       (message "No file on this line"))))
 
 (defun svn-status-ensure-cursor-on-file ()
@@ -3040,8 +3065,10 @@ Then move to that line."
          (mark-count 0)
          (line-info (svn-status-get-line-information))
          (file-name (svn-status-line-info->filename line-info))
-         (sub-file-regexp (concat "^" (regexp-quote
-                                       (file-name-as-directory file-name))))
+         (sub-file-regexp (if (file-directory-p file-name)
+                              (concat "^" (regexp-quote
+                                           (file-name-as-directory file-name)))
+                            nil))
          (newcursorpos-fname)
          (i-fname)
          (first-line t)
@@ -3052,7 +3079,8 @@ Then move to that line."
         (setq first-line nil))
       (setq i-fname (svn-status-line-info->filename (car st-info)))
       (when (or (string= file-name i-fname)
-                (string-match sub-file-regexp i-fname))
+                (when sub-file-regexp
+                  (string-match sub-file-regexp i-fname)))
         (when (svn-status-line-info->is-visiblep (car st-info))
           (when (or (not only-this-line) (string= file-name i-fname))
             (setq newcursorpos-fname i-fname)
@@ -5389,7 +5417,7 @@ removed again, when a faster parsing and display routine for
   (interactive)
   (unless svn-trac-project-root
     (svn-status-set-trac-project-root))
-  (svn-browse-url (concat svn-trac-project-root "browse")))
+  (svn-browse-url (concat svn-trac-project-root "browser")))
 
 (defun svn-trac-browse-report (arg)
   "Open the trac report view for the current svn repository.
