@@ -1016,7 +1016,7 @@ test_compare_paths(const char **msg,
     { "/foo",         "/foo/bar",     -1},
     { "/foo",         "/foo/bar/boo", -1},
     { "foo",          "/foo",         1},
-    { "foo\xe0bar",   "foo",          1},
+    { "foo\xe0""bar", "foo",          1},
   };
 
   *msg = "test svn_path_compare_paths";
