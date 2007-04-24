@@ -843,14 +843,6 @@ c2r_svn_string(void *value, void *ctx)
   return c2r_string2(s->data);
 }
 
-static VALUE
-c2r_svn_stringbuf(void *value, void *ctx)
-{
-  const svn_stringbuf_t *buffer = (svn_stringbuf_t *)value;
-
-  return rb_str_new(buffer->data, buffer->len);
-}
-
 typedef struct {
   apr_array_header_t *array;
   apr_pool_t *pool;
