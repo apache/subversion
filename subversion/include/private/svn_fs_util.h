@@ -69,6 +69,26 @@ svn_error_t *svn_fs__err_lock_owner_mismatch(svn_fs_t *fs,
                                                 const char *username,
                                                 const char *lock_owner);
 
+/* Return a NULL-terminated copy of the first component of PATH,
+   allocated in POOL.  If path is empty, or consists entirely of
+   slashes, return the empty string.
+
+   If the component is followed by one or more slashes, we set *NEXT_P
+   to point after the slashes.  If the component ends PATH, we set
+   *NEXT_P to zero.  This means:
+   - If *NEXT_P is zero, then the component ends the PATH, and there
+     are no trailing slashes in the path.
+   - If *NEXT_P points at PATH's terminating NULL character, then
+     the component returned was the last, and PATH ends with one or more
+     slash characters.
+   - Otherwise, *NEXT_P points to the beginning of the next component
+     of PATH.  You can pass this value to next_entry_name to extract
+     the next component. */
+char *
+svn_fs__next_entry_name(const char **next_p,
+                        const char *path,
+                        apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

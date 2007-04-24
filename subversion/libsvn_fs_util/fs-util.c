@@ -187,3 +187,31 @@ svn_fs__err_path_already_locked(svn_fs_t *fs,
      lock->path, lock->owner, fs->path);
 }
 
+char *
+svn_fs__next_entry_name(const char **next_p,
+                        const char *path,
+                        apr_pool_t *pool)
+{
+  const char *end;
+
+  /* Find the end of the current component.  */
+  end = strchr(path, '/');
+
+  if (! end)
+    {
+      /* The path contains only one component, with no trailing
+         slashes. */
+      *next_p = 0;
+      return apr_pstrdup(pool, path);
+    }
+  else
+    {
+      /* There's a slash after the first component.  Skip over an arbitrary
+         number of slashes to find the next one. */
+      const char *next = end;
+      while (*next == '/')
+        next++;
+      *next_p = next;
+      return apr_pstrndup(pool, path, end - path);
+    }
+}

@@ -635,52 +635,6 @@ make_parent_path(dag_node_t *node,
 }
 
 
-/* Return a null-terminated copy of the first component of PATH,
-   allocated in POOL.  If path is empty, or consists entirely of
-   slashes, return the empty string.
-
-   If the component is followed by one or more slashes, we set *NEXT_P
-   to point after the slashes.  If the component ends PATH, we set
-   *NEXT_P to zero.  This means:
-   - If *NEXT_P is zero, then the component ends the PATH, and there
-     are no trailing slashes in the path.
-   - If *NEXT_P points at PATH's terminating null character, then
-     the component returned was the last, and PATH ends with one or more
-     slash characters.
-   - Otherwise, *NEXT_P points to the beginning of the next component
-     of PATH.  You can pass this value to next_entry_name to extract
-     the next component.  */
-
-static char *
-next_entry_name(const char **next_p,
-                const char *path,
-                apr_pool_t *pool)
-{
-  const char *end;
-
-  /* Find the end of the current component.  */
-  end = strchr(path, '/');
-
-  if (! end)
-    {
-      /* The path contains only one component, with no trailing
-         slashes.  */
-      *next_p = 0;
-      return apr_pstrdup(pool, path);
-    }
-  else
-    {
-      /* There's a slash after the first component.  Skip over an arbitrary
-         number of slashes to find the next one.  */
-      const char *next = end;
-      while (*next == '/')
-        next++;
-      *next_p = next;
-      return apr_pstrndup(pool, path, end - path);
-    }
-}
-
-
 /* Flags for open_path.  */
 typedef enum open_path_flags_t {
 
@@ -754,17 +708,17 @@ open_path(parent_path_t **parent_path_p,
       dag_node_t *child;
 
       /* Parse out the next entry from the path.  */
-      entry = next_entry_name(&next, rest, pool);
+      entry = svn_fs__next_entry_name(&next, rest, pool);
 
       /* Calculate the path traversed thus far. */
       path_so_far = svn_path_join(path_so_far, entry, pool);
 
       if (*entry == '\0')
         {
-          /* Given the behavior of next_entry_name, this happens when
-             the path either starts or ends with a slash.  In either
-             case, we stay put: the current directory stays the same,
-             and we add nothing to the parent path.  */
+          /* Given the behavior of svn_fs__next_entry_name(), this
+             happens when the path either starts or ends with a slash.
+             In either case, we stay put: the current directory stays
+             the same, and we add nothing to the parent path. */
           child = here;
         }
       else
