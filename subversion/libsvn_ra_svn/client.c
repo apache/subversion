@@ -506,6 +506,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   sess->pool = pool;
   sess->is_tunneled = (tunnel_argv != NULL);
   sess->user = uri->user;
+  sess->hostname = uri->hostname;
   sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
                                     uri->port);
   sess->tunnel_argv = tunnel_argv;
