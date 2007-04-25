@@ -520,10 +520,12 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
  * they're not, it might be nice to change apr_hash_first() so
  * read-only uses of hashes can be protected via the type system.
  *
- * Use @a pool for all allocation.  (If the caller is iterating over log
- * messages, invoking this receiver on each, we recommend the standard
- * pool loop recipe: create a subpool, pass it as @a pool to each call,
- * clear it after each iteration, destroy it after the loop is done.)
+ * Use @a pool for temporary allocation.  If the caller is iterating
+ * over log messages, invoking this receiver on each, we recommend the
+ * standard pool loop recipe: create a subpool, pass it as @a pool to
+ * each call, clear it after each iteration, destroy it after the loop
+ * is done.  (For allocation that must last beyond the lifetime of a
+ * given receiver call, use a pool in @a baton.)
  */
 typedef svn_error_t *(*svn_log_message_receiver_t)
   (void *baton,
