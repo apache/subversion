@@ -371,3 +371,114 @@ svn_client_log(const apr_array_header_t *targets,
 
   return err;
 }
+
+/* A log callback conforming to the svn_log_message_receiver_t
+   interface for obtaining the last revision of a node at a path and
+   storing it in *BATON (an svn_revnum_t). */
+static svn_error_t *
+revnum_receiver(void *baton,
+                apr_hash_t *changed_paths,
+                svn_revnum_t revision,
+                const char *author,
+                const char *date,
+                const char *message,
+                apr_pool_t *pool)
+{
+  *((svn_revnum_t *) baton) = revision;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
+                               svn_ra_session_t *ra_session,
+                               const char *rel_path,
+                               svn_revnum_t rev,
+                               apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
+  *oldest_rev = SVN_INVALID_REVNUM;
+  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
+
+  /* Trace back in history to find the revision at which this node
+     was created (copied or added). */
+  err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
+                       revnum_receiver, oldest_rev, pool);
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+              err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
+    {
+      /* A locally-added but uncommitted versioned resource won't
+         exist in the repository. */
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  return err;
+}
+
+struct copy_source_baton
+{
+  const char **copy_source;
+  apr_pool_t *pool;
+};
+
+/* A log callback conforming to the svn_log_message_receiver_t
+   interface for obtaining the copy source of a node at a path and
+   storing it in *BATON (a struct copy_source_baton *). */
+static svn_error_t *
+copy_source_receiver(void *baton,
+                     apr_hash_t *changed_paths,
+                     svn_revnum_t revision,
+                     const char *author,
+                     const char *date,
+                     const char *message,
+                     apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  void *val;
+  const char *copy_source_path;
+  svn_log_changed_path_t *changed_path;
+  struct copy_source_baton *copy_source_baton;
+  copy_source_baton = baton;
+  /*FIXME: if the rev at which this node is created has few other node 
+   changes too extract only our node. */
+  for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, NULL, NULL, &val);
+      changed_path = val;
+    }
+  copy_source_path = changed_path->copyfrom_path;
+  
+  *((char **) copy_source_baton->copy_source) = 
+                     apr_pstrdup(copy_source_baton->pool, copy_source_path);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__get_copy_source(const char **copy_source,
+                            svn_ra_session_t *ra_session,
+                            const char *rel_path,
+                            svn_revnum_t rev,
+                            apr_pool_t *pool)
+{
+  svn_error_t *err;
+  struct copy_source_baton copy_source_baton;
+  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
+  *copy_source = NULL;
+  copy_source_baton.copy_source = copy_source;
+  copy_source_baton.pool = pool;
+  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
+
+  /* Trace back in history to find the revision at which this node
+     was created (copied or added). */
+  err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, TRUE, TRUE,
+                       copy_source_receiver, &copy_source_baton, pool);
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+              err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
+    {
+      /* A locally-added but uncommitted versioned resource won't
+         exist in the repository. */
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  return err;
+}

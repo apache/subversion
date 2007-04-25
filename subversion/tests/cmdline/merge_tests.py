@@ -1243,7 +1243,7 @@ def merge_record_only(sbox):
 def merge_with_implicit_target_helper(sbox, arg_flav):
   "ARG_FLAV is one of 'r' (revision range) or 'c' (single change)."
 
-  if arg_flav not in ('r', 'c'):
+  if arg_flav not in ('r', 'c', '*'):
     raise svntest.Failure("Unrecognized flavor of merge argument")
 
   sbox.build()
@@ -1293,10 +1293,18 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
     elif arg_flav == 'c':
       svntest.actions.run_and_verify_svn(None, ['U    mu\n'], [],
                                          'merge', '-c', '-2', mu_url)
+    elif arg_flav == '*':
+      # Implicit merge source URL and revision range detection is for
+      # forward merges only (e.g. non-reverts).  Undo application of
+      # r2 to enable continuation of the test case.
+      svntest.actions.run_and_verify_svn(None, ['U    mu\n'], [],
+                                         'merge', '-c', '-2', mu_url)
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text):
-      raise svntest.Failure("Unexpected text in 'mu'")
+      raise svntest.Failure("Unexpected text '%s' in 'mu', expected '%s'" %
+                            (svntest.tree.get_text('mu'), orig_mu_text))
+
 
     # merge using filename for sourcepath
     # Cannot use run_and_verify_merge with a file target
@@ -1306,6 +1314,10 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
     elif arg_flav == 'c':
       svntest.actions.run_and_verify_svn(None, ['G    mu\n'], [],
                                          'merge', '-c', '2', 'mu')
+
+    elif arg_flav == '*':
+      svntest.actions.run_and_verify_svn(None, ['G    mu\n'], [],
+                                         'merge', 'mu')
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
@@ -1321,6 +1333,11 @@ def merge_with_implicit_target_using_r(sbox):
 def merge_with_implicit_target_using_c(sbox):
   "merging a file w/no explicit target path using -c"
   merge_with_implicit_target_helper(sbox, 'c')
+
+def merge_with_implicit_target_and_revs(sbox):
+  "merging a file w/no explicit target path or revs"
+  merge_with_implicit_target_helper(sbox, '*')
+
 
 #----------------------------------------------------------------------
 
@@ -5566,6 +5583,7 @@ test_list = [ None,
               simple_property_merges,
               merge_with_implicit_target_using_r,
               merge_with_implicit_target_using_c,
+              merge_with_implicit_target_and_revs,
               merge_catches_nonexistent_target,
               merge_tree_deleted_in_target,
               merge_similar_unrelated_trees,
