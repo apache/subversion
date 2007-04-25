@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-04-25 12:03+0800\n"
-"PO-Revision-Date: 2007-04-19 12:24+0800\n"
+"PO-Revision-Date: 2007-04-25 12:13+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -6858,9 +6858,9 @@ msgid "Error converting depth from locale to UTF8"
 msgstr "深度从本地编码转换到 UTF8 失败"
 
 #: svn/main.c:1218
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
-msgstr "“%s”不是有效的深度；尝试 0，1，或 2"
+msgstr "“%s” 不是有效的深度；尝试 “empty”，“files”，“immediates”，或 “infinity”"
 
 #: svn/main.c:1312 svn/main.c:1322
 msgid "--auto-props and --no-auto-props are mutually exclusive"
