@@ -36,6 +36,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_client_private.h"
 
 
 /*** Getting update information ***/
@@ -415,17 +416,20 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
   return err;
 }
 
-struct copy_source_baton
+/* The baton for use with copyfrom_info_receiver(). */
+typedef struct
 {
-  const char **copy_source;
+  const char *target_path;
+  const char *path;
+  svn_revnum_t rev;
   apr_pool_t *pool;
-};
+} copyfrom_info_t;
 
 /* A log callback conforming to the svn_log_message_receiver_t
    interface for obtaining the copy source of a node at a path and
-   storing it in *BATON (a struct copy_source_baton *). */
+   storing it in *BATON (a struct copyfrom_info_t *). */
 static svn_error_t *
-copy_source_receiver(void *baton,
+copyfrom_info_receiver(void *baton,
                      apr_hash_t *changed_paths,
                      svn_revnum_t revision,
                      const char *author,
@@ -433,52 +437,94 @@ copy_source_receiver(void *baton,
                      const char *message,
                      apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
-  void *val;
-  const char *copy_source_path;
-  svn_log_changed_path_t *changed_path;
-  struct copy_source_baton *copy_source_baton;
-  copy_source_baton = baton;
-  /*FIXME: if the rev at which this node is created has few other node 
-   changes too extract only our node. */
-  for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
+  copyfrom_info_t *copyfrom_info = baton;
+  if (copyfrom_info->path)
+    /* The copy source has already been found. */
+    return SVN_NO_ERROR;
+
+  if (changed_paths)
     {
-      apr_hash_this(hi, NULL, NULL, &val);
-      changed_path = val;
+      apr_hash_index_t *hi;
+      char *path;
+      svn_log_changed_path_t *changed_path;
+
+      for (hi = apr_hash_first(NULL, changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          void *val;
+          apr_hash_this(hi, (void *) &path, NULL, &val);
+          changed_path = val;
+
+          /* Consider only the path we're interested in. */
+          /* ### FIXME: Look for moved parents of target_path. */
+          if (changed_path->copyfrom_path &&
+              SVN_IS_VALID_REVNUM(changed_path->copyfrom_rev) &&
+              strcmp(path, copyfrom_info->target_path) == 0)
+            {
+              copyfrom_info->path = apr_pstrdup(copyfrom_info->pool,
+                                                changed_path->copyfrom_path);
+              copyfrom_info->rev = changed_path->copyfrom_rev;
+              break;
+            }
+        }
     }
-  copy_source_path = changed_path->copyfrom_path;
-  
-  *((char **) copy_source_baton->copy_source) = 
-                     apr_pstrdup(copy_source_baton->pool, copy_source_path);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client__get_copy_source(const char **copy_source,
-                            svn_ra_session_t *ra_session,
-                            const char *rel_path,
-                            svn_revnum_t rev,
+svn_client__get_copy_source(const char *path_or_url,
+                            const svn_opt_revision_t *rev,
+                            const char **copyfrom_path,
+                            svn_revnum_t *copyfrom_rev,
+                            svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
   svn_error_t *err;
-  struct copy_source_baton copy_source_baton;
-  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
-  *copy_source = NULL;
-  copy_source_baton.copy_source = copy_source;
-  copy_source_baton.pool = pool;
-  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
+  copyfrom_info_t copyfrom_info = { NULL, NULL, SVN_INVALID_REVNUM, pool };
+  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(path_or_url));
+  svn_opt_revision_t oldest_rev;
 
-  /* Trace back in history to find the revision at which this node
-     was created (copied or added). */
+  oldest_rev.kind = svn_opt_revision_number;
+  oldest_rev.value.number = 1;
+
+  {
+    svn_ra_session_t *ra_session;
+    svn_revnum_t at_rev;
+    const char *at_url;
+    SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
+                                             path_or_url, rev, rev, ctx,
+                                             pool));
+
+    SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
+                                              path_or_url, NULL, ra_session,
+                                              NULL, pool));
+  }
+
+  APR_ARRAY_PUSH(rel_paths, const char *) = path_or_url;
+
+  /* Find the copy source.  Trace back in history to find the revision
+     at which this node was created (copied or added). */
+  err = svn_client_log3(rel_paths, rev, rev, &oldest_rev, 0, TRUE, TRUE,
+                        copyfrom_info_receiver, &copyfrom_info, ctx, pool);
+  /* ### Reuse ra_session by way of svn_ra_get_log()?
   err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, TRUE, TRUE,
-                       copy_source_receiver, &copy_source_baton, pool);
-  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
-              err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
+                       copyfrom_info_receiver, &copyfrom_info, pool);
+  */
+  if (err)
     {
-      /* A locally-added but uncommitted versioned resource won't
-         exist in the repository. */
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+          err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+        {
+          /* A locally-added but uncommitted versioned resource won't
+             exist in the repository. */
+            svn_error_clear(err);
+            err = SVN_NO_ERROR;
+        }
+      return err;
     }
-  return err;
+
+  *copyfrom_path = copyfrom_info.path;
+  *copyfrom_rev = copyfrom_info.rev;
+  return SVN_NO_ERROR;
 }
