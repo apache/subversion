@@ -57,9 +57,8 @@ Candidate changes:
      This bug has the affect of causing dumpfiles generated from affected
      datasets to be unloadable (e.g. if a child of a directory sorts above
      the directory, and both are to be added in the same revision).
-   Votes for r24755 only:
-     +1: cmpilato, dlr, hwright
    Votes:
+     +1: cmpilato (r24755 only), dlr, hwright (r24755 only)
      +0: lgo
 
 Veto-blocked changes:
