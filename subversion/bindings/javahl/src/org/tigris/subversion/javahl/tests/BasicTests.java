@@ -782,6 +782,8 @@ public class BasicTests extends SVNTests
                                    "Copy files", true),
                      2);
         thisTest.checkStatus();
+
+        assertExpectedCopySource(sources[0], "A/B/F/alpha", thisTest);
     }
 
     /**
@@ -824,6 +826,34 @@ public class BasicTests extends SVNTests
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "Move files", true), 2);
         thisTest.checkStatus();
+
+        assertExpectedCopySource(new CopySource(srcPaths[0],
+                                                Revision.getInstance(1), null),
+                                 "A/B/F/alpha", thisTest);
+    }
+
+    /**
+     * Assert that the copy source discovered for
+     * <code>destPath</code> at {@link Revision#HEAD} is equivalent to
+     * <code>expectedSrc</code>.
+     * @exception SubversionException If retrieval of the copy source fails.
+     * @since 1.5
+     */
+    private void assertExpectedCopySource(CopySource expectedSrc,
+                                          String destPath, OneTest thisTest)
+        throws SubversionException
+    {
+        String wcPath = new File(thisTest.getWCPath(), destPath).getPath();
+        CopySource src = client.getCopySource(wcPath, Revision.HEAD);
+        // ### FIXME: We really want consistent path formats:
+        //assertEquals("Unexpected copy source path",
+         //             expectedSrc.getPath(), src.getPath());
+        assertTrue("Unexpected copy source path",
+                   expectedSrc.getPath().endsWith(src.getPath()));
+        assertEquals("Unexpected copy source revision",
+                     expectedSrc.getRevision(), src.getRevision());
+        assertEquals("Unexpected copy source peg revision",
+                     expectedSrc.getPegRevision(), src.getPegRevision());
     }
 
     /**

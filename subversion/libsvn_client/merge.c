@@ -46,6 +46,7 @@
 
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_client_private.h"
 
 #include "svn_private_config.h"
 

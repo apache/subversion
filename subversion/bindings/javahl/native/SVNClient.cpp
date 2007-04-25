@@ -48,6 +48,7 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "private/svn_client_private.h"
 #include "svn_private_config.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
@@ -2087,4 +2088,25 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
                                 callback,
                                 recurse ? TRUE : FALSE,
                                 ctx, requestPool.pool()), );
+}
+
+jobject
+SVNClient::getCopySource(const char *path, Revision &revision)
+{
+    Pool requestPool;
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return NULL;
+    const char *copyfromPath;
+    svn_revnum_t copyfromRev;
+    svn_error_t *err = svn_client__get_copy_source(path, revision.revision(),
+                                                   &copyfromPath, &copyfromRev,
+                                                   ctx, requestPool.pool());
+    if (err)
+    {
+        JNIUtil::handleSVNError(err);
+        return NULL;
+    }
+    return CopySources::makeJCopySource(copyfromPath, copyfromRev,
+                                        requestPool);
 }

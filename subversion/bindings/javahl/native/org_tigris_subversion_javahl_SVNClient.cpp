@@ -1599,7 +1599,7 @@ Java_org_tigris_subversion_javahl_SVNClient_info2
 
 JNIEXPORT jobject JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_getCopySource
-(JNIEnv *env, jobject jthis, jstring path)
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision)
 {
   JNIEntry(SVNClient, getCopySource);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1608,8 +1608,15 @@ Java_org_tigris_subversion_javahl_SVNClient_getCopySource
       JNIUtil::throwError("bad C++ this");
       return NULL;
     }
-  // ### TODO: Implement me!
-  return NULL;
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  Revision rev(jrevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+ 
+  return cl->getCopySource(path, rev);
 }
 
 JNIEXPORT void JNICALL

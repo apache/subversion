@@ -53,6 +53,7 @@ class SVNClient :public SVNBase
  public:
   void info2(const char *path, Revision &revision, Revision &pegRevision,
              bool recurse, InfoCallback *callback);
+  jobject getCopySource(const char *path, Revision &revision);
   void unlock(Targets &targets, bool force);
   void lock(Targets &targets, const char *comment, bool force);
   jobjectArray revProperties(jobject jthis, const char *path,

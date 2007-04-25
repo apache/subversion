@@ -221,16 +221,6 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
                                apr_pool_t *pool);
 
 
-/* Retrieve the copy source of the node at REL_PATH at REV and store
-   it in COPY_SOURCE. If REL_PATH is not a copy (or doesn't exist),
-   set *COPY_SOURCE to NULL.  Use POOL for temporary allocations. */
-svn_error_t *
-svn_client__get_copy_source(const char **copy_source,
-                            svn_ra_session_t *ra_session,
-                            const char *rel_path,
-                            svn_revnum_t rev,
-                            apr_pool_t *pool);
-
 /* ---------------------------------------------------------------- */
 
 /*** RA callbacks ***/
