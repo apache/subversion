@@ -209,6 +209,28 @@ svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
                              svn_boolean_t recurse, svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
+/* Retrieve the oldest revision of the node at REL_PATH at REV since
+   it was last copied (if applicable), and store it in OLDEST_REV.  If
+   REL_PATH does not exist in that REV, set *OLDEST_REV to
+   SVN_INVALID_REVNUM.  Use POOL for temporary allocations. */
+svn_error_t *
+svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
+                               svn_ra_session_t *ra_session,
+                               const char *rel_path,
+                               svn_revnum_t rev,
+                               apr_pool_t *pool);
+
+
+/* Retrieve the copy source of the node at REL_PATH at REV and store
+   it in COPY_SOURCE. If REL_PATH is not a copy (or doesn't exist),
+   set *COPY_SOURCE to NULL.  Use POOL for temporary allocations. */
+svn_error_t *
+svn_client__get_copy_source(const char **copy_source,
+                            svn_ra_session_t *ra_session,
+                            const char *rel_path,
+                            svn_revnum_t rev,
+                            apr_pool_t *pool);
+
 /* ---------------------------------------------------------------- */
 
 /*** RA callbacks ***/

@@ -351,22 +351,6 @@ struct path_driver_cb_baton
   svn_boolean_t is_move;
 };
 
-/* A log callback conforming to the svn_log_message_receiver_t
-   interface for obtaining the last revision of a node at a path and
-   storing it in *BATON (an svn_revnum_t). */
-static svn_error_t *
-revnum_receiver(void *baton,
-                apr_hash_t *changed_paths,
-                svn_revnum_t revision,
-                const char *author,
-                const char *date,
-                const char *message,
-                apr_pool_t *pool)
-{
-  *((svn_revnum_t *) baton) = revision;
-  return SVN_NO_ERROR;
-}
-
 /* Obtain the implied merge info of repository-relative path PATH in
    *IMPLIED_MERGEINFO (e.g. every revision of the node at PATH since
    it last appeared).  REL_PATH corresponds to PATH, but is relative
@@ -379,32 +363,16 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
                        svn_revnum_t rev,
                        apr_pool_t *pool)
 {
-  svn_error_t *err;
-  svn_revnum_t oldest_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t oldest_rev;
   svn_merge_range_t *range;
   apr_array_header_t *rangelist;
-  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
 
   *implied_mergeinfo = apr_hash_make(pool);
-  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
 
-  /* Trace back in history to find the revision at which this node
-     was created (copied or added). */
-  err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
-                       revnum_receiver, &oldest_rev, pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
-          err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
-        {
-          /* A locally-added but uncommitted versioned resource won't
-             exist in the repository. */
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-        }
-
-      return err;
-    }
+  SVN_ERR(svn_client__oldest_rev_at_path(&oldest_rev, ra_session, rel_path,
+                                         rev, pool));
+  if (oldest_rev == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
   range = apr_palloc(pool, sizeof(*range));
   range->start = oldest_rev;
@@ -413,7 +381,7 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
   apr_hash_set(*implied_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 /* Obtain the implied merge info and the existing merge info of the
