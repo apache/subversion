@@ -142,7 +142,7 @@ copyfrom_info_receiver(void *baton,
 
 svn_error_t *
 svn_client__get_copy_source(const char *path_or_url,
-                            const svn_opt_revision_t *rev,
+                            const svn_opt_revision_t *revision,
                             const char **copyfrom_path,
                             svn_revnum_t *copyfrom_rev,
                             svn_client_ctx_t *ctx,
@@ -161,8 +161,8 @@ svn_client__get_copy_source(const char *path_or_url,
     svn_revnum_t at_rev;
     const char *at_url;
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
-                                             path_or_url, rev, rev, ctx,
-                                             pool));
+                                             path_or_url, revision, revision,
+                                             ctx, pool));
 
     SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
                                               path_or_url, NULL, ra_session,
@@ -173,8 +173,9 @@ svn_client__get_copy_source(const char *path_or_url,
 
   /* Find the copy source.  Trace back in history to find the revision
      at which this node was created (copied or added). */
-  err = svn_client_log3(rel_paths, rev, rev, &oldest_rev, 0, TRUE, TRUE,
-                        copyfrom_info_receiver, &copyfrom_info, ctx, pool);
+  err = svn_client_log3(rel_paths, revision, revision, &oldest_rev, 0,
+                        TRUE, TRUE, copyfrom_info_receiver, &copyfrom_info,
+                        ctx, pool);
   /* ### Reuse ra_session by way of svn_ra_get_log()?
   err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, TRUE, TRUE,
                        copyfrom_info_receiver, &copyfrom_info, pool);
@@ -194,6 +195,56 @@ svn_client__get_copy_source(const char *path_or_url,
 
   *copyfrom_path = copyfrom_info.path;
   *copyfrom_rev = copyfrom_info.rev;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__recommend_merge_sources(const char *path_or_url,
+                                    const svn_opt_revision_t *revision,
+                                    apr_array_header_t **recommendations,
+                                    svn_client_ctx_t *ctx,
+                                    apr_pool_t *pool)
+{
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_rev;
+  apr_hash_t *mergeinfo;
+  apr_hash_index_t *hi;
+
+  *recommendations = apr_array_make(pool, 1, sizeof(const char *));
+
+  /* In our ideal algorithm, the list of recommendations should be
+     ordered by:
+
+     1) The most recent existing merge source.
+     2) The copyfrom source (which will also be listed as a merge
+        source if the copy was made with a 1.5+ client and server).
+     3) All other merge sources, most recent to least recent.
+
+     However, determining the order of application of merge sources
+     requires a new RA API.  Until such an API is available, our
+     algorithm will be:
+
+     1) The copyfrom source.
+     2) All remaining merge sources (unordered). */
+
+  /* ### TODO: Use RA APIs directly to improve efficiency. */
+  SVN_ERR(svn_client__get_copy_source(path_or_url, revision, &copyfrom_path,
+                                      &copyfrom_rev, ctx, pool));
+  APR_ARRAY_PUSH(*recommendations, const char *) = copyfrom_path;
+
+  SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, revision,
+                                   ctx, pool));
+  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      const char *path;
+      apr_hash_this(hi, (void *) &path, NULL, NULL);
+      if (strcmp(path, copyfrom_path) != 0)
+        {
+          APR_ARRAY_PUSH(*recommendations, const char *) = apr_pstrdup(pool,
+                                                                       path);
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 

@@ -2643,15 +2643,16 @@ svn_client_merge_peg3(const char *source,
     }
   else
     {
-      /* If a merge source was not specified, try to derive it from
-         copy source. */
-      const char *copy_source_path;
+      /* If a merge source was not specified, try to derive it. */
+      apr_array_header_t *source_recommendations;
       svn_revnum_t rev;
       svn_opt_revision_t target_revision;
       target_revision.kind = svn_opt_revision_working;
-      SVN_ERR(svn_client__get_copy_source(target_wcpath, &target_revision,
-                                          &copy_source_path, &rev, ctx, pool));
-      if (copy_source_path)
+      SVN_ERR(svn_client__recommend_merge_sources(target_wcpath,
+                                                  &target_revision,
+                                                  &source_recommendations,
+                                                  ctx, pool));
+      if (source_recommendations->nelts > 0)
         {
           /* Prepend the repository root path to the copy source path. */
           const char *repos_root;
@@ -2668,7 +2669,9 @@ svn_client_merge_peg3(const char *source,
                                                    ctx,
                                                    pool));
           SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
-          URL = apr_pstrcat(pool, repos_root, copy_source_path, NULL);
+          URL = apr_pstrcat(pool, repos_root,
+                            APR_ARRAY_IDX(source_recommendations, 0, char *),
+                            NULL);
         }
       else
         {
