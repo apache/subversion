@@ -2645,25 +2645,28 @@ svn_client_merge_peg3(const char *source,
     {
       /* If a merge source was not specified, try to derive it from
          copy source. */
-      svn_ra_session_t *ra_session;
-      svn_revnum_t working_revnum;
-      svn_opt_revision_t wc_revision;
-      const char *working_copy_url;
       const char *copy_source_path;
-      wc_revision.kind = svn_opt_revision_working;
-      SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                               &working_revnum,
-                                               &working_copy_url,
-                                               target_wcpath,
-                                               &wc_revision,
-                                               &wc_revision,
-                                               ctx,
-                                               pool));
-      SVN_ERR(svn_client__get_copy_source(&copy_source_path, ra_session,
-                                          "", working_revnum, pool));
+      svn_opt_revision_t target_revision;
+      target_revision.kind = svn_opt_revision_working;
+      SVN_ERR(svn_client__get_copy_source(target_wcpath, &target_revision,
+                                          &copy_source_path, NULL, ctx, pool));
       if (copy_source_path)
         {
+          /* Prepend the repository root path to the copy source path. */
           const char *repos_root;
+          svn_ra_session_t *ra_session;
+          svn_revnum_t working_revnum;
+          const char *target_url;
+
+          /* ### TODO: Try something cheaper than creating a RA session. */
+          SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                                   &working_revnum,
+                                                   &target_url,
+                                                   target_wcpath,
+                                                   &target_revision,
+                                                   &target_revision,
+                                                   ctx,
+                                                   pool));
           SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
           URL = apr_pstrcat(pool, repos_root, copy_source_path, NULL);
         }
