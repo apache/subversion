@@ -80,6 +80,10 @@ class SvnFsTest < Test::Unit::TestCase
     FileUtils.mv(@fs.path, backup_path)
     FileUtils.mkdir_p(@fs.path)
 
+    assert_raises(Svn::Error::RaLocalReposOpenFailed) do
+      ctx.log_message(path, rev)
+    end
+
     yield(backup_path, @fs.path)
     assert_equal(log, ctx.log_message(path, rev))
   end
