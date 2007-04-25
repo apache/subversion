@@ -58,7 +58,7 @@ Candidate changes:
      datasets to be unloadable (e.g. if a child of a directory sorts above
      the directory, and both are to be added in the same revision).
    Votes:
-     +1: cmpilato (r24755 only), dlr, hwright (r24755 only)
+     +1: cmpilato, dlr, hwright (r24755 only)
      +0: lgo
 
 Veto-blocked changes:
