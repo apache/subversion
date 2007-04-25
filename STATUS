@@ -41,15 +41,6 @@ Candidate changes:
     Votes:
       +1: blair, cmpilato
 
- * r23910
-   Fix issue 1789: large 'svn diff' on Win32 fails
-   Justification:
-     'svn diff' is a rather common use-case, change only
-     does a fallback for one specific (Windows) error code
-   Votes:
-     +1: dionisos, dlr
-     +0: malcolm
-
  * r24497, r24504
    Make Perl-based txdelta_window_handler actually usable by editors
    and related functions.
@@ -98,6 +89,15 @@ Veto-blocked changes:
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
 Approved changes:
+
+ * r23910
+   Fix issue 1789: large 'svn diff' on Win32 fails
+   Justification:
+     'svn diff' is a rather common use-case, change only
+     does a fallback for one specific (Windows) error code
+   Votes:
+     +1: dionisos, dlr, lgo
+     +0: malcolm
 
  * r24483
    Stop merge notifications for locally modified files unchanged by a merge. 
