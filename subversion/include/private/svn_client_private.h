@@ -52,11 +52,11 @@ svn_client__get_copy_source(const char *path_or_url,
  * recommendations are available).  Use @a pool for all allocations.
  */
 svn_error_t *
-svn_client__recommend_merge_sources(const char *path_or_url,
-                                    const svn_opt_revision_t *revision,
-                                    apr_array_header_t **recommendations,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *pool);
+svn_client__suggest_merge_sources(const char *path_or_url,
+                                  const svn_opt_revision_t *revision,
+                                  apr_array_header_t **suggestions,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

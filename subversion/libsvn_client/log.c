@@ -199,18 +199,18 @@ svn_client__get_copy_source(const char *path_or_url,
 }
 
 svn_error_t *
-svn_client__recommend_merge_sources(const char *path_or_url,
-                                    const svn_opt_revision_t *revision,
-                                    apr_array_header_t **recommendations,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *pool)
+svn_client__suggest_merge_sources(const char *path_or_url,
+                                  const svn_opt_revision_t *revision,
+                                  apr_array_header_t **suggestions,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool)
 {
   const char *copyfrom_path;
   svn_revnum_t copyfrom_rev;
   apr_hash_t *mergeinfo;
   apr_hash_index_t *hi;
 
-  *recommendations = apr_array_make(pool, 1, sizeof(const char *));
+  *suggestions = apr_array_make(pool, 1, sizeof(const char *));
 
   /* In our ideal algorithm, the list of recommendations should be
      ordered by:
@@ -230,7 +230,7 @@ svn_client__recommend_merge_sources(const char *path_or_url,
   /* ### TODO: Use RA APIs directly to improve efficiency. */
   SVN_ERR(svn_client__get_copy_source(path_or_url, revision, &copyfrom_path,
                                       &copyfrom_rev, ctx, pool));
-  APR_ARRAY_PUSH(*recommendations, const char *) = copyfrom_path;
+  APR_ARRAY_PUSH(*suggestions, const char *) = copyfrom_path;
 
   SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, revision,
                                    ctx, pool));
@@ -240,8 +240,7 @@ svn_client__recommend_merge_sources(const char *path_or_url,
       apr_hash_this(hi, (void *) &path, NULL, NULL);
       if (strcmp(path, copyfrom_path) != 0)
         {
-          APR_ARRAY_PUSH(*recommendations, const char *) = apr_pstrdup(pool,
-                                                                       path);
+          APR_ARRAY_PUSH(*suggestions, const char *) = apr_pstrdup(pool, path);
         }
     }
 
