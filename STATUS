@@ -99,19 +99,6 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r23217, r23223, r23225, r23226, r23227, r23231, r23232
-    Fix issue #2705, with tests: repos_replay failed
-      on revisions with copy-with-modifications from
-      unreadable directories.
-    Justification:
-      Prevents ra_replay (svnsync, SVK) on real-world repositories,
-      like r120621 in the GCC repo if syncing trunk only.
-    Notes:
-      glasser (nominating this) only tested that merge was clean and
-      did not run tests.
-    Votes:
-      +1: glasser, malcolm, vgeorgescu
-
  * r24483
    Stop merge notifications for locally modified files unchanged by a merge. 
    Justification:
