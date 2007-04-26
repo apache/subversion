@@ -22,6 +22,31 @@
 Describes Subversion 1.5.0, except where noted as
 <i>unimplemented.</i></p>
 
+<div class="h2" id="merge">
+<h2>Merge operations</h2>
+
+<p>Merge operations involving a single source URL (e.g. <code>svn
+merge -cN URL</code>) allow the revision range and source URL
+parameters to be optional.  The revision range defaults to "all
+unmerged revisions", while the source URL is inferred using a
+combination of merge info and copy history.  When a revision range is
+not provided, merge operations are not able to "revert" changes
+(e.g. a la <code>svn merge -c -7 URL</code>).</p>
+
+<p>See the <a href="#repeated-merge">repeated merge</a> section below
+for discussion of various merge algorithms, and details on the merge
+algorithm used.</p>
+
+<p>Merge info is <em>not taken into consideration for three-way
+merges</em>, merge operations which do not specify identical "from"
+and "to" URLs (e.g. <code>svn merge FROM_URL@REV1 TO_URL@REV2</code>).
+In the future, Subversion will likely support this, but currently
+lacks sufficient history and merge info between the repository and
+client to perform this operation in a reasonable manner.  The primary
+use case this will impact is vendor branches.</p>
+
+</div>  <!-- merge -->
+
 <div class="h2" id="diff-status">
 <h2>Diff/Status operations</h2>
 
