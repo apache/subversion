@@ -625,7 +625,7 @@ public class BasicTests extends SVNTests
         itemPath = fileToSVNPath(new File(thisTest.getWCPath(),
                                           "/A/B/E/alpha"),
                                  false);
-        client.propertySet(itemPath, "cqcq", "qrz", false);
+        client.propertyCreate(itemPath, "cqcq", "qrz", false, false);
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
 
         client.properties(itemPath, null, null, false, callback);

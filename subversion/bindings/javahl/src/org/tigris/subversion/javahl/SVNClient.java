@@ -1447,9 +1447,12 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    public native void propertyCreate(String path, String name, byte[] value,
-                                      boolean recurse, boolean force)
-            throws ClientException;
+    public void propertyCreate(String path, String name, byte[] value,
+                               boolean recurse, boolean force)
+            throws ClientException
+    {
+        propertyCreate(path, name, new String(value), recurse, force);
+    }
 
     /**
      * Retrieve one revsision property of one item
