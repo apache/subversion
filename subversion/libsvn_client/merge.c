@@ -1219,7 +1219,7 @@ elide_children(apr_array_header_t *children_with_mergeinfo,
           path_prefix = svn_path_dirname(child_wcpath, iterpool);
           path_suffix = svn_path_basename(child_wcpath, iterpool);
 
-          while (strcmp(path_prefix, target_wcpath))
+          while (strcmp(path_prefix, target_wcpath) != 0)
             {
               path_suffix = svn_path_join(svn_path_basename(path_prefix,
                                                             iterpool),
