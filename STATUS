@@ -50,6 +50,16 @@ Candidate changes:
      +1: clkao
      +0: glasser (I don't grok SWIG, but having this available in Perl is good)
 
+  * r24697, -9, 24793
+    Fix issue 2743: fix property handling for locally replaced files
+    Justification:
+      Regression introduced in 1.4.0
+    Votes:
+      +1: lgo
+    Notes:
+      There's a small merge conflict when merging the test case, backport branch
+      not needed though.
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
