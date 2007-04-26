@@ -1303,7 +1303,7 @@ test_list = [ None,
               url_props_ops,
               removal_schedule_added_props,
               update_props_on_wc_root,
-              XFail(props_on_replaced_file),
+              props_on_replaced_file,
              ]
 
 if __name__ == '__main__':
