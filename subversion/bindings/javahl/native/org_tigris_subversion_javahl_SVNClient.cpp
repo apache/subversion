@@ -855,7 +855,7 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyRemove
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_propertyCreate__Ljava_lang_String_2Ljava_lang_String_2Ljava_lang_String_2ZZ
+Java_org_tigris_subversion_javahl_SVNClient_propertyCreate
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jstring jvalue,
  jboolean jrecurse, jboolean jforce)
 {
@@ -879,35 +879,6 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyCreate__Ljava_lang_String_2L
     return;
 
   cl->propertyCreate(path, name, value, jrecurse ? true:false,
-                     jforce ? true:false);
-}
-
-JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_propertyCreate__Ljava_lang_String_2Ljava_lang_String_2_3BZZ
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jbyteArray jvalue,
- jboolean jrecurse, jboolean jforce)
-{
-  JNIEntry(SVNClient, propertyCreate);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError(_("bad C++ this"));
-      return;
-    }
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  JNIStringHolder name(jname);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  JNIByteArray value(jvalue);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  cl->propertyCreate(path, name, (const char *)value.getBytes(),
-                     jrecurse ? true:false,
                      jforce ? true:false);
 }
 
