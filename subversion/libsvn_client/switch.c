@@ -186,8 +186,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
       if (err)
         {
           if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
-            svn_error_clear(err);
-            err = SVN_NO_ERROR;
+            {
+              svn_error_clear(err);
+              err = SVN_NO_ERROR;
+            }
+          /* Any other error is not returned until after we sleep. */
         }
       else
         {
