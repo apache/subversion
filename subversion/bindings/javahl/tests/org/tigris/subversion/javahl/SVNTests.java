@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -15,10 +15,7 @@
  * ====================================================================
  * @endcopyright
  */
-package org.tigris.subversion.javahl.tests;
-
-import junit.framework.TestCase;
-import org.tigris.subversion.javahl.*;
+package org.tigris.subversion.javahl;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -27,6 +24,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import junit.framework.TestCase;
 
 /**
  * common base class for the javahl binding tests
