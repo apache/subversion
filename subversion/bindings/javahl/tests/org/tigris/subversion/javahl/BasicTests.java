@@ -15,7 +15,7 @@
  * ====================================================================
  * @endcopyright
  */
-package org.tigris.subversion.javahl.tests;
+package org.tigris.subversion.javahl;
 
 import org.tigris.subversion.javahl.*;
 
