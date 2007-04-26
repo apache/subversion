@@ -1128,7 +1128,7 @@ def merge_similar_unrelated_trees(sbox):
 def merge_one_file_helper(sbox, arg_flav, record_only = 0):
   "ARG_FLAV is one of 'r' (revision range) or 'c' (single change)."
 
-  if arg_flav not in ('r', 'c'):
+  if arg_flav not in ('r', 'c', '*'):
     raise svntest.Failure("Unrecognized flavor of merge argument")
 
   sbox.build()
@@ -1170,6 +1170,10 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
                                        ['U    ' + rho_path + '\n'], [],
                                        'merge', '-c', '2',
                                        rho_url, rho_path)
+  elif arg_flav == '*':
+    svntest.actions.run_and_verify_svn(None ,
+                                       ['U    ' + rho_path + '\n'], [],
+                                       'merge', rho_url, rho_path)
 
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/D/G/rho', status='MM')
@@ -1232,6 +1236,10 @@ def merge_one_file_using_r(sbox):
 def merge_one_file_using_c(sbox):
   "merge one file (issue #1150) using the -c option"
   merge_one_file_helper(sbox, 'c')
+
+def merge_one_file_using_implicit_revs(sbox):
+  "merge one file without explicit revisions"
+  merge_one_file_helper(sbox, '*')
 
 def merge_record_only(sbox):
   "mark a revision range as merged"
@@ -5592,6 +5600,7 @@ test_list = [ None,
               three_way_merge_add_of_existing_binary_file,
               merge_one_file_using_r,
               merge_one_file_using_c,
+              merge_one_file_using_implicit_revs,
               merge_record_only,
               merge_in_new_file_and_diff,
               merge_skips_obstructions,
