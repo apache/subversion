@@ -79,8 +79,6 @@ class SVNClient :public SVNBase
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, jobject outputStream,
                          size_t bufSize);
-  void propertyCreate(const char *path, const char *name,
-                      const char *value, bool recurse, bool force);
   void propertyRemove(const char *path, const char *name, bool recurse);
   void propertySet(const char *path, const char *name, const char *value,
                    bool recurse, bool force);

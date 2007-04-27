@@ -804,17 +804,6 @@ void SVNClient::propertyRemove(const char *path, const char *name,
                 SVN_INVALID_REVNUM);
 }
 
-void SVNClient::propertyCreate(const char *path, const char *name,
-                               const char *value, bool recurse, bool force)
-{
-    Pool requestPool;
-    SVN_JNI_NULL_PTR_EX(path, "path", );
-    SVN_JNI_NULL_PTR_EX(name, "name", );
-    SVN_JNI_NULL_PTR_EX(value, "value", );
-    svn_string_t *val = svn_string_create(value, requestPool.pool());
-    propertySet(path, name, val, recurse, force, SVN_INVALID_REVNUM);
-}
-
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      Revision *pegRevision, const char *outfileName,
