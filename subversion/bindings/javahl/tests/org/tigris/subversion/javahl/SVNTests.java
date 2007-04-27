@@ -50,6 +50,11 @@ class SVNTests extends TestCase
     protected final File rootDir;
 
     /**
+     * The Subversion file system type.
+     */
+    private String fsType;
+
+    /**
      * the base name of the test. Together with the testCounter this will make
      * up the directory name of the test.
      */
@@ -165,6 +170,18 @@ class SVNTests extends TestCase
             // in a trailing /, so add it now.
             if (!rootUrl.endsWith("/"))
                 rootUrl = rootUrl + '/';
+        }
+
+        // Determine the Subversion file system type to use.
+        if (this.fsType == null)
+        {
+            this.fsType =
+                System.getProperty("test.fstype", SVNAdmin.FSFS).toLowerCase();
+            if (!(SVNAdmin.FSFS.equals(this.fsType) ||
+                  SVNAdmin.BDB.equals(this.fsType)))
+            {
+                this.fsType = SVNAdmin.FSFS;
+            }
         }
 
         this.localTmp = new File(this.rootDir, "local_tmp");
