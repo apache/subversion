@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-04-27 08:54+0800\n"
-"PO-Revision-Date: 2007-04-25 12:13+0800\n"
+"PO-Revision-Date: 2007-04-27 09:43+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1308,7 +1308,7 @@ msgstr "使用两个 URL 不与合并信息修改兼容"
 #: libsvn_client/merge.c:2679
 #, c-format
 msgid "Unable to determine merge source for '%s', please provide an explicit source"
-msgstr ""
+msgstr "不能检测到“%s”的合并来源，请明确提供"
 
 #: libsvn_client/prop_commands.c:73
 #, c-format
@@ -6263,7 +6263,6 @@ msgstr ""
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
 #: svn/main.c:513
-#, fuzzy
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6297,15 +6296,17 @@ msgstr ""
 "将两个来源之间的差异应用至工作副本路径。\n"
 "用法: 1、merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
 "      2、merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-"      3、merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n"
+"      3、merge [-c M | -r N:M] [SOURCE[@REV] [WCPATH]]\n"
 "\n"
 "  1、第一种形式中，源 URL 的版本 N 与 M作为比较的来源。如果没有指定版本，默认为 HEAD。\n"
 "\n"
 "  2、在第二种形式中，两个源工作副本路径对应的仓库中的URL作为比较的来源。这里必须指定版本。\n"
 "\n"
-"  3、第三种形式中，SOURCE 可为 URL 或工作副本中的路径，后者会使用仓库中对应的URL。\n"
-"     比较源就是REV版本中的URL在版本 N 和 M 时的状态。REV默认为HEAD。\n"
-"\n"
+"  3、第三种形式中，SOURCE 可为 URL 或工作副本中的路径，后者会使用仓库中对应的 URL。\n"
+"    如果没有指定 WCPATH，就使用源 URL 的路径。如果不能自动检测 WCPATH，就显示错误\n"
+"    信息，询问 SOURCE。比较版本为 REV 的 URL，就像它在版本 N 到 M 存在一样。如果没有\n"
+"    给出 REV，默认为HEAD。选项“-c M”等价于“-r N:M”，其中 N = M-1。如果没有给出\n"
+"    版本范围，默认为 “-r OLDEST_REV_OF_SOURCE_AT_URL:HEAD”。\n"
 "  WCPATH 是接收修改的工作副本路径。WCPATH 默认值为“.”，除非来源中有与当前目录中同名的文件，\n"
 "  这时修改会直接应用至该文件。\n"
 
