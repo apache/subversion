@@ -115,7 +115,7 @@ StatusCallback::createJavaStatus(const char *path,
                              "JZLjava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;"
                              "JLorg/tigris/subversion/javahl/Lock;"
-                             "JJILjava/lang/String;)V");
+                             "JJILjava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
@@ -153,6 +153,7 @@ StatusCallback::createJavaStatus(const char *path,
   jlong jOODLastCmtDate = 0;
   jint jOODKind = org_tigris_subversion_javahl_NodeKind_none;
   jstring jOODLastCmtAuthor = NULL;
+  jstring jChangelist = NULL;
   if (status != NULL)
     {
       jTextType = EnumMapper::mapStatusKind(status->text_status);
@@ -220,6 +221,10 @@ StatusCallback::createJavaStatus(const char *path,
             return NULL;
 
           jLockCreationDate = entry->lock_creation_date;
+
+          jChangelist = JNIUtil::makeJString(entry->changelist);
+          if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
         }
     }
 
@@ -233,7 +238,7 @@ StatusCallback::createJavaStatus(const char *path,
                                jIsSwitched, jLockToken, jLockOwner,
                                jLockComment, jLockCreationDate, jLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
-                               jOODKind, jOODLastCmtAuthor);
+                               jOODKind, jOODLastCmtAuthor, jChangelist);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -286,6 +291,10 @@ StatusCallback::createJavaStatus(const char *path,
     return NULL;
 
   env->DeleteLocalRef(jOODLastCmtAuthor);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  env->DeleteLocalRef(jChangelist);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
