@@ -2039,6 +2039,10 @@ public class BasicTests extends SVNTests
         String[] cl = client.getChangelist(changelistName,
                                            thisTest.getWCPath());
         assertTrue(java.util.Arrays.equals(cl, paths));
+        // Does status report this changelist?
+        Status[] status = client.status(paths[0], false, false, false, false,
+                                        false);
+        assertEquals(status[0].getChangelist(), changelistName);
 
         // Remove the path from the changelist, and check to see if the path is
         // actually removed.

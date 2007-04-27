@@ -196,6 +196,13 @@ public class Status implements java.io.Serializable
     private String reposLastCmtAuthor;
 
     /**
+     * @since 1.5
+     * Set to the changelist of the item, or <code>null</code> if not under
+     * version control.
+     */
+    private String changelist;
+
+    /**
      * this constructor should only called from JNI code
      * @param path                  the file system path of item
      * @param url                   the url of the item
@@ -235,6 +242,7 @@ public class Status implements java.io.Serializable
      *                              out of date
      * @param reposLastCmtAuthor    the author of the last commit, if out of
      *                              date
+     * @param changelist            the changelist the item is a member of
      */
     public Status(String path, String url, int nodeKind, long revision,
                   long lastChangedRevision, long lastChangedDate,
@@ -246,7 +254,7 @@ public class Status implements java.io.Serializable
                   boolean switched, String lockToken, String lockOwner,
                   String lockComment, long lockCreationDate, Lock reposLock,
                   long reposLastCmtRevision, long reposLastCmtDate,
-                  int reposKind, String reposLastCmtAuthor)
+                  int reposKind, String reposLastCmtAuthor, String changelist)
     {
         this.path = path;
         this.url = url;
@@ -276,6 +284,7 @@ public class Status implements java.io.Serializable
         this.reposLastCmtDate = reposLastCmtDate;
         this.reposKind = reposKind;
         this.reposLastCmtAuthor = reposLastCmtAuthor;
+        this.changelist = changelist;
     }
 
     /**
@@ -670,6 +679,15 @@ public class Status implements java.io.Serializable
     public String getReposLastCmtAuthor()
     {
         return reposLastCmtAuthor;
+    }
+    
+    /**
+     * @return the changelist name
+     * @since 1.5
+     */
+    public String getChangelist()
+    {
+        return changelist;
     }
 
     /**
