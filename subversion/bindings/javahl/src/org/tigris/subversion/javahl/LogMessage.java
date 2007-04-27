@@ -85,7 +85,7 @@ public class LogMessage implements java.io.Serializable
         changedPaths = cp;
         revision = r;
         author = a;
-        timeMicros = 1000*d.getTime();
+        timeMicros = 1000 * d.getTime();
         date = d;
         message = m;
     }
@@ -139,7 +139,7 @@ public class LogMessage implements java.io.Serializable
      */
     public long getTimeMillis()
     {
-        return timeMicros/1000;
+        return timeMicros / 1000;
     }
 
     /**
@@ -148,8 +148,9 @@ public class LogMessage implements java.io.Serializable
      */
     public Date getDate()
     {
-        if (null == date) {
-            date = new Date(timeMicros/1000);
+        if (date == null)
+        {
+            date = new Date(timeMicros / 1000);
         }
         return date;
     }
