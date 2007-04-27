@@ -222,14 +222,13 @@ commands</em>, are:</p>
 <ul>
   <li><code>svn log</code></li>
   <li><code>svn blame</code></li>
-  <li><code>svn status --show-updates</code></li>
 </ul>
 
-<p>Both <code>svn info</code> and <code>svn ls --verbose</code> are
-purposely not included in this list, on the grounds that one would
-typically need more information than they can reasonably provide.
-Adding more output to these commands would clutter their interface,
-further reducing their utility.  </p>
+<p><code>svn info</code>, <code>svn ls --verbose</code> and <code>svn status
+--show-updates</code> are purposely not included in this list, on the grounds
+that one would typically need more information than they can reasonably provide.
+Adding more output to these commands would clutter their interface, further
+reducing their utility.</p>
 
 <p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
 single-character shortcut, will be introduced for the auditing commands.
@@ -293,11 +292,6 @@ merge, we should recurse until we find a commit which did not add merge info
 
 <div class="h5" id="auditing-questions">
 <h5>Pending Questions</h5>
-
-<ul>
-  <li>What happens when <code>svn status --show-updates</code> has
-  multiple original authors?</li>
-</ul>
 
 </div>  <!-- auditing-questions -->
 
