@@ -54,10 +54,12 @@ svn_cl__merge(apr_getopt_t *os,
   if (targets->nelts >= 1)
     {
       SVN_ERR(svn_opt_parse_path(&peg_revision1, &sourcepath1,
-                                 APR_ARRAY_IDX(targets, 0, const char *), pool));
+                                 APR_ARRAY_IDX(targets, 0, const char *),
+                                 pool));
       if (targets->nelts >= 2)
         SVN_ERR(svn_opt_parse_path(&peg_revision2, &sourcepath2,
-                                   APR_ARRAY_IDX(targets, 1, const char *), pool));
+                                   APR_ARRAY_IDX(targets, 1, const char *),
+                                   pool));
     }
 
   /* If an (optional) source, or a source plus WC path is provided,
