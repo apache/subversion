@@ -714,7 +714,6 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   sasl_conn_t *sasl_ctx;
   const char *mechstring = "", *last_err = "", *realmstring;
   const char *local_addrport = NULL, *remote_addrport = NULL;
-  char *hostname = NULL;
   svn_boolean_t success, compat = (realm == NULL);
   /* Reserve space for 3 callbacks (for the username, password and the
      array terminator). */
