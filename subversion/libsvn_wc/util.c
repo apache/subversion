@@ -234,7 +234,6 @@ svn_error_t *
 svn_wc__path_switched(const char *wc_path,
                       svn_boolean_t *switched,
                       const svn_wc_entry_t *entry,
-                      svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
   const char *wc_parent_path, *parent_child_url;

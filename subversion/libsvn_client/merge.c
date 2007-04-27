@@ -903,8 +903,7 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
 
           /* If WCPATH is switched, don't look any higher for inherited
              merge info. */
-          SVN_ERR(svn_wc__path_switched(wcpath, &switched, entry, adm_access,
-                                        pool));
+          SVN_ERR(svn_wc__path_switched(wcpath, &switched, entry, pool));
           if (switched)
             break;
         }
@@ -1256,8 +1255,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
       const char *walk_path;
 
       /* Check for second easy out: TARGET_WCPATH is switched. */
-      SVN_ERR(svn_wc__path_switched(target_wcpath, &switched, entry,
-                                    adm_access, pool));
+      SVN_ERR(svn_wc__path_switched(target_wcpath, &switched, entry, pool));
       if (!switched)
         {
           /* Get the TARGET_WCPATH's explicit mergeinfo. */
