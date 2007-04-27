@@ -1417,9 +1417,12 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    public native void propertyCreate(String path, String name, String value,
-                                      boolean recurse, boolean force)
-            throws ClientException;
+    public void propertyCreate(String path, String name, String value,
+                               boolean recurse, boolean force)
+            throws ClientException
+    {
+        propertySet(path, name, value, recurse, force);
+    }
 
     /**
      * Create and sets one property of an item with a byte array value

@@ -854,34 +854,6 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyRemove
   cl->propertyRemove(path, name, jrecurse ? true:false);
 }
 
-JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_propertyCreate
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jstring jvalue,
- jboolean jrecurse, jboolean jforce)
-{
-  JNIEntry(SVNClient, propertyCreate);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError(_("bad C++ this"));
-      return;
-    }
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  JNIStringHolder name(jname);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  JNIStringHolder value(jvalue);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  cl->propertyCreate(path, name, value, jrecurse ? true:false,
-                     jforce ? true:false);
-}
-
 JNIEXPORT jobject JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_revProperty
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jobject jrevision)
