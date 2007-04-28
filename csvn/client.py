@@ -68,5 +68,6 @@ class ClientSession(object):
     # Private. Convert a repository-relative copyfrom path into a proper
     # copyfrom URI
     def _abs_copyfrom_path(self, path):
-        return "%s/%s" % (self.url.rstrip("/"), path)
+        return svn_path_uri_encode("%s/%s" % (self.url.rstrip("/"), path),
+                                   self.iterpool)
 

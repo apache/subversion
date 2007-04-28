@@ -154,20 +154,20 @@ class Txn(object):
            directories."""
 
         kind = svn_node_none
-        if os.path.isfile(local_path):
-            kind = svn_node_file
-        elif os.path.isdir(local_path):
+        if os.path.isdir(local_path):
             kind = svn_node_dir
+        elif os.path.exists(local_path):
+            kind = svn_node_file
 
         # Don't add ignored files or directories
         if self.ignore_func and self.ignore_func(remote_path, kind):
             return
 
-        if os.path.isfile(local_path):
-            self._upload_file(remote_path, local_path)
-        elif (os.path.isdir(local_path) and
+        if (os.path.isdir(local_path) and
               self.check_path(remote_path) != svn_node_dir):
             self.mkdir(remote_path)
+        elif not os.path.isdir(local_path) and os.path.exists(local_path):
+            self._upload_file(remote_path, local_path)
 
         ignores = []
 
@@ -272,11 +272,16 @@ class Txn(object):
                 copyfrom_path = "%s/%s" % (copyfrom_path, path_component)
  
         if parent.ops.has_key(path):
-            kind = parent.open(path).kind
+            node = parent.open(path)
+            if node.action == "DELETE":
+                kind = svn_node_none
+            else:
+                kind = node.kind
         else:
             kind = self.session.check_path(copyfrom_path or total_path, rev)
 
         return (kind, parent)
+
 
 def _txn_commit_callback(info, baton, pool):
     client_txn = cast(baton, py_object).value
@@ -306,6 +311,10 @@ class _txn_operation(object):
                 return op
             elif action == "ADD" and op.action == "DELETE":
                 op.action = "REPLACE"
+                op.local_path = local_path
+                op.copyfrom_path = copyfrom_path
+                op.copyfrom_rev = copyfrom_rev
+                op.kind = kind
                 return op
             elif (action == "DELETE" and op.action == "OPEN" and
                   kind == svn_node_dir):
