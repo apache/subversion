@@ -306,23 +306,15 @@ svn_wc__load_props(apr_hash_t **base_props_p,
      our WC has prop caching, the user requested working props and there are no
      prop mods. */
   if (base_props_p
-      || (has_propcaching && ! entry->has_prop_mods))
+      || (has_propcaching && ! entry->has_prop_mods && entry->has_props))
     {
+      const char *prop_base_path;
+
+      SVN_ERR(svn_wc__prop_base_path(&prop_base_path, full_path,
+                                     kind, FALSE, pool));
       base_props = apr_hash_make(pool);
+      SVN_ERR(svn_wc__load_prop_file(prop_base_path, base_props, pool));
 
-      /* When this entry is scheduled for replacement, the base property file
-         is only there to revert to the original item, so it should be ignored 
-         here. */
-      if (entry->schedule != svn_wc_schedule_replace 
-          || !(has_propcaching && entry->has_props))
-        {
-          const char *prop_base_path;
-
-          SVN_ERR(svn_wc__prop_base_path(&prop_base_path, full_path,
-                                         kind, FALSE, pool));
-          
-          SVN_ERR(svn_wc__load_prop_file(prop_base_path, base_props, pool));
-        }
       if (base_props_p)
         *base_props_p = base_props;
     }
