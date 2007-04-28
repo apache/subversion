@@ -5229,8 +5229,8 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   # should reflect the combination of the inherited mergeinfo
   # with each merge performed.
   #
-  # Also test implied merge source when a merge target and
-  # revision range are specified.
+  # Also tests implied merge source and target when only a revision
+  # range is specified.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -5243,22 +5243,19 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   expected_disk, expected_status = setup_branch(sbox)
 
   # Merge r4 into A_COPY
-  # Search for the comment entitled "The Merge Kluge" elsewhere in
-  # this file, to understand why we shorten and chdir() below.
-  short_A_COPY_path = shorten_path_kludge(A_COPY_path)
-  short_A_COPY_rho_path = shorten_path_kludge(A_COPY_rho_path)
   saved_cwd = os.getcwd()
   try:
-    os.chdir(svntest.main.work_dir)
+    os.chdir(A_COPY_path)
     # Use run_and_verify_svn rather than run_and_verify_merge so we
     # can test the implied merge source functionality.
     svntest.actions.run_and_verify_svn(None,
-                                       ['U    ' + short_A_COPY_rho_path +
-                                        '\n'], [], 'merge', '-c4',
-                                       short_A_COPY_path)
+                                       ['U    ' +
+                                       os.path.join("D", "G", "rho") + '\n'],
+                                       [], 'merge', '-c4')
   finally:
     os.chdir(saved_cwd)
 
+  # Check the results of the merge.
   expected_status.tweak("A_COPY", status=' M')
   expected_status.tweak("A_COPY/D/G/rho", status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -5267,6 +5264,10 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
                                      A_COPY_path)
 
   # Merge r2:6 into A_COPY/D
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  #
   # A_COPY/D should inherit the mergeinfo '/A:1,4' from A_COPY
   # combine it with the discontinous merges performed directly on
   # it (A/D/ 2:3 and A/D 4:6) resulting in '/A/D:1,3-6'.
