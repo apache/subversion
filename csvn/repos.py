@@ -20,7 +20,7 @@ class Repos(object):
         """Get the latest revision in the repository"""
         return self.fs.latest_revnum()
 
-    def check_path(self, path, rev = None):
+    def check_path(self, path, rev = None, encoded=False):
         """Check whether the given PATH exists in the specified REV. If REV
            is not specified, look at the latest revision.
 
@@ -30,6 +30,7 @@ class Repos(object):
           ... a directory, then we return svn_node_dir
           ... unknown, then we return svn_node_unknowna
         """
+        assert(not encoded)
         root = self.fs.root(rev=rev, pool=self.iterpool)
         return root.check_path(path)
 
@@ -64,6 +65,9 @@ class Repos(object):
             commit_callback, commit_baton, svn_repos_authz_callback_t(),
             None, pool)
         return (editor, editor_baton)
+
+    def _relative_path(self, path):
+        return path
 
     # Private. Convert a repository-relative copyfrom path into a proper
     # copyfrom URI

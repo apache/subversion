@@ -3,6 +3,40 @@ from csvn.core import *
 from txn import Txn
 import os
 
+class ClientURI(object):
+
+    def __init__(self, uri, encoded=True):
+        """Create a ClientURI object from an absolute URI. If encoded=True, the
+           input string may be URI-encoded."""
+        pool = Pool()
+        if not encoded:
+            uri = svn_path_uri_encode(uri, pool)
+        self._as_parameter_ = svn_path_canonicalize(uri, pool)
+
+    def join(self, uri):
+        """Convert the specified absolute uri to a decoded path,
+           relative to me."""
+        return ClientURI(svn_path_join(self, uri, Pool()))
+
+    def dirname(self):
+        """Get the parent directory of this URI"""
+        return ClientURI(svn_path_dirname(self, Pool()))
+
+    def relative_path(self, uri, encoded=True):
+        """Convert the supplied URI to a decoded path, relative to me."""
+        pool = Pool()
+        if not encoded:
+            uri = svn_path_uri_encode(uri, pool)
+        child_path = svn_path_is_child(self, uri, pool) or uri
+        return svn_path_uri_decode(child_path, pool)
+
+    def longest_ancestor(self, uri):
+        """Get the longest ancestor of this URI and another URI"""
+        return ClientURI(svn_path_get_longest_ancestor(self, uri, Pool()))
+
+    def __str__(self):
+        return self._as_parameter_
+
 class ClientSession(object):
 
     def __init__(self, url, username=None, password=None):
@@ -11,7 +45,7 @@ class ClientSession(object):
 
         self.pool = Pool()
         self.iterpool = Pool()
-        self.url = url
+        self.url = ClientURI(url)
 
         self.client = POINTER(svn_client_ctx_t)()
         svn_client_create_context(byref(self.client), self.pool)
@@ -36,7 +70,7 @@ class ClientSession(object):
         self.iterpool.clear()
         return revnum.value
 
-    def check_path(self, path, rev = None):
+    def check_path(self, path, rev = None, encoded=True):
         """Check the status of PATH@REV. If REV is not specified,
            look at the latest revision in the repository.
 
@@ -47,6 +81,7 @@ class ClientSession(object):
           ... unknown, then we return svn_node_unknown
         """
 
+        path = self._relative_path(path, encoded)
         if rev is None:
             rev = self.latest_revnum()
         kind = svn_node_kind_t()
@@ -65,9 +100,12 @@ class ClientSession(object):
             commit_baton, NULL, FALSE, pool)
         return (editor, editor_baton)
 
+    # Private. Convert a URI to a repository-relative path
+    def _relative_path(self, path, encoded=True):
+        return self.url.relative_path(path, encoded)
+
     # Private. Convert a repository-relative copyfrom path into a proper
     # copyfrom URI
     def _abs_copyfrom_path(self, path):
-        return svn_path_uri_encode("%s/%s" % (self.url.rstrip("/"), path),
-                                   self.iterpool)
+        return self.url.join(ClientURI(path, False))
 

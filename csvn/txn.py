@@ -60,10 +60,13 @@ class Txn(object):
         """Check the status of PATH@REV. If PATH or any of its
            parents have been modified in this transaction, take this
            into consideration."""
+        path = self.session._relative_path(path)
         return self._check_path(path, rev)[0]
 
     def delete(self, path, base_rev=None):
         """Delete PATH from the repository as of base_rev"""
+
+        path = self.session._relative_path(path)
 
         kind, parent = self._check_path(path, base_rev)
 
@@ -78,6 +81,8 @@ class Txn(object):
 
     def mkdir(self, path):
         """Create a directory at PATH.""" 
+
+        path = self.session._relative_path(path)
 
         if self.ignore_func and self.ignore_func(path, svn_node_dir):
             return
@@ -102,6 +107,8 @@ class Txn(object):
     def propset(self, path, key, value):
         """Set the property named KEY to VALUE on the specified PATH"""
 
+        path = self.session._relative_path(path)
+
         kind, parent = self._check_path(path)
 
         if kind == svn_node_none:
@@ -118,10 +125,13 @@ class Txn(object):
            If LOCAL_PATH is supplied, update the new copy to match
            LOCAL_PATH."""
 
+        src_path = self.session._relative_path(src_path)
+        dest_path = self.session._relative_path(dest_path)
+
         if not src_rev:
             src_rev = self.session.latest_revnum()
 
-        kind = self.session.check_path(src_path, src_rev)
+        kind = self.session.check_path(src_path, src_rev, encoded=False)
         _, parent = self._check_path(dest_path)
 
         if kind == svn_node_none:
@@ -152,6 +162,8 @@ class Txn(object):
 
            This function does not add or update ignored files or
            directories."""
+
+        remote_path = self.session._relative_path(remote_path)
 
         kind = svn_node_none
         if os.path.isdir(local_path):
@@ -278,7 +290,8 @@ class Txn(object):
             else:
                 kind = node.kind
         else:
-            kind = self.session.check_path(copyfrom_path or total_path, rev)
+            kind = self.session.check_path(copyfrom_path or total_path, rev,
+                                           encoded=False)
 
         return (kind, parent)
 
