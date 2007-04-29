@@ -1003,22 +1003,9 @@ def run_tests(test_list, serial_only = False):
   if not is_child_process:
     safe_rmtree(temp_dir)
 
-  # Calculate pristine_url from test_area_url.
-  pristine_url = test_area_url + '/' + pristine_dir
-  if windows:
-    pristine_url = pristine_url.replace('\\', '/')  
-  
-  # Setup the pristine repository (and working copy)
-  actions.setup_pristine_repository()
-
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
     testnums = range(1, len(test_list))
-
-  # don't run tests in parallel when the tests don't support it or there 
-  # are only a few tests to run.
-  if serial_only or len(testnums) < 2:
-    parallel = 0
 
   if list_tests:
     print "Test #  Mode   Test Description"
@@ -1028,6 +1015,16 @@ def run_tests(test_list, serial_only = False):
 
     # done. just exit with success.
     sys.exit(0)
+
+  # don't run tests in parallel when the tests don't support it or there 
+  # are only a few tests to run.
+  if serial_only or len(testnums) < 2:
+    parallel = 0
+
+  # Calculate pristine_url from test_area_url.
+  pristine_url = test_area_url + '/' + pristine_dir
+  if windows:
+    pristine_url = pristine_url.replace('\\', '/')  
 
   # Setup the pristine repository (and working copy)
   actions.setup_pristine_repository()
