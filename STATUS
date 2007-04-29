@@ -50,7 +50,7 @@ Candidate changes:
      +1: clkao
      +0: glasser (I don't grok SWIG, but having this available in Perl is good)
 
-  * r24697, -9, 24793
+  * r24697, -9, 24793, 24827
     Fix issue 2743: fix property handling for locally replaced files
     Justification:
       Regression introduced in 1.4.0
