@@ -46,6 +46,7 @@ def _usage_exit():
   print "  --httpd-dir          : location where Apache HTTPD is installed"
   print "  --httpd-port         : port for Apache HTTPD; random port number"
   print "                         will be used, if not specified"
+  print " --list                : print test doc strings only"
   sys.exit(0)
 
 CMDLINE_TEST_SCRIPT_PATH = 'subversion/tests/cmdline/'
@@ -74,7 +75,7 @@ for section in gen_obj.sections.values():
 opts, args = my_getopt(sys.argv[1:], 'hrdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
-                        'httpd-dir=', 'httpd-port=', 'help'])
+                        'httpd-dir=', 'httpd-port=', 'help', 'list'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -87,6 +88,7 @@ run_svnserve = None
 svnserve_args = None
 run_httpd = None
 httpd_port = None
+list_tests = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -113,6 +115,8 @@ for opt, val in opts:
     run_httpd = 1
   elif opt == '--httpd-port':
     httpd_port = int(val)
+  elif opt == '--list':
+    list_tests = 1
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -489,7 +493,8 @@ sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
-                           base_url, fs_type, 1, cleanup)
+                           base_url, fs_type, 1, cleanup, 
+                           list_tests = list_tests)
 old_cwd = os.getcwd()
 try:
   os.chdir(abs_builddir)
