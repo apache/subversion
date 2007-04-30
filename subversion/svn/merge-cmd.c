@@ -94,8 +94,7 @@ svn_cl__merge(apr_getopt_t *os,
       if (targets->nelts == 0)
         {
           /* Set the default peg revision if one was not specified. */
-          if (peg_revision1.kind == svn_opt_revision_unspecified)
-            peg_revision1.kind = svn_opt_revision_head;
+          peg_revision1.kind = svn_opt_revision_head;
         }
       else
         {
