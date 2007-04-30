@@ -399,9 +399,9 @@ def status_nonrecursive_update_different_cwd(sbox):
   os.chdir(wc_dir)
   try:
     expected_output = [
-      '       *                                C/J\n'
-      'A               0       ?   ?           C/K\n'
-      '                1        1 jrandom      C\n',
+      '       *                                %s\n' % os.path.join("C", "J"),
+      'A               0       ?   ?           %s\n' % os.path.join("C", "K"),
+      '       *        1        1 jrandom      C\n',
       'Status against revision:      2\n' ]
 
     os.chdir('A')
@@ -413,7 +413,7 @@ def status_nonrecursive_update_different_cwd(sbox):
     expected_output = [
       '       *                                J\n',
       'A               0       ?   ?           K\n',
-      '                1        1 jrandom      .\n',
+      '       *        1        1 jrandom      .\n',
       'Status against revision:      2\n']
 
     os.chdir('C')
@@ -1537,7 +1537,7 @@ test_list = [ None,
               status_ignored_dir,
               status_unversioned_dir,
               status_dash_u_missing_dir,
-              XFail(status_nonrecursive_update_different_cwd),
+              status_nonrecursive_update_different_cwd,
               status_add_plus_conflict,
               inconsistent_eol,
               status_update_with_incoming_props,
