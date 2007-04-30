@@ -3461,6 +3461,42 @@ def copy_peg_rev_url(sbox):
                                         expected_disk,
                                         expected_status)
 
+# Test copying an older revision of a wc directory in the wc.
+def old_dir_wc_to_wc(sbox):
+  "copy old revision of wc dir to new dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  E = os.path.join(wc_dir, 'A', 'B', 'E')
+  E2 = os.path.join(wc_dir, 'E2')
+  alpha_url = sbox.repo_url + '/A/B/E/alpha'
+
+  # delete E/alpha in r2
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', '', alpha_url)
+
+  # Copy an old revision of E into a new path in the WC
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-r1', E, E2)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'E2'      : Item(verb='Adding'),
+    })
+
+  # Created expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'E2' : Item(status='  ', wc_rev=3),
+    'E2/beta'  : Item(status='  ', wc_rev=3),
+    })
+  # Commit the one file.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
 
 ########################################################################
 # Run the tests
@@ -3530,6 +3566,7 @@ test_list = [ None,
               copy_peg_rev_local_files,
               copy_peg_rev_local_dirs,
               copy_peg_rev_url,
+              XFail(old_dir_wc_to_wc),
              ]
 
 if __name__ == '__main__':
