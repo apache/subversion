@@ -337,10 +337,10 @@ Whitespace fixes.  No functional change.
   </dd>
 
   <dt><code>svn blame</code></dt>
-  <dd>Two additional columns for each line, with the original revision
-  and author of that line.  Unlike other commands, we do not need to
-  worry about multiple source revisions, because each line can have at
-  most one author.</dd>
+  <dd>Reuse the existing author and revision columns.  Instead of listing
+  the merging author and revision, list the original author and revision of
+  that line.  Unlike other commands, we do not need to worry about multiple
+  source revisions, because each line can have at most one author.</dd>
 </dl>
 
 <p>For commits which remove merge info (e.g. reverts),
