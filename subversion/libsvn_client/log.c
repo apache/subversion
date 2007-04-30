@@ -200,6 +200,9 @@ svn_client__get_copy_source(const char *path_or_url,
              exist in the repository. */
             svn_error_clear(err);
             err = SVN_NO_ERROR;
+
+            *copyfrom_path = NULL;
+            *copyfrom_rev = SVN_INVALID_REVNUM;
         }
       return err;
     }
