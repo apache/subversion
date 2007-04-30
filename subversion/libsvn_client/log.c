@@ -188,7 +188,7 @@ svn_client__get_copy_source(const char *path_or_url,
                         TRUE, TRUE, copyfrom_info_receiver, &copyfrom_info,
                         ctx, pool);
   /* ### Reuse ra_session by way of svn_ra_get_log()?
-  err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, TRUE, TRUE,
+  err = svn_ra_get_log(ra_session, rel_paths, revision, 1, 0, TRUE, TRUE,
                        copyfrom_info_receiver, &copyfrom_info, pool);
   */
   if (err)
