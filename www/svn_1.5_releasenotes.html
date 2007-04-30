@@ -1,0 +1,237 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+<title>Subversion 1.5 Release Notes</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1 style="text-align: center">Subversion 1.5 Release Notes</h1>
+
+<div class="h2" id="news" title="news">
+<h2>What's New in Subversion 1.5</h2>
+
+<ul>
+  <li>Merge Tracking</li>
+  <li>Sparse checkouts</li>
+  <li>WebDAV transparent write-through proxy</li>
+  <li>Cyrus SASL support for ra_svn and <tt>svnserve</tt></li>
+  <li>Copy/move improvements: peg revisions, 'svn mv file1 file2; svn
+    mv file2 file3', 'svn cp *.c dir'</li>
+  <li>Cancellation improvements</li>
+  <li>Changelist support</li>
+  <li>FSFS sharding</li>
+  <li>JavaHL bindings improvements</li>
+  <li>Many improved APIs</li>
+  <li>More than XXX new bug fixes</li>
+</ul>
+
+<p>Details are described below.</p>
+
+<p>Subversion 1.5 is a superset of all previous Subversion releases,
+and is considered the current "best" release.  Anything in 1.0.x,
+1.1.x, 1.2.x or 1.3.x is also in 1.5, but 1.5 contains features and
+bugfixes not present in any earlier release.  The new features will
+eventually be documented in a 1.5 version of the free Subversion book,
+see <a
+href="http://svnbook.red-bean.com">svnbook.red-bean.com</a>.</p>
+
+</div>  <!-- news -->
+
+<div class="h2" id="compatibility" title="compatibility">
+<h2>Compatibility Concerns</h2>
+
+<p>Older clients and servers interoperate transparently with 1.5
+servers and clients.  Of course, some of the new 1.5 features may not
+be available unless both client and server are the latest version
+(e.g. <a href="/merge-tracking/func-spec.html#migration-and-interoperability"
+>Merge Tracking</a>).  There is <strong>no need</strong> to dump and
+reload your repositories; Subversion 1.5 can read repositories created
+by earlier versions.  To upgrade an existing installation, just
+install the newest libraries and binaries on top of the older
+ones.</p>
+
+<p>Subversion 1.5 maintains API/ABI compatibility with earlier
+releases, by only adding new functions.  A program written to the 1.0,
+1.1, 1.2 or 1.3 API can both compile and run using 1.5 libraries.
+However, a program written for 1.5 cannot necessarily compile or run
+against older libraries.</p>
+
+<div class="h3" id="wc-format-change" title="wc-format-change">
+<h3>Working Copy and Repository Format Changes</h3>
+
+<p>XXX: 1.5 currently uses the same SVN_WC__VERSION (8) as 1.4.x.
+However, some changes <em>sussman</em> and some other folks are
+considering for Merge Tracking may impact this.  If these changes turn
+out not to require a WC format bump, remove this section.</p>
+
+<p>Due to certain improvements and bugfixes made to the working copy
+library, the version number of the working copy format has been
+incremented. This means that Subversion clients earlier than 1.5 will
+<em>not</em> be able to work with working copies produced by Subversion
+1.5.  Similarly, the repository format has changed as well, meaning
+that pre-1.5 Subversion tools that normally access a repository
+directly
+(e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>, <tt>svnadmin</tt>)
+won't be able to read a repository originally created by Subversion
+1.5. </p>
+
+<p><strong>WARNING:</strong> if a Subversion 1.5 client encounters a pre-1.5
+working copy, it will <em>automatically</em> upgrade the working copy
+format as soon as it touches it, making it unreadable by older
+Subversion clients.  If you are using several versions of Subversion
+on your machine, you need to be careful about which version you use in
+which working copy, to avoid accidentally upgrading the working copy
+format.  This "auto upgrade" feature, however, does <em>not</em> occur
+with the new repository format.  </p>
+
+</div>  <!-- wc-format-change -->
+
+<div class="h3" id="output-changes" title="output-changes">
+<h3>Command Line Output Changes</h3>
+
+<p>Although the Subversion developers try hard to keep output from the
+command line programs compatible between releases, new information
+sometimes has to be added.  This might break scripts that rely on the
+exact format of the output.  In 1.5, the following changes have been
+made to the output:</p>
+
+<p>XXX: Enumerate changes to output (e.g. for changelists).</p>
+
+<ul>
+  <li><p>Conflict markers in files now match the file's defined
+    eol-style.</p></li>
+</ul>
+
+</div>  <!-- output-changes -->
+
+</div>  <!-- compatibility -->
+
+<div class="h2" id="new-features" title="new-features">
+<h2>New Features</h2>
+
+<p>XXX: Describe each new feature.  See the 1.4 RNs for a
+"template".</p>
+
+<div class="h3" id="merge-tracking" title="merge-tracking">
+<h3>Merge Tracking (<em>client and server</em>)</h3>
+
+<p>XXX</p>
+
+</div> <!-- merge-tracking -->
+
+<div class="h3" id="sparse-checkouts" title="sparse-checkouts">
+<h3>Sparse checkouts (<em>client and server</em>)</h3>
+
+<p>XXX</p>
+
+</div> <!-- sparse-checkouts -->
+
+<div class="h3" id="webdav-proxy" title="webdav-proxy">
+<h3>WebDAV transparent write-through proxy (<em>server</em>)</h3>
+
+<p>XXX</p>
+
+</div>  <!-- webdav-proxy -->
+
+<div class="h3" id="cyrus-sasl" title="cyrus-sasl">
+<h3>Cyrus SASL support for ra_svn and <tt>svnserve</tt> (<em>client
+and server</em>)</h3>
+
+<p>XXX</p>
+
+</div> <!-- cyrus-sasl -->
+
+<div class="h3" id="changelist-support" title="changelist-support">
+<h3>Changelist support (<em>client</em>)</h3>
+
+<p>XXX</p>
+
+</div>  <!-- changelist-support -->
+
+<div class="h3" id="fsfs-sharding" title="fsfs-sharding">
+<h3>FSFS sharding</h3>
+
+<p>XXX</p>
+
+</div>  <!-- fsfs-sharding -->
+
+</div>  <!-- new-features -->
+
+
+<div class="h2" id="enhancements" title="enhancements">
+<h2>Enhancements and Bugfixes</h2>
+
+<div class="h3" id="copy-move-improvements" title="copy-move-improvements">
+<h3>Copy/move improvements</h3>
+
+<p>XXX</p>
+
+</div>  <!-- copy-move-improvements -->
+
+<div class="h3" id="cancellation-improvements"
+     title="cancellation-improvements">
+<h3>Cancellation improvements (<em>client</em>)</h3>
+
+<p>XXX</p>
+
+</div>  <!-- cancellation-improvements -->
+
+<div class="h3" id="javahl-improvements" title="javahl-improvements">
+<h3>Javahl bindings improvements</h3>
+
+<p>XXX: Should this go into the APIs section?</p>
+
+</div>  <!-- javahl-improvements -->
+
+<div class="h3" id="apis" title="apis">
+<h3>API improvements (<em>client and server</em>)</h3>
+
+<p>If you develop a 3rd-party client application that uses Subversion
+  APIs, you may want to take notice of some new APIs:</p>
+
+<ul>
+  <li>XXX: Enumerate specific new API additions (e.g. merge info
+    retrieval?)</li>
+
+  <li>Many APIs have been revised to newer versions.</li>
+</ul>
+
+</div>  <!-- apis -->
+
+<div class="h3" id="bug-fixes" title="bug-fixes">
+<h3>Other bug fixes (<em>client and server</em>)</h3>
+
+<p>The usual slew of heretofore-unreleased bug fixes, more than 40
+overall. See the
+<a href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>
+file for full details.</p>
+
+</div>  <!-- bug-fixes -->
+
+</div>  <!-- enhancements -->
+
+<div class="h2" id="svn-1.3-deprecation" title="svn-1.3-deprecation">
+<h2>Subversion 1.3.x series no longer supported</h2>
+
+<p>The Subversion 1.3.x line is no longer supported.  This doesn't
+mean that your 1.3 installation is doomed; if it works well and is all
+you need, that's fine.  "No longer supported" just means we've stopped
+accepting bug reports against 1.3.x versions, and will not make any
+more 1.3.x bugfix releases, except perhaps for absolutely critical
+security or data-loss bugs.</p>
+
+</div>  <!-- svn-1.3-deprecation -->
+
+</div>  <!-- app -->
+</body>
+</html>
