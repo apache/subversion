@@ -3571,7 +3571,7 @@ test_list = [ None,
               copy_peg_rev_local_files,
               copy_peg_rev_local_dirs,
               copy_peg_rev_url,
-              XFail(old_dir_wc_to_wc),
+              old_dir_wc_to_wc,
              ]
 
 if __name__ == '__main__':
