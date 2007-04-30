@@ -3470,10 +3470,14 @@ def old_dir_wc_to_wc(sbox):
 
   E = os.path.join(wc_dir, 'A', 'B', 'E')
   E2 = os.path.join(wc_dir, 'E2')
-  alpha_url = sbox.repo_url + '/A/B/E/alpha'
+  E_url = sbox.repo_url + '/A/B/E'
+  alpha_url = E_url + '/alpha'
 
   # delete E/alpha in r2
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', '', alpha_url)
+
+  # delete E in r3
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', '', E_url)
 
   # Copy an old revision of E into a new path in the WC
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-r1', E, E2)
@@ -3486,8 +3490,9 @@ def old_dir_wc_to_wc(sbox):
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'E2' : Item(status='  ', wc_rev=3),
-    'E2/beta'  : Item(status='  ', wc_rev=3),
+    'E2' : Item(status='  ', wc_rev=4),
+    'E2/alpha'  : Item(status='  ', wc_rev=4),
+    'E2/beta'  : Item(status='  ', wc_rev=4),
     })
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir,
