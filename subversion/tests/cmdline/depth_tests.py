@@ -524,6 +524,84 @@ def depth_immediates_receive_delete(sbox):
   raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
+def depth_immediates_subdir_propset_1(sbox):
+  "depth-1 commit subdirectory propset, then update"
+  ign_a, ign_b, wc_immediates, ign_c \
+         = set_up_depthy_working_copies(sbox, immediates=True)
+
+  A_path = os.path.join(wc_immediates, 'A')
+
+  # Set a property on an immediate subdirectory of the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'pset', 'foo', 'bar',
+                                     A_path)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_immediates, {
+    'A' : Item(verb='Sending'),
+    })
+  
+  # Create expected status tree.
+  expected_status = svntest.wc.State(wc_immediates, {
+    '' : Item(status='  ', wc_rev=1),
+    'iota' : Item(status='  ', wc_rev=1),
+    'A' : Item(status='  ', wc_rev=2)
+    })
+
+  # Commit wc_immediates/A.
+  svntest.actions.run_and_verify_commit(wc_immediates,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        A_path)
+
+  # Create expected output tree for the update.
+  expected_output = svntest.wc.State(wc_immediates, { })
+
+  # Create expected disk tree.
+  expected_disk = svntest.wc.State('', { 
+    'iota' : Item(contents="This is the file 'iota'.\n"),
+    'A' : Item(contents=None, props={'foo' : 'bar'}),
+    })
+  
+  expected_status.tweak(contents=None, status='  ', wc_rev=2)
+  
+  # Update the depth-immediates wc.
+  svntest.actions.run_and_verify_update(wc_immediates,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
+
+#----------------------------------------------------------------------
+def depth_immediates_subdir_propset_2(sbox):
+  "depth-1 update receives a subdirectory propset"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make the other working copy.
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  A_path = os.path.join(wc_dir, 'A')
+
+  # Set a property on an immediate subdirectory of the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'pset', 'foo', 'bar',
+                                     A_path)
+  # Commit.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'logmsg', A_path)
+
+  # Update at depth=immediates in the other wc, expecting to see no errors.
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     SVNAnyOutput, [],
+                                     'update', '--depth', 'immediates',
+                                     other_wc)
+
+#----------------------------------------------------------------------
 def depth_update_to_more_depth(sbox):
   "gradually update an empty wc to depth=infinity"
 
@@ -621,7 +699,9 @@ test_list = [ None,
               depth_empty_unreceive_delete,
               XFail(depth_immediates_unreceive_delete),
               XFail(depth_immediates_receive_delete),
-              XFail(depth_update_to_more_depth)
+              XFail(depth_update_to_more_depth),
+              XFail(depth_immediates_subdir_propset_1),
+              XFail(depth_immediates_subdir_propset_2),
             ]
 
 if __name__ == "__main__":
