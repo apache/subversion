@@ -85,15 +85,16 @@ svn_cl__merge(apr_getopt_t *os,
 
       using_rev_range_syntax = TRUE;
     }
+
   if (using_rev_range_syntax)
     {
       if (targets->nelts > 2)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Too many arguments given"));
 
+      /* Set the default value for unspecified paths and peg revision. */
       if (targets->nelts == 0)
         {
-          /* Set the default peg revision if one was not specified. */
           peg_revision1.kind = svn_opt_revision_head;
         }
       else
@@ -101,7 +102,6 @@ svn_cl__merge(apr_getopt_t *os,
           /* targets->nelts is 1 or 2 here. */
           sourcepath2 = sourcepath1;
 
-          /* Set the default peg revision if one was not specified. */
           if (peg_revision1.kind == svn_opt_revision_unspecified)
             peg_revision1.kind = svn_path_is_url(sourcepath1)
               ? svn_opt_revision_head : svn_opt_revision_working;
