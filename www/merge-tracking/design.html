@@ -480,6 +480,19 @@ FS isn't based on a weave.</p>
 <p>Existing functions of interest are <code>svn_repos_fs_get_merge_info()</code>
 and <code>svn_fs_merge_info__get_merge_info()</code>.</p>
 
+<div class="h4" id="audit-log">
+<h4><code>svn log</code> Implementation</h4>
+</div>  <!-- audit-log -->
+
+<div class="h4" id="audit-blame">
+<h4><code>svn blame</code> Implementation</h4>
+
+<p>Even though the command line client doesn't consume both the original 
+author and revision and the merging author and revision, the blame API should
+provide both for use by other clients.</p>
+
+</div>  <!-- audit-blame -->
+
 </div>  <!-- commutative-reporting -->
 
 </div>  <!-- audit-operations -->
