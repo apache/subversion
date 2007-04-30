@@ -5594,7 +5594,7 @@ test_list = [ None,
               obey_reporter_api_semantics_while_doing_subtree_merges,
               mergeinfo_inheritance,
               mergeinfo_elision,
-              XFail(mergeinfo_inheritance_and_discontinuous_ranges),
+              mergeinfo_inheritance_and_discontinuous_ranges,
               XFail(merge_to_target_with_copied_children),
               merge_to_switched_path,
              ]

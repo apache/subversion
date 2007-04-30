@@ -151,7 +151,7 @@ svn_client__get_copy_source(const char *path_or_url,
   svn_error_t *err;
   copyfrom_info_t copyfrom_info = { NULL, NULL, SVN_INVALID_REVNUM, pool };
   apr_array_header_t *targets = apr_array_make(pool, 1, sizeof(path_or_url));
-  svn_opt_revision_t oldest_rev;
+  svn_opt_revision_t oldest_rev, peg_revision;
 
   oldest_rev.kind = svn_opt_revision_number;
   oldest_rev.value.number = 1;
@@ -171,9 +171,20 @@ svn_client__get_copy_source(const char *path_or_url,
 
   APR_ARRAY_PUSH(targets, const char *) = path_or_url;
 
+  /* Treat "" as a URL and pass a valid peg rev. */
+  if (!strcmp(path_or_url, "")
+      && revision->kind == svn_opt_revision_working)
+    {
+      peg_revision.kind = svn_opt_revision_unspecified;
+    }
+  else
+    {
+      peg_revision = *revision;
+    }
+
   /* Find the copy source.  Trace back in history to find the revision
      at which this node was created (copied or added). */
-  err = svn_client_log3(targets, revision, revision, &oldest_rev, 0,
+  err = svn_client_log3(targets, &peg_revision, revision, &oldest_rev, 0,
                         TRUE, TRUE, copyfrom_info_receiver, &copyfrom_info,
                         ctx, pool);
   /* ### Reuse ra_session by way of svn_ra_get_log()?
