@@ -450,8 +450,10 @@ svn_path_compare_paths(const char *path1,
     return 1;
 
   /* Common prefix was skipped above, next character is compared to
-     determine order */
-  return path1[i] < path2[i] ? -1 : 1;
+     determine order.  We need to use an unsigned comparison, though,
+     so a "next character" of NULL (0x00) sorts numerically
+     smallest. */
+  return (unsigned char)(path1[i]) < (unsigned char)(path2[i]) ? -1 : 1;
 }
 
 
