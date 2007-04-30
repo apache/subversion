@@ -36,7 +36,8 @@ extern "C" {
  * Retrieve the copy source of @a path_or_url at @a *revision, and
  * store it in @a *copyfrom_path and @a *copyfrom_rev. If @a
  * path_or_url is not a copy (or doesn't exist), set @a *copyfrom_path
- * and @a *copyfrom_rev to @c NULL.  Use @a pool for all allocations.
+ * and @a *copyfrom_rev to @c NULL and @c SVN_INVALID_REVNUM
+ * (respectively).  Use @a pool for all allocations.
  */
 svn_error_t *
 svn_client__get_copy_source(const char *path_or_url,
