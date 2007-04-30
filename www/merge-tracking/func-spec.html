@@ -224,11 +224,15 @@ commands</em>, are:</p>
   <li><code>svn blame</code></li>
 </ul>
 
-<p><code>svn info</code>, <code>svn ls --verbose</code> and <code>svn status
---show-updates</code> are purposely not included in this list, on the grounds
-that one would typically need more information than they can reasonably provide.
-Adding more output to these commands would clutter their interface, further
-reducing their utility.</p>
+<p><code>svn info</code>, <code>svn ls --verbose</code> and <code>svn
+status --show-updates</code> are purposely not included in this list.
+While one would typically need more information than they can
+reasonably provide alone, adding more output to these commands would
+clutter their command-line interface, reducing their utility.  Merge
+Tracking-aware API support for the underlying functionality provided
+by these commands may be added at some point in the future (e.g. for
+use by third-party clients like <a href="http://tortoisesvn.tigris.org/"
+>TortoiseSVN</a>).</p>
 
 <p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
 single-character shortcut, will be introduced for the auditing commands.
