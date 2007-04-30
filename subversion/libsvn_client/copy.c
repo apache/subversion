@@ -1657,6 +1657,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                 {
                   svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
+                  svn_opt_revision_t peg_revision;
 
                   /* We can convert the working copy path to a URL based on the
                      entries file. */
@@ -1681,6 +1682,9 @@ setup_copy(svn_commit_info_t **commit_info_p,
                        svn_path_local_style(pair->src, pool));
 
                   pair->src = apr_pstrdup(pool, entry->url);
+                  peg_revision.kind = svn_opt_revision_number;
+                  peg_revision.value.number = entry->revision;
+                  pair->src_peg_revision = peg_revision;
                 }
 
               svn_pool_destroy(iterpool);
