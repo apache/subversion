@@ -172,7 +172,7 @@ svn_client__get_copy_source(const char *path_or_url,
   APR_ARRAY_PUSH(targets, const char *) = path_or_url;
 
   /* Treat "" as a URL and pass a valid peg rev. */
-  if (!strcmp(path_or_url, "")
+  if (strcmp(path_or_url, "") == 0
       && revision->kind == svn_opt_revision_working)
     {
       peg_revision.kind = svn_opt_revision_unspecified;
