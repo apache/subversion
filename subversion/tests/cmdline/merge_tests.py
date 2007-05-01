@@ -5542,6 +5542,193 @@ def merge_to_switched_path(sbox):
                                      expected, [],
                                      'pl', '-vR', A_COPY_D_path)
 
+
+def merge_to_path_with_switched_children(sbox):
+  "merge to path with switched children"
+
+  # When the target of a merge has switched children without mergeinfo,
+  # the children should also get mergeinfo set on them as a result of
+  # the merge.  If the switched children do have mergeinfo this mergeinfo
+  # should not elide.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox)
+
+  # Some paths we'll care about
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+  A_COPY_psi_path = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
+  A_COPY_G_path = os.path.join(wc_dir, "A_COPY", "D", "G")
+  A_COPY_H_path = os.path.join(wc_dir, "A_COPY", "D", "H")
+  A_COPY_D_path = os.path.join(wc_dir, "A_COPY", "D")
+
+  # Switch a file and dir path in the branch:
+
+  # Switch A_COPY/D/G to A/D/G.
+  wc_disk.tweak('A_COPY/D/G/rho',contents="New content")
+  wc_status.tweak("A_COPY/D/G", wc_rev=6, switched='S')
+  wc_status.tweak("A_COPY/D/G/pi", wc_rev=6)
+  wc_status.tweak("A_COPY/D/G/rho", wc_rev=6)
+  wc_status.tweak("A_COPY/D/G/tau", wc_rev=6)
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    "A_COPY/D/G/rho" : Item(status='U '),
+    })
+  svntest.actions.run_and_verify_switch(sbox.wc_dir, A_COPY_G_path,
+                                        sbox.repo_url + "/A/D/G",
+                                        expected_output, wc_disk, wc_status,
+                                        None, None, None, None, None, 1)
+
+  # Switch A_COPY/D/H/psi to A/D/H/psi.
+  wc_status.tweak("A_COPY/D/H/psi", wc_rev=6, switched='S')
+  wc_disk.tweak('A_COPY/D/H/psi',contents="New content")
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    "A_COPY/D/H/psi" : Item(status='U '),
+    })
+  svntest.actions.run_and_verify_switch(sbox.wc_dir, A_COPY_psi_path,
+                                        sbox.repo_url + "/A/D/H/psi",
+                                        expected_output, wc_disk, wc_status,
+                                        None, None, None, None, None, 1)
+
+  # Merge r6 into A_COPY/D/H.  The switched child of A_COPY/D/H,
+  # file A_COPY/D/H/psi (which has no mergeinfo prior to the merge),
+  # should get its own mergeinfo.
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_H_COPY_path = shorten_path_kludge(A_COPY_H_path)
+  expected_output = wc.State(short_H_COPY_path, {
+    'omega' : Item(status='U ')
+    })
+  expected_status = wc.State(short_H_COPY_path, {
+    ''      : Item(status=' M', wc_rev=2),
+    'psi'   : Item(status=' M', wc_rev=6, switched='S'),
+    'omega' : Item(status='M ', wc_rev=2),
+    'chi'   : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:1,6'}),
+    'psi'   : Item("New content",
+                   props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1,6'}),
+    'omega' : Item("New content"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    })
+  expected_skip = wc.State(short_H_COPY_path, { })
+  saved_cwd = os.getcwd()
+
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_H_COPY_path, '5', '6',
+                                         sbox.repo_url + '/A/D/H',
+                                         expected_output, expected_disk,
+                                         expected_status, expected_skip,
+                                         None, None, None, None, None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Merge r4 into A_COPY/D.  The switched child of A_COPY/D,
+  # directory A_COPY/D/G (which has no mergeinfo prior to the merge),
+  # should get its own mergeinfo.
+  short_D_COPY_path = shorten_path_kludge(A_COPY_D_path)
+  expected_output = wc.State(short_D_COPY_path, {})
+  expected_status = wc.State(short_D_COPY_path, {
+    ''        : Item(status=' M', wc_rev=2),
+    'H'       : Item(status=' M', wc_rev=2),
+    'H/chi'   : Item(status='  ', wc_rev=2),
+    'H/omega' : Item(status='M ', wc_rev=2),
+    'H/psi'   : Item(status=' M', wc_rev=6, switched='S'),
+    'G'       : Item(status=' M', wc_rev=6, switched='S'),
+    'G/pi'    : Item(status='  ', wc_rev=6),
+    'G/rho'   : Item(status='  ', wc_rev=6),
+    'G/tau'   : Item(status='  ', wc_rev=6),
+    'gamma'   : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,4'}),
+    'H'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:1,4,6'}),
+    'H/chi'   : Item("This is the file 'chi'.\n"),
+    'H/omega' : Item("New content"),
+    'H/psi'   : Item("New content",
+                     props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1,4,6'}),
+    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4'}),
+    'G/pi'    : Item("This is the file 'pi'.\n"),
+    'G/rho'   : Item("New content"),
+    'G/tau'   : Item("This is the file 'tau'.\n"),
+    'gamma'   : Item("This is the file 'gamma'.\n"),
+    })
+  expected_skip = wc.State(short_D_COPY_path, { })
+
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_D_COPY_path, '3', '4',
+                                         sbox.repo_url + '/A/D',
+                                         expected_output, expected_disk,
+                                         expected_status, expected_skip,
+                                         None, None, None, None, None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Finally, merge r2:6 into A_COPY.  The switched children of A_COPY,
+  # A_COPY/D/G and A_COPY/D/H/psi should get the mergeinfo for -r2:6.
+  # All mergeinfo on paths under A_COPY should elide *except* that on
+  # the switched paths.
+  short_A_COPY_path = shorten_path_kludge(A_COPY_path)
+  expected_output = wc.State(short_A_COPY_path, {
+    'B/E/beta' : Item(status='U ')
+    })
+  expected_status = wc.State(short_A_COPY_path, {
+    ''          : Item(status=' M', wc_rev=2),
+    'B'         : Item(status='  ', wc_rev=2),
+    'mu'        : Item(status='  ', wc_rev=2),
+    'B/E'       : Item(status='  ', wc_rev=2),
+    'B/E/alpha' : Item(status='  ', wc_rev=2),
+    'B/E/beta'  : Item(status='M ', wc_rev=2),
+    'B/lambda'  : Item(status='  ', wc_rev=2),
+    'B/F'       : Item(status='  ', wc_rev=2),
+    'C'         : Item(status='  ', wc_rev=2),
+    'D'         : Item(status='  ', wc_rev=2),
+    'D/G'       : Item(status=' M', wc_rev=6, switched='S'),
+    'D/G/pi'    : Item(status='  ', wc_rev=6),
+    'D/G/rho'   : Item(status='  ', wc_rev=6),
+    'D/G/tau'   : Item(status='  ', wc_rev=6),
+    'D/gamma'   : Item(status='  ', wc_rev=2),
+    'D/H'       : Item(status='  ', wc_rev=2),
+    'D/H/chi'   : Item(status='  ', wc_rev=2),
+    'D/H/psi'   : Item(status=' M', wc_rev=6, switched='S'),
+    'D/H/omega' : Item(status='M ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,3-6'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,3-6'}),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content",
+                       props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1,3-6'}),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(short_A_COPY_path, { })
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_A_COPY_path, '2', '6',
+                                         sbox.repo_url + '/A',
+                                         expected_output, expected_disk,
+                                         expected_status, expected_skip,
+                                         None, None, None, None, None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -5597,6 +5784,7 @@ test_list = [ None,
               mergeinfo_inheritance_and_discontinuous_ranges,
               XFail(merge_to_target_with_copied_children),
               merge_to_switched_path,
+              XFail(merge_to_path_with_switched_children),
              ]
 
 if __name__ == '__main__':
