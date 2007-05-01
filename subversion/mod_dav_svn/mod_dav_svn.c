@@ -67,6 +67,7 @@ typedef struct {
   enum conf_flag list_parentpath; /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
   const char *master_uri;            /* URI to the master SVN repos */
+  const char *activities_db;         /* path to activities database(s) */
 } dir_conf_t;
 
 
@@ -156,6 +157,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
 
   newconf->fs_path = INHERIT_VALUE(parent, child, fs_path);
   newconf->master_uri = INHERIT_VALUE(parent, child, master_uri);
+  newconf->activities_db = INHERIT_VALUE(parent, child, activities_db);
   newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
   newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
   newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
@@ -186,6 +188,17 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
   dir_conf_t *conf = config;
 
   conf->master_uri = apr_pstrdup(cmd->pool, arg1);
+
+  return NULL;
+}
+
+
+static const char *
+SVNActivitiesDB_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  dir_conf_t *conf = config;
+
+  conf->activities_db = apr_pstrdup(cmd->pool, arg1);
 
   return NULL;
 }
@@ -454,6 +467,16 @@ dav_svn__get_list_parentpath_flag(request_rec *r)
 }
 
 
+const char *
+dav_svn__get_activities_db(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->activities_db;
+}
+
+
 static void
 merge_xml_filter_insert(request_rec *r)
 {
@@ -618,6 +641,12 @@ static const command_rec cmds[] =
   /* per directory/location */
   AP_INIT_TAKE1("SVNMasterURI", SVNMasterURI_cmd, NULL, ACCESS_CONF,
                 "specifies a URI to access a master Subversion repository"),
+
+  /* per directory/location */
+  AP_INIT_TAKE1("SVNActivitiesDB", SVNActivitiesDB_cmd, NULL, ACCESS_CONF,
+                "specifies the location in the filesystem in which the "
+                "activities database(s) should be stored"),
+
 
   { NULL }
 };

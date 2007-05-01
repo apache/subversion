@@ -1054,7 +1054,6 @@ create_svn_repos_t(const char *path, apr_pool_t *pool)
 
   repos->path = apr_pstrdup(pool, path);
   repos->db_path = svn_path_join(path, SVN_REPOS__DB_DIR, pool);
-  repos->dav_path = svn_path_join(path, SVN_REPOS__DAV_DIR, pool);
   repos->conf_path = svn_path_join(path, SVN_REPOS__CONF_DIR, pool);
   repos->hook_path = svn_path_join(path, SVN_REPOS__HOOK_DIR, pool);
   repos->lock_path = svn_path_join(path, SVN_REPOS__LOCK_DIR, pool);
@@ -1066,15 +1065,25 @@ create_svn_repos_t(const char *path, apr_pool_t *pool)
 static svn_error_t *
 create_repos_structure(svn_repos_t *repos,
                        const char *path,
+                       apr_hash_t *fs_config,
                        apr_pool_t *pool)
 {
   /* Create the top-level repository directory. */
   SVN_ERR_W(create_repos_dir(path, pool),
             _("Could not create top-level directory"));
 
-  /* Create the DAV sandbox directory.  */
-  SVN_ERR_W(create_repos_dir(repos->dav_path, pool),
-            _("Creating DAV sandbox dir"));
+  /* Create the DAV sandbox directory if pre-1.4 or pre-1.5-compatible. */
+  if (fs_config
+      && (apr_hash_get(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
+                       APR_HASH_KEY_STRING)
+          || apr_hash_get(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
+                          APR_HASH_KEY_STRING)))
+    {
+      const char *dav_path = svn_path_join(repos->path,
+                                           SVN_REPOS__DAV_DIR, pool);
+      SVN_ERR_W(create_repos_dir(dav_path, pool),
+                _("Creating DAV sandbox dir"));
+    }
 
   /* Create the lock directory.  */
   SVN_ERR(create_locks(repos, pool));
@@ -1180,7 +1189,7 @@ svn_repos_create(svn_repos_t **repos_p,
     repos->fs_type = DEFAULT_FS_TYPE;
 
   /* Create the various files and subdirectories for the repository. */
-  SVN_ERR_W(create_repos_structure(repos, path, pool),
+  SVN_ERR_W(create_repos_structure(repos, path, fs_config, pool),
             _("Repository creation failed"));
   
   /* Lock if needed. */
