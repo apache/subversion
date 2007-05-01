@@ -105,7 +105,7 @@ Approved changes:
    Justification:
      Long standing bug effecting only the output of svn merge.
    Branch: 1.4.x-r24483
-   Note: Merge test #1 is failing.
+     (1.4.x-r24755@24762 -c24762, 1.4.x-r24483 -c24865)
    Votes:
      +1: pburba, dlr, cmpilato
-     -1: malcolmr (uh, no; it makes the test fail!)
+     +0: malcolm
