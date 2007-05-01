@@ -119,9 +119,18 @@ includes = ('%s/include/subversion-1/svn_*.h '
             '%s/include/apr-1/ap[ru]_*.h' % (apr_prefix, svn_prefix))
 
 os.environ["LD_LIBRARY_PATH"] = ld_library_path
-os.system("cd %s && python %s/ctypesgen/wrap.py %s %s "
-          "%s -o svn_all.py" % (tempdir, os.getcwd(),
-                                flags, ldflags, includes))
+try:
+    from distutils import sysconfig
+    python_exe = os.path.join(sysconfig.get_config_var("BINDIR"),
+                              sysconfig.get_config_var('PYTHON'))
+except:
+    python_exe = "python"
+
+cmd = ("cd %s && %s %s/ctypesgen/wrap.py %s %s "
+       "%s -o svn_all.py" % (tempdir, python_exe, os.getcwd(),
+                             flags, ldflags, includes))
+print cmd
+os.system(cmd)
 
 func_re = re.compile(r"CFUNCTYPE\(POINTER\((\w+)\)")
 out = file("%s/svn_all2.py" % tempdir, "w")
