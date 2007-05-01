@@ -140,9 +140,8 @@ main (int argc, const char **argv)
   apr_pool_t *pool;
   svn_error_t *err;
   const char *URL;
-  svn_ra_plugin_t *ra_lib;  
-  void *session, *ra_baton;
-  svn_ra_callbacks_t *cbtable;
+  svn_ra_session_t  *session;
+  svn_ra_callbacks2_t *cbtable;
   svn_revnum_t rev;
   apr_hash_t *cfg_hash;
   svn_auth_baton_t *auth_baton;
@@ -206,16 +205,10 @@ main (int argc, const char **argv)
 
   /* Now do the real work. */
 
-  err = svn_ra_init_ra_libs (&ra_baton, pool);
+  err = svn_ra_open2(&session, URL, cbtable, NULL, cfg_hash, pool);
   if (err) goto hit_error;
 
-  err = svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool);
-  if (err) goto hit_error;
-  
-  err = ra_lib->open (&session, URL, cbtable, NULL, cfg_hash, pool);
-  if (err) goto hit_error;
-
-  err = ra_lib->get_latest_revnum (session, &rev, pool);
+  err = svn_ra_get_latest_revnum(session, &rev, pool);
   if (err) goto hit_error;
 
   printf ("The latest revision is %ld.\n", rev);
