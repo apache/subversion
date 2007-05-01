@@ -482,6 +482,39 @@ and <code>svn_fs_merge_info__get_merge_info()</code>.</p>
 
 <div class="h4" id="audit-log">
 <h4><code>svn log</code> Implementation</h4>
+
+<p>Prior to merge tracking, log messages had a linear relationship to one
+another.  That is, the only information gleaned from the order in which a
+message was returned was where the revision number of that message fell in
+relation to the revision numbers of messages preceding and succeeding it.</p>
+
+<p>The introduction of merge tracking changes that paradigm.  Log messages
+for independent revisions are still linearly related as before, but log
+messages for merging revisions now have children.  These children are log
+messages for the revisions which have been merged, and they may in turn
+also have children.</p>
+
+<p>The result is a tree structure which the repository layer builds as it
+collects log message information.  This tree structure then gets serialized
+and marshaled back to the client, which can then rebuilt the tree if needed.
+Additionally, less information needs to be explicitly given, as the tree
+structure itself implies revision relationships.
+</p>
+
+<p>We currently use the <code>svn_log_message_receiver_t</code> interface
+to return log messages between application layers.  To enable a tree
+structure, we add another parameter, <code>child_count</code>.  When
+<code>child_count</code> is zero, the node is a leaf node, when
+<code>child_count</code> is greater than zero, the node is an interior node,
+with the given number of children.  These children may also have children and
+indicate such by their own <code>child_count</code> parameters.  Consumers of
+this API can be aware of the number of children and rebuild the tree, or pass
+the values farther up the application stack.  In effect, this method implements
+a preorder traversal of the log message tree.</p>
+
+<p>(For convenience, we may want to consolidate all the data parameters of
+<code>svn_log_message_receiver_t</code> into a single structure.)</p>
+
 </div>  <!-- audit-log -->
 
 <div class="h4" id="audit-blame">
