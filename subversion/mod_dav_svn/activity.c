@@ -33,9 +33,6 @@
 #include "dav_svn.h"
 
 
-#define ACTIVITY_DB "dav/activities.d"
-
-
 /* Escape ACTIVITY_ID to be safely usable as a filename.  Simply
    returns the MD5 checksum of the id.
 */
@@ -45,6 +42,15 @@ escape_activity(const char *activity_id, apr_pool_t *pool)
   unsigned char digest[APR_MD5_DIGESTSIZE];
   apr_md5(digest, activity_id, strlen(activity_id));
   return svn_md5_digest_to_cstring_display(digest, pool);
+}
+
+/* Return filename for ACTIVITY_ID under the repository in REPOS. */
+static const char *
+activity_pathname(const dav_svn_repos *repos, const char *activity_id)
+{
+  return svn_path_join(repos->activities_db,
+                       escape_activity(activity_id, repos->pool),
+                       repos->pool);
 }
 
 
@@ -139,11 +145,7 @@ read_txn(const char *pathname, apr_pool_t *pool)
 const char *
 dav_svn__get_txn(const dav_svn_repos *repos, const char *activity_id)
 {
-  const char *pathname;
-  pathname = svn_path_join_many(repos->pool, repos->fs_path, ACTIVITY_DB,
-                                escape_activity(activity_id, repos->pool),
-                                NULL);
-  return read_txn(pathname, repos->pool);
+  return read_txn(activity_pathname(repos, activity_id), repos->pool);
 }
 
 
@@ -160,9 +162,7 @@ dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
      404.  If the transaction is not present or is immutable, return a
      204.  For all other failures, return a 500. */
 
-  pathname = svn_path_join_many(repos->pool, repos->fs_path, ACTIVITY_DB,
-                                escape_activity(activity_id, repos->pool),
-                                NULL);
+  pathname = activity_pathname(repos, activity_id);
   txn_name = read_txn(pathname, repos->pool);
   if (txn_name == NULL)
     {
@@ -228,19 +228,13 @@ dav_svn__store_activity(const dav_svn_repos *repos,
   apr_file_t *activity_file;
 
   /* Create activities directory if it does not yet exist. */
-  err = svn_io_make_dir_recursively(svn_path_join_many(repos->pool,
-                                                       repos->fs_path,
-                                                       ACTIVITY_DB,
-                                                       NULL),
-                                    repos->pool);
+  err = svn_io_make_dir_recursively(repos->activities_db, repos->pool);
   if (err != NULL)
     return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                 "could not initialize activity db.",
                                 repos->pool);
 
-  final_path = svn_path_join_many(repos->pool, repos->fs_path, ACTIVITY_DB,
-                                  escape_activity(activity_id, repos->pool),
-                                  NULL);
+  final_path = activity_pathname(repos, activity_id);
   err = svn_io_open_unique_file2(&activity_file, &tmp_path, final_path,
                                  ".tmp", svn_io_file_del_none, repos->pool);
   if (err)

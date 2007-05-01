@@ -44,6 +44,9 @@
 #include "dav_svn.h"
 
 
+#define DEFAULT_ACTIVITY_DB "dav/activities.d"
+
+
 struct dav_stream {
   const dav_resource *res;
 
@@ -1571,6 +1574,21 @@ get_resource(request_rec *r,
 
   /* Is autoversioning active in this repos? */
   repos->autoversioning = dav_svn__get_autoversioning_flag(r);
+
+  /* Path to activities database */
+  repos->activities_db = dav_svn__get_activities_db(r);
+  if (repos->activities_db == NULL)
+    /* If not specified, use default ($repos/dav/activities.d). */
+    repos->activities_db = svn_path_join(repos->fs_path,
+                                         DEFAULT_ACTIVITY_DB,
+                                         r->pool);
+  else if (fs_parent_path != NULL)
+    /* If this is a ParentPath-based repository, treat the specified
+       path as a similar parent directory. */
+    repos->activities_db = svn_path_join(repos->activities_db,
+                                         svn_path_basename(repos->fs_path,
+                                                           r->pool),
+                                         r->pool);
 
   /* Remember various bits for later URL construction */
   repos->base_url = ap_construct_url(r->pool, "", r);
