@@ -5304,8 +5304,7 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_D_COPY_path, '2', '6',
-                                         sbox.repo_url + \
-                                         '/A/D',
+                                         sbox.repo_url + '/A/D',
                                          expected_output,
                                          expected_disk,
                                          expected_status,
