@@ -36,7 +36,12 @@ def get_apr_config():
     for apr_config in apr_config_paths:
         fout = run_cmd("%s --includes --cppflags" % apr_config)
         if fout:
-            flags = fout.split()
+            # Look for flags that wrap.py can understand, and add them
+            # to our list of flags
+            for flag in fout.split():
+                if flag.startswith("-D") or flag.startswith("-I"):
+                    flags.append(flag)
+
             apr_prefix = run_cmd("%s --prefix" % apr_config)
             apr_prefix = apr_prefix.strip()
             if not prefix:
