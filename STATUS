@@ -108,3 +108,4 @@ Approved changes:
    Note: Merge test #1 is failing.
    Votes:
      +1: pburba, dlr, cmpilato
+     -1: malcolmr (uh, no; it makes the test fail!)
