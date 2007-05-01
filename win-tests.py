@@ -46,7 +46,7 @@ def _usage_exit():
   print "  --httpd-dir          : location where Apache HTTPD is installed"
   print "  --httpd-port         : port for Apache HTTPD; random port number"
   print "                         will be used, if not specified"
-  print " --list                : print test doc strings only"
+  print "  --list               : print test doc strings only"
   sys.exit(0)
 
 CMDLINE_TEST_SCRIPT_PATH = 'subversion/tests/cmdline/'
