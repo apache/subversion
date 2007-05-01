@@ -58,7 +58,6 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
-    self.have_gen_uri = None
     self.sasl_path = None
 
     # NLS options
@@ -202,6 +201,10 @@ class WinGeneratorBase(GeneratorBase):
     # Find the installed Java Development Kit
     self._find_jdk()
 
+    # Find APR and APR-util version
+    self._find_apr()
+    self._find_apr_util()
+
     # Look for ML
     if self.zlib_path:
       self._find_ml()
@@ -213,15 +216,6 @@ class WinGeneratorBase(GeneratorBase):
     # Find serf and its dependencies
     if self.serf_path:
       self._find_serf()
-
-    # Check for gen_uri_delims project in apr-util
-    gen_uri_path = os.path.join(self.apr_util_path, 'uri',
-                                'gen_uri_delims.dsp')
-    if os.path.exists(gen_uri_path):
-      self.have_gen_uri = 1
-
-    # Run apr-util's w32locatedb.pl script
-    self._configure_apr_util()
 
     #Make some files for the installer so that we don't need to
     #require sed or some other command to do it
@@ -302,11 +296,6 @@ class WinGeneratorBase(GeneratorBase):
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
                              install_targets)
     
-    # Drop the gen_uri_delims target unless we're on an old apr-util
-    if not self.have_gen_uri:
-      install_targets = filter(lambda x: x.name != 'gen_uri_delims',
-                               install_targets)
-      
     # Drop the libsvn_fs_base target and tests if we don't have BDB
     if not self.bdb_lib:
       install_targets = filter(lambda x: x.name != 'libsvn_fs_base',
@@ -593,13 +582,7 @@ class WinGeneratorBase(GeneratorBase):
             and target.external_project):
       return None
 
-    if target.external_project[:10] == 'apr-iconv/':
-      path = self.apr_iconv_path + target.external_project[9:]
-    elif target.external_project[:9] == 'apr-util/':
-      path = self.apr_util_path + target.external_project[8:]
-    elif target.external_project[:4] == 'apr/':
-      path = self.apr_path + target.external_project[3:]
-    elif target.external_project[:5] == 'neon/':
+    if target.external_project[:5] == 'neon/':
       path = self.neon_path + target.external_project[4:]
     elif target.external_project[:5] == 'serf/' and self.serf_lib:
       path = self.serf_path + target.external_project[4:]
@@ -866,6 +849,12 @@ class WinGeneratorBase(GeneratorBase):
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
       fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
+
+    fakelibdirs.append(self.apath(self.apr_path, cfg))
+    fakelibdirs.append(self.apath(self.apr_util_path, cfg))
+    fakelibdirs.append(self.apath(self.apr_util_path, 'xml', 'expat',
+                                  'lib', libcfg))
+
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -945,6 +934,15 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_SASL_LIBS)':
         nondeplibs.append(sasllib)
         
+      if dep.external_lib == '$(SVN_APR_LIBS)':
+        nondeplibs.append(self.apr_lib)
+
+      if dep.external_lib == '$(SVN_APRUTIL_LIBS)':
+        nondeplibs.append(self.aprutil_lib)
+
+      if dep.external_lib == '$(SVN_XML_LIBS)':
+        nondeplibs.append('xml.lib')
+
     return gen_base.unique(nondeplibs)
 
   def get_win_sources(self, target, reldir_prefix=''):
@@ -1271,19 +1269,51 @@ class WinGeneratorBase(GeneratorBase):
     else:
       sys.stderr.write('serf not found, ra_serf will not be built\n')
 
-  def _configure_apr_util(self):
-    if not self.configure_apr_util:
-      return
-    script_path = os.path.join(self.apr_util_path, "build", "w32locatedb.pl")
-    inc_path = os.path.join(self.bdb_path, "include")
-    lib_path = os.path.join(self.bdb_path, "lib")
-    cmdline = "perl %s dll %s %s" % (escape_shell_arg(script_path),
-                                     escape_shell_arg(inc_path),
-                                     escape_shell_arg(lib_path))
-    sys.stderr.write('Configuring apr-util library...\n%s\n' % cmdline)
-    if os.system(cmdline):
-      sys.stderr.write('WARNING: apr-util library was not configured'
-                       ' successfully\n')
+  def _find_apr(self):
+    "Find the APR library and version"
+
+    version_file_path = os.path.join(self.apr_path, 'include',
+                                     'apr_version.h')
+    
+    if not os.path.exists(version_file_path):
+      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
+      sys.stderr.write("Use '--with-apr' option to configure APR location.\n");
+      sys.exit(1)
+
+    fp = open(version_file_path)
+    txt = fp.read()
+    fp.close()
+    vermatch = re.compile(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', re.M) \
+                 .search(txt)
+    
+    major_ver = int(vermatch.group(1))
+    if major_ver > 0:
+      self.apr_lib = 'libapr-%d.lib' % major_ver
+    else:
+      self.apr_lib = 'libapr.lib'
+   
+  def _find_apr_util(self):
+    "Find the APR-util library and version"
+
+    version_file_path = os.path.join(self.apr_util_path, 'include',
+                                     'apu_version.h')
+    
+    if not os.path.exists(version_file_path):
+      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
+      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n");
+      sys.exit(1)
+
+    fp = open(version_file_path)
+    txt = fp.read()
+    fp.close()
+    vermatch = re.compile(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', re.M) \
+                 .search(txt)
+    
+    major_ver = int(vermatch.group(1))
+    if major_ver > 0:
+      self.aprutil_lib = 'libaprutil-%d.lib' % major_ver
+    else:
+      self.aprutil_lib = 'libaprutil.lib'
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
