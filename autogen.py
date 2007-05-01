@@ -36,12 +36,7 @@ def get_apr_config():
     for apr_config in apr_config_paths:
         fout = run_cmd("%s --includes --cppflags" % apr_config)
         if fout:
-            # Look for flags that wrap.py can understand, and add them
-            # to our list of flags
-            for flag in fout.split():
-                if flag.startswith("-D") or flag.startswith("-I"):
-                    flags.append(flag)
-
+            flags = fout.split()
             apr_prefix = run_cmd("%s --prefix" % apr_config)
             apr_prefix = apr_prefix.strip()
             if not prefix:
@@ -126,9 +121,9 @@ try:
 except:
     python_exe = "python"
 
-cmd = ("cd %s && %s %s/ctypesgen/wrap.py %s %s "
+cmd = ("cd %s && %s %s/ctypesgen/wrap.py --cpp '%s %s' %s "
        "%s -o svn_all.py" % (tempdir, python_exe, os.getcwd(),
-                             flags, ldflags, includes))
+                             cpp, flags, ldflags, includes))
 print cmd
 os.system(cmd)
 
