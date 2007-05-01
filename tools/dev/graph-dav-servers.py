@@ -71,7 +71,8 @@ STATS = """1/1/2003       70
 1/1/2007               77027
 2/1/2007               84813
 3/1/2007               95679
-4/1/2007              103852"""
+4/1/2007              103852
+5/1/2007              117267"""
 
 
 def get_date(raw_date):
@@ -104,10 +105,13 @@ def draw_graph(dates, counts):
   figure(1, figsize=(6.5, 4.5))
 
   ax = subplot(111)
-  ax.xaxis.set_major_formatter( DateFormatter('%b,%y') )
-  ax.yaxis.set_major_formatter( FormatStrFormatter('%d') )
+  plot_date(dates, counts, color='r', linestyle='-', marker='o', markersize=3)
 
-  plot(dates, counts, color='r', marker='o', markersize=3)
+  ax.xaxis.set_major_formatter( DateFormatter('%Y') )
+  ax.xaxis.set_major_locator( YearLocator() )
+  ax.xaxis.set_minor_locator( MonthLocator() )
+
+  ax.yaxis.set_major_formatter( FormatStrFormatter('%d') )
 
   ylabel('Total # of Public DAV Servers')
 
