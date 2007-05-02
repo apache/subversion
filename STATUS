@@ -89,6 +89,16 @@ Veto-blocked changes:
       +1: malcolm, dlr, hwright
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
+ * r24497, r24504
+   Make Perl-based txdelta_window_handler actually usable by editors
+   and related functions.
+   Justification:
+     Binding completeness.
+   Votes:
+     +1: clkao
+     +0: glasser (I don't grok SWIG, but having this available in Perl is good)
+     -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
+
 Approved changes:
 
  * r24483
@@ -100,11 +110,3 @@ Approved changes:
      +1: pburba, dlr, cmpilato
      +0: malcolm
 
- * r24497, r24504
-   Make Perl-based txdelta_window_handler actually usable by editors
-   and related functions.
-   Justification:
-     Binding completeness.
-   Votes:
-     +1: clkao
-     +0: glasser (I don't grok SWIG, but having this available in Perl is good)
