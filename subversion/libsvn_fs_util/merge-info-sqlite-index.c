@@ -66,8 +66,7 @@ util_sqlite_exec(sqlite3 *db, const char *sql,
 {
   char *err_msg;
   if (sqlite3_exec(db, sql, NULL, NULL, &err_msg) != SQLITE_OK)
-    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                            err_msg);
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL, err_msg);
   return SVN_NO_ERROR;
 }
 
