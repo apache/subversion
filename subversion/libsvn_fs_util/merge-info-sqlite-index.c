@@ -213,14 +213,14 @@ index_path_merge_info(svn_revnum_t new_rev, sqlite3 *db, const char *path,
           int i;
           SQLITE_ERR(sqlite3_prepare
                      (db, 
-                      "INSERT INTO mergeinfo (revision, mergedto, "
-                      "mergedfrom, mergedrevstart, mergedrevend) VALUES "
+                      "INSERT INTO mergeinfo (revision, mergedfrom, "
+                      "mergedto, mergedrevstart, mergedrevend) VALUES "
                       "(?, ?, ?, ?, ?);",
                       -1, &stmt, NULL), db);
           SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
-          SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
+          SQLITE_ERR(sqlite3_bind_text(stmt, 2, from, -1, SQLITE_TRANSIENT),
                      db);
-          SQLITE_ERR(sqlite3_bind_text(stmt, 3, from, -1, SQLITE_TRANSIENT),
+          SQLITE_ERR(sqlite3_bind_text(stmt, 3, path, -1, SQLITE_TRANSIENT),
                      db);
           for (i = 0; i < revlist->nelts; i++)
             {
