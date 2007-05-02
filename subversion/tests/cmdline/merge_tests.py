@@ -5314,6 +5314,28 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   finally:
     os.chdir(saved_cwd)
 
+  # Wipe the memory of a portion of the previous merge...
+  ### It'd be nice to use 'merge --record-only' here, but we can't (yet)
+  ### wipe all ranges for a file due to the bug pointed out in r24645.
+  mu_copy_path = os.path.join(A_COPY_path, 'mu')
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property 'svn:mergeinfo' set on '" +
+                                      mu_copy_path + "'\n"], [], 'propset',
+                                     SVN_PROP_MERGE_INFO, '', mu_copy_path)
+  # ...and confirm that we can commit the wiped merge info...
+  expected_output = wc.State(wc_dir, {
+    'A_COPY/mu' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        None,
+                                        None,
+                                        None, None, None, None,
+                                        mu_copy_path)
+  # ...and that the presence of the property is retained, even when
+  # the value has been wiped.
+  svntest.actions.run_and_verify_svn(None, ['\n'], [], 'propget',
+                                     SVN_PROP_MERGE_INFO, mu_copy_path)
 
 def merge_to_target_with_copied_children(sbox):
   "merge works when target has copied children"
