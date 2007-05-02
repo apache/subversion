@@ -2731,7 +2731,7 @@ svn_wc__tweak_entry(apr_hash_t *entries,
       && (entry->schedule != svn_wc_schedule_replace)
       && (entry->copied != TRUE)
       && (entry->revision != new_rev))
-  {
+    {
       *write_required = TRUE;
       entry->revision = new_rev;
     }
