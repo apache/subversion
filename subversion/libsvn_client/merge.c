@@ -1529,6 +1529,9 @@ update_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
         rangelist = NULL;
       apr_hash_set(mergeinfo, rel_path, APR_HASH_KEY_STRING, rangelist);
 
+      if (is_revert && apr_hash_count(mergeinfo) == 0)
+        mergeinfo = NULL;
+
       SVN_ERR(svn_client__record_wc_merge_info(path, mergeinfo,
                                                adm_access, subpool));
     }

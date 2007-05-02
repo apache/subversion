@@ -90,7 +90,7 @@ svn_client__record_wc_merge_info(const char *wcpath,
 
   /* Convert the merge info (if any) into text for storage as a
      property value. */
-  if (apr_hash_count(mergeinfo) > 0)
+  if (mergeinfo)
     {
       /* The WC will contain merge info. */
       SVN_ERR(svn_mergeinfo__to_string(&mergeinfo_str, mergeinfo, pool));
