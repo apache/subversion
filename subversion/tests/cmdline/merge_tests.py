@@ -2628,6 +2628,7 @@ def setup_dir_replace(sbox):
     'foo/new file 2' : Item(status='A '),
     })
   expected_disk = wc.State('', {
+    ''               : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2'}),
     'foo' : Item(),
     'foo/new file'   : Item("Initial text in new file.\n"),
     'foo/new file 2' : Item("Initial text in new file 2.\n"),
@@ -2643,8 +2644,8 @@ def setup_dir_replace(sbox):
                                        expected_output,
                                        expected_disk,
                                        expected_status,
-                                       expected_skip)
-
+                                       expected_skip,
+                                       None, None, None, None, None, 1)
   # Commit merge of foo onto C, creating r3.
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'        : Item(verb='Sending'),
@@ -2750,6 +2751,7 @@ def merge_dir_replace(sbox):
     'foo/new file'   : Item(status='D '),
     })
   expected_disk = wc.State('', {
+    ''    : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2-5'}),
     'foo' : Item(),
     'foo/file foo'       : Item("Initial text in file foo.\n"),
     'foo/bar' : Item(),
@@ -2771,7 +2773,7 @@ def merge_dir_replace(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       0, # skip props
+                                       1,
                                        0) # don't do a dry-run the output differs
 
   # Commit merge of foo onto C
@@ -2860,6 +2862,7 @@ def merge_dir_and_file_replace(sbox):
     'foo/new file'   : Item(status='D '),
     })
   expected_disk = wc.State('', {
+    ''    : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2-5'}),
     'foo' : Item(),
     'foo/new file 2' : Item("New text in new file 2.\n"),
     'foo/bar' : Item(),
@@ -2880,7 +2883,7 @@ def merge_dir_and_file_replace(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       0, # skip props
+                                       1,
                                        0) # don't do a dry-run the output differs
 
   # Commit merge of foo onto C
