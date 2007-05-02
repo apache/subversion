@@ -21,7 +21,7 @@ parser.add_option("-p", "--prefix", dest="prefix",
 def get_apr_config():
     flags = []
     ldflags = []
-    ld_library_path = []
+    library_path = []
     ferr = None
     prefix = options.prefix
     apr_include_dir = None
@@ -69,40 +69,45 @@ def get_apr_config():
                         "option.")
 
     ldflags = [
-        "-llibapr-%s.so" % apr_version[0],
-        "-llibaprutil-%s.so" % apr_version[0],
+        "-lapr-%s" % apr_version[0],
+        "-laprutil-%s" % apr_version[0],
     ]
 
     # List the libraries in the order they should be loaded
     libraries = [ 
-        "libsvn_subr-1.so",
-        "libsvn_diff-1.so",
-        "libsvn_delta-1.so",
-        "libsvn_fs_util-1.so",
-        "libsvn_fs_fs-1.so",
-        "libsvn_fs_base-1.so",
-        "libsvn_fs-1.so",
-        "libsvn_wc-1.so",
-        "libsvn_ra_local-1.so",
-        "libsvn_ra_svn-1.so",
-        "libsvn_ra_dav-1.so",
-        "libsvn_ra_serf-1.so",
-        "libsvn_ra-1.so",
-        "libsvn_client-1.so",
+        "svn_subr-1",
+        "svn_diff-1",
+        "svn_delta-1",
+        "svn_fs_util-1",
+        "svn_fs_fs-1",
+        "svn_fs_base-1",
+        "svn_fs-1",
+        "svn_wc-1",
+        "svn_ra_local-1",
+        "svn_ra_svn-1",
+        "svn_ra_dav-1",
+        "svn_ra_serf-1",
+        "svn_ra-1",
+        "svn_client-1",
     ]
 
     for lib in libraries:
-        if os.path.exists("%s/lib/%s" % (svn_prefix, lib)):
+        if glob("%s/lib/*%s*" % (svn_prefix, lib)):
             ldflags.append("-l%s" % lib)
 
+    if apr_prefix != '/usr':
+        library_path.append("%s/lib" % apr_prefix)
+    if svn_prefix != '/usr' and svn_prefix != apr_prefix:
+        library_path.append("%s/lib" % svn_prefix)
+
     return (svn_prefix, apr_prefix, apr_include_dir, cpp,
-            " ".join(ldflags), " ".join(flags), ":".join(ld_library_path))
+            " ".join(ldflags), " ".join(flags), ":".join(library_path))
 
 def run_cmd(cmd):
     return os.popen(cmd).read()
 
 (svn_prefix, apr_prefix, apr_include_dir, cpp, ldflags, flags,
- ld_library_path) = get_apr_config()
+ library_path) = get_apr_config()
 
 ########################################################################
 # Build csvn/core/functions.py
@@ -113,7 +118,7 @@ tempdir = mkdtemp()
 includes = ('%s/include/subversion-1/svn_*.h '
             '%s/include/apr-1/ap[ru]_*.h' % (apr_prefix, svn_prefix))
 
-os.environ["LD_LIBRARY_PATH"] = ld_library_path
+os.environ["LIBRARY_PATH"] = library_path
 
 cmd = ("cd %s && %s %s/ctypesgen/wrap.py --cpp '%s %s' %s "
        "%s -o svn_all.py" % (tempdir, sys.executable, os.getcwd(),
@@ -126,8 +131,6 @@ out = file("%s/svn_all2.py" % tempdir, "w")
 for line in file("%s/svn_all.py" % tempdir):
     line = line.replace("restype = POINTER(svn_error_t)",
                         "restype = SVN_ERR")
-    line = line.replace("'%s/lib/" % svn_prefix, "'")
-    line = line.replace("'%s/lib/" % apr_prefix, "'")
     if not line.startswith("FILE ="):
         out.write(line)
 out.close()
