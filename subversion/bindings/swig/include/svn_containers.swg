@@ -603,6 +603,17 @@
 /* -----------------------------------------------------------------------
    Output of apr_array_header_t * <svn_merge_range_t *>
 */
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **RANGELIST {
+  %append_output
+    (svn_swig_py_rangelist_to_list(*$1, $descriptor(svn_merge_range_t *),
+                                   _global_py_pool));
+
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **RANGELIST {
   %append_output(svn_swig_rb_apr_array_to_array_merge_range(*$1));

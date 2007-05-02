@@ -615,6 +615,13 @@ static PyObject *convert_rangelist(void *value, void *ctx, PyObject *py_pool)
   return NULL;
 }
 
+PyObject *svn_swig_py_rangelist_to_list(apr_array_header_t *rangelist,
+                                        swig_type_info *type,
+                                        PyObject *py_pool)
+{
+  return convert_rangelist(rangelist, type, py_pool);
+}
+
 PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash, 
                                         swig_type_info *type,
                                         PyObject *py_pool)
