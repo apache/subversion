@@ -502,15 +502,16 @@ structure itself implies revision relationships.
 </p>
 
 <p>We currently use the <code>svn_log_message_receiver_t</code> interface
-to return log messages between application layers.  To enable a tree
-structure, we add another parameter, <code>child_count</code>.  When
-<code>child_count</code> is zero, the node is a leaf node, when
+to return log messages between application layers.  To enable communication
+of the tree structure, we add another parameter, <code>child_count</code>.
+When <code>child_count</code> is zero, the node is a leaf node.  When
 <code>child_count</code> is greater than zero, the node is an interior node,
 with the given number of children.  These children may also have children and
-indicate such by their own <code>child_count</code> parameters.  Consumers of
-this API can be aware of the number of children and rebuild the tree, or pass
-the values farther up the application stack.  In effect, this method implements
-a preorder traversal of the log message tree.</p>
+indicate such by their own <code>child_count</code> parameters.  Children
+are returned in-band through the receiver interface immediately following their
+parents.  Consumers of this API can be aware of the number of children and
+rebuild the tree, or pass the values farther up the application stack.  In
+effect, this method implements a preorder traversal of the log message tree.</p>
 
 <p>(For convenience, we may want to consolidate all the data parameters of
 <code>svn_log_message_receiver_t</code> into a single structure.)</p>
