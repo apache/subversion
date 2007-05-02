@@ -596,8 +596,7 @@ PyObject *svn_swig_py_stringhash_to_dict(apr_hash_t *hash)
   return convert_hash(hash, convert_string, NULL, NULL);
 }
 
-static PyObject *convert_mergeinfo_array(void *value, void *ctx, 
-                                         PyObject *py_pool)
+static PyObject *convert_rangelist(void *value, void *ctx, PyObject *py_pool)
 {
   int i;
   PyObject *list;
@@ -620,7 +619,7 @@ PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash,
                                         swig_type_info *type,
                                         PyObject *py_pool)
 {
-  return convert_hash(hash, convert_mergeinfo_array, type, py_pool);
+  return convert_hash(hash, convert_rangelist, type, py_pool);
 }
 
 static PyObject *convert_mergeinfo_hash(void *value, void *ctx, 
