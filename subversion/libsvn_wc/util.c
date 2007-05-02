@@ -236,7 +236,7 @@ svn_wc__path_switched(const char *wc_path,
                       const svn_wc_entry_t *entry,
                       apr_pool_t *pool)
 {
-  const char *wc_parent_path, *parent_child_url;
+  const char *wc_parent_path, *parent_child_url, *basename;
   const svn_wc_entry_t *parent_entry;
   svn_wc_adm_access_t *parent_adm_access;
   svn_error_t *err;
@@ -268,8 +268,12 @@ svn_wc__path_switched(const char *wc_path,
   SVN_ERR(svn_wc__entry_versioned(&parent_entry, wc_parent_path,
                                   parent_adm_access, FALSE, pool));
   SVN_ERR(svn_wc_adm_close(parent_adm_access));
-  parent_child_url = svn_path_join(parent_entry->url,
-                                   svn_path_basename(wc_path, pool), pool);
+  basename = svn_path_basename(wc_path, pool);
+
+  if (!svn_path_is_uri_safe(basename))
+    basename = svn_path_uri_encode(basename, pool);
+
+  parent_child_url = svn_path_join(parent_entry->url, basename, pool);
   *switched = strcmp(parent_child_url, entry->url);
 
   return SVN_NO_ERROR;
