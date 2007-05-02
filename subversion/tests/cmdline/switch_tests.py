@@ -587,9 +587,6 @@ def relocate_deleted_missing_copied(sbox):
   # Commit to verify that copyfrom URLs have been relocated
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H2'       : Item(verb='Adding'),
-    'A/D/H2/chi'   : Item(verb='Adding'),
-    'A/D/H2/omega' : Item(verb='Adding'),
-    'A/D/H2/psi'   : Item(verb='Adding'),
     })
   expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
                         status='  ', wc_rev='3', copied=None)
