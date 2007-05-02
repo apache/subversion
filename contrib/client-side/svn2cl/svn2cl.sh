@@ -3,7 +3,7 @@
 # svn2cl.sh - front end shell script for svn2cl.xsl, calls xsltproc
 #             with the correct parameters
 # 
-# Copyright (C) 2005, 2006 Arthur de Jong.
+# Copyright (C) 2005, 2006, 2007 Arthur de Jong.
 # 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@ set -e
 set -u
 
 # svn2cl version
-VERSION="0.8"
+VERSION="0.9"
 
 # set default parameters
 PWD=`pwd`
@@ -52,6 +52,7 @@ OUTSTYLE="cl"
 SVNLOGCMD="svn --verbose --xml log"
 SVNINFOCMD="svn info"
 AUTHORSFILE=""
+IGNORE_MESSAGE_STARTING=""
 TITLE="ChangeLog"
 REVISION_LINK="#r"
 TMPFILES=""
@@ -116,6 +117,14 @@ do
       ;;
     --revision-link=*)
       REVISION_LINK=`echo "$1" | sed 's/^--[a-z-]*=//'`
+      shift
+      ;;
+    --ignore-message-starting)
+      IGNORE_MESSAGE_STARTING="$2"
+      shift 2 || { echo "$prog: option requires an argument -- $1";exit 1; }
+      ;;
+    --ignore-message-starting=*)
+      IGNORE_MESSAGE_STARTING=`echo "$1" | sed 's/^--[a-z-]*=//'`
       shift
       ;;
     -f|--file|-o|--output)
@@ -186,7 +195,7 @@ do
       echo "$prog $VERSION";
       echo "Written by Arthur de Jong."
       echo ""
-      echo "Copyright (C) 2005, 2006 Arthur de Jong."
+      echo "Copyright (C) 2005, 2006, 2007 Arthur de Jong."
       echo "This is free software; see the source for copying conditions.  There is NO"
       echo "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
       exit 0
@@ -206,6 +215,8 @@ do
       echo "  --reparagraph        rewrap lines inside a paragraph"
       echo "  --title=NAME         title used in html file"
       echo "  --revision-link=NAME link revision numbers in html output"
+      echo "  --ignore-message-starting=STRING"
+      echo "                       ignore messages starting with the string"
       echo "  -o, --output=FILE    output to FILE instead of ChangeLog"
       echo "  -f, --file=FILE      alias for -o, --output"
       echo "  --stdout             output to stdout instead of ChangeLog"
@@ -299,6 +310,7 @@ eval "$SVNLOGCMD" | \
            --stringparam authorsfile "$AUTHORSFILE" \
            --stringparam title "$TITLE" \
            --stringparam revision-link "$REVISION_LINK" \
+           --stringparam ignore-message-starting "$IGNORE_MESSAGE_STARTING" \
            --nowrite \
            --nomkdir \
            --nonet \

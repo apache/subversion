@@ -99,11 +99,13 @@
     <li><a href="#svn_all_diffs_pl">svn_all_diffs.pl</a></li>
   </ul></li>
   <li><strong>emacs</strong><ul>
+    <li><a href="#dsvn_el">dsvn.el</a></li>
     <li><a href="#psvn_el">psvn.el</a></li>
     <li><a href="#vc_svn_el">vc-svn.el</a></li>
   </ul></li>
   <li><strong>fsfs</strong><ul>
     <li><a href="#svn_fast_backup">svn-fast-backup</a></li>
+    <li><a href="#fsfs_reshard_py">fsfs-reshard.py</a></li>
   </ul></li>
   <li><strong>graph</strong><ul>
     <li><a href="#svn_graph_pl">svn-graph.pl</a></li>
@@ -131,6 +133,7 @@
   <li><strong>.po files</strong><ul>
     <li><a href="#l10n_report">l10n-report.py</a></li>
     <li><a href="#verify_po_py">verify-po.py</a></li>
+    <li><a href="#po_update_sh">po-update.sh</a></li>
   </ul></li>
   <li><strong>post-commit - email</strong><ul>
     <li><a href="#commit_email_pl">commit-email.pl</a></li>
@@ -321,6 +324,15 @@
   <p>Wrapper for running a diff program.</p>
 
 
+  <h3><a name="dsvn_el"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/emacs/dsvn.el">dsvn.el</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/emacs/dsvn.el">contrib/client-side/emacs/dsvn.el</a>)</h3>
+  <p>A Subversion interface for Emacs, providing a similar interface as
+     pcl-cvs for CVS.
+  </p>
+  <p>See also <a href="#psvn_el">psvn.el</a>.</p>
+
+
   <h3><a name="mucc_c"
     href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/mucc/mucc.c">mucc.c</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/mucc">contrib/client-side/mucc</a>)</h3>
@@ -338,6 +350,7 @@
   <p>A Subversion interface for Emacs, providing a similar interface as
      pcl-cvs for CVS.
   </p>
+  <p>See also <a href="#dsvn_el">dsvn.el</a>.</p>
 
 
   <h3><a name="search_svnlog_pl"
@@ -940,6 +953,11 @@
   mail them to an email id. By default, the report is displayed in the
   stdout.</p>
 
+  <h3><a name="po_update_sh"
+    href="http://svn.collab.net/repos/svn/trunk/tools/po/po-update.sh">po-update.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/po">tools/po</a>)</h3>
+  <p>Script to generate Subversion pot files and update locales.</p>
+
 </div>
 
 <div class="h2">
@@ -957,6 +975,15 @@
     (<a href="http://svn.collab.net/repos/svn/trunk/contrib/server-side">contrib/server-side</a>)</h3>
   <p>This shell script demonstrates a backup/restore recipe for live
      Subversion repositories, using a standard full+incrementals process.
+  </p>
+
+
+  <h3><a name="fsfs_reshard_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/server-side/fsfs-reshard.py">fsfs-reshard.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/server-side">tools/server-side</a>)</h3>
+  <p>This script performs an offline conversion of an FSFS repository between
+     the linear format compatible with Subversion 1.4 or later and the sharded
+     format expected to be included with Subversion 1.5.
   </p>
 
 

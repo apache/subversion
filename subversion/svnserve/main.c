@@ -2,7 +2,7 @@
  * main.c :  Main control function for svnserve
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -201,7 +201,7 @@ static void help(apr_pool_t *pool)
   exit(0);
 }
 
-static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
+static svn_error_t * version(apr_pool_t *pool)
 {
   const char *fs_desc_start
     = _("The following repository back-end (FS) modules are available:\n\n");
@@ -211,7 +211,7 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
-  return svn_opt_print_help(os, "svnserve", TRUE, FALSE, version_footer->data,
+  return svn_opt_print_help(NULL, "svnserve", TRUE, FALSE, version_footer->data,
                             NULL, NULL, NULL, NULL, pool);
 }
 
@@ -345,22 +345,12 @@ int main(int argc, const char *argv[])
   /* Check library versions */
   err = check_lib_versions();
   if (err)
-    {
-      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-      svn_error_clear(err);
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
   /* Initialize the FS library. */
   err = svn_fs_initialize(pool);
   if (err)
-    {
-      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-      svn_error_clear(err);
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
   err = svn_cmdline__getopt_init(&os, argc, argv, pool);
   if (err)
@@ -388,7 +378,7 @@ int main(int argc, const char *argv[])
           break;
 
         case SVNSERVE_OPT_VERSION:
-          SVN_INT_ERR(version(os, pool));
+          SVN_INT_ERR(version(pool));
           exit(0);
           break;
           
@@ -445,11 +435,7 @@ int main(int argc, const char *argv[])
 
           err = svn_io_check_resolved_path(params.root, &kind, pool);
           if (err)
-            {
-              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-              svn_error_clear(err);
-              return EXIT_FAILURE;
-            }
+            return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
           if (kind != svn_node_dir)
             {
               svn_error_clear
@@ -535,18 +521,14 @@ int main(int argc, const char *argv[])
       if (status)
         {
           err = svn_error_wrap_apr(status, _("Can't open stdin"));
-          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-          svn_error_clear(err);
-          exit(1);
+          return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
         }
 
       status = apr_file_open_stdout(&out_file, pool);
       if (status)
         {
           err = svn_error_wrap_apr(status, _("Can't open stdout"));
-          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-          svn_error_clear(err);
-          exit(1);
+          return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
         }
                                 
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
@@ -628,9 +610,7 @@ int main(int argc, const char *argv[])
   if (status)
     {
       err = svn_error_wrap_apr(status, _("Can't get address info"));
-      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-      svn_error_clear(err);
-      exit(1);
+      return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
     }
 
 
@@ -644,9 +624,7 @@ int main(int argc, const char *argv[])
   if (status)
     {
       err = svn_error_wrap_apr(status, _("Can't create server socket"));
-      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-      svn_error_clear(err);
-      exit(1);
+      return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
     }
 
   /* Prevents "socket in use" errors when server is killed and quickly
@@ -657,9 +635,7 @@ int main(int argc, const char *argv[])
   if (status)
     {
       err = svn_error_wrap_apr(status, _("Can't bind server socket"));
-      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-      svn_error_clear(err);
-      exit(1);
+      return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
     }
 
   apr_socket_listen(sock, 7);
@@ -725,9 +701,7 @@ int main(int argc, const char *argv[])
         {
           err = svn_error_wrap_apr
             (status, _("Can't accept client connection"));
-          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-          svn_error_clear(err);
-          exit(1);
+          return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
         }
 
       conn = svn_ra_svn_create_conn(usock, NULL, NULL, connection_pool);

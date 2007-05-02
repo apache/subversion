@@ -700,13 +700,11 @@ def dont_diff_binary_file(sbox):
   wc_dir = sbox.wc_dir
   
   # Add a binary file to the project.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
-  theta_contents = fp.read()  # suck up contents of a test .png file
-  fp.close()
-
+  theta_contents = svntest.main.file_read(
+    os.path.join(sys.path[0], "theta.bin"), 'rb')
   # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  svntest.main.file_write(theta_path, theta_contents)
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
   
   svntest.main.run_svn(None, 'add', theta_path)  
 
@@ -1901,28 +1899,27 @@ def diff_property_changes_to_base(sbox):
                                        'ci', '-m', 'empty-msg')
 
     # Check that forward and reverse repos-repos diffs are as expected.
-    out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                                  'diff', '-r', '1:2')
-    svntest.main.compare_unordered_output(expected_output_r1_r2, out)
+    expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
+    svntest.actions.run_and_verify_svn(None, expected, [],
+                                       'diff', '-r', '1:2')
 
-    out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                                  'diff', '-r', '2:1')
-    svntest.main.compare_unordered_output(expected_output_r2_r1, out)
+    expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
+    svntest.actions.run_and_verify_svn(None, expected, [],
+                                       'diff', '-r', '2:1')
 
     # Now check repos->WORKING, repos->BASE, and BASE->repos.
     # (BASE is r1, and WORKING has no local mods, so this should produce
     # the same output as above).
-    out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                                  'diff', '-r', '1')
-    svntest.main.compare_unordered_output(expected_output_r1_r2, out)
+    expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
+    svntest.actions.run_and_verify_svn(None, expected, [],
+                                       'diff', '-r', '1')
 
-    out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                                  'diff', '-r', '1:BASE')
-    svntest.main.compare_unordered_output(expected_output_r1_r2, out)
+    svntest.actions.run_and_verify_svn(None, expected, [],
+                                       'diff', '-r', '1:BASE')
 
-    out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                                  'diff', '-r', 'BASE:1')
-    svntest.main.compare_unordered_output(expected_output_r2_r1, out)
+    expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
+    svntest.actions.run_and_verify_svn(None, expected, [],
+                                       'diff', '-r', 'BASE:1')
 
     # Modify some properties.
     svntest.actions.run_and_verify_svn(None, None, [],
@@ -1939,13 +1936,13 @@ def diff_property_changes_to_base(sbox):
 
     # Check that the earlier diffs against BASE are unaffected by the
     # presence of local mods.
-    out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                                  'diff', '-r', '1:BASE')
-    svntest.main.compare_unordered_output(expected_output_r1_r2, out)
+    expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
+    svntest.actions.run_and_verify_svn(None, expected, [],
+                                       'diff', '-r', '1:BASE')
 
-    out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                                  'diff', '-r', 'BASE:1')
-    svntest.main.compare_unordered_output(expected_output_r2_r1, out)
+    expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
+    svntest.actions.run_and_verify_svn(None, expected, [],
+                                       'diff', '-r', 'BASE:1')
   finally:
     os.chdir(current_dir)
 
@@ -2191,9 +2188,9 @@ def diff_prop_change_local_propmod(sbox):
     # We also need to make sure that the 'new' (WORKING only) properties
     # are included in the output, since they won't be listed in a simple
     # BASE->r2 diff.
-    out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                                  'diff', '-r', '2')
-    svntest.main.compare_unordered_output(expected_output_r2_wc, out)
+    expected = svntest.actions.UnorderedOutput(expected_output_r2_wc)
+    svntest.actions.run_and_verify_svn(None, expected, [],
+                                       'diff', '-r', '2')
   finally:
     os.chdir(current_dir)
 
@@ -2476,6 +2473,16 @@ def basic_diff_summarize(sbox):
                                         None, None, None, None,
                                         wc_dir)
 
+  # Get the differences between two files.
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status=' M'),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
+                                                None, None, None, None,
+                                                os.path.join(wc_dir, 'iota'),
+                                                '-c2')
+
+  # Get the differences between two versions of an entire directory.
   expected_diff = svntest.wc.State(wc_dir, {
     'A/mu': Item(status='M '),
     'iota': Item(status=' M'),
@@ -2717,7 +2724,7 @@ test_list = [ None,
               diff_repos_working_added_dir,
               diff_base_repos_moved,
               diff_added_subtree,
-              basic_diff_summarize,
+              XFail(basic_diff_summarize),
               diff_weird_author,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,

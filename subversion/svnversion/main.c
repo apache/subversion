@@ -26,9 +26,10 @@
 #define SVNVERSION_OPT_VERSION SVN_OPT_FIRST_LONGOPT_ID
 
 
-static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
+static svn_error_t *
+version(apr_pool_t *pool)
 {
-  return svn_opt_print_help(os, "svnversion", TRUE, FALSE, NULL, NULL,
+  return svn_opt_print_help(NULL, "svnversion", TRUE, FALSE, NULL, NULL,
                             NULL, NULL, NULL, pool);
 }
 
@@ -144,12 +145,7 @@ main(int argc, const char *argv[])
   /* Check library versions */
   err = check_lib_versions();
   if (err)
-    {
-      svn_handle_error2(err, stderr, FALSE, "svnversion: ");
-      svn_error_clear(err);
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error(err, pool, "svnversion: ");
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
@@ -157,10 +153,7 @@ main(int argc, const char *argv[])
     {
       err = svn_wc_set_adm_dir("_svn", pool);
       if (err)
-        {
-          svn_handle_error2(err, stderr, FALSE, "svnversion: ");
-          return EXIT_FAILURE;
-        }
+        return svn_cmdline_handle_exit_error(err, pool, "svnversion: ");
     }
 #endif
 
@@ -193,7 +186,7 @@ main(int argc, const char *argv[])
           help(options, pool);
           break;
         case SVNVERSION_OPT_VERSION:
-          SVN_INT_ERR(version(os, pool));
+          SVN_INT_ERR(version(pool));
           exit(0);
           break;
         default:

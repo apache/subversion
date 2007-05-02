@@ -50,6 +50,7 @@ svn_cl__propset(apr_getopt_t *os,
   svn_string_t *propval = NULL;
   svn_boolean_t propval_came_from_cmdline;
   apr_array_header_t *args, *targets;
+  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   int i;
 
   /* PNAME and PROPVAL expected as first 2 arguments if filedata was
@@ -83,10 +84,35 @@ svn_cl__propset(apr_getopt_t *os,
       return svn_error_create 
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Bad encoding option: prop value not stored as UTF8"));
-  
+
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
-                                        opt_state->targets, pool));
+
+  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+     all the targets, we need to build a list of targets made of both
+     ones the user typed, as well as any specified by --changelist.  */
+  if (opt_state->changelist)
+    {
+      SVN_ERR(svn_client_get_changelist(&changelist_targets,
+                                        opt_state->changelist,
+                                        "",
+                                        ctx,
+                                        pool));
+      if (apr_is_empty_array(changelist_targets))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("no such changelist '%s'"),
+                                 opt_state->changelist);
+    }
+
+  if (opt_state->targets && changelist_targets)
+    combined_targets = apr_array_append(pool, opt_state->targets,
+                                        changelist_targets);
+  else if (opt_state->targets)
+    combined_targets = opt_state->targets;
+  else if (changelist_targets)
+    combined_targets = changelist_targets;
+
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+                                        combined_targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {

@@ -1,5 +1,5 @@
 /*
- * sasl_auth.c :  functions for SASL-based authentication
+ * cyrus_auth.c :  functions for Cyrus SASL-based authentication
  *
  * ====================================================================
  * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
@@ -705,22 +705,6 @@ svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *get_remote_hostname(char **hostname, apr_socket_t *sock)
-{
-  apr_status_t apr_err;
-  apr_sockaddr_t *sa;
-
-  apr_err = apr_socket_addr_get(&sa, APR_REMOTE, sock);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
-
-  apr_err = apr_getnameinfo(hostname, sa, 0);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
                           apr_array_header_t *mechlist,
@@ -730,7 +714,6 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   sasl_conn_t *sasl_ctx;
   const char *mechstring = "", *last_err = "", *realmstring;
   const char *local_addrport = NULL, *remote_addrport = NULL;
-  char *hostname = NULL;
   svn_boolean_t success, compat = (realm == NULL);
   /* Reserve space for 3 callbacks (for the username, password and the
      array terminator). */
@@ -742,7 +725,6 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
     {
       SVN_ERR(svn_ra_svn__get_addresses(&local_addrport, &remote_addrport,
                                         sess->conn, pool));
-      SVN_ERR(get_remote_hostname(&hostname, sess->conn->sock));
     }
 
   /* Create a string containing the list of mechanisms, separated by spaces. */
@@ -802,7 +784,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
       svn_pool_clear(subpool);
 
       SVN_ERR(new_sasl_ctx(&sasl_ctx, sess->is_tunneled,
-                           hostname, local_addrport, remote_addrport,
+                           sess->hostname, local_addrport, remote_addrport,
                            callbacks, sess->conn->pool));
       err = try_auth(sess, sasl_ctx, &success, &last_err, mechstring,
                      compat, subpool);

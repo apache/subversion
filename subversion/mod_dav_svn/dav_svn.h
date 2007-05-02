@@ -109,6 +109,9 @@ typedef struct {
   /* is the client a Subversion client? */
   svn_boolean_t is_svn_client;
 
+  /* The path to the activities db */
+  const char *activities_db;
+
 } dav_svn_repos;
 
 
@@ -295,6 +298,9 @@ const char *dav_svn__get_xslt_uri(request_rec *r);
 
 /* Return the master URI (for mirroring) */
 const char * dav_svn__get_master_uri(request_rec *r);
+
+/* Return the activities db */
+const char * dav_svn__get_activities_db(request_rec *r);
 
 /* Return the root directory */
 const char * dav_svn__get_root_dir(request_rec *r);

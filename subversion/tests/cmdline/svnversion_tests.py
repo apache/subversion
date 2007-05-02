@@ -18,6 +18,7 @@
 
 # General modules
 import os.path
+import warnings
 
 # Our testing module
 import svntest
@@ -174,6 +175,7 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
+  warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning)
   svntest.main.run_tests(test_list)
   # NOTREACHED
 

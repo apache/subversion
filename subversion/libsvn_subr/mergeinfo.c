@@ -25,6 +25,7 @@
 #include "svn_error_codes.h"
 #include "svn_string.h"
 #include "svn_mergeinfo.h"
+#include "private/svn_mergeinfo_private.h"
 #include "svn_private_config.h"
 
 /* Define a MAX macro if we don't already have one */
@@ -122,7 +123,7 @@ parse_revlist(const char **input, const char *end,
 
   if (curr == end)
     return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            _("No revision list found "));
+                            _("No revision list found"));
 
   while (curr < end)
     {
@@ -217,11 +218,12 @@ parse_top(const char **input, const char *end, apr_hash_t *hash,
 
 /* Parse mergeinfo.  */
 svn_error_t *
-svn_mergeinfo_parse(const char *input, apr_hash_t **hash,
+svn_mergeinfo_parse(apr_hash_t **mergehash, 
+                    const char *input, 
                     apr_pool_t *pool)
 {
-  *hash = apr_hash_make(pool);
-  return parse_top(&input, input + strlen(input), *hash, pool);
+  *mergehash = apr_hash_make(pool);
+  return parse_top(&input, input + strlen(input), *mergehash, pool);
 }
 
 
@@ -625,6 +627,25 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
 }
 
 svn_error_t *
+svn_mergeinfo__equals(svn_boolean_t *is_equal,
+                      apr_hash_t *info1, 
+                      apr_hash_t *info2,
+                      apr_pool_t *pool)
+{
+  if (apr_hash_count(info1) == apr_hash_count(info2))
+    {
+      apr_hash_t *deleted, *added;
+      SVN_ERR(svn_mergeinfo_diff(&deleted, &added, info1, info2, pool));
+      *is_equal = apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0;
+    }
+  else
+    {
+      *is_equal = FALSE;
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
                     apr_pool_t *pool)
 {
@@ -772,9 +793,16 @@ svn_error_t *
 svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *input,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *mergeinfo_buf;
-  SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
-  *output = svn_string_create_from_buf(mergeinfo_buf, pool);
+  if (apr_hash_count(input) > 0)
+    {
+      svn_stringbuf_t *mergeinfo_buf;
+      SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
+      *output = svn_string_create_from_buf(mergeinfo_buf, pool);
+    }
+  else
+    {
+      *output = svn_string_create("", pool);
+    }
   return SVN_NO_ERROR;
 }
 

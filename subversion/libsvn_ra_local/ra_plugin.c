@@ -26,7 +26,9 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_path.h"
+
 #include "svn_private_config.h"
+#include "private/svn_repos_private.h"
 #include "../libsvn_ra/ra_loader.h"
 
 #define APR_WANT_STRFUNC
@@ -614,13 +616,14 @@ make_reporter(svn_ra_session_t *session,
                                               pool));
 
   /* Build a reporter baton. */
-  SVN_ERR(svn_repos_begin_report2(&rbaton,
+  SVN_ERR(svn_repos__begin_report(&rbaton,
                                   revision,
                                   sbaton->repos,
                                   sbaton->fs_path->data,
                                   target,
                                   other_fs_path,
                                   text_deltas,
+                                  depth,
                                   ignore_ancestry,
                                   editor,
                                   edit_baton,
@@ -667,7 +670,7 @@ svn_ra_local__get_merge_info(svn_ra_session_t *session,
           apr_hash_this(hi, &key, NULL, &value);
           path = key;
           info = value;
-          SVN_ERR(svn_mergeinfo_parse(info, &for_path, pool));
+          SVN_ERR(svn_mergeinfo_parse(&for_path, info, pool));
           apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
         }
     }

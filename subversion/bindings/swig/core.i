@@ -44,13 +44,7 @@
 #endif
 
 /* ### for now, let's ignore this thing. */
-#ifndef SWIGRUBY
 %ignore svn_prop_t;
-#endif
-#ifdef SWIGRUBY
-%immutable svn_prop_t::name;
-%immutable svn_prop_t::value;
-#endif
 
 /* -----------------------------------------------------------------------
    The following struct members have to be read-only because otherwise
@@ -226,16 +220,41 @@
 /* bad pool convention */
 %ignore svn_opt_print_generic_help;
 
+%ignore svn_opt_args_to_target_array;
+
 /* Ugliness because the constants are typedefed and SWIG ignores them
    as a result. */
 %constant svn_revnum_t SWIG_SVN_INVALID_REVNUM = -1;
 %constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
 
 /* -----------------------------------------------------------------------
-   input rangelist to svn_rangelist_to_stringbuf
+   input rangelist
 */
 %apply apr_array_header_t *RANGELIST {
-   apr_array_header_t *rangeinput
+  apr_array_header_t *rangeinput,
+  apr_array_header_t *from,
+  apr_array_header_t *to,
+  apr_array_header_t *changes,
+  apr_array_header_t *eraser,
+  apr_array_header_t *whiteboard,
+  apr_array_header_t *rangelist1,
+  apr_array_header_t *rangelist2
+}
+
+/* -----------------------------------------------------------------------
+   output rangelist
+*/
+%apply apr_array_header_t **RANGELIST {
+  apr_array_header_t **deleted,
+  apr_array_header_t **added,
+  apr_array_header_t **output
+}
+
+/* -----------------------------------------------------------------------
+   input and output rangelist
+*/
+%apply apr_array_header_t **RANGELIST_INOUT {
+  apr_array_header_t **rangelist_inout
 }
 
 /* -----------------------------------------------------------------------
@@ -248,7 +267,8 @@
    apr_hash_t *mergein1,
    apr_hash_t *mergein2,
    apr_hash_t *eraser,
-   apr_hash_t *whiteboard
+   apr_hash_t *whiteboard,
+   apr_hash_t *changes
 }
 
 /* -----------------------------------------------------------------------
@@ -441,6 +461,16 @@
     apr_hash_t **added,
     apr_hash_t **mergeoutput
 }
+
+/* -----------------------------------------------------------------------
+   svn_mergeinfo_merge()
+*/
+
+#ifdef SWIGRUBY
+%apply apr_hash_t **MERGEHASH_INOUT {
+    apr_hash_t **mergeinfo_inout
+}
+#endif
 
 /* -----------------------------------------------------------------------
    svn_io_parse_mimetypes_file()
@@ -653,6 +683,14 @@ PyObject *svn_swig_py_exception_type(void);
 %ignore svn_diff_file_options_create;
 %ignore svn_create_commit_info;
 %ignore svn_commit_info_dup;
+%ignore svn_mergeinfo_merge;
+%ignore svn_mergeinfo_sort;
+%ignore svn_rangelist_merge;
+%ignore svn_rangelist_reverse;
+
+%ignore svn_opt_args_to_target_array2;
+%ignore svn_opt_parse_num_args;
+%ignore svn_opt_parse_all_args;
 #endif
 
 /* ----------------------------------------------------------------------- */
@@ -723,6 +761,10 @@ SubversionException = _core.SubversionException
 #ifdef SWIGRUBY
 %init %{
   svn_swig_rb_initialize();
+
+  rb_define_const(mCore, "SVN_VER_NUM", rb_str_new2(SVN_VER_NUM));
+  rb_define_const(mCore, "SVN_VER_NUMBER", rb_str_new2(SVN_VER_NUMBER));
+  rb_define_const(mCore, "SVN_VERSION", rb_str_new2(SVN_VERSION));
 %}
 
 %header %{
@@ -871,6 +913,24 @@ struct svn_auth_baton_t
   };
 }
 
+%extend svn_merge_range_t
+{
+  svn_merge_range_t(svn_revnum_t start, svn_revnum_t end, apr_pool_t *pool) {
+    svn_merge_range_t *self;
+    self = apr_palloc(pool, sizeof(svn_merge_range_t));
+    self->start = start;
+    self->end = end;
+    return self;
+  };
+
+  ~svn_merge_range_t() {
+  };
+
+  svn_merge_range_t *dup(apr_pool_t *pool) {
+    return svn_merge_range_dup(self, pool);
+  };
+}
+
 %include svn_diff_h.swg
 
 %inline %{
@@ -884,6 +944,33 @@ static VALUE
 svn_locale_charset(void)
 {
   return INT2NUM((int)APR_LOCALE_CHARSET);
+}
+
+static svn_error_t *
+svn_swig_rb_mergeinfo_merge(apr_hash_t **mergeinfo_inout,
+                            apr_hash_t *changes, apr_pool_t *pool)
+{
+  return svn_mergeinfo_merge(mergeinfo_inout, changes, pool);
+}
+
+static svn_error_t *
+svn_swig_rb_mergeinfo_sort(apr_hash_t **mergeinfo_inout, apr_pool_t *pool)
+{
+  return svn_mergeinfo_sort(*mergeinfo_inout, pool);
+}
+
+static svn_error_t *
+svn_swig_rb_rangelist_merge(apr_array_header_t **rangelist_inout,
+                            apr_array_header_t *changes, apr_pool_t *pool)
+{
+  return svn_rangelist_merge(rangelist_inout, changes, pool);
+}
+
+static svn_error_t *
+svn_swig_rb_rangelist_reverse(apr_array_header_t **rangelist_inout,
+                              apr_pool_t *pool)
+{
+  return svn_rangelist_reverse(*rangelist_inout, pool);
 }
 
 /* prompt providers return baton for protecting GC */

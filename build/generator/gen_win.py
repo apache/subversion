@@ -58,7 +58,6 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
-    self.have_gen_uri = None
     self.sasl_path = None
 
     # NLS options
@@ -129,12 +128,12 @@ class GeneratorBase(gen_base.GeneratorBase):
 
   def __init__(self, fname, verfname, options):
 
-    # Initialize parent
-    gen_base.GeneratorBase.__init__(self, fname, verfname, options)
-    
     # parse (and save) the options that were passed to us
     self.parse_options(options)
 
+    # Initialize parent
+    gen_base.GeneratorBase.__init__(self, fname, verfname, options)
+    
     # Find Berkeley DB
     self._find_bdb()
 
@@ -199,6 +198,13 @@ class WinGeneratorBase(GeneratorBase):
     # Find the installed SWIG version to adjust swig options
     self._find_swig()
 
+    # Find the installed Java Development Kit
+    self._find_jdk()
+
+    # Find APR and APR-util version
+    self._find_apr()
+    self._find_apr_util()
+
     # Look for ML
     if self.zlib_path:
       self._find_ml()
@@ -210,15 +216,6 @@ class WinGeneratorBase(GeneratorBase):
     # Find serf and its dependencies
     if self.serf_path:
       self._find_serf()
-
-    # Check for gen_uri_delims project in apr-util
-    gen_uri_path = os.path.join(self.apr_util_path, 'uri',
-                                'gen_uri_delims.dsp')
-    if os.path.exists(gen_uri_path):
-      self.have_gen_uri = 1
-
-    # Run apr-util's w32locatedb.pl script
-    self._configure_apr_util()
 
     #Make some files for the installer so that we don't need to
     #require sed or some other command to do it
@@ -299,11 +296,6 @@ class WinGeneratorBase(GeneratorBase):
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
                              install_targets)
     
-    # Drop the gen_uri_delims target unless we're on an old apr-util
-    if not self.have_gen_uri:
-      install_targets = filter(lambda x: x.name != 'gen_uri_delims',
-                               install_targets)
-      
     # Drop the libsvn_fs_base target and tests if we don't have BDB
     if not self.bdb_lib:
       install_targets = filter(lambda x: x.name != 'libsvn_fs_base',
@@ -405,6 +397,15 @@ class WinGeneratorBase(GeneratorBase):
   def get_proj_sources(self, quote_path, target):
     "Get the list of source files for each project"
     sources = [ ]
+
+    javac_exe = "javac"
+    javah_exe = "javah"
+    jar_exe = "jar"
+    if self.jdk_path:
+      javac_exe = os.path.join(self.jdk_path, "bin", javac_exe)
+      javah_exe = os.path.join(self.jdk_path, "bin", javah_exe)
+      jar_exe = os.path.join(self.jdk_path, "bin", jar_exe)
+    
     if not isinstance(target, gen_base.TargetProject):
       cbuild = None
       ctarget = None
@@ -417,8 +418,9 @@ class WinGeneratorBase(GeneratorBase):
           headers = self.path(target.headers)
           classname = target.package + "." + source.class_name
 
-          cbuild = "javah -verbose -force -classpath %s -d %s %s" \
-                   % (self.quote(classes), self.quote(headers), classname)
+          cbuild = "%s -verbose -force -classpath %s -d %s %s" \
+                   % (self.quote(javah_exe), self.quote(classes),
+                      self.quote(headers), classname)
 
           ctarget = self.path(object.filename_win)
 
@@ -429,9 +431,10 @@ class WinGeneratorBase(GeneratorBase):
 
           sourcepath = self.path(source.sourcepath)
 
-          cbuild = "javac -g -target 1.2 -source 1.3 -classpath %s -d %s " \
+          cbuild = "%s -g -target 1.2 -source 1.3 -classpath %s -d %s " \
                    "-sourcepath %s $(InputPath)" \
-                   % tuple(map(self.quote, (classes, targetdir, sourcepath)))
+                   % tuple(map(self.quote, (javac_exe, classes,
+                                            targetdir, sourcepath)))
 
           ctarget = self.path(object.filename)
 
@@ -445,8 +448,9 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
       classdir = self.path(target.classes)
       jarfile = msvc_path_join(classdir, target.jar)
-      cbuild = "jar cf %s -C %s %s" \
-               % (jarfile, classdir, string.join(target.packages))
+      cbuild = "%s cf %s -C %s %s" \
+               % (self.quote(jar_exe), jarfile, classdir,
+                  string.join(target.packages))
       deps = map(lambda x: x.custom_target, sources)
       sources.append(ProjectItem(path='makejar', reldir='', user_deps=deps,
                                  custom_build=cbuild, custom_target=jarfile))
@@ -578,13 +582,7 @@ class WinGeneratorBase(GeneratorBase):
             and target.external_project):
       return None
 
-    if target.external_project[:10] == 'apr-iconv/':
-      path = self.apr_iconv_path + target.external_project[9:]
-    elif target.external_project[:9] == 'apr-util/':
-      path = self.apr_util_path + target.external_project[8:]
-    elif target.external_project[:4] == 'apr/':
-      path = self.apr_path + target.external_project[3:]
-    elif target.external_project[:5] == 'neon/':
+    if target.external_project[:5] == 'neon/':
       path = self.neon_path + target.external_project[4:]
     elif target.external_project[:5] == 'serf/' and self.serf_lib:
       path = self.serf_path + target.external_project[4:]
@@ -732,11 +730,14 @@ class WinGeneratorBase(GeneratorBase):
     "Return the list of defines for target"
 
     fakedefines = ["WIN32","_WINDOWS","alloca=_alloca",
-                   "snprintf=_snprintf", "_CRT_SECURE_NO_DEPRECATE=",
+                   "_CRT_SECURE_NO_DEPRECATE=",
                    "_CRT_NONSTDC_NO_DEPRECATE="]
     if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
+
+    if target.name.find('ruby') == -1:
+      fakedefines.append("snprintf=_snprintf")
 
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
@@ -827,6 +828,10 @@ class WinGeneratorBase(GeneratorBase):
 
     if self.sasl_path:
       fakeincludes.append(self.apath(self.sasl_path, 'include'))
+
+    if target.name == "libsvnjavahl" and self.jdk_path:
+      fakeincludes.append(os.path.join(self.jdk_path, 'include'))
+      fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
     
     return fakeincludes
 
@@ -844,6 +849,12 @@ class WinGeneratorBase(GeneratorBase):
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
       fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
+
+    fakelibdirs.append(self.apath(self.apr_path, cfg))
+    fakelibdirs.append(self.apath(self.apr_util_path, cfg))
+    fakelibdirs.append(self.apath(self.apr_util_path, 'xml', 'expat',
+                                  'lib', libcfg))
+
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -923,6 +934,15 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_SASL_LIBS)':
         nondeplibs.append(sasllib)
         
+      if dep.external_lib == '$(SVN_APR_LIBS)':
+        nondeplibs.append(self.apr_lib)
+
+      if dep.external_lib == '$(SVN_APRUTIL_LIBS)':
+        nondeplibs.append(self.aprutil_lib)
+
+      if dep.external_lib == '$(SVN_XML_LIBS)':
+        nondeplibs.append('xml.lib')
+
     return gen_base.unique(nondeplibs)
 
   def get_win_sources(self, target, reldir_prefix=''):
@@ -1105,6 +1125,37 @@ class WinGeneratorBase(GeneratorBase):
     except ImportError:
       pass
 
+  def _find_jdk(self):
+    self.jdk_path = None
+    jdk_ver = None
+    try:
+      import _winreg
+      key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
+                            r"SOFTWARE\JavaSoft\Java Development Kit")
+      # Find the newest JDK version.
+      num_values = _winreg.QueryInfoKey(key)[1]
+      for i in range(num_values):
+        (name, value, key_type) = _winreg.EnumValue(key, i)
+        if name == "CurrentVersion":
+          jdk_ver = value
+          break
+      
+      # Find the JDK path.
+      if jdk_ver is not None:
+        key = _winreg.OpenKey(key, jdk_ver)
+        num_values = _winreg.QueryInfoKey(key)[1]
+        for i in range(num_values):
+          (name, value, key_type) = _winreg.EnumValue(key, i)
+          if name == "JavaHome":
+            self.jdk_path = value
+            break
+      _winreg.CloseKey(key)
+    except (ImportError, EnvironmentError):
+      pass
+    if self.jdk_path:
+      sys.stderr.write("Found JDK version %s in %s\n"
+                       % (jdk_ver, self.jdk_path))
+
   def _find_swig(self):
     # Require 1.3.24. If not found, assume 1.3.25.
     default_version = '1.3.25'
@@ -1218,19 +1269,51 @@ class WinGeneratorBase(GeneratorBase):
     else:
       sys.stderr.write('serf not found, ra_serf will not be built\n')
 
-  def _configure_apr_util(self):
-    if not self.configure_apr_util:
-      return
-    script_path = os.path.join(self.apr_util_path, "build", "w32locatedb.pl")
-    inc_path = os.path.join(self.bdb_path, "include")
-    lib_path = os.path.join(self.bdb_path, "lib")
-    cmdline = "perl %s dll %s %s" % (escape_shell_arg(script_path),
-                                     escape_shell_arg(inc_path),
-                                     escape_shell_arg(lib_path))
-    sys.stderr.write('Configuring apr-util library...\n%s\n' % cmdline)
-    if os.system(cmdline):
-      sys.stderr.write('WARNING: apr-util library was not configured'
-                       ' successfully\n')
+  def _find_apr(self):
+    "Find the APR library and version"
+
+    version_file_path = os.path.join(self.apr_path, 'include',
+                                     'apr_version.h')
+    
+    if not os.path.exists(version_file_path):
+      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
+      sys.stderr.write("Use '--with-apr' option to configure APR location.\n");
+      sys.exit(1)
+
+    fp = open(version_file_path)
+    txt = fp.read()
+    fp.close()
+    vermatch = re.compile(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', re.M) \
+                 .search(txt)
+    
+    major_ver = int(vermatch.group(1))
+    if major_ver > 0:
+      self.apr_lib = 'libapr-%d.lib' % major_ver
+    else:
+      self.apr_lib = 'libapr.lib'
+   
+  def _find_apr_util(self):
+    "Find the APR-util library and version"
+
+    version_file_path = os.path.join(self.apr_util_path, 'include',
+                                     'apu_version.h')
+    
+    if not os.path.exists(version_file_path):
+      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
+      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n");
+      sys.exit(1)
+
+    fp = open(version_file_path)
+    txt = fp.read()
+    fp.close()
+    vermatch = re.compile(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', re.M) \
+                 .search(txt)
+    
+    major_ver = int(vermatch.group(1))
+    if major_ver > 0:
+      self.aprutil_lib = 'libaprutil-%d.lib' % major_ver
+    else:
+      self.aprutil_lib = 'libaprutil.lib'
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"

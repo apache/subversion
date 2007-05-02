@@ -29,33 +29,57 @@ module Svn
       alias_method :wcprop_changes=, :incoming_prop_changes=
     end
 
+    class CommitItemWrapper
+      def initialize(item)
+        @item = item
+      end
+
+      def incoming_prop_changes
+        if @item.incoming_prop_changes
+          Util.hash_to_prop_array(@item.incoming_prop_changes)
+        else
+          nil
+        end
+      end
+      alias_method :wcprop_changes, :incoming_prop_changes
+
+      def method_missing(method, *args, &block)
+        @item.__send__(method, *args, &block)
+      end
+    end
+
     class Info
       alias url URL
       alias repos_root_url repos_root_URL
     end
 
-    PropListItem = ProplistItem
-    # Following methods are also available:
-    #
-    # [name]
-    #   Returns an URI for the item concerned with the instance.
-    # [props]
-    #   Returns a Hash of properties, such as
-    #   <tt>{propname1 => propval1, propname2 => propval2, ...}</tt>.
+
+    # For backward compatibility
     class PropListItem
-      alias name node_name
-      alias props prop_hash
+      # Returns an URI for the item concerned with the instance.
+      attr_accessor :name
+
+      # Returns a Hash of properties, such as
+      # <tt>{propname1 => propval1, propname2 => propval2, ...}</tt>.
+      attr_accessor :props
+
+      alias_method :node_name, :name
+      alias_method :prop_hash, :props
+
+      def initialize(name, props)
+        @name = name
+        @props = props
+      end
 
       def method_missing(meth, *args)
-        _props = props
-        if _props.respond_to?(meth)
-          _props.__send__(meth, *args)
+        if @props.respond_to?(meth)
+          @props.__send__(meth, *args)
         else
           super
         end
       end
     end
-    
+
     Context = Ctx
     class Context
       alias _auth_baton auth_baton
@@ -73,10 +97,12 @@ module Svn
       end
 
       def checkout(url, path, revision=nil, peg_rev=nil,
-                   recurse=true, ignore_externals=false)
+                   depth=nil, ignore_externals=false,
+                   allow_unver_obstruction=false)
         revision ||= "HEAD"
-        Client.checkout2(url, path, peg_rev, revision,
-                         recurse, ignore_externals, self)
+        Client.checkout3(url, path, peg_rev, revision, depth,
+                         ignore_externals, allow_unver_obstruction,
+                         self)
       end
       alias co checkout
 
@@ -85,17 +111,19 @@ module Svn
         Client.mkdir2(normalize_path(paths), self)
       end
 
-      def commit(targets, recurse=true, keep_locks=false)
+      def commit(targets, recurse=true, keep_locks=false,
+                 keep_changelist=false, changelist_name=nil)
         targets = [targets] unless targets.is_a?(Array)
-        Client.commit3(targets, recurse, keep_locks, self)
+        Client.commit4(targets, recurse, keep_locks, keep_changelist,
+                       changelist_name, self)
       end
       alias ci commit
 
-      def status(path, rev=nil, recurse=true, get_all=false,
+      def status(path, rev=nil, depth=nil, get_all=false,
                  update=true, no_ignore=false,
                  ignore_externals=false, &status_func)
-        Client.status2(path, rev, status_func,
-                       recurse, get_all, update, no_ignore,
+        Client.status3(path, rev, status_func,
+                       depth, get_all, update, no_ignore,
                        ignore_externals, self)
       end
       alias st status
@@ -104,9 +132,9 @@ module Svn
         Client.add3(path, recurse, force, no_ignore, self)
       end
 
-      def delete(paths, force=false)
+      def delete(paths, force=false, keep_local=false)
         paths = [paths] unless paths.is_a?(Array)
-        Client.delete2(paths, force, self)
+        Client.delete3(paths, force, keep_local, self)
       end
       alias del delete
       alias remove delete
@@ -117,10 +145,12 @@ module Svn
         rm(paths, true)
       end
 
-      def update(paths, rev="HEAD", recurse=true, ignore_externals=false)
+      def update(paths, rev="HEAD", depth=nil, ignore_externals=false,
+                 allow_unver_obstruction=false)
         paths_is_array = paths.is_a?(Array)
         paths = [paths] unless paths_is_array
-        result = Client.update2(paths, rev, recurse, ignore_externals, self)
+        result = Client.update3(paths, rev, depth, ignore_externals,
+                                allow_unver_obstruction, self)
         result = result.first unless paths_is_array
         result
       end
@@ -147,8 +177,11 @@ module Svn
         Client.resolved(path, recurse, self)
       end
       
-      def propset(name, value, target, recurse=true, force=false)
-        Client.propset2(name, value, target, recurse, force, self)
+      def propset(name, value, target, recurse=true, force=false,
+                  base_revision_for_url=nil)
+        base_revision_for_url ||= Svn::Core::INVALID_REVNUM
+        Client.propset3(name, value, target, recurse, force,
+                        base_revision_for_url, self)
       end
       alias prop_set propset
       alias pset propset
@@ -172,52 +205,81 @@ module Svn
       alias pget propget
       alias pg propget
 
+      # Obsoleted document.
+      #
       # Returns list of properties attached to +target+ as an Array of
       # Svn::Client::PropListItem.
       # Paths and URIs are available as +target+.
-      def proplist(target, rev=nil, peg_rev=nil, recurse=true)
+      def proplist(target, rev=nil, peg_rev=nil, recurse=true, &block)
         rev ||= "HEAD"
         peg_rev ||= rev
-        Client.proplist2(target, rev, peg_rev, recurse, self)
+        items = []
+        receiver = Proc.new do |path, prop_hash|
+          items << PropListItem.new(path, prop_hash)
+          block.call(path, prop_hash) if block
+        end
+        Client.proplist3(target, rev, peg_rev, recurse, receiver, self)
+        items
       end
       alias prop_list proplist
       alias plist proplist
       alias pl proplist
-      
-      def copy(src_path, dst_path, rev=nil)
-        Client.copy3(src_path, rev || "HEAD", dst_path, self)
+
+      def copy(src_paths, dst_path, rev_or_copy_as_child=nil)
+        if src_paths.is_a?(Array)
+          copy_as_child = rev_or_copy_as_child
+          if copy_as_child.nil?
+            copy_as_child = src_paths.size == 1 ? false : true
+          end
+          src_paths = src_paths.collect do |path|
+            if path.is_a?(CopySource)
+              path
+            else
+              CopySource.new(path)
+            end
+          end
+        else
+          copy_as_child = false
+          unless src_paths.is_a?(CopySource)
+            src_paths = CopySource.new(src_paths, rev_or_copy_as_child)
+          end
+          src_paths = [src_paths]
+        end
+        Client.copy4(src_paths, dst_path, copy_as_child, self)
       end
       alias cp copy
-      
-      def move(src_path, dst_path, force=false)
-        Client.move4(src_path, dst_path, force, self)
+
+      def move(src_paths, dst_path, force=false, move_as_child=nil)
+        src_paths = [src_paths] unless src_paths.is_a?(Array)
+        move_as_child = src_paths.size == 1 ? false : true if move_as_child.nil?
+        Client.move5(src_paths, dst_path, force, move_as_child, self)
       end
       alias mv move
 
-      def mv_f(src_path, dst_path)
-        move(src_path, dst_path, true)
+      def mv_f(src_paths, dst_path, move_as_child=nil)
+        move(src_paths, dst_path, true, move_as_child)
       end
 
       def diff(options, path1, rev1, path2, rev2,
-               out_file, err_file, recurse=true,
+               out_file, err_file, depth=nil,
                ignore_ancestry=false,
                no_diff_deleted=false, force=false,
                header_encoding=nil)
         header_encoding ||= Core::LOCALE_CHARSET
-        Client.diff3(options, path1, rev1, path2, rev2,
-                     recurse, ignore_ancestry,
+        Client.diff4(options, path1, rev1, path2, rev2,
+                     depth, ignore_ancestry,
                      no_diff_deleted, force, header_encoding,
                      out_file, err_file, self)
       end
 
       def diff_peg(options, path, start_rev, end_rev,
                    out_file, err_file, peg_rev=nil,
-                   recurse=true, ignore_ancestry=false,
+                   depth=nil, ignore_ancestry=false,
                    no_diff_deleted=false, force=false,
                    header_encoding=nil)
         header_encoding ||= Core::LOCALE_CHARSET
-        Client.diff_peg3(options, path, peg_rev, start_rev, end_rev,
-                         recurse, ignore_ancestry,
+        Client.diff_peg4(options, path, peg_rev, start_rev, end_rev,
+                         depth, ignore_ancestry,
                          no_diff_deleted, force, header_encoding,
                          out_file, err_file, self)
       end
@@ -227,34 +289,34 @@ module Svn
       # and returns +nil+.
       # +diff+ is an instance of Svn::Client::DiffSummarize.
       def diff_summarize(path1, rev1, path2, rev2,
-                         recurse=true, ignore_ancestry=true,
+                         depth=nil, ignore_ancestry=true,
                          &block) # :yields: diff
-        Client.diff_summarize(path1, rev1, path2, rev2,
-                              recurse, ignore_ancestry, block, self)
+        Client.diff_summarize2(path1, rev1, path2, rev2,
+                               depth, ignore_ancestry, block, self)
       end
 
       def diff_summarize_peg(path1, rev1, rev2, peg_rev=nil,
-                             recurse=true, ignore_ancestry=true,
+                             depth=nil, ignore_ancestry=true,
                              &block)
-        Client.diff_summarize_peg(path1, rev1, rev2, peg_rev,
-                                  recurse, ignore_ancestry, block, self)
+        Client.diff_summarize_peg2(path1, rev1, rev2, peg_rev,
+                                   depth, ignore_ancestry, block, self)
       end
 
       def merge(src1, rev1, src2, rev2, target_wcpath,
-                recurse=true, ignore_ancestry=false,
-                force=false, dry_run=false, options=nil)
-        Client.merge2(src1, rev1, src2, rev2, target_wcpath,
-                      recurse, ignore_ancestry, force,
+                depth=nil, ignore_ancestry=false,
+                force=false, dry_run=false, options=nil, record_only=false)
+        Client.merge3(src1, rev1, src2, rev2, target_wcpath,
+                      depth, ignore_ancestry, force, record_only,
                       dry_run, options, self)
       end
 
       def merge_peg(src, rev1, rev2, target_wcpath,
-                    peg_rev=nil, recurse=true,
+                    peg_rev=nil, depth=nil,
                     ignore_ancestry=false, force=false,
-                    dry_run=false, options=nil)
-        Client.merge_peg2(src, rev1, rev2, peg_rev,
-                          target_wcpath, recurse, ignore_ancestry,
-                          force, dry_run, options, self)
+                    dry_run=false, options=nil, record_only=false)
+        Client.merge_peg3(src, rev1, rev2, peg_rev,
+                          target_wcpath, depth, ignore_ancestry,
+                          force, record_only, dry_run, options, self)
       end
       
       # Returns a content of +path+ at +rev+ as a String.
@@ -427,9 +489,9 @@ module Svn
 
       def export(from, to, rev=nil, peg_rev=nil,
                  force=false, ignore_externals=false,
-                 recurse=true, native_eol=nil)
-        Client.export3(from, to, rev, peg_rev, force,
-                       ignore_externals, recurse, native_eol, self)
+                 depth=nil, native_eol=nil)
+        Client.export4(from, to, rev, peg_rev, force,
+                       ignore_externals, depth, native_eol, self)
       end
       
       def ls(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
@@ -451,10 +513,10 @@ module Svn
                     fetch_locks, block, self)
       end
 
-      def switch(path, uri, rev=nil, recurse=true)
-        Client.switch(path, uri, rev, recurse, self)
+      def switch(path, uri, rev=nil, depth=nil, allow_unver_obstruction=false)
+        Client.switch2(path, uri, rev, depth, allow_unver_obstruction, self)
       end
-      
+
       def add_simple_provider
         add_provider(Core.auth_get_simple_provider)
       end
@@ -524,9 +586,19 @@ module Svn
       end
 
       def set_log_msg_func(callback=Proc.new)
+        callback_wrapper = Proc.new do |items|
+          items = items.collect do |item|
+            item_wrapper = CommitItemWrapper.new(item)
+          end
+          callback.call(items)
+        end
+        set_log_msg_func2(callback_wrapper)
+      end
+
+      def set_log_msg_func2(callback=Proc.new)
         @log_msg_baton = Client.set_log_msg_func3(self, callback)
       end
-      
+
       def set_notify_func(callback=Proc.new)
         @notify_baton = Client.set_notify_func2(self, callback)
       end
@@ -542,6 +614,34 @@ module Svn
       def config
         Client.get_config(self)
       end
+
+      def merge_info(path_or_url, revision=nil)
+        info = Client.get_mergeinfo(path_or_url, revision, self)
+        Core::MergeInfo.new(info)
+      end
+      alias_method :mergeinfo, :merge_info
+
+      def add_to_change_list(change_list_name, *paths)
+        paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
+        Client.add_to_changelist(paths, change_list_name, self)
+      end
+      alias_method :add_to_changelist, :add_to_change_list
+
+      def change_list(change_list_name, root_path, &block)
+        args = [change_list_name, root_path, self]
+        if block
+          Client.get_changelist_streamy(block, *args)
+        else
+          Client.get_changelist(*args)
+        end
+      end
+      alias_method :changelist, :change_list
+
+      def remove_from_change_list(change_list_name, *paths)
+        paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
+        Client.remove_from_changelist(paths, change_list_name, self)
+      end
+      alias_method :remove_from_changelist, :remove_from_change_list
 
       private
       def init_callbacks
@@ -637,6 +737,14 @@ module Svn
       # Returns +true+ when the instance is a change made to an unknown node.
       def node_kind_unknown?
         node_kind == Core::NODE_UNKNOWN
+      end
+    end
+
+    class CopySource
+      alias_method :_initialize, :initialize
+      private :_initialize
+      def initialize(path, rev=nil, peg_rev=nil)
+        _initialize(path, rev, peg_rev)
       end
     end
   end

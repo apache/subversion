@@ -315,10 +315,12 @@ typedef struct svn_client_proplist_item_t
  * The callback invoked by svn_client_proplist3().  Each invocation
  * describes the property specified by @a item.  Use @a pool for all
  * temporary allocation.
+ *
+ * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_proplist_receiver_t)
   (void *baton,
-   svn_stringbuf_t *path,
+   const char *path,
    apr_hash_t *prop_hash,
    apr_pool_t *pool);
 
@@ -810,15 +812,6 @@ typedef struct svn_client_ctx_t
    * @since New in 1.3. */
   void *log_msg_baton2;
 
-  /** Log message callback function. NULL means that Subversion
-   *   should try @c log_msg_func2, then @c log_msg_func.
-   * @since New in 1.5. */
-  svn_client_get_commit_log3_t log_msg_func3;
-
-  /** The callback baton for @c log_msg_func3.
-   * @since New in 1.5. */
-  void *log_msg_baton3;
-
   /** Notification callback for network progress information.
    * May be NULL if not used.
    * @since New in 1.3. */
@@ -827,6 +820,15 @@ typedef struct svn_client_ctx_t
   /** Callback baton for progress_func.
    * @since New in 1.3. */
   void *progress_baton;
+
+  /** Log message callback function. NULL means that Subversion
+   *   should try @c log_msg_func2, then @c log_msg_func.
+   * @since New in 1.5. */
+  svn_client_get_commit_log3_t log_msg_func3;
+
+  /** The callback baton for @c log_msg_func3.
+   * @since New in 1.5. */
+  void *log_msg_baton3;
 
   /** MIME types map.
    * @since New in 1.5. */
@@ -2392,6 +2394,27 @@ svn_client_merge_peg(const char *source,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
+/**
+ * Retrieve the merge info for @a path_or_url in @a *mergeinfo,
+ * storing a mapping of repository-relative paths to @c
+ * apr_array_header_t *'s of @c svn_merge_range_t *'s, or @c NULL if
+ * there is no merge info.
+ *
+ * @a path_or_url is a WC path or repository URL.  If @a path_or_url
+ * is a WC path, @a revision is ignored in preference to @a
+ * path_or_url's @c WORKING revision.  If @a path_or_url is a URL, @a
+ * revision is the revision at which to get its merge info.  @a
+ * mergeinfo is allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
+                         const char *path_or_url,
+                         const svn_opt_revision_t *revision,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *pool);
+
 /** @} */
 
 /**
@@ -2559,7 +2582,7 @@ typedef struct svn_client_copy_source_t
  * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
  * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
  *
- * If @a src_paths has multiple items, and @a copy_as_child is FALSE, fail
+ * If @a sources has multiple items, and @a copy_as_child is FALSE, fail
  * with @c SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED.
  *
  * If @a dst_path is a URL, use the authentication baton 
@@ -3256,7 +3279,7 @@ svn_client_export(svn_revnum_t *result_rev,
  * @{
  */
 
-/** Invoked by svn_client_list() for each @a path with its @a dirent and,
+/** Invoked by svn_client_list2() for each @a path with its @a dirent and,
  * if @a path is locked, its @a lock.  @a abs_path is the filesystem path
  * to which @a path is relative.  @a baton is the baton passed to the
  * caller.  @a pool may be used for temporary allocations.
@@ -3291,18 +3314,38 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * Use authentication baton cached in @a ctx to authenticate against the 
  * repository.
  *
- * If @a recurse is true (and @a path_or_url is a directory) this will
- * be a recursive operation.
- *
- * ### TODO(sd): This really should take depth instead of recurse, but
- * ### one thing at a time, one thing at a time...
+ * If @a depth is @c svn_depth_empty, list just @a path_or_url itself.
+ * If @a depth is @c svn_depth_files, list @a path_or_url and its file
+ * entries.  If @c svn_depth_immediates, list its immediate file and
+ * directory entries.  If @c svn_depth_infinity, list file entries and
+ * recurse (with @c svn_depth_infinity) on directory entries.
  *
  * @a dirent_fields controls which fields in the @c svn_dirent_t's are
  * filled in.  To have them totally filled in use @c SVN_DIRENT_ALL, 
  * otherwise simply bitwise OR together the combination of @c SVN_DIRENT_
  * fields you care about.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_list2(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_client_list_func_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/* Like svn_client_list2(), but with @a recurse instead of @a depth.
+ * If @a recurse is true, pass @c svn_depth_files for @a depth; else
+ * pass @c svn_depth_infinity.
+ *
  * @since New in 1.4.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_list(const char *path_or_url,

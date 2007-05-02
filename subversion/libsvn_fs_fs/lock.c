@@ -1,7 +1,7 @@
 /* lock.c :  functions for manipulating filesystem locks.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,6 +37,7 @@
 #include "fs_fs.h"
 #include "../libsvn_fs/fs-loader.h"
 
+#include "private/svn_fs_util.h"
 #include "svn_private_config.h"
 
 /* Names of special lock directories in the fs_fs filesystem. */
@@ -491,7 +492,7 @@ get_lock(svn_lock_t **lock_p,
 
   SVN_ERR(read_digest_file(NULL, &lock, fs, digest_path, pool));
   if (! lock)
-    return svn_fs_fs__err_no_such_lock(fs, path);
+    return svn_fs__err_no_such_lock(fs, path);
 
   /* Don't return an expired lock. */
   if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
@@ -501,7 +502,7 @@ get_lock(svn_lock_t **lock_p,
       if (have_write_lock)
         SVN_ERR(delete_lock(fs, lock, pool));
       *lock_p = NULL;
-      return svn_fs_fs__err_lock_expired(fs, lock->token); 
+      return svn_fs__err_lock_expired(fs, lock->token); 
     }
   
   *lock_p = lock;
@@ -651,7 +652,7 @@ svn_fs_fs__allow_locked_operation(const char *path,
                                   svn_boolean_t have_write_lock,
                                   apr_pool_t *pool)
 {
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, pool);
   if (recurse)
     {
       /* Discover all locks at or below the path. */
@@ -706,7 +707,7 @@ lock_body(void *baton, apr_pool_t *pool)
   SVN_ERR(lb->fs->vtable->revision_root(&root, lb->fs, youngest, pool));
   SVN_ERR(svn_fs_fs__check_path(&kind, root, lb->path, pool));
   if (kind == svn_node_dir)
-    return svn_fs_fs__err_not_file(lb->fs, lb->path);
+    return svn_fs__err_not_file(lb->fs, lb->path);
 
   /* While our locking implementation easily supports the locking of
      nonexistent paths, we deliberately choose not to allow such madness. */
@@ -717,7 +718,7 @@ lock_body(void *baton, apr_pool_t *pool)
 
   /* We need to have a username attached to the fs. */
   if (!lb->fs->access_ctx || !lb->fs->access_ctx->username)
-    return svn_fs_fs__err_no_user(lb->fs);
+    return svn_fs__err_no_user(lb->fs);
 
   /* Is the caller attempting to lock an out-of-date working file? */
   if (SVN_IS_VALID_REVNUM(lb->current_rev))
@@ -763,7 +764,7 @@ lock_body(void *baton, apr_pool_t *pool)
       if (! lb->steal_lock)
         {
           /* Sorry, the path is already locked. */
-          return svn_fs_fs__err_path_already_locked(lb->fs, existing_lock);
+          return svn_fs__err_path_already_locked(lb->fs, existing_lock);
         }
       else
         {
@@ -818,15 +819,15 @@ unlock_body(void *baton, apr_pool_t *pool)
     {
       /* Sanity check:  the incoming token should match lock->token. */
       if (strcmp(ub->token, lock->token) != 0)
-        return svn_fs_fs__err_no_such_lock(ub->fs, lock->path);
+        return svn_fs__err_no_such_lock(ub->fs, lock->path);
 
       /* There better be a username attached to the fs. */
       if (! (ub->fs->access_ctx && ub->fs->access_ctx->username))
-        return svn_fs_fs__err_no_user(ub->fs);
+        return svn_fs__err_no_user(ub->fs);
 
       /* And that username better be the same as the lock's owner. */
       if (strcmp(ub->fs->access_ctx->username, lock->owner) != 0)
-        return svn_fs_fs__err_lock_owner_mismatch
+        return svn_fs__err_lock_owner_mismatch
           (ub->fs, ub->fs->access_ctx->username, lock->owner);
     }  
 
@@ -853,8 +854,8 @@ svn_fs_fs__lock(svn_lock_t **lock_p,
 {
   struct lock_baton lb;
 
-  SVN_ERR(svn_fs_fs__check_fs(fs));
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  SVN_ERR(svn_fs__check_fs(fs));
+  path = svn_fs__canonicalize_abspath(path, pool);
 
   lb.lock_p = lock_p;
   lb.fs = fs;
@@ -878,7 +879,7 @@ svn_fs_fs__generate_lock_token(const char **token,
                                svn_fs_t *fs,
                                apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
 
   /* Notice that 'fs' is currently unused.  But perhaps someday, we'll
      want to use the fs UUID + some incremented number?  For now, we
@@ -899,8 +900,8 @@ svn_fs_fs__unlock(svn_fs_t *fs,
 {
   struct unlock_baton ub;
 
-  SVN_ERR(svn_fs_fs__check_fs(fs));
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  SVN_ERR(svn_fs__check_fs(fs));
+  path = svn_fs__canonicalize_abspath(path, pool);
 
   ub.fs = fs;
   ub.path = path;
@@ -919,8 +920,8 @@ svn_fs_fs__get_lock(svn_lock_t **lock_p,
                     const char *path,
                     apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_fs__check_fs(fs));
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  SVN_ERR(svn_fs__check_fs(fs));
+  path = svn_fs__canonicalize_abspath(path, pool);
   return get_lock_helper(fs, lock_p, path, FALSE, pool);
 }
 
@@ -934,8 +935,8 @@ svn_fs_fs__get_locks(svn_fs_t *fs,
 {
   const char *digest_path;
 
-  SVN_ERR(svn_fs_fs__check_fs(fs));
-  path = svn_fs_fs__canonicalize_abspath(path, pool);
+  SVN_ERR(svn_fs__check_fs(fs));
+  path = svn_fs__canonicalize_abspath(path, pool);
 
   /* Get the top digest path in our tree of interest, and then walk it. */
   digest_path = digest_path_from_path(fs, path, pool);

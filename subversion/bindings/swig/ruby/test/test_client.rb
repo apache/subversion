@@ -837,7 +837,11 @@ class SvnClientTest < Test::Unit::TestCase
     File.open(branch_path, "w") {|f| f.print(src)}
     rev2 = ctx.commit(@wc_path).revision
 
+    assert_equal({}, ctx.merge_info(trunk))
     ctx.merge(branch, rev1, branch, rev2, trunk)
+    merge_info = ctx.merge_info(trunk)
+    assert_equal(["/branch"], merge_info.keys)
+    assert_equal([[2, 2]], merge_info["/branch"].collect {|range| range.to_a})
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -848,17 +852,25 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge(branch, rev3, branch, rev4, trunk)
     assert(!File.exist?(trunk_path))
 
+    merge_info = ctx.merge_info(trunk, rev4)
+    assert_equal(["/branch"], merge_info.keys)
+    assert_equal([[2, 2], [4, 4]],
+                 merge_info["/branch"].collect {|range| range.to_a })
     ctx.propdel("svn:mergeinfo", trunk)
+    merge_info = ctx.merge_info(trunk)
+    assert_equal(["/branch"], merge_info.keys)
+    assert_equal([[2, 2]], merge_info["/branch"].collect {|range| range.to_a})
+
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
     ctx.merge(branch, rev3, branch, rev4, trunk)
     assert(File.exist?(trunk_path))
     rev5 = ctx.commit(@wc_path).revision
-    
+
     File.open(trunk_path, "a") {|f| f.print(src)}
     ctx.merge(branch, rev3, branch, rev4, trunk, true, false, true, true)
     assert(File.exist?(trunk_path))
-    
+
     ctx.merge(branch, rev3, branch, rev4, trunk, true, false, true)
     rev6 = ctx.commit(@wc_path).revision
 
@@ -885,7 +897,11 @@ class SvnClientTest < Test::Unit::TestCase
     File.open(branch_path, "w") {|f| f.print(src)}
     rev2 = ctx.commit(@wc_path).revision
 
+    assert_equal({}, ctx.merge_info(trunk))
     ctx.merge_peg(branch, rev1, rev2, trunk)
+    merge_info = ctx.merge_info(trunk)
+    assert_equal(["/branch"], merge_info.keys)
+    assert_equal([[2, 2]], merge_info["/branch"].collect {|range| range.to_a})
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -896,7 +912,15 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge_peg(branch, rev3, rev4, trunk)
     assert(!File.exist?(trunk_path))
 
+    merge_info = ctx.merge_info(trunk, rev4)
+    assert_equal(["/branch"], merge_info.keys)
+    assert_equal([[2, 2], [4, 4]],
+                 merge_info["/branch"].collect {|range| range.to_a })
     ctx.propdel("svn:mergeinfo", trunk)
+    merge_info = ctx.merge_info(trunk)
+    assert_equal(["/branch"], merge_info.keys)
+    assert_equal([[2, 2]], merge_info["/branch"].collect {|range| range.to_a})
+
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
     ctx.merge_peg(branch, rev3, rev4, trunk)
@@ -1864,5 +1888,81 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.config = config
     assert_equal(options,
                  ctx.config[Svn::Core::CONFIG_CATEGORY_SERVERS].to_hash)
+  end
+
+  def test_context_mimetypes_map
+    context = Svn::Client::Context.new
+    assert_nil(context.mimetypes_map)
+    context.mimetypes_map = {"txt" => "text/plain"}
+    assert_equal({"txt" => "text/plain"}, context.mimetypes_map)
+  end
+
+  def test_context_revprop_table
+    context = Svn::Client::Context.new
+    assert_nil(context.revprop_table)
+    context.revprop_table = {"my-prop" => "XXX"}
+    assert_equal({"my-prop" => "XXX"}, context.revprop_table)
+  end
+
+  def assert_change_list
+    log = "sample log"
+    file1 = "hello1.txt"
+    file2 = "hello2.txt"
+    src = "Hello"
+    change_list1 = "XXX"
+    change_list2 = "YYY"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+
+    ctx = make_context(log)
+    File.open(path1, "w") {|f| f.print(src)}
+    File.open(path2, "w") {|f| f.print(src)}
+    ctx.add(path1)
+    ctx.add(path2)
+    ctx.commit(@wc_path)
+
+    assert_equal([], yield(ctx, change_list1, @wc_path))
+    ctx.add_to_change_list(change_list1, path1)
+    assert_equal([path1], yield(ctx, change_list1, @wc_path))
+
+    assert_equal([], yield(ctx, change_list2, @wc_path))
+    ctx.add_to_change_list(change_list2, path1, path2)
+    assert_equal([path1, path2].sort,
+                 yield(ctx, change_list2, @wc_path).sort)
+    assert_equal([], yield(ctx, change_list1, @wc_path))
+
+    ctx.add_to_change_list(change_list1, [path1, path2])
+    assert_equal([path1, path2].sort,
+                 yield(ctx, change_list1, @wc_path).sort)
+    assert_equal([], yield(ctx, change_list2, @wc_path))
+
+    ctx.remove_from_change_list(change_list1, path1)
+    assert_equal([path2], yield(ctx, change_list1, @wc_path))
+    ctx.remove_from_change_list(change_list1, [path2])
+    assert_equal([], yield(ctx, change_list1, @wc_path))
+
+    ctx.add_to_change_list(change_list1, path1)
+    ctx.add_to_change_list(change_list2, path2)
+    assert_equal([path1], yield(ctx, change_list1, @wc_path))
+    assert_equal([path2], yield(ctx, change_list2, @wc_path))
+    ctx.remove_from_change_list(nil, [path1, path2])
+    assert_equal([], yield(ctx, change_list1, @wc_path))
+    assert_equal([], yield(ctx, change_list2, @wc_path))
+  end
+
+  def test_change_list_get_without_block
+    assert_change_list do |ctx, change_list_name, root_path|
+      ctx.change_list(change_list_name, root_path)
+    end
+  end
+
+  def test_change_list_get_with_block
+    assert_change_list do |ctx, change_list_name, root_path|
+      paths = []
+      ctx.change_list(change_list_name, root_path) do |path|
+        paths << path
+      end
+      paths
+    end
   end
 end

@@ -64,5 +64,7 @@ module Svn
 
     class ReposAlreadyClose < Error
     end
+
+    WcMismatchedChangeList = WcMismatchedChangelist
   end
 end

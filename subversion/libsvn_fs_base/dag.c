@@ -1,7 +1,7 @@
 /* dag.c : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,7 @@
 #include "svn_error.h"
 #include "svn_md5.h"
 #include "svn_fs.h"
+#include "svn_hash.h"
 #include "svn_props.h"
 
 #include "dag.h"
@@ -46,6 +47,7 @@
 #include "bdb/strings-table.h"
 
 #include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -1363,7 +1365,7 @@ svn_fs_base__dag_copy(dag_node_t *to_node,
          reserved above.  */
       SVN_ERR(svn_fs_bdb__create_copy
               (fs, copy_id,
-               svn_fs_base__canonicalize_abspath(from_path, pool),
+               svn_fs__canonicalize_abspath(from_path, pool),
                SVN_INVALID_REVNUM, from_txn_id, id, NULL, copy_kind_copy,
                trail, pool));
 
@@ -1487,7 +1489,12 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                                   APR_HASH_KEY_STRING);
   if (target_mergeinfo)
     {
-      SVN_ERR(svn_fs_merge_info__update_index(txn, *new_rev, TRUE, pool));
+      svn_stringbuf_t *buf = svn_stringbuf_create_from_string(target_mergeinfo,
+                                                              pool);
+      svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
+      apr_hash_t *mergeinfo = apr_hash_make(pool);
+      SVN_ERR(svn_hash_read2(mergeinfo, stream, NULL, pool));
+      SVN_ERR(svn_fs_merge_info__update_index(txn, *new_rev, mergeinfo, pool));
       SVN_ERR(svn_fs_base__set_txn_prop
               (fs, txn_id, SVN_FS_PROP_TXN_MERGEINFO, NULL, trail, pool));
     }

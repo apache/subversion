@@ -4469,7 +4469,7 @@ get_merge_info(const char **msg,
   /* Create the greek tree. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   
-  SVN_ERR(svn_mergeinfo_parse("/A/E: 1-5", &mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, "/A/E: 1-5", pool));
   SVN_ERR(svn_fs_change_merge_info(txn_root, "/A/B", mergeinfo, pool));
 
   /* Commit it. */
@@ -4615,7 +4615,7 @@ unordered_txn_dirprops(const char **msg,
   /* Commit the second one first. */
   SVN_ERR(test_commit_txn(&new_rev, txn2, NULL, pool));
   
-  /* Then commit the first -- but expect an conflict due to the
+  /* Then commit the first -- but expect a conflict due to the
      propchanges made by the other txn. */
   SVN_ERR(test_commit_txn(&not_rev, txn, "/A/B", pool));
   SVN_ERR(svn_fs_abort_txn(txn, pool));

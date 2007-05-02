@@ -35,9 +35,11 @@
 #include "svn_pools.h"
 
 #include "client.h"
+#include "mergeinfo.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_mergeinfo_private.h"
 
 
 /*** Code. ***/
@@ -349,22 +351,6 @@ struct path_driver_cb_baton
   svn_boolean_t is_move;
 };
 
-/* A log callback conforming to the svn_log_message_receiver_t
-   interface for obtaining the last revision of a node at a path and
-   storing it in *BATON (an svn_revnum_t). */
-static svn_error_t *
-revnum_receiver(void *baton,
-                apr_hash_t *changed_paths,
-                svn_revnum_t revision,
-                const char *author,
-                const char *date,
-                const char *message,
-                apr_pool_t *pool)
-{
-  *((svn_revnum_t *) baton) = revision;
-  return SVN_NO_ERROR;
-}
-
 /* Obtain the implied merge info of repository-relative path PATH in
    *IMPLIED_MERGEINFO (e.g. every revision of the node at PATH since
    it last appeared).  REL_PATH corresponds to PATH, but is relative
@@ -377,37 +363,16 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
                        svn_revnum_t rev,
                        apr_pool_t *pool)
 {
-  svn_error_t *err;
-  svn_revnum_t oldest_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t oldest_rev;
   svn_merge_range_t *range;
   apr_array_header_t *rangelist;
-  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
 
   *implied_mergeinfo = apr_hash_make(pool);
-  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
 
-  /* Trace back in history to find the revision at which this node
-     was created (copied or added). */
-  err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
-                       revnum_receiver, &oldest_rev, pool);
-  /* ### FIXME: ra_dav may fail with SVN_ERR_RA_DAV_PATH_NOT_FOUND.
-     ### This is possibly related to path construction mentioned in
-     ### calculate_target_merge_info()... */
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
-          err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
-        {
-          /* A locally-added but uncommitted versioned resource won't
-             exist in the repository. */
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      else
-        {
-          return err;
-        }
-    }
+  SVN_ERR(svn_client__oldest_rev_at_path(&oldest_rev, ra_session, rel_path,
+                                         rev, pool));
+  if (oldest_rev == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
   range = apr_palloc(pool, sizeof(*range));
   range->start = oldest_rev;
@@ -416,7 +381,7 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
   apr_hash_set(*implied_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 /* Obtain the implied merge info and the existing merge info of the
@@ -441,14 +406,10 @@ calculate_target_merge_info(svn_ra_session_t *ra_session,
                                             pool));
 
   /* Obtain any implied and/or existing (explicit) merge info. */
-  /* ### FIXME: May fail with SVN_ERR_RA_DAV_PATH_NOT_FOUND over
-     ### ra_dav, because we're providing a path relative to the
-     ### repository root instead of the ra_session (which may've been
-     ### opened to a path somewhere under the root). */
   SVN_ERR(get_implied_merge_info(ra_session, target_mergeinfo,
                                  src_rel_path, src_path, src_revnum, pool));
-  SVN_ERR(svn_client__get_merge_info_for_path(ra_session, &src_mergeinfo,
-                                              src_path, src_revnum, pool));
+  SVN_ERR(svn_client__get_repos_merge_info(ra_session, &src_mergeinfo,
+                                           src_path, src_revnum, pool));
 
   /* Combine and return all merge info. */
   if (src_mergeinfo)
@@ -960,7 +921,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 {
   const char *message;
   apr_hash_t *revprop_table;
-  const char *top_src_path, *top_dst_url;
+  const char *top_src_path, *top_dst_url, *repos_root;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -1017,8 +978,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
 
-      /* ### FIXME: I want the path relative to the ra_session
-         ### instead. */
       SVN_ERR(svn_client__path_relative_to_root(&pair->src_rel, pair->src,
                                                 NULL, ra_session, adm_access,
                                                 pool));
@@ -1091,6 +1050,11 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                      SVN_CLIENT__SINGLE_REPOS_NAME, 
                                      APR_HASH_KEY_STRING)))
     goto cleanup;
+
+  /* Reparent the ra_session to repos_root. So that 'svn_ra_get_log'
+     on paths relative to repos_root would work fine. */
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 
   /* ### TODO: This extra loop would be unnecessary if this code lived
      ### in svn_client__get_copy_committables(), which is incidentally
@@ -1717,6 +1681,8 @@ setup_copy(svn_commit_info_t **commit_info_p,
                        svn_path_local_style(pair->src, pool));
 
                   pair->src = apr_pstrdup(pool, entry->url);
+                  pair->src_peg_revision.kind = svn_opt_revision_number;
+                  pair->src_peg_revision.value.number = entry->revision;
                 }
 
               svn_pool_destroy(iterpool);

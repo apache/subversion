@@ -444,5 +444,5 @@ try:
     if debug: print "Commit is OK"
 
 finally:
-    while diff_out.read(1024 * 1024 * 64): pass
+    for line in diff_out: pass
     diff_out.close()

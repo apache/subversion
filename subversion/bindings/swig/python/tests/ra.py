@@ -90,6 +90,18 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     child = editor.add_directory("blah", root, None, 0)
     editor.close_edit(edit_baton)
 
+  def test_commit_with_delta_driver(self):
+    def my_callback(info, pool):
+      self.assertEqual(info.revision, fs.youngest_rev(self.fs))
+    (editor, edit_baton) = ra.get_commit_editor2(self.ra_ctx, "log msg", my_callback, None, False)
+
+    paths = ['trunk/newdir']
+    def driver_cb(parent, path, pool):
+      self.assert_(path in paths)
+      return editor.add_directory(path, parent, None, 0)
+    delta.path_driver(editor, edit_baton, -1, paths, driver_cb)
+    editor.close_edit(edit_baton)
+
   def test_do_diff2(self):
 
     class ChangeReceiver(delta.Editor):

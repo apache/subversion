@@ -27,7 +27,7 @@ class TestHarness:
 
   def __init__(self, abs_srcdir, abs_builddir, logfile,
                base_url=None, fs_type=None, verbose=None, cleanup=None,
-               enable_sasl=None):
+               enable_sasl=None, list_tests=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -43,6 +43,7 @@ class TestHarness:
     self.verbose = verbose
     self.cleanup = cleanup
     self.enable_sasl = enable_sasl
+    self.list_tests = list_tests
     self.log = None
 
   def run(self, list):
@@ -114,6 +115,8 @@ class TestHarness:
       cmdline.append('--cleanup')
     if self.fs_type is not None:
       cmdline.append(quote('--fs-type=' + self.fs_type))
+    if self.list_tests is not None:
+      cmdline.append('--list')
 
     old_cwd = os.getcwd()
     try:

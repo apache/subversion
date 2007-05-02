@@ -217,7 +217,8 @@ enum
     svnadmin__use_post_revprop_change_hook,
     svnadmin__clean_logs,
     svnadmin__wait,
-    svnadmin__pre_1_4_compatible
+    svnadmin__pre_1_4_compatible,
+    svnadmin__pre_1_5_compatible
   };
 
 /* Option codes and descriptions.
@@ -295,6 +296,10 @@ static const apr_getopt_option_t options_table[] =
      N_("use format compatible with Subversion versions\n"
         "                             earlier than 1.4")},
 
+    {"pre-1.5-compatible",     svnadmin__pre_1_5_compatible, 0,
+     N_("use format compatible with Subversion versions\n"
+        "                             earlier than 1.5")},
+
     {NULL}
   };
 
@@ -314,7 +319,8 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
    ("usage: svnadmin create REPOS_PATH\n\n"
     "Create a new, empty repository at REPOS_PATH.\n"),
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
-    svnadmin__config_dir, svnadmin__fs_type, svnadmin__pre_1_4_compatible} },
+    svnadmin__config_dir, svnadmin__fs_type, svnadmin__pre_1_4_compatible,
+    svnadmin__pre_1_5_compatible } },
 
   {"deltify", subcommand_deltify, {0}, N_
    ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -434,6 +440,7 @@ struct svnadmin_opt_state
   const char *new_repository_path;                  /* hotcopy dest. path */
   const char *fs_type;                              /* --fs-type */
   svn_boolean_t pre_1_4_compatible;                 /* --pre-1.4-compatible */
+  svn_boolean_t pre_1_5_compatible;                 /* --pre-1.5-compatible */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
@@ -511,6 +518,11 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   if (opt_state->pre_1_4_compatible)
     apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
+                 APR_HASH_KEY_STRING,
+                 "1");
+
+  if (opt_state->pre_1_5_compatible)
+    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
                  APR_HASH_KEY_STRING,
                  "1");
 
@@ -619,7 +631,8 @@ recode_stream_create(FILE *std_stream, apr_pool_t *pool)
    whether to send the dump to stdout or an empty stream. */
 static svn_error_t *
 dump_repo(apr_getopt_t *os, void *baton,
-          apr_pool_t *pool, svn_boolean_t dump_contents)
+          apr_pool_t *pool, svn_boolean_t dump_contents,
+          svn_boolean_t incremental)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
@@ -666,7 +679,7 @@ dump_repo(apr_getopt_t *os, void *baton,
     stderr_stream = recode_stream_create(stderr, pool);
 
   SVN_ERR(svn_repos_dump_fs2(repos, stdout_stream, stderr_stream,
-                             lower, upper, opt_state->incremental,
+                             lower, upper, incremental,
                              opt_state->use_deltas, check_cancel, NULL,
                              pool));
 
@@ -678,7 +691,8 @@ dump_repo(apr_getopt_t *os, void *baton,
 static svn_error_t *
 subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  return dump_repo(os, baton, pool, TRUE);
+  struct svnadmin_opt_state *opt_state = baton;
+  return dump_repo(os, baton, pool, TRUE, opt_state->incremental);
 }
 
 
@@ -1061,7 +1075,9 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_error_t *
 subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  return dump_repo(os, baton, pool, FALSE);
+  struct svnadmin_opt_state *opt_state = baton;
+  return dump_repo(os, baton, pool, FALSE,
+               opt_state->start_revision.kind != svn_opt_revision_unspecified);
 }
 
 
@@ -1204,6 +1220,7 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       svn_pool_clear(subpool);
     }
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -1343,7 +1360,10 @@ main(int argc, const char *argv[])
         break;
       case svnadmin__pre_1_4_compatible:
         opt_state.pre_1_4_compatible = TRUE;
-        break;        
+        break;
+      case svnadmin__pre_1_5_compatible:
+        opt_state.pre_1_5_compatible = TRUE;
+        break;
       case svnadmin__fs_type:
         err = svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool);
         if (err)
@@ -1459,14 +1479,8 @@ main(int argc, const char *argv[])
       err = parse_local_repos_path(os, 
                                    &(opt_state.repository_path), 
                                    pool);
-      if(err)
-        {
-          svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
-          svn_error_clear(err);
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
-        }
-
+      if (err)
+        return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
     }
 
 
@@ -1477,13 +1491,8 @@ main(int argc, const char *argv[])
       err = parse_local_repos_path(os,
                                    &(opt_state.new_repository_path), 
                                    pool);
-      if(err)
-        {
-          svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
-          svn_error_clear(err);
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
-        }
+      if (err)
+        return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
@@ -1544,10 +1553,7 @@ main(int argc, const char *argv[])
           err = svn_error_quick_wrap(err, 
                                      _("Try 'svnadmin help' for more info"));
         }
-      svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
-      svn_error_clear(err);
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
+      return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
     }
   else
     {

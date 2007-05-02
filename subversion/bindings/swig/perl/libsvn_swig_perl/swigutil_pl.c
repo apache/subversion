@@ -748,6 +748,19 @@ static svn_error_t * thunk_abort_edit(void *edit_baton,
     return close_baton(edit_baton, "abort_edit", pool);
 }
 
+
+void 
+svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
+                              void **h_baton,
+                              SV *callback,
+                              apr_pool_t *pool)
+{
+    *handler = thunk_window_handler;
+    *h_baton = callback;
+    SvREFCNT_inc(callback);
+    svn_swig_pl_hold_ref_in_pool(pool, callback);
+}
+
 void svn_delta_make_editor(svn_delta_editor_t **editor,
 			   void **edit_baton,
 			   SV *perl_editor,

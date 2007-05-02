@@ -73,6 +73,13 @@ typedef struct svn_fs_t svn_fs_t;
  *  @since New in 1.4. 
  */
 #define SVN_FS_CONFIG_PRE_1_4_COMPATIBLE        "pre-1.4-compatible"
+
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.5.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_FS_CONFIG_PRE_1_5_COMPATIBLE        "pre-1.5-compatible"
 /** @} */
 
 
@@ -1180,6 +1187,8 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
  *   the merge info for that path should be removed altogether.
  *
  * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
                                       const char *path,
@@ -1199,6 +1208,8 @@ svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
  * from parent directories of @a paths.
  *
  * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *svn_fs_get_merge_info(apr_hash_t **minfohash,
                                    svn_fs_root_t *root,

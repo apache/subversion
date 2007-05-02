@@ -208,12 +208,14 @@ enum svn_recurse_kind
  */
 typedef enum
 {
-  /* Depth undetermined or ignored.
-    ### TODO(sd): This depth may turn out to be unnecessary. ### */
+  /* The order of these depths is important: the higher the number,
+     the deeper it descends.  This allows us to compare two depths
+     numerically to decide which should govern. */
+
+  /* Depth undetermined or ignored. */
   svn_depth_unknown    = -2,
 
-  /* Exclude (remove, whatever) directory D.
-     ### TODO(sd): This depth may turn out to be unnecessary. ### */
+  /* Exclude (i.e., don't descend into) directory D. */
   svn_depth_exclude    = -1,
 
   /* Just the named directory D, no entries.  Updates will not pull in
@@ -518,10 +520,12 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
  * they're not, it might be nice to change apr_hash_first() so
  * read-only uses of hashes can be protected via the type system.
  *
- * Use @a pool for all allocation.  (If the caller is iterating over log
- * messages, invoking this receiver on each, we recommend the standard
- * pool loop recipe: create a subpool, pass it as @a pool to each call,
- * clear it after each iteration, destroy it after the loop is done.)
+ * Use @a pool for temporary allocation.  If the caller is iterating
+ * over log messages, invoking this receiver on each, we recommend the
+ * standard pool loop recipe: create a subpool, pass it as @a pool to
+ * each call, clear it after each iteration, destroy it after the loop
+ * is done.  (For allocation that must last beyond the lifetime of a
+ * given receiver call, use a pool in @a baton.)
  */
 typedef svn_error_t *(*svn_log_message_receiver_t)
   (void *baton,

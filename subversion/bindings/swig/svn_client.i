@@ -43,6 +43,39 @@
     const char *comment
 };
 
+#ifdef SWIGRUBY
+%apply apr_hash_t *HASH_CSTRING_MAYBENULL {
+  apr_hash_t *mimetypes_map,
+  apr_hash_t *revprop_table
+}
+#endif
+
+#ifdef SWIGRUBY
+%apply apr_hash_t **MERGEHASH {
+  apr_hash_t **mergeinfo
+}
+#endif
+
+#ifdef SWIGRUBY
+%apply apr_array_header_t *SOURCES {
+  apr_array_header_t *sources
+}
+#endif
+
+#ifdef SWIGRUBY
+%apply const char *NOT_NULL {
+  const char *changelist_name
+};
+#endif
+
+%apply const apr_array_header_t *STRINGLIST {
+  apr_array_header_t *src_paths
+}
+
+%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  apr_array_header_t **paths
+}
+
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
@@ -111,21 +144,15 @@
 }
 #endif
 
-#ifdef SWIGPYTHON
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
 %callback_typemap(svn_client_get_commit_log3_t log_msg_func,
                   void *log_msg_baton,
                   svn_swig_py_get_commit_log_func,
                   ,
-                  )
+                  svn_swig_rb_get_commit_log_func)
 #endif
 
 #ifdef SWIGRUBY
-%callback_typemap(svn_client_get_commit_log3_t log_msg_func,
-                  void *log_msg_baton,
-                  ,
-                  ,
-                  svn_swig_rb_get_commit_log_func)
-
 %callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
                   ,
                   ,
@@ -162,6 +189,16 @@
                   ,
                   ,
                   svn_swig_rb_client_list_func)
+
+%callback_typemap(svn_proplist_receiver_t receiver, void *receiver_baton,
+                  ,
+                  ,
+                  svn_swig_rb_proplist_receiver)
+
+%callback_typemap(svn_changelist_receiver_t callback_func, void *callback_baton,
+                  ,
+                  ,
+                  svn_swig_rb_changelist_receiver)
 #endif
 
 /* -----------------------------------------------------------------------
@@ -286,9 +323,43 @@
 %ignore svn_client_commit_item_create;
 %ignore svn_client_commit_item2_dup;
 %ignore svn_client_commit_item3_dup;
+%ignore svn_client_copy_source_t::path;
+%ignore svn_client_copy_source_t::revision;
+%ignore svn_client_copy_source_t::peg_revision;
+
+%ignore svn_client_remove_from_changelist;
+%ignore svn_client_commit4;
 #endif
 
 %include svn_client_h.swg
+
+#ifdef SWIGRUBY
+%header %{
+#define _svn_client_remove_from_changelist svn_client_remove_from_changelist
+#define _svn_client_commit4 svn_client_commit4
+%}
+%rename(svn_client_remove_from_changelist) _svn_client_remove_from_changelist;
+%rename(svn_client_commit4) _svn_client_commit4;
+%apply const char *MAY_BE_NULL {
+  const char *removed_changelist,
+  const char *changelist_name_may_be_null
+}
+svn_error_t *
+_svn_client_remove_from_changelist(const apr_array_header_t *paths,
+                                   const char *removed_changelist,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool);
+
+svn_error_t *
+_svn_client_commit4(svn_commit_info_t **commit_info_p,
+                    const apr_array_header_t *targets,
+                    svn_boolean_t recurse,
+                    svn_boolean_t keep_locks,
+                    svn_boolean_t keep_changelist,
+                    const char *changelist_name_may_be_null,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+#endif
 
 #ifdef SWIGPYTHON
 
@@ -331,6 +402,54 @@
 
   svn_client_commit_item3_t *dup(apr_pool_t *pool) {
     return svn_client_commit_item3_dup(self, pool);
+  };
+}
+
+%extend svn_client_copy_source_t
+{
+  %rename(path) _path;
+  %rename(revision) _revision;
+  %rename(peg_revision) _peg_revision;
+
+  svn_client_copy_source_t(const char *path,
+                           const svn_opt_revision_t *rev,
+                           const svn_opt_revision_t *peg_rev,
+                           apr_pool_t *pool) {
+    svn_client_copy_source_t *self;
+    svn_opt_revision_t *revision;
+    svn_opt_revision_t *peg_revision;
+
+    self = apr_palloc(pool, sizeof(*self));
+    self->path = path ? apr_pstrdup(pool, path) : NULL;
+
+    revision = apr_palloc(pool, sizeof(revision));
+    revision->kind = rev->kind;
+    revision->value.number = rev->value.number;
+    revision->value.date = rev->value.date;
+    self->revision = revision;
+
+    peg_revision = apr_palloc(pool, sizeof(peg_revision));
+    peg_revision->kind = peg_rev->kind;
+    peg_revision->value.number = peg_rev->value.number;
+    peg_revision->value.date = peg_rev->value.date;
+    self->peg_revision = peg_revision;
+
+    return self;
+  };
+
+  ~svn_client_copy_source_t() {
+  };
+
+  const char *_path(void) {
+    return self->path;
+  };
+
+  const svn_opt_revision_t *_revision(void) {
+    return self->revision;
+  };
+
+  const svn_opt_revision_t *_peg_revision(void) {
+    return self->peg_revision;
   };
 }
 

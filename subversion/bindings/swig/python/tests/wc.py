@@ -126,6 +126,28 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def test_status(self):
       wc.status2(self.path, self.wc)
 
+  def test_status_editor(self):
+      paths = []
+      def status_func(target, status):
+        self.assert_(target.startswith(self.path))
+        paths.append(target)
+
+      (anchor_access, target_access,
+       target) = wc.adm_open_anchor(self.path, False, -1, None)
+      (editor, edit_baton, set_locks_baton,
+       edit_revision) = wc.get_status_editor2(anchor_access,
+                                              self.path,
+                                              None,  # SvnConfig
+                                              True,  # recursive
+                                              False, # get_all
+                                              False, # no_ignore
+                                              status_func,
+                                              None,  # cancel_func
+                                              None,  # traversal_info
+                                              )
+      editor.close_edit(edit_baton)
+      self.assert_(len(paths) > 0)
+
   def test_is_normal_prop(self):
       self.failIf(wc.is_normal_prop('svn:wc:foo:bar'))
       self.failIf(wc.is_normal_prop('svn:entry:foo:bar'))

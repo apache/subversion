@@ -58,6 +58,8 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message,
                                 VALUE file, VALUE line);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+VALUE svn_swig_rb_svn_error_to_rb_error(svn_error_t *error);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_handle_svn_error(svn_error_t *error);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
@@ -78,6 +80,10 @@ VALUE svn_swig_rb_apr_hash_to_hash_svn_string(apr_hash_t *hash);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_apr_hash_to_hash_swig_type(apr_hash_t *hash,
                                              const char *type_name);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+VALUE svn_swig_rb_apr_hash_to_hash_merge_range(apr_hash_t *hash);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+VALUE svn_swig_rb_apr_hash_to_hash_merge_range_hash(apr_hash_t *hash);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_prop_hash_to_hash(apr_hash_t *prop_hash);
@@ -91,11 +97,14 @@ VALUE svn_swig_rb_apr_array_to_array_svn_string(const apr_array_header_t *ary);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_apr_array_to_array_svn_rev(const apr_array_header_t *ary);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-VALUE svn_swig_rb_apr_array_to_array_prop(const apr_array_header_t *ary);
-SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_apr_array_to_array_proplist_item(const apr_array_header_t *ary);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_apr_array_to_array_external_item2(const apr_array_header_t *ary);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+VALUE svn_swig_rb_apr_array_to_array_merge_range(const apr_array_header_t *ary);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+VALUE svn_swig_rb_prop_apr_array_to_hash_prop(const apr_array_header_t *ary);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_hash_t *svn_swig_rb_hash_to_apr_hash_string(VALUE hash, apr_pool_t *pool);
@@ -109,6 +118,9 @@ apr_hash_t *svn_swig_rb_hash_to_apr_hash_swig_type(VALUE hash,
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_hash_t *svn_swig_rb_hash_to_apr_hash_revnum(VALUE hash,
                                                 apr_pool_t *pool);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_hash_t *svn_swig_rb_hash_to_apr_hash_merge_range(VALUE hash,
+                                                     apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_rb_strings_to_apr_array(VALUE strings,
@@ -118,18 +130,21 @@ apr_array_header_t *
 svn_swig_rb_array_to_auth_provider_object_apr_array(VALUE array,
                                                     apr_pool_t *pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-apr_array_header_t *svn_swig_rb_array_to_apr_array_prop(VALUE array,
-                                                        apr_pool_t *pool);
-SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_rb_array_to_apr_array_revnum(VALUE array,
                                                           apr_pool_t *pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_rb_array_to_apr_array_merge_range(VALUE array,
                                                                apr_pool_t *pool);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_array_header_t *svn_swig_rb_array_to_apr_array_copy_source(VALUE array,
+                                                               apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_rb_to_apr_array_prop(VALUE array_or_hash,
                                                   apr_pool_t *pool);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_array_header_t *svn_swig_rb_to_apr_array_row_prop(VALUE array_or_hash,
+                                                      apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self, VALUE *rb_pool, apr_pool_t **pool);
@@ -289,10 +304,10 @@ svn_error_t *svn_swig_rb_repos_file_rev_handler(void *baton,
                                                 apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-svn_error_t *svn_swig_rb_wc_relocation_validator2(void *baton,
+svn_error_t *svn_swig_rb_wc_relocation_validator3(void *baton,
                                                   const char *uuid,
                                                   const char *url,
-                                                  svn_boolean_t root,
+                                                  const char *root_url,
                                                   apr_pool_t *pool);
 
 
@@ -409,6 +424,18 @@ svn_error_t *svn_swig_rb_client_list_func(void *baton,
                                           const svn_lock_t *lock,
                                           const char *abs_path,
                                           apr_pool_t *pool);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_rb_proplist_receiver(void *baton,
+                                           const char *path,
+                                           apr_hash_t *prop_hash,
+                                           apr_pool_t *pool);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_rb_changelist_receiver(void *baton, const char *path);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+extern svn_ra_reporter3_t *svn_swig_rb_ra_reporter3;
 
 #ifdef __cplusplus
 }

@@ -8,7 +8,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2006 CollabNet.  All rights reserved.
+# Copyright (c) 2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -407,15 +407,75 @@ def depth_immediates_bring_in_dir(sbox):
 #----------------------------------------------------------------------
 def depth_immediates_fill_in_dir(sbox):
   "bring a dir into a depth-immediates working copy"
+
   # Run 'svn up A' to fill in A as a depth-infinity subdir.
-  raise svntest.Failure("<test not yet written>")
+  ign_a, ign_b, wc_immediates, wc \
+                        = set_up_depthy_working_copies(sbox, immediates=True)
+  A_path = os.path.join(wc_immediates, 'A')
+  expected_output = svntest.wc.State(wc_immediates, {
+    'A/mu'           : Item(status='A '),
+    'A/B'            : Item(status='A '),
+    'A/B/lambda'     : Item(status='A '),
+    'A/B/E'          : Item(status='A '),
+    'A/B/E/alpha'    : Item(status='A '),
+    'A/B/E/beta'     : Item(status='A '),
+    'A/B/F'          : Item(status='A '),
+    'A/C'            : Item(status='A '),
+    'A/D'            : Item(status='A '),
+    'A/D/gamma'      : Item(status='A '),
+    'A/D/G'          : Item(status='A '),
+    'A/D/G/pi'       : Item(status='A '),
+    'A/D/G/rho'      : Item(status='A '),
+    'A/D/G/tau'      : Item(status='A '),
+    'A/D/H'          : Item(status='A '),
+    'A/D/H/chi'      : Item(status='A '),
+    'A/D/H/psi'      : Item(status='A '),
+    'A/D/H/omega'    : Item(status='A ')
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_immediates, 1)
+  svntest.actions.run_and_verify_update(wc_immediates,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--depth', 'infinity', 
+                                        A_path)
 
 #----------------------------------------------------------------------
 def depth_mixed_bring_in_dir(sbox):
   "bring a dir into a mixed-depth working copy"
+
   # Run 'svn up --depth=immediates A' in a depth-empty working copy.
-  # Then run 'svn up A/B' to fill out B.
-  raise svntest.Failure("<test not yet written>")
+  wc_empty, ign_a, ign_b, wc = set_up_depthy_working_copies(sbox, empty=True)
+  A_path = os.path.join(wc_empty, 'A')
+
+  expected_output = svntest.wc.State(wc_empty, {
+    'A'              : Item(status='A '),
+    'A/mu'           : Item(status='A '),
+    'A/B'            : Item(status='A '),
+    'A/C'            : Item(status='A '),
+    'A/D'            : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha', 
+                       'A/B/E/beta', 'A/B/F', 'A/D/gamma', 'A/D/G', 
+                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H', 
+                       'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
+  expected_status = svntest.actions.get_virginal_state(wc_empty, 1)
+  expected_status.remove('iota', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha', 
+                         'A/B/E/beta', 'A/B/F', 'A/D/gamma', 'A/D/G', 
+                         'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H', 
+                         'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
+  svntest.actions.run_and_verify_update(wc_empty,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--depth', 'immediates', 
+                                        A_path)
 
 #----------------------------------------------------------------------
 def depth_empty_unreceive_delete(sbox):
@@ -464,6 +524,163 @@ def depth_immediates_receive_delete(sbox):
   raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
+def depth_immediates_subdir_propset_1(sbox):
+  "depth-1 commit subdirectory propset, then update"
+  ign_a, ign_b, wc_immediates, ign_c \
+         = set_up_depthy_working_copies(sbox, immediates=True)
+
+  A_path = os.path.join(wc_immediates, 'A')
+
+  # Set a property on an immediate subdirectory of the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'pset', 'foo', 'bar',
+                                     A_path)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_immediates, {
+    'A' : Item(verb='Sending'),
+    })
+  
+  # Create expected status tree.
+  expected_status = svntest.wc.State(wc_immediates, {
+    '' : Item(status='  ', wc_rev=1),
+    'iota' : Item(status='  ', wc_rev=1),
+    'A' : Item(status='  ', wc_rev=2)
+    })
+
+  # Commit wc_immediates/A.
+  svntest.actions.run_and_verify_commit(wc_immediates,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        A_path)
+
+  # Create expected output tree for the update.
+  expected_output = svntest.wc.State(wc_immediates, { })
+
+  # Create expected disk tree.
+  expected_disk = svntest.wc.State('', { 
+    'iota' : Item(contents="This is the file 'iota'.\n"),
+    'A' : Item(contents=None, props={'foo' : 'bar'}),
+    })
+  
+  expected_status.tweak(contents=None, status='  ', wc_rev=2)
+  
+  # Update the depth-immediates wc.
+  svntest.actions.run_and_verify_update(wc_immediates,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
+
+#----------------------------------------------------------------------
+def depth_immediates_subdir_propset_2(sbox):
+  "depth-1 update receives a subdirectory propset"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make the other working copy.
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  A_path = os.path.join(wc_dir, 'A')
+
+  # Set a property on an immediate subdirectory of the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'pset', 'foo', 'bar',
+                                     A_path)
+  # Commit.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'logmsg', A_path)
+
+  # Update at depth=immediates in the other wc, expecting to see no errors.
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     SVNAnyOutput, [],
+                                     'update', '--depth', 'immediates',
+                                     other_wc)
+
+#----------------------------------------------------------------------
+def depth_update_to_more_depth(sbox):
+  "gradually update an empty wc to depth=infinity"
+
+  wc_dir, ign_a, ign_b, wc = set_up_depthy_working_copies(sbox, empty=True)
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+  try:
+    # Run 'svn up --depth=files' in a depth-empty working copy.
+    expected_output = svntest.wc.State(wc_dir, {
+      'iota'              : Item(status='A '),
+      })
+    expected_status = svntest.wc.State(wc_dir, {
+      'iota' : Item(status='  ', wc_rev=1),
+      })
+    expected_disk = svntest.wc.State('', {
+      'iota' : Item("This is the file 'iota'.\n"),
+      })
+    svntest.actions.run_and_verify_update(wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None, None,
+                                          None, None, None, None,
+                                          '--depth', 'files')
+
+    # Run 'svn up --depth=immediates' in the now depth-files working copy.
+    expected_output = svntest.wc.State(wc_dir, {
+      'A'              : Item(status='A '),
+      })
+    expected_status = svntest.wc.State(wc_dir, {
+      'iota' : Item(status='  ', wc_rev=1),
+      'A' : Item(status='  ', wc_rev=1),
+      })
+    expected_disk = svntest.wc.State('', {
+      'iota' : Item("This is the file 'iota'.\n"),
+      'A'    : Item(),
+      })
+    svntest.actions.run_and_verify_update(wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None, None,
+                                          None, None, None, None,
+                                          '--depth', 'immediates')
+
+    # Run 'svn up --depth=infinity' in the now depth-immediates working copy.
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/mu'           : Item(status='A '),
+      'A/B'            : Item(status='A '),
+      'A/B/lambda'     : Item(status='A '),
+      'A/B/E'          : Item(status='A '),
+      'A/B/E/alpha'    : Item(status='A '),
+      'A/B/E/beta'     : Item(status='A '),
+      'A/B/F'          : Item(status='A '),
+      'A/C'            : Item(status='A '),
+      'A/D'            : Item(status='A '),
+      'A/D/gamma'      : Item(status='A '),
+      'A/D/G'          : Item(status='A '),
+      'A/D/G/pi'       : Item(status='A '),
+      'A/D/G/rho'      : Item(status='A '),
+      'A/D/G/tau'      : Item(status='A '),
+      'A/D/H'          : Item(status='A '),
+      'A/D/H/chi'      : Item(status='A '),
+      'A/D/H/psi'      : Item(status='A '),
+      'A/D/H/omega'    : Item(status='A ')
+      })
+    expected_disk = svntest.main.greek_state.copy()
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    svntest.actions.run_and_verify_update(wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None, None,
+                                          None, None, None, None,
+                                          '--depth', 'infinity')
+  finally:
+    os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -478,10 +695,13 @@ test_list = [ None,
               XFail(depth_immediates_bring_in_file),
               XFail(depth_immediates_bring_in_dir),
               XFail(depth_immediates_fill_in_dir),
-              XFail(depth_mixed_bring_in_dir),
+              depth_mixed_bring_in_dir,
               depth_empty_unreceive_delete,
               XFail(depth_immediates_unreceive_delete),
               XFail(depth_immediates_receive_delete),
+              XFail(depth_update_to_more_depth),
+              XFail(depth_immediates_subdir_propset_1),
+              XFail(depth_immediates_subdir_propset_2),
             ]
 
 if __name__ == "__main__":

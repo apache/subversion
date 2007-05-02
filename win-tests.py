@@ -4,6 +4,11 @@ Driver for running the tests on Windows.
 For a list of options, run this script with the --help option.
 """
 
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 import os, sys
 import filecmp
 import shutil
@@ -41,6 +46,9 @@ def _usage_exit():
   print "  --httpd-dir          : location where Apache HTTPD is installed"
   print "  --httpd-port         : port for Apache HTTPD; random port number"
   print "                         will be used, if not specified"
+  print "  --list               : print test doc strings only"
+  print "  --enable-sasl        : enable Cyrus SASL authentication for"
+  print "                         svnserve"
   sys.exit(0)
 
 CMDLINE_TEST_SCRIPT_PATH = 'subversion/tests/cmdline/'
@@ -69,7 +77,8 @@ for section in gen_obj.sections.values():
 opts, args = my_getopt(sys.argv[1:], 'hrdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
-                        'httpd-dir=', 'httpd-port=', 'help'])
+                        'httpd-dir=', 'httpd-port=', 'help', 'list',
+                        'enable-sasl'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -82,6 +91,8 @@ run_svnserve = None
 svnserve_args = None
 run_httpd = None
 httpd_port = None
+list_tests = None
+enable_sasl = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -108,6 +119,11 @@ for opt, val in opts:
     run_httpd = 1
   elif opt == '--httpd-port':
     httpd_port = int(val)
+  elif opt == '--list':
+    list_tests = 1
+  elif opt == '--enable-sasl':
+    enable_sasl = 1
+    base_url = "svn://localhost/"
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -210,7 +226,7 @@ def locate_libs():
 
   dlls.append(os.path.join(gen_obj.sqlite_path, 'bin', 'sqlite3.dll'))
 
-  if gen_obj.bdb_path is not None:
+  if gen_obj.bdb_lib is not None:
     partial_path = os.path.join(gen_obj.bdb_path, 'bin', gen_obj.bdb_lib)
     if objdir == 'Debug':
       dlls.append(partial_path + 'd.dll')
@@ -365,9 +381,9 @@ class Httpd:
       fp.write(self._sys_module('access_compat_module', 'mod_access_compat.so'))
       fp.write(self._sys_module('authz_core_module', 'mod_authz_core.so'))
       fp.write(self._sys_module('authz_user_module', 'mod_authz_user.so'))
+      fp.write(self._sys_module('authn_core_module', 'mod_authn_core.so'))
     if self.httpd_ver >= 2.2:
       fp.write(self._sys_module('auth_basic_module', 'mod_auth_basic.so'))
-      fp.write(self._sys_module('authn_core_module', 'mod_authn_core.so'))
       fp.write(self._sys_module('authn_file_module', 'mod_authn_file.so'))
     else:
       fp.write(self._sys_module('auth_module', 'mod_auth.so'))
@@ -484,7 +500,8 @@ sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
-                           base_url, fs_type, 1, cleanup)
+                           base_url, fs_type, 1, cleanup, 
+                           enable_sasl, list_tests)
 old_cwd = os.getcwd()
 try:
   os.chdir(abs_builddir)

@@ -61,7 +61,10 @@ print_dirent(void *baton,
     {
       if (dirent->kind == svn_node_file)
         entryname = svn_path_basename(abs_path, pool);
+      else if (pb->verbose)
+        entryname = ".";
       else
+        /* Don't bother to list if no useful information will be shown. */
         return SVN_NO_ERROR;
     }
   else
@@ -140,7 +143,10 @@ print_dirent_xml(void *baton,
     {
       if (dirent->kind == svn_node_file)
         entryname = svn_path_basename(abs_path, pool);
+      else if (pb->verbose)
+        entryname = ".";
       else
+        /* Don't bother to list if no useful information will be shown. */
         return SVN_NO_ERROR;
     }
   else
@@ -275,13 +281,13 @@ svn_cl__list(apr_getopt_t *os,
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
 
-      SVN_ERR(svn_client_list(truepath, &peg_revision,
-                              &(opt_state->start_revision),
-                              SVN_DEPTH_TO_RECURSE(opt_state->depth),
-                              dirent_fields,
-                              (opt_state->xml || opt_state->verbose),
-                              opt_state->xml ? print_dirent_xml : print_dirent,
-                              &pb, ctx, subpool));
+      SVN_ERR(svn_client_list2(truepath, &peg_revision,
+                               &(opt_state->start_revision),
+                               opt_state->depth,
+                               dirent_fields,
+                               (opt_state->xml || opt_state->verbose),
+                               opt_state->xml ? print_dirent_xml : print_dirent,
+                               &pb, ctx, subpool));
 
       if (opt_state->xml)
         {

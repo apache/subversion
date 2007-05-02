@@ -49,6 +49,10 @@
 #endif
 
 #ifdef SWIGRUBY
+%apply const char *NOT_NULL {
+  const char *path
+};
+
 %apply svn_stream_t *MAY_BE_NULL {
     svn_stream_t *dumpstream_may_be_null,
     svn_stream_t *feedback_stream

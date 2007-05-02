@@ -6,7 +6,7 @@
 ;;	Mattias Engdegård <mattias@virtutech.com>
 ;; Maintainer: David Kågedal <david@virtutech.com>
 ;; Created: 27 Jan 2006
-;; Version: 1.0
+;; Version: 1.2
 ;; Keywords: docs
 
 ;; This program is free software; you can redistribute it and/or
@@ -118,6 +118,15 @@
 (defconst svn-status-mark-col  18)
 (defconst svn-status-file-col  20)
 
+(defgroup dsvn nil
+  "Settings for dsvn."
+  :group 'tools)
+
+(defcustom svn-program "svn"
+  "*The svn program to run"
+  :type 'string
+  :group 'dsvn)  
+
 (defun svn-call-process (program buffer &rest args)
   "Run svn and wait for it to finish.
 Argument PROGRAM is the svn binary to run.
@@ -149,7 +158,7 @@ Return non-NIL if there was any output."
         (fundamental-mode))
       (setq default-directory dir)
       (setq buffer-read-only t)
-      (let ((cmd `("svn" ,subcommand ,@args))
+      (let ((cmd `(,svn-program ,subcommand ,@args))
             proc)
         (if in-top-dir
             (setq cmd (append (list "env" (concat "SVN_DIR=" (get-svn-dir)))
@@ -176,7 +185,7 @@ Optional argument ARGS is a list of arguments."
     (with-current-buffer buf
       (erase-buffer)
       (setq default-directory dir))
-    (apply 'call-process "svn" nil buf nil (symbol-name command) args)
+    (apply 'call-process svn-program nil buf nil (symbol-name command) args)
     buf))
 
 (defun svn-output-filter (proc str)
@@ -224,7 +233,7 @@ buffer to describe what is going on."
       (setq command-s "status"
             args (cons "-v" args)))
     (setq proc (apply 'start-process "svn" (current-buffer)
-                      "svn" command-s args))
+                      svn-program command-s args))
     (if (fboundp filter-func)
         (set-process-filter proc filter-func)
       (set-process-filter proc 'svn-default-filter))
@@ -299,7 +308,10 @@ Argument ARG are the command line arguments."
                  (svn-action-files)))
         (commit-buf (current-buffer))
         (status-buf svn-status-buf)
-        (msg-file (make-temp-file "svn-commit")))
+        (msg-file (if (fboundp 'make-temp-file)
+		      (make-temp-file "svn-commit")
+		    (make-temp-name (expand-file-name "svn-commit"
+						      (temp-directory))))))
     ;; Ensure final newline
     (goto-char (point-max))
     (unless (bolp)
@@ -359,7 +371,7 @@ Argument ARG are the command line arguments."
           (when pos
             (svn-update-status-flag pos ?\  ?\ )
             (svn-update-status-msg pos "Committed"))
-          (when file-buffer
+          (when (and file-buffer (fboundp 'vc-svn-workfile-version))
             (with-current-buffer file-buffer
               ;; Use buffer-file-name instead of path to get the
               ;; canonical file name used by vc
@@ -419,7 +431,7 @@ Argument ARG is the command-line arguments, as a string."
       (setq buffer-read-only t)
       (erase-buffer)
       (setq default-directory dir)
-      (svn-call-process "svn" diff-buf
+      (svn-call-process svn-program diff-buf
                         "diff" "-r"
                         (format "%d:%d" (1- commit-id) commit-id)))))
 
@@ -562,20 +574,22 @@ If optional argument CLEAR is non-NIL, clear the buffer first."
 
 (defun svn-refresh-one (file)
   "Run `svn status' on FILE."
-  (interactive (list (read-file-name "Svn status on file: "
-                                     default-directory
-                                     nil t
-                                     (or (svn-getprop (point) 'file)
-                                         (svn-getprop (point) 'dir)))))
+  (interactive (list (expand-file-name
+		      (read-file-name "Svn status on file: "
+				      default-directory
+				      nil t
+				      (or (svn-getprop (point) 'file)
+					  (svn-getprop (point) 'dir))))))
   (if (file-directory-p file)
       (setq file (file-name-as-directory file)))
   (svn-check-running)
-  (let ((local-file
+  (let* ((exp-default-dir (expand-file-name default-directory))
+	 (local-file
 	 (if (file-name-absolute-p file)
-	     (let ((ddl (length default-directory)))
+	     (let ((ddl (length exp-default-dir)))
 	       (if (or (< (length file) ddl)
 		       (not (string= (substring file 0 ddl)
-				     default-directory)))
+				     exp-default-dir)))
 		   (error "Outside working copy")
 		 (substring file ddl)))
 	   file)))
@@ -957,8 +971,10 @@ been modified."
                       (insert "         Top-level directory:")
                     (insert "         Directory " dir ":"))
                   (newline)
+		  ;; Next line only needed on XEmacs
+		  (remove-text-properties start (point) '(svn-file nil))
                   (add-text-properties start (point)
-                                       (list 'face '(:weight bold)
+                                       (list 'face 'bold
                                              'svn-dir dir))))))
           (forward-line 1))))))
 
@@ -1275,11 +1291,12 @@ argument."
     (when (file-directory-p (car files))
       (error "Can only move files"))
     (let* ((src (car files))
-           (dst (read-file-name "Move to: "
-                                (file-name-directory src)
-                                (file-name-nondirectory src)
-                                nil
-                                (file-name-nondirectory src))))
+           (dir (file-name-directory src))
+           (dst (completing-read "Move to: "
+                                 'svn-complete-url
+                                 nil nil
+                                 dir
+                                 'svn-switch-history)))
       (svn-run 'move (list src dst) "Moving file"))))
 
 (defun svn-move-filter (proc str)

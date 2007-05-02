@@ -22,9 +22,30 @@
 Describes Subversion 1.5.0, except where noted as
 <i>unimplemented.</i></p>
 
-<p style="color: red">TODO: Describe how each <a
-href="requirements.html">requirement</a> will actually function for
-Subversion.  Remove redundancies.</p>
+<div class="h2" id="merge">
+<h2>Merge operations</h2>
+
+<p>Merge operations involving a single source URL (e.g. <code>svn
+merge -cN URL</code>) allow the revision range and source URL
+parameters to be optional.  The revision range defaults to "all
+unmerged revisions", while the source URL is inferred using a
+combination of merge info and copy history.  When a revision range is
+not provided, merge operations are not able to "revert" changes
+(e.g. a la <code>svn merge -c -7 URL</code>).</p>
+
+<p>See the <a href="#repeated-merge">repeated merge</a> section below
+for discussion of various merge algorithms, and details on the merge
+algorithm used.</p>
+
+<p>Merge info is <em>not taken into consideration for three-way
+merges</em>, merge operations which do not specify identical "from"
+and "to" URLs (e.g. <code>svn merge FROM_URL@REV1 TO_URL@REV2</code>).
+In the future, Subversion will likely support this, but currently
+lacks sufficient history and merge info between the repository and
+client to perform this operation in a reasonable manner.  The primary
+use case this will impact is vendor branches.</p>
+
+</div>  <!-- merge -->
 
 <div class="h2" id="diff-status">
 <h2>Diff/Status operations</h2>
@@ -66,8 +87,7 @@ Subversion.  Remove redundancies.</p>
 <p>Copy/move operations which contact the repository include:</p>
 
 <ul>
-  <li>WC to URL (<i>code in progress, tests complete</i>, copy test
-    #11 still failing over ra_dav)</li>
+  <li>WC to URL</li>
   <li>URL to WC</li>
   <li>URL to URL</li>
 </ul>
@@ -121,19 +141,19 @@ merge info in the WC).</p>
 <p>Property changes from <code>propedit</code>, <code>propset</code>,
 and <code>propdel</code> operations can be used to change merge info.
 However, as these operations do not attempt to address merge info
-inheritance, changes to merge info on a path can have side
-effects.</p>
+inheritance, changes to merge info on a directory affects merge info
+on any child paths.</p>
 
 </div>  <!-- prop-change -->
 
-<div class="h2" id="meta-data">
-<h2>Merge-related Meta Data</h2>
+<div class="h2" id="merge-history">
+<h2>Merge History</h2>
 
 <p>Merge Tracking meta data is stored in housekeeping properties
 (e.g. <code>svn:mergeinfo</code>).</p>
 
-<div class="h3" id="meta-data-mainpulation">
-<h3>Meta Data Manipulation</h3>
+<div class="h3" id="merge-history-mainpulation">
+<h3>Merge History Manipulation</h3>
 
 <p>While direct manipulation of housekeeping properties can be used to
 change merge info, commands to manipulate this information have been
@@ -157,17 +177,35 @@ housekeeping property).</p>
 
 </div>  <!-- meta-data-mainpulation -->
 
-<div class="h3" id="meta-data-audit">
-<h3>Meta Data Audit and Query</h3>
+<div class="h3" id="merge-history-audit">
+<h3>Merge History Audit and Query</h3>
 
 <p>These features may or may not be completed for 1.5.0.</p>
 
 <ul>
-      <li>Change Set Merge Availability (TODO)</li>
-      <li>Find Change Set (TODO)</li>
-      <li><a href="#commutative-author-and-rev">Commutative Author and Revision
-      Reporting</a></li>
+  <li><a href="#show-changesets-available">Change Set Merge
+    Availability</a> (<i>unimplemented</i>)</li>
+
+  <li><a href="#find-changeset">Find Change Set</a>
+    (<i>unimplemented</i>)</li>
+
+  <li><a href="#commutative-author-and-rev">Commutative Author and Revision
+    Reporting</a> (<i>unimplemented</i>)</li>
 </ul>
+
+<div class="h4" id="show-changesets-available">
+<h4>Change Set Merge Availability</h4>
+
+<p>TODO: Show change sets available from a merge source.</p>
+
+</div>  <!-- show-changesets-available -->
+
+<div class="h4" id="find-changeset">
+<h4>Find Change Set</h4>
+
+<p>TODO: Show where a change set has been merged to.</p>
+
+</div>  <!-- find-changeset -->
 
 <div class="h4" id="commutative-author-and-rev">
 <h4>Commutative Author and Revision Auditing</h4>
@@ -184,12 +222,17 @@ commands</em>, are:</p>
 <ul>
   <li><code>svn log</code></li>
   <li><code>svn blame</code></li>
-  <li><code>svn status --show-updates</code></li>
 </ul>
 
-<p><code>svn info</code> is purposely not included in this list, on
-the grounds that one would typically need more information than it can
-reasonably provide.</p>
+<p><code>svn info</code>, <code>svn ls --verbose</code> and <code>svn
+status --show-updates</code> are purposely not included in this list.
+While one would typically need more information than they can
+reasonably provide alone, adding more output to these commands would
+clutter their command-line interface, reducing their utility.  Merge
+Tracking-aware API support for the underlying functionality provided
+by these commands may be added at some point in the future (e.g. for
+use by third-party clients like <a href="http://tortoisesvn.tigris.org/"
+>TortoiseSVN</a>).</p>
 
 <p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
 single-character shortcut, will be introduced for the auditing commands.
@@ -201,46 +244,126 @@ as follows.</p>
 
 <dl>
   <dt><code>svn log</code></dt>
-  <dd><p>The original log message, in the current format, with the
+  <dd><p>The original log message(s), in the current format, with the
   addition of a list of revisions and merge source paths that have
   been merged into the target.  The output for <code>log</code> should
   be consistent with the <code>diff</code> output for the
   <code>svn:mergeinfo</code> property.</p>
 
   <p>The <code>--verbose</code> switch will output the log information
-  for the merged revisions as well.  This output may be in the style
-  of <code>svnmerge.py</code>: the primary log message, followed by
-  each of the original log messages indented with separators between
-  them.</p>
+  for the merged revisions in place of the information for the revision
+  in which the merge occured.  Each of the original message(s) will have an
+  additional line indicating that it is the result of a merge, and which
+  revision the merge occured in.</p>
+
+  <p>For instance, if Alice was the original author of r12, Bob was the
+  orginial author of r14, and Chuck merged them both r12 and r14 as part
+  of r24, the output of <code>svn log --merge-sensitive</code>
+  will look like this:</p>
+  <pre>
+------------------------------------------------------------------------
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 2 lines
+ 
+Merge r12 and r14 from branch to trunk.
+------------------------------------------------------------------------
+r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 2 lines
+Result of a merge from: r24
+
+Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
+------------------------------------------------------------------------
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+Result of a merge from: r24
+
+Fix frapnalyzer bug in frobnicator.
+  </pre>
+
+  <p>Using the same example, the output of <code>svn log --merge-sensitive
+  --verbose</code> will look like:</p>
+
+  <pre>
+------------------------------------------------------------------------
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 2 lines
+Changed paths:
+   M /trunk/death-ray.c
+   M /trunk/frobnicator/frapnalyzer.c
+ 
+Merge r12 and r14 from branch to trunk.
+------------------------------------------------------------------------
+r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 2 lines
+Changed paths:
+   M /trunk/death-ray.c
+ 
+Result of a merge from: r24
+
+Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
+------------------------------------------------------------------------
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+Changed paths:
+   M /trunk/frobnicator/frapnalyzer.c
+   M /trunk/death-ray.c
+ 
+Result of a merge from:
+   r24
+
+Fix frapnalyzer bug in frobnicator.
+  </pre>
+
+  <p>If r12 was itself a merge of r9 and r10, <code>svn log
+  --merge-sensitive</code> for r24 will look like this:</p>
+
+  <pre>
+------------------------------------------------------------------------
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 2 lines
+ 
+Merge r12 and r14 from branch to trunk.
+------------------------------------------------------------------------
+r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 2 lines
+Result of a merge from: r24
+
+Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
+------------------------------------------------------------------------
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+Result of a merge from: r24
+
+Fix frapnalyzer bug in frobnicator.
+------------------------------------------------------------------------
+r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 2 lines
+Result of a merge from: r12, r24
+
+Fix frapnalyzer documentation.
+------------------------------------------------------------------------
+r9  | bob   | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+Result of a merge from: r12, r24
+
+Whitespace fixes.  No functional change.
+  </pre>
+
+  <p>In each case, merged revisions will be grouped together under the merging
+  revisions, and sorted by revision number.  This may mean that not all log
+  messages will be in revision number order, but changes will be presented in
+  the order they were actually made.</p>
+  
   </dd>
 
   <dt><code>svn blame</code></dt>
-  <dd>Two additional columns for each line, with the original revision
-  and author of that line.  Unlike other commands, we do not need to
-  worry about multiple source revisions, because each line can have at
-  most one author.</dd>
-
-  <dt><code>svn status --show-updates</code></dt>
-  <dd>Add additional columns, reflecting the last original authors and
-  revisions.</dd>
+  <dd>Reuse the existing author and revision columns.  Instead of listing
+  the merging author and revision, list the original author and revision of
+  that line.  Unlike other commands, we do not need to worry about multiple
+  source revisions, because each line can have at most one author.</dd>
 </dl>
+
+<p>For commits which remove merge info (e.g. reverts),
+<code>--merge-sensitive</code> will trace back to the original author.  For
+example if Alice makes a commit to code previously modified by Bob (committed
+with no merge history), and Alice's commit is subsequently reverted by Chris,
+we should show Bob as the author.  If Bob's commit was itself the result of a
+merge, we should recurse until we find a commit which did not add merge info
+(the leaf node), and assume its author.</p>
 
 </div>  <!-- auditing-scope -->
 
 <div class="h5" id="auditing-questions">
 <h5>Pending Questions</h5>
-
-<ul>
-  <li>How will <code>--merge-sensitive</code> behave for commits which remove
-  merge info (e.g. reverts)?</li>
-
-  <li>In the case of <code>svn log</code>, would the user be better served if we
-  just included the original revision logs in line with the logs (i.e., no
-  special indentation, etc.)?</li>
-
-  <li>What about <code>svn ls --verbose</code>, which also shows revisions and
-  usernames?</li>
-</ul>
 
 </div>  <!-- auditing-questions -->
 

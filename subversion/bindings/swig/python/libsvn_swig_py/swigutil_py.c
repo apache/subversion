@@ -1873,6 +1873,75 @@ void svn_swig_py_status_func(void *baton,
 }
 
 
+svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
+                                                   void *parent_baton,
+                                                   void *callback_baton,
+                                                   const char *path,
+                                                   apr_pool_t *pool)
+{
+  PyObject *function = callback_baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return err;
+
+  svn_swig_py_acquire_py_lock();
+  result = PyObject_CallFunction(function, (char *)"OsO&",
+                                 svn_swig_NewPointerObjString(parent_baton,
+                                                              "void *",
+                                                          application_py_pool),
+                                 path, make_ob_pool, pool);
+  if (result == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      if (svn_swig_ConvertPtr(result, dir_baton, svn_swig_TypeQuery("void *")) == -1)
+        {
+          err = type_conversion_error("void *");
+        }
+    }
+
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+
+void svn_swig_py_status_func2(void *baton,
+                              const char *path,
+                              svn_wc_status2_t *status)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return;
+
+  svn_swig_py_acquire_py_lock();
+  if ((result = PyObject_CallFunction(function, (char *)"sO&", path,
+                                      make_ob_wc_status, status)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      /* The callback shouldn't be returning anything. */
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  /* Our error has no place to go. :-( */
+  if (err)
+    svn_error_clear(err);
+    
+  svn_swig_py_release_py_lock();
+}
+
+
 svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
 {
   PyObject *function = cancel_baton;
@@ -2260,9 +2329,9 @@ svn_swig_py_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
           else
             {
               creds = apr_pcalloc(pool, sizeof(*creds));
-              creds->username = tmp_creds->username ? \
+              creds->username = tmp_creds->username ?
                 apr_pstrdup(pool, tmp_creds->username) : NULL;
-              creds->password = tmp_creds->password ? \
+              creds->password = tmp_creds->password ?
                 apr_pstrdup(pool, tmp_creds->password) : NULL;
               creds->may_save = tmp_creds->may_save;
             }
@@ -2311,7 +2380,7 @@ svn_swig_py_auth_username_prompt_func(svn_auth_cred_username_t **cred,
           else
             {
               creds = apr_pcalloc(pool, sizeof(*creds));
-              creds->username = tmp_creds->username ? \
+              creds->username = tmp_creds->username ?
                 apr_pstrdup(pool, tmp_creds->username) : NULL;
               creds->may_save = tmp_creds->may_save;
             }
@@ -2415,7 +2484,7 @@ svn_swig_py_auth_ssl_client_cert_prompt_func(
           else
             {
               creds = apr_pcalloc(pool, sizeof(*creds));
-              creds->cert_file = tmp_creds->cert_file ? \
+              creds->cert_file = tmp_creds->cert_file ?
                 apr_pstrdup(pool, tmp_creds->cert_file) : NULL;
               creds->may_save = tmp_creds->may_save;
             }
@@ -2467,7 +2536,7 @@ svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
           else
             {
               creds = apr_pcalloc(pool, sizeof(*creds));
-              creds->password = tmp_creds->password ? \
+              creds->password = tmp_creds->password ?
                 apr_pstrdup(pool, tmp_creds->password) : NULL;
               creds->may_save = tmp_creds->may_save;
             }

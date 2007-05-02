@@ -1016,6 +1016,7 @@ test_compare_paths(const char **msg,
     { "/foo",         "/foo/bar",     -1},
     { "/foo",         "/foo/bar/boo", -1},
     { "foo",          "/foo",         1},
+    { "foo\xe0""bar", "foo",          1},
   };
 
   *msg = "test svn_path_compare_paths";
@@ -1130,6 +1131,10 @@ test_splitext(const char **msg,
     { "period.",                   "period.",                "" },
     { "file.ends-with/period.",    "file.ends-with/period.", "" },
     { "two-periods..txt",          "two-periods..",          "txt" },
+    { ".dot-file",                 ".dot-file",              "" },
+    { "sub/.dot-file",             "sub/.dot-file",          "" },
+    { ".dot-file.withext",         ".dot-file.",             "withext" },
+    { "sub/.dot-file.withext",     "sub/.dot-file.",         "withext" },
     { "",                          "",                       "" },
   };
 

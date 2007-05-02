@@ -84,6 +84,18 @@ svn_error_t *svn_wc__props_modified(const char *path,
                                     svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool);
 
+/** Given a @a wcpath with its accompanying @a entry, set @a *switched to
+ * whether @a wcpath is switched (TRUE or FALSE).  All allocations are
+ * done in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc__path_switched(const char *wcpath,
+                      svn_boolean_t *switched,
+                      const svn_wc_entry_t *entry,
+                      apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

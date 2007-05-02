@@ -221,7 +221,7 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#bdb43-upgrade">After upgrading to Berkeley DB
     4.3 or later, I'm seeing repository errors.</a></li>
 <li><a href="#tiger-apr-0.9.6">Why do I get occasional, seemingly
-    inconsistent errors checking out over http:// from a repository
+    inconsistent errors when checking out over http:// from a repository
     running on MacOS X 10.4 (Tiger)?</a></li>
 <li><a href="#debian-libtool">I can't build Subversion from working
     copy source on Debian GNU/Linux; I get errors at the final link
@@ -2335,7 +2335,7 @@ working copy is out of date?</h3>
     the very changes you are trying now to commit.  You can use 'svn
     log -rHEAD' to see if your supposed-failed commit actually
     succeeded.  If it did, run 'svn revert' to revert your local
-    changes, then run 'svn update' to your own changes back from the
+    changes, then run 'svn update' to get your own changes back from the
     server.  (Note that only 'svn update' brings your local copies
     up-to-date; revert doesn't do that.)</p>
 </li>
@@ -3146,16 +3146,17 @@ etc.)</li>
 
 
 <div class="h3" id="tiger-apr-0.9.6" title="tiger-apr-0.9.6">
-<h3>Why do I get occasional, seemingly inconsistent errors checking
+<h3>Why do I get occasional, seemingly inconsistent errors when checking
     out over http:// from a repository running on MacOS X 10.4 (Tiger)?</h3>
 
 <p>Note: this assumes the repository is being served by Apache 2.0.x.</p>
 
-<p>There is a bug in APR 0.9.6 that is present when it is running on
-Tiger, and shows up when you attempt to check out a file larger than
-64K.  The resulting checkout fails, often with unpredictable error
-messages.  Here are some examples of what you might see on the client
-side, the specific errors may differ for you:</p>
+<p>There is <a href="http://issues.apache.org/bugzilla/show_bug.cgi?id=34332"
+>a bug in APR 0.9.6</a> that is present when it is running on Tiger,
+and shows up when you attempt to check out a file larger than 64Kb.
+The resulting checkout fails, often with unpredictable error messages.
+Here are some examples of what you might see on the client side, the
+specific errors may differ for you:</p>
 
 <pre>
    svn: Invalid diff stream: [tgt] insn 1 starts beyond the target view position
@@ -3184,9 +3185,11 @@ will access the filesystem directly instead of going through Apache.
 If the resulting checkout completes successfully, then it is almost
 certain that this is the problem.</p>
 
-<p>Currently, the best solution is to rebuild Apache and Subversion
-from their respective sources, setting the following environment
-variable before running configure for Apache:</p>
+<p>Currently, the best solution is to upgrade to APR 1.2.0+.</p>
+
+<p>Alternately, you can rebuild Apache and Subversion from their
+respective sources, setting the following environment variable before
+running configure for Apache:</p>
 
 <pre>
    setenv ac_cv_func_poll no

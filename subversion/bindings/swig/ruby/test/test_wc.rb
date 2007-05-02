@@ -4,6 +4,7 @@ require "util"
 require "svn/core"
 require "svn/wc"
 require "svn/repos"
+require "svn/ra"
 
 class SvnWcTest < Test::Unit::TestCase
   include SvnTestUtil
@@ -242,6 +243,12 @@ class SvnWcTest < Test::Unit::TestCase
       queue.push(access, path1, true, {"my-prop" => "value"})
       queue.process(access, next_rev)
     end
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+      queue = Svn::Wc::CommittedQueue.new
+      queue.push(access, path1, true, [Svn::Core::Prop.new("my-prop", "value")])
+      queue.process(access, next_rev)
+    end
   end
 
   def test_ancestry
@@ -471,7 +478,7 @@ EOE
     assert(!Svn::Wc.locked?(@wc_path))
   end
 
-  def assert_translated_file_eol(method_name)
+  def assert_translated_eol(method_name)
     src_file = "src"
     crlf_file = "crlf"
     cr_file = "cr"
@@ -505,36 +512,51 @@ EOE
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
       _wrap_assertion do
         File.open(src_path, "wb") {|f| f.print(source)}
-
         args = [method_name, src_path, crlf_path, Svn::Wc::TRANSLATE_FROM_NF]
-        if windows?
-          assert_equal(lf_source, yield(access.send(*args)))
-        else
-          assert_equal(crlf_source, yield(access.send(*args)))
-        end
+        result = yield(access.send(*args), source)
+        result ||= File.open(src_path, "rb") {|f| f.read}
+        assert_equal(crlf_source, result)
 
+        File.open(src_path, "wb") {|f| f.print(source)}
         args = [method_name, src_path, cr_path, Svn::Wc::TRANSLATE_FROM_NF]
-        assert_equal(cr_source, yield(access.send(*args)))
+        result = yield(access.send(*args), source)
+        result ||= File.open(src_path, "rb") {|f| f.read}
+        assert_equal(cr_source, result)
 
+        File.open(src_path, "wb") {|f| f.print(source)}
         args = [method_name, src_path, lf_path, Svn::Wc::TRANSLATE_FROM_NF]
-        assert_equal(lf_source, yield(access.send(*args)))
+        result = yield(access.send(*args), source)
+        result ||= File.open(src_path, "rb") {|f| f.read}
+        assert_equal(lf_source, result)
       end
     end
   end
 
   def test_translated_file_eol
-    assert_translated_file_eol(:translated_file) do |name|
+    assert_translated_eol(:translated_file) do |name, source|
       File.open(name, "rb") {|f| f.read}
     end
   end
 
   def test_translated_file2_eol
-    assert_translated_file_eol(:translated_file2) do |file|
+    assert_translated_eol(:translated_file2) do |file, source|
       file.read
     end
   end
 
-  def assert_translated_file_keyword(method_name)
+  def test_translated_stream_eol
+    assert_translated_eol(:translated_stream) do |stream, source|
+      if source
+        stream.write(source)
+        stream.close
+        nil
+      else
+        stream.read
+      end
+    end
+  end
+
+  def assert_translated_keyword(method_name)
     src_file = "$Revision$"
     revision_file = "revision_file"
     src_path = File.join(@wc_path, src_file)
@@ -552,25 +574,39 @@ EOE
     ctx.ci(revision_path)
 
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
-      File.open(src_path, "w") {|f| f.print(source)}
-
+      File.open(src_path, "wb") {|f| f.print(source)}
       args = [method_name, src_path, revision_path, Svn::Wc::TRANSLATE_FROM_NF]
-      assert_equal(revision_source, yield(access.send(*args)))
+      result = yield(access.send(*args), source)
+      result ||= File.open(src_path, "rb") {|f| f.read}
+      assert_equal(revision_source, result)
 
+      File.open(src_path, "wb") {|f| f.print(source)}
       args = [method_name, src_path, revision_path, Svn::Wc::TRANSLATE_TO_NF]
       assert_equal(source, yield(access.send(*args)))
     end
   end
 
   def test_translated_file_keyword
-    assert_translated_file_keyword(:translated_file) do |name|
+    assert_translated_keyword(:translated_file) do |name, source|
       File.open(name, "rb") {|f| f.read}
     end
   end
 
   def test_translated_file2_keyword
-    assert_translated_file_keyword(:translated_file2) do |file|
+    assert_translated_keyword(:translated_file2) do |file, source|
       file.read
+    end
+  end
+
+  def test_translated_stream_keyword
+    assert_translated_keyword(:translated_stream) do |stream, source|
+      if source
+        stream.write(source)
+        stream.close
+        nil
+      else
+        stream.read
+      end
     end
   end
 
@@ -616,5 +652,286 @@ EOE
   def test_committed_queue_new
     queue = Svn::Wc::CommittedQueue.new
     assert_kind_of(Svn::Wc::CommittedQueue, queue)
+  end
+
+  def assert_diff_callbacks(method_name)
+    log = "sample log"
+    file1 = "hello.txt"
+    file2 = "hello2.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path1 = File.join(dir_path, file1)
+    path2 = File.join(dir_path, file2)
+    prop_name = "my-prop"
+    prop_value = "value"
+
+    ctx = make_context(log)
+    config = {}
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
+
+    FileUtils.mkdir(dir_path)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(dir_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    File.open(path1, "w") {|f| f.print(src * 2)}
+    File.open(path2, "w") {|f| f.print(src)}
+    ctx.add(path2)
+    ctx.prop_set(prop_name, prop_value, path1)
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |adm|
+      callbacks = Object.new
+      def callbacks.result
+        @result
+      end
+      def callbacks.result=(result)
+        @result = result
+      end
+      def callbacks.file_added(access, path, tmpfile1, tmpfile2, rev1,
+                               rev2, mimetype1, mimetype2,
+                               prop_changes, original_props)
+        @result << [:file_added, path, prop_changes]
+        [Svn::Wc::NOTIFY_STATE_UNCHANGED, Svn::Wc::NOTIFY_STATE_UNCHANGED]
+      end
+      def callbacks.file_changed(access, path, tmpfile1, tmpfile2, rev1,
+                                 rev2, mimetype1, mimetype2,
+                                 prop_changes, original_props)
+        @result << [:file_changed, path, prop_changes]
+        [Svn::Wc::NOTIFY_STATE_UNCHANGED, Svn::Wc::NOTIFY_STATE_UNCHANGED]
+      end
+      def callbacks.dir_props_changed(access, path, prop_changes, original_props)
+        @result << [:dir_props_changed, path, prop_changes]
+        Svn::Wc::NOTIFY_STATE_UNCHANGED
+      end
+      callbacks.result = []
+      editor = adm.__send__(method_name, dir, callbacks)
+      reporter = session.diff(rev1, "", @repos_uri, editor)
+      adm.crawl_revisions(dir_path, reporter)
+
+      args = {
+        :dir_changed_prop_names => [
+                                    "svn:entry:committed-date",
+                                    "svn:entry:uuid",
+                                    "svn:entry:last-author",
+                                    "svn:entry:committed-rev"
+                                   ],
+        :file_changed_prop_name => prop_name,
+        :file_changed_prop_value => prop_value,
+      }
+      dir_changed_props, file_changed_props, empty_changed_props = yield(args)
+      assert_equal([
+                    [:dir_props_changed, @wc_path, dir_changed_props],
+                    [:file_changed, path1, file_changed_props],
+                    [:file_added, path2, empty_changed_props],
+                   ],
+                   callbacks.result)
+    end
+  end
+
+  def test_diff_callbacks_for_backward_compatibility
+    assert_diff_callbacks(:diff_editor) do |args|
+      dir_changed_props = args[:dir_changed_prop_names].collect do |name|
+        Svn::Core::Prop.new(name, nil)
+      end
+      prop_name = args[:file_changed_prop_name]
+      prop_value = args[:file_changed_prop_value]
+      file_changed_props = [Svn::Core::Prop.new(prop_name, prop_value)]
+      empty_changed_props = []
+      [dir_changed_props, file_changed_props, empty_changed_props]
+    end
+  end
+
+  def test_diff_callbacks
+    assert_diff_callbacks(:diff_editor2) do |args|
+      dir_changed_props = {}
+      args[:dir_changed_prop_names].each do |name|
+        dir_changed_props[name] = nil
+      end
+      prop_name = args[:file_changed_prop_name]
+      prop_value = args[:file_changed_prop_value]
+      file_changed_props = {prop_name => prop_value}
+      empty_changed_props = {}
+      [dir_changed_props, file_changed_props, empty_changed_props]
+    end
+  end
+
+  def test_update_editor
+    log = "sample log"
+    file1 = "hello.txt"
+    file2 = "hello2.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path1 = File.join(dir_path, file1)
+    path2 = File.join(dir_path, file2)
+
+    ctx = make_context(log)
+    config = {}
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
+
+    FileUtils.mkdir(dir_path)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(dir_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    File.open(path1, "w") {|f| f.print(src * 2)}
+    File.open(path2, "w") {|f| f.print(src)}
+    ctx.add(path2)
+    rev2 = ctx.commit(@wc_path).revision
+
+    assert(File.exists?(path2))
+    assert_equal(0, ctx.up(@wc_path, 0))
+    assert(!File.exists?(path2))
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      editor = access.update_editor(0, @wc_path)
+      assert_equal(0, editor.target_revision)
+
+      reporter = session.update2(rev2, @wc_path, editor)
+      access.crawl_revisions(@wc_path, reporter)
+      assert_equal(rev2, editor.target_revision)
+    end
+  end
+
+  def test_switch_editor
+    log = "sample log"
+    file1 = "hello.txt"
+    file2 = "hello2.txt"
+    src = "Hello"
+    dir1 = "dir1"
+    dir2 = "dir2"
+    dir1_path = File.join(@wc_path, dir1)
+    dir2_path = File.join(@wc_path, dir2)
+    dir1_uri = "#{@repos_uri}/#{dir1}"
+    dir2_uri = "#{@repos_uri}/#{dir2}"
+    path1 = File.join(dir1_path, file1)
+    path2 = File.join(dir2_path, file2)
+
+    ctx = make_context(log)
+    config = {}
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
+
+    FileUtils.mkdir(dir1_path)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(dir1_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    FileUtils.mkdir(dir2_path)
+    File.open(path2, "w") {|f| f.print(src)}
+    ctx.add(dir2_path)
+    rev2 = ctx.commit(@wc_path).revision
+
+    assert(File.exists?(path1))
+    assert_equal(rev2, ctx.switch(@wc_path, dir2_uri))
+    assert(File.exists?(File.join(@wc_path, file2)))
+    Svn::Wc::AdmAccess.open_anchor(@wc_path) do |access, dir_access, target|
+      editor = dir_access.switch_editor(rev2, @wc_path, dir1_uri)
+      assert_equal(rev2, editor.target_revision)
+
+      reporter = session.switch2(rev1, @wc_path, dir1_uri, editor)
+      dir_access.crawl_revisions(@wc_path, reporter)
+      assert_equal(rev1, editor.target_revision)
+    end
+  end
+
+  def test_relocate
+    log = "sample log"
+    file1 = "hello.txt"
+    file2 = "hello2.txt"
+    src = "Hello"
+    dir1 = "dir1"
+    dir2 = "dir2"
+    dir1_path = File.join(@wc_path, dir1)
+    dir2_path = File.join(@wc_path, dir2)
+    dir1_uri = "#{@repos_uri}/#{dir1}"
+    dir2_uri = "#{@repos_uri}/#{dir2}"
+    path1 = File.join(dir1_path, file1)
+    path2 = File.join(dir2_path, file2)
+
+    ctx = make_context(log)
+    config = {}
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
+
+    FileUtils.mkdir(dir1_path)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(dir1_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    FileUtils.mkdir(dir2_path)
+    File.open(path2, "w") {|f| f.print(src)}
+    ctx.add(dir2_path)
+    rev2 = ctx.commit(@wc_path).revision
+
+    Svn::Wc::AdmAccess.probe_open(nil, @wc_path) do |access|
+      assert(@repos_uri, access.entry(@wc_path).url)
+      values = []
+      access.relocate(@wc_path, @repos_uri, dir2_uri) do |uuid, url, root_url|
+        values << [uuid, url, root_url]
+      end
+      assert_equal([
+                    [@fs.uuid, dir2_uri, nil],
+                    [@fs.uuid, dir2_uri, dir2_uri],
+                    [nil, "#{dir2_uri}/#{dir1}", dir2_uri],
+                    [nil, "#{dir2_uri}/#{dir1}/#{file1}", dir2_uri],
+                    [nil, "#{dir2_uri}/#{dir2}", dir2_uri],
+                    [nil, "#{dir2_uri}/#{dir2}/#{file2}", dir2_uri],
+                   ],
+                   values)
+      assert(dir2_uri, access.entry(@wc_path).url)
+    end
+  end
+
+  def test_ignore?
+    assert(!Svn::Wc.ignore?("xxx.c", []))
+    assert(Svn::Wc.ignore?("xxx.c", ["*.c"]))
+    assert(!Svn::Wc.ignore?("xxx.c", ["XXX.c"]))
+    assert(Svn::Wc.ignore?("xxx.c", ["xxx.c"]))
+    assert(!Svn::Wc.ignore?("xxx.c", ["*.H", "*.C"]))
+    assert(Svn::Wc.ignore?("xxx.C", ["*.H", "*.C"]))
+  end
+
+  def test_change_list
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      assert_nil(access.entry(@wc_path).change_list)
+    end
+
+    notifies = []
+    notify_collector = Proc.new {|notify| notifies << notify }
+    Svn::Wc.set_change_list(path, "123", nil, nil, notify_collector)
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      assert("123", access.entry(@wc_path).change_list)
+    end
+    assert_equal([[path, nil]],
+                 notifies.collect {|notify| [notify.path, notify.err]})
+
+    notifies = []
+    Svn::Wc.set_change_list(path, "456", nil, nil, notify_collector)
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      assert("456", access.entry(@wc_path).change_list)
+    end
+    assert_equal([[path, nil]],
+                 notifies.collect {|notify| [notify.path, notify.err]})
+
+    notifies = []
+    Svn::Wc.set_change_list(path, "789", "000", nil, notify_collector)
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      assert("456", access.entry(@wc_path).change_list)
+    end
+    assert_equal([[path, Svn::Error::WcMismatchedChangeList]],
+                 notifies.collect {|notify| [notify.path, notify.err.class]})
   end
 end

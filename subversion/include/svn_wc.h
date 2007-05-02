@@ -2057,9 +2057,18 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  *   - If @a get_all is false, then only locally-modified entries will be
  *     returned.  If true, then all entries will be returned.
  *
- *   - If @a recurse is false, status structures will be returned only
- *     for the target and its immediate children.  Otherwise, this
- *     operation is fully recursive.
+ *   - If @a depth is @c svn_depth_empty, a status structure will
+ *     be returned for the target only; if @c svn_depth_files, for the
+ *     target and its immediate file children; if
+ *     @c svn_depth_immediates, for the target and its immediate
+ *     children; if @c svn_depth_infinity, for the target and
+ *     everything underneath it, fully recursively.  
+ *
+ *     If @a depth is @c svn_depth_unknown, take depths from the
+ *     working copy and behave as above in each directory's case.
+ *
+ *     If the given @a depth is incompatible with the depth found in a
+ *     working copy directory, the found depth always governs.
  *
  * If @a no_ignore is set, statuses that would typically be ignored
  * will instead be reported.
@@ -2074,7 +2083,32 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       void **set_locks_baton,
+                                       svn_revnum_t *edit_revision,
+                                       svn_wc_adm_access_t *anchor,
+                                       const char *target,
+                                       apr_hash_t *config,
+                                       svn_depth_t depth,
+                                       svn_boolean_t get_all,
+                                       svn_boolean_t no_ignore,
+                                       svn_wc_status_func2_t status_func,
+                                       void *status_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       svn_wc_traversal_info_t *traversal_info,
+                                       apr_pool_t *pool);
+
+/*
+ * Like svn_wc_get_status_editor3(), but with @a recurse instead of @a depth.
+ * If @a recurse is true, behave as if for @c svn_depth_infinity; else
+ * if @a recurse is false, behave as if for @c svn_depth_files.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -2092,7 +2126,6 @@ svn_error_t *svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
                                        void *cancel_baton,
                                        svn_wc_traversal_info_t *traversal_info,
                                        apr_pool_t *pool);
-
 
 /**
  * Same as svn_wc_get_status_editor2(), but with @a set_locks_baton set
@@ -2121,7 +2154,7 @@ svn_error_t *svn_wc_get_status_editor(const svn_delta_editor_t **editor,
  * Associate @a locks, a hash table mapping <tt>const char*</tt>
  * absolute repository paths to <tt>svn_lock_t</tt> objects, with a
  * @a set_locks_baton returned by an earlier call to
- * svn_wc_get_status_editor2().  @a repos_root is the repository root URL.
+ * svn_wc_get_status_editor3().  @a repos_root is the repository root URL.
  * Perform all allocations in @a pool.
  *
  * @note @a locks will not be copied, so it must be valid throughout the
@@ -3606,6 +3639,8 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
  *
  * @a adm_access is an access baton for the directory containing
  * @a path.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_wc_relocate3(const char *path,

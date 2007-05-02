@@ -220,34 +220,49 @@ svn_client_status3(svn_revnum_t *result_rev,
   void *edit_baton, *set_locks_baton;
   const svn_wc_entry_t *entry = NULL;
   struct status_baton sb;
+  svn_error_t *err;
+
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
-  /* ### TODO(sd): This is a shim, we should use depth for real. */
-  svn_depth_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
   sb.deleted_in_repos = FALSE;
 
-  SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
-                                 path, FALSE,
-                                 SVN_DEPTH_TO_RECURSE(depth) ? -1 : 1,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
+  /* Try to open the target directory. If the target is a file or an 
+     unversioned directory, open the parent directory instead */
+  err = svn_wc_adm_open3(&anchor_access, NULL, path, FALSE,
+                         SVN_DEPTH_TO_RECURSE(depth) ? -1 : 1,
+                         ctx->cancel_func, ctx->cancel_baton,
+                         pool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
+                                     path, FALSE,
+                                     SVN_DEPTH_TO_RECURSE(depth) ? -1 : 1,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     pool));
+    }
+  else if (!err)
+    {
+      target = "";
+      target_access = anchor_access;
+    }
+  else
+    return err;
+
   anchor = svn_wc_adm_access_path(anchor_access);
 
+  /* For local status default depth = svn_depth_infinity, any directories that
+     are not on disk will be ignored anyway. */
   if (depth == svn_depth_unknown)
-    {
-      SVN_ERR(svn_wc_entry(&entry, anchor, anchor_access, FALSE, pool));
-      if (entry)
-        depth = entry->depth;
-    }
+    depth = svn_depth_infinity;
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
-  /* ### TODO(sd): ...and this would take depth, not recurse... */
-  SVN_ERR(svn_wc_get_status_editor2(&editor, &edit_baton, &set_locks_baton,
+  SVN_ERR(svn_wc_get_status_editor3(&editor, &edit_baton, &set_locks_baton,
                                     &edit_revision, anchor_access, target,
-                                    ctx->config, recurse, get_all, no_ignore,
+                                    ctx->config, depth, get_all, no_ignore,
                                     tweak_status, &sb, ctx->cancel_func,
                                     ctx->cancel_baton, traversal_info,
                                     pool));

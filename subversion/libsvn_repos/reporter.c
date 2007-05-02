@@ -17,11 +17,15 @@
  */
 
 #include "svn_path.h"
+#include "svn_types.h"
+#include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_pools.h"
 #include "svn_md5.h"
 #include "svn_props.h"
+#include "private/svn_repos_private.h"
 #include "repos.h"
 #include "svn_private_config.h"
 
@@ -85,7 +89,7 @@ typedef struct report_baton_t
   svn_revnum_t t_rev;          /* Revnum which the edit will bring the wc to */
   const char *t_path;          /* FS path the edit will bring the wc to */
   svn_boolean_t text_deltas;   /* Whether to report text deltas */
-  svn_depth_t default_depth;   /* Default depth for the editor drive. */
+  svn_depth_t default_depth;   /* Default depth for set_path and link_path. */
   svn_boolean_t ignore_ancestry;
   svn_boolean_t is_switch;
   const svn_delta_editor_t *editor;
@@ -711,8 +715,6 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   if (t_entry->kind == svn_node_dir)
     {
-      svn_depth_t depth_beneath_here = depth;
-
       if (related)
         SVN_ERR(b->editor->open_directory(e_path, dir_baton, s_rev, pool, 
                                           &new_baton));
@@ -721,14 +723,9 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                                          SVN_INVALID_REVNUM, pool,
                                          &new_baton));
 
-      /* If we're descending to update a subdir because its parent
-         is depth-immediates, then the subdir is just depth-empty. */
-      if (depth == svn_depth_immediates)
-        depth_beneath_here = svn_depth_empty;
-
       SVN_ERR(delta_dirs(b, s_rev, s_path, t_path, new_baton, e_path,
                          info ? info->start_empty : FALSE,
-                         depth_beneath_here, pool));
+                         depth, pool));
       return b->editor->close_directory(new_baton, pool);
     }
   else
@@ -1026,6 +1023,12 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
       if (!*b->s_operand)
         return svn_error_create(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
                                 _("Two top-level reports with no target"));
+      /* If the client issued a set-path followed by a delete-path, we need
+         to respect the depth set by the initial set-path. */
+      if (! SVN_IS_VALID_REVNUM(b->lookahead->rev))
+        {
+          b->lookahead->depth = info->depth;
+        }
       info = b->lookahead;
       SVN_ERR(read_path_info(&b->lookahead, b->tempfile, subpool));
     }
@@ -1040,7 +1043,8 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
 
 /* --- COLLECTING THE REPORT INFORMATION --- */
 
-/* Record a report operation into the temporary file. */
+/* Record a report operation into the temporary file.  Return an error
+   if both DEPTH and B->default_depth is svn_depth_unknown. */
 static svn_error_t *
 write_path_info(report_baton_t *b, const char *path, const char *lpath,
                 svn_revnum_t rev, svn_depth_t depth,
@@ -1048,6 +1052,17 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
                 const char *lock_token, apr_pool_t *pool)
 {
   const char *lrep, *rrep, *drep, *ltrep, *rep;
+
+  if (depth == svn_depth_unknown)
+    {
+      depth = b->default_depth;
+
+      if (depth == svn_depth_unknown)
+        return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                                 _("Unsupported report depth '%s' for "
+                                   "path '%s'"),
+                                 svn_depth_to_word(depth), path);
+    }
 
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
@@ -1057,9 +1072,6 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
                               strlen(lpath), lpath) : "-";
   rrep = (SVN_IS_VALID_REVNUM(rev)) ?
     apr_psprintf(pool, "+%ld:", rev) : "-";
-
-  if (depth == svn_depth_unknown)
-    depth = b->default_depth;
 
   if (depth == svn_depth_empty)
     drep = "+0:";
@@ -1092,7 +1104,8 @@ svn_repos_set_path2(void *baton, const char *path, svn_revnum_t rev,
                     svn_boolean_t start_empty, const char *lock_token,
                     apr_pool_t *pool)
 {
-  return svn_repos_set_path3(baton, path, rev, svn_depth_infinity,
+  return svn_repos_set_path3(baton, path, rev,
+                             ((report_baton_t *) baton)->default_depth,
                              start_empty, lock_token, pool);
 }
 
@@ -1118,9 +1131,9 @@ svn_repos_link_path2(void *baton, const char *path, const char *link_path,
                      svn_revnum_t rev, svn_boolean_t start_empty,
                      const char *lock_token, apr_pool_t *pool)
 {
-  return svn_repos_link_path3(baton, path, link_path,
-                              rev, svn_depth_infinity, start_empty,
-                              lock_token, pool);
+  return svn_repos_link_path3(baton, path, link_path, rev,
+                              ((report_baton_t *) baton)->default_depth,
+                              start_empty, lock_token, pool);
 }
 
 svn_error_t *
@@ -1165,24 +1178,21 @@ svn_repos_abort_report(void *baton, apr_pool_t *pool)
 /* --- BEGINNING THE REPORT --- */
 
 
-/* Behaves as per the docs for svn_repos_begin_report2(), with the
-   additional parameter DEFAULT_DEPTH for compatibility with the
-   original svn_repos_begin_report() API. */
-static svn_error_t *
-begin_report(void **report_baton,
-             svn_revnum_t revnum,
-             svn_repos_t *repos,
-             const char *fs_base,
-             const char *s_operand,
-             const char *switch_path,
-             svn_boolean_t text_deltas,
-             svn_depth_t default_depth,
-             svn_boolean_t ignore_ancestry,
-             const svn_delta_editor_t *editor,
-             void *edit_baton,
-             svn_repos_authz_func_t authz_read_func,
-             void *authz_read_baton,
-             apr_pool_t *pool)
+svn_error_t *
+svn_repos__begin_report(void **report_baton,
+                        svn_revnum_t revnum,
+                        svn_repos_t *repos,
+                        const char *fs_base,
+                        const char *s_operand,
+                        const char *switch_path,
+                        svn_boolean_t text_deltas,
+                        svn_depth_t default_depth,
+                        svn_boolean_t ignore_ancestry,
+                        const svn_delta_editor_t *editor,
+                        void *edit_baton,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_pool_t *pool)
 {
   report_baton_t *b;
   const char *tempdir;
@@ -1230,20 +1240,20 @@ svn_repos_begin_report2(void **report_baton,
                         void *authz_read_baton,
                         apr_pool_t *pool)
 {
-  return begin_report(report_baton,
-                      revnum,
-                      repos,
-                      fs_base,
-                      s_operand,
-                      switch_path,
-                      text_deltas,
-                      svn_depth_infinity,
-                      ignore_ancestry,
-                      editor,
-                      edit_baton,
-                      authz_read_func,
-                      authz_read_baton,
-                      pool);
+  return svn_repos__begin_report(report_baton,
+                                 revnum,
+                                 repos,
+                                 fs_base,
+                                 s_operand,
+                                 switch_path,
+                                 text_deltas,
+                                 svn_depth_unknown,
+                                 ignore_ancestry,
+                                 editor,
+                                 edit_baton,
+                                 authz_read_func,
+                                 authz_read_baton,
+                                 pool);
 }
 
 
@@ -1264,18 +1274,18 @@ svn_repos_begin_report(void **report_baton,
                        void *authz_read_baton,
                        apr_pool_t *pool)
 {
-  return begin_report(report_baton,
-                      revnum,
-                      repos,
-                      fs_base,
-                      s_operand,
-                      switch_path,
-                      text_deltas,
-                      SVN_DEPTH_FROM_RECURSE(recurse),
-                      ignore_ancestry,
-                      editor,
-                      edit_baton,
-                      authz_read_func,
-                      authz_read_baton,
-                      pool);
+  return svn_repos__begin_report(report_baton,
+                                 revnum,
+                                 repos,
+                                 fs_base,
+                                 s_operand,
+                                 switch_path,
+                                 text_deltas,
+                                 SVN_DEPTH_FROM_RECURSE(recurse),
+                                 ignore_ancestry,
+                                 editor,
+                                 edit_baton,
+                                 authz_read_func,
+                                 authz_read_baton,
+                                 pool);
 }

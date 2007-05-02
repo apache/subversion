@@ -46,12 +46,20 @@
 
 struct edit_baton
 {
-  /* For status, the "destination" of the edit and whether to honor
-     any paths that are 'below'.  */
+  /* For status, the "destination" of the edit.  */
   const char *anchor;
   const char *target;
   svn_wc_adm_access_t *adm_access;
-  svn_boolean_t descend;
+
+  /* The overall depth of this edit (a dir baton may override this).
+   *
+   * If this is svn_depth_unknown, the depths found in the working
+   * copy will govern the edit; or if the edit depth indicates a
+   * descent deeper than the found depths are capable of, the found
+   * depths also govern, of course (there's no point descending into
+   * something that's not there).
+   */
+  svn_depth_t default_depth;
 
   /* Do we want all statuses (instead of just the interesting ones) ? */
   svn_boolean_t get_all;
@@ -110,6 +118,14 @@ struct dir_baton
   /* Baton for this directory's parent, or NULL if this is the root
      directory. */
   struct dir_baton *parent_baton;
+
+  /* The ambient requested depth below this point in the edit.  This
+     can differ from the parent baton's depth (with the edit baton
+     considered the ultimate parent baton).  For example, if the
+     parent baton has svn_depth_immediates, then here we should have
+     svn_depth_empty, because there would be no further recursion, not
+     even to file children. */
+  svn_depth_t depth;
 
   /* 'svn status' shouldn't print status lines for things that are
      added;  we're only interest in asking if objects that the user
@@ -674,7 +690,7 @@ static svn_error_t *get_dir_status(struct edit_baton *eb,
                                    svn_wc_adm_access_t *adm_access,
                                    const char *entry,
                                    apr_array_header_t *ignores,
-                                   svn_boolean_t descend,
+                                   svn_depth_t depth,
                                    svn_boolean_t get_all,
                                    svn_boolean_t no_ignore,
                                    svn_boolean_t skip_this_dir,
@@ -697,7 +713,7 @@ handle_dir_entry(struct edit_baton *eb,
                  svn_node_kind_t kind,
                  svn_boolean_t special,
                  apr_array_header_t *ignores,
-                 svn_boolean_t descend,
+                 svn_depth_t depth,
                  svn_boolean_t get_all,
                  svn_boolean_t no_ignore,
                  svn_wc_status_func2_t status_func,
@@ -726,13 +742,16 @@ handle_dir_entry(struct edit_baton *eb,
                                        pool));
 
       /* Descend only if the subdirectory is a working copy directory
-         (and DESCEND is non-zero ofcourse)  */
-      if (descend && (full_entry != entry))
+         (and DEPTH permits it, of course)  */
+      if (full_entry != entry
+          && (depth == svn_depth_unknown
+              || depth == svn_depth_immediates
+              || depth == svn_depth_infinity))
         {
           svn_wc_adm_access_t *dir_access;
           SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, path, pool));
           SVN_ERR(get_dir_status(eb, dir_entry, dir_access, NULL, ignores, 
-                                 descend, get_all, no_ignore, FALSE, 
+                                 depth, get_all, no_ignore, FALSE, 
                                  status_func, status_baton, cancel_func,
                                  cancel_baton, pool));
         }
@@ -769,14 +788,14 @@ handle_dir_entry(struct edit_baton *eb,
    *will* be reported, regardless of this parameter's value.
 
    Other arguments are the same as those passed to
-   svn_wc_get_status_editor2().  */
+   svn_wc_get_status_editor3().  */
 static svn_error_t *
 get_dir_status(struct edit_baton *eb,
                const svn_wc_entry_t *parent_entry,
                svn_wc_adm_access_t *adm_access,
                const char *entry,
                apr_array_header_t *ignores,
-               svn_boolean_t descend,
+               svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
                svn_boolean_t skip_this_dir,
@@ -867,7 +886,7 @@ get_dir_status(struct edit_baton *eb,
                                    entry_entry,
                                    dirent_p ? dirent_p->kind : svn_node_none,
                                    dirent_p ? dirent_p->special : FALSE,
-                                   ignores, descend, get_all, 
+                                   ignores, depth, get_all, 
                                    no_ignore, status_func, status_baton, 
                                    cancel_func, cancel_baton, subpool));
         }
@@ -889,7 +908,19 @@ get_dir_status(struct edit_baton *eb,
     }
 
   /** If we get here, ENTRY is NULL and we are handling all the
-      directory entries. */
+      directory entries (depending on specified depth). */
+
+  /* Handle "this-dir" first. */
+  if (! skip_this_dir)
+    SVN_ERR(send_status_structure(path, adm_access, dir_entry, 
+                                  parent_entry, svn_node_dir, FALSE,
+                                  get_all, FALSE, eb->repos_locks,
+                                  eb->repos_root, status_func, status_baton,
+                                  subpool));
+
+  /* If the requested depth is empty, we only need status on this-dir. */
+  if (depth == svn_depth_empty)
+    return SVN_NO_ERROR;
 
   /* Make our iteration pool. */
   iterpool = svn_pool_create(subpool);
@@ -926,14 +957,6 @@ get_dir_status(struct edit_baton *eb,
                                     status_func, status_baton, iterpool));
     }
 
-  /* Handle "this-dir" first. */
-  if (! skip_this_dir)
-    SVN_ERR(send_status_structure(path, adm_access, dir_entry, 
-                                  parent_entry, svn_node_dir, FALSE,
-                                  get_all, FALSE, eb->repos_locks,
-                                  eb->repos_root, status_func, status_baton,
-                                  subpool));
-
   /* Loop over entries hash */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
@@ -952,6 +975,11 @@ get_dir_status(struct edit_baton *eb,
       if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
+      /* Skip directories if user is only interested in files */
+      if (depth == svn_depth_files
+          && dirent_p && dirent_p->kind == svn_node_dir)
+        continue;
+
       /* Clear the iteration subpool. */
       svn_pool_clear(iterpool);
 
@@ -960,11 +988,13 @@ get_dir_status(struct edit_baton *eb,
                                dirent_p ? dirent_p->kind : svn_node_none,
                                dirent_p ? dirent_p->special : FALSE,
                                ignores, 
-                               descend, get_all, no_ignore, 
+                               depth == svn_depth_infinity ? depth 
+                                                           : svn_depth_empty,
+                               get_all, no_ignore, 
                                status_func, status_baton, cancel_func, 
                                cancel_baton, iterpool));
     }
-  
+
   /* Destroy our subpools. */
   svn_pool_destroy(subpool);
 
@@ -1209,6 +1239,23 @@ make_dir_baton(void **dir_baton,
   d->ood_kind = svn_node_dir;
   d->ood_last_cmt_author = NULL;
 
+  if (pb)
+    {
+      if (pb->depth == svn_depth_immediates)
+        d->depth = svn_depth_empty;
+      else if (pb->depth == svn_depth_files || pb->depth == svn_depth_empty)
+        d->depth = svn_depth_exclude;
+      else if (pb->depth == svn_depth_unknown)
+        // This is only tentative, it can be overridden from d's entry later.
+        d->depth = svn_depth_unknown;
+      else
+        d->depth = svn_depth_infinity;
+    }
+  else
+    {
+      d->depth = eb->default_depth;
+    }
+
   /* Get the status for this path's children.  Of course, we only want
      to do this if the path is versioned as a directory. */
   if (pb)
@@ -1226,15 +1273,30 @@ make_dir_baton(void **dir_baton,
       && (status_in_parent->text_status != svn_wc_status_obstructed)
       && (status_in_parent->text_status != svn_wc_status_external)
       && (status_in_parent->text_status != svn_wc_status_ignored)
-      && (status_in_parent->entry->kind == svn_node_dir))
+      && (status_in_parent->entry->kind == svn_node_dir)
+      && (d->depth == svn_depth_unknown
+          || d->depth == svn_depth_infinity
+          || d->depth == svn_depth_files
+          || d->depth == svn_depth_immediates)
+          )
     {
       svn_wc_adm_access_t *dir_access;
+      svn_wc_status2_t *this_dir_status;
       apr_array_header_t *ignores = eb->ignores;
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access, 
                                   d->path, pool));
       SVN_ERR(get_dir_status(eb, status_in_parent->entry, dir_access, NULL, 
-                             ignores, FALSE, TRUE, TRUE, TRUE, hash_stash, 
-                             d->statii, NULL, NULL, pool));
+                             ignores, svn_depth_immediates, TRUE, TRUE, TRUE, 
+                             hash_stash, d->statii, NULL, NULL, pool));
+
+      /* If we found a depth here, it should govern. */
+      this_dir_status = apr_hash_get(d->statii, d->path, APR_HASH_KEY_STRING);
+      if (this_dir_status && this_dir_status->entry
+          && (d->depth == svn_depth_unknown
+              || d->depth > status_in_parent->entry->depth))
+        {
+          d->depth = this_dir_status->entry->depth;
+        }
     }
 
   *dir_baton = d;
@@ -1353,18 +1415,17 @@ mark_deleted(void *baton,
 
 /* Handle a directory's STATII hash.  EB is the edit baton.  DIR_PATH
    and DIR_ENTRY are the on-disk path and entry, respectively, for the
-   directory itself.  If DESCEND is set, this function will recurse
-   into subdirectories.  Also, if DIR_WAS_DELETED is set, each status
-   that is reported through this function will have its
-   repos_text_status field showing a deletion.  Use POOL for all
-   allocations. */
+   directory itself.  Descend into subdirectories according to DEPTH.
+   Also, if DIR_WAS_DELETED is set, each status that is reported
+   through this function will have its repos_text_status field showing
+   a deletion.  Use POOL for all allocations. */
 static svn_error_t *
 handle_statii(struct edit_baton *eb,
               svn_wc_entry_t *dir_entry,
               const char *dir_path,
               apr_hash_t *statii,
               svn_boolean_t dir_was_deleted,
-              svn_boolean_t descend,
+              svn_depth_t depth,
               apr_pool_t *pool)
 {
   apr_array_header_t *ignores = eb->ignores;
@@ -1398,13 +1459,16 @@ handle_statii(struct edit_baton *eb,
       /* Now, handle the status. */
       if (svn_wc__adm_missing(eb->adm_access, key))
         status->text_status = svn_wc_status_missing;
-      else if (descend && status->entry && status->entry->kind == svn_node_dir)
+      else if (status->entry && status->entry->kind == svn_node_dir
+               && (depth == svn_depth_unknown
+                   || depth == svn_depth_immediates
+                   || depth == svn_depth_infinity))
         {
           svn_wc_adm_access_t *dir_access;
           SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,
                                       key, subpool));
           SVN_ERR(get_dir_status(eb, dir_entry, dir_access, NULL,
-                                 ignores, TRUE, eb->get_all, 
+                                 ignores, depth, eb->get_all, 
                                  eb->no_ignore, TRUE, status_func, 
                                  status_baton, eb->cancel_func, 
                                  eb->cancel_baton, subpool));
@@ -1667,7 +1731,7 @@ close_directory(void *dir_baton,
 
   /* Handle this directory's statuses, and then note in the parent
      that this has been done. */
-  if (pb)
+  if (pb && db->depth != svn_depth_exclude)
     {
       svn_boolean_t was_deleted = FALSE;
 
@@ -1680,12 +1744,13 @@ close_directory(void *dir_baton,
 
       /* Now do the status reporting. */
       SVN_ERR(handle_statii(eb, dir_status ? dir_status->entry : NULL, 
-                            db->path, db->statii, was_deleted, eb->descend, pool));
+                            db->path, db->statii, was_deleted, db->depth,
+                            pool));
       if (dir_status && is_sendable_status(dir_status, eb))
         (eb->status_func)(eb->status_baton, db->path, dir_status);
       apr_hash_set(pb->statii, db->path, APR_HASH_KEY_STRING, NULL);
     }
-  else
+  else if (! pb)
     {
       /* If this is the top-most directory, and the operation had a
          target, we should only report the target. */
@@ -1697,7 +1762,8 @@ close_directory(void *dir_baton,
           tgt_status = apr_hash_get(db->statii, path, APR_HASH_KEY_STRING);
           if (tgt_status)
             {
-              if ((eb->descend)
+              if (eb->default_depth != svn_depth_exclude
+                  /* ### TODO(sd): above condition "can't happen", right? */
                   && (tgt_status->entry)
                   && (tgt_status->entry->kind == svn_node_dir))
                 {
@@ -1706,8 +1772,9 @@ close_directory(void *dir_baton,
                                               path, pool));
                   SVN_ERR(get_dir_status 
                           (eb, tgt_status->entry, dir_access, NULL,
-                           eb->ignores, TRUE, eb->get_all, eb->no_ignore, 
-                           TRUE, eb->status_func, eb->status_baton, 
+                           eb->ignores, eb->default_depth, eb->get_all,
+                           eb->no_ignore, TRUE,
+                           eb->status_func, eb->status_baton, 
                            eb->cancel_func, eb->cancel_baton, pool));
                 }
               if (is_sendable_status(tgt_status, eb))
@@ -1720,7 +1787,7 @@ close_directory(void *dir_baton,
              Note that our directory couldn't have been deleted,
              because it is the root of the edit drive. */
           SVN_ERR(handle_statii(eb, eb->anchor_status->entry, db->path, 
-                                db->statii, FALSE, eb->descend, pool));
+                                db->statii, FALSE, eb->default_depth, pool));
           if (is_sendable_status(eb->anchor_status, eb))
             (eb->status_func)(eb->status_baton, db->path, eb->anchor_status);
           eb->anchor_status = NULL;
@@ -1908,8 +1975,9 @@ close_edit(void *edit_baton,
           if (! tgt_entry)
             {
               err = get_dir_status(eb, NULL, eb->adm_access, eb->target, 
-                                   ignores, FALSE, eb->get_all, TRUE,
-                                   TRUE, eb->status_func, eb->status_baton,
+                                   ignores, svn_depth_empty, eb->get_all,
+                                   TRUE, TRUE,
+                                   eb->status_func, eb->status_baton,
                                    eb->cancel_func, eb->cancel_baton,
                                    pool);
               if (err) goto cleanup;
@@ -1921,7 +1989,7 @@ close_edit(void *edit_baton,
               if (err) goto cleanup;
 
               err = get_dir_status(eb, NULL, tgt_access, NULL, ignores, 
-                                   eb->descend, eb->get_all, 
+                                   eb->default_depth, eb->get_all, 
                                    eb->no_ignore, FALSE, 
                                    eb->status_func, eb->status_baton, 
                                    eb->cancel_func, eb->cancel_baton,
@@ -1932,8 +2000,8 @@ close_edit(void *edit_baton,
       else
         {
           err = get_dir_status(eb, NULL, eb->adm_access, eb->target, 
-                               ignores, FALSE, eb->get_all, TRUE,
-                               TRUE, eb->status_func, eb->status_baton,
+                               ignores, svn_depth_empty, eb->get_all,
+                               TRUE, TRUE, eb->status_func, eb->status_baton,
                                eb->cancel_func, eb->cancel_baton, pool);
           if (err) goto cleanup;
         }
@@ -1941,7 +2009,7 @@ close_edit(void *edit_baton,
   else
     {
       err = get_dir_status(eb, NULL, eb->adm_access, NULL, ignores, 
-                           eb->descend, eb->get_all, eb->no_ignore, 
+                           eb->default_depth, eb->get_all, eb->no_ignore, 
                            FALSE, eb->status_func, eb->status_baton, 
                            eb->cancel_func, eb->cancel_baton, pool);
       if (err) goto cleanup;
@@ -1966,14 +2034,14 @@ close_edit(void *edit_baton,
 /*** Public API ***/
 
 svn_error_t *
-svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
+svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           void **set_locks_baton,
                           svn_revnum_t *edit_revision,
                           svn_wc_adm_access_t *anchor,
                           const char *target,
                           apr_hash_t *config,
-                          svn_boolean_t recurse,
+                          svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
                           svn_wc_status_func2_t status_func,
@@ -1988,7 +2056,7 @@ svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
 
   /* Construct an edit baton. */
   eb = apr_palloc(pool, sizeof(*eb));
-  eb->descend           = recurse;
+  eb->default_depth     = depth;
   eb->target_revision   = edit_revision;
   eb->adm_access        = anchor;
   eb->config            = config;
@@ -2040,6 +2108,42 @@ svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
 }
 
 
+svn_error_t *
+svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          void **set_locks_baton,
+                          svn_revnum_t *edit_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          apr_hash_t *config,
+                          svn_boolean_t recurse,
+                          svn_boolean_t get_all,
+                          svn_boolean_t no_ignore,
+                          svn_wc_status_func2_t status_func,
+                          void *status_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool)
+{
+  return svn_wc_get_status_editor3(editor,
+                                   edit_baton,
+                                   set_locks_baton,
+                                   edit_revision,
+                                   anchor,
+                                   target,
+                                   config,
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   get_all,
+                                   no_ignore,
+                                   status_func,
+                                   status_baton,
+                                   cancel_func,
+                                   cancel_baton,
+                                   traversal_info,
+                                   pool);
+}
+
 
 /* Helpers for deprecated svn_wc_status_editor(), of type
    svn_wc_status_func2_t. */
@@ -2080,8 +2184,9 @@ svn_wc_get_status_editor(const svn_delta_editor_t **editor,
   b->original_func = status_func;
   b->original_baton = status_baton;
 
-  return svn_wc_get_status_editor2(editor, edit_baton, NULL, edit_revision,
-                                   anchor, target, config, recurse,
+  return svn_wc_get_status_editor3(editor, edit_baton, NULL, edit_revision,
+                                   anchor, target, config,
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
                                    get_all, no_ignore, old_status_func_cb,
                                    b, cancel_func, cancel_baton,
                                    traversal_info, pool);

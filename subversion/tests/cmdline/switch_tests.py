@@ -27,6 +27,8 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
+# Constant for the merge info property.
+SVN_PROP_MERGE_INFO = "svn:mergeinfo"
 
 ### Bummer.  It would be really nice to have easy access to the URL
 ### member of our entries files so that switches could be testing by
@@ -1426,6 +1428,7 @@ def mergeinfo_switch_elision(sbox):
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
+  lambda_path   = os.path.join(wc_dir, "A", "B_COPY_1", "lambda")
   B_COPY_1_path = os.path.join(wc_dir, "A", "B_COPY_1")
   B_COPY_2_path = os.path.join(wc_dir, "A", "B_COPY_2")
   E_COPY_2_path = os.path.join(wc_dir, "A", "B_COPY_2", "E")
@@ -1649,6 +1652,47 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status,
                                         None, None, None, None, None, 1)
 
+  # Now check that a switch which reverses and earlier witch and leaves
+  # a path in an unswitched state does elide its mergeinfo.
+  #
+  # Switch A/B_COPY_1/lambda to iota.  Use propset to give A/B_COPY/lambda
+  # the mergeinfo '/A/B/lambda:1,3-4'.  Then switch A/B_COPY_1/lambda back
+  # to A/B_COPY_1/lambda.  The local mergeinfo for r1,3-4 should elide this
+  # time to A/B_COPY_1.
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    "A/B_COPY_1/lambda" : Item(status='U '),
+    })
+  expected_disk.tweak("A/B_COPY_1/lambda",
+                      contents="This is the file 'iota'.\n")
+  expected_status.tweak("A/B_COPY_1/lambda", wc_rev=5, switched='S')
+  svntest.actions.run_and_verify_switch(sbox.wc_dir,
+                                        lambda_path,
+                                        sbox.repo_url + "/iota",
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property '" + SVN_PROP_MERGE_INFO +
+                                      "' set on '" + lambda_path + "'" +
+                                      "\n"], [], 'ps', SVN_PROP_MERGE_INFO,
+                                     '/A/B/lambda:1,3-4', lambda_path)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    "A/B_COPY_1/lambda" : Item(status='U '),
+    })
+  expected_disk.tweak("A/B_COPY_1/lambda",
+                      contents="This is the file 'lambda'.\n")
+  expected_status.tweak("A/B_COPY_1/lambda", switched=None)
+  svntest.actions.run_and_verify_switch(sbox.wc_dir,
+                                        lambda_path,
+                                        sbox.repo_url + "/A/B_COPY_1/lambda",
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -1676,7 +1720,7 @@ test_list = [ None,
               forced_switch,
               forced_switch_failures,
               switch_scheduled_add,
-              XFail(mergeinfo_switch_elision),
+              mergeinfo_switch_elision,
              ]
 
 if __name__ == '__main__':

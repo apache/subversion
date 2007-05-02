@@ -13,17 +13,23 @@ allow for cherry-picking.  Expose merge info via properties.  Allow
 for repos dump/load (including the ability to re-create the merge
 history index).
 
-* Make revision and source URL parameters to the 'svn merge -cN URL'
-  command to be optional (via use of merge info and copy history).
-  Support this via the API itself (in addition to the command-line
-  client).  (kamesh/dlr)
+* Provide an API for merging arbitrary revision ranges ('-c 3,5,7' or
+  '-r 2:3,9:12').  Client tools will use this to best support
+  cherry-picking.  Command-line client UI to follow post-1.5.
 
-  * Default merge source (a URL) to any single source in merge info
-    already present on the target of the merge.  If there are multiple
-    previous merge sources, a specific source must be specified.
+  * Write libsvn_client API.  (lundblad)
 
-  * Default revision range (e.g. for -r/-c) to "all unmerged revisions",
-    "oldest revision at merge source's path" thru HEAD.
+  * Write corresponding JavaHL bindings.  (dlr/markphip)
+
+* Provide a libsvn_client API capable of listing "all unmerged
+  revisions".  Client tools will use this to allow the user to select
+  the revisions to merge (e.g. a la 'svn merge --show-available [URL]').
+  (kamesh)
+
+  * Always recurse (in case child merge info differs), but support the
+    --depth option.
+
+  * Need new RA call.
 
 * Allow for merge info which contains empty range lists, necessary for
   override of merge info by child paths which would otherwise inherit
@@ -33,19 +39,23 @@ history index).
     make it all the way through to the FS and into the merge info
     index in a meaningful fashion yet.
 
-* Handle notifications resulting from a merge.  (dlr)
+    * Fix issue #2769.  (dlr)
 
-  * Handle multiple notifications for single WC items. Possible
-    solutions include:
+* Handle notifications resulting from a merge.  (sussman)
+
+  * Handle multiple notifications for single WC items.
 
     * Output multiple notifications, but print divider lines
       indicating the revisions range to which a set of notifications
-      applies.  Introduce a new type of "skipped" notification for WC
-      items which are already in conflict.
+      applies.  This will require enhancing the notification API to
+      include enough context to indicate which revision range is
+      currently being merged.  Introduce a new type of "skipped"
+      notification for WC items which are already in conflict.
 
-    * Collate changes as merge ranges are applied.  Detect and handle
-      collisions (multiple notifications to the same WC item), giving
-      preference to later notifications (?).
+    * Document potential wrapper for the above API, something which we
+      won't be implementing: Collate changes as merge ranges are
+      applied.  Detect and handle collisions (multiple notifications
+      to the same WC item), giving preference to later notifications.
 
   * Handle skips.
 
@@ -69,19 +79,27 @@ history index).
       marker!), being sure to record partial application of merge
       ranges.
 
+      Update (2007/04/23): Discussion with some Subversion dev
+      Googlers indicate that they'd prefer a more comprehensive
+      solution which allows interactivity to be deferred until all
+      possible merging has occurred.  (They are not alone in a desire
+      to see this use case handled.)
+      
+    * Add a notification message or perhaps a notification callback so
+      that a client may provide detailed information about the state of
+      the merge.  Something which identifies which revisions have been
+      merged and that the user needs to resolve the conflicts and then
+      restart the merge process to allow it to pick up where it left off.
+
 * Handle merge info inheritance (and eliding, if any additional work
   is necessary).  (pburba/dlr)
 
-  * Fix inheritance bugs, issues #2733.
+  * Fix bug on merge to target with moved/copied children,
+    issue #2754.  (pburba)
 
   * Improve merge algorithm used for target trees with child paths
     that contain differing merge info, per Peter Lundblad's
     suggestions. (lundblad)
-
-  * When a tree with inherited merge info contains a child with
-    differing merge info, lookup of the merge info for this child must
-    reflect that of the parent (except for where they differ).
-    (pburba/dlr)
 
 * Treat all revisions from a 'copy' source as merge info for the
   destination.  This equates to turning all those revs into actual
@@ -89,8 +107,28 @@ history index).
 
   * Update func and/or design spec.
 
-  * Handle all 'copy'/'move' operation types.  (dlr)
-    http://subversion.tigris.org/merge-tracking/func-spec.html#copy-move
+  * Handle WC -> WC 'copy'/'move' operations.  (dlr)
+    http://subversion.tigris.org/merge-tracking/func-spec.html#wc-wc-copy-move
+
+    Update (2007/04/23): Discussion with some Subversion dev Googlers
+    indicates that we should purposely break command-line UI
+    compatibility here, and instead require an explicit option to
+    avoid contacting the repos.
+
+* Account for merge info differences for switched directories when
+  gathering and setting merge info.  (pburba)
+
+* Handle sparsely-populated directories, or portions of a tree not
+  checked out due to lack of authorization.
+
+  * Inheritance of merge info throug sparsely-populated directories
+    could potentially be handled via explicit merge info (e.g. to
+    avoid recording merge info for paths not checked out).
+
+  * There's little we can do about paths not checked out because of
+    insufficient authorization.  Since the client isn't allowed to
+    know these paths exist, we can't avoid potentially inherited merge
+    info!
 
 * Update design.html with the latest content from the "BASIC DESIGN"
   section below.
@@ -124,6 +162,16 @@ Implement auditing/reporting and other high-level features.
     unblock       Revert the effect of 'block'
 
   * Write up outcome in func-spec.html.
+
+* Improve heuristics for grokking the source URL parameter to the
+  'svn merge -cN URL' command.  See the comments inlined into the
+  svn_client__suggest_merge_sources() implementation for details.
+
+* Add command-line option for suggesting a merge source URL for use by
+  the 'svn merge -cN URL' command (e.g. 'svn merge --suggest-source').
+
+* Expose the libsvn_client API for merging arbitrary revision ranges
+  ('-c 3,5,7' or '-r 2:3,9:12') via the command-line client's UI.
 
 * Handle three-way merges (e.g. 'svn merge URL1 URL2 WC_TARGET').
   We'll likely need to use a different method of calculating the set
@@ -545,9 +593,6 @@ The same thing that happens if the info is not there now.
 
 What happens if a user edits merge info incorrectly?
 They get the results specified by their merge info.
-
-How does the revprop stay up to date?
-We copy it from revision to revision.
 
 What happens if a user manually edits a file and unmerges a revision (IE
 not using a "reverse merge" command), but doesn't update the merge info

@@ -302,7 +302,7 @@ second place for auth-request point as noted below.
     returned.  If rev is not specified, the youngest revision is used.
 
   update
-    params:   ( [ rev:number ] target:string recurse:bool ? depth:word)
+    params:   ( [ rev:number ] target:string recurse:bool )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.
@@ -310,8 +310,7 @@ second place for auth-request point as noted below.
     response: ( )
 
   switch
-    params:   ( [ rev:number ] target:string recurse:bool url:string
-                ? depth:word)
+    params:   ( [ rev:number ] target:string recurse:bool url:string )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.
@@ -319,7 +318,7 @@ second place for auth-request point as noted below.
     response: ( )
 
   status
-    params:   ( target:string recurse:bool ? [ rev:number ] ? depth:word )
+    params:   ( target:string recurse:bool ? [ rev:number ] )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.
@@ -328,7 +327,7 @@ second place for auth-request point as noted below.
 
   diff
     params:   ( [ rev:number ] target:string recurse:bool ignore-ancestry:bool
-                url:string ? text-deltas:bool ? depth:word )
+                url:string ? text-deltas:bool )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.

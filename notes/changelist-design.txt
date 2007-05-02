@@ -404,21 +404,23 @@ perform metadata operations on a whole set of files.
 ==> Finished items:
 
     * svn changelist [--remove]
+
+    * svn status shows grouped changelists
+        -  'svn status --changelist' works too
+    * 'svn info' shows changelists
+
     * svn commit --changelist
     * svn revert --changelist
     * svn log --changelist
-    * 'svn status' shows changelists
-    * 'svn info' shows changelists
+    * svn diff --changelist  (wc-wc and wc-repos cases)
+    * svn update --changelist
+    * svn lock/unlock --changelist
+    * svn propget/propset --changelist
+###    * svn proplist/propdel --changelist
+
 
 
 ==> TO-DO:
-
-* Things that still need to take the --changelist filter argument:
-
-   -  svn status
-   -  svn diff    (wc-wc and wc-url cases, not url-url cases)
-   -  svn lock/unlock
-   -  svn proplist/propget/propset/propdel
 
 * make --cl the same as --changelist, for convenience?
 

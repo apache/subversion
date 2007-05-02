@@ -21,14 +21,13 @@ end
 
 module Svn
   module Util
-
     module_function
     def to_ruby_class_name(name)
       name.split("_").collect do |x|
         "#{x[0,1].upcase}#{x[1..-1].downcase}"
       end.join("")
     end
-      
+
     def to_ruby_const_name(name)
       name.upcase
     end
@@ -40,7 +39,13 @@ module Svn
     def copy?(copyfrom_path, copyfrom_rev)
       Util.valid_rev?(copyfrom_rev) && !copyfrom_path.nil?
     end
-    
+
+    def hash_to_prop_array(hash)
+      hash.collect do |key, value|
+        Svn::Core::Prop.new(key, value)
+      end
+    end
+
     def set_constants(ext_mod, target_mod=self)
       target_name = nil
       ext_mod.constants.each do |const|
@@ -89,11 +94,22 @@ EOC
     def filename_to_temp_file(filename)
       file = Tempfile.new("svn-ruby")
       file.binmode
-      file.print(File.read(filename))
+      file.print(File.open(filename, "rb") {|f| f.read})
       file.close
       file.open
       file.binmode
       file
+    end
+
+    def reset_message_directory
+      if /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+        top_directory = File.join(File.dirname(__FILE__), "..", "..")
+        top_directory = File.expand_path(top_directory)
+        locale_directory = File.join(top_directory, "share", "locale")
+        locale_directory_win = locale_directory.tr(File::SEPARATOR,
+                                                   File::ALT_SEPARATOR)
+        GetText.bindtextdomain(locale_directory_win)
+      end
     end
   end
 end

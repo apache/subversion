@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -58,6 +58,8 @@
 #include "bdb/copies-table.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_util.h"
+#include "private/svn_mergeinfo_private.h"
 
 
 /* ### I believe this constant will become internal to reps-strings.c.
@@ -368,7 +370,7 @@ svn_fs_base__revision_root(svn_fs_root_t **root_p,
   struct revision_root_args args;
   svn_fs_root_t *root;
 
-  SVN_ERR(svn_fs_base__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
 
   args.root_p = &root;
   args.rev = rev;
@@ -464,7 +466,7 @@ mutable_root_node(dag_node_t **node_p,
                                        trail, pool);
   else
     /* If it's not a transaction root, we can't change its contents.  */
-    return svn_fs_base__err_not_mutable(root->fs, root->rev, error_path);
+    return svn_fs__err_not_mutable(root->fs, root->rev, error_path);
 }
 
 
@@ -644,52 +646,6 @@ make_parent_path(dag_node_t *node,
 }
 
 
-/* Return a null-terminated copy of the first component of PATH,
-   allocated in POOL.  If path is empty, or consists entirely of
-   slashes, return the empty string.
-
-   If the component is followed by one or more slashes, we set *NEXT_P
-   to point after the slashes.  If the component ends PATH, we set
-   *NEXT_P to zero.  This means:
-   - If *NEXT_P is zero, then the component ends the PATH, and there
-     are no trailing slashes in the path.
-   - If *NEXT_P points at PATH's terminating null character, then
-     the component returned was the last, and PATH ends with one or more
-     slash characters.
-   - Otherwise, *NEXT_P points to the beginning of the next component
-     of PATH.  You can pass this value to next_entry_name to extract
-     the next component.  */
-
-static char *
-next_entry_name(const char **next_p,
-                const char *path,
-                apr_pool_t *pool)
-{
-  const char *end;
-
-  /* Find the end of the current component.  */
-  end = strchr(path, '/');
-
-  if (! end)
-    {
-      /* The path contains only one component, with no trailing
-         slashes.  */
-      *next_p = 0;
-      return apr_pstrdup(pool, path);
-    }
-  else
-    {
-      /* There's a slash after the first component.  Skip over an arbitrary
-         number of slashes to find the next one.  */
-      const char *next = end;
-      while (*next == '/')
-        next++;
-      *next_p = next;
-      return apr_pstrndup(pool, path, end - path);
-    }
-}
-
-
 /* Flags for open_path.  */
 typedef enum open_path_flags_t {
 
@@ -739,7 +695,7 @@ open_path(parent_path_t **parent_path_p,
   dag_node_t *here; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root.  */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
-  const char *canon_path = svn_fs_base__canonicalize_abspath(path, pool);
+  const char *canon_path = svn_fs__canonicalize_abspath(path, pool);
   const char *path_so_far = "/";
 
   /* Make a parent_path item for the root node, using its own current
@@ -763,17 +719,17 @@ open_path(parent_path_t **parent_path_p,
       dag_node_t *child;
 
       /* Parse out the next entry from the path.  */
-      entry = next_entry_name(&next, rest, pool);
+      entry = svn_fs__next_entry_name(&next, rest, pool);
 
       /* Calculate the path traversed thus far. */
       path_so_far = svn_path_join(path_so_far, entry, pool);
 
       if (*entry == '\0')
         {
-          /* Given the behavior of next_entry_name, this happens when
-             the path either starts or ends with a slash.  In either
-             case, we stay put: the current directory stays the same,
-             and we add nothing to the parent path.  */
+          /* Given the behavior of svn_fs__next_entry_name(), this
+             happens when the path either starts or ends with a slash.
+             In either case, we stay put: the current directory stays
+             the same, and we add nothing to the parent path. */
           child = here;
         }
       else
@@ -841,7 +797,7 @@ open_path(parent_path_t **parent_path_p,
 
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_base__dag_node_kind(child) != svn_node_dir)
-        SVN_ERR_W(svn_fs_base__err_not_directory(fs, path_so_far),
+        SVN_ERR_W(svn_fs__err_not_directory(fs, path_so_far),
                   apr_psprintf(pool, _("Failure opening '%s'"), path));
 
       rest = next;
@@ -989,7 +945,7 @@ get_dag(dag_node_t **dag_node_p,
   dag_node_t *node = NULL;
 
   /* Canonicalize the input PATH. */
-  path = svn_fs_base__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, pool);
 
   /* If ROOT is a revision root, we'll look for the DAG in our cache. */
   node = dag_node_cache_get(root, path, pool);
@@ -1028,7 +984,7 @@ add_change(svn_fs_t *fs,
            apr_pool_t *pool)
 {
   change_t change;
-  change.path = svn_fs_base__canonicalize_abspath(path, pool);
+  change.path = svn_fs__canonicalize_abspath(path, pool);
   change.noderev_id = noderev_id;
   change.kind = change_kind;
   change.text_mod = text_mod;
@@ -1381,7 +1337,7 @@ change_txn_merge_info(struct change_node_prop_args *args, trail_t *trail)
      children of the root are received without a leading slash
      (e.g. "/file.txt" is received as "file.txt"), so must be made
      absolute. */
-  const char *canon_path = svn_fs_base__canonicalize_abspath(args->path, 
+  const char *canon_path = svn_fs__canonicalize_abspath(args->path, 
                                                              trail->pool);
   SVN_ERR(svn_fs_base__set_txn_merge_info(args->root->fs, txn_id, canon_path,
                                           args->value, trail, trail->pool));
@@ -1970,7 +1926,7 @@ merge(svn_stringbuf_t *conflict_p,
     }
 
   /* We have the same fs, now check it. */
-  SVN_ERR(svn_fs_base__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
 
   source_id   = svn_fs_base__dag_get_id(source);
   target_id   = svn_fs_base__dag_get_id(target);
@@ -3141,12 +3097,12 @@ txn_body_move(void *baton,
       SVN_ERR(svn_fs_base__dag_move 
               (from_parent_path->parent->node,
                from_parent_path->entry,
-               svn_fs_base__canonicalize_abspath(from_path, trail->pool),
+               svn_fs__canonicalize_abspath(from_path, trail->pool),
                from_root->rev,
                svn_fs_base__dag_get_id(from_parent_path->node),
                to_parent_path->parent->node,
                to_parent_path->entry,
-               svn_fs_base__canonicalize_abspath(to_path, trail->pool),
+               svn_fs__canonicalize_abspath(to_path, trail->pool),
                txn_id, trail, trail->pool));
 
       /* Make a record of this modification in the changes table. */
@@ -4118,8 +4074,7 @@ base_node_history(svn_fs_history_t **history_p,
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history(root->fs,
-                                svn_fs_base__canonicalize_abspath(path,
-                                                                  pool),
+                                svn_fs__canonicalize_abspath(path, pool),
                                 root->rev, FALSE, NULL,
                                 SVN_INVALID_REVNUM, pool);
   return SVN_NO_ERROR;

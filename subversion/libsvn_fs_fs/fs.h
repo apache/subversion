@@ -1,7 +1,7 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -35,10 +35,14 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   2
+#define SVN_FS_FS__FORMAT_NUMBER   3
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
+
+/* The minimum format number that supports the "layout" filesystem
+   format option. */
+#define SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT 3
 
 /* Maximum number of directories to cache dirents for. 
    This *must* be a power of 2 for DIR_CACHE_ENTRIES_INDEX
@@ -114,6 +118,9 @@ typedef struct
 
   /* The format number of this FS. */
   int format;
+  /* The maximum number of files to store per directory (for sharded
+     layouts) or zero (for linear layouts). */
+  int max_files_per_dir;
 
   /* The uuid of this FS. */
   const char *uuid;
@@ -121,18 +128,6 @@ typedef struct
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 } fs_fs_data_t;
-
-
-/* Return a canonicalized version of a filesystem PATH, allocated in
-   POOL.  While the filesystem API is pretty flexible about the
-   incoming paths (they must be UTF-8 with '/' as separators, but they
-   don't have to begin with '/', and multiple contiguous '/'s are
-   ignored) we want any paths that are physically stored in the
-   underlying database to look consistent.  Specifically, absolute
-   filesystem paths should begin with '/', and all redundant and trailing '/'
-   characters be removed.  */
-const char *
-svn_fs_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
 
 
 /*** Filesystem Transaction ***/

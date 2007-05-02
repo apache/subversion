@@ -29,7 +29,7 @@ class Time
       end
     end
   end
-  
+
   def to_apr_time
     to_i * MILLION + usec
   end
@@ -49,6 +49,7 @@ module Svn
     Util.set_methods(Ext::Core, self)
 
     nls_init
+    Util.reset_message_directory
 
     # for backward compatibility
     SWIG_INVALID_REVNUM = INVALID_REVNUM
@@ -56,12 +57,17 @@ module Svn
 
     class << self
       alias binary_mime_type? mime_type_is_binary
+      alias prop_diffs2 prop_diffs
+
+      def prop_diffs(target_props, source_props)
+        Property.prop_diffs(target_props, source_props)
+      end
     end
 
 
     DEFAULT_CHARSET = default_charset
     LOCALE_CHARSET = locale_charset
-    
+
     AuthCredSSLClientCert = AuthCredSslClientCert
     AuthCredSSLClientCertPw = AuthCredSslClientCertPw
     AuthCredSSLServerTrust = AuthCredSslServerTrust
@@ -73,7 +79,7 @@ module Svn
     DIRENT_ALL = dirent_all
 
     Pool = Svn::Ext::Core::Apr_pool_wrapper_t
-    
+
     class Pool
       class << self
         def number_of_pools
@@ -105,7 +111,7 @@ module Svn
       def write(data)
         Core.stream_write(self, data)
       end
-      
+
       def read(len=nil)
         if len.nil?
           read_all
@@ -119,7 +125,7 @@ module Svn
           buf
         end
       end
-      
+
       def close
         Core.stream_close(self)
       end
@@ -127,12 +133,12 @@ module Svn
       def copy(other, &cancel_proc)
         Core.stream_copy2(self, other, cancel_proc)
       end
-      
+
       private
       def _read(size)
         Core.stream_read(self, size)
       end
-      
+
       def read_all
         buf = ""
         while chunk = _read(CHUNK_SIZE)
@@ -308,7 +314,7 @@ module Svn
       def to_a
         [major, minor, patch, tag]
       end
-      
+
       def to_s
         "#{major}.#{minor}.#{patch}#{tag}"
       end
@@ -358,7 +364,7 @@ module Svn
     end
 
     Config = SWIG::TYPE_p_svn_config_t
-    
+
     class Config
       include Enumerable
 
@@ -392,7 +398,7 @@ module Svn
       def get(section, option, default=nil)
         Core.config_get(self, section, option, default)
       end
-      
+
       def get_bool(section, option, default)
         Core.config_get_bool(self, section, option, default)
       end
@@ -401,7 +407,7 @@ module Svn
         Core.config_set(self, section, option, value)
       end
       alias_method :[]=, :set
-      
+
       def set_bool(section, option, value)
         Core.config_set_bool(self, section, option, value)
       end
@@ -488,12 +494,26 @@ module Svn
         Core.prop_needs_translation(name)
       end
 
-      def categorize_props(props)
+      def categorize(props)
+        categorize2(props).collect do |categorized_props|
+          Util.hash_to_prop_array(categorized_props)
+        end
+      end
+      alias_method :categorize_props, :categorize
+      module_function :categorize_props
+
+      def categorize2(props)
         Core.categorize_props(props)
       end
 
-      def prop_diffs(target_props, source_props)
-        Core.prop_diffs(target_props, source_props)
+      def diffs(target_props, source_props)
+        Util.hash_to_prop_array(diffs2(target_props, source_props))
+      end
+      alias_method :prop_diffs, :diffs
+      module_function :prop_diffs
+
+      def diffs2(target_props, source_props)
+        Core.prop_diffs2(target_props, source_props)
       end
 
       def has_svn_prop?(props)
@@ -560,6 +580,105 @@ module Svn
       # Returns +true+ when the path is added by the copy action.
       def copied?
         Util.copy?(copyfrom_path, copyfrom_rev)
+      end
+    end
+
+    # For backward compatibility
+    class Prop
+      attr_accessor :name, :value
+      def initialize(name, value)
+        @name = name
+        @value = value
+      end
+
+      def ==(other)
+        other.is_a?(self.class) and
+          [@name, @value] == [other.name, other.value]
+      end
+    end
+
+    class MergeRange
+      def to_a
+        [self.start, self.end]
+      end
+
+      def inspect
+        super.gsub(/>$/, ":#{to_a.inspect}>")
+      end
+    end
+
+    class MergeInfo < Hash
+      class << self
+        def parse(input)
+          new(Core.mergeinfo_parse(input))
+        end
+      end
+
+      def initialize(info)
+        super()
+        info.each do |path, ranges|
+          self[path] = RangeList.new(*ranges)
+        end
+      end
+
+      def diff(to)
+        Core.mergeinfo_diff(self, to).collect do |result|
+          self.class.new(result)
+        end
+      end
+
+      def merge(changes)
+        self.class.new(Core.swig_rb_mergeinfo_merge(self, changes))
+      end
+
+      def remove(eraser)
+        self.class.new(Core.mergeinfo_remove(eraser, self))
+      end
+
+      def sort
+        self.class.new(Core.swig_rb_mergeinfo_sort(self))
+      end
+
+      def to_s
+        Core.mergeinfo_to_stringbuf(self)
+      end
+    end
+
+    class RangeList < Array
+      def initialize(*ranges)
+        super()
+        ranges.each do |range|
+          self << Svn::Core::MergeRange.new(*range.to_a)
+        end
+      end
+
+      def diff(to)
+        result = Core.rangelist_diff(self, to)
+        deleted = result.pop
+        added = result
+        [added, deleted].collect do |result|
+          self.class.new(*result)
+        end
+      end
+
+      def merge(changes)
+        self.class.new(*Core.swig_rb_rangelist_merge(self, changes))
+      end
+
+      def remove(eraser)
+        self.class.new(*Core.rangelist_remove(eraser, self))
+      end
+
+      def intersect(other)
+        self.class.new(*Core.rangelist_intersect(self, other))
+      end
+
+      def reverse
+        self.class.new(*Core.swig_rb_rangelist_reverse(self))
+      end
+
+      def to_s
+        Core.rangelist_to_stringbuf(self)
       end
     end
   end

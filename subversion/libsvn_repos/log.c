@@ -296,6 +296,9 @@ get_history(struct path_info *info,
      don't fetch any more for this path. */
   if (info->history_rev < start)
     {
+      svn_pool_destroy(subpool);
+      if (info->oldpool)
+        svn_pool_destroy(info->oldpool);
       info->done = TRUE;
       return SVN_NO_ERROR;
     }
@@ -494,7 +497,7 @@ svn_repos_get_logs3(svn_repos_t *repos,
                     apr_pool_t *pool)
 {
   svn_revnum_t head = SVN_INVALID_REVNUM;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   svn_fs_t *fs = repos->fs;
   apr_array_header_t *revs = NULL;
   svn_revnum_t hist_end = end;
@@ -555,15 +558,15 @@ svn_repos_get_logs3(svn_repos_t *repos,
         {
           svn_revnum_t rev = hist_start + i;
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
           if (start > end)
             rev = hist_end - i;
           SVN_ERR(send_change_rev(rev, fs,
                                   discover_changed_paths,
                                   authz_read_func, authz_read_baton,
-                                  receiver, receiver_baton, subpool));
+                                  receiver, receiver_baton, iterpool));
         }
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
       return SVN_NO_ERROR;
     }
 
@@ -590,10 +593,10 @@ svn_repos_get_logs3(svn_repos_t *repos,
         {
           svn_boolean_t readable;
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
 
           SVN_ERR(authz_read_func(&readable, root, this_path,
-                                  authz_read_baton, subpool));
+                                  authz_read_baton, iterpool));
           if (! readable)
             return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
         }
@@ -634,7 +637,7 @@ svn_repos_get_logs3(svn_repos_t *repos,
       svn_boolean_t changed = FALSE;
       any_histories_left = FALSE;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       for (i = 0; i < histories->nelts; i++)
         {
           struct path_info *info = APR_ARRAY_IDX(histories, i,
@@ -660,7 +663,7 @@ svn_repos_get_logs3(svn_repos_t *repos,
                                       discover_changed_paths,
                                       authz_read_func, authz_read_baton,
                                       receiver, receiver_baton,
-                                      subpool));
+                                      iterpool));
               if (limit && ++send_count >= limit)
                 break;
             }
@@ -681,18 +684,18 @@ svn_repos_get_logs3(svn_repos_t *repos,
          history in forward order. */
       for (i = 0; i < revs->nelts; ++i)
         {
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
           SVN_ERR(send_change_rev(APR_ARRAY_IDX(revs, revs->nelts - i - 1,
                                                 svn_revnum_t),
                                   fs, discover_changed_paths,
                                   authz_read_func, authz_read_baton,
-                                  receiver, receiver_baton, subpool));
+                                  receiver, receiver_baton, iterpool));
           if (limit && i + 1 >= limit)
             break;
         }
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 

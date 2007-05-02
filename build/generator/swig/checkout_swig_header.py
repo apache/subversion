@@ -20,9 +20,9 @@ class Generator(generator.swig.Generator):
 
   def write_makefile_rules(self, makefile):
     """Write makefile rules to checkout files"""
-    script_path = 'build/generator/swig/checkout_swig_header.py'
+    script_path = '$(top_srcdir)/build/generator/swig/checkout_swig_header.py'
     conf = '$(abs_srcdir)/build.conf'
-    makefile.write('CHECKOUT_SWIG = cd $(top_srcdir) && $(PYTHON)' +
+    makefile.write('CHECKOUT_SWIG = cd $(top_builddir) && $(PYTHON)' +
                    ' %s %s $(SWIG)\n\n' % (script_path, conf))
     checkout_locations = []
     for path in self.swig_checkout_files:

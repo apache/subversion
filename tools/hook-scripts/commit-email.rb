@@ -4,68 +4,135 @@ require "optparse"
 require "ostruct"
 require "stringio"
 require "tempfile"
+require "time"
+require "net/smtp"
+require "socket"
 
-SENDMAIL = "/usr/sbin/sendmail"
+SMTP_PORT = 25
+KILO_SIZE = 1000
+DEFAULT_MAX_SIZE = "500M"
 
-def parse(args)
+class OptionParser
+  class CannotCoexistOption < ParseError
+    const_set(:Reason, 'cannot coexist option'.freeze)
+  end
+end
+
+def parse_args(args)
   options = OpenStruct.new
   options.to = []
   options.error_to = []
   options.from = nil
+  options.from_domain = nil
   options.add_diff = true
+  options.max_size = parse_size(DEFAULT_MAX_SIZE)
   options.repository_uri = nil
   options.rss_path = nil
   options.rss_uri = nil
   options.name = nil
+  options.use_utf7 = false
+  options.server = "localhost"
+  options.port = SMTP_PORT
 
   opts = OptionParser.new do |opts|
-    opts.separator ""
+    opts.banner += " REPOSITORY_PATH REVISION TO"
 
-    opts.on("-I", "--include [PATH]",
-            "Add [PATH] to load path") do |path|
-      $LOAD_PATH.unshift(path)
+    opts.separator ""
+    opts.separator "E-mail related options:"
+
+    opts.on("-sSERVER", "--server=SERVER",
+            "Use SERVER as SMTP server (#{options.server})") do |server|
+      options.server = server
     end
-    
-    opts.on("-t", "--to [TO]",
-            "Add [TO] to to address") do |to|
+
+    opts.on("-pPORT", "--port=PORT", Integer,
+            "Use PORT as SMTP port (#{options.port})") do |port|
+      options.port = port
+    end
+
+    opts.on("-tTO", "--to=TO", "Add TO to To: address") do |to|
       options.to << to unless to.nil?
     end
-    
-    opts.on("-e", "--error-to [TO]",
-            "Add [TO] to to address when error is occurred") do |to|
+
+    opts.on("-eTO", "--error-to=TO",
+            "Add TO to To: address when an error occurs") do |to|
       options.error_to << to unless to.nil?
     end
-    
-    opts.on("-f", "--from [FROM]",
-            "Use [FROM] as from address") do |from|
+
+    opts.on("-fFROM", "--from=FROM", "Use FROM as from address") do |from|
+      if options.from_domain
+        raise OptionParser::CannotCoexistOption,
+              "cannot coexist with --from-domain"
+      end
       options.from = from
     end
-    
-    opts.on("-n", "--no-diff",
-            "Don't add diffs") do |from|
-      options.add_diff = false
+
+    opts.on("--from-domain=DOMAIN",
+            "Use author@DOMAIN as from address") do |domain|
+      if options.from
+        raise OptionParser::CannotCoexistOption,
+              "cannot coexist with --from"
+      end
+      options.from_domain = domain
     end
-    
-    opts.on("-r", "--repository-uri [URI]",
-            "Use [URI] as URI of repository") do |uri|
-      options.repository_uri = uri
-    end
-    
-    opts.on("--rss-path [PATH]",
-            "Use [PATH] as output RSS path") do |path|
-      options.rss_path = path
-    end
-    
-    opts.on("--rss-uri [URI]",
-            "Use [URI] as output RSS URI") do |uri|
-      options.rss_uri = uri
-    end
-    
-    opts.on("--name [NAME]",
-            "Use [NAME] as repository name") do |name|
+
+    opts.separator ""
+    opts.separator "Output related options:"
+
+    opts.on("--name=NAME", "Use NAME as repository name") do |name|
       options.name = name
     end
-    
+
+    opts.on("-rURI", "--repository-uri=URI",
+            "Use URI as URI of repository") do |uri|
+      options.repository_uri = uri
+    end
+
+    opts.on("-n", "--no-diff", "Don't add diffs") do |diff|
+      options.add_diff = false
+    end
+
+    opts.on("--max-size=SIZE",
+            "Limit mail body size to SIZE",
+            "G/GB/M/MB/K/KB/B units are available",
+            "(#{format_size(options.max_size)})") do |max_size|
+      begin
+        options.max_size = parse_size(max_size)
+      rescue ArgumentError
+        raise OptionParser::InvalidArgument, max_size
+      end
+    end
+
+    opts.on("--no-limit-size",
+            "Don't limit mail body size",
+            "(#{limited_size?(options.max_size)})") do |not_limit_size|
+      options.max_size = -1
+    end
+
+    opts.on("--[no-]utf7",
+            "Use UTF-7 encoding for mail body instead",
+            "of UTF-8 (#{options.use_utf7})") do |use_utf7|
+      options.use_utf7 = use_utf7
+    end
+
+    opts.separator ""
+    opts.separator "RSS related options:"
+
+    opts.on("--rss-path=PATH", "Use PATH as output RSS path") do |path|
+      options.rss_path = path
+    end
+
+    opts.on("--rss-uri=URI", "Use URI as output RSS URI") do |uri|
+      options.rss_uri = uri
+    end
+
+    opts.separator ""
+    opts.separator "Other options:"
+
+    opts.on("-IPATH", "--include=PATH", "Add PATH to load path") do |path|
+      $LOAD_PATH.unshift(path)
+    end
+
     opts.on_tail("--help", "Show this message") do
       puts opts
       exit!
@@ -75,6 +142,44 @@ def parse(args)
   opts.parse!(args)
 
   options
+end
+
+def limited_size?(size)
+  size > 0
+end
+
+def format_size(size)
+  return "no limit" unless limited_size?(size)
+  return "#{size}B" if size < KILO_SIZE
+  size /= KILO_SIZE.to_f
+  return "#{size}KB" if size < KILO_SIZE
+  size /= KILO_SIZE.to_f
+  return "#{size}MB" if size < KILO_SIZE
+  size /= KILO_SIZE.to_f
+  "#{size}GB"
+end
+
+def parse_size(size)
+  case size
+  when /\A(.+?)GB?\z/i
+    Float($1) * KILO_SIZE ** 3
+  when /\A(.+?)MB?\z/i
+    Float($1) * KILO_SIZE ** 2
+  when /\A(.+?)KB?\z/i
+    Float($1) * KILO_SIZE
+  when /\A(.+?)B?\z/i
+    Float($1)
+  else
+    raise ArgumentError, "invalid size: #{size.inspect}"
+  end
+end
+
+def parse(argv=ARGV)
+  argv = argv.dup
+  options = parse_args(argv)
+  repos, revision, to, *rest = argv
+
+  [repos, revision, to, options]
 end
 
 def make_body(info, params)
@@ -251,24 +356,26 @@ HEADER
     % svn #{command} #{link}@#{rev}
 CONTENT
         end
-      
+
         [desc, link]
       end
     ]
   end
 end
 
-def make_header(to, from, info, params)
+def make_header(to, from, info, params, body_encoding, body_encoding_bit)
   headers = []
   headers << x_author(info)
+  headers << x_revision(info)
   headers << x_repository(info)
   headers << x_id(info)
-  headers << x_sha256(info)
-  headers << "Content-Type: text/plain; charset=UTF-8"
-  headers << "Content-Transfer-Encoding: 8bit"
+  headers << "MIME-Version: 1.0"
+  headers << "Content-Type: text/plain; charset=#{body_encoding}"
+  headers << "Content-Transfer-Encoding: #{body_encoding_bit}"
   headers << "From: #{from}"
-  headers << "To: #{to.join(' ')}"
+  headers << "To: #{to.join(', ')}"
   headers << "Subject: #{make_subject(params[:name], info)}"
+  headers << "Date: #{Time.now.rfc2822}"
   headers.find_all do |header|
     /\A\s*\z/ !~ header
   end.join("\n")
@@ -286,6 +393,10 @@ def x_author(info)
   "X-SVN-Author: #{info.author}"
 end
 
+def x_revision(info)
+  "X-SVN-Revision: #{info.revision}"
+end
+
 def x_repository(info)
   # "X-SVN-Repository: #{info.path}"
   "X-SVN-Repository: XXX"
@@ -295,20 +406,69 @@ def x_id(info)
   "X-SVN-Commit-Id: #{info.entire_sha256}"
 end
 
-def x_sha256(info)
-  info.sha256.collect do |name, inf|
-    "X-SVN-SHA256-Info: #{name}, #{inf[:revision]}, #{inf[:sha256]}"
-  end.join("\n")
+def utf8_to_utf7(utf8)
+  require 'iconv'
+  Iconv.conv("UTF-7", "UTF-8", utf8)
+rescue InvalidEncoding
+  begin
+    Iconv.conv("UTF7", "UTF8", utf8)
+  rescue Exception
+    nil
+  end
+rescue Exception
+  nil
+end
+
+def truncate_body(body, max_size, use_utf7)
+  return body if body.size < max_size
+
+  truncated_body = body[0, max_size]
+  truncated_message = "... truncated to #{format_size(max_size)}\n"
+  truncated_message = utf8_to_utf7(truncated_message) if use_utf7
+  truncated_message_size = truncated_message.size
+
+  lf_index = truncated_body.rindex(/(?:\r|\r\n|\n)/)
+  while lf_index
+    if lf_index + truncated_message_size < max_size
+      truncated_body[lf_index, max_size] = "\n#{truncated_message}"
+      break
+    else
+      lf_index = truncated_body.rindex(/(?:\r|\r\n|\n)/, lf_index - 1)
+    end
+  end
+
+  truncated_body
 end
 
 def make_mail(to, from, info, params)
-  make_header(to, from, info, params) + "\n" + make_body(info, params)
+  utf8_body = make_body(info, params)
+  utf7_body = nil
+  utf7_body = utf8_to_utf7(utf8_body) if params[:use_utf7]
+  if utf7_body
+    body = utf7_body
+    encoding = "utf-7"
+    bit = "7bit"
+  else
+    body = utf8_body
+    encoding = "utf-8"
+    bit = "8bit"
+  end
+
+  max_size = params[:max_size]
+  if limited_size?(max_size)
+    body = truncate_body(body, max_size, !utf7_body.nil?)
+  end
+
+  make_header(to, from, info, params, encoding, bit) + "\n" + body
 end
 
-def sendmail(to, from, mail)
-  args = to.collect {|address| address.dump}.join(' ')
-  open("| #{SENDMAIL} #{args}", "w") do |f|
-    f.print(mail)
+def sendmail(to, from, mail, server=nil, port=nil)
+  server ||= "localhost"
+  port ||= SMTP_PORT
+  Net::SMTP.start(server, port) do |smtp|
+    smtp.open_message_stream(from, to) do |f|
+      f.print(mail)
+    end
   end
 end
 
@@ -340,10 +500,10 @@ def make_rss(base_rss, name, rss_uri, repos_uri, info)
 
     if base_rss
       base_rss.items.each do |item|
-        item.setup_maker(maker) 
+        item.setup_maker(maker)
       end
     end
-    
+
     diff_info(info, repos_uri, true).each do |name, infos|
       infos.each do |desc, link|
         item = maker.items.new_item
@@ -371,30 +531,29 @@ def rss_items(items, info, repos_uri)
       items << [link, name, desc, info.date]
     end
   end
-  
+
   items.sort_by do |uri, title, desc, date|
     date
   end.reverse
 end
 
 def main
-  if ARGV.find {|arg| arg == "--help"}
-    parse(ARGV)
-  else
-    repos, revision, to, *rest = ARGV
-    options = parse(rest)
-  end
-  
+  repos, revision, to, options = parse
+
   require "svn/info"
   info = Svn::Info.new(repos, revision)
-  from = options.from || info.author
-  to = [to, *options.to]
+  from = options.from
+  from ||= "#{info.author}@#{options.from_domain}".sub(/@\z/, '')
+  to = [to, *options.to].compact
   params = {
     :repository_uri => options.repository_uri,
     :name => options.name,
     :add_diff => options.add_diff,
+    :use_utf7 => options.use_utf7,
+    :max_size => options.max_size,
   }
-  sendmail(to, from, make_mail(to, from, info, params))
+  sendmail(to, from, make_mail(to, from, info, params),
+           options.server, options.port)
 
   if options.repository_uri and
       options.rss_path and
@@ -414,22 +573,49 @@ end
 
 begin
   main
-rescue Exception
-  _, _, to, *rest = ARGV
-  to = [to]
-  from = ENV["USER"]
+rescue Exception => error
+  argv = ARGV.dup
+  to = []
+  subject = "Error"
+  from = "#{ENV['USER']}@#{Socket.gethostname}"
+  server = nil
+  port = nil
   begin
-    options = parse(rest)
+    _, _, _to, options = parse(argv)
+    to = [_to]
     to = options.error_to unless options.error_to.empty?
-    from = options.from
-  rescue Exception
+    from = options.from || from
+    subject = "#{options.name}: #{subject}" if options.name
+    server = options.server
+    port = options.port
+  rescue OptionParser::MissingArgument
+    argv.delete_if {|arg| $!.args.include?(arg)}
+    retry
+  rescue OptionParser::ParseError
+    if to.empty?
+      _, _, _to, *_ = ARGV.reject {|arg| /^-/.match(arg)}
+      to = [_to]
+    end
   end
-  sendmail(to, from, <<-MAIL)
+
+  detail = <<-EOM
+#{error.class}: #{error.message}
+#{error.backtrace.join("\n")}
+EOM
+  to = to.compact
+  if to.empty?
+    STDERR.puts detail
+  else
+    sendmail(to, from, <<-MAIL, server, port)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Transfer-Encoding: 7bit
 From: #{from}
 To: #{to.join(', ')}
-Subject: Error
+Subject: #{subject}
+Date: #{Time.now.rfc2822}
 
-#{$!.class}: #{$!.message}
-#{$@.join("\n")}
+#{detail}
 MAIL
+  end
 end
