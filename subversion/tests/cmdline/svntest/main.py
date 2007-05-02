@@ -115,6 +115,7 @@ except ImportError:
 
 # The locations of the svn, svnadmin and svnlook binaries, relative to
 # the only scripts that import this file right now (they live in ../).
+# Use --bin to override these defaults.
 svn_binary = os.path.abspath('../../svn/svn' + _exe)
 svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
 svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
@@ -904,7 +905,7 @@ def usage():
   prog_name = os.path.basename(sys.argv[0])
   print "%s [--url] [--fs-type] [--verbose] [--enable-sasl] [--cleanup] \\" \
         % prog_name
-  print "%s [<test> ...]" % (" " * len(prog_name))
+  print "%s [--bin] [<test> ...]" % (" " * len(prog_name))
   print "%s [--list] [<test> ...]\n" % prog_name
   print "Arguments:"
   print " test          The number of the test to run (multiple okay), " \
@@ -917,6 +918,7 @@ def usage():
   print " --cleanup     Whether to clean up"
   print " --enable-sasl Whether to enable SASL authentication"
   print " --parallel    Run the tests in parallel"
+  print " --bin         Use the svn binaries installed in this path"
   print " --help        This information"
 
 
@@ -938,16 +940,21 @@ def run_tests(test_list, serial_only = False):
   global cleanup_mode
   global enable_sasl
   global is_child_process
-
+  global svn_binary
+  global svnadmin_binary
+  global svnlook_binary
+  global svnsync_binary
+  global svnversion_binary
+  
   testnums = []
   # Should the tests be listed (as opposed to executed)?
   list_tests = False
 
   parallel = 0
-
+  svn_bin = None
   opts, args = my_getopt(sys.argv[1:], 'vhpc',
                          ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
-                          'enable-sasl', 'help', 'parallel'])
+                          'enable-sasl', 'help', 'parallel', 'bin='])
 
   for arg in args:
     if arg == "list":
@@ -992,12 +999,21 @@ def run_tests(test_list, serial_only = False):
     elif opt == '-c':
       is_child_process = True
 
+    elif opt == '--bin':
+      svn_bin = val
+
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
   ######################################################################
   # Initialization
-  
+  if not svn_bin is None:
+    svn_binary = os.path.join(svn_bin, 'svn' + _exe)
+    svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
+    svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
+    svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
+    svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
+
   # Cleanup: if a previous run crashed or interrupted the python
   # interpreter, then `temp_dir' was never removed.  This can cause wonkiness.
   if not is_child_process:

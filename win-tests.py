@@ -32,6 +32,7 @@ def _usage_exit():
   print "Valid options:"
   print "  -r, --release        : test the Release configuration"
   print "  -d, --debug          : test the Debug configuration (default)"
+  print "  --bin=PATH           : use the svn binaries installed in PATH"
   print "  -u URL, --url=URL    : run ra_dav or ra_svn tests against URL; will"
   print "                         start svnserve for ra_svn tests"
   print "  -v, --verbose        : talk more"
@@ -78,7 +79,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'help', 'list',
-                        'enable-sasl'])
+                        'enable-sasl', 'bin='])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -93,6 +94,7 @@ run_httpd = None
 httpd_port = None
 list_tests = None
 enable_sasl = None
+svn_bin = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -124,6 +126,8 @@ for opt, val in opts:
   elif opt == '--enable-sasl':
     enable_sasl = 1
     base_url = "svn://localhost/"
+  elif opt == '--bin':
+    svn_bin = val
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -501,7 +505,7 @@ import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
                            base_url, fs_type, 1, cleanup, 
-                           enable_sasl, list_tests)
+                           enable_sasl, list_tests, svn_bin)
 old_cwd = os.getcwd()
 try:
   os.chdir(abs_builddir)

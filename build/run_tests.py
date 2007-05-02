@@ -27,13 +27,14 @@ class TestHarness:
 
   def __init__(self, abs_srcdir, abs_builddir, logfile,
                base_url=None, fs_type=None, verbose=None, cleanup=None,
-               enable_sasl=None, list_tests=None):
+               enable_sasl=None, list_tests=None, svn_bin=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
     LOGFILE is the name of the log file.
     BASE_URL is the base url for DAV tests.
     FS_TYPE is the FS type for repository creation.
+    SVN_BIN is the path where the svn binaries are installed.
     '''
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
@@ -44,6 +45,7 @@ class TestHarness:
     self.cleanup = cleanup
     self.enable_sasl = enable_sasl
     self.list_tests = list_tests
+    self.svn_bin = svn_bin
     self.log = None
 
   def run(self, list):
@@ -117,6 +119,8 @@ class TestHarness:
       cmdline.append(quote('--fs-type=' + self.fs_type))
     if self.list_tests is not None:
       cmdline.append('--list')
+    if self.svn_bin is not None:
+      cmdline.append(quote('--bin=' + self.svn_bin))
 
     old_cwd = os.getcwd()
     try:
