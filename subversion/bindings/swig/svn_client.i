@@ -50,7 +50,7 @@
 }
 #endif
 
-#ifdef SWIGRUBY
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
 %apply apr_hash_t **MERGEHASH {
   apr_hash_t **mergeinfo
 }
