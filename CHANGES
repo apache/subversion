@@ -1,18 +1,22 @@
 Version 1.4.4
-(?? April 2007, from /branches/1.4.x)
+(?? May 2007, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.4
 
  User-visible changes:
   - Client:
     * fixed: 'svn up' of replaced file without history fails (issue #2618)
     * fixed: 'svn export' succeeds on non-existent URL (r23191, -3, -5, -200)
+    * fixed: 'svn diff' fails writing large hunks to Win console (issue #1789)
+    * fixed: svnsync cannot sync unreadable modified dir copies (issue #2705)
     * fixed: ra_dav litters empty transactions if initial setup fails (r23594)
     * fixed: inconsistent expansion of revision number keywords (issue #1743)
 
   - Server:
     * fixed: rare dirprop dataloss leading to BDB repo corruption (issue #2751)
+    * fixed: race condition when changing FSFS revprops (r23439, r23440)
     * fixed: 'svnadmin load' invents svn:date if none exists (issue #2729)
     * fixed: svnserve can't commit locked file if root unwritable (issue #2700)
+    * fixed: 'svnadmin dump' output invalid for non-ASCII paths (issue #2641)
 
   - Client and Server:
     * fixed: hang during character translation (r23491, r23492)
