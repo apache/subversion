@@ -41,21 +41,12 @@ Candidate changes:
     Votes:
       +1: blair, cmpilato
 
- * r24497, r24504
-   Make Perl-based txdelta_window_handler actually usable by editors
-   and related functions.
-   Justification:
-     Binding completeness.
-   Votes:
-     +1: clkao
-     +0: glasser (I don't grok SWIG, but having this available in Perl is good)
-
   * r24697, -9, 24793, 24827
     Fix issue 2743: fix property handling for locally replaced files
     Justification:
       Regression introduced in 1.4.0
     Votes:
-      +1: lgo
+      +1: lgo, malcolm
     Notes:
       There's a small merge conflict when merging the test case, backport branch
       not needed though.
@@ -104,8 +95,16 @@ Approved changes:
    Stop merge notifications for locally modified files unchanged by a merge. 
    Justification:
      Long standing bug effecting only the output of svn merge.
-   Branch: 1.4.x-r24483
-     (1.4.x-r24755@24762 -c24762, 1.4.x-r24483 -c24865)
+   Branch: 1.4.x-r24483 (-r24761:24865)
    Votes:
      +1: pburba, dlr, cmpilato
      +0: malcolm
+
+ * r24497, r24504
+   Make Perl-based txdelta_window_handler actually usable by editors
+   and related functions.
+   Justification:
+     Binding completeness.
+   Votes:
+     +1: clkao
+     +0: glasser (I don't grok SWIG, but having this available in Perl is good)
