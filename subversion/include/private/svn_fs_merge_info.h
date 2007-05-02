@@ -33,10 +33,11 @@ svn_error_t *
 svn_fs_merge_info__create_index(const char *path, apr_pool_t *pool);
 
 /* Update the merge info index according to the changes made in
-   transaction TXN for revision NEW_REV.  MERGEINFO is the merge
-   information for the transaction, or NULL if there was no merge info
-   recorded for that transaction.  Use POOL for any temporary
-   allocations.
+   transaction TXN for revision NEW_REV.  MERGEINFO_FOR_PATHS is the
+   merge information for each path changed in the transaction (a
+   mapping of const char * -> apr_hash_t *), or NULL if there was no
+   merge info recorded for that transaction.  Use POOL for any
+   temporary allocations.
 
    NOTE: Even if there is no merge info, this function should be
    called to make sure there is no stray merge info for this revision
@@ -44,7 +45,7 @@ svn_fs_merge_info__create_index(const char *path, apr_pool_t *pool);
 svn_error_t *
 svn_fs_merge_info__update_index(svn_fs_txn_t *txn, 
                                 svn_revnum_t new_rev,
-                                apr_hash_t *mergeinfo, 
+                                apr_hash_t *mergeinfo_for_paths,
                                 apr_pool_t *pool);
 
 /* Get the merge info for the set of PATHS (an array of
