@@ -1237,7 +1237,8 @@ elide_children(apr_array_header_t *children_with_mergeinfo,
                 }
 
               SVN_ERR(mergeinfo_elides(&elides, target_mergeinfo,
-                                       child_mergeinfo, path_suffix, iterpool));
+                                       child_mergeinfo, path_suffix,
+                                       iterpool));
               if (elides)
                 SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGE_INFO, NULL,
                                          child_wcpath, adm_access, TRUE,
