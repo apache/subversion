@@ -65,10 +65,10 @@ base_rev = fetched_rev.value
 
 txn = s.txn()
 
-txn.copy(src_path="", dest_path=new_dir_name)
-
 for name in dirents_hash.iterkeys():
     # I'm not sure that base_rev here actually guarantees anything...
     txn.delete(name, base_rev=base_rev)
+
+txn.copy(src_path="", dest_path=new_dir_name)
 
 txn.commit(commit_message)
