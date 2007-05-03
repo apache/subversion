@@ -5613,6 +5613,8 @@ def merge_to_path_with_switched_children(sbox):
                                         expected_output, wc_disk, wc_status,
                                         None, None, None, None, None, 1)
 
+  # Target with switched file child:
+  #
   # Merge r6 into A_COPY/D/H.  The switched child of A_COPY/D/H,
   # file A_COPY/D/H/psi (which has no mergeinfo prior to the merge),
   # should get its own mergeinfo.
@@ -5649,9 +5651,16 @@ def merge_to_path_with_switched_children(sbox):
   finally:
     os.chdir(saved_cwd)
 
+  # Target with switched dir child:
+  #
   # Merge r4 into A_COPY/D.  The switched child of A_COPY/D,
   # directory A_COPY/D/G (which has no mergeinfo prior to the merge),
-  # should get its own mergeinfo.
+  # should get its own mergeinfo.  A_COPY/D/H/psi and A_COPY/D/H should
+  # also pick up mergeinfo for r4.
+  #
+  # Then merge r6 into A_COPY/D, the switched children now have
+  # mergeinfo prior to the merge, but again, should not elide.
+  # A_COPY/D/H, which is not switched, should elide to A_COPY/D.
   short_D_COPY_path = shorten_path_kludge(A_COPY_D_path)
   expected_output = wc.State(short_D_COPY_path, {})
   expected_status = wc.State(short_D_COPY_path, {
@@ -5684,6 +5693,17 @@ def merge_to_path_with_switched_children(sbox):
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_D_COPY_path, '3', '4',
+                                         sbox.repo_url + '/A/D',
+                                         expected_output, expected_disk,
+                                         expected_status, expected_skip,
+                                         None, None, None, None, None, 1)
+    expected_disk.tweak('', props={SVN_PROP_MERGE_INFO : '/A/D:1,4,6'})
+    expected_disk.tweak('G', props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4,6'})
+    expected_disk.tweak('H', props={}) # Elides to A_COPY/D
+    expected_status.tweak('H', status='  ')
+    expected_disk.tweak('H/psi',
+                        props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1,4,6'})
+    svntest.actions.run_and_verify_merge(short_D_COPY_path, '5', '6',
                                          sbox.repo_url + '/A/D',
                                          expected_output, expected_disk,
                                          expected_status, expected_skip,
