@@ -168,7 +168,7 @@ class Hash(DictMixin):
 
 
 class Array(ListMixin):
-    """An array wrapper for apr_hash_t"""
+    """An array wrapper for apr_array_header_t"""
 
     def __init__(self, type, items=None, size=0):
         self.type = type
