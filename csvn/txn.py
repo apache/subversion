@@ -136,7 +136,7 @@ class Txn(object):
 
         if kind == svn_node_none:
             message = ("Can't copy '%s': "
-                       "No such file or directory" % path)
+                       "No such file or directory" % src_path)
             raise SubversionException(SVN_ERR_BAD_URL, message)
 
         if kind == svn_node_file or local_path is None:
