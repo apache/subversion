@@ -6,6 +6,9 @@ from tempfile import TemporaryFile
 from csvn.ext.listmixin import ListMixin
 import sys
 
+TRUE=1
+FALSE=0
+
 # Convert the standard files
 stdout = PyFile_AsFile(sys.stdout)
 stderr = PyFile_AsFile(sys.stderr)
