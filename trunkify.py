@@ -2,7 +2,7 @@
 
 # TODO:
 #
-# Move some of the functionality (dict_from_apr_hash, a wrapper around
+# Move some of the functionality (e.g. a wrapper around
 # svn_ra_get_dir2, etc) into csvn proper.
 #
 # Remove properties from the given URL.
@@ -47,32 +47,13 @@ elif options.file:
 else:
     commit_message = "Move project into new directory '%s'." % new_dir_name
 
-def dict_from_apr_hash(h, val_type, pool):
-    d = {}
-
-    hi = apr_hash_first(pool, h)
-
-    # This *can't* be 'hi is not None' even though I thought NULL maps
-    # to None...
-    while hi:
-        key_vp = c_void_p()
-        val_vp = c_void_p()
-        apr_hash_this(hi, byref(key_vp), None, byref(val_vp))
-
-        key_as_string = cast(key_vp, c_char_p).value
-        d[key_as_string] = cast(val_vp, val_type)
-
-        hi = apr_hash_next(hi)
-
-    return d
-
 s = ClientSession(repos_url, user=User(username=options.username))
 
-dirents_hash = POINTER(apr_hash_t)()
+dirents_hash = Hash(POINTER(svn_dirent_t), None)
 fetched_rev = svn_revnum_t()
 
 svn_ra_get_dir2(s,
-                byref(dirents_hash),
+                dirents_hash.byref(),
                 byref(fetched_rev),
                 None,
                 "",
@@ -80,14 +61,13 @@ svn_ra_get_dir2(s,
                 0, # don't need any dirent fields
                 s.pool)
 
-dirents_dict = dict_from_apr_hash(dirents_hash, POINTER(svn_dirent_t), s.pool)
 base_rev = fetched_rev.value
 
 txn = s.txn()
 
 txn.copy(src_path="", dest_path=new_dir_name)
 
-for name in dirents_dict.iterkeys():
+for name in dirents_hash.iterkeys():
     # I'm not sure that base_rev here actually guarantees anything...
     txn.delete(name, base_rev=base_rev)
 

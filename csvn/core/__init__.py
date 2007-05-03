@@ -4,6 +4,7 @@ from ctypes import *
 from functions import *
 from tempfile import TemporaryFile
 from csvn.ext.listmixin import ListMixin
+from UserDict import DictMixin
 import sys
 
 TRUE=1
@@ -109,7 +110,65 @@ class Pool(object):
     self._is_valid = lambda: 1
 application_pool = Pool()
 
+class Hash(DictMixin):
+    """A dictionary wrapper for apr_hash_t"""
+
+    def __init__(self, type, items={}):
+        self.type = type
+        self.pool = Pool()
+        if isinstance(items, POINTER(apr_hash_t)):
+            self.hash = items
+        elif items is None:
+            self.hash = POINTER(apr_hash_t)()
+        elif isinstance(items, Hash):
+            self.hash = apr_hash_copy(items, self.pool)
+        else:
+            self.hash = apr_hash_make(self.pool)
+            if hasattr(items, "iteritems"):
+                self.update(items.iteritems())
+            else:
+                self.update(items)
+
+    def __getitem__(self, key):
+        value = apr_hash_get(self, cast(key, c_void_p), len(key))
+        if not value:
+            raise KeyError(key)
+        return cast(value, self.type)
+ 
+    def __setitem__(self, key, value):
+        apr_hash_set(self, cast(key, c_void_p), len(key),
+                     cast(value, self.type))
+
+    def keys(self):
+        return list(self.iterkeys())
+
+    def __iter__(self):
+        for (key, val) in self.iteritems():
+            yield key
+
+    def iteritems(self):
+        hi = apr_hash_first(self.pool, self)
+        while hi:
+            key_vp = c_void_p()
+            val_vp = c_void_p()
+            apr_hash_this(hi, byref(key_vp), None, byref(val_vp))
+            yield (string_at(key_vp), cast(val_vp, self.type))
+            hi = apr_hash_next(hi)
+
+    def __len__(self):
+        return apr_hash_count(self)
+
+    def byref(self):
+        return pointer(self._as_parameter_)
+
+    def pointer(self):
+        return pointer(self._as_parameter_)
+
+    _as_parameter_ = property(fget=lambda self: self.hash)
+
+
 class Array(ListMixin):
+    """An array wrapper for apr_hash_t"""
 
     def __init__(self, type, items=None, size=0):
         self.type = type
