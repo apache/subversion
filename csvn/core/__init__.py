@@ -3,6 +3,7 @@
 from ctypes import *
 from functions import *
 from tempfile import TemporaryFile
+from csvn.ext.listmixin import ListMixin
 import sys
 
 # Convert the standard files
@@ -24,6 +25,10 @@ svn_cmdline_init("", stderr)
 
 application_pool = None
 
+def _mark_weakpool_invalid(weakpool):
+  if weakpool and weakpool() and hasattr(weakpool(), "_is_valid"):
+    del weakpool()._is_valid
+
 class Pool(object):
   def __init__(self, parent_pool=None):
     """Create a new memory pool"""
@@ -32,7 +37,7 @@ class Pool(object):
     self._mark_valid()
 
     # Protect important functions from GC
-    self._svn_pool_destroy = svn_pool_destroy
+    self._svn_pool_destroy = apr_pool_destroy
 
   def valid(self):
     """Check whether this memory pool and its parents
@@ -99,4 +104,65 @@ class Pool(object):
 
     # Mark pool as valid
     self._is_valid = lambda: 1
+application_pool = Pool()
+
+class Array(ListMixin):
+
+    def __init__(self, type, items=None, size=0):
+        self.type = type
+        self.pool = Pool()
+        if not items:
+            self.header = apr_array_make(self.pool, size, sizeof(type))
+        elif isinstance(items, POINTER(apr_array_header_t)):
+            self.header = items
+        elif isinstance(items, Array):
+            self.header = apr_array_copy(self.pool, items)
+        else:
+            self.header = apr_array_make(self.pool, len(items),
+                                         sizeof(type))
+            self.extend(items)
+
+    _as_parameter_ = property(fget=lambda self: self.header)
+    elts = property(fget=lambda self: cast(self.header[0].elts, POINTER(self.type)))
+
+    def _get_element(self, i):
+        return self.elts[i]
+
+    def _set_element(self, i, value):
+        self.elts[i] = value
+
+    def __len__(self):
+        return self.header[0].nelts
+
+    def _resize_region(self, start, end, new_size):
+        diff = start-end+new_size
+
+        # Growing
+        if diff > 0:
+            l = len(self)
+
+            # Make space for the new items
+            for i in xrange(diff):
+                apr_array_push(self)
+
+            # Move the old items out of the way, if necessary
+            if end < l:
+                src_idx = max(end-diff,0)
+                memmove(byref(self.elts + end),
+                        byref(self.elts[src_idx]),
+                        (l-src_idx)*self.header[0].elt_size)
+
+        # Shrinking
+        elif diff < 0:
+
+            # Overwrite the deleted items with items we still need
+            if end < len(self):
+                memmove(byref(self.elts[end+diff]),
+                        byref(self.elts[end]),
+                        (len(self)-end)*self.header[0].elt_size)
+
+            # Shrink the array
+            for i in xrange(-diff):
+                apr_array_pop(self)
+
 
