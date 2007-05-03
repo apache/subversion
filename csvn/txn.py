@@ -366,7 +366,7 @@ class _txn_operation(object):
 
             if self.action in ("ADD", "REPLACE"):
                 copyfrom_path = None
-                if self.copyfrom_path:
+                if self.copyfrom_path is not None:
                     copyfrom_path = session._abs_copyfrom_path(
                         self.copyfrom_path)
                 if self.kind == svn_node_dir:
