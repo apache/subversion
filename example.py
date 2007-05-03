@@ -1,4 +1,3 @@
-from csvn.repos import *
 from csvn.client import *
 import os
 
