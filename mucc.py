@@ -8,7 +8,7 @@
 
 import os
 from csvn.core import *
-from csvn.client import ClientSession, ClientURI
+from csvn.client import ClientSession, ClientURI, User
 from optparse import OptionParser
 
 usage = """python mucc.py [OPTION]... [ACTION]...
@@ -102,7 +102,7 @@ for arg in args:
             else:
                 ancestor = arg
 
-session = ClientSession(ancestor, username=options.username)
+session = ClientSession(ancestor, user=User(username=options.username))
 txn = session.txn()
 
 # Carry out the transaction

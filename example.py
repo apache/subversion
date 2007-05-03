@@ -4,8 +4,8 @@ import os
 
 if os.path.exists("/tmp/test-repos"):
     svn_repos_delete("/tmp/test-repos", Pool())
-repos = Repos("/tmp/test-repos", username="joecommitter",
-              create=True)
+user = User(username="joecommitter")
+repos = LocalClient("/tmp/test-repos", user=user, create=True)
 print "Repos UUID: ", repos.uuid()
 
 # Create a new transaction
@@ -62,7 +62,7 @@ txn.copy(src_path="file1.txt", src_rev=2,
 new_rev = txn.commit("Replace file3.txt with a new copy of file1.txt")
 print "Committed revision %d" % new_rev
 
-session = ClientSession("file:///tmp/test-repos")
+session = ClientSession("file:///tmp/test-repos", user=user)
 
 # Create a new transaction
 txn = session.txn()
