@@ -7,8 +7,15 @@ from csvn.ext.listmixin import ListMixin
 from UserDict import DictMixin
 import sys
 
-TRUE=1
-FALSE=0
+# Constants which are defined in the Subversion headers, but aren't
+# picked up by ctypesgen
+TRUE = 1
+FALSE = 0
+SVN_DIRENT_ALL = -1
+SVN_INVALID_REVNUM = -1
+SVN_IGNORED_REVNUM = -1
+SVN_INVALID_FILESIZE = -1
+SVN_RA_SVN_UNSPECIFIED_NUMBER = -1
 
 # Convert the standard files
 stdout = PyFile_AsFile(sys.stdout)
