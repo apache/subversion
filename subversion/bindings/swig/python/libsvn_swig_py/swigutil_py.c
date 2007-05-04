@@ -37,6 +37,7 @@
 #include "svn_auth.h"
 #include "svn_pools.h"
 #include "svn_mergeinfo.h"
+#include "svn_types.h"
 
 #include "svn_private_config.h" /* for SVN_APR_INT64_T_PYCFMT */
 
@@ -899,6 +900,45 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
     }
   Py_DECREF(keys);
   return hash;
+}
+
+apr_array_header_t *svn_swig_py_proparray_from_dict(PyObject *dict,
+                                                    apr_pool_t *pool)
+{
+  apr_array_header_t *array;
+  PyObject *keys;
+  int i, num_keys;
+
+  if (dict == Py_None)
+    return NULL;
+
+  if (!PyDict_Check(dict))
+    {
+      PyErr_SetString(PyExc_TypeError, "not a dictionary");
+      return NULL;
+    }
+
+  keys = PyDict_Keys(dict);
+  num_keys = PyList_Size(keys);
+  array = apr_array_make(pool, num_keys, sizeof(svn_prop_t *));
+  for (i = 0; i < num_keys; i++)
+    {
+      PyObject *key = PyList_GetItem(keys, i);
+      PyObject *value = PyDict_GetItem(dict, key);
+      svn_prop_t *prop = apr_palloc(pool, sizeof(*prop));
+      prop->name = make_string_from_ob(key, pool);
+      prop->value = make_svn_string_from_ob(value, pool);
+      if (! (prop->name && prop->value))
+        {
+          PyErr_SetString(PyExc_TypeError,
+                          "dictionary keys/values aren't strings");
+          Py_DECREF(keys);
+          return NULL;
+        }
+      APR_ARRAY_PUSH(array, svn_prop_t *) = prop;
+    }
+  Py_DECREF(keys);
+  return array;
 }
 
 apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,

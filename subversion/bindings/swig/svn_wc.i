@@ -66,6 +66,31 @@
   apr_hash_t *new_props
 };
 
+/*
+   svn_wc_queue_committed()
+   svn_wc_process_committed4()
+   svn_wc_process_committed3()
+   svn_wc_process_committed2()
+   svn_wc_process_committed()
+*/
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *wcprop_changes
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
+{
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+
+  $1 = svn_swig_py_proparray_from_dict($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+
 /* svn_wc_match_ignore_list() */
 %apply const apr_array_header_t *STRINGLIST {
   apr_array_header_t *list
