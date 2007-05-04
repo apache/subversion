@@ -77,16 +77,18 @@ class ClientURI(object):
         pool = Pool()
         if not encoded:
             uri = svn_path_uri_encode(uri, pool)
-        self._as_parameter_ = svn_path_canonicalize(uri, pool)
+        self._as_parameter_ = str(svn_path_canonicalize(uri, pool))
 
     def join(self, uri):
         """Join this URI and the specified relative URI,
            adding a slash if necessary."""
-        return ClientURI(svn_path_join(self, uri, Pool()))
+        pool = Pool()
+        return ClientURI(svn_path_join(self, uri, pool))
 
     def dirname(self):
         """Get the parent directory of this URI"""
-        return ClientURI(svn_path_dirname(self, Pool()))
+        pool = Pool()
+        return ClientURI(svn_path_dirname(self, pool))
 
     def relative_path(self, uri, encoded=True):
         """Convert the supplied URI to a decoded path, relative to me."""
@@ -94,11 +96,12 @@ class ClientURI(object):
         if not encoded:
             uri = svn_path_uri_encode(uri, pool)
         child_path = svn_path_is_child(self, uri, pool) or uri
-        return svn_path_uri_decode(child_path, pool)
+        return str(svn_path_uri_decode(child_path, pool))
 
     def longest_ancestor(self, uri):
         """Get the longest ancestor of this URI and another URI"""
-        return ClientURI(svn_path_get_longest_ancestor(self, uri, Pool()))
+        pool = Pool()
+        return ClientURI(svn_path_get_longest_ancestor(self, uri, pool))
 
     def __str__(self):
         """Return the URI as a string"""
@@ -318,9 +321,9 @@ class _fs(object):
 
     def uuid(self):
         """See Repos.uuid"""
-        uuid_buffer = c_char_p()
+        uuid_buffer = String()
         svn_fs_get_uuid(self, byref(uuid_buffer), self.iterpool)
-        uuid_str = string_at(uuid_buffer)
+        uuid_str = str(uuid_buffer)
         self.iterpool.clear()
         return uuid_str
 
