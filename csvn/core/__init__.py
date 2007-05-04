@@ -234,4 +234,34 @@ class Array(ListMixin):
             for i in xrange(-diff):
                 apr_array_pop(self)
 
+def _stream_read(baton, buffer, len):
+    f = cast(baton, py_object).value
+    memmove(buffer, f.read(len), len)
+    return SVN_NO_ERROR
+
+def _stream_write(baton, data, len):
+    f = cast(baton, py_object).value
+    f.write(data)
+    return SVN_NO_ERROR
+
+def _stream_close(baton):
+    f = cast(baton, py_object).value
+    f.close()
+    return SVN_NO_ERROR
+
+class Stream(object):
+
+    def __init__(self, buffer, disown=False):
+        """Create a stream which wraps a Python file or file-like object"""
+
+        self.pool = Pool()
+        self.buffer = buffer
+        baton = c_void_p(id(buffer))
+        self.stream = svn_stream_create(baton, self.pool)
+        svn_stream_set_read(self.stream, svn_read_fn_t(_stream_read))
+        svn_stream_set_write(self.stream, svn_write_fn_t(_stream_write))
+        if not disown:
+            svn_stream_set_close(self.stream, svn_close_fn_t(_stream_close))
+
+    _as_parameter_ = property(fget=lambda self: self.stream)
 

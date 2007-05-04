@@ -176,6 +176,15 @@ class ClientSession(object):
                         rev, fields, dirents.pool)
         return dirents
 
+    def cat(self, buffer, path, rev = SVN_INVALID_REVNUM):
+        """Get PATH@REV and save it to BUFFER. BUFFER must be a Python file
+           or a StringIO object.
+
+           If REV is not specified, we look at the latest revision of the
+           repository."""
+        stream = Stream(buffer)
+        svn_ra_get_file(self, path, rev, stream, NULL, NULL, stream.pool)
+
     # Private. Produces a delta editor for the commit, so that the Txn
     # class can commit its changes over the RA layer.
     def _get_commit_editor(self, message, commit_callback, commit_baton, pool):
