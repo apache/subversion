@@ -192,7 +192,8 @@ class Array(ListMixin):
             self.extend(items)
 
     _as_parameter_ = property(fget=lambda self: self.header)
-    elts = property(fget=lambda self: cast(self.header[0].elts, POINTER(self.type)))
+    elts = property(fget=lambda self: cast(self.header[0].elts.raw,
+                                           POINTER(self.type)))
 
     def _get_element(self, i):
         return self.elts[i]
