@@ -23,13 +23,7 @@
 
 #include "../svn_test.h"
 
-/**
- * A shorter version of APR_EOL_STR; holds the native linefeed for the
- * current platform. E.g., on UNIX systems, this will be "\n", while on
- * Windows, it will be "\r\n". This is defined privately because the
- * macro lacks a namespacing prefix. Used to terminate lines in large
- * multi-line string literals.
- */
+/* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
 
 /* Random number seed.  Yes, it's global, just pretend you can't see it. */
