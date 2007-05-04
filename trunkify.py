@@ -2,9 +2,6 @@
 
 # TODO:
 #
-# Move some of the functionality (e.g. a wrapper around
-# svn_ra_get_dir2, etc) into csvn proper.
-#
 # Remove properties from the given URL.
 
 from csvn.core import *
