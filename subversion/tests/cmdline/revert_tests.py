@@ -699,8 +699,7 @@ def revert_replaced_with_history_file(sbox):
   # situation: no local modifications, mu has its original content again.
 
   # revert 'mu' locally, shouldn't change a thing.
-  expected_output = re.escape("Reverted '" + mu_path + "'")
-  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+  svntest.actions.run_and_verify_svn(None, [], [], "revert",
                                      mu_path)
 
   # Verify the content of 'mu'
@@ -727,7 +726,7 @@ test_list = [ None,
               revert_propset__file,
               revert_propdel__dir,
               revert_propdel__file,
-              XFail(revert_replaced_with_history_file),
+              revert_replaced_with_history_file,
              ]
 
 if __name__ == '__main__':
