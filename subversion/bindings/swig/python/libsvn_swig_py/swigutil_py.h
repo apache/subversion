@@ -202,6 +202,13 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
                                              apr_pool_t *pool);
 
 /* helper function to convert a Python dictionary mapping strings to
+   strings into an 'apr_array_header_t *' of svn_prop_t *
+   allocated in POOL. */
+SVN_SWIG_SWIGUTIL_EXPORT
+apr_array_header_t *svn_swig_py_proparray_from_dict(PyObject *dict,
+                                                    apr_pool_t *pool);
+
+/* helper function to convert a Python dictionary mapping strings to
    strings into an apr_hash_t mapping const char *'s to svn_string_t's,
    allocated in POOL. */
 SVN_SWIG_SWIGUTIL_EXPORT
