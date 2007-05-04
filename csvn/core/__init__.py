@@ -235,14 +235,17 @@ class Array(ListMixin):
             for i in xrange(-diff):
                 apr_array_pop(self)
 
-def _stream_read(baton, buffer, len):
+def _stream_read(baton, buffer, l):
     f = cast(baton, py_object).value
-    memmove(buffer, f.read(len), len)
+    s = f.read(l[0])
+    memmove(buffer, string, len(s))
+    l[0] = len(s)
     return SVN_NO_ERROR
 
-def _stream_write(baton, data, len):
+def _stream_write(baton, data, l):
     f = cast(baton, py_object).value
-    f.write(data)
+    s = string_at(data.raw, l[0])
+    f.write(s)
     return SVN_NO_ERROR
 
 def _stream_close(baton):
