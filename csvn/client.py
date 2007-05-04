@@ -157,6 +157,25 @@ class ClientSession(object):
         self.iterpool.clear()
         return kind.value
 
+    def list(self, path, rev = SVN_INVALID_REVNUM, fields = SVN_DIRENT_ALL):
+        """List the contents of the specified directory PATH@REV. This 
+           function returns a dictionary, which maps entry names to
+           directory entries (svn_dirent_t objects).
+
+           If REV is not specified, we look at the latest revision of the
+           repository.
+
+           FIELDS controls what portions of the svn_dirent_t object are
+           filled in. To have them completely filled in, just pass in
+           SVN_DIRENT_ALL (which is the default); otherwise, pass the
+           bitwise OR of all the SVN_DIRENT_ fields you would like to
+           have returned to you.
+        """
+        dirents = Hash(POINTER(svn_dirent_t), None)
+        svn_ra_get_dir2(self, dirents.byref(), NULL, NULL, path,
+                        rev, fields, dirents.pool)
+        return dirents
+
     # Private. Produces a delta editor for the commit, so that the Txn
     # class can commit its changes over the RA layer.
     def _get_commit_editor(self, message, commit_callback, commit_baton, pool):

@@ -49,25 +49,10 @@ else:
 
 s = ClientSession(repos_url, user=User(username=options.username))
 
-dirents_hash = Hash(POINTER(svn_dirent_t), None)
-fetched_rev = svn_revnum_t()
-
-svn_ra_get_dir2(s,
-                dirents_hash.byref(),
-                byref(fetched_rev),
-                None,
-                "",
-                -1,  # bah, SVN_INVALID_REVNUM is not exported
-                0, # don't need any dirent fields
-                s.pool)
-
-base_rev = fetched_rev.value
-
 txn = s.txn()
 
-for name in dirents_hash.iterkeys():
-    # I'm not sure that base_rev here actually guarantees anything...
-    txn.delete(name, base_rev=base_rev)
+for name in s.list("").iterkeys():
+    txn.delete(name)
 
 txn.copy(src_path="", dest_path=new_dir_name)
 
