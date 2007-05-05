@@ -189,7 +189,10 @@ class ClientSession(object):
         svn_ra_get_file(self, path, rev, stream, NULL, NULL, stream.pool)
 
     def proplist(self, path, rev = SVN_INVALID_REVNUM):
-        """Return a dictionary containing the properties on PATH@REV"""
+        """Return a dictionary containing the properties on PATH@REV
+
+           If REV is not specified, we look at the latest revision of the
+           repository."""
 
         props = Hash(POINTER(svn_string_t), None, wrapper=SvnStringPtr)
         status = self.check_path(path, rev)
@@ -201,6 +204,12 @@ class ClientSession(object):
                             props.pool)
         return props
 
+    def propget(self, name, path, rev = SVN_INVALID_REVNUM):
+        """Get property NAME from PATH@REV.
+
+           If REV is not specified, we look at the latest revision of the
+           repository."""
+        return self.proplist(path, rev)[name]
 
     # Private. Produces a delta editor for the commit, so that the Txn
     # class can commit its changes over the RA layer.
