@@ -120,9 +120,10 @@ application_pool = Pool()
 class Hash(DictMixin):
     """A dictionary wrapper for apr_hash_t"""
 
-    def __init__(self, type, items={}):
+    def __init__(self, type, items={}, wrapper=None):
         self.type = type
         self.pool = Pool()
+        self.wrapper = wrapper
         if isinstance(items, POINTER(apr_hash_t)):
             self.hash = items
         elif items is None:
@@ -140,33 +141,44 @@ class Hash(DictMixin):
         value = apr_hash_get(self, cast(key, c_void_p), len(key))
         if not value:
             raise KeyError(key)
-        return cast(value, self.type)
+        value = cast(value, self.type)
+        if self.wrapper:
+            value = self.wrapper.from_param(value)
+        return value
  
     def __setitem__(self, key, value):
-        apr_hash_set(self, cast(key, c_void_p), len(key),
-                     cast(value, self.type))
+        if self.wrapper:
+            value = self.wrapper.to_param(value, self.pool)
+        apr_hash_set(self, key, len(key), value)
+
+    def __delitem__(self, key):
+        apr_hash_set(self, key, len(key), NULL)
 
     def keys(self):
         return list(self.iterkeys())
 
     def __iter__(self):
-        for (key, val) in self.iteritems():
+        for (key, _) in self.iteritems():
             yield key
 
     def iteritems(self):
-        hi = apr_hash_first(self.pool, self)
+        pool = Pool()
+        hi = apr_hash_first(pool, self)
         while hi:
             key_vp = c_void_p()
             val_vp = c_void_p()
             apr_hash_this(hi, byref(key_vp), None, byref(val_vp))
-            yield (string_at(key_vp), cast(val_vp, self.type))
+            val = cast(val_vp, self.type)
+            if self.wrapper:
+                val = self.wrapper.from_param(val)
+            yield (string_at(key_vp), val)
             hi = apr_hash_next(hi)
 
     def __len__(self):
         return apr_hash_count(self)
 
     def byref(self):
-        return pointer(self._as_parameter_)
+        return byref(self._as_parameter_)
 
     def pointer(self):
         return pointer(self._as_parameter_)
@@ -268,4 +280,19 @@ class Stream(object):
             svn_stream_set_close(self.stream, svn_close_fn_t(_stream_close))
 
     _as_parameter_ = property(fget=lambda self: self.stream)
+
+class SvnStringPtr(object):
+
+    @staticmethod
+    def to_param(obj, pool):
+        return svn_string_ncreate(obj, len(obj), pool)
+
+    @staticmethod
+    def from_param(obj):
+
+        assert isinstance(obj[0], svn_string_t)
+
+        # Convert from a raw svn_string_t object. Pass in the length, so that
+        # we handle binary property values with embedded NULLs correctly.
+        return string_at(obj[0].data.raw, obj[0].len)
 

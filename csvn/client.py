@@ -188,6 +188,20 @@ class ClientSession(object):
         stream = Stream(buffer)
         svn_ra_get_file(self, path, rev, stream, NULL, NULL, stream.pool)
 
+    def proplist(self, path, rev = SVN_INVALID_REVNUM):
+        """Return a dictionary containing the properties on PATH@REV"""
+
+        props = Hash(POINTER(svn_string_t), None, wrapper=SvnStringPtr)
+        status = self.check_path(path, rev)
+        if status == svn_node_dir:
+            svn_ra_get_dir2(self, NULL, NULL, props.byref(), path,
+                            rev, 0, props.pool)
+        else:
+            svn_ra_get_file(self, path, rev, NULL, NULL, props.byref(),
+                            props.pool)
+        return props
+
+
     # Private. Produces a delta editor for the commit, so that the Txn
     # class can commit its changes over the RA layer.
     def _get_commit_editor(self, message, commit_callback, commit_baton, pool):
