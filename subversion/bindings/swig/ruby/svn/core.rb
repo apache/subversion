@@ -7,20 +7,23 @@ require "svn/error"
 require "svn/ext/core"
 
 class Time
-  MILLION = 1000000
+  MILLION = 1_000_000
 
   class << self
     def from_apr_time(apr_time)
+      return apr_time if apr_time.is_a?(Time)
       sec, usec = apr_time.divmod(MILLION)
       Time.at(sec, usec)
     end
 
     def from_svn_format(str)
       return nil if str.nil?
+      return str if str.is_a?(Time)
       from_apr_time(Svn::Core.time_from_cstring(str))
     end
 
     def parse_svn_format(str)
+      return str if str.is_a?(Time)
       matched, result = Svn::Core.parse_date(str, Time.now.to_apr_time)
       if matched
         from_apr_time(result)

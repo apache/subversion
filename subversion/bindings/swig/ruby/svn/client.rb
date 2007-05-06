@@ -51,6 +51,11 @@ module Svn
     class Info
       alias url URL
       alias repos_root_url repos_root_URL
+
+      alias _last_changed_date last_changed_date
+      def last_changed_date
+        Time.from_apr_time(_last_changed_date)
+      end
     end
 
 
@@ -159,7 +164,7 @@ module Svn
       def import(path, uri, recurse=true, no_ignore=false)
         Client.import2(path, uri, !recurse, no_ignore, self)
       end
-      
+
       def cleanup(dir)
         Client.cleanup(dir, self)
       end
@@ -176,7 +181,7 @@ module Svn
       def resolved(path, recurse=true)
         Client.resolved(path, recurse, self)
       end
-      
+
       def propset(name, value, target, recurse=true, force=false,
                   base_revision_for_url=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
@@ -186,7 +191,7 @@ module Svn
       alias prop_set propset
       alias pset propset
       alias ps propset
-      
+
       def propdel(name, target, recurse=true, force=false)
         Client.propset2(name, nil, target, recurse, force, self)
       end
@@ -318,7 +323,7 @@ module Svn
                           target_wcpath, depth, ignore_ancestry,
                           force, record_only, dry_run, options, self)
       end
-      
+
       # Returns a content of +path+ at +rev+ as a String.
       def cat(path, rev="HEAD", peg_rev=nil, output=nil)
         used_string_io = output.nil?
@@ -336,7 +341,7 @@ module Svn
         targets = [targets] unless targets.is_a?(Array)
         Client.lock(targets, comment, steal_lock, self)
       end
-      
+
       def unlock(targets, break_lock=false)
         targets = [targets] unless targets.is_a?(Array)
         Client.unlock(targets, break_lock, self)
@@ -355,11 +360,11 @@ module Svn
       def url_from_path(path)
         Client.url_from_path(path)
       end
-      
+
       def uuid_from_path(path, adm)
         Client.uuid_from_path(path, adm, self)
       end
-      
+
       # Returns UUID for +url+ as a String.
       def uuid_from_url(url)
         Client.uuid_from_url(url, self)
@@ -368,7 +373,7 @@ module Svn
       def open_ra_session(url)
         Client.open_ra_session(url, self)
       end
-      
+
       # Scans revisions from +start_rev+ to +end_rev+ for each path in
       # +paths+, invokes block once for each revision, and then returns
       # +nil+.
@@ -432,7 +437,7 @@ module Svn
       alias praise blame
       alias annotate blame
       alias ann annotate
-      
+
       # Returns a value of a revision property named +name+ for +uri+
       # at +rev+, as a String.
       # Both URLs and paths are available as +uri+.
@@ -441,7 +446,7 @@ module Svn
         value
       end
       alias rp revprop
-      
+
       # Returns a value of a revision property named +name+ for +uri+
       # at +rev+, as an Array such as <tt>[value, rev]</tt>.
       # Both URLs and paths are available as +uri+.
@@ -455,7 +460,7 @@ module Svn
       end
       alias rpget revprop_get
       alias rpg revprop_get
-      
+
       # Sets +value+ as a revision property named +name+ for +uri+ at +rev+.
       # Both URLs and paths are available as +uri+.
       def revprop_set(name, value, uri, rev, force=false)
@@ -463,7 +468,7 @@ module Svn
       end
       alias rpset revprop_set
       alias rps revprop_set
-      
+
       # Deletes a revision property, named +name+, for +uri+ at +rev+.
       # Both URLs and paths are available as +uri+.
       def revprop_del(name, uri, rev, force=false)
@@ -493,7 +498,7 @@ module Svn
         Client.export4(from, to, rev, peg_rev, force,
                        ignore_externals, depth, native_eol, self)
       end
-      
+
       def ls(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
         rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
         peg_rev ||= rev
@@ -526,13 +531,13 @@ module Svn
           add_provider(Core.auth_get_windows_simple_provider)
         end
       end
-      
+
       if Core.respond_to?(:auth_get_keychain_simple_provider)
         def add_keychain_simple_provider
           add_provider(Core.auth_get_keychain_simple_provider)
         end
       end
-      
+
       def add_username_provider
         add_provider(Core.auth_get_username_provider)
       end
@@ -560,25 +565,25 @@ module Svn
         klass = Core::AuthCredSimple
         add_prompt_provider("simple", args, prompt, klass)
       end
-      
+
       def add_username_prompt_provider(retry_limit, prompt=Proc.new)
         args = [retry_limit]
         klass = Core::AuthCredUsername
         add_prompt_provider("username", args, prompt, klass)
       end
-      
+
       def add_ssl_server_trust_prompt_provider(prompt=Proc.new)
         args = []
         klass = Core::AuthCredSSLServerTrust
         add_prompt_provider("ssl_server_trust", args, prompt, klass)
       end
-      
+
       def add_ssl_client_cert_prompt_provider(retry_limit, prompt=Proc.new)
         args = [retry_limit]
         klass = Core::AuthCredSSLClientCert
         add_prompt_provider("ssl_client_cert", args, prompt, klass)
       end
-      
+
       def add_ssl_client_cert_pw_prompt_provider(retry_limit, prompt=Proc.new)
         args = [retry_limit]
         klass = Core::AuthCredSSLClientCertPw
@@ -602,7 +607,7 @@ module Svn
       def set_notify_func(callback=Proc.new)
         @notify_baton = Client.set_notify_func2(self, callback)
       end
-      
+
       def set_cancel_func(callback=Proc.new)
         @cancel_baton = Client.set_cancel_func(self, callback)
       end
@@ -657,7 +662,7 @@ module Svn
         private "#{type}_func2", "#{type}_baton2"
         private "#{type}_func2=", "#{type}_baton2="
       end
-      
+
       def add_prompt_provider(name, args, prompt, cred_class)
         real_prompt = Proc.new do |*prompt_args|
           cred = cred_class.new
