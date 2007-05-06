@@ -120,22 +120,33 @@ application_pool = Pool()
 class Hash(DictMixin):
     """A dictionary wrapper for apr_hash_t"""
 
-    def __init__(self, type, items={}, wrapper=None):
+    def __init__(self, type, items={}, wrapper=None, dup=None):
         self.type = type
         self.pool = Pool()
         self.wrapper = wrapper
         if isinstance(items, POINTER(apr_hash_t)):
-            self.hash = items
+            if dup:
+                self.hash = apr_hash_copy(self.pool, items)
+            else:
+                self.hash = items
         elif items is None:
             self.hash = POINTER(apr_hash_t)()
         elif isinstance(items, Hash):
-            self.hash = apr_hash_copy(items, self.pool)
+            if dup:
+                self.hash = apr_hash_copy(self.pool, items)
+            else:
+                self.hash = items.hash
         else:
             self.hash = apr_hash_make(self.pool)
             if hasattr(items, "iteritems"):
                 self.update(items.iteritems())
             else:
                 self.update(items)
+
+        if dup:
+            # Copy items into our pool
+            for key, value in self.iteritems():
+                self[key] = dup(value, self.pool)
 
     def __getitem__(self, key):
         value = apr_hash_get(self, cast(key, c_void_p), len(key))
@@ -145,7 +156,7 @@ class Hash(DictMixin):
         if self.wrapper:
             value = self.wrapper.from_param(value)
         return value
- 
+
     def __setitem__(self, key, value):
         if self.wrapper:
             value = self.wrapper.to_param(value, self.pool)
@@ -175,7 +186,7 @@ class Hash(DictMixin):
             hi = apr_hash_next(hi)
 
     def __len__(self):
-        return apr_hash_count(self)
+        return int(apr_hash_count(self))
 
     def byref(self):
         return byref(self._as_parameter_)
@@ -295,4 +306,5 @@ class SvnStringPtr(object):
         # Convert from a raw svn_string_t object. Pass in the length, so that
         # we handle binary property values with embedded NULLs correctly.
         return string_at(obj[0].data.raw, obj[0].len)
+
 

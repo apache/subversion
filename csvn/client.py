@@ -1,7 +1,36 @@
 import csvn.core as svn
 from csvn.core import *
+from csvn.ext.callback_receiver import CallbackReceiver
 from txn import Txn
 import os
+
+class _LogMessageReceiver(CallbackReceiver):
+
+    def collect(self, session, start_rev, end_rev, paths, limit, verbose,
+                stop_on_copy):
+        self.verbose = verbose
+        pool = Pool()
+        baton = c_void_p(id(self))
+        receiver = svn_log_message_receiver_t(self.receive)
+        svn_ra_get_log(session, paths, start_rev, end_rev,
+                       limit, verbose, stop_on_copy, receiver,
+                       baton, pool)
+
+    def receive(baton, changed_paths, revision, author, date, message, pool):
+        self = cast(baton, py_object).value
+
+        # Convert the wrapped strings to Python strings
+        author = str(author)
+        date = str(date)
+        message = str(message)
+
+        if self.verbose:
+            changed_paths = Hash(POINTER(svn_log_changed_path_t),
+                                 changed_paths, dup = svn_log_changed_path_dup)
+        else:
+            changed_paths = None
+        self.send((changed_paths, revision, author, date, message))
+    receive = staticmethod(receive)
 
 class User(object):
 
@@ -210,6 +239,54 @@ class ClientSession(object):
            If REV is not specified, we look at the latest revision of the
            repository."""
         return self.proplist(path, rev)[name]
+
+    def log(self, start_rev, end_rev, paths=None, limit=0, verbose=FALSE,
+            stop_on_copy=FALSE):
+        """A generator function which tracks information about the revisions
+           between START_REV and END_REV.
+
+           You can iterate through the log information for several revisions
+           using a regular for loop. For example:
+             for entry in session.log(start_rev, end_rev):
+               (changed_paths, revision, author, date, message) = entry
+               ...
+
+           ARGUMENTS:
+
+             If PATHS is not None and has one or more elements, then only
+             show revisions in which at least one of PATHS was changed (i.e.,
+             if file, text or props changed; if dir, props changed or an entry
+             was added or deleted). Each PATH should be relative to the current
+             session's root.
+
+             If LIMIT is non-zero, only the first LIMIT logs are returned.
+
+             If VERBOSE is True, then changed_paths will contain a list of
+             paths affected by this revision.
+
+             If STOP_ON_COPY is True, then this function will not cross
+             copies while traversing history.
+
+             If START_REV or END_REV is a non-existent revision, we throw
+             a SVN_ERR_FS_NO_SUCH_REVISION SubversionException, without
+             returning any logs.
+
+           RETURN VALUES:
+
+             REVISION, AUTHOR, DATE, and MESSAGE are straightforward, and
+             contain what you expect. DATE is formatted as a cstring in
+             a machine-readable format, which is understood by
+             svn_time_from_cstring.
+
+             If VERBOSE is False, then CHANGED_PATHS will be None. Otherwise,
+             it will contain a dictionary which maps every path committed
+             in REVISION to svn_log_changed_path_t pointers.
+        """
+
+        paths = Array(c_char_p, paths is None and [""] or paths)
+        return iter(_LogMessageReceiver(self, start_rev, end_rev, paths,
+                                        limit, verbose, stop_on_copy))
+
 
     # Private. Produces a delta editor for the commit, so that the Txn
     # class can commit its changes over the RA layer.

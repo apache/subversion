@@ -1,0 +1,87 @@
+from csvn.client import *
+import time, sys, gc
+from optparse import OptionParser
+import textwrap
+
+usage = """python log.py [OPTION]... URL
+
+Print all of the log messages for a repository at a given URL,
+similar to 'svn log URL'. Useful for demo purposes only.
+"""
+
+parser = OptionParser(usage=usage)
+parser.add_option("-u", "--username", dest="username",
+                  help="commit the changes as USERNAME")
+parser.add_option("-v", "--verbose", dest="verbose",
+                  action='store_true', help="verbose mode",
+                  default=False)
+parser.add_option("", "--stop-on-copy", dest="stop_on_copy",
+                  action='store_true', help="verbose mode",
+                  default=False)
+parser.add_option("-r", "", dest="rev",
+                  help="revision range")
+
+(options, args) = parser.parse_args()
+
+if len(args) != 1:
+    parser.print_help()
+    sys.exit(1)
+
+repos_url = args[0]
+revs = options.rev
+if revs and ":" in revs:
+    [start_rev, end_rev] = revs.split(":")
+elif revs:
+    start_rev = revs
+    end_rev = revs
+else:
+    start_rev = 1
+    end_rev = "HEAD"
+
+session = ClientSession(repos_url, user=User(options.username))
+
+if end_rev == "HEAD":
+    end_rev = session.latest_revnum()
+if start_rev == "HEAD":
+    start_rev = session.latest_revnum()
+start_rev = int(start_rev)
+end_rev = int(end_rev)
+
+def date_to_human_date(date):
+    """Convert date to a human readable format"""
+    when = apr_time_t()
+    pool = Pool()
+    svn_time_from_cstring(byref(when), date, pool)
+    return svn_time_to_human_cstring(when, pool)
+
+def count_lines(message):
+    num_lines = message.count("\n") + 1
+    if num_lines == 1:
+        num_lines = "1 line"
+    else:
+        num_lines = "%d lines" % num_lines
+    return num_lines
+
+for (changed_paths, revision, author, date, message) in \
+     session.log(start_rev, end_rev, verbose=options.verbose,
+                 stop_on_copy=options.stop_on_copy):
+
+    date = date_to_human_date(date)
+    num_lines = count_lines(message)
+
+    print "-" * 72
+    print "r%d | %s | %s | %s" % (revision, author, date, num_lines)
+    if options.verbose:
+        print "Changed paths:"
+        for key, value in changed_paths.iteritems():
+            value = value[0]
+            if value.copyfrom_rev != SVN_INVALID_REVNUM:
+                print "   %s %s (from %s:%d)" % (value.action, key,
+                                                 value.copyfrom_path,
+                                                 value.copyfrom_rev)
+            else:
+                print "   %s %s" % (value.action, key)
+    print
+    print message
+
+print "-" * 72
