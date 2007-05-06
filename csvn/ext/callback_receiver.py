@@ -28,11 +28,6 @@ class CallbackReceiver(Thread):
         self.consumed = False
         self.exception = None
 
-        # Tell the main thread not to forcefully shut down while
-        # we're still running, causing problems if we take a tiny
-        # bit more time to exit than the main thread
-        self.setDaemon(True)
-
     def run(self, *args, **kwargs):
         try:
             try:
@@ -163,6 +158,9 @@ class _CallbackResultIterator(object):
         # If the child thread raised an exception, re-raise it
         if self.receiver.exception:
             raise self.receiver.exception
+
+        # Wait for the thread to exit before returning
+        self.receiver.join()
 
 class CollectionError(Exception):
     pass
