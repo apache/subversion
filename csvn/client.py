@@ -217,6 +217,19 @@ class ClientSession(object):
         stream = Stream(buffer)
         svn_ra_get_file(self, path, rev, stream, NULL, NULL, stream.pool)
 
+    def info(self, path, rev = None):
+        """Get a pointer to a svn_dirent_t object associated with PATH@REV.
+           If PATH does not exist, return None.
+
+           If REV is not specified, we look at the latest revision of the
+           file."""
+        dirent = POINTER(svn_dirent_t)()
+        dirent.pool = Pool()
+        if rev is None:
+            rev = self.latest_revnum()
+        svn_ra_stat(self, path, rev, byref(dirent), dirent.pool)
+        return dirent
+
     def proplist(self, path, rev = SVN_INVALID_REVNUM):
         """Return a dictionary containing the properties on PATH@REV
 
