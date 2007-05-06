@@ -341,14 +341,6 @@ Contents
         whether a deletion of an immediate child should be allowed to
         pass thru when using svn_depth_files.
 
-      * I haven't done anything with 'svn status' yet, don't know if
-        it would behave correctly w.r.t. depths out of the box or not.
-        Clearly, this needs investigation.
-
-      * I haven't done anything with either 'svn switch --depth' or
-        'svn switch' handling mixed-depth working copies automatically.  
-        Probably some bits work right now, and other bits don't.
-
       * There's no interface for getting rid of stuff once you've
         brought it into your working copy -- no "exclusion" interface,
         in other words.  So you can do this:
@@ -384,6 +376,8 @@ Contents
            svn_client_diff_summarize2()
            svn_client_diff_summarize_peg2()
            svn_client_diff_peg3()
+
+      * We need tests for 'svn status --depth' and 'svn switch --depth'.
 
       * Some APIs still take recurse booleans.  It's not clear to me
         that all of these should be switched to depth, but the
