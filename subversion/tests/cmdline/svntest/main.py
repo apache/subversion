@@ -158,6 +158,9 @@ fs_type = None
 # this dir, so there's one point at which to mount, e.g., a ramdisk.
 work_dir = "svn-test-work"
 
+# Constant for the merge info property.
+SVN_PROP_MERGE_INFO = "svn:mergeinfo"
+
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
 general_repo_dir = os.path.join(work_dir, "repositories")

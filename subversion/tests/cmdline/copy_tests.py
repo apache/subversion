@@ -23,6 +23,8 @@ import stat, os, re
 import svntest
 from svntest import SVNAnyOutput
 
+from svntest.main import SVN_PROP_MERGE_INFO
+
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
@@ -164,7 +166,7 @@ is only relevant when WC_COPY is true."""
   # Verify both content and props have been copied
   props = { 'phony-prop' : '*' }
   if not wc_copy or contact_repos_for_merge_info:
-    props['svn:mergeinfo'] = '/A/D/G/pi:1-2'
+    props[SVN_PROP_MERGE_INFO] = '/A/D/G/pi:1-2'
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
                       props=props)
@@ -921,7 +923,7 @@ def wc_to_repos(sbox):
                            (H2_url, '/A/D/H:1'),
                            (H2_url + '/beta', '/A/B/E/beta:1')):
     svntest.actions.run_and_verify_svn(None, [merge_info + '\n'], [],
-                                       'propget', 'svn:mergeinfo', dest)
+                                       'propget', SVN_PROP_MERGE_INFO, dest)
 
   # check local property was copied
   svntest.actions.run_and_verify_svn(None, ['bar\n'], [], 'propget', 'foo',
@@ -1052,7 +1054,7 @@ def repos_to_wc(sbox):
   # Validate that the merge info of the copy destination matches the
   # implied merge info from the copy source.
   svntest.actions.run_and_verify_svn(None, ['/A/B:1\n'], [],
-                                     'propget', 'svn:mergeinfo',
+                                     'propget', SVN_PROP_MERGE_INFO,
                                      os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
@@ -2751,7 +2753,7 @@ def copy_added_paths_to_URL(sbox):
   # Validate that the merge info of the copy destination matches the
   # implied merge info from the copy source.
   svntest.actions.run_and_verify_svn(None, ['\n'], [], 'propget',
-                                     'svn:mergeinfo', upsilon_copy_URL)
+                                     SVN_PROP_MERGE_INFO, upsilon_copy_URL)
 
   # Copy added dir A/D/I to URL://A/D/G/I
   I_copy_URL = sbox.repo_url + '/A/D/G/I'
@@ -3320,7 +3322,7 @@ def copy_peg_rev_local_files(sbox):
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
     'sigma' : Item(contents=psi_text,
-                   props={ 'svn:mergeinfo' : '/A/D/H/psi:1' }),
+                   props={ SVN_PROP_MERGE_INFO : '/A/D/H/psi:1' }),
     })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
@@ -3389,7 +3391,7 @@ def copy_peg_rev_local_dirs(sbox):
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
-    'A/J'         : Item(props={ 'svn:mergeinfo' : '/A/B/E:1' }),
+    'A/J'         : Item(props={ SVN_PROP_MERGE_INFO : '/A/B/E:1' }),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
     'A/J/beta'  : Item(contents="This is the file 'beta'.\n"),
     })
@@ -3437,7 +3439,7 @@ def copy_peg_rev_url(sbox):
   # Validate that the merge info of the copy destination matches the
   # implied merge info from the copy source.
   svntest.actions.run_and_verify_svn(None, ['/A/D/H/psi:1\n'], [],
-                                     'propget', 'svn:mergeinfo', sigma_url)
+                                     'propget', SVN_PROP_MERGE_INFO, sigma_url)
 
   # Update to HEAD and verify disk contents
   expected_output = svntest.wc.State(wc_dir, {

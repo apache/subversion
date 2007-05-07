@@ -28,8 +28,7 @@ Item = wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 
-# Constant for the merge info property.
-SVN_PROP_MERGE_INFO = "svn:mergeinfo"
+from svntest.main import SVN_PROP_MERGE_INFO
 
 def shorten_path_kludge(path):
   '''Search for the comment entitled "The Merge Kluge" elsewhere in
@@ -5322,7 +5321,8 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   ### wipe all ranges for a file due to the bug pointed out in r24645.
   mu_copy_path = os.path.join(A_COPY_path, 'mu')
   svntest.actions.run_and_verify_svn(None,
-                                     ["property 'svn:mergeinfo' set on '" +
+                                     ["property '" + SVN_PROP_MERGE_INFO 
+                                      + "' set on '" +
                                       mu_copy_path + "'\n"], [], 'propset',
                                      SVN_PROP_MERGE_INFO, '', mu_copy_path)
   # ...and confirm that we can commit the wiped merge info...
@@ -5559,9 +5559,9 @@ def merge_to_switched_path(sbox):
      "A         " + G_COPY_path + "\n"])
   expected = svntest.actions.UnorderedOutput(
     ["Properties on '" + A_COPY_D_path + "':\n",
-     "  svn:mergeinfo : /A/D/:4\n",
+     "  " + SVN_PROP_MERGE_INFO + " : /A/D/:4\n",
      "Properties on '" + A_COPY_D_G_path + "':\n",
-     "  svn:mergeinfo : /A/D/G:4\n"])
+     "  " + SVN_PROP_MERGE_INFO +" : /A/D/G:4\n"])
   svntest.actions.run_and_verify_svn(None,
                                      expected, [],
                                      'pl', '-vR', A_COPY_D_path)
