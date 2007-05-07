@@ -119,6 +119,9 @@ history index).
 * Account for merge info differences for switched directories when
   gathering and setting merge info.  (pburba)
 
+* Support --depth option for merge: Limit search for children with merge
+  info to depth and set appropriate merge info at depth.  (pburba)
+
 * Handle sparsely-populated directories, or portions of a tree not
   checked out due to lack of authorization.
 
