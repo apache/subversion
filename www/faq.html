@@ -3312,6 +3312,29 @@ to fix this issue.</p>
 
 </div>
 
+<div class="h3" id="broken-subclipse" title="broken-subclipse">
+<h3>I get an error that says "This client is too old".</h3>
+
+You're using both an older (pre-1.4) version of the Subversion
+command-line client, and Subclipse.  You recently upgraded Subclipse,
+and now your command-line client says
+
+<pre>
+svn: This client is too old to work with working copy
+'/path/to/your/working/copy'; please get a newer Subversion client
+</pre>
+
+This happened because Subversion's working-copy format changed
+incompatibly&mdash;the new version of Subclipse upgraded your working
+copy, so now your command-line program, which is old, cannot read it.
+(This problem isn't specific to Subclipse; it would also have happened
+if you'd used a command-line client that was 1.4 or newer, along with
+your older command-line client.)
+
+The fix is simply to upgrade your command-line client to 1.4 or newer.
+
+</div>
+
 <div class="h2" id="developer-questions" title="developer-questions">
 <h2>Developer questions:</h2>
 <p/>
@@ -3507,29 +3530,6 @@ real data loss in the repository.</p>
 <p>You might also like to check The Jargon File's definition for 
 <a href="http://catb.org/~esr/jargon/html/W/wedged.html">'wedged'</a>.
 </p>
-
-</div>
-
-<div class="h3" id="broken-subclipse" title="broken-subclipse">
-<h3>I get an error that says "This client is too old".</h3>
-
-You're using both an older (pre-1.4) version of the Subversion
-command-line client, and Subclipse.  You recently upgraded Subclipse,
-and now your command-line client says
-
-<pre>
-svn: This client is too old to work with working copy
-'/path/to/your/working/copy'; please get a newer Subversion client
-</pre>
-
-This happened because Subversion's working-copy format changed
-incompatibly&mdash;the new version of Subclipse upgraded your working
-copy, so now your command-line program, which is old, cannot read it.
-(This problem isn't specific to Subclipse; it would also have happened
-if you'd used a command-line client that was 1.4 or newer, along with
-your older command-line client.)
-
-The fix is simply to upgrade your command-line client to 1.4 or newer.
 
 </div>
 
