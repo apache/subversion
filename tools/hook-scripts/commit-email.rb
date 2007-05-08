@@ -10,7 +10,7 @@ require "socket"
 
 SMTP_PORT = 25
 KILO_SIZE = 1000
-DEFAULT_MAX_SIZE = "500M"
+DEFAULT_MAX_SIZE = "100M"
 
 class OptionParser
   class CannotCoexistOption < ParseError
