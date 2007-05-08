@@ -393,7 +393,6 @@ def detect_project(info, params)
   [
    :added_files, :deleted_files, :updated_files, :copied_files,
    :added_dirs, :deleted_dirs, :updated_dirs, :copied_dirs,
-   :changed_dirs,
   ].each do |targets|
     info.send(targets).each do |path|
       first_component = path.split("/", 2)[0]
