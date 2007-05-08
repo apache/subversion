@@ -1,7 +1,7 @@
 /* merge-info-sqlite-index.c
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -30,7 +30,7 @@
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 
-#include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_mergeinfo.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
 
@@ -151,7 +151,7 @@ open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
 {
   svn_error_t *err;
   const char *db_path = svn_path_join(repos_path, 
-                                      SVN_FS_MERGE_INFO__DB_NAME, pool);
+                                      SVN_FS_MERGEINFO__DB_NAME, pool);
   SQLITE_ERR(sqlite3_open(db_path, db), *db);
 #ifdef SQLITE3_DEBUG
   sqlite3_trace(*db, sqlite_tracer, *db);
@@ -173,7 +173,7 @@ open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
 /* Create an sqlite DB for our merge info index under PATH.  Use POOL
    for temporary allocations. */
 svn_error_t *
-svn_fs_merge_info__create_index(const char *path, apr_pool_t *pool)
+svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool)
 {
   sqlite3 *db;
   SVN_ERR(open_db(&db, path, pool));
@@ -284,9 +284,9 @@ index_txn_merge_info(sqlite3 *db, svn_revnum_t new_rev,
    revision number as NEW_REV, and if the current transaction contains
    merge info, record it. */
 svn_error_t *
-svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
-                                apr_hash_t *mergeinfo_for_paths,
-                                apr_pool_t *pool)
+svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
+                               apr_hash_t *mergeinfo_for_paths,
+                               apr_pool_t *pool)
 {
   const char *deletestring;
   sqlite3 *db;
@@ -539,11 +539,11 @@ get_merge_info_for_path(sqlite3 *db,
 
 /* Get the merge info for a set of paths.  */
 svn_error_t *
-svn_fs_merge_info__get_merge_info(apr_hash_t **mergeinfo,
-                                  svn_fs_root_t *root,
-                                  const apr_array_header_t *paths,
-                                  svn_boolean_t include_parents,
-                                  apr_pool_t *pool)
+svn_fs_mergeinfo__get_merge_info(apr_hash_t **mergeinfo,
+                                 svn_fs_root_t *root,
+                                 const apr_array_header_t *paths,
+                                 svn_boolean_t include_parents,
+                                 apr_pool_t *pool)
 {
   apr_hash_t *mergeinfo_cache = apr_hash_make(pool);
   sqlite3 *db;
