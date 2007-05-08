@@ -769,7 +769,7 @@ def log_limit(sbox):
   svntest.actions.run_and_verify_svn(None, None, must_be_positive,
                                      'log', '--limit', '-1', '--revision', '1',
                                      sbox.repo_url, 'A/B')
-                                                                                                
+
 def log_base_peg(sbox):
   "run log on an @BASE target"
   guarantee_repos_and_wc(sbox)
