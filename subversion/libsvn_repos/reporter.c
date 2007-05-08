@@ -89,7 +89,13 @@ typedef struct report_baton_t
   svn_revnum_t t_rev;          /* Revnum which the edit will bring the wc to */
   const char *t_path;          /* FS path the edit will bring the wc to */
   svn_boolean_t text_deltas;   /* Whether to report text deltas */
-  svn_depth_t default_depth;   /* Default depth for set_path and link_path. */
+
+  /* If the client requested a specific depth, record it here; if the
+     client did not, then this is svn_depth_unknown, and the depth of
+     information transmitted from server to client will be governed
+     strictly by the path-associated depths recorded in the report. */
+  svn_depth_t requested_depth;
+
   svn_boolean_t ignore_ancestry;
   svn_boolean_t is_switch;
   const svn_delta_editor_t *editor;
@@ -1044,7 +1050,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
 /* --- COLLECTING THE REPORT INFORMATION --- */
 
 /* Record a report operation into the temporary file.  Return an error
-   if both DEPTH and B->default_depth is svn_depth_unknown. */
+   if DEPTH is svn_depth_unknown. */
 static svn_error_t *
 write_path_info(report_baton_t *b, const char *path, const char *lpath,
                 svn_revnum_t rev, svn_depth_t depth,
@@ -1054,15 +1060,9 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
   const char *lrep, *rrep, *drep, *ltrep, *rep;
 
   if (depth == svn_depth_unknown)
-    {
-      depth = b->default_depth;
-
-      if (depth == svn_depth_unknown)
-        return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
-                                 _("Unsupported report depth '%s' for "
-                                   "path '%s'"),
-                                 svn_depth_to_word(depth), path);
-    }
+    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                             _("Unsupported report depth '%s'"),
+                             svn_depth_to_word(depth));
 
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
@@ -1104,8 +1104,7 @@ svn_repos_set_path2(void *baton, const char *path, svn_revnum_t rev,
                     svn_boolean_t start_empty, const char *lock_token,
                     apr_pool_t *pool)
 {
-  return svn_repos_set_path3(baton, path, rev,
-                             ((report_baton_t *) baton)->default_depth,
+  return svn_repos_set_path3(baton, path, rev, svn_depth_infinity,
                              start_empty, lock_token, pool);
 }
 
@@ -1131,8 +1130,7 @@ svn_repos_link_path2(void *baton, const char *path, const char *link_path,
                      svn_revnum_t rev, svn_boolean_t start_empty,
                      const char *lock_token, apr_pool_t *pool)
 {
-  return svn_repos_link_path3(baton, path, link_path, rev,
-                              ((report_baton_t *) baton)->default_depth,
+  return svn_repos_link_path3(baton, path, link_path, rev, svn_depth_infinity,
                               start_empty, lock_token, pool);
 }
 
@@ -1186,7 +1184,7 @@ svn_repos__begin_report(void **report_baton,
                         const char *s_operand,
                         const char *switch_path,
                         svn_boolean_t text_deltas,
-                        svn_depth_t default_depth,
+                        svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
@@ -1207,7 +1205,7 @@ svn_repos__begin_report(void **report_baton,
   b->t_path = switch_path ? switch_path
     : svn_path_join(fs_base, s_operand, pool);
   b->text_deltas = text_deltas;
-  b->default_depth = default_depth;
+  b->requested_depth = depth;
   b->ignore_ancestry = ignore_ancestry;
   b->is_switch = (switch_path != NULL);
   b->editor = editor;

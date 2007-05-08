@@ -2402,14 +2402,18 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                    report->sess->bkt_alloc);
     }
 
-  /* Old servers still pay attention to "recursive" here (modern
-     servers use the "depth" argument to link_path/set_path). */
+  /* Old servers know "recursive" but not "depth"; help them DTRT. */
   if (depth == svn_depth_files || depth == svn_depth_empty)
     {
       svn_ra_serf__add_tag_buckets(report->buckets,
                                    "S:recursive", "no",
                                    report->sess->bkt_alloc);
     }
+
+  /* ### TODO(sd): Send depth as a word, not a number! */
+  svn_ra_serf__add_tag_buckets(report->buckets,
+                               "S:depth", apr_itoa(pool, depth),
+                               report->sess->bkt_alloc);
 
   return SVN_NO_ERROR;
 }
