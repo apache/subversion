@@ -407,10 +407,10 @@ end
 def make_subject(name, info, params)
   subject = ""
   project = detect_project(info, params)
+  subject << "#{name} " if name
   if project
     subject << "[#{project} r#{info.revision}] "
   else
-    subject << "#{name}:" if name
     subject << "r#{info.revision}: "
   end
   subject << info.log.lstrip.to_a.first.to_s.chomp
