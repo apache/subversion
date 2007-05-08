@@ -46,7 +46,7 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 
-#include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -1449,7 +1449,7 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
       svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
       apr_hash_t *mergeinfo = apr_hash_make(pool);
       SVN_ERR(svn_hash_read2(mergeinfo, stream, NULL, pool));
-      SVN_ERR(svn_fs_merge_info__update_index(txn, *new_rev, mergeinfo, pool));
+      SVN_ERR(svn_fs_mergeinfo__update_index(txn, *new_rev, mergeinfo, pool));
       SVN_ERR(svn_fs_base__set_txn_prop
               (fs, txn_id, SVN_FS_PROP_TXN_MERGEINFO, NULL, trail, pool));
     }

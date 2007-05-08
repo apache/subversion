@@ -3,7 +3,7 @@
  * be consumed by only fs_* libs.
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,20 +17,20 @@
  * ====================================================================
  */
 
-#ifndef SVN_FS_MERGE_INFO_H
-#define SVN_FS_MERGE_INFO_H
+#ifndef SVN_FS_MERGEINFO_H
+#define SVN_FS_MERGEINFO_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 /* The name of the sqlite merge info database. */
-#define SVN_FS_MERGE_INFO__DB_NAME "mergeinfo.db"
+#define SVN_FS_MERGEINFO__DB_NAME "mergeinfo.db"
 
 /* Create the merge info index under PATH.  Use POOL for any temporary
    allocations. */
 svn_error_t *
-svn_fs_merge_info__create_index(const char *path, apr_pool_t *pool);
+svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool);
 
 /* Update the merge info index according to the changes made in
    transaction TXN for revision NEW_REV.  MERGEINFO_FOR_PATHS is the
@@ -43,10 +43,10 @@ svn_fs_merge_info__create_index(const char *path, apr_pool_t *pool);
    called to make sure there is no stray merge info for this revision
    left from a previous failed commit.  */
 svn_error_t *
-svn_fs_merge_info__update_index(svn_fs_txn_t *txn, 
-                                svn_revnum_t new_rev,
-                                apr_hash_t *mergeinfo_for_paths,
-                                apr_pool_t *pool);
+svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, 
+                               svn_revnum_t new_rev,
+                               apr_hash_t *mergeinfo_for_paths,
+                               apr_pool_t *pool);
 
 /* Get the merge info for the set of PATHS (an array of
    absolute-in-the-fs paths) under ROOT and return it in *MERGEINFO,
@@ -56,14 +56,14 @@ svn_fs_merge_info__update_index(svn_fs_txn_t *txn,
    error if the mergeinfo store does not exist or doesn't use the
    'mergeinfo' schema.  */
 svn_error_t *
-svn_fs_merge_info__get_merge_info(apr_hash_t **mergeinfo,
-                                  svn_fs_root_t *root,
-                                  const apr_array_header_t *paths,
-                                  svn_boolean_t include_parents,
-                                  apr_pool_t *pool);
+svn_fs_mergeinfo__get_merge_info(apr_hash_t **mergeinfo,
+                                 svn_fs_root_t *root,
+                                 const apr_array_header_t *paths,
+                                 svn_boolean_t include_parents,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_FS_MERGE_INFO_H */
+#endif /* SVN_FS_MERGEINFO_H */
