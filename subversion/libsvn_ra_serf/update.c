@@ -2410,9 +2410,8 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                    report->sess->bkt_alloc);
     }
 
-  /* ### TODO(sd): Send depth as a word, not a number! */
   svn_ra_serf__add_tag_buckets(report->buckets,
-                               "S:depth", apr_itoa(pool, depth),
+                               "S:depth", svn_depth_to_word(depth),
                                report->sess->bkt_alloc);
 
   return SVN_NO_ERROR;
