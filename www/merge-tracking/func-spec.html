@@ -207,16 +207,15 @@ housekeeping property).</p>
 </div>  <!-- find-changeset -->
 
 <div class="h4" id="commutative-author-and-rev">
-<h4>Commutative Author and Revision Auditing</h4>
+<h4>Commutative Author and Revision Reporting</h4>
 
 <div class="h5" id="auditing-scope">
 <h5>Scope</h5>
 
-<p>Most commands which show username and merge information should also
+<p>The following commands which show username and merge information should
 respect merge information and support <a
 href="requirements.html#commutative-author-and-rev">Commutative
-Auditing</a>.  These commands, collectively referred to <em>auditing
-commands</em>, are:</p>
+Reporting</a>.  These commands are:</p>
 
 <ul>
   <li><code>svn log</code></li>
@@ -234,12 +233,12 @@ use by third-party clients like <a href="http://tortoisesvn.tigris.org/"
 >TortoiseSVN</a>).</p>
 
 <p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
-single-character shortcut, will be introduced for the auditing commands.
-Using it will enable these commands to show the additional information gleaned
-from parsing and processing the merge info on the targets in question.  This
-switch will also work with <code>--xml</code> to include additional merge 
-information.  The new functionality added by <code>--merge-sensitive</code> is
-as follows.</p>
+single-character shortcut (<code>-g</code>), will be introduced for the 
+toggle merge information.  Using it will enable these commands to show the
+additional information gleaned from parsing and processing the merge info
+on the targets in question.  This switch will also work with
+<code>--xml</code> to include additional merge information.  The new
+functionality added by <code>--merge-sensitive</code> is as follows.</p>
 
 <dl>
   <dt><code>svn log</code></dt>
