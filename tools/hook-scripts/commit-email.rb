@@ -394,10 +394,12 @@ def detect_project(info, params)
    :added_files, :deleted_files, :updated_files, :copied_files,
    :added_dirs, :deleted_dirs, :updated_dirs, :copied_dirs,
   ].each do |targets|
-    info.send(targets).each do |path|
-      first_component = path.split("/", 2)[0]
-      project ||= first_component
-      return nil if project != first_component
+    info.send(targets).each do |path, from_path, |
+      [path, from_path].compact.each do |target_path|
+        first_component = target_path.split("/", 2)[0]
+        project ||= first_component
+        return nil if project != first_component
+      end
     end
   end
   project
