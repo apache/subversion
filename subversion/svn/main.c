@@ -1369,6 +1369,9 @@ main(int argc, const char *argv[])
         if (err != SVN_NO_ERROR)
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         break;
+      case 'g':
+        opt_state.merge_sensitive = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */

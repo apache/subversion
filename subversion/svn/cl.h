@@ -156,6 +156,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t keep_changelist; /* don't remove changelist after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
   apr_hash_t *revprop_table;     /* table with revision properties to set */
+  svn_boolean_t merge_sensitive; /* display extra merge information */
 
 } svn_cl__opt_state_t;
 
