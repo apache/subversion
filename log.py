@@ -47,13 +47,6 @@ if start_rev == "HEAD":
 start_rev = int(start_rev)
 end_rev = int(end_rev)
 
-def date_to_human_date(date):
-    """Convert date to a human readable format"""
-    when = apr_time_t()
-    pool = Pool()
-    svn_time_from_cstring(byref(when), date, pool)
-    return svn_time_to_human_cstring(when, pool)
-
 def count_lines(message):
     num_lines = message.count("\n") + 1
     if num_lines == 1:
