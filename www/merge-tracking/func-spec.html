@@ -134,25 +134,32 @@ merge info in the WC).</p>
 
 </div>  <!-- copy-move -->
 
-<!-- switched-paths -->
-
-<div id=switched-paths>
-
+<div class="h2" id="switched-paths">
 <h2>Switched Paths</h2>
 
-<p>Switched paths are treated as the root of the working copy regarding merge info inheritance and elision, specifically:</p>
+<p>Switched paths are treated as the root of the working copy regarding
+merge info inheritance and elision, specifically:</p>
 
-<ul type=disc>
- <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
-     mso-list:l8 level1 lfo1;tab-stops:list .5in'>Merge rev N to switched PATH which has no explicit merge info: PATH does not inherit merge info from its working copy ancestors.  PATH gets merge info for rev N plus any inherited mergeinfo from the repository.</li>
- <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
-     mso-list:l8 level1 lfo1;tab-stops:list .5in'>Merge rev N to PATH with switched CHILD with no explicit merge info: CHILD does not inherit merge info from its working copy ancestors.  CHILD gets merge info for rev N plus any inherited mergeinfo from the repository.</li>
- <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
-     mso-list:l8 level1 lfo1;tab-stops:list .5in'>Elision: Merge info on switched paths never elides.</li>
- <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
-     mso-list:l8 level1 lfo1;tab-stops:list .5in'>Switch PATH which has <I>committed</I> merge info or switch PATH which has a CHILD with <I>committed</I> mergeinfo: PATH’s / CHILD’s mergeinfo is <I>replaced</I> by the explicit mergeinfo from the repository.</li>
- <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
-     mso-list:l8 level1 lfo1;tab-stops:list .5in'>Switch PATH which has <I>local</I> merge info or switch PATH which has a CHILD with <I>local</I> mergeinfo: PATH’s / CHILDS’s local mergeinfo is <I>merged</I> with explicit or inherited mergeinfo from the repository.</li>
+<ul>
+ <li>Merge rev N to switched PATH which has no explicit merge info: PATH
+   does not inherit merge info from its working copy ancestors.  PATH gets
+   merge info for rev N plus any inherited mergeinfo from the repository.</li>
+
+ <li>Merge rev N to PATH with switched CHILD with no explicit merge info:
+   CHILD does not inherit merge info from its working copy ancestors.  CHILD
+   gets merge info for rev N plus any inherited mergeinfo from the repository.
+   </li>
+
+ <li>Elision: Merge info on switched paths never elides.</li>
+
+ <li>Switch PATH which has <em>committed</em> merge info or switch PATH which
+   has a CHILD with <em>committed</em> mergeinfo: PATH's / CHILD's mergeinfo
+   is <em>replaced</em> by the explicit mergeinfo from the repository.</li>
+
+ <li>Switch PATH which has <em>local</em> merge info or switch PATH which has
+   a CHILD with <em>local</em> mergeinfo: PATH's / CHILDS's local mergeinfo
+   is <em>merged</em> with explicit or inherited mergeinfo from the repository.
+   </li>
 </ul>
 
 </div>  <!-- switched-paths -->
