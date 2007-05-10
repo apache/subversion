@@ -749,7 +749,6 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
     {
       /* This is a regular "mkdir" + "svn add" */
       apr_pool_t *subpool = svn_pool_create(pool);
-      svn_error_t *err;
       int i;
 
       for (i = 0; i < paths->nelts; i++)
