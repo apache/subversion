@@ -623,6 +623,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
         {
           svn_client__copy_pair_t *first_pair =
             APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *);
+          svn_error_clear(err);
+
           return svn_error_createf
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              _("Source and dest appear not to be in the same repository "
