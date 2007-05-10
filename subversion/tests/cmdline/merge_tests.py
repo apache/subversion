@@ -5570,10 +5570,12 @@ def merge_to_switched_path(sbox):
 def merge_to_path_with_switched_children(sbox):
   "merge to path with switched children"
 
-  # When the target of a merge has switched children without mergeinfo,
-  # the children should also get mergeinfo set on them as a result of
-  # the merge.  If the switched children do have mergeinfo this mergeinfo
-  # should not elide.
+  # When the target of a merge has switched children without explicit
+  # mergeinfo, the children should also get mergeinfo set on them as a
+  # result of the merge.  This mergeinfo includes the mergeinfo resulting
+  # from the merge *and* any mergeinfo from the repos for the switched path.
+  # If the switched children do have mergeinfo this mergeinfo should not
+  # elide.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -5585,15 +5587,17 @@ def merge_to_path_with_switched_children(sbox):
   A_COPY_G_path = os.path.join(wc_dir, "A_COPY", "D", "G")
   A_COPY_H_path = os.path.join(wc_dir, "A_COPY", "D", "H")
   A_COPY_D_path = os.path.join(wc_dir, "A_COPY", "D")
+  H_path = os.path.join(wc_dir, "A", "D", "H")
+
+  svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up',
+                                     wc_dir)
+  wc_status.tweak(wc_rev=6)
 
   # Switch a file and dir path in the branch:
 
   # Switch A_COPY/D/G to A/D/G.
   wc_disk.tweak('A_COPY/D/G/rho',contents="New content")
-  wc_status.tweak("A_COPY/D/G", wc_rev=6, switched='S')
-  wc_status.tweak("A_COPY/D/G/pi", wc_rev=6)
-  wc_status.tweak("A_COPY/D/G/rho", wc_rev=6)
-  wc_status.tweak("A_COPY/D/G/tau", wc_rev=6)
+  wc_status.tweak("A_COPY/D/G", switched='S')
   expected_output = svntest.wc.State(sbox.wc_dir, {
     "A_COPY/D/G/rho" : Item(status='U '),
     })
@@ -5603,7 +5607,7 @@ def merge_to_path_with_switched_children(sbox):
                                         None, None, None, None, None, 1)
 
   # Switch A_COPY/D/H/psi to A/D/H/psi.
-  wc_status.tweak("A_COPY/D/H/psi", wc_rev=6, switched='S')
+  wc_status.tweak("A_COPY/D/H/psi", switched='S')
   wc_disk.tweak('A_COPY/D/H/psi',contents="New content")
   expected_output = svntest.wc.State(sbox.wc_dir, {
     "A_COPY/D/H/psi" : Item(status='U '),
@@ -5619,22 +5623,41 @@ def merge_to_path_with_switched_children(sbox):
   # file A_COPY/D/H/psi (which has no mergeinfo prior to the merge),
   # should get its own mergeinfo.
   #
+  # Prior to this merge, manually set some the mergeinfo '/A/B/E:5'
+  # on A/D/H and commit it.  This results in the switched path A_COPY/D/H/psi
+  # having inheritable mergeinfo from the repository.
+  #
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property '" + SVN_PROP_MERGE_INFO +
+                                      "' set on '" + H_path + "'" +
+                                      "\n"], [], 'ps', SVN_PROP_MERGE_INFO,
+                                     '/A/B/E:5', H_path)
+  expected_output = wc.State(wc_dir, {'A/D/H' : Item(verb='Sending')})
+  wc_status.tweak("A/D/H", wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+  # Update the WC putting A_COPY/D/H/psi is at rev 7 so it will inherit
+  # the propval just committed.
+  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [], 'up',
+                                     wc_dir)
   short_H_COPY_path = shorten_path_kludge(A_COPY_H_path)
   expected_output = wc.State(short_H_COPY_path, {
     'omega' : Item(status='U ')
     })
   expected_status = wc.State(short_H_COPY_path, {
-    ''      : Item(status=' M', wc_rev=2),
-    'psi'   : Item(status=' M', wc_rev=6, switched='S'),
-    'omega' : Item(status='M ', wc_rev=2),
-    'chi'   : Item(status='  ', wc_rev=2),
+    ''      : Item(status=' M', wc_rev=7),
+    'psi'   : Item(status=' M', wc_rev=7, switched='S'),
+    'omega' : Item(status='M ', wc_rev=7),
+    'chi'   : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
     ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:1,6'}),
     'psi'   : Item("New content",
-                   props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1,6'}),
+                   props={SVN_PROP_MERGE_INFO :
+                          '/A/B/E/psi:5\n/A/D/H/psi:1,6\n'}),
     'omega' : Item("New content"),
     'chi'   : Item("This is the file 'chi'.\n"),
     })
@@ -5664,16 +5687,16 @@ def merge_to_path_with_switched_children(sbox):
   short_D_COPY_path = shorten_path_kludge(A_COPY_D_path)
   expected_output = wc.State(short_D_COPY_path, {})
   expected_status = wc.State(short_D_COPY_path, {
-    ''        : Item(status=' M', wc_rev=2),
-    'H'       : Item(status=' M', wc_rev=2),
-    'H/chi'   : Item(status='  ', wc_rev=2),
-    'H/omega' : Item(status='M ', wc_rev=2),
-    'H/psi'   : Item(status=' M', wc_rev=6, switched='S'),
-    'G'       : Item(status=' M', wc_rev=6, switched='S'),
-    'G/pi'    : Item(status='  ', wc_rev=6),
-    'G/rho'   : Item(status='  ', wc_rev=6),
-    'G/tau'   : Item(status='  ', wc_rev=6),
-    'gamma'   : Item(status='  ', wc_rev=2),
+    ''        : Item(status=' M', wc_rev=7),
+    'H'       : Item(status=' M', wc_rev=7),
+    'H/chi'   : Item(status='  ', wc_rev=7),
+    'H/omega' : Item(status='M ', wc_rev=7),
+    'H/psi'   : Item(status=' M', wc_rev=7, switched='S'),
+    'G'       : Item(status=' M', wc_rev=7, switched='S'),
+    'G/pi'    : Item(status='  ', wc_rev=7),
+    'G/rho'   : Item(status='  ', wc_rev=7),
+    'G/tau'   : Item(status='  ', wc_rev=7),
+    'gamma'   : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,4'}),
@@ -5681,7 +5704,8 @@ def merge_to_path_with_switched_children(sbox):
     'H/chi'   : Item("This is the file 'chi'.\n"),
     'H/omega' : Item("New content"),
     'H/psi'   : Item("New content",
-                     props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1,4,6'}),
+                     props={SVN_PROP_MERGE_INFO :
+                            '/A/B/E/psi:5\n/A/D/H/psi:1,4,6\n'}),
     'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4'}),
     'G/pi'    : Item("This is the file 'pi'.\n"),
     'G/rho'   : Item("New content"),
@@ -5702,7 +5726,8 @@ def merge_to_path_with_switched_children(sbox):
     expected_disk.tweak('H', props={}) # Elides to A_COPY/D
     expected_status.tweak('H', status='  ')
     expected_disk.tweak('H/psi',
-                        props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1,4,6'})
+                        props={SVN_PROP_MERGE_INFO :
+                               '/A/B/E/psi:5\n/A/D/H/psi:1,4,6\n'})
     svntest.actions.run_and_verify_merge(short_D_COPY_path, '5', '6',
                                          sbox.repo_url + '/A/D',
                                          expected_output, expected_disk,
@@ -5720,25 +5745,25 @@ def merge_to_path_with_switched_children(sbox):
     'B/E/beta' : Item(status='U ')
     })
   expected_status = wc.State(short_A_COPY_path, {
-    ''          : Item(status=' M', wc_rev=2),
-    'B'         : Item(status='  ', wc_rev=2),
-    'mu'        : Item(status='  ', wc_rev=2),
-    'B/E'       : Item(status='  ', wc_rev=2),
-    'B/E/alpha' : Item(status='  ', wc_rev=2),
-    'B/E/beta'  : Item(status='M ', wc_rev=2),
-    'B/lambda'  : Item(status='  ', wc_rev=2),
-    'B/F'       : Item(status='  ', wc_rev=2),
-    'C'         : Item(status='  ', wc_rev=2),
-    'D'         : Item(status='  ', wc_rev=2),
-    'D/G'       : Item(status=' M', wc_rev=6, switched='S'),
-    'D/G/pi'    : Item(status='  ', wc_rev=6),
-    'D/G/rho'   : Item(status='  ', wc_rev=6),
-    'D/G/tau'   : Item(status='  ', wc_rev=6),
-    'D/gamma'   : Item(status='  ', wc_rev=2),
-    'D/H'       : Item(status='  ', wc_rev=2),
-    'D/H/chi'   : Item(status='  ', wc_rev=2),
-    'D/H/psi'   : Item(status=' M', wc_rev=6, switched='S'),
-    'D/H/omega' : Item(status='M ', wc_rev=2),
+    ''          : Item(status=' M', wc_rev=7),
+    'B'         : Item(status='  ', wc_rev=7),
+    'mu'        : Item(status='  ', wc_rev=7),
+    'B/E'       : Item(status='  ', wc_rev=7),
+    'B/E/alpha' : Item(status='  ', wc_rev=7),
+    'B/E/beta'  : Item(status='M ', wc_rev=7),
+    'B/lambda'  : Item(status='  ', wc_rev=7),
+    'B/F'       : Item(status='  ', wc_rev=7),
+    'C'         : Item(status='  ', wc_rev=7),
+    'D'         : Item(status='  ', wc_rev=7),
+    'D/G'       : Item(status=' M', wc_rev=7, switched='S'),
+    'D/G/pi'    : Item(status='  ', wc_rev=7),
+    'D/G/rho'   : Item(status='  ', wc_rev=7),
+    'D/G/tau'   : Item(status='  ', wc_rev=7),
+    'D/gamma'   : Item(status='  ', wc_rev=7),
+    'D/H'       : Item(status='  ', wc_rev=7),
+    'D/H/chi'   : Item(status='  ', wc_rev=7),
+    'D/H/psi'   : Item(status=' M', wc_rev=7, switched='S'),
+    'D/H/omega' : Item(status='M ', wc_rev=7),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,3-6'}),
@@ -5759,7 +5784,8 @@ def merge_to_path_with_switched_children(sbox):
     'D/H'       : Item(),
     'D/H/chi'   : Item("This is the file 'chi'.\n"),
     'D/H/psi'   : Item("New content",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1,3-6'}),
+                       props={SVN_PROP_MERGE_INFO :
+                              '/A/B/E/psi:5\n/A/D/H/psi:1,3-6\n'}),
     'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State(short_A_COPY_path, { })
