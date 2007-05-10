@@ -1278,6 +1278,9 @@ svn_client_add(const char *path,
  * for addition (using svn_client_add(), whose docstring you should
  * read).
  *
+ * If @a make_parents is TRUE, create any non-existent parent directories
+ * also.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1287,14 +1290,27 @@ svn_client_add(const char *path,
  * @a ctx->notify_baton2 and the path of the new directory.  Note that this is
  * only called for items added to the working copy.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_mkdir3(svn_commit_info_t **commit_info_p,
+                  const apr_array_header_t *paths,
+                  svn_boolean_t make_parents,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+
+/**
+ * Same as svn_client_mkdir3(), but with @a make_parents always FALSE.
+ *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_mkdir2(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
-
 
 /**
  * Same as svn_client_mkdir2(), but takes the @c svn_client_commit_info_t

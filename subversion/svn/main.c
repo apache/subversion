@@ -202,6 +202,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("set revision property ARG in new revision\n"
                        "                             "
                        "using the name=value format")},
+  {"make-parents",  svn_cl__make_parents_opt, 0,
+                    N_("make intermediate directories")},
   {0,               0, 0, 0}
 };
 
@@ -556,8 +558,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Each directory specified by a URL is created in the repository via\n"
      "    an immediate commit.\n"
      "\n"
-     "  In both cases, all the intermediate directories must already exist.\n"),
-    {'q',
+     "  In both cases, all the intermediate directories must already exist,\n"
+     "  unless the --make-parents option is given.\n"),
+    {'q', svn_cl__make_parents_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"}, N_
@@ -1366,6 +1369,9 @@ main(int argc, const char *argv[])
         err = parse_revprop(&opt_state.revprop_table, opt_arg, pool);
         if (err != SVN_NO_ERROR)
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        break;
+      case svn_cl__make_parents_opt:
+        opt_state.make_parents = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
