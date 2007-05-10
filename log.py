@@ -62,18 +62,17 @@ def count_lines(message):
         num_lines = "%d lines" % num_lines
     return num_lines
 
-for (changed_paths, revision, author, date, message) in \
+for entry in \
      session.log(start_rev, end_rev, verbose=options.verbose,
                  stop_on_copy=options.stop_on_copy):
 
-    date = date_to_human_date(date)
-    num_lines = count_lines(message)
-
+    num_lines = count_lines(entry.message)
     print "-" * 72
-    print "r%d | %s | %s | %s" % (revision, author, date, num_lines)
+    print "r%d | %s | %s | %s" % (entry.revision, entry.author,
+                                  entry.date.as_human_string(), num_lines)
     if options.verbose:
         print "Changed paths:"
-        for key, value in changed_paths.iteritems():
+        for key, value in entry.changed_paths.iteritems():
             value = value[0]
             if value.copyfrom_rev != SVN_INVALID_REVNUM:
                 print "   %s %s (from %s:%d)" % (value.action, key,
@@ -82,6 +81,6 @@ for (changed_paths, revision, author, date, message) in \
             else:
                 print "   %s %s" % (value.action, key)
     print
-    print message
+    print entry.message
 
 print "-" * 72

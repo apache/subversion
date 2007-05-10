@@ -4,6 +4,33 @@ from csvn.ext.callback_receiver import CallbackReceiver
 from txn import Txn
 import os
 
+class SvnDate(str):
+
+    def as_apr_time_t(self):
+        """Return this date to an apr_time_t object"""
+        pool = Pool()
+        when = apr_time_t()
+        svn_time_from_cstring(byref(when), self, pool)
+        return when
+
+    def as_human_string(self):
+        """Return this date to a human-readable date"""
+        pool = Pool()
+        return str(svn_time_to_human_cstring(self.as_apr_time_t(), pool))
+
+class LogEntry(object):
+    """REVISION, AUTHOR, DATE, and MESSAGE are straightforward, and
+       contain what you expect. DATE is an SvnDate object.
+
+       If no information about the paths changed in this revision is
+       available, CHANGED_PATHS will be None. Otherwise, CHANGED_PATHS
+       will contain a dictionary which maps every path committed
+       in REVISION to svn_log_changed_path_t pointers."""
+
+    __slots__ = ['changed_paths', 'revision',
+                 'author', 'date', 'message']
+
+
 class _LogMessageReceiver(CallbackReceiver):
 
     def collect(self, session, start_rev, end_rev, paths, limit, verbose,
@@ -19,17 +46,21 @@ class _LogMessageReceiver(CallbackReceiver):
     def receive(baton, changed_paths, revision, author, date, message, pool):
         self = cast(baton, py_object).value
 
-        # Convert the wrapped strings to Python strings
-        author = str(author)
-        date = str(date)
-        message = str(message)
+        entry = LogEntry()
+
+        # Save information about the log entry
+        entry.revision = revision
+        entry.author = str(author)
+        entry.date = SvnDate(date)
+        entry.message = str(message)
 
         if self.verbose:
-            changed_paths = Hash(POINTER(svn_log_changed_path_t),
-                                 changed_paths, dup = svn_log_changed_path_dup)
+            entry.changed_paths = Hash(POINTER(svn_log_changed_path_t),
+              changed_paths, dup = svn_log_changed_path_dup)
         else:
-            changed_paths = None
-        self.send((changed_paths, revision, author, date, message))
+            entry.changed_paths = None
+
+        self.send(entry)
     receive = staticmethod(receive)
 
 class User(object):
@@ -255,13 +286,17 @@ class ClientSession(object):
 
     def log(self, start_rev, end_rev, paths=None, limit=0, verbose=FALSE,
             stop_on_copy=FALSE):
-        """A generator function which tracks information about the revisions
-           between START_REV and END_REV.
+        """A generator function which returns information about the revisions
+           between START_REV and END_REV. Each return value is a LogEntry
+           object which describes a revision.
+
+           For details on what fields are contained in a LogEntry object,
+           please see the LogEntry documentation.
 
            You can iterate through the log information for several revisions
            using a regular for loop. For example:
              for entry in session.log(start_rev, end_rev):
-               (changed_paths, revision, author, date, message) = entry
+               print "Revision %d" % entry.revision
                ...
 
            ARGUMENTS:
@@ -284,16 +319,6 @@ class ClientSession(object):
              a SVN_ERR_FS_NO_SUCH_REVISION SubversionException, without
              returning any logs.
 
-           RETURN VALUES:
-
-             REVISION, AUTHOR, DATE, and MESSAGE are straightforward, and
-             contain what you expect. DATE is formatted as a cstring in
-             a machine-readable format, which is understood by
-             svn_time_from_cstring.
-
-             If VERBOSE is False, then CHANGED_PATHS will be None. Otherwise,
-             it will contain a dictionary which maps every path committed
-             in REVISION to svn_log_changed_path_t pointers.
         """
 
         paths = Array(c_char_p, paths is None and [""] or paths)
