@@ -934,6 +934,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   svn_error_t *unlock_err = SVN_NO_ERROR;
   svn_error_t *cleanup_err = SVN_NO_ERROR;
   const svn_wc_entry_t *entry;
+  apr_pool_t *iterpool;
   int i;
 
   /* The commit process uses absolute paths, so we need to open the access
@@ -972,22 +973,25 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   /* Figure out the basename that will result from each copy and check to make
      sure it doesn't exist already. */
+  iterpool = svn_pool_create(pool);
+
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_node_kind_t dst_kind;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
 
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_client__path_relative_to_root(&pair->src_rel, pair->src,
                                                 NULL, ra_session, adm_access,
                                                 pool));
-      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, iterpool));
       pair->src_revnum = entry->revision;
 
       pair->dst_rel = svn_path_is_child(top_dst_url, pair->dst, pool);
       SVN_ERR(svn_ra_check_path(ra_session, 
-                                svn_path_uri_decode(pair->dst_rel, pool),
-                                SVN_INVALID_REVNUM, &dst_kind, pool));
+                                svn_path_uri_decode(pair->dst_rel, iterpool),
+                                SVN_INVALID_REVNUM, &dst_kind, iterpool));
   
       if (dst_kind != svn_node_none)
         {
@@ -995,6 +999,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                    _("Path '%s' already exists"), pair->dst);
         }
     }
+
+  svn_pool_destroy(iterpool);
 
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
