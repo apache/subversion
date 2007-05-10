@@ -97,7 +97,7 @@ def checkout(url, revision=None):
 def merge(wc_dir, revision_from, revision_to):
     """Merges repo_url from revision revision_from to revision revision_to into wc_dir"""
     global logger
-    logger.info("Merging between revisions %s and %s into %s" % (wc_dir, revision_from, revision_to))
+    logger.info("Merging between revisions %s and %s into %s" % (revision_from, revision_to, wc_dir))
     os.chdir(wc_dir)
     return call_cmd(["svn", "merge", "-r", revision_from+":"+revision_to, wc_dir])
 
@@ -122,10 +122,12 @@ def treat_status(wc_dir_orig, wc_dir):
                 check_exit(add(wc_dir_orig, wc_dir, file), "Error during add")
         elif entry_type == 'deleted':
             entries_to_delete.append(entry)
-        elif entry_type == 'modified':
+        elif entry_type == 'modified' or entry_type == 'replaced':
             check_exit(update(wc_dir_orig, wc_dir, file), "Error during update")
+        elif entry_type == 'normal':
+            logger.info("File %s has a 'normal' state (unchanged). Ignoring." % (file))
         else:
-            logger.warn("Status not understood : '%s' not supported (file : %s)" % (entry_type, file))
+            logger.error("Status not understood : '%s' not supported (file : %s)" % (entry_type, file))
 
     # We then treat the left deletions
     for entry in entries_to_delete:
@@ -165,7 +167,7 @@ def copy(wc_dir_orig, wc_dir, file):
         orig_svn_subroot = '/'+sub_url.split(file)[0].replace(os.path.sep, '/')
         #print >>sys.stderr, "orig_svn_subroot : %s" % (orig_svn_subroot)
     
-    global log_tree, logger
+    global log_tree
     if not log_tree:
         # Detecting original file copy path
         os.chdir(wc_dir_orig)
