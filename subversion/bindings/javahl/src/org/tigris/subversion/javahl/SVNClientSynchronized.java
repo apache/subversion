@@ -743,17 +743,19 @@ public class SVNClientSynchronized implements SVNClientInterface
      * <code>destPath</code> is not a URL.
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
+     * @param makeParents Whether to create intermediate parents
      * @throws ClientException If the copy operation fails.
      * @since 1.5
      * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
      */
     public void copy(CopySource[] sources, String destPath, String message,
-                     boolean copyAsChild)
+                     boolean copyAsChild, boolean makeParents)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.copy(sources, destPath, message, copyAsChild);
+            worker.copy(sources, destPath, message, copyAsChild,
+                        makeParents);
         }
     }
 
@@ -787,17 +789,20 @@ public class SVNClientSynchronized implements SVNClientInterface
      * modifications exist.
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
+     * @param makeParents Whether to create intermediate parents
      * @throws ClientException If the move operation fails.
      * @since 1.5
      * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
      */
     public void move(String[] srcPaths, String destPath, String message,
-                     boolean force, boolean moveAsChild)
+                     boolean force, boolean moveAsChild,
+                     boolean makeParents)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.move(srcPaths, destPath, message, force, moveAsChild);
+            worker.move(srcPaths, destPath, message, force, moveAsChild,
+                        makeParents);
         }
     }
 
@@ -834,6 +839,24 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.move(srcPath, destPath, message, force);
+        }
+    }
+
+    /**
+     * Creates a directory directly in a repository or creates a
+     * directory on disk and schedules it for addition.
+     * @param path      directories to be created
+     * @param message   commit message to used if path contains urls
+     * @param makeParents Whether to create intermediate parents
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void mkdir(String[] path, String message, boolean makeParents)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.mkdir(path, message, makeParents);
         }
     }
 
