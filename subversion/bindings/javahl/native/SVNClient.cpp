@@ -404,7 +404,8 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
-                                 copyAsChild, ctx, requestPool.pool()), );
+                                 copyAsChild, false, ctx, requestPool.pool()),
+                );
 }
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
@@ -425,7 +426,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_move5(&commit_info, (apr_array_header_t *) srcs,
                                  destinationPath.c_str(), force, moveAsChild,
-                                 ctx, requestPool.pool()), );
+                                 false, ctx, requestPool.pool()), );
 }
 
 void SVNClient::mkdir(Targets &targets, const char *message)

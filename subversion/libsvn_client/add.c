@@ -686,11 +686,11 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
 /** Make a directory and add it to the repository.
   * If the parent directory doesn't exist, create it.
   */
-static svn_error_t *
-make_wc_subdir(const char *path,
-               svn_boolean_t make_parents,
-               svn_client_ctx_t *ctx,
-               apr_pool_t *pool)
+svn_error_t *
+svn_client__make_local_parents(const char *path,
+                               svn_boolean_t make_parents,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool)
 {
   svn_error_t *err;
   
@@ -708,7 +708,7 @@ make_wc_subdir(const char *path,
       if (node_kind == svn_node_none)
         {
           /* recurse to make parent */
-          SVN_ERR(make_wc_subdir(path_parent, TRUE, ctx, pool));
+          SVN_ERR(svn_client__make_local_parents(path_parent, TRUE, ctx, pool));
         }
     }
 
@@ -761,7 +761,8 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-          SVN_ERR(make_wc_subdir(path, make_parents, ctx, subpool));
+          SVN_ERR(svn_client__make_local_parents(path, make_parents, ctx,
+                                                 subpool));
         }
       svn_pool_destroy(subpool);
     }

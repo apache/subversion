@@ -3505,6 +3505,188 @@ def old_dir_wc_to_wc(sbox):
                                         None, None,
                                         wc_dir)
 
+
+#----------------------------------------------------------------------
+# Test copying and creating parents in the wc
+
+def copy_make_parents_wc_wc(sbox):
+  "svn cp --make-parents WC_PATH WC_PATH"
+   
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  new_iota_path = os.path.join(wc_dir, 'X', 'Y', 'Z', 'iota')
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--make-parents',
+                                     iota_path, new_iota_path)
+
+  # Create expected output
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'           : Item(verb='Adding'),
+    'X/Y'         : Item(verb='Adding'),
+    'X/Y/Z'       : Item(verb='Adding'),
+    'X/Y/Z/iota'  : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  
+  # Add the moved files
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+#----------------------------------------------------------------------
+# Test copying and creating parents from the repo to the wc
+
+def copy_make_parents_repo_wc(sbox):
+  "svn cp --make-parents URL WC_PATH"
+   
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_url = sbox.repo_url + '/iota'
+  new_iota_path = os.path.join(wc_dir, 'X', 'Y', 'Z', 'iota')
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--make-parents',
+                                     iota_url, new_iota_path)
+
+  # Create expected output
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'           : Item(verb='Adding'),
+    'X/Y'         : Item(verb='Adding'),
+    'X/Y/Z'       : Item(verb='Adding'),
+    'X/Y/Z/iota'  : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  
+  # Add the moved files
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+
+#----------------------------------------------------------------------
+# Test copying and creating parents from the wc to the repo
+
+def copy_make_parents_wc_repo(sbox):
+  "svn cp --make-parents WC_PATH URL"
+   
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  new_iota_url = sbox.repo_url + '/X/Y/Z/iota'
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--make-parents',
+                                     '-m', 'log msg',
+                                     iota_path, new_iota_url)
+
+  # Update to HEAD and verify disk contents
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'           : Item(status='A '),
+    'X/Y'         : Item(status='A '),
+    'X/Y/Z'       : Item(status='A '),
+    'X/Y/Z/iota'  : Item(status='A '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'X'           : Item(),
+    'X/Y'         : Item(),
+    'X/Y/Z'       : Item(),
+    'X/Y/Z/iota'  : Item(contents="This is the file 'iota'.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
+#----------------------------------------------------------------------
+# Test copying and creating parents from repo to repo
+
+def copy_make_parents_repo_repo(sbox):
+  "svn cp --make-parents URL URL"
+   
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_url = sbox.repo_url + '/iota'
+  new_iota_url = sbox.repo_url + '/X/Y/Z/iota'
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--make-parents',
+                                     '-m', 'log msg',
+                                     iota_url, new_iota_url)
+
+  # Update to HEAD and verify disk contents
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'           : Item(status='A '),
+    'X/Y'         : Item(status='A '),
+    'X/Y/Z'       : Item(status='A '),
+    'X/Y/Z/iota'  : Item(status='A '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'X'           : Item(),
+    'X/Y'         : Item(),
+    'X/Y/Z'       : Item(),
+    'X/Y/Z/iota'  : Item(contents="This is the file 'iota'.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -3574,6 +3756,10 @@ test_list = [ None,
               copy_peg_rev_local_dirs,
               copy_peg_rev_url,
               old_dir_wc_to_wc,
+              copy_make_parents_wc_wc,
+              copy_make_parents_repo_wc,
+              copy_make_parents_wc_repo,
+              copy_make_parents_repo_repo,
              ]
 
 if __name__ == '__main__':
