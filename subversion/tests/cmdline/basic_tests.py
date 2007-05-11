@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -250,6 +250,54 @@ def basic_mkdir_url(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status)
+
+
+#----------------------------------------------------------------------
+def basic_mkdir_url_with_parents(sbox):
+  "basic mkdir URL, including parent directories"
+
+  sbox.build()
+
+  Y_Z_url = sbox.repo_url + '/Y/Z'
+
+  svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
+                                     ["\n", "Committed revision 2.\n"], [],
+                                     'mkdir', '-m', 'log_msg',
+                                     '--make-parents', Y_Z_url)
+
+  expected_output = wc.State(sbox.wc_dir, {
+    'Y'   : Item(status='A '),
+    'Y/Z' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'Y'   : Item(),
+    'Y/Z' : Item()
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
+  expected_status.add({
+    'Y'   : Item(status='  ', wc_rev=2),
+    'Y/Z' : Item(status='  ', wc_rev=2)
+    })
+
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
+#----------------------------------------------------------------------
+def basic_mkdir_wc_with_parents(sbox):
+  "basic mkdir, including parent directories"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  Y_Z_path = os.path.join(wc_dir, 'Y', 'Z')
+
+  svntest.actions.run_and_verify_svn("mkdir dir/subdir", None, [],
+                                     'mkdir', '--make-parents', Y_Z_path)
+  
 
 #----------------------------------------------------------------------
 def basic_corruption(sbox):
@@ -1835,6 +1883,8 @@ test_list = [ None,
               basic_commit,
               basic_update,
               basic_mkdir_url,
+              basic_mkdir_url_with_parents,
+              basic_mkdir_wc_with_parents,
               basic_corruption,
               basic_merging_update,
               basic_conflict,

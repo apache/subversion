@@ -80,7 +80,7 @@ I.    INTRODUCTION
          provides convenience routines for things like hashtables,
          checksums, and argument processing.  While it was originally
          developed for the Apache HTTP server, APR is a standalone
-         library used by Subversion and other products.  It is a a
+         library used by Subversion and other products.  It is a
          critical dependency for all of Subversion; it's the layer
          that allows Subversion clients and servers to run on
          different operating systems.
@@ -211,9 +211,9 @@ I.    INTRODUCTION
         |     then upgrade your libapr to 1.X without rebuilding       |
         |     Subversion, things will break and segfault.              |
         |                                                              |
-        |   - if your Subversion libraries are using one version of    |
-        |     APR, but your Apache server is using a different         |
-        |     version, things will break and segfault.                 |
+        |   - if your Subversion server libraries are linked to one    | 
+        |     version of APR, but your Apache server is linked to a    | 
+        |     different version, things will break and segfault.       |
         |                                                              |
         | Subversion 1.0 originally shipped with APR 0.9.  Even        |
         | though APR 1.X has been available for many years, we         |

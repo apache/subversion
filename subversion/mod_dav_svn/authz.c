@@ -22,6 +22,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 
+#include "mod_authz_svn.h"
 #include "dav_svn.h"
 
 
@@ -41,12 +42,27 @@ allow_read(request_rec *r,
   request_rec *subreq;
   enum dav_svn__build_what uri_type;
   svn_boolean_t allowed = FALSE;
+  authz_svn__subreq_bypass_func_t allow_read_bypass = NULL;
 
   /* Easy out:  if the admin has explicitly set 'SVNPathAuthz Off',
      then this whole callback does nothing. */
   if (! dav_svn__get_pathauthz_flag(r))
     {
       return TRUE;
+    }
+
+  /* If bypass is specified and authz has exported the provider.
+     Otherwise, we fall through to the full version.  This should be
+     safer than allowing or disallowing all accesses if there is a
+     configuration error.
+     XXX: Is this the proper thing to do in this case? */
+  allow_read_bypass = dav_svn__get_pathauthz_bypass(r);
+  if (allow_read_bypass != NULL)
+    {
+      if (allow_read_bypass(r,path, repos->repo_name) == OK)
+        return TRUE;
+      else
+        return FALSE;
     }
 
   /* If no revnum is specified, assume HEAD. */

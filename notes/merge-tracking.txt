@@ -167,6 +167,10 @@ Implement auditing/reporting and other high-level features.
 
   * Write up outcome in func-spec.html.
 
+* Add commutative author and revision reporting to 'svn log' and 'svn blame'.
+  The 'svn log' portion is currently being implemented on the
+  merge-sensitive-log branch.  (hwright)
+
 * Improve heuristics for grokking the source URL parameter to the
   'svn merge -cN URL' command.  See the comments inlined into the
   svn_client__suggest_merge_sources() implementation for details.

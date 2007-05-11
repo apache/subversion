@@ -372,6 +372,14 @@ svn_error_t * svn_client__wc_delete(const char *path,
    intended for direct modification. */
 apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
 
+/* Make PATH and add it to the working copy, optionally making all the
+   intermediate parent directories if MAKE_PARENTS is TRUE. */
+svn_error_t *
+svn_client__make_local_parents(const char *path,
+                               svn_boolean_t make_parents,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool);
+
 /* ---------------------------------------------------------------- */
 
 /*** Checkout, update and switch ***/

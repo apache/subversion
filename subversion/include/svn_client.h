@@ -1278,6 +1278,9 @@ svn_client_add(const char *path,
  * for addition (using svn_client_add(), whose docstring you should
  * read).
  *
+ * If @a make_parents is TRUE, create any non-existent parent directories
+ * also.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1287,14 +1290,27 @@ svn_client_add(const char *path,
  * @a ctx->notify_baton2 and the path of the new directory.  Note that this is
  * only called for items added to the working copy.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_mkdir3(svn_commit_info_t **commit_info_p,
+                  const apr_array_header_t *paths,
+                  svn_boolean_t make_parents,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+
+/**
+ * Same as svn_client_mkdir3(), but with @a make_parents always FALSE.
+ *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_mkdir2(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
-
 
 /**
  * Same as svn_client_mkdir2(), but takes the @c svn_client_commit_info_t
@@ -2597,6 +2613,9 @@ typedef struct svn_client_copy_source_t
  * as copies.  No changes will happen to the repository until a commit occurs.
  * This scheduling can be removed with svn_client_revert().
  *
+ * If @a make_parents is TRUE, create any non-existent parent directories
+ * also.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo
  * that this function can use to query for a commit log message when one is
  * needed.
@@ -2612,13 +2631,14 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_copy4(), with only one @a src_path and
- * @a copy_as_child set to FALSE.  Also, use @a src_revision as both 
- * the operational and peg revision.
+ * Similar to svn_client_copy4(), with only one @a src_path,
+ * @a copy_as_child set to FALSE and @a make_parents set to FALSE.  Also,
+ * use @a src_revision as both the operational and peg revision.
  *
  * @since New in 1.4.
  *
@@ -2729,6 +2749,9 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * If @a src_paths has multiple items, and @a move_as_child is FALSE, fail
  * with @c SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED.
  *
+ * If @a make_parents is TRUE, create any non-existent parent directories
+ * also.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
  *
@@ -2747,12 +2770,13 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  const char *dst_path,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
+                 svn_boolean_t make_parents,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_move5(), with only one @a src_path and
- * @a move_as_child set to FALSE.
+ * Similar to svn_client_move5(), with only one @a src_path,
+ * @a move_as_child set to FALSE and @a make_parents set to FALSE.
  *
  * @since New in 1.4.
  *

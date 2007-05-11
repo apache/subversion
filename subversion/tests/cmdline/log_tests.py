@@ -205,8 +205,8 @@ def parse_log_output(log_lines):
   If LOG_LINES contains changed-path information, then the hash
   also contains
 
-     'paths'    ===>  list of strings
-
+     'paths'    ===>  list of tuples of the form (X, PATH), where X is the
+  first column of verbose output, and PATH is the affected path.
      """
 
   # Here's some log output to look at while writing this function:
@@ -261,13 +261,15 @@ def parse_log_output(log_lines):
       lines = int(match.group(4))
       this_item['lines']    = lines
 
-      # Eat the expected blank line.
-      log_lines.pop(0)
+      # Parse verbose output, starting with "Changed paths"
+      if log_lines.pop(0).strip() == 'Changed paths:':
+        paths = []
+        path_line = log_lines.pop(0).strip()
+        while path_line != '':
+          paths.append( (path_line[0], path_line[2:]) )
+          path_line = log_lines.pop(0).strip()
 
-      ### TODO: Parse "Changed paths" (available from 'log -v') into
-      ### the 'paths' element.  They'd appear here, right after the
-      ### header line, and with be a blank line between them and the
-      ### msg.
+        this_item['paths'] = paths
 
       # Accumulate the log message
       msg = ''
@@ -305,7 +307,7 @@ class SVNUnexpectedLogs(svntest.Failure):
     return msg
 
 
-def check_log_chain(chain, revlist):
+def check_log_chain(chain, revlist, path_counts=[]):
   """Verify that log chain CHAIN contains the right log messages for
   revisions START to END (see documentation for parse_log_output() for
   more about log chains).
@@ -320,6 +322,9 @@ def check_log_chain(chain, revlist):
   carefully.
   Also verify that even numbered commit messages have three lines.
 
+  If the length of PATH_COUNTS is greater than zero, make sure that each
+  log has that number of paths.
+
   Raise an error if anything looks wrong.
   """
 
@@ -327,6 +332,9 @@ def check_log_chain(chain, revlist):
   if len(chain) != nbr_expected:
     raise SVNUnexpectedLogs('Number of elements in log chain and revision ' +
                             'list %s not equal' % revlist, chain)
+  if path_counts and len(path_counts) != nbr_expected:
+    raise SVNUnexpectedLogs('Number of elements in log chain and path ' +
+                            'counts %s not equal' % path_counts, chain)
   missing_revs = []
   for i in range(0, nbr_expected):
     expect_rev = revlist[i]
@@ -362,6 +370,14 @@ def check_log_chain(chain, revlist):
     if not msg_re.search(msg):
       raise SVNUnexpectedLogs("Malformed log message, expected '%s'" % msg,
                               chain)
+
+    # If path_counts, check the number of changed paths
+    if path_counts:
+      if (not 'paths' in log_item) or (not log_item['paths']):
+        raise SVNUnexpectedLogs("No changed path information", chain)
+      if path_counts[i] != len(log_item['paths']):
+        raise SVNUnexpectedLogs("Changed paths counts not equal for " +
+                                "revision %d" % (i + 1), chain)
 
   nbr_missing_revs = len(missing_revs)
   if nbr_missing_revs > 0:
@@ -769,7 +785,7 @@ def log_limit(sbox):
   svntest.actions.run_and_verify_svn(None, None, must_be_positive,
                                      'log', '--limit', '-1', '--revision', '1',
                                      sbox.repo_url, 'A/B')
-                                                                                                
+
 def log_base_peg(sbox):
   "run log on an @BASE target"
   guarantee_repos_and_wc(sbox)
@@ -788,6 +804,20 @@ def log_base_peg(sbox):
 
   log_chain = parse_log_output(out)
   check_log_chain(log_chain, [1])
+
+
+def log_verbose(sbox):
+  "run log with verbose output"
+  guarantee_repos_and_wc(sbox)
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-v',
+                                                   sbox.wc_dir)
+
+  log_chain = parse_log_output(output)
+  path_counts = [2, 2, 1, 2, 2, 2, 4, 1, 20]
+  check_log_chain(log_chain, range(max_revision, 1 - 1, -1), path_counts)
+
 
 ########################################################################
 # Run the tests
@@ -809,6 +839,7 @@ test_list = [ None,
               log_xml_empty_date,
               log_limit,
               log_base_peg,
+              log_verbose,
              ]
 
 if __name__ == '__main__':

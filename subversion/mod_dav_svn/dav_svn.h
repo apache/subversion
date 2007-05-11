@@ -31,6 +31,7 @@
 #include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "mod_authz_svn.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -254,6 +255,11 @@ svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
+
+/* for the repository referred to by this request, are subrequests bypassed?
+ * A function pointer if yes, NULL if not.
+ */
+authz_svn__subreq_bypass_func_t dav_svn__get_pathauthz_bypass(request_rec *r);
 
 /* for the repository referred to by this request, is a GET of
    SVNParentPath allowed? */

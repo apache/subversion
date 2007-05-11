@@ -202,6 +202,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("set revision property ARG in new revision\n"
                        "                             "
                        "using the name=value format")},
+  {"make-parents",  svn_cl__make_parents_opt, 0,
+                    N_("make intermediate directories")},
   {"merge-sensitive", 'g', 0,
                     N_("show additional information from merge history")},
   {0,               0, 0, 0}
@@ -343,7 +345,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    URL -> WC:   check out URL into WC, schedule for addition\n"
      "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
      "  All the SRCs must be of the same type.\n"),
-    {'r', 'q',
+    {'r', 'q', svn_cl__make_parents_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "delete", svn_cl__delete, {"del", "remove", "rm"}, N_
@@ -558,8 +560,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Each directory specified by a URL is created in the repository via\n"
      "    an immediate commit.\n"
      "\n"
-     "  In both cases, all the intermediate directories must already exist.\n"),
-    {'q',
+     "  In both cases, all the intermediate directories must already exist,\n"
+     "  unless the --make-parents option is given.\n"),
+    {'q', svn_cl__make_parents_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"}, N_
@@ -576,7 +579,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    WC  -> WC:   move and schedule for addition (with history)\n"
      "    URL -> URL:  complete server-side rename.\n"
      "  All the SRCs must be of the same type.\n"),
-    {'r', 'q', svn_cl__force_opt,
+    {'r', 'q', svn_cl__force_opt, svn_cl__make_parents_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
@@ -1368,6 +1371,9 @@ main(int argc, const char *argv[])
         err = parse_revprop(&opt_state.revprop_table, opt_arg, pool);
         if (err != SVN_NO_ERROR)
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        break;
+      case svn_cl__make_parents_opt:
+        opt_state.make_parents = TRUE;
         break;
       case 'g':
         opt_state.merge_sensitive = TRUE;

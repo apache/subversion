@@ -89,8 +89,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-05-05 09:21+0200\n"
-"PO-Revision-Date: 2007-05-07 08:34+0200\n"
+"POT-Creation-Date: 2007-05-09 07:27+0200\n"
+"PO-Revision-Date: 2007-05-09 09:00+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2718,12 +2718,12 @@ msgstr ""
 msgid "Path '%s' is already locked by user '%s' in filesystem '%s'"
 msgstr "Il percorso '%s' è già bloccato dall'utente '%s' nel filesystem '%s'"
 
-#: libsvn_fs_util/merge-info-sqlite-index.c:101
+#: libsvn_fs_util/mergeinfo-sqlite-index.c:101
 msgid "Merge Tracking schema format not set"
 msgstr ""
 "Il formato per lo schema del tracking delle fusioni non è stato impostato"
 
-#: libsvn_fs_util/merge-info-sqlite-index.c:106
+#: libsvn_fs_util/mergeinfo-sqlite-index.c:106
 #, c-format
 msgid "Merge Tracking schema format %d not recognized"
 msgstr "Il formato %d per lo schema del tracking non è stato riconosciuto"
@@ -3401,87 +3401,87 @@ msgstr "Dirlist non è una lista"
 msgid "Merge info element is not a list"
 msgstr "L'elemento di informazioni di fusione non è una lista"
 
-#: libsvn_ra_svn/client.c:1217
+#: libsvn_ra_svn/client.c:1220
 msgid "Log entry not a list"
 msgstr "La voce di log non è una lista"
 
-#: libsvn_ra_svn/client.c:1230
+#: libsvn_ra_svn/client.c:1233
 msgid "Changed-path entry not a list"
 msgstr "La voce del percorso modificato non è una lista"
 
-#: libsvn_ra_svn/client.c:1306
+#: libsvn_ra_svn/client.c:1309
 msgid "'stat' not implemented"
 msgstr "'stat' non è implementato"
 
-#: libsvn_ra_svn/client.c:1363
+#: libsvn_ra_svn/client.c:1366
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' non è implementato"
 
-#: libsvn_ra_svn/client.c:1375
+#: libsvn_ra_svn/client.c:1378
 msgid "Location entry not a list"
 msgstr "La voce di locazione non è una lista"
 
-#: libsvn_ra_svn/client.c:1425
+#: libsvn_ra_svn/client.c:1428
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' non è implementato"
 
-#: libsvn_ra_svn/client.c:1438
+#: libsvn_ra_svn/client.c:1441
 msgid "Revision entry not a list"
 msgstr "La voce di revisione non è una lista"
 
-#: libsvn_ra_svn/client.c:1451 libsvn_ra_svn/client.c:1476
+#: libsvn_ra_svn/client.c:1454 libsvn_ra_svn/client.c:1479
 msgid "Text delta chunk not a string"
 msgstr "Il frammento di delta del testo non è una stringa"
 
-#: libsvn_ra_svn/client.c:1488
+#: libsvn_ra_svn/client.c:1491
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "Il comando get-file-revs non ha restituito nessuna revisione"
 
-#: libsvn_ra_svn/client.c:1536
+#: libsvn_ra_svn/client.c:1539
 msgid "Server doesn't support the lock command"
 msgstr "Il server non supporta il comando lock"
 
-#: libsvn_ra_svn/client.c:1600
+#: libsvn_ra_svn/client.c:1603
 msgid "Server doesn't support the unlock command"
 msgstr "Il server non supporta il comando unlock"
 
-#: libsvn_ra_svn/client.c:1697
+#: libsvn_ra_svn/client.c:1700
 msgid "Lock response not a list"
 msgstr "La risposta di blocco non è una lista"
 
-#: libsvn_ra_svn/client.c:1711
+#: libsvn_ra_svn/client.c:1714
 msgid "Unknown status for lock command"
 msgstr "Status sconosciuto per il comando di blocco"
 
-#: libsvn_ra_svn/client.c:1733
+#: libsvn_ra_svn/client.c:1736
 msgid "Didn't receive end marker for lock responses"
 msgstr "Non ho ricevuto il marcatore di terminazione della risposta di blocco"
 
-#: libsvn_ra_svn/client.c:1820
+#: libsvn_ra_svn/client.c:1823
 msgid "Unlock response not a list"
 msgstr "La risposta di sblocco non è una lista"
 
-#: libsvn_ra_svn/client.c:1834
+#: libsvn_ra_svn/client.c:1837
 msgid "Unknown status for unlock command"
 msgstr "Status sconosciuto per il comando di sblocco"
 
-#: libsvn_ra_svn/client.c:1855
+#: libsvn_ra_svn/client.c:1858
 msgid "Didn't receive end marker for unlock responses"
 msgstr "Non ho ricevuto il marcatore di terminazione della risposta di sblocco"
 
-#: libsvn_ra_svn/client.c:1879 libsvn_ra_svn/client.c:1907
+#: libsvn_ra_svn/client.c:1882 libsvn_ra_svn/client.c:1910
 msgid "Server doesn't support the get-lock command"
 msgstr "Il server non supporta il comando get-lock"
 
-#: libsvn_ra_svn/client.c:1920
+#: libsvn_ra_svn/client.c:1923
 msgid "Lock element not a list"
 msgstr "L'elemento di blocco non è una lista"
 
-#: libsvn_ra_svn/client.c:1943
+#: libsvn_ra_svn/client.c:1946
 msgid "Server doesn't support the replay command"
 msgstr "Il server non supporta il comando replay"
 
-#: libsvn_ra_svn/client.c:2008
+#: libsvn_ra_svn/client.c:2011
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versione %d del lettore per ra_svn non supportata"
@@ -3917,40 +3917,40 @@ msgstr "'%s' non trovato nel filesystem"
 msgid "Filesystem path '%s' is neither a file nor a directory"
 msgstr "Il percorso di filesystem '%s' non è un file o una directory"
 
-#: libsvn_repos/reporter.c:222
+#: libsvn_repos/reporter.c:228
 #, c-format
 msgid "Invalid depth (%s) for path '%s'"
 msgstr "Profondità non valida (%s) per il percorso '%s'"
 
-#: libsvn_repos/reporter.c:653
+#: libsvn_repos/reporter.c:659
 #, c-format
 msgid "Working copy path '%s' does not exist in repository"
 msgstr "Il percorso '%s' della copia di lavoro non esiste nel repository"
 
-#: libsvn_repos/reporter.c:941
+#: libsvn_repos/reporter.c:947
 msgid "Not authorized to open root of edit operation"
 msgstr "Non autorizzato ad aprire la root per un'operazione di modifica"
 
-#: libsvn_repos/reporter.c:960
+#: libsvn_repos/reporter.c:966
 msgid "Target path does not exist"
 msgstr "Il percorso indicato come obbiettivo non esiste"
 
-#: libsvn_repos/reporter.c:967
+#: libsvn_repos/reporter.c:973
 msgid "Cannot replace a directory from within"
 msgstr "Non posso sostituire la directory dall'interno della stessa"
 
-#: libsvn_repos/reporter.c:1010
+#: libsvn_repos/reporter.c:1016
 msgid "Invalid report for top level of working copy"
 msgstr "Rapporto non valido per il primo livello della copia di lavoro"
 
-#: libsvn_repos/reporter.c:1025
+#: libsvn_repos/reporter.c:1031
 msgid "Two top-level reports with no target"
 msgstr "Due rapporti al primo livello senza nessun obiettivo"
 
-#: libsvn_repos/reporter.c:1062
+#: libsvn_repos/reporter.c:1064
 #, c-format
-msgid "Unsupported report depth '%s' for path '%s'"
-msgstr "Profondità del report '%s' non supportata per il percorso '%s'"
+msgid "Unsupported report depth '%s'"
+msgstr "Profondità del report '%s' non supportata"
 
 #: libsvn_repos/repos.c:178
 #, c-format
@@ -5733,7 +5733,7 @@ msgstr ""
 "Per ulteriori informazioni, vedi http://subversion.tigris.org/\n"
 "\n"
 
-#: svn/help-cmd.c:65 svnsync/main.c:1430
+#: svn/help-cmd.c:65 svnsync/main.c:1439
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -7678,7 +7678,7 @@ msgstr "Cancello       %s\n"
 msgid "Replacing      %s\n"
 msgstr "Sovrascrivo    %s\n"
 
-#: svn/notify.c:368
+#: svn/notify.c:368 svnsync/main.c:620
 msgid "Transmitting file data "
 msgstr "Trasmissione dati "
 
@@ -9169,7 +9169,7 @@ msgstr "Non riesco ad impostare lo stato scollegato"
 msgid "Can't create thread"
 msgstr "Non riesco a creare il thread"
 
-#: svnserve/serve.c:1437
+#: svnserve/serve.c:1469
 msgid "Path is not a string"
 msgstr "Il valore di path non è una stringa"
 
@@ -9343,28 +9343,36 @@ msgstr "Non posso inizializzare un repository con del contenuto"
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "Il repository di destinazione si sta già sincronizzando con '%s'"
 
-#: svnsync/main.c:525 svnsync/main.c:528 svnsync/main.c:1203
-#: svnsync/main.c:1382
+#: svnsync/main.c:525 svnsync/main.c:528 svnsync/main.c:1212
+#: svnsync/main.c:1391
 #, c-format
 msgid "Path '%s' is not a URL"
 msgstr "Il percorso '%s' non è un'URL"
 
-#: svnsync/main.c:914
+#: svnsync/main.c:744
+msgid "."
+msgstr "."
+
+#: svnsync/main.c:848
+msgid "\n"
+msgstr "\n"
+
+#: svnsync/main.c:923
 #, c-format
 msgid "Committed revision %ld.\n"
 msgstr "Commit della revisione %ld eseguito.\n"
 
-#: svnsync/main.c:954
+#: svnsync/main.c:963
 msgid "Destination repository has not been initialized"
 msgstr "Il repository di destinazione non è stato inizializzato"
 
-#: svnsync/main.c:969
+#: svnsync/main.c:978
 #, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
 msgstr ""
 "L'UUID del repository di origine (%s) non corrisponde all'UUID atteso (%s)"
 
-#: svnsync/main.c:1032
+#: svnsync/main.c:1041
 #, c-format
 msgid ""
 "Revision being currently copied (%ld), last merged revision (%ld), and "
@@ -9376,7 +9384,7 @@ msgstr ""
 "loro; hai eseguito il commit verso la destinazione senza usare\n"
 "svnsync?"
 
-#: svnsync/main.c:1070
+#: svnsync/main.c:1079
 #, c-format
 msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
@@ -9386,12 +9394,12 @@ msgstr ""
 "hai eseguito il commit alla verso la destinazione senza usare \n"
 "svnsync?"
 
-#: svnsync/main.c:1148
+#: svnsync/main.c:1157
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr "Il commit ha creato la revisione %ld ma avrebbe dovuto creare %ld"
 
-#: svnsync/main.c:1275 svnsync/main.c:1280
+#: svnsync/main.c:1284 svnsync/main.c:1289
 #, c-format
 msgid ""
 "Cannot copy revprops for a revision (%ld) that has not been synchronized yet"
@@ -9399,17 +9407,17 @@ msgstr ""
 "Non posso copiare revprops per una revisione (%ld) che non è stata ancora "
 "sincronizzata"
 
-#: svnsync/main.c:1332
+#: svnsync/main.c:1341
 #, c-format
 msgid "'%s' is not a valid revision range"
 msgstr "'%s' non è un intervallo di revisione valido"
 
-#: svnsync/main.c:1346 svnsync/main.c:1366
+#: svnsync/main.c:1355 svnsync/main.c:1375
 #, c-format
 msgid "Invalid revision number (%ld)"
 msgstr "Numero di revisione non valido (%ld)"
 
-#: svnsync/main.c:1423
+#: svnsync/main.c:1432
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -9424,7 +9432,7 @@ msgstr ""
 "\n"
 "Commandi disponibili:\n"
 
-#: svnsync/main.c:1581
+#: svnsync/main.c:1590
 msgid ""
 "Cannot use --username or --password with any of --source-username, --source-"
 "password, --sync-username, or --sync-password.\n"
@@ -9433,7 +9441,7 @@ msgstr ""
 "username,\n"
 "--source-password, --sync-username o --sync-password.\n"
 
-#: svnsync/main.c:1661
+#: svnsync/main.c:1670
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -9443,7 +9451,7 @@ msgstr ""
 "Digita 'svnsync help %s' per le informazioni\n"
 "sul suo utilizzo.\n"
 
-#: svnsync/main.c:1733
+#: svnsync/main.c:1742
 msgid "Try 'svnsync help' for more info"
 msgstr "Usa 'svnsync help' per maggiori informazioni"
 

@@ -916,7 +916,8 @@ dav_svn__update_report(const dav_resource *resource,
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = "";
   svn_boolean_t text_deltas = TRUE;
-  svn_depth_t depth = svn_depth_infinity;
+  svn_depth_t depth = svn_depth_unknown;
+  svn_boolean_t saw_depth = FALSE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
   dav_svn__authz_read_baton arb;
@@ -1016,25 +1017,37 @@ dav_svn__update_report(const dav_resource *resource,
             return derr;
           target = cdata;
         }
-      if (child->ns == ns && strcmp(child->name, "recursive") == 0)
+      if (child->ns == ns && strcmp(child->name, "depth") == 0)
+        {
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          depth = svn_depth_from_word(cdata);
+          saw_depth = TRUE;
+        }
+      if ((child->ns == ns && strcmp(child->name, "recursive") == 0)
+          && (! saw_depth))
         {
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
           if (strcmp(cdata, "no") == 0)
             depth = svn_depth_files;
-          /* "yes" is the default, so we do nothing special for it.
-
-             Note that even modern, depth-aware clients still transmit
-             "no" for "recursive" in the svn_depth_files case and the
+          else
+            depth = svn_depth_infinity;
+          /* Note that even modern, depth-aware clients still transmit
+             "no" for "recursive" (along with "files" for "depth") in
+             the svn_depth_files case, and transmit "no" in the
              svn_depth_empty case.  This is because they don't know if
              they're talking to a depth-aware server or not, and they
-             don't need to know -- all they have to do is transmit a
-             "recursive" element here, and send depths in their
-             set_path() calls, and the server will DTRT either way
-             (although in the svn_depth_empty case, the client will
-             still have some work to do in ignoring the files that
-             come down). */  
+             don't need to know -- all they have to do is transmit
+             both, and the server will DTRT either way (although in
+             the svn_depth_empty case, the client will still have some
+             work to do in ignoring the files that come down).
+
+             When both "depth" and "recursive" are sent, we don't
+             bother to check if they're mutually consistent, we just
+             let depth dominate. */  
         }
       if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
         {
@@ -1187,10 +1200,6 @@ dav_svn__update_report(const dav_resource *resource,
             apr_xml_attr *this_attr = child->attr;
 
             entry_counter++;
-
-            /* Pre-1.5 clients specify a report-wide depth via a
-               recurse flag when beginning the report. */
-            depth = svn_depth_unknown;
 
             while (this_attr)
               {
