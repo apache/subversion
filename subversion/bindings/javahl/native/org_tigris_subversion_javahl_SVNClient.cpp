@@ -501,7 +501,7 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_copy
 (JNIEnv *env, jobject jthis, jobjectArray jcopySources, jstring jdestPath,
- jstring jmessage, jboolean jcopyAsChild)
+ jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents)
 {
   JNIEntry(SVNClient, copy);
 
@@ -521,13 +521,15 @@ Java_org_tigris_subversion_javahl_SVNClient_copy
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->copy(copySources, destPath, message, jcopyAsChild ? true : false);
+  cl->copy(copySources, destPath, message, jcopyAsChild ? true : false,
+           jmakeParents ? true : false);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_move
 (JNIEnv *env, jobject jthis, jobjectArray jsrcPaths, jstring jdestPath,
- jstring jmessage, jboolean jforce, jboolean jmoveAsChild)
+ jstring jmessage, jboolean jforce, jboolean jmoveAsChild,
+ jboolean jmakeParents)
 {
   JNIEntry(SVNClient, move);
 
@@ -547,12 +549,13 @@ Java_org_tigris_subversion_javahl_SVNClient_move
   if (JNIUtil::isExceptionThrown())
     return;
   cl->move(srcPaths, destPath, message, jforce ? true : false,
-           jmoveAsChild ? true : false);
+           jmoveAsChild ? true : false, jmakeParents ? true : false);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_mkdir
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage)
+(JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
+ jboolean jmakeParents)
 {
   JNIEntry(SVNClient, mkdir);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -566,7 +569,7 @@ Java_org_tigris_subversion_javahl_SVNClient_mkdir
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->mkdir(targets, message);
+  cl->mkdir(targets, message, jmakeParents ? true : false);
 }
 
 JNIEXPORT void JNICALL
