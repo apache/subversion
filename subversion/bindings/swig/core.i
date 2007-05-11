@@ -181,8 +181,8 @@
  * EVERY function in the file is listed in the order it appears, and is either
  * %ignore-d, or present as a comment, explicitly documenting that we wrap it.
  */
-%ignore svn_path_internal_style;
-%ignore svn_path_local_style;
+// svn_path_internal_style;
+// svn_path_local_style;
 %ignore svn_path_join;
 %ignore svn_path_join_many;
 %ignore svn_path_basename;
