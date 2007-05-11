@@ -343,7 +343,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    URL -> WC:   check out URL into WC, schedule for addition\n"
      "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
      "  All the SRCs must be of the same type.\n"),
-    {'r', 'q',
+    {'r', 'q', svn_cl__make_parents_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "delete", svn_cl__delete, {"del", "remove", "rm"}, N_
@@ -577,7 +577,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    WC  -> WC:   move and schedule for addition (with history)\n"
      "    URL -> URL:  complete server-side rename.\n"
      "  All the SRCs must be of the same type.\n"),
-    {'r', 'q', svn_cl__force_opt,
+    {'r', 'q', svn_cl__force_opt, svn_cl__make_parents_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
