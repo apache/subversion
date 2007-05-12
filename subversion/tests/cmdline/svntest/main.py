@@ -582,6 +582,42 @@ def compare_unordered_output(expected, actual):
     except ValueError:
       raise Failure("Expected output does not match actual output")
 
+def skip_test_when_no_authz_available():
+  "skip this test when authz is not available"
+  if test_area_url.startswith('file://'):
+    raise svntest.Skip
+
+def write_restrictive_svnserve_conf(repo_dir):
+  "Create a restrictive authz file ( no anynomous access )."
+
+  fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
+  fp.write("[general]\nanon-access = none\nauth-access = write\n"
+           "authz-db = authz\n")
+  if enable_sasl == 1:
+    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
+  else:
+    fp.write("password-db = passwd\n")
+  fp.close()
+
+def write_authz_file(sbox, rules, sections=None):
+  """Write an authz file to SBOX, appropriate for the RA method used,
+with authorizations rules RULES mapping paths to strings containing
+the rules. You can add sections SECTIONS (ex. groups, aliases...) with
+an appropriate list of mappings.
+"""
+  fp = open(sbox.authz_file, 'w')
+  if sbox.repo_url.startswith("http"):
+    prefix = sbox.name + ":"
+  else:
+    prefix = ""
+  if sections:
+    for p, r in sections.items():
+      fp.write("[%s]\n%s\n" % (p, r))
+
+  for p, r in rules.items():
+    fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+  fp.close()
+
 def use_editor(func):
   os.environ['SVN_EDITOR'] = svneditor_script
   os.environ['SVNTEST_EDITOR_FUNC'] = func
