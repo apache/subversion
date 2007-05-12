@@ -585,7 +585,7 @@ def compare_unordered_output(expected, actual):
 def skip_test_when_no_authz_available():
   "skip this test when authz is not available"
   if test_area_url.startswith('file://'):
-    raise svntest.Skip
+    raise Skip
 
 def write_restrictive_svnserve_conf(repo_dir):
   "Create a restrictive authz file ( no anynomous access )."
