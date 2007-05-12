@@ -51,6 +51,13 @@ Candidate changes:
       There's a small merge conflict when merging the test case, backport branch
       not needed though.
 
+  * r24926, r24939 
+    Fix issue 2698: Merging replaced file does not update text-base version
+    Justification:
+      Small fix, non intrusive.
+    Votes: 
+      +1: lgo
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
