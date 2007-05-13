@@ -911,7 +911,8 @@ call_receiver(const char *path,
  *
  * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
  *
- * If RECURSE is true and KIND is svn_node_dir, then recurse.
+ * If the target is a directory, only fetch properties for the files
+ * and directories at depth DEPTH.
  */
 static svn_error_t *
 remote_proplist(const char *target_prefix,
@@ -919,7 +920,7 @@ remote_proplist(const char *target_prefix,
                 svn_node_kind_t kind,
                 svn_revnum_t revnum,
                 svn_ra_session_t *ra_session,
-                svn_boolean_t recurse,
+                svn_depth_t depth,
                 svn_proplist_receiver_t receiver,
                 void *receiver_baton,
                 apr_pool_t *pool,
@@ -931,8 +932,9 @@ remote_proplist(const char *target_prefix,
  
   if (kind == svn_node_dir)
     {
-      SVN_ERR(svn_ra_get_dir2(ra_session, (recurse ? &dirents : NULL), NULL,
-                              &prop_hash, target_relative, revnum,
+      SVN_ERR(svn_ra_get_dir2(ra_session,
+                              (depth > svn_depth_empty) ? &dirents : NULL,
+                              NULL, &prop_hash, target_relative, revnum,
                               SVN_DIRENT_KIND, scratchpool));
     }
   else if (kind == svn_node_file)
@@ -979,7 +981,8 @@ remote_proplist(const char *target_prefix,
                 final_hash, receiver, receiver_baton,
                 pool);
   
-  if (recurse && (kind == svn_node_dir) && (apr_hash_count(dirents) > 0))
+  if (depth > svn_depth_empty
+      && (kind == svn_node_dir) && (apr_hash_count(dirents) > 0))
     {
       apr_pool_t *subpool = svn_pool_create(scratchpool);
       
@@ -991,7 +994,7 @@ remote_proplist(const char *target_prefix,
           void *val;
           const char *this_name;
           svn_dirent_t *this_ent;
-          const char *new_target_relative;
+          const char *new_target_relative;          
 
           svn_pool_clear(subpool);
 
@@ -1002,16 +1005,25 @@ remote_proplist(const char *target_prefix,
           new_target_relative = svn_path_join(target_relative,
                                               this_name, subpool);
 
-          SVN_ERR(remote_proplist(target_prefix,
-                                  new_target_relative,
-                                  this_ent->kind,
-                                  revnum,
-                                  ra_session,
-                                  recurse,
-                                  receiver,
-                                  receiver_baton,
-                                  pool,
-                                  subpool));
+          if (this_ent->kind == svn_node_file
+              || depth > svn_depth_files)
+            {
+              svn_depth_t depth_below_here = depth;
+
+              if (depth == svn_depth_immediates)
+                depth_below_here = svn_depth_empty;
+
+              SVN_ERR(remote_proplist(target_prefix,
+                                      new_target_relative,
+                                      this_ent->kind,
+                                      revnum,
+                                      ra_session,
+                                      depth_below_here,
+                                      receiver,
+                                      receiver_baton,
+                                      pool,
+                                      subpool));
+            }
         }
 
       svn_pool_destroy(subpool);
@@ -1073,7 +1085,7 @@ svn_error_t *
 svn_client_proplist3(const char *target,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
+                     svn_depth_t depth,
                      svn_proplist_receiver_t receiver,
                      void *receiver_baton,
                      svn_client_ctx_t *ctx,
@@ -1086,6 +1098,9 @@ svn_client_proplist3(const char *target,
   svn_revnum_t revnum;
 
   SVN_ERR(maybe_convert_to_url(&utarget, target, revision, pool));
+
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_empty;
 
   /* Iff utarget is a url, that means we must use it, that is, the
      requested property information is not available locally. */
@@ -1104,16 +1119,22 @@ svn_client_proplist3(const char *target,
 
       SVN_ERR(remote_proplist(url, "",
                               kind, revnum, ra_session,
-                              recurse, receiver, receiver_baton,
+                              depth, receiver, receiver_baton,
                               pool, subpool));
       svn_pool_destroy(subpool);
     }
   else  /* working copy path */
     {
       svn_boolean_t pristine;
+      int adm_depth = -1;
+
+      if (depth == svn_depth_empty || depth == svn_depth_files)
+        adm_depth = 0;
+      else if (depth == svn_depth_immediates)
+        adm_depth = 1;
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
-                                     FALSE, recurse ? -1 : 0,
+                                     FALSE, adm_depth,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
       SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
@@ -1132,7 +1153,7 @@ svn_client_proplist3(const char *target,
         }
 
       /* Fetch, recursively or not. */
-      if (recurse && (node->kind == svn_node_dir))
+      if (depth == svn_depth_infinity && (node->kind == svn_node_dir))
         {
           static const svn_wc_entry_callbacks_t walk_callbacks
             = { proplist_walk_cb };
@@ -1150,11 +1171,55 @@ svn_client_proplist3(const char *target,
         }
       else
         {
-          apr_hash_t *hash;
+          apr_hash_t *hash;          
 
           SVN_ERR(pristine_or_working_props(&hash, target, adm_access,
                                             pristine, pool));
           SVN_ERR(call_receiver(target, hash, receiver, receiver_baton, pool));
+
+          /* If depth is at least svn_depth_files and target is a directory,
+             we'll need to iterate over the directory entries. */
+          if (depth > svn_depth_empty && (node->kind == svn_node_dir))
+            {
+              apr_hash_t *entries;
+              apr_hash_index_t *hi;
+              apr_pool_t *iterpool = svn_pool_create(pool);
+
+              SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
+              for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+                {
+                  const void *key;
+                  void *val;
+                  const svn_wc_entry_t *current_entry;
+                  const char *path;
+
+                  apr_hash_this(hi, &key, NULL, &val);
+                  current_entry = val;
+
+                  /* We already handled THIS_DIR. */
+                  if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+                    continue;
+
+                  path = svn_path_join(target, key, iterpool);
+
+                  if (current_entry->kind == svn_node_file
+                      || depth == svn_depth_immediates)
+                    {
+                      /* Ignore the entry if it does not exist at the time
+                         of interest. */
+                      if (current_entry->schedule
+                          == (pristine ? svn_wc_schedule_add 
+                                       : svn_wc_schedule_delete))
+                        continue;
+
+                      SVN_ERR(pristine_or_working_props(&hash, path,
+                                                        adm_access,
+                                                        pristine, iterpool));
+                      SVN_ERR(call_receiver(path, hash, receiver,
+                                            receiver_baton, iterpool));
+                    }
+                }
+            }
         }
       
       SVN_ERR(svn_wc_adm_close(adm_access));
@@ -1210,7 +1275,8 @@ svn_client_proplist2(apr_array_header_t **props,
   pl_baton.props = *props;
   pl_baton.pool = pool;
 
-  SVN_ERR(svn_client_proplist3(target, peg_revision, revision, recurse,
+  SVN_ERR(svn_client_proplist3(target, peg_revision, revision,
+                               recurse ? svn_depth_infinity : svn_depth_empty,
                                proplist_receiver_cb, &pl_baton, ctx, pool));
 
   return SVN_NO_ERROR;

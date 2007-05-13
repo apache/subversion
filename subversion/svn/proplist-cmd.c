@@ -223,7 +223,7 @@ svn_cl__proplist(apr_getopt_t *os,
           SVN_ERR(svn_cl__try
                   (svn_client_proplist3(truepath, &peg_revision,
                                         &(opt_state->start_revision),
-                                        SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                                        opt_state->depth,
                                         pl_receiver,
                                         &pl_baton,
                                         ctx, subpool),
