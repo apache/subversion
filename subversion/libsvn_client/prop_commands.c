@@ -1193,6 +1193,8 @@ svn_client_proplist3(const char *target,
                   const svn_wc_entry_t *current_entry;
                   const char *path;
 
+                  svn_pool_clear(iterpool);
+
                   apr_hash_this(hi, &key, NULL, &val);
                   current_entry = val;
 
