@@ -3083,15 +3083,13 @@ svn_client_revprop_get(const char *propname,
  * baton cached in @a ctx for authentication if contacting the
  * repository.
  *
- * If @a recurse is false, or @a target is a file, @a *props will contain 
- * only a single element.  Otherwise, it will contain one element for each
- * versioned entry below (and including) @a target.
- *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth right now; it's not exactly part of the
- * ### sparse-directories feature, although it's related.  Usually
- * ### you would just name the target carefully... Is there a
- * ### situation where depth support would be useful here?
+ * If @a depth is @c svn_depth_empty, list only the properties of
+ * @a path_or_url itself.  If @a depth is @c svn_depth_files, and
+ * @a path_or_url is a directory, list the properties of @a path_or_url
+ * and its file entries.  If @c svn_depth_immediates, list the properties
+ * of its immediate file and directory entries.  If @c svn_depth_infinity,
+ * list the properties of its file entries and recurse (with
+ * @c svn_depth_infinity) on directory entries.
  *
  * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
@@ -3101,7 +3099,7 @@ svn_error_t *
 svn_client_proplist3(const char *target,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
+                     svn_depth_t depth,
                      svn_proplist_receiver_t receiver,
                      void *receiver_baton,
                      svn_client_ctx_t *ctx,
@@ -3110,7 +3108,9 @@ svn_client_proplist3(const char *target,
 /**
  * Similar to svn_client_proplist3(), except the properties are returned 
  * as an array of @c svn_client_proplist_item_t * structures, instead of
- * by invoking the receiver function.
+ * by invoking the receiver function, and @a recurse is used instead of
+ * a svn_depth_t parameter (FALSE corresponds to svn_depth_empty, and TRUE
+ * to svn_depth_infinity).
  *
  * @since New in 1.2.
  *
