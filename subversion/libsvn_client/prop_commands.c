@@ -1219,6 +1219,7 @@ svn_client_proplist3(const char *target,
                                             receiver_baton, iterpool));
                     }
                 }
+              svn_pool_destroy(iterpool);
             }
         }
       
