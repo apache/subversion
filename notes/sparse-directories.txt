@@ -462,7 +462,6 @@ Contents
            svn_client_commit4()   # Is manual control of depth needed here?
            svn_client_propset3()  # Is manual control of depth needed here?
            svn_client_propget3()  # Is manual control of depth needed here?
-           svn_client_proplist3() # Is manual control of depth needed here?
            svn_client_resolved()  # Is manual control of depth needed here?
            svn_client_relocate()  # I don't think this needs to take depth.
            svn_client_info()      # I don't think this needs to take depth.
