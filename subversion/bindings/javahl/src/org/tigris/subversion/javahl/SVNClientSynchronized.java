@@ -1470,18 +1470,18 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param path        the path of the item
      * @param revision    the revision of the item
      * @param pegRevision the revision to interpret path
-     * @param recurse     get properties from subdirectories also
+     * @param depth       the depth to recurse into subdirectories
      * @param callback    the callback to use to return the properties
      * @since 1.5
      */
     public void properties(String path, Revision revision,
-                           Revision pegRevision, boolean recurse,
+                           Revision pegRevision, int depth,
                            ProplistCallback callback)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.properties(path, revision, pegRevision, recurse, callback);
+            worker.properties(path, revision, pegRevision, depth, callback);
         }
     }
 

@@ -1302,7 +1302,8 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
-        properties(path, revision, pegRevision, false, callback);
+        properties(path, revision, pegRevision, Depth.fromRecurse(false),
+                   callback);
 
         Map propMap = callback.getProperties(path);
         if (propMap == null)
@@ -1328,12 +1329,12 @@ public class SVNClient implements SVNClientInterface
      * @param path        the path of the item
      * @param revision    the revision of the item
      * @param pegRevision the revision to interpret path
-     * @param recurse     get properties from subdirectories also
+     * @param depth       the depth to recurse into subdirectories
      * @param callback    the callback to use to return the properties
      * @since 1.5
      */
     public native void properties(String path, Revision revision,
-                                  Revision pegRevision, boolean recurse,
+                                  Revision pegRevision, int depth,
                                   ProplistCallback callback)
             throws ClientException;
 

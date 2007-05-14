@@ -781,7 +781,7 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_properties
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jboolean jrecurse, jobject jproplistCallback)
+ jobject jpegRevision, jint jdepth, jobject jproplistCallback)
 {
   JNIEntry(SVNClient, properties);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -803,7 +803,7 @@ Java_org_tigris_subversion_javahl_SVNClient_properties
     return;
 
   ProplistCallback callback(jproplistCallback);
-  cl->properties(path, revision, pegRevision, jrecurse ? true : false,
+  cl->properties(path, revision, pegRevision, (svn_depth_t)jdepth,
                  &callback);
 }
 
