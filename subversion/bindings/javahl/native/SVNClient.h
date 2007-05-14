@@ -83,7 +83,7 @@ class SVNClient :public SVNBase
   void propertySet(const char *path, const char *name, const char *value,
                    bool recurse, bool force);
   void properties(const char *path, Revision &revision,
-                  Revision &pegRevision, bool recurse,
+                  Revision &pegRevision, svn_depth_t depth,
                   ProplistCallback *callback);
   jobject getMergeInfo(const char *target, Revision &rev);
   void merge(const char *path1, Revision &revision1, const char *path2,

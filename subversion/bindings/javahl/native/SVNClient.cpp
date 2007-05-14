@@ -766,7 +766,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
 }
 
 void SVNClient::properties(const char *path, Revision &revision,
-                           Revision &pegRevision, bool recurse,
+                           Revision &pegRevision, svn_depth_t depth,
                            ProplistCallback *callback)
 {
     Pool requestPool;
@@ -779,7 +779,7 @@ void SVNClient::properties(const char *path, Revision &revision,
         return;
 
     SVN_JNI_ERR(svn_client_proplist3(intPath.c_str(), pegRevision.revision(),
-                                     revision.revision(), recurse,
+                                     revision.revision(), depth,
                                      ProplistCallback::callback, callback,
                                      ctx, requestPool.pool()), );
 

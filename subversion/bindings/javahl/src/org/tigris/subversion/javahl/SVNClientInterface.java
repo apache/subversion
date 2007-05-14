@@ -1007,12 +1007,12 @@ public interface SVNClientInterface
      * @param path        the path of the item
      * @param revision    the revision of the item
      * @param pegRevision the revision to interpret path
-     * @param recurse     get properties from subdirectories also
+     * @param depth       the depth to recurse into subdirectories
      * @param callback    the callback to use to return the properties
      * @since 1.5
      */
     void properties(String path, Revision revision, Revision pegRevision,
-                    boolean recurse, ProplistCallback callback)
+                    int depth, ProplistCallback callback)
             throws ClientException;
 
     /**
