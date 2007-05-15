@@ -61,6 +61,21 @@ public class Version
     public native int getPatch();
 
     /**
+     * @return Whether the JavaHL native library version is at least
+     * of <code>major.minor.patch</code> level.
+     * @since 1.5.0
+     */
+    public boolean isAtLeast(int major, int minor, int patch)
+    {
+        int actualMajor = getMajor();
+        int actualMinor = getMinor();
+        return ((major < actualMajor)
+                || (major == actualMajor && minor < actualMinor)
+                || (major == actualMajor && minor == actualMinor &&
+                    patch <= getPatch()));
+    }
+
+    /**
      * @return Some text further describing the library version
      * (e.g. <code>" (r1234)"</code>, <code>" (Alpha 1)"</code>,
      * <code>" (dev build)"</code>, etc.).
