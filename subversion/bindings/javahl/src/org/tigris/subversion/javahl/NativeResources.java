@@ -112,6 +112,7 @@ class NativeResources
 
     /**
      * Initialize the native library layer.
+     * @since 1.5.0
      */
     private static native void initNativeLibrary();
 }
