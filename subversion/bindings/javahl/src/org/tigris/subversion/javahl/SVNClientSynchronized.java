@@ -1943,9 +1943,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Set directory for the configuration information
-     * @param configDir     path of the directory
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.setConfigDirectory(String)
      */
     public void setConfigDirectory(String configDir) throws ClientException
     {
