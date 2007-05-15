@@ -215,7 +215,7 @@ module Svn
       # Returns list of properties attached to +target+ as an Array of
       # Svn::Client::PropListItem.
       # Paths and URIs are available as +target+.
-      def proplist(target, rev=nil, peg_rev=nil, recurse=true, &block)
+      def proplist(target, rev=nil, peg_rev=nil, depth=nil, &block)
         rev ||= "HEAD"
         peg_rev ||= rev
         items = []
@@ -223,7 +223,7 @@ module Svn
           items << PropListItem.new(path, prop_hash)
           block.call(path, prop_hash) if block
         end
-        Client.proplist3(target, rev, peg_rev, recurse, receiver, self)
+        Client.proplist3(target, rev, peg_rev, depth, receiver, self)
         items
       end
       alias prop_list proplist
