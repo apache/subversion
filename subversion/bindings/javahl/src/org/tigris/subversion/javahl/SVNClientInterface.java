@@ -1310,9 +1310,11 @@ public interface SVNClientInterface
     /**
      * Set directory for the configuration information, taking the
      * usual steps to ensure that Subversion's config file templates
-     * exist in the specified location.
-     *
-     * @param configDir     path of the directory
+     * exist in the specified location..  On Windows, setting a
+     * non-<code>null</code> value will override lookup of
+     * configuration in the registry.
+     * @param configDir Path of the directory, or <code>null</code>
+     * for the platform's default.
      * @throws ClientException
      */
     void setConfigDirectory(String configDir) throws ClientException;
