@@ -74,7 +74,7 @@ svn_cl__mkdir(apr_getopt_t *os,
 
   ctx->revprop_table = opt_state->revprop_table;
 
-  err = svn_client_mkdir3(&commit_info, targets, opt_state->make_parents,
+  err = svn_client_mkdir3(&commit_info, targets, opt_state->parents,
                           ctx, pool);
 
   if (ctx->log_msg_func3)

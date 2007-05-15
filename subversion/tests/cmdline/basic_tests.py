@@ -263,7 +263,7 @@ def basic_mkdir_url_with_parents(sbox):
   svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
                                      ["\n", "Committed revision 2.\n"], [],
                                      'mkdir', '-m', 'log_msg',
-                                     '--make-parents', Y_Z_url)
+                                     '--parents', Y_Z_url)
 
   expected_output = wc.State(sbox.wc_dir, {
     'Y'   : Item(status='A '),
@@ -296,7 +296,7 @@ def basic_mkdir_wc_with_parents(sbox):
   Y_Z_path = os.path.join(wc_dir, 'Y', 'Z')
 
   svntest.actions.run_and_verify_svn("mkdir dir/subdir", None, [],
-                                     'mkdir', '--make-parents', Y_Z_path)
+                                     'mkdir', '--parents', Y_Z_path)
   
 
 #----------------------------------------------------------------------
