@@ -3109,8 +3109,8 @@ svn_client_proplist3(const char *target,
  * Similar to svn_client_proplist3(), except the properties are returned 
  * as an array of @c svn_client_proplist_item_t * structures, instead of
  * by invoking the receiver function, and @a recurse is used instead of
- * a svn_depth_t parameter (FALSE corresponds to svn_depth_empty, and TRUE
- * to svn_depth_infinity).
+ * a @c svn_depth_t parameter (FALSE corresponds to @c svn_depth_empty,
+ * and TRUE to @c svn_depth_infinity).
  *
  * @since New in 1.2.
  *
