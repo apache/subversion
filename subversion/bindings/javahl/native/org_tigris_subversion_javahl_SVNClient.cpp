@@ -1564,11 +1564,3 @@ Java_org_tigris_subversion_javahl_SVNClient_getCopySource
  
   return cl->getCopySource(path, rev);
 }
-
-JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_initNative
-(JNIEnv *env, jclass jclazz)
-{
-  // No standard JNIEntry here, because this call initializes everything
-  JNIUtil::JNIGlobalInit(env);
-}
