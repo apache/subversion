@@ -89,8 +89,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-05-11 07:38+0200\n"
-"PO-Revision-Date: 2007-05-13 18:07+0200\n"
+"POT-Creation-Date: 2007-05-15 07:41+0200\n"
+"PO-Revision-Date: 2007-05-15 09:28+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1312,7 +1312,7 @@ msgstr ""
 "Solo differenze fra il testo base di un percorso e i suoi file di lavoro "
 "sono supportati correntemente"
 
-#: libsvn_client/diff.c:1212 libsvn_client/switch.c:110
+#: libsvn_client/diff.c:1212 libsvn_client/switch.c:111
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "La directory '%s' non ha URL"
@@ -1504,7 +1504,7 @@ msgstr "Il valore non sarà impostato se non forzato"
 msgid "'%s' does not exist in revision %ld"
 msgstr "'%s' non esiste nella revisione %ld"
 
-#: libsvn_client/prop_commands.c:666 libsvn_client/prop_commands.c:947
+#: libsvn_client/prop_commands.c:666 libsvn_client/prop_commands.c:949
 #, c-format
 msgid "Unknown node kind for '%s'"
 msgstr "Tipo di nodo sconosciuto per '%s'"
@@ -1565,6 +1565,23 @@ msgstr "Percorso '%s' non ha una revisione confermata"
 #, c-format
 msgid "Unrecognized revision type requested for '%s'"
 msgstr "Tipo di revisione non riconosciuto per '%s'"
+
+#: libsvn_client/switch.c:135 libsvn_ra_local/ra_plugin.c:108
+#: libsvn_ra_local/ra_plugin.c:597 libsvn_wc/update_editor.c:2617
+#, c-format
+msgid ""
+"'%s'\n"
+"is not the same repository as\n"
+"'%s'"
+msgstr ""
+"'%s'\n"
+"non è lo stesso repository di\n"
+"'%s'"
+
+#: libsvn_client/switch.c:150
+#, c-format
+msgid "Destination does not exist: '%s'"
+msgstr "La destinazione non esiste: '%s'"
 
 #: libsvn_client/update.c:145 libsvn_wc/log.c:2573
 #, c-format
@@ -3158,18 +3175,6 @@ msgstr "La richiesta %s ha restituito XML non valido nella risposta: %s (%s)"
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "richiesta %s fallita su '%s'"
-
-#: libsvn_ra_local/ra_plugin.c:108 libsvn_ra_local/ra_plugin.c:597
-#: libsvn_wc/update_editor.c:2617
-#, c-format
-msgid ""
-"'%s'\n"
-"is not the same repository as\n"
-"'%s'"
-msgstr ""
-"'%s'\n"
-"non è lo stesso repository di\n"
-"'%s'"
 
 #. ----------------------------------------------------------------
 #. * The RA vtable routines *
@@ -6814,7 +6819,6 @@ msgstr ""
 "  in quel caso le differenze vengono applicate a quel file.\n"
 
 #: svn/main.c:549
-#, fuzzy
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
