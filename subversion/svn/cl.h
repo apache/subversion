@@ -85,7 +85,7 @@ typedef enum {
   svn_cl__xml_opt,
   svn_cl__keep_local_opt,
   svn_cl__with_revprop_opt,
-  svn_cl__make_parents_opt
+  svn_cl__parents_opt
 } svn_cl__longopt_t;
 
 
@@ -157,7 +157,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t keep_changelist; /* don't remove changelist after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
   apr_hash_t *revprop_table;     /* table with revision properties to set */
-  svn_boolean_t make_parents;  /* create intermediate directories */
+  svn_boolean_t parents;         /* create intermediate directories */
 
 } svn_cl__opt_state_t;
 
