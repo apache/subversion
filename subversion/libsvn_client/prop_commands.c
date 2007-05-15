@@ -1126,6 +1126,9 @@ svn_client_proplist3(const char *target,
   else  /* working copy path */
     {
       svn_boolean_t pristine;
+      /* Initialize the administrative area lock depth to -1 for the
+         svn_depth_infinity case, and override it below for the other
+         depths. */
       int adm_depth = -1;
 
       if (depth == svn_depth_empty || depth == svn_depth_files)
@@ -1279,6 +1282,9 @@ svn_client_proplist2(apr_array_header_t **props,
   pl_baton.pool = pool;
 
   SVN_ERR(svn_client_proplist3(target, peg_revision, revision,
+                               /* We can't use SVN_DEPTH_FROM_RECURSE() here,
+                                  because we want a non-recursive proplist
+                                  to mean svn_depth_empty, not _files. */
                                recurse ? svn_depth_infinity : svn_depth_empty,
                                proplist_receiver_cb, &pl_baton, ctx, pool));
 

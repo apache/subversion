@@ -3089,7 +3089,9 @@ svn_client_revprop_get(const char *propname,
  * and its file entries.  If @c svn_depth_immediates, list the properties
  * of its immediate file and directory entries.  If @c svn_depth_infinity,
  * list the properties of its file entries and recurse (with
- * @c svn_depth_infinity) on directory entries.
+ * @c svn_depth_infinity) on directory entries.  @c svn_depth_unknown is
+ * equivalent to @c svn_depth_empty.  All other values produce undefined
+ * results.
  *
  * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
