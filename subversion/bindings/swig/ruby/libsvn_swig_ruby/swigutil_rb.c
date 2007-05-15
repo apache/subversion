@@ -140,6 +140,7 @@ DEFINE_ID(delete_path, "delete_path")
 DEFINE_ID(link_path, "link_path")
 DEFINE_ID(finish_report, "finish_report")
 DEFINE_ID(abort_report, "abort_report")
+DEFINE_ID(to_s, "to_s")
 
 typedef void *(*r2c_func)(VALUE value, void *ctx, apr_pool_t *pool);
 typedef VALUE (*c2r_func)(void *value, void *ctx);
@@ -779,13 +780,15 @@ svn_swig_rb_to_depth(VALUE value)
     return SVN_DEPTH_FROM_RECURSE(TRUE);
   } else if (value == Qfalse) {
     return SVN_DEPTH_FROM_RECURSE(FALSE);
-  } else if (RTEST(rb_obj_is_kind_of(value, rb_cString))) {
+  } else if (RTEST(rb_obj_is_kind_of(value, rb_cString)) ||
+             RTEST(rb_obj_is_kind_of(value, rb_cSymbol))) {
+    value = rb_funcall(value, rb_id_to_s(), 0);
     return svn_depth_from_word(StringValueCStr(value));
   } else if (RTEST(rb_obj_is_kind_of(value, rb_cInteger))) {
     return NUM2INT(value);
   } else {
     rb_raise(rb_eArgError,
-             "'%s' must be DEPTH_STRING (e.g. \"infinity\") "
+             "'%s' must be DEPTH_STRING (e.g. \"infinity\" or :infinity) "
              "or Svn::Core::DEPTH_*",
              r2c_inspect(value));
   }
