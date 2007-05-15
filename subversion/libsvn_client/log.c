@@ -233,7 +233,8 @@ svn_client__suggest_merge_sources(const char *path_or_url,
   /* ### TODO: Use RA APIs directly to improve efficiency. */
   SVN_ERR(svn_client__get_copy_source(path_or_url, revision, &copyfrom_path,
                                       &copyfrom_rev, ctx, pool));
-  APR_ARRAY_PUSH(*suggestions, const char *) = copyfrom_path;
+  if (copyfrom_path)
+    APR_ARRAY_PUSH(*suggestions, const char *) = copyfrom_path;
 
   SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, revision,
                                    ctx, pool));
@@ -241,7 +242,7 @@ svn_client__suggest_merge_sources(const char *path_or_url,
     {
       const char *path;
       apr_hash_this(hi, (void *) &path, NULL, NULL);
-      if (strcmp(path, copyfrom_path) != 0)
+      if (copyfrom_path == NULL || strcmp(path, copyfrom_path) != 0)
         {
           APR_ARRAY_PUSH(*suggestions, const char *) = apr_pstrdup(pool, path);
         }
