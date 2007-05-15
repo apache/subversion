@@ -434,11 +434,11 @@ append_component_to_paths(apr_hash_t **output,
   return SVN_NO_ERROR;
 }
 
-/* A helper for get_merge_info() that retrieves merge info recursively
-   (when INCLUDE_PARENTS is TRUE) for a single path.  Pass NULL for
-   RESULT if you only want CACHE to be updated.  Otherwise, both
-   RESULT and CACHE are updated with the appropriate merge info for
-   PATH. */
+/* A helper for svn_fs_mergeinfo__get_merge_info() that retrieves
+   merge info recursively (when INCLUDE_PARENTS is TRUE) for a single
+   path.  Pass NULL for RESULT if you only want CACHE to be updated.
+   Otherwise, both RESULT and CACHE are updated with the appropriate
+   merge info for PATH. */
 static svn_error_t *
 get_merge_info_for_path(sqlite3 *db,
                         const char *path,
@@ -564,7 +564,6 @@ svn_fs_mergeinfo__get_merge_info(apr_hash_t **mergeinfo,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-
       SVN_ERR(get_merge_info_for_path(db, path, rev, *mergeinfo,
                                       mergeinfo_cache, include_parents, pool));
     }
@@ -572,14 +571,15 @@ svn_fs_mergeinfo__get_merge_info(apr_hash_t **mergeinfo,
   for (i = 0; i < paths->nelts; i++)
     {
       svn_stringbuf_t *mergeinfo_buf;
-      apr_hash_t *currhash;
+      apr_hash_t *path_mergeinfo;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
-      currhash = apr_hash_get(*mergeinfo, path, APR_HASH_KEY_STRING);
-      if (currhash)
+      path_mergeinfo = apr_hash_get(*mergeinfo, path, APR_HASH_KEY_STRING);
+      if (path_mergeinfo)
         {
-          SVN_ERR(svn_mergeinfo_sort(currhash, pool));
-          SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, currhash, pool));
+          SVN_ERR(svn_mergeinfo_sort(path_mergeinfo, pool));
+          SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, path_mergeinfo,
+                                             pool));
           apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
                        mergeinfo_buf->data);
         }
