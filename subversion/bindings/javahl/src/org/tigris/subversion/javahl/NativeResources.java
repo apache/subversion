@@ -95,7 +95,12 @@ class NativeResources
      */
     private static final void init()
     {
+        initNativeLibrary();
         version = new Version();
-        SVNClient.initNative();
     }
+
+    /**
+     * Initialize the native library layer.
+     */
+    private static native void initNativeLibrary();
 }

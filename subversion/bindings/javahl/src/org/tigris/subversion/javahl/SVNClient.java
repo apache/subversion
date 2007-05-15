@@ -1807,12 +1807,6 @@ public class SVNClient implements SVNClientInterface
             throws SubversionException;
 
     /**
-     * Internal method to initialize the native layer. Only to be called by
-     * NativeResources.loadNativeLibrary
-     */
-    static native void initNative();
-
-    /**
      * A private log message callback implementation used by thin wrappers.
      * Instances of this class are not thread-safe.
      */
