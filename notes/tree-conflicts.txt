@@ -4,6 +4,11 @@ This file is a scratch pad for working out current and expected
 behaviors for various tree-conflict situations.  It may be considered
 unfinished at best -- scatterbrained is more like it.
 
+NOTE:  As Subversion does not actually have real 'move' functionality,
+please try to express move-ish use-cases in terms of deletes and
+adds-with-history (copies).
+
+
 UPDATE SCENARIOS
 ================
 
