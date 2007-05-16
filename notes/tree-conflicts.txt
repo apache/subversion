@@ -8,9 +8,13 @@ NOTE:  As Subversion does not actually have real 'move' functionality,
 please try to express move-ish use-cases in terms of deletes and
 adds-with-history (copies).
 
+
+=========
+SCENARIOS
+=========
 
-UPDATE SCENARIOS
-================
+Update Scenarios
+----------------
 
 'svn update' pulls file deletion atop file with local text mods
   NOW:  file is silently unversioned
@@ -37,8 +41,8 @@ UPDATE SCENARIOS
   NEW:  modified items are marked as conflicted
 
 
-MERGE SCENARIOS
-===============
+Merge Scenarios
+---------------
 
 'svn merge' file deletion
   NOW:  file is unversioned; if not locally modified, it is also deleted
@@ -48,3 +52,53 @@ MERGE SCENARIOS
         that was deleted from the merge source.  but what if there was
         no merge source?  or what if the merge is using two
         independent lines of history for its source-left and source-right?
+
+
+
+
+========================
+CMPILATO'S BRAINSTORMING
+========================
+
+There appear to me to be some pretty clear goals:
+
+   * Conflicting operations should be marked as such and require user
+     interaction to resolve
+
+   * In such a conflicting situation, users would like to be able to
+     easily do the following:
+
+        - determine what local mods they've made
+        - apply those mods elsewhere if necessary
+        - overrule the conflict and make their changes anyway
+
+   * Tree conflicts appear to be something special, and should be 
+     annotated as such.
+
+With those things in mind, here are some not-fully-baked ideas:
+
+To annotate a tree conflict, we recycle the 'conflict-new' conflict
+file slot pointing to a dropped file named <versionedfile>.trej.  It's
+contents can note the details of the tree conflict.
+
+'svn update' pulls file deletion atop file with local text mods
+  NOW:  file is silently unversioned
+  NEW:  file is marked as added-with-history (as of the revision
+        previously in the working copy), and placed into a state of
+        conflict.  there are no conflict markers, but the .trej file
+        note that our file was deleted in the repository
+
+'svn update' pulls text mods onto schedule-delete file
+  NOW:  text mods are silently merged into file's text-base
+  NEW:  file remains scheduled for deletion, text-base is up-to-date,
+        but file is marked as conflict, and .trej file notes that
+        the file was modified in the repository.
+
+'svn update' pulls dir deletion atop dir containing deep text mods
+  NOW:  directory is removed save for modified files (left unversioned)
+  NEW:  modified files are marked as added-with-history (as of their
+        working copy revisions), placed into a state of conflict, with
+        .trej files noting the deletion of the parent directory.
+        Intermediate directories are marked as added (no history) and
+        in conflict, with their .trej files noting the deletion of the
+        directory.
