@@ -215,7 +215,6 @@ def textual_merges_galore(sbox):
   # case 4, which we'll handle in a second pass.
   expected_output = wc.State(other_wc, {'A/B/lambda' : Item(status='U '),
                                         'A/D/G/rho'  : Item(status='U '),
-                                        'A/D/G/pi'   : Item(status='G '),
                                         'A/D/G/tau'  : Item(status='C '),
                                         })
 
@@ -306,7 +305,6 @@ def textual_merges_galore(sbox):
   # merge on rho, which is all we really care about.
   expected_output = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
                              { 'rho'  : Item(status='G '),
-                               'pi'   : Item(status='G '),
                                'tau'  : Item(status='C '),
                                })
   
