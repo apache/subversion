@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -951,6 +951,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED,
              SVN_ERR_CLIENT_CATEGORY_START + 14,
              "Operation does not support multiple sources")
+
+  SVN_ERRDEF(SVN_ERR_CLIENT_NO_VERSIONED_PARENT,
+             SVN_ERR_CLIENT_CATEGORY_START + 15,
+             "No versioned parent directories")
 
   /* misc errors */
 

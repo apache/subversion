@@ -1201,10 +1201,10 @@ svn_client_switch(svn_revnum_t *result_rev,
  * ### important for the sparse-directories work, so leaving it
  * ### for now.
  * 
- * @a path's parent must be under revision control already, but @a 
- * path is not.  If @a recursive is set, then assuming @a path is a 
- * directory, all of its contents will be scheduled for addition as 
- * well.
+ * @a path's parent must be under revision control already (unless
+ * @a add_parents is true), but @a path is not.  If @a recursive is 
+ * set, then assuming @a path is a directory, all of its contents will
+ * be scheduled for addition as well.
  *
  * If @a force is not set and @a path is already under version
  * control, return the error @c SVN_ERR_ENTRY_EXISTS.  If @a force is
@@ -1220,12 +1220,31 @@ svn_client_switch(svn_revnum_t *result_rev,
  * If @a no_ignore is false, don't add files or directories that match
  * ignore patterns.
  *
+ * If @a add_parents is true, recurse up @a path's directory and look for
+ * a versioned directory.  If found, add all intermediate paths between it
+ * and @a path.  If not found, return @c SVN_ERR_CLIENT_NO_VERSIONED_PARENTS.
+ *
  * @par Important:
  * This is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
  * can be removed with svn_client_revert().
  *
- * @since New in 1.3.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_add4(const char *path,
+                svn_boolean_t recursive,
+                svn_boolean_t force,
+                svn_boolean_t no_ignore,
+                svn_boolean_t add_parents,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_add4(), but with @a add_parents always set to
+ * false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_client_add3(const char *path,

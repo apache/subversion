@@ -203,7 +203,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "using the name=value format")},
   {"parents",       svn_cl__parents_opt, 0,
-                    N_("make intermediate directories")},
+                    N_("make and/or add intermediate directories")},
   {0,               0, 0, 0}
 };
 
@@ -248,7 +248,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: add PATH...\n"),
     {svn_cl__targets_opt, 'N', svn_cl__depth_opt, 'q', svn_cl__config_dir_opt,
      svn_cl__force_opt, svn_cl__no_ignore_opt, svn_cl__autoprops_opt,
-     svn_cl__no_autoprops_opt} },
+     svn_cl__no_autoprops_opt, svn_cl__parents_opt} },
 
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"}, N_
     ("Output the content of specified files or\n"
