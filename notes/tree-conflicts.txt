@@ -39,3 +39,12 @@ UPDATE SCENARIOS
 
 MERGE SCENARIOS
 ===============
+
+'svn merge' file deletion
+  NOW:  file is unversioned; if not locally modified, it is also deleted
+  NEW:  of interest here is not just whether the file is locally
+        modified, but if it has been modified at all since the point
+        in its history that is the common ancestor of the fork of it
+        that was deleted from the merge source.  but what if there was
+        no merge source?  or what if the merge is using two
+        independent lines of history for its source-left and source-right?
