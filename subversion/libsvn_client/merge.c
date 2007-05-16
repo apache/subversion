@@ -1030,6 +1030,31 @@ get_wc_or_repos_merge_info(apr_hash_t **target_mergeinfo,
   SVN_ERR(svn_wc__entry_versioned(entry, target_wcpath, adm_access, FALSE,
                                   pool));
 
+  /* We may get an entry with abrieviated information from TARGET_WCPATH's
+     parent.  This limited entry does not have a URL and probably means
+     TARGET_WCPATH is missing or that the access for TARGET_WCPATH is not in
+     ADM_ACCESS's baton set (i.e. ADM_ACCESS was opened for TARGET_WCPATH's
+     parent with lock depth == 0).  Either way we can't get accurate merge
+     info for TARGET_WCPATH. */
+  if (! (*entry)->url)
+    {
+      svn_node_kind_t wckind;
+
+      SVN_ERR(svn_io_check_path(target_wcpath, &wckind, pool));
+      if (wckind == svn_node_none)
+        {
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("Path '%s' is missing"),
+                                   svn_path_local_style(target_wcpath, pool));
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL, 
+                                   _("Cannot find a URL for '%s'."),
+                                   svn_path_local_style(target_wcpath, pool));
+        }
+    }
+
   /* ### FIXME: dionisos sez: "We can have schedule 'normal' files
      ### with a copied parameter of TRUE and a revision number of
      ### INVALID_REVNUM.  Copied directories cause this behaviour on
