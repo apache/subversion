@@ -86,7 +86,9 @@ contents can note the details of the tree conflict.
   NEW:  file is marked as added-with-history (as of the revision
         previously in the working copy), and placed into a state of
         conflict.  there are no conflict markers, but the .trej file
-        note that our file was deleted in the repository
+        note that our file was deleted in the repository.  user can
+        see mods with 'svn diff'; revert still works; resolved+commit
+        undoes the deletion and commits the users's mods.
 
 'svn update' pulls text mods onto schedule-delete file
   NOW:  text mods are silently merged into file's text-base
