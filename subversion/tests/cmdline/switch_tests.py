@@ -1648,7 +1648,7 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status,
                                         None, None, None, None, None, 1)
 
-  # Now check that a switch which reverses and earlier witch and leaves
+  # Now check that a switch which reverses and earlier switch and leaves
   # a path in an unswitched state does elide its mergeinfo.
   #
   # Switch A/B_COPY_1/lambda to iota.  Use propset to give A/B_COPY/lambda
