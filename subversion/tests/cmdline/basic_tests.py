@@ -1535,6 +1535,61 @@ def basic_add_no_ignores(sbox):
       raise svntest.actions.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
+def basic_add_parents(sbox):
+  'test add --parents'
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  X_path = os.path.join(wc_dir, 'X')
+  Y_path = os.path.join(X_path, 'Y')
+  Z_path = os.path.join(Y_path, 'Z')
+  zeta_path = os.path.join(Z_path, 'zeta')
+  omicron_path = os.path.join(Y_path, 'omicron')
+
+  # Create some unversioned directories
+  os.mkdir(X_path, 0755)
+  os.mkdir(Y_path, 0755)
+  os.mkdir(Z_path, 0755)
+
+  # Create new files
+  z = open(zeta_path, 'w')
+  z.write("This is the file 'zeta'.\n")
+  z.close()
+  o = open(omicron_path, 'w')
+  o.write("This is the file 'omicron'.\n")
+  o.close()
+
+  # Add the file, with it's parents
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', '--parents',
+                                     zeta_path)
+
+  # Build expected state
+  expected_output = wc.State(wc_dir, {
+      'X'            : Item(verb='Adding'),
+      'X/Y'          : Item(verb='Adding'),
+      'X/Y/Z'        : Item(verb='Adding'),
+      'X/Y/Z/zeta'   : Item(verb='Adding'),
+    })
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/zeta'  : Item(status='  ', wc_rev=2),
+    })
+
+  # Commit and verify                                     
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+#----------------------------------------------------------------------
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
 
@@ -1900,6 +1955,7 @@ test_list = [ None,
               nonexistent_repository,
               basic_auth_cache,
               basic_add_ignores,
+              basic_add_parents,
               uri_syntax,
               basic_checkout_file,
               basic_info,
