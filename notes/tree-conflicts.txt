@@ -1,0 +1,36 @@
+                               -*- text -*-
+
+This file is a scratch pad for working out current and expected
+behaviors for various tree-conflict situations.  It may be considered
+unfinished at best -- scatterbrained is more like it.
+
+UPDATE SCENARIOS
+================
+
+'svn update' pulls file deletion atop file with local text mods
+  NOW:  file is silently unversioned
+  NEW:  file is marked as conflicted
+
+'svn update' pulls file deletion atop file with local prop mods
+  NOW:  file is removed and prop mods are forever lost
+  NEW:  file is marked as conflicted
+
+'svn update' pulls dir deletion atop dir with local prop mods
+  NOW:  directory is removed and prop mods are forever lost
+  NEW:  directory is marked as conflicted
+
+'svn update' pulls text mods onto schedule-delete file
+  NOW:  text mods are silently merged into file's text-base
+  NEW:  file is marked as conflicted
+
+'svn update' pulls dir deletion atop dir containing deep prop mods
+  NOW:  directory is removed and prop mods are forever lost
+  NEW:  modified items are marked as conflicted
+
+'svn update' pulls dir deletion atop dir containing deep text mods
+  NOW:  directory is removed save for modified files (left unversioned)
+  NEW:  modified items are marked as conflicted
+
+
+MERGE SCENARIOS
+===============
