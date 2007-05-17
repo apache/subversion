@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -207,6 +207,11 @@ def parse_log_output(log_lines):
 
      'paths'    ===>  list of tuples of the form (X, PATH), where X is the
   first column of verbose output, and PATH is the affected path.
+
+  If LOG_LINES contains merge result information, then the hash also contains
+
+     'merges'   ===> list of merging revisions that resulted in this log
+  being part of the list of messages.
      """
 
   # Here's some log output to look at while writing this function:
@@ -254,6 +259,7 @@ def parse_log_output(log_lines):
 
     match = header_re.search(this_line)
     if match and match.groups():
+      is_result = 0
       this_item = {}
       this_item['revision'] = int(match.group(1))
       this_item['author']   = match.group(2)
@@ -262,14 +268,35 @@ def parse_log_output(log_lines):
       this_item['lines']    = lines
 
       # Parse verbose output, starting with "Changed paths"
-      if log_lines.pop(0).strip() == 'Changed paths:':
+      next_line = log_lines.pop(0)
+      if next_line.strip() == 'Changed paths:':
         paths = []
         path_line = log_lines.pop(0).strip()
-        while path_line != '':
+
+        # Stop on either a blank line or a "Result of a merge..." line
+        while path_line != '' and path_line[0:6] != 'Result':
           paths.append( (path_line[0], path_line[2:]) )
           path_line = log_lines.pop(0).strip()
 
         this_item['paths'] = paths
+
+        if path_line[0:6] == 'Result':
+          is_result = 1
+          result_line = path_line
+
+      elif next_line[0:6] == 'Result':
+        is_result = 1
+        result_line = next_line.strip()
+
+      # Parse output of "Result of a merge..." line
+      if is_result:
+        merges = []
+        for rev_str in result_line[24:].split(','):
+          merges.append(int(rev_str.strip()[1:]))
+        this_item['merges'] = merges
+
+        # Eat blank line
+        log_lines.pop(0)
 
       # Accumulate the log message
       msg = ''
@@ -281,6 +308,7 @@ def parse_log_output(log_lines):
         this_item['msg'] = msg
         chain.append(this_item)
     else:  # if didn't see separator now, then something's wrong
+      print this_line
       raise SVNLogParseError, "trailing garbage after log message"
 
   return chain
@@ -819,6 +847,79 @@ def log_verbose(sbox):
   check_log_chain(log_chain, range(max_revision, 1 - 1, -1), path_counts)
 
 
+def log_parser(sbox):
+  "meta-test for the log parser"
+
+  logs = ['''------------------------------------------------------------------------
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
+Changed paths:
+   M /trunk/death-ray.c
+   M /trunk/frobnicator/frapnalyzer.c
+ 
+Merge r12 and r14 from branch to trunk.
+------------------------------------------------------------------------
+r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
+Changed paths:
+   M /trunk/death-ray.c
+Result of a merge from: r24
+
+Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
+------------------------------------------------------------------------
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
+Changed paths:
+   M /trunk/frobnicator/frapnalyzer.c
+   M /trunk/death-ray.c
+Result of a merge from: r24
+
+Fix frapnalyzer bug in frobnicator.
+------------------------------------------------------------------------''',
+  '''------------------------------------------------------------------------
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
+ 
+Merge r12 and r14 from branch to trunk.
+------------------------------------------------------------------------
+r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r24
+
+Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
+------------------------------------------------------------------------
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r24
+
+Fix frapnalyzer bug in frobnicator.
+------------------------------------------------------------------------
+r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r12, r24
+
+Fix frapnalyzer documentation.
+------------------------------------------------------------------------
+r9 | bob   | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r12, r24
+
+Whitespace fixes.  No functional change.
+------------------------------------------------------------------------''',
+  '''------------------------------------------------------------------------
+r5 | kfogel | Tue 6 Nov 2001 17:18:19 | 1 line
+
+Log message for revision 5.
+------------------------------------------------------------------------
+r4 | kfogel | Tue 6 Nov 2001 17:18:18 | 3 lines
+
+Log message for revision 4
+but with multiple lines
+to test the code.
+------------------------------------------------------------------------
+r3 | kfogel | Tue 6 Nov 2001 17:18:17 | 1 line
+
+Log message for revision 3.
+------------------------------------------------------------------------''',
+  ]  # end of log list
+
+  for log in logs:
+    log_chain = parse_log_output([line+"\n" for line in log.split("\n")])
+
+
+
 ########################################################################
 # Run the tests
 
@@ -840,6 +941,7 @@ test_list = [ None,
               log_limit,
               log_base_peg,
               log_verbose,
+              log_parser,
              ]
 
 if __name__ == '__main__':
