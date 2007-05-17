@@ -1081,7 +1081,7 @@ def run_tests(test_list, serial_only = False):
   if windows:
     pristine_url = pristine_url.replace('\\', '/')  
 
-  # Setup the pristine repository (and working copy)
+  # Setup the pristine repository
   actions.setup_pristine_repository()
 
   # Run the tests.
