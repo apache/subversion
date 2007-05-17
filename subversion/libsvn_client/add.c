@@ -439,7 +439,8 @@ add(const char *path,
 
 
 /* Go up the directory tree, looking for a versioned directory.  If found,
-   add all the intermediate directories.  Otherwise, return SVN_ERR_XXX */
+   add all the intermediate directories.  Otherwise, return
+   SVN_ERR_CLIENT_NO_VERSIONED_PARENT. */
 static svn_error_t *
 add_parent_dirs(const char *path,
                 svn_wc_adm_access_t **parent_access,
