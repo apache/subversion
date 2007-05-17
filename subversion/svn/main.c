@@ -559,7 +559,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    an immediate commit.\n"
      "\n"
      "  In both cases, all the intermediate directories must already exist,\n"
-     "  unless the --make-parents option is given.\n"),
+     "  unless the --parents option is given.\n"),
     {'q', svn_cl__parents_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
