@@ -756,9 +756,6 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
 
 
 
-/** Make a directory and add it to the repository.
-  * If the parent directory doesn't exist, create it.
-  */
 svn_error_t *
 svn_client__make_local_parents(const char *path,
                                svn_boolean_t make_parents,
@@ -767,27 +764,12 @@ svn_client__make_local_parents(const char *path,
 {
   svn_error_t *err;
   
-  /* if we're making parents as needed, we have to check for existence first */
   if (make_parents)
-    {
-      const char *path_parent;
-      svn_node_kind_t node_kind;
-
-      svn_path_split(path, &path_parent, NULL, pool);
-
-      /* find out if the parent exists */
-      SVN_ERR(svn_io_check_path(path_parent, &node_kind, pool));
-
-      if (node_kind == svn_node_none)
-        {
-          /* recurse to make parent */
-          SVN_ERR(svn_client__make_local_parents(path_parent, TRUE, ctx, pool));
-        }
-    }
-
-  SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
+    SVN_ERR(svn_io_make_dir_recursively(path, pool));
+  else
+    SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
   
-  err = svn_client_add(path, FALSE, ctx, pool);
+  err = svn_client_add4(path, FALSE, FALSE, FALSE, make_parents, ctx, pool);
   
   /* We just created a new directory, but couldn't add it to
      version control. Don't leave unversioned directories behind. */
