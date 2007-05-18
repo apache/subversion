@@ -59,13 +59,6 @@ Candidate changes:
       +1: lgo
       +0: giovannibajo (can't review on the patch, but interested in the fix)
 
-  * r25063
-    Prevent spurious failure of svnadmin test 4 on this branch.
-    Justification:
-      Minor fix affecting test suite only.
-    Votes: 
-      +1: pburba
-      
 Veto-blocked changes:
 
   * r21531, r21848, r21934
@@ -116,3 +109,9 @@ Veto-blocked changes:
 
 Approved changes:
 
+  * r25063
+    Prevent spurious failure of svnadmin test 4 on this branch.
+    Justification:
+      Minor fix affecting test suite only.
+    Votes: 
+      +1: pburba, glasser (via IRC), dlr (via IRC)
