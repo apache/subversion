@@ -108,10 +108,3 @@ Veto-blocked changes:
      -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
 
 Approved changes:
-
-  * r25063
-    Prevent spurious failure of svnadmin test 4 on this branch.
-    Justification:
-      Minor fix affecting test suite only.
-    Votes: 
-      +1: pburba, glasser (via IRC), dlr (via IRC)
