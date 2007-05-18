@@ -306,7 +306,13 @@ diff -q "$HTTPD_CFG" "$HTTPD_CFG-copy" > /dev/null \
   || fail "HTTPD doesn't operate according to the generated configuration"
 rm "$HTTPD_CFG-copy"
 
-say "HTTPD is good, starting the tests..."
+say "HTTPD is good"
+
+if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
+  exit
+fi
+
+say "starting the tests..."
 
 if [ $# = 0 ]; then
   time make check "BASE_URL=$BASE_URL"
