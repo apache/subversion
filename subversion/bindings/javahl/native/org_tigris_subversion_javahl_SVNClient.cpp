@@ -429,7 +429,7 @@ Java_org_tigris_subversion_javahl_SVNClient_revert
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_add
 (JNIEnv *env, jobject jthis, jstring jpath, jboolean jrecurse,
- jboolean jforce)
+ jboolean jforce, jboolean jnoIgnore, jboolean jaddParents)
 {
   JNIEntry(SVNClient, add);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -442,7 +442,8 @@ Java_org_tigris_subversion_javahl_SVNClient_add
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->add(path, jrecurse ? true : false, jforce ? true : false);
+  cl->add(path, jrecurse ? true : false, jforce ? true : false,
+          jnoIgnore ? true : false, jaddParents ? true : false);
 }
 
 JNIEXPORT jlongArray JNICALL

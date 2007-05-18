@@ -621,6 +621,28 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Adds a file to the repository.
+     * @param path      path to be added.
+     * @param recurse   recurse into subdirectories
+     * @param force     if adding a directory and recurse true and path is a
+     *                  directory, all not already managed files are added.
+     * @param noIgnores if false, don't add files or directories matching
+     *                  ignore patterns
+     * @param addParents add any intermediate parents to the working copy
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void add(String path, boolean recurse, boolean force,
+                    boolean noIgnores, boolean addParents)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.add(path, recurse, force, noIgnores, addParents);
+        }
+    }
+
+    /**
      * Updates the directory or file from repository
      * @param path target file.
      * @param revision the revision number to update.
