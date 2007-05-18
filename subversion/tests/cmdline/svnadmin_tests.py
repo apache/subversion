@@ -259,6 +259,8 @@ def empty_date(sbox):
   # Verify that the revision still lacks the svn:date property.
   svntest.actions.run_and_verify_svn(None, [], [], "propget",
                                      "--revprop", "-r1", "svn:date",
+                                     "--username", svntest.main.wc_author,
+                                     "--password", svntest.main.wc_passwd,
                                      sbox.wc_dir)
 
 #----------------------------------------------------------------------
