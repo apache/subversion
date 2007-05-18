@@ -1203,6 +1203,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
           item->url = url;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
+          item->incoming_prop_changes = apr_array_make(pool, 1,
+                                                       sizeof(svn_prop_t *));
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
     }
