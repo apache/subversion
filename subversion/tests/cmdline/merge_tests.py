@@ -5802,6 +5802,44 @@ def merge_to_path_with_switched_children(sbox):
   finally:
     os.chdir(saved_cwd)
 
+# Test for issue 2047: Merge from parent dir fails while it succeeds from 
+# the direct dir
+def merge_with_implicit_target_file(sbox):
+  "merge a change to a file, using relative path"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a change to A/mu, then revert it using 'svn merge -r 2:1 A/mu'
+
+  # change A/mu and commit
+  A_path = os.path.join(wc_dir, 'A')
+  mu_path = os.path.join(A_path, 'mu')
+
+  svntest.main.file_append(mu_path, "A whole new line.\n")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Update to revision 2.
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+
+  # Revert the change committed in r2
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+
+    # run_and_verify_merge doesn't accept file paths.
+    svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-r', '2:1',
+                                       'A/mu')
+  finally:
+    os.chdir(saved_cwd)
 ########################################################################
 # Run the tests
 
@@ -5858,6 +5896,7 @@ test_list = [ None,
               XFail(merge_to_target_with_copied_children),
               merge_to_switched_path,
               XFail(merge_to_path_with_switched_children),
+              merge_with_implicit_target_file,
              ]
 
 if __name__ == '__main__':
