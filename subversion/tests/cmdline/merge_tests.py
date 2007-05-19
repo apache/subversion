@@ -4016,8 +4016,9 @@ def merge_eolstyle_handling(sbox):
   expected_backup_output = svntest.wc.State(wc_backup, {
     'A/mu' : Item(status='GU'),
     })
-  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 2)
-  expected_backup_status.tweak('A/mu', status='M ')
+  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 1)
+  expected_backup_status.tweak('', status=' M')
+  expected_backup_status.tweak('A/mu', status='MM')
 
   expected_backup_skip = wc.State('', { })
 
@@ -4041,8 +4042,9 @@ def merge_eolstyle_handling(sbox):
   expected_backup_output = svntest.wc.State(wc_backup, {
     'A/mu' : Item(status='GU'),
     })
-  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 3)
-  expected_backup_status.tweak('A/mu', status='M ')
+  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 1)
+  expected_backup_status.tweak('', status=' M')
+  expected_backup_status.tweak('A/mu', status='MM')
   svntest.actions.run_and_verify_merge(wc_backup, '2', '3', sbox.repo_url,
                                         expected_backup_output,
                                         expected_backup_disk,
@@ -4064,7 +4066,8 @@ def merge_eolstyle_handling(sbox):
   expected_backup_output = svntest.wc.State(wc_backup, {
     'A/mu' : Item(status=' U'),
     })
-  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 4)
+  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 1)
+  expected_backup_status.tweak('', status=' M')
   expected_backup_status.tweak('A/mu', status='M ')
   svntest.actions.run_and_verify_merge(wc_backup, '3', '4', sbox.repo_url,
                                        expected_backup_output,
