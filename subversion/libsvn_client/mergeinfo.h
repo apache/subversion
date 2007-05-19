@@ -30,8 +30,9 @@ svn_client__get_repos_merge_info(svn_ra_session_t *ra_session,
                                  svn_revnum_t rev,
                                  apr_pool_t *pool);
 
-/* Parse any merge info from WCPATH's ENTRY and store it in MERGEINFO.
-   If no merge info is available, set MERGEINFO to an empty hash. */
+/* Parse any merge info from the WCPATH's ENTRY and store it in
+   MERGEINFO.  If no record of any merge info exists, set MERGEINFO to
+   NULL.  Does not acount for inherited merge info. */
 svn_error_t *
 svn_client__parse_merge_info(apr_hash_t **mergeinfo,
                              const svn_wc_entry_t *entry,

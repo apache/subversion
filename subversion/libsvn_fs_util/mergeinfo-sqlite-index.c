@@ -30,6 +30,7 @@
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 
+#include "private/svn_compat.h"
 #include "private/svn_fs_mergeinfo.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
@@ -181,6 +182,19 @@ svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_merge_info_for_path(sqlite3 *db,
+                        const char *path,
+                        svn_revnum_t rev,
+                        apr_hash_t *result,
+                        apr_hash_t *cache,
+                        svn_boolean_t include_parents,
+                        apr_pool_t *pool);
+
+/* Represents "no merge info". */
+static svn_merge_range_t no_mergeinfo = { SVN_INVALID_REVNUM,
+                                          SVN_INVALID_REVNUM };;
+
 /* Insert the necessary indexing data into the DB for all the merges
    on PATH as of NEW_REV, which is provided (unparsed) in
    MERGEINFO_STR.  Use POOL for temporary allocations.*/
@@ -191,10 +205,29 @@ index_path_merge_info(svn_revnum_t new_rev, sqlite3 *db, const char *path,
   apr_hash_t *mergeinfo;
   apr_hash_index_t *hi;
   sqlite3_stmt *stmt;
+  svn_boolean_t remove_mergeinfo = FALSE;
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_str->data, pool));
 
-  for (hi = apr_hash_first(pool, mergeinfo);
+  if (apr_hash_count(mergeinfo) == 0)
+    {
+      /* All merge info has been removed from PATH (or explicitly set
+         to "none", if there previously was no merge info).  Find all
+         previous merge info, and (further below) insert dummy records
+         representing "no merge info" for all its previous merge
+         sources of PATH. */
+      apr_hash_t *cache = apr_hash_make(pool);
+      remove_mergeinfo = TRUE;
+      SVN_ERR(get_merge_info_for_path(db, path, new_rev, mergeinfo, cache,
+                                      TRUE, pool));
+      mergeinfo = apr_hash_get(mergeinfo, path, APR_HASH_KEY_STRING);
+      if (mergeinfo == NULL)
+        /* There was previously no merge info, inherited or explicit,
+           for PATH. */
+        return SVN_NO_ERROR;
+    }
+
+  for (hi = apr_hash_first(NULL, mergeinfo);
        hi != NULL;
        hi = apr_hash_next(hi))
     {
@@ -221,11 +254,23 @@ index_path_merge_info(svn_revnum_t new_rev, sqlite3 *db, const char *path,
                      db);
           SQLITE_ERR(sqlite3_bind_text(stmt, 3, path, -1, SQLITE_TRANSIENT),
                      db);
+
+          if (remove_mergeinfo)
+            {
+              /* Explicitly set "no merge info" for PATH, which may've
+                 previously had only inherited merge info. */
+#if APR_VERSION_AT_LEAST(1, 3, 0)
+              apr_array_clear(rangelist);
+#else
+              rangelist = apr_array_make(pool, 1, sizeof(&no_mergeinfo));
+#endif
+              APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = &no_mergeinfo;
+            }
+
           for (i = 0; i < rangelist->nelts; i++)
             {
-              svn_merge_range_t *range;
-
-              range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+              const svn_merge_range_t *range =
+                APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
               SQLITE_ERR(sqlite3_bind_int64(stmt, 4, range->start),
                          db);
               SQLITE_ERR(sqlite3_bind_int64(stmt, 5, range->end),
@@ -365,8 +410,6 @@ parse_mergeinfo_from_db(sqlite3 *db,
 
       do
         {
-          svn_merge_range_t *temprange;
-
           mergedfrom = (char *) sqlite3_column_text(stmt, 0);
           startrev = sqlite3_column_int64(stmt, 1);
           endrev = sqlite3_column_int64(stmt, 2);
@@ -381,10 +424,17 @@ parse_mergeinfo_from_db(sqlite3 *db,
               pathranges = apr_array_make(pool, 1,
                                           sizeof(svn_merge_range_t *));
             }
-          temprange = apr_pcalloc(pool, sizeof(*temprange));
-          temprange->start = startrev;
-          temprange->end = endrev;
-          APR_ARRAY_PUSH(pathranges, svn_merge_range_t *) = temprange;
+
+          /* Filter out invalid revision numbers, which are assumed to
+             represent dummy records indicating that a merge source
+             has no merge info for PATH. */
+          if (SVN_IS_VALID_REVNUM(startrev) && SVN_IS_VALID_REVNUM(endrev))
+            {
+              svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
+              range->start = startrev;
+              range->end = endrev;
+              APR_ARRAY_PUSH(pathranges, svn_merge_range_t *) = range;
+            }
 
           sqlite_result = sqlite3_step(stmt);
           lastmergedfrom = mergedfrom;
