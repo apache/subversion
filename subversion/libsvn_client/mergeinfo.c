@@ -75,7 +75,7 @@ svn_client__parse_merge_info(apr_hash_t **mergeinfo,
   if (propval)
     SVN_ERR(svn_mergeinfo_parse(mergeinfo, propval->data, pool));
   else
-    *mergeinfo = apr_hash_make(pool);
+    *mergeinfo = NULL;
 
   return SVN_NO_ERROR;
 }

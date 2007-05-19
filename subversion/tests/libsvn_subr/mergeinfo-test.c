@@ -181,12 +181,11 @@ test_parse_combine_rangeinfo(const char **msg,
 }
 
 
-#define NBR_BROKEN_MERGEINFO_VALS 5
+#define NBR_BROKEN_MERGEINFO_VALS 4
 /* Invalid merge info values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
     "/missing-revs",
-    "/missing-revs-with-colon: ",
     "/trunk: 5,7-9,10,11,13,14,",
     "/trunk 5,7-9,10,11,13,14",
     "/trunk:5 7--9 10 11 13 14"
@@ -226,6 +225,7 @@ static const char *mergeinfo3 = "/trunk: 15-25, 35-45, 55-65";
 static const char *mergeinfo4 = "/trunk: 15-25, 35-45";
 static const char *mergeinfo5 = "/trunk: 10-30, 35-45, 55-65";
 static const char *mergeinfo6 = "/trunk: 15-25";
+static const char *mergeinfo7 = "/empty-rangelist:\n/with-trailing-space: ";
 
 static svn_error_t *
 test_parse_multi_line_mergeinfo(const char **msg,
@@ -239,6 +239,9 @@ test_parse_multi_line_mergeinfo(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
+
+  SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo7, pool));
+
   return SVN_NO_ERROR;
 }
 
