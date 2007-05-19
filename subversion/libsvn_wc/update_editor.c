@@ -2280,8 +2280,8 @@ merge_file(svn_wc_notify_state_t *content_state,
             /* Working file exists and has local mods
                or is scheduled for addition but is not an obstruction. */
             {                  
-              /* Now we need to let loose svn_wc_merge2() to merge the
-                 textual changes into the working file. */
+              /* Now we need to let loose svn_wc__merge_internal() to merge 
+                 the textual changes into the working file. */
               const char *oldrev_str, *newrev_str, *mine_str;
               const char *merge_left;
               const char *path_ext;
