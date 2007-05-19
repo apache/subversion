@@ -217,36 +217,12 @@ href="http://www.netmeister.org/news/learn2quote.html"
 <div class="h2" id="patches" title="patches">
 <h2>Sending patches:</h2>
 
-<p>If you're posting a patch, start the subject line with
-<tt>[PATCH]</tt>.  This helps our patch manager spot patches right
-away.  If the patch addresses a particular issue, include the issue
-number as well: "<tt>[PATCH]&nbsp;issue&nbsp;#1729: ...</tt>".
-Developers who are interested in that particular issue will know to
-read the mail.</p>
-
-<p>Generate the patch with <tt>svn&nbsp;diff</tt> from the top of a
-Subversion trunk working copy.  If the file you're diffing is not
-under revision control, you can achieve the same effect by using
-<tt>diff&nbsp;-u</tt>.</p>
-
-<p>If you can, send your patch as an attachment, using a mime-type of
-text/x-diff, text/x-patch, or text/plain.  Most people's mailreaders
-can display those inline, and having it as an attachment allows them
-to extract the patch from the message conveniently.  Never send
-patches in archived or compressed form (e.g., tar, gzip, zip, bzip2),
-because that prevents people from reviewing the patch directly in
-their mailreaders.</p>
-
-<p>If you can't attach the patch with a reasonable mime-type, or if
-the patch is very short, then it's okay to include it directly in the
-body of your message.  But watch out: some mail editors can munge
-inline patches by inserting unasked-for line breaks in the middle of
-long lines.  If you think your mail software might do this, then the
-patch must be sent as as an attachment.</p>
-
-<p>Please include a log message with your patch.  See the
-<a href="hacking.html#log-messages">Hacker's Guide to Subversion</a>
-for guidelines on writing log messages.</p>
+<p>See
+<a href="hacking.html#patches">here</a> for advice on how to send in a
+patch.  Note that you can send in a patch to modify these web pages as
+well as to modify code; the web pages' repository URL is
+<a href="http://svn.collab.net/repos/svn/trunk/www/"
+>http://svn.collab.net/repos/svn/trunk/www/</a>.</p>
 
 </div>
 
