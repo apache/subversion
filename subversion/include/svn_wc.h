@@ -3459,7 +3459,26 @@ typedef enum svn_wc_merge_outcome_t
  *  tracking the two backup files.  If @a dry_run is @c TRUE no files are
  *  changed.  The outcome of the merge is returned in @a *merge_outcome.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
+                           const char *left,
+                           const char *right,
+                           const char *merge_target,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *left_label,
+                           const char *right_label,
+                           const char *target_label,
+                           svn_boolean_t dry_run,
+                           const char *diff3_cmd,
+                           const apr_array_header_t *merge_options,
+                           const apr_array_header_t *prop_diff,
+                           apr_pool_t *pool);
+
+
+/** Similar to svn_wc_merge3(), but with @a prop_diff set to NULL.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
                            const char *left,

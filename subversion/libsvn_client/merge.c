@@ -253,7 +253,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   
   /* Other easy outs:  if the merge target isn't under version
      control, or is just missing from disk, fogettaboutit.  There's no
-     way svn_wc_merge2() can do the merge. */
+     way svn_wc_merge3() can do the merge. */
   {
     const svn_wc_entry_t *entry;
     svn_node_kind_t kind;
@@ -277,7 +277,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   }
 
   /* This callback is essentially no more than a wrapper around
-     svn_wc_merge2().  Thank goodness that all the
+     svn_wc_merge3().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
@@ -337,11 +337,12 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
           const char *right_label = apr_psprintf(subpool,
                                                  _(".merge-right.r%ld"),
                                                  yours_rev);
-          SVN_ERR(svn_wc_merge2(&merge_outcome,
+          SVN_ERR(svn_wc_merge3(&merge_outcome,
                                 older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
                                 merge_b->dry_run, merge_b->diff3_cmd,
-                                merge_b->merge_options, subpool));
+                                merge_b->merge_options, 
+                                prop_changes, subpool));
         }
 
       if (content_state)
