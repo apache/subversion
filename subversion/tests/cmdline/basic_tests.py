@@ -259,6 +259,11 @@ def basic_mkdir_url_with_parents(sbox):
   sbox.build()
 
   Y_Z_url = sbox.repo_url + '/Y/Z'
+  svntest.actions.run_and_verify_svn("erroneous mkdir URL URL/subdir",
+                                     [],
+                                     ".*Try 'svn mkdir --parents' instead.*",
+                                     'mkdir', '-m', 'log_msg',
+                                     Y_Z_url)
 
   svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
                                      ["\n", "Committed revision 2.\n"], [],
@@ -294,6 +299,10 @@ def basic_mkdir_wc_with_parents(sbox):
   wc_dir = sbox.wc_dir
 
   Y_Z_path = os.path.join(wc_dir, 'Y', 'Z')
+
+  svntest.actions.run_and_verify_svn("erroneous mkdir dir/subdir", [],
+                                     ".*Try 'svn mkdir --parents' instead.*",
+                                     'mkdir', Y_Z_path)
 
   svntest.actions.run_and_verify_svn("mkdir dir/subdir", None, [],
                                      'mkdir', '--parents', Y_Z_path)
