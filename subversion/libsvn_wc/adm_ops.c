@@ -2229,8 +2229,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       
   if (is_file)
     {
-	  const svn_node_kind_t kind;
-	  const svn_boolean_t wc_special, local_special;
+      const svn_node_kind_t kind;
+      const svn_boolean_t wc_special, local_special;
       svn_boolean_t text_modified_p;
       full_path = svn_path_join(full_path, name, pool);
 
