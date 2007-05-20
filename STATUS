@@ -59,6 +59,13 @@ Candidate changes:
       +1: lgo
       +0: giovannibajo (can't review on the patch, but interested in the fix)
 
+  * r25076, -7
+    Fix issue 1808: svn up deletes symlinks which are not under version control
+    Justification:
+      Data loss, small local fix
+    Votes:
+      +1: lgo
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
