@@ -1141,11 +1141,32 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  * readable and unreadable changed-paths, then silently omit the
  * unreadable changed-paths when pushing the revision.
  *
- * See also the documentation for @c svn_log_message_receiver_t.
+ * See also the documentation for @c svn_log_message_receiver2_t.
  *
  * Use @a pool for temporary allocations.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_get_logs4(svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    int limit,
+                    svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_log_message_receiver2_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool);
+
+/**
+ * Same as svn_repos_get_logs4(), but with @a receiver being a 
+ * @c svn_log_message_receiver_t instead of @c svn_log_message_receiver2_t.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_repos_get_logs3(svn_repos_t *repos,

@@ -401,12 +401,13 @@ send_change_rev(svn_revnum_t rev,
                 svn_boolean_t discover_changed_paths,
                 svn_repos_authz_func_t authz_read_func,
                 void *authz_read_baton,
-                svn_log_message_receiver_t receiver,
+                svn_log_message_receiver2_t receiver,
                 void *receiver_baton,
                 apr_pool_t *pool)
 {
   svn_string_t *author, *date, *message;
   apr_hash_t *r_props, *changed_paths = NULL;
+  svn_log_entry_t *log_entry;
 
   SVN_ERR(svn_fs_revision_proplist(&r_props, fs, rev, pool));
   author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
@@ -458,12 +459,16 @@ send_change_rev(svn_revnum_t rev,
         changed_paths = NULL;
     }
 
+  log_entry = svn_log_entry_create(pool);
+
+  log_entry->changed_paths = changed_paths;
+  log_entry->revision = rev;
+  log_entry->author = author ? author->data : NULL;
+  log_entry->date = date ? date->data : NULL;
+  log_entry->message = message ? message->data : NULL;
+
   SVN_ERR((*receiver)(receiver_baton,
-                      changed_paths,
-                      rev,
-                      author ? author->data : NULL,
-                      date ? date->data : NULL,
-                      message ? message->data : NULL,
+                      log_entry,
                       pool));
 
   return SVN_NO_ERROR;
@@ -476,7 +481,7 @@ send_change_rev(svn_revnum_t rev,
 #define MAX_OPEN_HISTORIES 32
 
 svn_error_t *
-svn_repos_get_logs3(svn_repos_t *repos,
+svn_repos_get_logs4(svn_repos_t *repos,
                     const apr_array_header_t *paths,
                     svn_revnum_t start,
                     svn_revnum_t end,
@@ -485,7 +490,7 @@ svn_repos_get_logs3(svn_repos_t *repos,
                     svn_boolean_t strict_node_history,
                     svn_repos_authz_func_t authz_read_func,
                     void *authz_read_baton,
-                    svn_log_message_receiver_t receiver,
+                    svn_log_message_receiver2_t receiver,
                     void *receiver_baton,
                     apr_pool_t *pool)
 {
@@ -690,6 +695,55 @@ svn_repos_get_logs3(svn_repos_t *repos,
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
+}
+
+
+struct log3_baton
+{
+  void *receiver_baton;
+  svn_log_message_receiver_t receiver;
+};
+
+static svn_error_t *
+log3_receiver(void *baton,
+              svn_log_entry_t *log_entry,
+              apr_pool_t *pool)
+{
+  struct log3_baton *lb = (struct log3_baton *)baton;
+
+  return lb->receiver(lb->receiver_baton,
+                      log_entry->changed_paths,
+                      log_entry->revision,
+                      log_entry->author,
+                      log_entry->date,
+                      log_entry->message,
+                      pool);
+}
+
+svn_error_t *
+svn_repos_get_logs3(svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    int limit,
+                    svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_log_message_receiver_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool)
+{
+  struct log3_baton baton;
+
+  baton.receiver = receiver;
+  baton.receiver_baton = receiver_baton;
+
+  return svn_repos_get_logs4(repos, paths, start, end, limit,
+                             discover_changed_paths, strict_node_history,
+                             authz_read_func, authz_read_baton,
+                             log3_receiver, &baton,
+                             pool);
 }
 
 svn_error_t *
