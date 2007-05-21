@@ -1179,7 +1179,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                int limit,
                                svn_boolean_t discover_changed_paths,
                                svn_boolean_t strict_node_history,
-                               svn_log_message_receiver_t receiver,
+                               svn_log_message_receiver2_t receiver,
                                void *receiver_baton, apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
@@ -1248,8 +1248,17 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
         cphash = NULL;
 
       if (! (limit && ++nreceived > limit))
-        SVN_ERR(receiver(receiver_baton, cphash, rev, author, date, message,
-                         subpool));
+        {
+          svn_log_entry_t *log_entry = svn_log_entry_create(subpool);
+
+          log_entry->changed_paths = cphash;
+          log_entry->revision = rev;
+          log_entry->author = author;
+          log_entry->date = date;
+          log_entry->message = message;
+
+          SVN_ERR(receiver(receiver_baton, log_entry, subpool));
+        }
 
       apr_pool_clear(subpool);
     }

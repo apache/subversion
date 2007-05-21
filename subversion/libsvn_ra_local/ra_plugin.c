@@ -792,17 +792,13 @@ svn_ra_local__do_diff(svn_ra_session_t *session,
 struct log_baton
 {
   svn_ra_local__session_baton_t *session;
-  svn_log_message_receiver_t real_cb;
+  svn_log_message_receiver2_t real_cb;
   void *real_baton;
 };
 
 static svn_error_t *
 cancellation_log_receiver(void *baton,
-                          apr_hash_t *changed_paths,
-                          svn_revnum_t revision,
-                          const char *author,
-                          const char *date,
-                          const char *message,
+                          svn_log_entry_t *log_entry,
                           apr_pool_t *pool)
 {
   struct log_baton *b = baton;
@@ -810,8 +806,7 @@ cancellation_log_receiver(void *baton,
 
   SVN_ERR((session->callbacks->cancel_func)(session->callback_baton));
 
-  return b->real_cb(b->real_baton, changed_paths, revision, author,
-                    date, message, pool);
+  return b->real_cb(b->real_baton, log_entry, pool);
 }
 
 
@@ -823,7 +818,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                       int limit,
                       svn_boolean_t discover_changed_paths,
                       svn_boolean_t strict_node_history,
-                      svn_log_message_receiver_t receiver,
+                      svn_log_message_receiver2_t receiver,
                       void *receiver_baton,
                       apr_pool_t *pool)
 {
@@ -859,7 +854,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
       receiver_baton = &lb;
     }
 
-  return svn_repos_get_logs3(sbaton->repos,
+  return svn_repos_get_logs4(sbaton->repos,
                              abs_paths,
                              start,
                              end,

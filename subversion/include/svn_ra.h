@@ -1162,7 +1162,26 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
+ * @since New in 1.5.
+ */
+
+svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
+                             const apr_array_header_t *paths,
+                             svn_revnum_t start,
+                             svn_revnum_t end,
+                             int limit,
+                             svn_boolean_t discover_changed_paths,
+                             svn_boolean_t strict_node_history,
+                             svn_log_message_receiver2_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_get_log2(), but uses @c svn_log_message_receiver_t
+ * instead of @c svn_log_message_recevier2_t.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
                             const apr_array_header_t *paths,

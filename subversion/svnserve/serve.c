@@ -1498,9 +1498,8 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 /* Send a log entry to the client. */
-static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
-                                 svn_revnum_t rev, const char *author,
-                                 const char *date, const char *message,
+static svn_error_t *log_receiver(void *baton,
+                                 svn_log_entry_t *log_entry,
                                  apr_pool_t *pool)
 {
   log_baton_t *b = baton;
@@ -1513,9 +1512,10 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
   char action[2];
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(!"));
-  if (changed_paths)
+  if (log_entry->changed_paths)
     {
-      for (h = apr_hash_first(pool, changed_paths); h; h = apr_hash_next(h))
+      for (h = apr_hash_first(pool, log_entry->changed_paths); h;
+                                                        h = apr_hash_next(h))
         {
           apr_hash_this(h, &key, NULL, &val);
           path = key;
@@ -1527,8 +1527,11 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
                                          change->copyfrom_rev));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)", rev, author,
-                                 date, message));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)",
+                                 log_entry->revision,
+                                 log_entry->author,
+                                 log_entry->date,
+                                 log_entry->message));
   return SVN_NO_ERROR;
 }
 
@@ -1578,7 +1581,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path->data;
   lb.conn = conn;
-  err = svn_repos_get_logs3(b->repos, full_paths, start_rev, end_rev,
+  err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
                             authz_check_access_cb_func(b), b, log_receiver,
                             &lb, pool);

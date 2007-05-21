@@ -299,7 +299,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
                                   int limit,
                                   svn_boolean_t discover_changed_paths,
                                   svn_boolean_t strict_node_history,
-                                  svn_log_message_receiver_t receiver,
+                                  svn_log_message_receiver2_t receiver,
                                   void *receiver_baton,
                                   apr_pool_t *pool);
 

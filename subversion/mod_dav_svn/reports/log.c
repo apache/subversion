@@ -70,11 +70,7 @@ maybe_send_header(struct log_receiver_baton *lrb)
    BATON is a `struct log_receiver_baton *'.  */
 static svn_error_t *
 log_receiver(void *baton,
-             apr_hash_t *changed_paths,
-             svn_revnum_t rev,
-             const char *author,
-             const char *date,
-             const char *msg,
+             svn_log_entry_t *log_entry,
              apr_pool_t *pool)
 {
   struct log_receiver_baton *lrb = baton;
@@ -83,34 +79,35 @@ log_receiver(void *baton,
 
   SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                             "<S:log-item>" DEBUG_CR "<D:version-name>%ld"
-                            "</D:version-name>" DEBUG_CR, rev));
+                            "</D:version-name>" DEBUG_CR, log_entry->revision));
 
-  if (author)
+  if (log_entry->author)
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                               "<D:creator-displayname>%s"
                               "</D:creator-displayname>" DEBUG_CR,
-                              apr_xml_quote_string(pool, author, 0)));
+                              apr_xml_quote_string(pool, log_entry->author, 0)));
 
   /* ### this should be DAV:creation-date, but we need to format
      ### that date a bit differently */
-  if (date)
+  if (log_entry->date)
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                               "<S:date>%s</S:date>" DEBUG_CR,
-                              apr_xml_quote_string(pool, date, 0)));
+                              apr_xml_quote_string(pool, log_entry->date, 0)));
 
-  if (msg)
+  if (log_entry->message)
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                               "<D:comment>%s</D:comment>" DEBUG_CR,
                               apr_xml_quote_string
-                              (pool, svn_xml_fuzzy_escape(msg, pool), 0)));
+                              (pool, svn_xml_fuzzy_escape(log_entry->message,
+                                                          pool), 0)));
 
 
-  if (changed_paths)
+  if (log_entry->changed_paths)
     {
       apr_hash_index_t *hi;
       char *path;
 
-      for (hi = apr_hash_first(pool, changed_paths);
+      for (hi = apr_hash_first(pool, log_entry->changed_paths);
            hi != NULL;
            hi = apr_hash_next(hi))
         {
@@ -289,7 +286,7 @@ dav_svn__log_report(const dav_resource *resource,
      flag in our log_receiver_baton structure). */
 
   /* Send zero or more log items. */
-  serr = svn_repos_get_logs3(repos->repos,
+  serr = svn_repos_get_logs4(repos->repos,
                              paths,
                              start,
                              end,

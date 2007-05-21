@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -351,9 +351,16 @@ static svn_error_t *compat_get_log(void *session_baton,
                                    void *receiver_baton,
                                    apr_pool_t *pool)
 {
+  svn_log_message_receiver2_t receiver2;
+  void *receiver2_baton;
+
+  svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
+                               receiver, receiver_baton,
+                               pool);
+
   return VTBL.get_log(session_baton, paths, start, end, 0, /* limit */
                       discover_changed_paths, strict_node_history,
-                      receiver, receiver_baton, pool);
+                      receiver2, receiver2_baton, pool);
 }
 
 static svn_error_t *compat_check_path(void *session_baton,
