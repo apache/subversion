@@ -49,9 +49,6 @@ history index).
 
   * Handle skips.
 
-    * If all changes in a merge are skipped, no merge info should be
-      recorded for the target.
-
     * If only some changes are skipped, merge info should be recorded
       for the target, and recorded as empty (or with no modifications,
       if there is pre-existing merge info) for the skipped items.
