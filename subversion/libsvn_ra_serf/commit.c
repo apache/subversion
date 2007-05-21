@@ -483,6 +483,11 @@ get_version_url(dir_context_t *dir)
       root_checkout =
           svn_ra_serf__get_ver_prop(props, session->repos_url.path,
                                     dir->base_revision, "DAV:", "checked-in");
+      
+      if (!root_checkout)
+        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+                                 _("Path '%s' not present"),
+                                 session->repos_url.path);
     }
 
   dir->checked_in_url = svn_path_url_add_component(root_checkout,
