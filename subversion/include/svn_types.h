@@ -528,6 +528,15 @@ typedef struct svn_log_entry_t
   const char *message;
 } svn_log_entry_t;
 
+/**
+ * Returns an @c svn_log_entry_t, allocated in @a pool with all fields
+ * initialized to null values.
+ *
+ * @note To allow for extending the @c svn_log_entry_t structure in future
+ * releases, this function should always be used to allocate the structure.
+ *
+ * @since New in 1.5.
+ */
 svn_log_entry_t *
 svn_log_entry_create(apr_pool_t *pool);
 
