@@ -137,14 +137,13 @@ struct log_receiver_baton
  */
 static svn_error_t *
 log_message_receiver(void *baton,
-                     apr_hash_t *changed_paths,
-                     svn_revnum_t rev,
-                     const char *author,
-                     const char *date,
-                     const char *msg,
+                     svn_log_entry_t *log_entry,
                      apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
+  const char *author = log_entry->author;
+  const char *date = log_entry->date;
+  const char *msg = log_entry->message;
 
   /* Number of lines in the msg. */
   int lines;
@@ -152,16 +151,16 @@ log_message_receiver(void *baton,
   if (lb->cancel_func)
     SVN_ERR(lb->cancel_func(lb->cancel_baton));
 
-  if (rev == 0 && msg == NULL)
+  if (log_entry->revision == 0 && log_entry->message == NULL)
     return SVN_NO_ERROR;
 
   /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
      for more on the fallback fuzzy conversions below. */
 
-  if (author == NULL)
+  if (log_entry->author == NULL)
     author = _("(no author)");
 
-  if (date && date[0])
+  if (log_entry->date && log_entry->date[0])
     {
       /* Convert date to a format for humans. */
       apr_time_t time_temp;
@@ -172,12 +171,12 @@ log_message_receiver(void *baton,
   else
     date = _("(no date)");
 
-  if (! lb->omit_log_message && msg == NULL)
+  if (! lb->omit_log_message && log_entry->message == NULL)
     msg = "";
 
   SVN_ERR(svn_cmdline_printf(pool,
                              SEP_STRING "r%ld | %s | %s",
-                             rev, author, date));
+                             log_entry->revision, author, date));
 
   if (! lb->omit_log_message)
     {
@@ -190,13 +189,13 @@ log_message_receiver(void *baton,
 
   SVN_ERR(svn_cmdline_printf(pool, "\n"));
 
-  if (changed_paths)
+  if (log_entry->changed_paths)
     {
       apr_array_header_t *sorted_paths;
       int i;
 
       /* Get an array of sorted hash keys. */
-      sorted_paths = svn_sort__hash(changed_paths,
+      sorted_paths = svn_sort__hash(log_entry->changed_paths,
                                     svn_sort_compare_items_as_paths, pool);
 
       SVN_ERR(svn_cmdline_printf(pool,
@@ -207,7 +206,7 @@ log_message_receiver(void *baton,
                                                    svn_sort__item_t));
           const char *path = item->key;
           svn_log_changed_path_t *log_item 
-            = apr_hash_get(changed_paths, item->key, item->klen);
+            = apr_hash_get(log_entry->changed_paths, item->key, item->klen);
           const char *copy_data = "";
           
           if (log_item->copyfrom_path 
@@ -275,42 +274,39 @@ log_message_receiver(void *baton,
  */
 static svn_error_t *
 log_message_receiver_xml(void *baton,
-                         apr_hash_t *changed_paths,
-                         svn_revnum_t rev,
-                         const char *author,
-                         const char *date,
-                         const char *msg,
+                         svn_log_entry_t *log_entry,
                          apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
   char *revstr;
+  const char *date = log_entry->date;
 
   if (lb->cancel_func)
     SVN_ERR(lb->cancel_func(lb->cancel_baton));
 
-  if (rev == 0 && msg == NULL)
+  if (log_entry->revision == 0 && log_entry->message == NULL)
     return SVN_NO_ERROR;
 
-  revstr = apr_psprintf(pool, "%ld", rev);
+  revstr = apr_psprintf(pool, "%ld", log_entry->revision);
   /* <logentry revision="xxx"> */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "logentry",
                         "revision", revstr, NULL);
 
   /* <author>xxx</author> */
-  svn_cl__xml_tagged_cdata(&sb, pool, "author", author);
+  svn_cl__xml_tagged_cdata(&sb, pool, "author", log_entry->author);
 
   /* Print the full, uncut, date.  This is machine output. */
   /* According to the docs for svn_log_message_receiver_t, either
      NULL or the empty string represents no date.  Avoid outputting an
      empty date element. */
-  if (date && date[0] == '\0')
+  if (log_entry->date && log_entry->date[0] == '\0')
     date = NULL;
   /* <date>xxx</date> */
   svn_cl__xml_tagged_cdata(&sb, pool, "date", date);
 
-  if (changed_paths)
+  if (log_entry->changed_paths)
     {
       apr_hash_index_t *hi;
       char *path;
@@ -319,7 +315,7 @@ log_message_receiver_xml(void *baton,
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths",
                             NULL);
       
-      for (hi = apr_hash_first(pool, changed_paths);
+      for (hi = apr_hash_first(pool, log_entry->changed_paths);
            hi != NULL;
            hi = apr_hash_next(hi))
         {
@@ -363,7 +359,9 @@ log_message_receiver_xml(void *baton,
 
   if (! lb->omit_log_message)
     {
-      if (msg == NULL)
+      const char *msg = log_entry->message;
+
+      if (log_entry->message == NULL)
         msg = "";
 
       /* <msg>xxx</msg> */
@@ -505,7 +503,7 @@ svn_cl__log(apr_getopt_t *os,
       if (! opt_state->incremental)
         SVN_ERR(svn_cl__xml_print_header("log", pool));
       
-      SVN_ERR(svn_client_log3(targets,
+      SVN_ERR(svn_client_log4(targets,
                               &peg_revision,
                               &(opt_state->start_revision),
                               &(opt_state->end_revision),
@@ -529,7 +527,7 @@ svn_cl__log(apr_getopt_t *os,
        * is concerned, the result of 'svn log --quiet' is the same
        * either way.
        */
-      SVN_ERR(svn_client_log3(targets,
+      SVN_ERR(svn_client_log4(targets,
                               &peg_revision,
                               &(opt_state->start_revision),
                               &(opt_state->end_revision),
