@@ -697,29 +697,6 @@ svn_repos_get_logs4(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
-
-struct log3_baton
-{
-  void *receiver_baton;
-  svn_log_message_receiver_t receiver;
-};
-
-static svn_error_t *
-log3_receiver(void *baton,
-              svn_log_entry_t *log_entry,
-              apr_pool_t *pool)
-{
-  struct log3_baton *lb = (struct log3_baton *)baton;
-
-  return lb->receiver(lb->receiver_baton,
-                      log_entry->changed_paths,
-                      log_entry->revision,
-                      log_entry->author,
-                      log_entry->date,
-                      log_entry->message,
-                      pool);
-}
-
 svn_error_t *
 svn_repos_get_logs3(svn_repos_t *repos,
                     const apr_array_header_t *paths,
@@ -734,15 +711,17 @@ svn_repos_get_logs3(svn_repos_t *repos,
                     void *receiver_baton,
                     apr_pool_t *pool)
 {
-  struct log3_baton baton;
+  svn_log_message_receiver2_t receiver2;
+  void *receiver2_baton;
 
-  baton.receiver = receiver;
-  baton.receiver_baton = receiver_baton;
+  svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
+                               receiver, receiver_baton,
+                               pool);
 
   return svn_repos_get_logs4(repos, paths, start, end, limit,
                              discover_changed_paths, strict_node_history,
                              authz_read_func, authz_read_baton,
-                             log3_receiver, &baton,
+                             receiver2, receiver2_baton,
                              pool);
 }
 

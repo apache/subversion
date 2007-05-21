@@ -629,6 +629,21 @@ void svn_compat_wrap_commit_callback(svn_commit_callback2_t *callback2,
                                      void *callback_baton,
                                      apr_pool_t *pool);
 
+/** Return, in @a *receiver2 and @a *receiver2_baton a function/baton that
+ * will call @a receiver/@a receiver_baton, allocating the @a *receiver2_baton
+ * in @a pool.
+ *
+ * @note This is used by compatibility wrappers, which exist in more than
+ * Subversion core library.
+ *
+ * @since New in 1.5.
+ */
+void svn_compat_wrap_log_receiver(svn_log_message_receiver2_t *receiver2,
+                                  void **receiver2_baton,
+                                  svn_log_message_receiver_t receiver,
+                                  void *receiver_baton,
+                                  apr_pool_t *pool);
+
 
 /** A buffer size that may be used when processing a stream of data.
  *
