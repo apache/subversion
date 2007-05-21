@@ -50,8 +50,9 @@ history index).
   * Handle skips.
 
     * If only some changes are skipped, merge info should be recorded
-      for the target, and recorded as empty (or with no modifications,
-      if there is pre-existing merge info) for the skipped items.
+      for the target (implemented r25085), and recorded as empty (or
+      with no modifications, if there is pre-existing merge info) for
+      the skipped items.
 
   * Handle conflicts.
 
