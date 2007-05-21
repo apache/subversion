@@ -1427,6 +1427,9 @@ typedef struct
   /* The number of notifications received. */
   apr_uint32_t nbr_notifications;
 
+  /* The number of operative notifications received. */
+  apr_uint32_t nbr_operative_notifications;
+
   /* The list of any skipped paths, which should be examined and
      cleared after each invocation of the callback. */
   apr_hash_t *skipped_paths;
@@ -1446,6 +1449,14 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
   if (notify_b->same_urls)
     {
       notify_b->nbr_notifications++;
+
+      if (notify->content_state == svn_wc_notify_state_conflicted
+          || notify->content_state == svn_wc_notify_state_merged
+          || notify->content_state == svn_wc_notify_state_changed
+          || notify->prop_state == svn_wc_notify_state_conflicted
+          || notify->prop_state == svn_wc_notify_state_merged
+          || notify->prop_state == svn_wc_notify_state_changed)
+        notify_b->nbr_operative_notifications++;
 
       if (notify->action == svn_wc_notify_skip)
         {
@@ -1492,13 +1503,12 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
   *merges = apr_hash_make(pool);
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
 
-  /* Only set the merge info for the root of the target tree if we
-     didn't skip it or any paths under it. */
-  if (nbr_skips == 0)
-    {
-      apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
-    }
-  else /* nbr_skips > 0 */
+  /* Set the merge info for the root of the target tree unless we skipped
+     everything. */
+  if (nbr_skips == 0 || notify_b->nbr_operative_notifications > 0)
+    apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
+
+  if (nbr_skips > 0)
     {
       apr_hash_index_t *hi;
       const void *skipped_path;
@@ -1773,7 +1783,7 @@ do_merge(const char *initial_URL1,
   void *diff_edit_baton;
   svn_client_ctx_t *ctx = merge_b->ctx;
   notification_receiver_baton_t notify_b =
-    { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, NULL, pool };
+    { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, 0, NULL, pool };
   const char *URL1, *URL2, *path1, *path2, *rel_path;
   svn_opt_revision_t *revision1, *revision2;
   const svn_wc_entry_t *entry;
@@ -2109,7 +2119,7 @@ do_single_file_merge(const char *initial_URL1,
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   svn_client_ctx_t *ctx = merge_b->ctx;
   notification_receiver_baton_t notify_b =
-    { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, NULL, pool };
+    { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, 0, NULL, pool };
   const char *URL1, *path1, *URL2, *path2, *rel_path;
   svn_opt_revision_t *revision1, *revision2;
   svn_error_t *err;

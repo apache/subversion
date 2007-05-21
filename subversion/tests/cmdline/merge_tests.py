@@ -964,11 +964,12 @@ def merge_tree_deleted_in_target(sbox):
     'lambda'  : Item(status='U '),
     })
   expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3'}),
     'F'       : Item(),
     'lambda'  : Item("This is the file 'lambda'.\nchange lambda.\n"),
     })
   expected_status = wc.State(I_path, {
-    ''        : Item(status='  '),
+    ''        : Item(status=' M'),
     'F'       : Item(status='  '),
     'lambda'  : Item(status='M '),
     })
@@ -983,7 +984,7 @@ def merge_tree_deleted_in_target(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       0, 0)
+                                       1, 0)
 
 #----------------------------------------------------------------------
 # Issue #2515
@@ -1744,12 +1745,13 @@ def merge_skips_obstructions(sbox):
     'Q/bar'  : Item(status='A '),
     })
   expected_disk = wc.State('', {
+    ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2'}),
     'Q'      : Item(),
     'Q/bar'  : Item("bar"),
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(short_C_path, {
-    ''       : Item(status='  ', wc_rev=1),
+    ''       : Item(status=' M', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
     })
@@ -1768,7 +1770,7 @@ def merge_skips_obstructions(sbox):
                                          expected_status,
                                          expected_skip,
                                          None, None, None, None, None,
-                                         0, 0)
+                                         1, 0)
   finally:
     os.chdir(saved_cwd)
 
@@ -1789,11 +1791,12 @@ def merge_skips_obstructions(sbox):
     'foo'  : Item(status='A '),
     })
   expected_disk = wc.State('', {
+    ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2'}),
     'Q'      : Item("foo"),
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(short_C_path, {
-    ''     : Item(status='  ', wc_rev=1),
+    ''     : Item(status=' M', wc_rev=1),
     'foo'  : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(short_C_path, {
@@ -1810,7 +1813,7 @@ def merge_skips_obstructions(sbox):
                                          expected_status,
                                          expected_skip,
                                          None, None, None, None, None,
-                                         0, 0)
+                                         1, 0)
   finally:
     os.chdir(saved_cwd)
 
@@ -1838,6 +1841,9 @@ def merge_skips_obstructions(sbox):
   # Now create unversioned iota and A/D/G, try running a merge -r2:3.
   # The merge process should skip over these targets, since they're
   # unversioned.
+
+  # Note: This merge, and all subsequent merges within this test,
+  # skip *all* targets, so no merge info is set.
   
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
@@ -1869,7 +1875,9 @@ def merge_skips_obstructions(sbox):
                                          expected_output,
                                          expected_disk,
                                          expected_status.copy(short_wc_dir),
-                                         expected_skip)
+                                         expected_skip,
+                                         None, None, None, None, None,
+                                         1, 0)
   finally:
     os.chdir(saved_cwd)
   
@@ -1929,7 +1937,9 @@ def merge_skips_obstructions(sbox):
                                          expected_output,
                                          expected_disk,
                                          expected_status.copy(short_wc_dir),
-                                         expected_skip)
+                                         expected_skip,
+                                         None, None, None, None, None,
+                                         1, 0)
   finally:
     os.chdir(saved_cwd)
 
@@ -1966,7 +1976,9 @@ def merge_skips_obstructions(sbox):
                                          expected_output,
                                          expected_disk,
                                          expected_status.copy(short_wc_dir),
-                                         expected_skip)
+                                         expected_skip,
+                                         None, None, None, None, None,
+                                         1, 0)
   finally:
     os.chdir(saved_cwd)
 
