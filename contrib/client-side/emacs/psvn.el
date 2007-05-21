@@ -2019,9 +2019,11 @@ in use before `svn-status' was called."
   "Save all buffers visiting a file in TREE.
 If TREE is not given, try `svn-status-base-dir' as TREE."
   (interactive)
+  ;; (message "svn-status-save-some-buffers: tree1: %s" tree)
   (let ((ok t)
         (tree (or (svn-status-base-dir)
                   tree)))
+    ;; (message "svn-status-save-some-buffers: tree2: %s" tree)
     (unless tree
       (error "Not in a svn project tree"))
     (dolist (buffer (buffer-list))
@@ -2030,6 +2032,7 @@ If TREE is not given, try `svn-status-base-dir' as TREE."
           (let ((file (buffer-file-name)))
             (when file
               (let ((root (svn-status-base-dir (file-name-directory file))))
+                ;; (message "svn-status-save-some-buffers: file: %s, root: %s" file root)
                 (when (and root
                            (string= root tree)
                            ;; buffer is modified and in the tree TREE.
@@ -5218,14 +5221,18 @@ You can send raw data to the process via \\[svn-process-send-string]."
 
 (defun svn-status-repo-for-path (directory)
   "Find the repository root for DIRECTORY."
-  (let ((default-directory directory))
-    ;;(svn-run nil t 'parse-info "info" (expand-file-name ".")) ;; expand-file-name does not work in symlinked directories...
-    (svn-run nil t 'parse-info "info" ".")
-    (with-current-buffer svn-process-buffer-name
-      (goto-char (point-min))
-      (let ((case-fold-search t))
-        (when (search-forward "repository root: " nil t)
-          (buffer-substring-no-properties (point) (svn-point-at-eol)))))))
+  (let ((old-process-default-dir))
+    (with-current-buffer (get-buffer-create svn-process-buffer-name)
+      (setq old-process-default-dir default-directory)
+      (setq default-directory directory)) ;; update the default-directory for the *svn-process* buffer
+  (svn-run nil t 'parse-info "info" ".")
+  (with-current-buffer svn-process-buffer-name
+    ;; (message "svn-status-repo-for-path: %s: default-directory: %s directory: %s old-process-default-dir: %s" svn-process-buffer-name default-directory directory old-process-default-dir)
+    (setq default-directory old-process-default-dir)
+    (goto-char (point-min))
+    (let ((case-fold-search t))
+      (when (search-forward "repository root: " nil t)
+        (buffer-substring-no-properties (point) (svn-point-at-eol)))))))
 
 (defun svn-status-base-dir (&optional start-directory)
   "Find the svn root directory for the current working copy.
@@ -5243,6 +5250,7 @@ Return nil, if not in a svn working copy."
              (dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
              (in-tree (and repository-root (file-exists-p dot-svn-dir)))
              (dir-below (expand-file-name base-dir)))
+        ;; (message "repository-root: %s start-dir: %s" repository-root start-dir)
         (if (and (<= (car svn-client-version) 1) (< (cadr svn-client-version) 3))
             (setq base-dir (svn-status-base-dir-for-ancient-svn-client start-dir)) ;; svn version < 1.3
           (while (when (and dir-below (file-exists-p dot-svn-dir))
@@ -5251,6 +5259,7 @@ Return nil, if not in a svn working copy."
                    (setq dir-below
                          (and (string-match "\\(.*/\\)[^/]+/" dir-below)
                               (match-string 1 dir-below)))
+                   ;; (message "base-dir: %s, dir-below: %s, dot-svn-dir: %s in-tree: %s" base-dir dir-below dot-svn-dir in-tree)
                    (when dir-below
                      (if (string= (svn-status-repo-for-path dir-below) repository-root)
                          (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))
