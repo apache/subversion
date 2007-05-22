@@ -40,6 +40,9 @@ class NativeResources
      *
      * @throws UnsatisfiedLinkError If the native library cannot be
      * loaded.
+     * @throws LinkageError If the version of the loaded native
+     * library is not compatible with this version of JavaHL's Java
+     * APIs.
      * @since 1.3.0
      */
     public static synchronized void loadNativeLibrary()
@@ -92,10 +95,24 @@ class NativeResources
      * the native library has been loaded.  Sets library version
      * information, and initializes the re-entrance hack for native
      * code.
+     * @throws LinkageError If the version of the loaded native
+     * library is not compatible with this version of JavaHL's Java
+     * APIs.
      */
     private static final void init()
     {
+        initNativeLibrary();
         version = new Version();
-        SVNClient.initNative();
+        if (!version.isAtLeast(1, 5, 0))
+        {
+            throw new LinkageError("Native library version must be at least " +
+                                   "1.5.0, but is only " + version);
+        }
     }
+
+    /**
+     * Initialize the native library layer.
+     * @since 1.5.0
+     */
+    private static native void initNativeLibrary();
 }

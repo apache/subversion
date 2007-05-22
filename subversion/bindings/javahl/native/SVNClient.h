@@ -83,7 +83,7 @@ class SVNClient :public SVNBase
   void propertySet(const char *path, const char *name, const char *value,
                    bool recurse, bool force);
   void properties(const char *path, Revision &revision,
-                  Revision &pegRevision, bool recurse,
+                  Revision &pegRevision, svn_depth_t depth,
                   ProplistCallback *callback);
   jobject getMergeInfo(const char *target, Revision &rev);
   void merge(const char *path1, Revision &revision1, const char *path2,
@@ -113,7 +113,8 @@ class SVNClient :public SVNBase
                const char *changelistName);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                     bool ignoreExternals, bool allowUnverObstructions);
-  void add(const char *path, bool recurse, bool force);
+  void add(const char *path, bool recurse, bool force, bool no_ignore,
+           bool add_parents);
   void revert(const char *path, bool recurse);
   void remove(Targets &targets, const char *message, bool force,
               bool keep_local);

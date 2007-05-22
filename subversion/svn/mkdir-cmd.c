@@ -74,7 +74,7 @@ svn_cl__mkdir(apr_getopt_t *os,
 
   ctx->revprop_table = opt_state->revprop_table;
 
-  err = svn_client_mkdir3(&commit_info, targets, opt_state->make_parents,
+  err = svn_client_mkdir3(&commit_info, targets, opt_state->parents,
                           ctx, pool);
 
   if (ctx->log_msg_func3)
@@ -85,6 +85,12 @@ svn_cl__mkdir(apr_getopt_t *os,
       if (err->apr_err == APR_EEXIST)
         return svn_error_quick_wrap
           (err, _("Try 'svn add' or 'svn add --non-recursive' instead?"));
+      else if (!(opt_state->parents) &&
+               (APR_STATUS_IS_ENOENT(err->apr_err) || /* in wc */
+                err->apr_err == SVN_ERR_FS_NOT_FOUND || /* ra_local and ra_svn */
+                err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND /* ra_dav */))
+        return svn_error_quick_wrap
+          (err, _("Try 'svn mkdir --parents' instead?"));
       else
         return err;
     }

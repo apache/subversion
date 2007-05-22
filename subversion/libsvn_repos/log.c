@@ -32,6 +32,115 @@
 
 
 
+svn_error_t *
+svn_repos_check_revision_access(svn_repos_revision_access_level_t *access,
+                                svn_repos_t *repos,
+                                svn_revnum_t revision,
+                                svn_repos_authz_func_t authz_read_func,
+                                void *authz_read_baton,
+                                apr_pool_t *pool)
+{
+  svn_fs_t *fs = svn_repos_fs(repos);
+  svn_fs_root_t *rev_root;
+  apr_hash_t *changes;
+  apr_hash_index_t *hi;
+  svn_boolean_t found_readable = FALSE;
+  svn_boolean_t found_unreadable = FALSE;
+  apr_pool_t *subpool;
+
+  /* By default, we'll grant full read access to REVISION. */
+  *access = svn_repos_revision_access_full;
+
+  /* No auth-checking function?  We're done. */
+  if (! authz_read_func)
+    return SVN_NO_ERROR;
+
+  /* Fetch the changes associated with REVISION. */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, revision, pool));
+  SVN_ERR(svn_fs_paths_changed(&changes, rev_root, pool));
+
+  /* No changed paths?  We're done. */
+  if (apr_hash_count(changes) == 0)
+    return SVN_NO_ERROR;
+
+  /* Otherwise, we have to check the readability of each changed
+     path, or at least enough to answer the question asked. */
+  subpool = svn_pool_create(pool);
+  for (hi = apr_hash_first(NULL, changes); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      svn_fs_path_change_t *change;
+      svn_boolean_t readable;
+
+      svn_pool_clear(subpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      change = val;
+
+      SVN_ERR(authz_read_func(&readable, rev_root, key, 
+                              authz_read_baton, subpool));
+      if (! readable)
+        found_unreadable = TRUE;
+      else
+        found_readable = TRUE;
+
+      /* If we have at least one of each (readable/unreadable), we
+         have our answer. */
+      if (found_readable && found_unreadable)
+        goto decision;
+
+      switch (change->change_kind)
+        {
+        case svn_fs_path_change_add:
+        case svn_fs_path_change_replace:
+          {
+            const char *copyfrom_path;
+            svn_revnum_t copyfrom_rev;
+
+            SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                       rev_root, key, subpool));
+            if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+              {
+                svn_fs_root_t *copyfrom_root;
+                SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
+                                             copyfrom_rev, subpool));
+                SVN_ERR(authz_read_func(&readable,
+                                        copyfrom_root, copyfrom_path,
+                                        authz_read_baton, subpool));
+                if (! readable)
+                  found_unreadable = TRUE;
+
+                /* If we have at least one of each (readable/unreadable), we
+                   have our answer. */
+                if (found_readable && found_unreadable)
+                  goto decision;
+              }
+          }
+          break;
+
+        case svn_fs_path_change_delete:
+        case svn_fs_path_change_modify:
+        default:
+          break;
+        }
+    }
+
+ decision:
+  svn_pool_destroy(subpool);
+
+  /* Either every changed path was unreadable... */
+  if (! found_readable)
+    *access = svn_repos_revision_access_none;
+
+  /* ... or some changed path was unreadable... */
+  else if (found_unreadable)
+    *access = svn_repos_revision_access_partial;
+
+  /* ... or every changed path was readable (the default). */
+  return SVN_NO_ERROR;
+}
+
+
 /* Store as keys in CHANGED the paths of all node in ROOT that show a
  * significant change.  "Significant" means that the text or
  * properties of the node were changed, or that the node was added or
@@ -78,6 +187,9 @@ detect_changed(apr_hash_t **changed,
 
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
+      /* NOTE:  Much of this loop is going to look quite similar to
+         svn_repos_check_revision_access(), but we have to do more things
+         here, so we'll live with the duplication. */
       const void *key;
       void *val;
       svn_fs_path_change_t *change;

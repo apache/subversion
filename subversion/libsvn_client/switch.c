@@ -67,9 +67,10 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
-  const char *URL, *anchor, *target;
+  const char *URL, *anchor, *target, *source_root;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
+  svn_node_kind_t switch_url_kind;
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access, *dir_access;
   const char *diff3_cmd;
@@ -125,6 +126,31 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                                ctx, pool));
   SVN_ERR(svn_client__get_revision_number
           (&revnum, ra_session, revision, path, pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
+  
+  /* Disallow a switch operation to change the repository root of the target. */
+  if (! svn_path_is_ancestor(source_root, switch_url))
+    return svn_error_createf 
+      (SVN_ERR_WC_INVALID_SWITCH, NULL,
+       _("'%s'\n"
+         "is not the same repository as\n"
+         "'%s'"), switch_url, source_root);
+
+  /* Check to make sure that the switch target actually exists. */
+  SVN_ERR(svn_ra_reparent(ra_session, source_root, pool));
+  SVN_ERR(svn_ra_check_path(ra_session, 
+                            svn_path_is_child(source_root, switch_url, pool),
+                            revnum,
+                            &switch_url_kind,
+                            pool));
+
+  if (switch_url_kind == svn_node_none)
+    return svn_error_createf
+      (SVN_ERR_WC_INVALID_SWITCH, NULL,
+       _("Destination does not exist: '%s'"), switch_url);
+
+  SVN_ERR(svn_ra_reparent(ra_session, URL, pool));
+
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */

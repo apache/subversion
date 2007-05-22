@@ -26,7 +26,11 @@
  *
  * All paths passed to the @c svn_path_xxx functions, with the exceptions of
  * the svn_path_canonicalize() and svn_path_internal_style() functions,
- * must be in canonical form.
+ * must be in canonical form as defined by the Subversion path library
+ * itself.  For the most part, we mean what most anyone would mean
+ * when talking about canonical paths, but to be on the safe side, you
+ * should run your paths through svn_path_canonicalize() before
+ * passing them to other functions in this API.
  */
 
 #ifndef SVN_PATH_H

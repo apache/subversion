@@ -650,6 +650,41 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 
 
 svn_error_t *
+svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
+              const char *left,
+              const char *right,
+              const char *merge_target,
+              svn_wc_adm_access_t *adm_access,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              const apr_array_header_t *prop_diff,
+              apr_pool_t *pool)
+{
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
+
+  SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
+                                 left, right, merge_target,
+                                 adm_access,
+                                 left_label, right_label, target_label,
+                                 dry_run,
+                                 diff3_cmd,
+                                 merge_options,
+                                 prop_diff,
+                                 pool));
+
+  /* Write our accumulation of log entries into a log file */
+  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+
+  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
               const char *left,
               const char *right,
@@ -663,24 +698,10 @@ svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
               const apr_array_header_t *merge_options,
               apr_pool_t *pool)
 {
-  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
-
-  SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
-                                 left, right, merge_target,
-                                 adm_access,
-                                 left_label, right_label, target_label,
-                                 dry_run,
-                                 diff3_cmd,
-                                 merge_options,
-                                 NULL,
-                                 pool));
-
-  /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc_merge3(merge_outcome,
+                       left, right, merge_target, adm_access,
+                       left_label, right_label, target_label,
+                       dry_run, diff3_cmd, merge_options, NULL, pool);
 }
 
 svn_error_t *
@@ -696,8 +717,8 @@ svn_wc_merge(const char *left,
              const char *diff3_cmd,
              apr_pool_t *pool)
 {
-  return svn_wc_merge2(merge_outcome,
+  return svn_wc_merge3(merge_outcome,
                        left, right, merge_target, adm_access,
                        left_label, right_label, target_label,
-                       dry_run, diff3_cmd, NULL, pool);
+                       dry_run, diff3_cmd, NULL, NULL, pool);
 }

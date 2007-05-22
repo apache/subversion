@@ -447,8 +447,11 @@ extend_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
                                        adm_access, ctx, pool));
 
   /* Combine the provided merge info with any merge info from the WC. */
-  SVN_ERR(svn_mergeinfo_merge(&wc_mergeinfo, mergeinfo,
-                              pool));
+  if (wc_mergeinfo)
+    SVN_ERR(svn_mergeinfo_merge(&wc_mergeinfo, mergeinfo,
+                                pool));
+  else
+    wc_mergeinfo = mergeinfo;
 
   return svn_client__record_wc_merge_info(target_wcpath, wc_mergeinfo,
                                           adm_access, pool);
@@ -1203,6 +1206,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
           item->url = url;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
+          item->incoming_prop_changes = apr_array_make(pool, 1,
+                                                       sizeof(svn_prop_t *));
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
     }
@@ -1239,7 +1244,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_client__parse_merge_info(&wc_mergeinfo, entry,
                                            pair->src, adm_access, ctx,
                                            pool));
-      SVN_ERR(svn_mergeinfo_merge(&mergeinfo, wc_mergeinfo, pool));
+      if (wc_mergeinfo)
+        SVN_ERR(svn_mergeinfo_merge(&mergeinfo, wc_mergeinfo, pool));
       SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
                                        &mergeinfo_prop->value,
                                        mergeinfo, pool));

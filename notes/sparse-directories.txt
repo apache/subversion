@@ -462,7 +462,6 @@ Contents
            svn_client_commit4()   # Is manual control of depth needed here?
            svn_client_propset3()  # Is manual control of depth needed here?
            svn_client_propget3()  # Is manual control of depth needed here?
-           svn_client_proplist3() # Is manual control of depth needed here?
            svn_client_resolved()  # Is manual control of depth needed here?
            svn_client_relocate()  # I don't think this needs to take depth.
            svn_client_info()      # I don't think this needs to take depth.
@@ -474,8 +473,3 @@ Contents
            svn_wc_process_committed4() # Really not sure about this one.
            svn_wc_diff3()              # Maybe should be depth.  Maybe.
            svn_wc_relocate2()          # Why does it even take recurse??
-
-           svn_ra_do_update2()  # No, just remove recurse parameter.
-           svn_ra_do_switch2()  # Ditto.
-           svn_ra_do_status2()  # Ditto.
-           svn_ra_do_diff3()    # Ditto.

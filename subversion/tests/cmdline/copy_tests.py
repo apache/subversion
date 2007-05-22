@@ -3510,7 +3510,7 @@ def old_dir_wc_to_wc(sbox):
 # Test copying and creating parents in the wc
 
 def copy_make_parents_wc_wc(sbox):
-  "svn cp --make-parents WC_PATH WC_PATH"
+  "svn cp --parents WC_PATH WC_PATH"
    
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3519,7 +3519,7 @@ def copy_make_parents_wc_wc(sbox):
   new_iota_path = os.path.join(wc_dir, 'X', 'Y', 'Z', 'iota')
 
   # Copy iota
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--make-parents',
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
                                      iota_path, new_iota_path)
 
   # Create expected output
@@ -3553,7 +3553,7 @@ def copy_make_parents_wc_wc(sbox):
 # Test copying and creating parents from the repo to the wc
 
 def copy_make_parents_repo_wc(sbox):
-  "svn cp --make-parents URL WC_PATH"
+  "svn cp --parents URL WC_PATH"
    
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3562,7 +3562,7 @@ def copy_make_parents_repo_wc(sbox):
   new_iota_path = os.path.join(wc_dir, 'X', 'Y', 'Z', 'iota')
 
   # Copy iota
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--make-parents',
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
                                      iota_url, new_iota_path)
 
   # Create expected output
@@ -3597,7 +3597,7 @@ def copy_make_parents_repo_wc(sbox):
 # Test copying and creating parents from the wc to the repo
 
 def copy_make_parents_wc_repo(sbox):
-  "svn cp --make-parents WC_PATH URL"
+  "svn cp --parents WC_PATH URL"
    
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3606,7 +3606,7 @@ def copy_make_parents_wc_repo(sbox):
   new_iota_url = sbox.repo_url + '/X/Y/Z/iota'
 
   # Copy iota
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--make-parents',
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
                                      '-m', 'log msg',
                                      iota_path, new_iota_url)
 
@@ -3644,7 +3644,7 @@ def copy_make_parents_wc_repo(sbox):
 # Test copying and creating parents from repo to repo
 
 def copy_make_parents_repo_repo(sbox):
-  "svn cp --make-parents URL URL"
+  "svn cp --parents URL URL"
    
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3653,7 +3653,7 @@ def copy_make_parents_repo_repo(sbox):
   new_iota_url = sbox.repo_url + '/X/Y/Z/iota'
 
   # Copy iota
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--make-parents',
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
                                      '-m', 'log msg',
                                      iota_url, new_iota_url)
 

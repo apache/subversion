@@ -16,6 +16,7 @@
  * ====================================================================
  */
 #include <assert.h>
+#include <ctype.h>
 
 #include "svn_types.h"
 #include "svn_ctype.h"
@@ -64,8 +65,9 @@ parse_revision(const char **input, const char *end, svn_revnum_t *revision)
   svn_revnum_t result = strtol(curr, &endptr, 10);
 
   if (curr == endptr)
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            _("Invalid revision number"));
+    return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                             _("Invalid revision number found parsing '%s'"),
+                             curr);
 
   *revision = result;
 
@@ -121,19 +123,28 @@ parse_revlist(const char **input, const char *end,
   const char *curr = *input;
   svn_merge_range_t *lastrange = NULL;
 
-  if (curr == end)
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            _("No revision list found"));
+  /* Eat any leading horizontal white-space before the rangelist. */
+  while (curr < end && *curr != '\n' && isspace(*curr))
+    curr++;
 
-  while (curr < end)
+  if (*curr == '\n' || curr == end)
     {
+      /* Empty range list. */
+      *input = curr;
+      return SVN_NO_ERROR;
+    }
+
+  while (curr < end && *curr != '\n')
+    {
+      /* Parse individual revisions or revision ranges. */
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
       svn_revnum_t firstrev;
 
       SVN_ERR(parse_revision(&curr, end, &firstrev));
       if (*curr != '-' && *curr != '\n' && *curr != ',' && curr != end)
-        return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                                _("Invalid character found in revision list"));
+        return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                                 _("Invalid character '%c' found in revision "
+                                   "list"), *curr);
       mrange->start = firstrev;
       mrange->end = firstrev;
 
@@ -146,7 +157,6 @@ parse_revlist(const char **input, const char *end,
           mrange->end = secondrev;
         }
 
-      /* XXX: Watch empty revision list problem */
       if (*curr == '\n' || curr == end)
         {
           combine_with_lastrange(&lastrange, mrange, FALSE, revlist, pool);
@@ -160,14 +170,16 @@ parse_revlist(const char **input, const char *end,
         }
       else
         {
-          return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                                  _("Invalid character found in revision list"));
+          return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                                   _("Invalid character '%c' found in "
+                                     "range list"), *curr);
         }
 
     }
   if (*curr != '\n')
     return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            _("Revision list parsing ended before hitting newline"));
+                            _("Range list parsing ended before hitting "
+                              "newline"));
   *input = curr;
   return SVN_NO_ERROR;
 }
@@ -192,8 +204,9 @@ parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
   SVN_ERR(parse_revlist(input, end, revlist, pool));
 
   if (*input != end && *(*input) != '\n')
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            _("Could not find end of line in revision line"));
+    return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                             _("Could not find end of line in range list line "
+                               "in '%s'"), *input);
 
   if (*input != end)
     *input = *input + 1;

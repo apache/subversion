@@ -1,5 +1,5 @@
 Version 1.4.4
-(?? May 2007, from /branches/1.4.x)
+(16 May 2007, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.4
 
  User-visible changes:
@@ -7,6 +7,7 @@ http://svn.collab.net/repos/svn/tags/1.4.4
     * fixed: 'svn up' of replaced file without history fails (issue #2618)
     * fixed: 'svn export' succeeds on non-existent URL (r23191, -3, -5, -200)
     * fixed: 'svn diff' fails writing large hunks to Win console (issue #1789)
+    * fixed: 'svn merge' shows 'G' notifications for unchanged files (r24483)
     * fixed: svnsync cannot sync unreadable modified dir copies (issue #2705)
     * fixed: ra_dav litters empty transactions if initial setup fails (r23594)
     * fixed: inconsistent expansion of revision number keywords (issue #1743)

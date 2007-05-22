@@ -31,17 +31,6 @@ history index).
 
   * Need new RA call.
 
-* Allow for merge info which contains empty merge info for a path,
-  necessary for override of merge info by child paths which would
-  otherwise inherit merge info from their parents which they don't
-  reflect.
-
-  * FIXME: The code path from client to FS allows such values to
-    make it all the way through to the FS, but empty merge info for a
-    path are not making it into the merge info index in a meaningful
-    fashion yet (the "mergeinfo" table isn't getting updated, only the
-    "mergeinfo_changed" table).  (dlr)
-
 * Handle notifications resulting from a merge.  (sussman)
 
   * Handle multiple notifications for single WC items.
@@ -60,12 +49,10 @@ history index).
 
   * Handle skips.
 
-    * If all changes in a merge are skipped, no merge info should be
-      recorded for the target.
-
     * If only some changes are skipped, merge info should be recorded
-      for the target, and recorded as empty (or with no modifications,
-      if there is pre-existing merge info) for the skipped items.
+      for the target (implemented r25085), and recorded as empty (or
+      with no modifications, if there is pre-existing merge info) for
+      the skipped items.
 
   * Handle conflicts.
 

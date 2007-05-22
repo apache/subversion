@@ -621,6 +621,28 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Adds a file to the repository.
+     * @param path      path to be added.
+     * @param recurse   recurse into subdirectories
+     * @param force     if adding a directory and recurse true and path is a
+     *                  directory, all not already managed files are added.
+     * @param noIgnores if false, don't add files or directories matching
+     *                  ignore patterns
+     * @param addParents add any intermediate parents to the working copy
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void add(String path, boolean recurse, boolean force,
+                    boolean noIgnores, boolean addParents)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.add(path, recurse, force, noIgnores, addParents);
+        }
+    }
+
+    /**
      * Updates the directory or file from repository
      * @param path target file.
      * @param revision the revision number to update.
@@ -1470,18 +1492,18 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param path        the path of the item
      * @param revision    the revision of the item
      * @param pegRevision the revision to interpret path
-     * @param recurse     get properties from subdirectories also
+     * @param depth       the depth to recurse into subdirectories
      * @param callback    the callback to use to return the properties
      * @since 1.5
      */
     public void properties(String path, Revision revision,
-                           Revision pegRevision, boolean recurse,
+                           Revision pegRevision, int depth,
                            ProplistCallback callback)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.properties(path, revision, pegRevision, recurse, callback);
+            worker.properties(path, revision, pegRevision, depth, callback);
         }
     }
 
@@ -1943,9 +1965,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Set directory for the configuration information
-     * @param configDir     path of the directory
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.setConfigDirectory(String)
      */
     public void setConfigDirectory(String configDir) throws ClientException
     {

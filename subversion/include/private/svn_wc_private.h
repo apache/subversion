@@ -85,8 +85,9 @@ svn_error_t *svn_wc__props_modified(const char *path,
                                     apr_pool_t *pool);
 
 /** Given a @a wcpath with its accompanying @a entry, set @a *switched to
- * whether @a wcpath is switched (TRUE or FALSE).  All allocations are
- * done in @a pool.
+ * whether @a wcpath is switched (TRUE or FALSE).  If @a entry is an
+ * incomplete entry obtained from @a wcpath's parent return
+ * @c SVN_ERR_ENTRY_MISSING_URL.  All allocations are done in @a pool.
  *
  * @since New in 1.5.
  */

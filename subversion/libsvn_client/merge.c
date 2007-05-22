@@ -23,6 +23,8 @@
 /*** Includes. ***/
 
 #include <apr_strings.h>
+#include <apr_tables.h>
+#include <apr_hash.h>
 #include "svn_types.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -251,7 +253,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   
   /* Other easy outs:  if the merge target isn't under version
      control, or is just missing from disk, fogettaboutit.  There's no
-     way svn_wc_merge2() can do the merge. */
+     way svn_wc_merge3() can do the merge. */
   {
     const svn_wc_entry_t *entry;
     svn_node_kind_t kind;
@@ -275,7 +277,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   }
 
   /* This callback is essentially no more than a wrapper around
-     svn_wc_merge2().  Thank goodness that all the
+     svn_wc_merge3().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
@@ -335,11 +337,12 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
           const char *right_label = apr_psprintf(subpool,
                                                  _(".merge-right.r%ld"),
                                                  yours_rev);
-          SVN_ERR(svn_wc_merge2(&merge_outcome,
+          SVN_ERR(svn_wc_merge3(&merge_outcome,
                                 older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
                                 merge_b->dry_run, merge_b->diff3_cmd,
-                                merge_b->merge_options, subpool));
+                                merge_b->merge_options, 
+                                prop_changes, subpool));
         }
 
       if (content_state)
@@ -852,9 +855,32 @@ merge_callbacks =
 
 /*** Retrieving merge info. ***/
 
+/* Adjust merge sources in MERGEINFO (which is assumed to be non-NULL). */
+static APR_INLINE void
+adjust_mergeinfo_source_paths(apr_hash_t *mergeinfo, const char *walk_path,
+                              apr_hash_t *wc_mergeinfo, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  const void *merge_source;
+  void *rangelist;
+  const char *path;
+
+  for (hi = apr_hash_first(NULL, wc_mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      /* Copy inherited merge info into our output hash, adjusting the
+         merge source as appropriate. */
+      apr_hash_this(hi, &merge_source, NULL, &rangelist);
+      path = svn_path_join((const char *) merge_source, walk_path,
+                           apr_hash_pool_get(mergeinfo));
+      /* ### If pool has a different lifetime than mergeinfo->pool,
+         ### this use of "rangelist" will be a problem... */
+      apr_hash_set(mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+    }
+}
+
 /* Find explicit or inherited WC merge info for WCPATH, and return it
-   in *MERGEINFO.  Set *INHERITED to whether the merge info was inherited
-   (TRUE or FALSE).
+   in *MERGEINFO (NULL if no merge info is set).  Set *INHERITED to
+   whether the merge info was inherited (TRUE or FALSE).
 
    If INHERITED_ONLY is TRUE look only for inherited merge info and ignore
    explicit merge info on WCPATH.
@@ -889,7 +915,7 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
          interested in inherited mergeinfo. */
       if (inherited_only)
         {
-          wc_mergeinfo = apr_hash_make(pool);
+          wc_mergeinfo = NULL;
           inherited_only = FALSE;
         }
       else
@@ -929,7 +955,7 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
           SVN_ERR(svn_path_get_absolute(&wcpath, wcpath, pool));
         }
 
-      if (apr_hash_count(wc_mergeinfo) == 0 &&
+      if (wc_mergeinfo == NULL &&
           !svn_dirent_is_root(wcpath, strlen(wcpath)))
         {
           svn_error_t *err;
@@ -976,24 +1002,17 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
   else
     {
       /* Merge info may be inherited. */
-      apr_hash_index_t *hi;
-      void *val;
-      const void *key;
-      const char *path;
-      apr_array_header_t *rangelist;
-
-      *inherited = apr_hash_count(wc_mergeinfo) > 0;
-      *mergeinfo = apr_hash_make(pool);
-
-      for (hi = apr_hash_first(pool, wc_mergeinfo); hi; hi = apr_hash_next(hi))
+      if (wc_mergeinfo)
         {
-          /* Copy inherited merge info into our output hash, adjusting
-             the merge source as appropriate. */
-          apr_hash_this(hi, &key, NULL, &val);
-          path = svn_path_join((const char *) key, walk_path, pool);
-          rangelist = val;
-
-          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+          *inherited = (wc_mergeinfo && apr_hash_count(wc_mergeinfo) > 0);
+          *mergeinfo = apr_hash_make(pool);
+          adjust_mergeinfo_source_paths(*mergeinfo, walk_path, wc_mergeinfo,
+                                        pool);
+        }
+      else
+        {
+          *inherited = FALSE;
+          *mergeinfo = NULL;
         }
     }
 
@@ -1010,9 +1029,9 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
    RA_SESSION is NULL).  Store any merge info obtained for the target
    (reflected by *ENTRY, which is also acquired and returned by this
    function) in *TARGET_MERGEINFO, if no merge info is found
-   *TARGET_MERGEINFO is an empty hash.  If the target inherited any
-   merge info from a WC ancestor set *INHERITED to TRUE, set it to
-   FALSE otherwise. */
+   *TARGET_MERGEINFO is NULL.  If the target inherited any merge info
+   *from a WC ancestor set *INHERITED to TRUE, set it to FALSE
+   *otherwise. */
 static svn_error_t *
 get_wc_or_repos_merge_info(apr_hash_t **target_mergeinfo,
                            const svn_wc_entry_t **entry,
@@ -1029,6 +1048,31 @@ get_wc_or_repos_merge_info(apr_hash_t **target_mergeinfo,
 
   SVN_ERR(svn_wc__entry_versioned(entry, target_wcpath, adm_access, FALSE,
                                   pool));
+
+  /* We may get an entry with abrieviated information from TARGET_WCPATH's
+     parent.  This limited entry does not have a URL and probably means
+     TARGET_WCPATH is missing or that the access for TARGET_WCPATH is not in
+     ADM_ACCESS's baton set (i.e. ADM_ACCESS was opened for TARGET_WCPATH's
+     parent with lock depth == 0).  Either way we can't get accurate merge
+     info for TARGET_WCPATH. */
+  if (! (*entry)->url)
+    {
+      svn_node_kind_t wckind;
+
+      SVN_ERR(svn_io_check_path(target_wcpath, &wckind, pool));
+      if (wckind == svn_node_none)
+        {
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("Path '%s' is missing"),
+                                   svn_path_local_style(target_wcpath, pool));
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL, 
+                                   _("Cannot find a URL for '%s'."),
+                                   svn_path_local_style(target_wcpath, pool));
+        }
+    }
 
   /* ### FIXME: dionisos sez: "We can have schedule 'normal' files
      ### with a copied parameter of TRUE and a revision number of
@@ -1066,7 +1110,7 @@ get_wc_or_repos_merge_info(apr_hash_t **target_mergeinfo,
                             pool));
 
   /* If there in no WC merge info check the repository. */
-  if (!apr_hash_count(*target_mergeinfo))
+  if (*target_mergeinfo == NULL)
     {
       apr_hash_t *repos_mergeinfo;
       if (ra_session == NULL)
@@ -1091,8 +1135,9 @@ get_wc_or_repos_merge_info(apr_hash_t **target_mergeinfo,
 /* Helper for svn_client__elide_mergeinfo and elide_children.
 
    Compare PARENT_MERGEINFO and CHILD_MERGEINFO to see if they are
-   identical.  If PATH_SUFFIX is not NULL append PATH_SUFFIX to each
-   path in PARENT_MERGEINFO before performing the comparison.
+   identical (they may be NULL).  If PATH_SUFFIX is not NULL append
+   PATH_SUFFIX to each path in PARENT_MERGEINFO before performing the
+   comparison.
 
    Set *ELIDES to whether PARENT_MERGEINFO and CHILD_MERGEINFO are
    identical (TRUE or FALSE). */
@@ -1106,7 +1151,8 @@ mergeinfo_elides(svn_boolean_t *elides,
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *mergeinfo;
 
-  if (apr_hash_count(parent_mergeinfo) != apr_hash_count(child_mergeinfo))
+  if (parent_mergeinfo == NULL || child_mergeinfo == NULL ||
+      apr_hash_count(parent_mergeinfo) != apr_hash_count(child_mergeinfo))
     {
       *elides = FALSE;
       return SVN_NO_ERROR;
@@ -1280,7 +1326,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
 
          /* If TARGET_WCPATH has no explicit mergeinfo, there's nothing to
              elide, we're done. */
-          if (inherited || apr_hash_count(target_mergeinfo) == 0)
+          if (inherited || target_mergeinfo == NULL)
             return SVN_NO_ERROR;
 
           /* Get TARGET_WCPATH's inherited mergeinfo. */
@@ -1292,7 +1338,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
 
           /* If TARGET_WCPATH has no inherited mergeinfo, there's
              nowhere to elide to, we're done. */
-          if (apr_hash_count(mergeinfo) == 0)
+          if (mergeinfo == NULL)
             return SVN_NO_ERROR;
 
           SVN_ERR(mergeinfo_elides(&elides, mergeinfo, target_mergeinfo,
@@ -1339,8 +1385,12 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
   /* Subtract the revision ranges which have already been merged into
      the WC (if any) from the range requested for merging (to avoid
      repeated merging). */
-  target_rangelist = apr_hash_get(target_mergeinfo, rel_path,
-                                  APR_HASH_KEY_STRING);
+  if (target_mergeinfo)
+    target_rangelist = apr_hash_get(target_mergeinfo, rel_path,
+                                    APR_HASH_KEY_STRING);
+  else
+    target_rangelist = NULL;
+
   if (target_rangelist)
     {
       if (is_revert)
@@ -1377,6 +1427,9 @@ typedef struct
   /* The number of notifications received. */
   apr_uint32_t nbr_notifications;
 
+  /* The number of operative notifications received. */
+  apr_uint32_t nbr_operative_notifications;
+
   /* The list of any skipped paths, which should be examined and
      cleared after each invocation of the callback. */
   apr_hash_t *skipped_paths;
@@ -1396,6 +1449,14 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
   if (notify_b->same_urls)
     {
       notify_b->nbr_notifications++;
+
+      if (notify->content_state == svn_wc_notify_state_conflicted
+          || notify->content_state == svn_wc_notify_state_merged
+          || notify->content_state == svn_wc_notify_state_changed
+          || notify->prop_state == svn_wc_notify_state_conflicted
+          || notify->prop_state == svn_wc_notify_state_merged
+          || notify->prop_state == svn_wc_notify_state_changed)
+        notify_b->nbr_operative_notifications++;
 
       if (notify->action == svn_wc_notify_skip)
         {
@@ -1442,13 +1503,12 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
   *merges = apr_hash_make(pool);
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
 
-  /* Only set the merge info for the root of the target tree if we
-     didn't skip it or any paths under it. */
-  if (nbr_skips == 0)
-    {
-      apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
-    }
-  else /* nbr_skips > 0 */
+  /* Set the merge info for the root of the target tree unless we skipped
+     everything. */
+  if (nbr_skips == 0 || notify_b->nbr_operative_notifications > 0)
+    apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
+
+  if (nbr_skips > 0)
     {
       apr_hash_index_t *hi;
       const void *skipped_path;
@@ -1514,6 +1574,8 @@ update_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
          a fresh copy before using it to update the WC's merge info. */
       SVN_ERR(svn_client__parse_merge_info(&mergeinfo, entry, path, adm_access,
                                            ctx, subpool));
+      if (mergeinfo == NULL)
+        mergeinfo = apr_hash_make(subpool);
 
       /* ASSUMPTION: "target_wcpath" is always both a parent and
          prefix of "path". */
@@ -1721,7 +1783,7 @@ do_merge(const char *initial_URL1,
   void *diff_edit_baton;
   svn_client_ctx_t *ctx = merge_b->ctx;
   notification_receiver_baton_t notify_b =
-    { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, NULL, pool };
+    { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, 0, NULL, pool };
   const char *URL1, *URL2, *path1, *path2, *rel_path;
   svn_opt_revision_t *revision1, *revision2;
   const svn_wc_entry_t *entry;
@@ -2057,7 +2119,7 @@ do_single_file_merge(const char *initial_URL1,
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   svn_client_ctx_t *ctx = merge_b->ctx;
   notification_receiver_baton_t notify_b =
-    { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, NULL, pool };
+    { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, 0, NULL, pool };
   const char *URL1, *path1, *URL2, *path2, *rel_path;
   svn_opt_revision_t *revision1, *revision2;
   svn_error_t *err;

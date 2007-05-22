@@ -147,7 +147,8 @@ merge info inheritance and elision, specifically:</p>
 
  <li>Merge rev N to PATH with switched CHILD with no explicit merge info:
    CHILD does not inherit merge info from its working copy ancestors.  CHILD
-   gets merge info for rev N plus any inherited mergeinfo from the repository.
+   gets merge info for rev N plus any inherited mergeinfo from the
+   repository (<I>unimplemented</I>).
    </li>
 
  <li>Elision: Merge info on switched paths never elides.</li>
@@ -290,16 +291,16 @@ functionality added by <code>--merge-sensitive</code> is as follows.</p>
   will look like this:</p>
   <pre>
 ------------------------------------------------------------------------
-r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 2 lines
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
  
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
-r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 2 lines
+r14 | bob | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
-r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r24
 
 Fix frapnalyzer bug in frobnicator.
@@ -310,28 +311,25 @@ Fix frapnalyzer bug in frobnicator.
 
   <pre>
 ------------------------------------------------------------------------
-r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 2 lines
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/death-ray.c
    M /trunk/frobnicator/frapnalyzer.c
  
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
-r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 2 lines
+r14 | bob | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/death-ray.c
- 
 Result of a merge from: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
-r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/frobnicator/frapnalyzer.c
    M /trunk/death-ray.c
- 
-Result of a merge from:
-   r24
+Result of a merge from: r24
 
 Fix frapnalyzer bug in frobnicator.
   </pre>
@@ -341,26 +339,26 @@ Fix frapnalyzer bug in frobnicator.
 
   <pre>
 ------------------------------------------------------------------------
-r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 2 lines
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
  
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
-r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 2 lines
+r14 | bob | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
-r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r24
 
 Fix frapnalyzer bug in frobnicator.
 ------------------------------------------------------------------------
-r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 2 lines
+r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r12, r24
 
 Fix frapnalyzer documentation.
 ------------------------------------------------------------------------
-r9  | bob   | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+r9 | bob | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r12, r24
 
 Whitespace fixes.  No functional change.
