@@ -5558,7 +5558,7 @@ def merge_to_switched_path(sbox):
                                      ["property '" + SVN_PROP_MERGE_INFO +
                                       "' set on '" + A_COPY_D_path+ "'" +
                                       "\n"], [], 'ps', SVN_PROP_MERGE_INFO,
-                                     '/A/D/:4', A_COPY_D_path)
+                                     '/A/D:4', A_COPY_D_path)
   svntest.actions.run_and_verify_svn(None,
                                      [], [], 'merge', '-c4',
                                      sbox.repo_url + '/A/D/G_COPY',
