@@ -2180,6 +2180,9 @@ svn_repos_revision_access_level_t;
  * repos, as determined by consulting the @a authz_read_func callback
  * function and its associated @a authz_read_baton.
  *
+ * @a authz_read_func may be @c NULL, in which case @a access will be 
+ * set to @c svn_repos_revision_access_full.
+ *
  * @since New in 1.5.
  */
 svn_error_t *

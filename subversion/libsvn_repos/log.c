@@ -66,7 +66,7 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access,
   /* Otherwise, we have to check the readability of each changed
      path, or at least enough to answer the question asked. */
   subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(NULL, changes); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
@@ -187,6 +187,9 @@ detect_changed(apr_hash_t **changed,
 
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
+      /* NOTE:  Much of this loop is going to look quite similar to
+         svn_repos_check_revision_access(), but we have to do more things
+         here, so we'll live with the duplication. */
       const void *key;
       void *val;
       svn_fs_path_change_t *change;
