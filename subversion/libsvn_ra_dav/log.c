@@ -313,6 +313,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
                                   int limit,
                                   svn_boolean_t discover_changed_paths,
                                   svn_boolean_t strict_node_history,
+                                  svn_boolean_t include_merged_revisions,
                                   svn_log_message_receiver2_t receiver,
                                   void *receiver_baton,
                                   apr_pool_t *pool)
@@ -377,6 +378,13 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
       svn_stringbuf_appendcstr(request_body,
                                apr_psprintf(pool,
                                             "<S:strict-node-history/>"));
+    }
+
+  if (include_merged_revisions)
+    {
+      svn_stringbuf_appendcstr(request_body,
+                               apr_psprintf(pool,
+                                            "<S:include-merged-revisions/>"));
     }
 
   if (paths)

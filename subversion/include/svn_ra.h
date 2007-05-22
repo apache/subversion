@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1149,6 +1149,9 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  * If @a strict_node_history is set, copy history will not be traversed
  * (if any exists) when harvesting the revision logs for each path.
  *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a targets will also be returned.
+ *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
  *
@@ -1172,6 +1175,7 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              int limit,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
+                             svn_boolean_t include_merged_revisions,
                              svn_log_message_receiver2_t receiver,
                              void *receiver_baton,
                              apr_pool_t *pool);

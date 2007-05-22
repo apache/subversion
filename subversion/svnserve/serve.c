@@ -1542,7 +1542,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
-  svn_boolean_t changed_paths, strict_node;
+  svn_boolean_t changed_paths, strict_node, include_merged_revisions;
   apr_array_header_t *paths, *full_paths;
   svn_ra_svn_item_t *elt;
   int i;
@@ -1551,10 +1551,12 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* Parse the arguments.  The usual optional element pattern "(?n)"
      isn't used for the limit argument because pre-1.3 clients don't
-     know to send it. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n", &paths,
+     know to send it.  Nor is the pattern used for the include_merged_revisions
+     argument, because pre-1.5 clients don't know to send it, either. */
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?b", &paths,
                                  &start_rev, &end_rev, &changed_paths,
-                                 &strict_node, &limit));
+                                 &strict_node, &limit,
+                                 &include_merged_revisions));
 
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is 

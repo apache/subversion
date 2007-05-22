@@ -784,13 +784,15 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              int limit,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
+                             svn_boolean_t include_merged_revisions,
                              svn_log_message_receiver2_t receiver,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
   return session->vtable->get_log(session, paths, start, end, limit,
                                   discover_changed_paths, strict_node_history,
-                                  receiver, receiver_baton, pool);
+                                  include_merged_revisions, receiver,
+                                  receiver_baton, pool);
 }
 
 svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
@@ -813,7 +815,7 @@ svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
 
   return svn_ra_get_log2(session, paths, start, end, limit,
                          discover_changed_paths, strict_node_history,
-                         receiver2, receiver2_baton, pool);
+                         FALSE, receiver2, receiver2_baton, pool);
 }
 
 svn_error_t *svn_ra_check_path(svn_ra_session_t *session,
