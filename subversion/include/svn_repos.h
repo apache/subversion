@@ -74,19 +74,6 @@ typedef svn_error_t *(*svn_repos_authz_func_t)(svn_boolean_t *allowed,
                                                apr_pool_t *pool);
 
 
-/** An enum defining levels of revision access.
- *
- * @since New in 1.5.
- */
-typedef enum
-{
-  svn_repos_rev_readable = 1,
-  svn_repos_rev_partially_readable,
-  svn_repos_rev_unreadable
-}
-svn_repos_revision_access_level_t;
-
-
 /** An enum defining the kinds of access authz looks up.
  *
  * @since New in 1.3.
@@ -2122,6 +2109,70 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
                              svn_repos_authz_access_t required_access,
                              svn_boolean_t *access_granted,
                              apr_pool_t *pool);
+
+
+
+/** Revision Access Levels
+ *
+ * Like most version control systems, access to versioned objects in
+ * Subversion is determined on primarily path-based system.  Users either
+ * do or don't have the ability to read a given path.
+ * 
+ * However, unlike many version control systems where versioned objects
+ * maintain their own distinct version information (revision numbers,
+ * authors, log messages, change timestamps, etc.), Subversion binds
+ * multiple paths changed as part of a single commit operation into a
+ * set, calls the whole thing a revision, and hangs commit metadata
+ * (author, date, log message, etc.) off of that revision.  So, commit
+ * metadata is shared across all the paths changed as part of a given
+ * commit operation.
+ * 
+ * It is common (or, at least, we hope it is) for log messages to give
+ * detailed information about changes made in the commit to which the log
+ * message is attached.  Such information might include a mention of all
+ * the files changed, what was changed in them, and so on.  But this
+ * causes a problem when presenting information to readers who aren't
+ * authorized to read every path in the repository.  Simply knowing that
+ * a given path exists may be a security leak, even if the user can't see
+ * the contents of the data located at that path.
+ * 
+ * So Subversion does what it reasonably can to prevent the leak of this
+ * information, and does so via a staged revision access policy.  A
+ * reader can be said to have one of three levels of access to a given
+ * revision's metadata, based solely on the reader's access rights to the
+ * paths changed or copied in that revision:
+ * 
+ *   'full access' -- Granted when the reader has access to all paths
+ *      changed or copied in the revision, or when no paths were 
+ *      changed in the revision at all, this access level permits
+ *      full visibility of all revision property names and values,
+ *      and the full changed-paths information.
+ * 
+ *   'no access' -- Granted when the reader does not have access to any
+ *      paths changed or copied in the revision, this access levels
+ *      denies the reader access to all revision properties and all
+ *      changed-paths information.
+ * 
+ *   'partial access' -- Granted when the reader has access to at least
+ *      one, but not all, of the paths changed or copied on the revision,
+ *      this access level permits visibility of the svn:date and
+ *      svn:author revision properties and only the paths of the
+ *      changed-paths information to which the reader has access
+ *
+ */
+
+
+/** An enum defining levels of revision access.
+ *
+ * @since New in 1.5.
+ */
+typedef enum
+{
+  svn_repos_rev_readable,
+  svn_repos_rev_partially_readable,
+  svn_repos_rev_unreadable
+}
+svn_repos_revision_access_level_t;
 
 
 /**
