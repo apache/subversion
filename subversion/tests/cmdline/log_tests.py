@@ -21,7 +21,7 @@ import re, os
 
 # Our testing module
 import svntest
-from svntest import SVNAnyOutput
+from svntest import wc, SVNAnyOutput
 
 
 ######################################################################
@@ -919,6 +919,52 @@ Log message for revision 3.
     log_chain = parse_log_output([line+"\n" for line in log.split("\n")])
 
 
+def check_merge_results(log_chain, expected_merges):
+  '''Check LOG_CHAIN to see if the log information contains 'Result of Merge'
+  informaiton indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
+  whose key is the merged revision, and whose value is the merging revision.'''
+
+  for rev in expected_merges.keys():
+    try:
+      log = [x for x in log_chain if x['revision'] == rev][0]
+    except IndexError:
+      raise SVNUnexpectedLogs("Merged revision '%d' missing" % rev, log_chain)
+
+
+def simple_merge_sensitive_log(sbox):
+  "test a simple merge sensitive log scenario"
+
+  # Run the mergeinfo_inheritance test from merge_tests.py
+  # This probably breaks all kinds of rules, but for right now, it is the
+  # easiest way to establish some crazy merge info to then test logging on.
+  import merge_tests
+  merge_tests.mergeinfo_inheritance(sbox)
+
+  # Paths we care about
+  wc_dir = sbox.wc_dir
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+
+  # Commit any pending changes
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', 'rev 7',
+                                     wc_dir)
+
+  # Run the merge sensitive log, and compare results
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(A_COPY_path)
+    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                     '-g')
+
+    log_chain = parse_log_output(output)
+    expected_merges = {
+      1 : 7, 3 : 7, 4 : 7, 5 : 7, 6 : 7,
+      }
+    check_merge_results(log_chain, expected_merges)
+
+  finally:
+    os.chdir(saved_cwd)
+  
+
 
 ########################################################################
 # Run the tests
@@ -942,6 +988,7 @@ test_list = [ None,
               log_base_peg,
               log_verbose,
               log_parser,
+              XFail(simple_merge_sensitive_log),
              ]
 
 if __name__ == '__main__':
