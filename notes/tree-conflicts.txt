@@ -60,7 +60,35 @@ Merge Scenarios
 CMPILATO'S BRAINSTORMING
 ========================
 
-There appear to me to be some pretty clear goals:
+This whole thing is, I think, basically about ensuring that the
+history of a file isn't allowed to fork and then suffer the
+unceremonious death of one of the two resulting lines of history.
+
+When doing an update, we don't have to worry that the working copy
+base file has deviated from the line of history that's being deleted
+-- other processes prevent the this from happening (you can't commit
+to a deleted file; you can't delete a file that's been modified since
+you last updated).  But you do have to worry about local mods, which
+are a "different path" in the file's line of history than the path
+that led to its deletion.
+
+When doing a merge, though, stuff gets really complicated.  Now you
+have an arbitary line of history as the source which you are trying to
+"lay down" overtop the line of history of the stuff in your
+repository, and the goal remains the same: don't assume that
+deviations in those lines should by resolved by disregarding one side
+of the fork or the other -- that's ungood.  In the best case you are
+trying to append segments of one fork in the history road to the
+other, and hopefully you don't leave gaps or cause deviations.  In the
+worst case, though, you're dealing with a "line of history" that's
+made up on-the-fly (due to your left- and right-side merge sources
+being unrelated, or only related as second cousins twice removed, or
+something).  This is where the "merge = diff + patch" paradigm really
+starts to show its weaknesses (and maybe, just maybe, should have been
+a use-case that Subversion disallowed ... if only it weren't so darned
+useful for vendor branches...).
+
+Anyway, there appear to me to be some pretty clear goals:
 
    * Conflicting operations should be marked as such and require user
      interaction to resolve
@@ -104,3 +132,18 @@ contents can note the details of the tree conflict.
         Intermediate directories are marked as added (no history) and
         in conflict, with their .trej files noting the deletion of the
         directory.
+
+'svn merge' pulls file deletion
+  NOW:  if there's nothing at the target location to delete, the
+        target is "skipped" (?); otherwise the target is removed from
+        version control and, if not locally modified, deleted.
+  NEW:  all file deletions that would affect a local file and that come
+        via merge get sanity-checked, with the client pulling the
+        left-side source version of the file down and comparing its
+        contents with the to-be-deleted working file.  if they are
+        equivalent and there are no local mods to the file, it is
+        removed from version control.  otherwise, we have two sets of
+        data we'd like to keep easy track of:  diffs between
+        deleted-source and wc base file, and diffs between wc base and
+        wc working files.  need more thinkin' 'round these parts...
+        here, quickly ruling out any deletion that 
