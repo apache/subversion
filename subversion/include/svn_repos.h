@@ -2168,9 +2168,9 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
  */
 typedef enum
 {
-  svn_repos_rev_readable,
-  svn_repos_rev_partially_readable,
-  svn_repos_rev_unreadable
+  svn_repos_revision_access_none,
+  svn_repos_revision_access_partial,
+  svn_repos_revision_access_full
 }
 svn_repos_revision_access_level_t;
 
