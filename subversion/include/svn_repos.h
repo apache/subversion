@@ -846,7 +846,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                              void *authz_baton,
                              apr_pool_t *pool);
 
-/*
+/**
  * Similar to svn_repos_get_commit_editor5(), but with @a revprop_table
  * set to a hash containing @a user and @a log_msg as the
  * @c SVN_PROP_REVISION_AUTHOR and @c SVN_PROP_REVISION_LOG properties,
