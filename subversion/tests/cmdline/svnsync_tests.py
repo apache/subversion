@@ -385,7 +385,7 @@ def copy_from_unreadable_dir(sbox):
     '   A /A/P/F\n',
     '   A /A/P/lambda\n',
     '\n',
-    'Copy B to P\n',
+    '\n', # log message is stripped
   ]
 
   out, err = svntest.main.run_svn(None,
@@ -514,7 +514,7 @@ def copy_with_mod_from_unreadable_dir(sbox):
     '   A /A/P/NEW-DIR\n',
     '   A /A/P/lambda\n',
     '\n',
-    'log_msg\n',
+    '\n', # log message is stripped
   ]
 
   out, err = svntest.main.run_svn(None,
@@ -620,7 +620,7 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
     '   A /A/P/F\n',
     '   A /A/P/lambda\n',
     '\n',
-    'log_msg\n',
+    '\n', # log message is stripped
   ]
 
   out, err = svntest.main.run_svn(None,

@@ -74,6 +74,19 @@ typedef svn_error_t *(*svn_repos_authz_func_t)(svn_boolean_t *allowed,
                                                apr_pool_t *pool);
 
 
+/** An enum defining levels of revision access.
+ *
+ * @since New in 1.5.
+ */
+typedef enum
+{
+  svn_repos_rev_readable = 1,
+  svn_repos_rev_partially_readable,
+  svn_repos_rev_unreadable
+}
+svn_repos_revision_access_level_t;
+
+
 /** An enum defining the kinds of access authz looks up.
  *
  * @since New in 1.3.
@@ -2109,6 +2122,23 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
                              svn_repos_authz_access_t required_access,
                              svn_boolean_t *access_granted,
                              apr_pool_t *pool);
+
+
+/**
+ * Set @a access to the access level granted for @a revision in @a
+ * repos, as determined by consulting the @a authz_read_func callback
+ * function and its associated @a authz_read_baton.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_check_revision_access(svn_repos_revision_access_level_t *access,
+                                svn_repos_t *repos,
+                                svn_revnum_t revision,
+                                svn_repos_authz_func_t authz_read_func,
+                                void *authz_read_baton,
+                                apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
