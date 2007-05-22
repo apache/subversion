@@ -73,6 +73,7 @@ typedef enum {
   svn_cl__notice_ancestry_opt,
   svn_cl__old_cmd_opt,
   svn_cl__record_only_opt,
+  svn_cl__suggested_source_opt,
   svn_cl__relocate_opt,
   svn_cl__remove_opt,
   svn_cl__revprop_opt,
@@ -144,6 +145,7 @@ typedef struct svn_cl__opt_state_t
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* external editor command. */
   svn_boolean_t record_only;     /* whether to record merge info */
+  svn_boolean_t suggested_src;   /* whether to use the suggested merge src */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
