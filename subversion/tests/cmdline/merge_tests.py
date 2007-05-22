@@ -5576,7 +5576,7 @@ def merge_to_switched_path(sbox):
      "A         " + G_COPY_path + "\n"])
   expected = svntest.actions.UnorderedOutput(
     ["Properties on '" + A_COPY_D_path + "':\n",
-     "  " + SVN_PROP_MERGE_INFO + " : /A/D/:4\n",
+     "  " + SVN_PROP_MERGE_INFO + " : /A/D:4\n",
      "Properties on '" + A_COPY_D_G_path + "':\n",
      "  " + SVN_PROP_MERGE_INFO +" : /A/D/G:4\n"])
   svntest.actions.run_and_verify_svn(None,
