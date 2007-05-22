@@ -146,4 +146,3 @@ contents can note the details of the tree conflict.
         data we'd like to keep easy track of:  diffs between
         deleted-source and wc base file, and diffs between wc base and
         wc working files.  need more thinkin' 'round these parts...
-        here, quickly ruling out any deletion that 
