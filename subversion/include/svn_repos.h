@@ -2149,15 +2149,15 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
  *      and the full changed-paths information.
  * 
  *   'no access' -- Granted when the reader does not have access to any
- *      paths changed or copied in the revision, this access levels
+ *      paths changed or copied in the revision, this access level
  *      denies the reader access to all revision properties and all
  *      changed-paths information.
  * 
  *   'partial access' -- Granted when the reader has access to at least
- *      one, but not all, of the paths changed or copied on the revision,
+ *      one, but not all, of the paths changed or copied in the revision,
  *      this access level permits visibility of the svn:date and
  *      svn:author revision properties and only the paths of the
- *      changed-paths information to which the reader has access
+ *      changed-paths information to which the reader has access.
  *
  */
 
