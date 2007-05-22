@@ -225,14 +225,14 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
                               apr_pool_t *pool)
 {
   svn_string_t *old_value;
-  svn_repos_revision_access_level_t readability = svn_repos_rev_readable;
+  svn_repos_revision_access_level_t readability;
   char action;
 
   SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
                                           authz_read_func, authz_read_baton,
                                           pool));
 
-  if (readability == svn_repos_rev_readable)
+  if (readability == svn_repos_revision_access_full)
     {
       SVN_ERR(validate_prop(name, pool));
       SVN_ERR(svn_fs_revision_prop(&old_value, repos->fs, rev, name, pool));
@@ -304,18 +304,18 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
                            void *authz_read_baton,
                            apr_pool_t *pool)
 {
-  svn_repos_revision_access_level_t readability = svn_repos_rev_readable;
+  svn_repos_revision_access_level_t readability;
 
   SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
                                           authz_read_func, authz_read_baton, 
                                           pool));    
 
-  if (readability == svn_repos_rev_unreadable)
+  if (readability == svn_repos_revision_access_none)
     {
       /* Property?  What property? */
       *value_p = NULL;
     }
-  else if (readability == svn_repos_rev_partially_readable)
+  else if (readability == svn_repos_revision_access_partial)
     {      
       /* Only svn:author and svn:date are fetchable. */
       if ((strncmp(propname, SVN_PROP_REVISION_AUTHOR,
@@ -346,18 +346,18 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
                                void *authz_read_baton,
                                apr_pool_t *pool)
 {
-  svn_repos_revision_access_level_t readability = svn_repos_rev_readable;
+  svn_repos_revision_access_level_t readability;
 
   SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
                                           authz_read_func, authz_read_baton, 
                                           pool));    
 
-  if (readability == svn_repos_rev_unreadable)
+  if (readability == svn_repos_revision_access_none)
     {
       /* Return an empty hash. */
       *table_p = apr_hash_make(pool);
     }
-  else if (readability == svn_repos_rev_partially_readable)
+  else if (readability == svn_repos_revision_access_partial)
     {      
       apr_hash_t *tmphash;
       svn_string_t *value;
