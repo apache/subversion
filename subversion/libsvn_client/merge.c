@@ -1057,10 +1057,10 @@ get_wc_or_repos_merge_info(apr_hash_t **target_mergeinfo,
      info for TARGET_WCPATH. */
   if (! (*entry)->url)
     {
-      svn_node_kind_t wckind;
+      svn_node_kind_t wc_kind;
 
-      SVN_ERR(svn_io_check_path(target_wcpath, &wckind, pool));
-      if (wckind == svn_node_none)
+      SVN_ERR(svn_io_check_path(target_wcpath, &wc_kind, pool));
+      if (wc_kind == svn_node_none)
         {
           return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                    _("Path '%s' is missing"),
@@ -1069,7 +1069,7 @@ get_wc_or_repos_merge_info(apr_hash_t **target_mergeinfo,
       else
         {
           return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL, 
-                                   _("Cannot find a URL for '%s'."),
+                                   _("Cannot find a URL for '%s'"),
                                    svn_path_local_style(target_wcpath, pool));
         }
     }
