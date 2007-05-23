@@ -49,7 +49,7 @@ typedef enum {
   CREATOR,
   DATE,
   COMMENT,
-  CHILD_COUNT,
+  NBR_CHILDREN,
   ADDED_PATH,
   REPLACED_PATH,
   DELETED_PATH,
@@ -171,9 +171,9 @@ start_log(svn_ra_serf__xml_parser_t *parser,
         {
           push_state(parser, log_ctx, COMMENT);
         }
-      else if (strcmp(name.name, "child-count") == 0)
+      else if (strcmp(name.name, "nbr-children") == 0)
         {
-          push_state(parser, log_ctx, CHILD_COUNT);
+          push_state(parser, log_ctx, NBR_CHILDREN);
         }
       else if (strcmp(name.name, "added-path") == 0)
         {
@@ -292,10 +292,10 @@ end_log(svn_ra_serf__xml_parser_t *parser,
       info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == CHILD_COUNT &&
-           strcmp(name.name, "child-count") == 0)
+  else if (state == NBR_CHILDREN &&
+           strcmp(name.name, "nbr-children") == 0)
     {
-      info->log_entry->child_count = atol(info->tmp);
+      info->log_entry->nbr_children = atol(info->tmp);
       info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }

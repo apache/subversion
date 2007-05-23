@@ -540,7 +540,7 @@ typedef struct svn_log_entry_t
    * For more information see:
    * http://subversion.tigris.org/merge-tracking/design.html#commutative-reporting
    */
-  apr_uint64_t child_count;
+  apr_uint64_t nbr_children;
 } svn_log_entry_t;
 
 /**

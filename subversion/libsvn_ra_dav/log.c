@@ -120,7 +120,7 @@ log_start_element(int *elem, void *baton, int parent,
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
         SVN_RA_DAV__XML_CDATA },
       { "DAV:", "comment", ELEM_comment, SVN_RA_DAV__XML_CDATA },
-      { SVN_XML_NAMESPACE, "child-count", ELEM_child_count,
+      { SVN_XML_NAMESPACE, "nbr-children", ELEM_nbr_children,
         SVN_RA_DAV__XML_CDATA },
       { NULL }
     };
@@ -141,7 +141,7 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_deleted_path:
     case ELEM_modified_path:
     case ELEM_comment:
-    case ELEM_child_count:
+    case ELEM_nbr_children:
       lb->want_cdata = lb->cdata;
       svn_stringbuf_setempty(lb->cdata);
       break;
@@ -211,8 +211,8 @@ log_end_element(void *baton, int state,
     case ELEM_version_name:
       lb->log_entry->revision = SVN_STR_TO_REV(lb->cdata->data);
       break;
-    case ELEM_child_count:
-      lb->log_entry->child_count = atol(lb->cdata->data);
+    case ELEM_nbr_children:
+      lb->log_entry->nbr_children = atol(lb->cdata->data);
       break;
     case ELEM_creator_displayname:
       lb->log_entry->author = apr_pstrdup(lb->subpool, lb->cdata->data);

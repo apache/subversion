@@ -1532,7 +1532,7 @@ static svn_error_t *log_receiver(void *baton,
                                  log_entry->author,
                                  log_entry->date,
                                  log_entry->message,
-                                 log_entry->child_count));
+                                 log_entry->nbr_children));
   return SVN_NO_ERROR;
 }
 
