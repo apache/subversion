@@ -35,7 +35,7 @@ Valid options:
                                 'PREV'       revision just before COMMITTED
   -q [--quiet]             : print as little as possible
   -v [--verbose]           : print extra information
-  -g [--merge-sensitive]   : show additional information from merge history
+  -g [--merge-sensitive]   : use/display additional information from merge history
   --targets ARG            : pass contents of file ARG as additional args
   --stop-on-copy           : do not cross copies while traversing history
   --incremental            : give output suitable for concatenation
