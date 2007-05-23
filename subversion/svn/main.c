@@ -162,8 +162,6 @@ const apr_getopt_option_t svn_cl__options[] =
 #endif
   {"record-only",   svn_cl__record_only_opt, 0,
                     N_("mark revisions as merged (use with -r)")},
-  {"suggested-source", svn_cl__suggested_source_opt, 0,
-                    N_("use the suggested merge source URL")},
   {"old",           svn_cl__old_cmd_opt, 1,
                     N_("use ARG as the older target")},
   {"new",           svn_cl__new_cmd_opt, 1,
@@ -206,6 +204,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "using the name=value format")},
   {"parents",       svn_cl__parents_opt, 0,
                     N_("make intermediate directories")},
+  {"merge-sensitive", 'g', 0,
+                    N_("use/display additional information from merge "
+                       "history")},
   {0,               0, 0, 0}
 };
 
@@ -545,8 +546,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  in which case, the differences will be applied to that file.\n"),
     {'r', 'c', 'N', svn_cl__depth_opt, 'q', svn_cl__force_opt,
      svn_cl__dry_run_opt, svn_cl__merge_cmd_opt, svn_cl__record_only_opt,
-     svn_cl__suggested_source_opt, 'x', svn_cl__ignore_ancestry_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     'g', 'x', svn_cl__ignore_ancestry_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__config_dir_opt} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
@@ -1295,9 +1296,6 @@ main(int argc, const char *argv[])
       case svn_cl__record_only_opt:
         opt_state.record_only = TRUE;
         break;
-      case svn_cl__suggested_source_opt:
-        opt_state.suggested_src = TRUE;
-        break;
       case svn_cl__editor_cmd_opt:
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
         break;
@@ -1378,6 +1376,9 @@ main(int argc, const char *argv[])
         break;
       case svn_cl__parents_opt:
         opt_state.parents = TRUE;
+        break;
+      case 'g':
+        opt_state.merge_sensitive = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
