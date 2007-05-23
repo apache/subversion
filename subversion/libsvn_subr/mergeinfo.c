@@ -563,6 +563,22 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
   return SVN_NO_ERROR;
 }
 
+apr_uint64_t
+svn_rangelist_count_revs(apr_array_header_t *rangelist)
+{
+  apr_uint64_t nbr_revs = 0;
+  int i;
+
+  for (i = 0; i < rangelist->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                               svn_merge_range_t *);
+      nbr_revs += range->end - range->start + 1;
+    }
+
+  return nbr_revs;
+}
+
 /* Record deletions and additions of entire range lists (by path
    presence), and delegate to svn_rangelist_diff() for delta
    calculations on a specific path. */

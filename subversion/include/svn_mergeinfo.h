@@ -152,6 +152,14 @@ svn_rangelist_to_stringbuf(svn_stringbuf_t **output,
                            apr_array_header_t *rangeinput,
                            apr_pool_t *pool);
 
+/** Take an array of svn_merge_range_t *'s in @a rangelist, and return the
+ * number of distint revisions included in it.
+ *
+ * @since New in 1.5.
+ */
+apr_uint64_t
+svn_rangelist_count_revs(apr_array_header_t *rangelist);
+
 /** Take a hash of mergeinfo in @a mergeinput, and convert it back to
  * a text format mergeinfo in @a output.  If @a input contains no
  * elements, return the empty string.
