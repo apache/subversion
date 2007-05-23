@@ -1527,11 +1527,12 @@ static svn_error_t *log_receiver(void *baton,
                                          change->copyfrom_rev));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)",
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)n",
                                  log_entry->revision,
                                  log_entry->author,
                                  log_entry->date,
-                                 log_entry->message));
+                                 log_entry->message,
+                                 log_entry->child_count));
   return SVN_NO_ERROR;
 }
 

@@ -101,6 +101,10 @@ log_receiver(void *baton,
                               (pool, svn_xml_fuzzy_escape(log_entry->message,
                                                           pool), 0)));
 
+  if (log_entry->child_count)
+    SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
+                              "<S:child-count>%ld</S:child-count>" DEBUG_CR,
+                              log_entry->child_count));
 
   if (log_entry->changed_paths)
     {

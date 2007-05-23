@@ -1194,6 +1194,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   svn_revnum_t rev, copy_rev;
   svn_log_changed_path_t *change;
   int nreceived = 0;
+  apr_uint64_t child_count;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "log"));
   if (paths)
@@ -1220,9 +1221,9 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log entry not a list"));
-      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr(?c)(?c)(?c)",
+      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr(?c)(?c)(?c)?n",
                                      &cplist, &rev, &author, &date,
-                                     &message));
+                                     &message, &child_count));
       if (cplist->nelts > 0)
         {
           /* Interpret the changed-paths list. */
@@ -1258,6 +1259,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           log_entry->author = author;
           log_entry->date = date;
           log_entry->message = message;
+          log_entry->child_count = child_count;
 
           SVN_ERR(receiver(receiver_baton, log_entry, subpool));
         }

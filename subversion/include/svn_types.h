@@ -526,6 +526,21 @@ typedef struct svn_log_entry_t
 
   /** The log message of the commit. */
   const char *message;
+
+  /** The number of children of this log entry.
+   * When a log operation requests additional merge information, extra log
+   * entries may be returned as a result of this entry.  The new entries, are
+   * considered children of the original entry, with CHILD_COUNT cardinality
+   * The child entries are returned through the receiver interface right after
+   * the parent.
+   *
+   * For log operations which do not request additional merge information, the
+   * CHILD_COUNT is always zero.
+   *
+   * For more information see:
+   * http://subversion.tigris.org/merge-tracking/design.html#commutative-reporting
+   */
+  apr_uint64_t child_count;
 } svn_log_entry_t;
 
 /**
