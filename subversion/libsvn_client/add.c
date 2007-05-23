@@ -80,8 +80,9 @@ trim_string(char **pstr)
 }
 
 /* For one auto-props config entry (NAME, VALUE), if the filename pattern
-   NAME matches BATON->filename then add the properties listed in VALUE
-   into BATON->properties.  BATON must point to an auto_props_baton_t.
+   NAME matches BATON->filename case insensitively then add the properties 
+   listed in VALUE into BATON->properties.  
+   BATON must point to an auto_props_baton_t.
 */
 static svn_boolean_t
 auto_props_enumerator(const char *name,
@@ -98,7 +99,7 @@ auto_props_enumerator(const char *name,
     return TRUE;
 
   /* check if filename matches and return if it doesn't */
-  if (apr_fnmatch(name, autoprops->filename, 0) == APR_FNM_NOMATCH)
+  if (apr_fnmatch(name, autoprops->filename, APR_FNM_CASE_BLIND) == APR_FNM_NOMATCH)
     return TRUE;
   
   /* parse the value (we dup it first to effectively lose the
