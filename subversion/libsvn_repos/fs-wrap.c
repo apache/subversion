@@ -227,13 +227,16 @@ get_readability(int *can_read,
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
       const void *key;
+      void *val;
+      svn_fs_path_change_t *change;
       const char *path;
       svn_boolean_t readable;
 
       svn_pool_clear(subpool);
 
-      apr_hash_this(hi, &key, NULL, NULL);
+      apr_hash_this(hi, &key, NULL, &val);
       path = (const char *) key;
+      change = val;
 
       SVN_ERR(authz_read_func(&readable, root, path,
                               authz_read_baton, subpool));
@@ -241,8 +244,49 @@ get_readability(int *can_read,
         found_readable = TRUE;
       else
         found_unreadable = TRUE;
+
+      /* If we have at least one of each (readable/unreadable), we
+         have our answer. */
+      if (found_readable && found_unreadable)
+        goto decision;
+
+      switch (change->change_kind)
+        {
+        case svn_fs_path_change_add:
+        case svn_fs_path_change_replace:
+          {
+            const char *copyfrom_path;
+            svn_revnum_t copyfrom_rev;
+
+            SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                       root, key, subpool));
+            if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+              {
+                svn_fs_root_t *copyfrom_root;
+                SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
+                                             copyfrom_rev, subpool));
+                SVN_ERR(authz_read_func(&readable,
+                                        copyfrom_root, copyfrom_path,
+                                        authz_read_baton, subpool));
+                if (! readable)
+                  found_unreadable = TRUE;
+
+                /* If we have at least one of each (readable/unreadable), we
+                   have our answer. */
+                if (found_readable && found_unreadable)
+                  goto decision;
+              }
+          }
+          break;
+
+        case svn_fs_path_change_delete:
+        case svn_fs_path_change_modify:
+        default:
+          break;
+        }
     }
 
+ decision:
   svn_pool_destroy(subpool);
 
   if (found_unreadable && (! found_readable))
