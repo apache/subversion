@@ -205,7 +205,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"parents",       svn_cl__parents_opt, 0,
                     N_("make intermediate directories")},
   {"merge-sensitive", 'g', 0,
-                    N_("show additional information from merge history")},
+                    N_("use/display additional information from merge "
+                       "history")},
   {0,               0, 0, 0}
 };
 
@@ -545,7 +546,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  in which case, the differences will be applied to that file.\n"),
     {'r', 'c', 'N', svn_cl__depth_opt, 'q', svn_cl__force_opt,
      svn_cl__dry_run_opt, svn_cl__merge_cmd_opt, svn_cl__record_only_opt,
-     'x', svn_cl__ignore_ancestry_opt, SVN_CL__AUTH_OPTIONS,
+     'g', 'x', svn_cl__ignore_ancestry_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_

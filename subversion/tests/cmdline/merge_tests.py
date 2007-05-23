@@ -5270,7 +5270,8 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
     svntest.actions.run_and_verify_svn(None,
                                        ['U    ' +
                                        os.path.join("D", "G", "rho") + '\n'],
-                                       [], 'merge', '-c4')
+                                       [], 'merge', '-c4',
+                                       '--merge-sensitive')
   finally:
     os.chdir(saved_cwd)
 
