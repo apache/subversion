@@ -12,6 +12,10 @@ parser.add_option("-a", "--apr-config", dest="apr_config",
 parser.add_option("-p", "--prefix", dest="prefix",
                   help="Specify the prefix where Subversion is installed (e.g. /usr, or /usr/local)")
 
+parser.add_option("", "--save-preprocessed-headers", dest="filename",
+                  help="Save the preprocessed headers to the specified "
+                       "FILENAME")
+
 (options, args) = parser.parse_args()
 
 ########################################################################
@@ -123,6 +127,11 @@ os.environ["LIBRARY_PATH"] = library_path
 cmd = ("cd %s && %s %s/ctypesgen/wrap.py --cpp '%s %s' %s "
        "%s -o svn_all.py" % (tempdir, sys.executable, os.getcwd(),
                              cpp, flags, ldflags, includes))
+
+if options.filename:
+    cmd += " --save-preprocessed-headers=%s" % \
+        os.path.abspath(options.filename)
+
 print cmd
 os.system(cmd)
 
