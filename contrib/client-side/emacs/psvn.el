@@ -219,7 +219,8 @@
 
 ;;; user setable variables
 (defcustom svn-status-verbose t
-  "*Add '-v' to svn status call."
+  "*Add '-v' to svn status call.
+This can be toggled with \\[svn-status-toggle-svn-verbose-flag]."
   :type 'boolean
   :group 'psvn)
 (defcustom svn-log-edit-file-name "++svn-log++"
@@ -1487,8 +1488,12 @@ The results are used to build the `svn-status-info' variable."
           (dir)
           (revision-width svn-status-default-revision-width)
           (author-width svn-status-default-author-width)
-          (svn-marks-length (if (and svn-status-verbose svn-status-remote)
-                                8 6))
+          (svn-marks-length (if svn-status-verbose
+                                (if svn-status-remote
+                                    8 6)
+                              (if svn-status-remote
+                                  ;; not verbose
+                                  8 7)))
           (dir-set '("."))
           (externals-map (make-hash-table :test 'equal))
           (skip-double-external-dir-entry-name nil))
@@ -1532,7 +1537,7 @@ The results are used to build the `svn-status-info' variable."
                 svn-with-history-mark (elt svn-marks 3) ; 4th column - + or blank
                 svn-switched-mark (elt svn-marks 4)     ; 5th column - S or blank
                 svn-repo-locked-mark (elt svn-marks 5)) ; 6th column - K,O,T,B or blank
-          (if (and svn-status-verbose svn-status-remote)
+          (when svn-status-remote
               (setq svn-update-mark (elt svn-marks 7))) ; 8th column - * or blank
           (when (eq svn-property-mark ?\ )     (setq svn-property-mark nil))
           (when (eq svn-wc-locked-mark ?\ )    (setq svn-wc-locked-mark nil))
@@ -1542,6 +1547,7 @@ The results are used to build the `svn-status-info' variable."
           (when (eq svn-repo-locked-mark ?\ )  (setq svn-repo-locked-mark nil))
           (forward-char svn-marks-length)
           (skip-chars-forward " ")
+          ;; (message "after marks: '%s'" (buffer-substring (point) (line-end-position)))
           (cond
            ((looking-at "\\([-?]\\|[0-9]+\\) +\\([-?]\\|[0-9]+\\) +\\([^ ]+\\) *\\(.+\\)$")
             (setq local-rev (svn-parse-rev-num (match-string 1))
@@ -1792,6 +1798,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-options-map (kbd "s") 'svn-status-save-state)
   (define-key svn-status-mode-options-map (kbd "l") 'svn-status-load-state)
   (define-key svn-status-mode-options-map (kbd "x") 'svn-status-toggle-sort-status-buffer)
+  (define-key svn-status-mode-options-map (kbd "v") 'svn-status-toggle-svn-verbose-flag)
   (define-key svn-status-mode-options-map (kbd "f") 'svn-status-toggle-display-full-path)
   (define-key svn-status-mode-options-map (kbd "t") 'svn-status-set-trac-project-root)
   (define-key svn-status-mode-options-map (kbd "n") 'svn-status-set-module-name)
@@ -1873,9 +1880,11 @@ A and B must be line-info's."
      ["Set Short module name" svn-status-set-module-name t]
      ["Set Changelog style" svn-status-set-changelog-style t]
      ["Set Branch list" svn-status-set-branch-list t]
-     ["Toggle sorting of *svn-status* buffer" svn-status-toggle-sort-status-buffer
+     ["Sort the *svn-status* buffer" svn-status-toggle-sort-status-buffer
       :style toggle :selected svn-status-sort-status-buffer]
-     ["Toggle display of full path names" svn-status-toggle-display-full-path
+     ["Use -v for svn status calls" svn-status-toggle-svn-verbose-flag
+      :style toggle :selected svn-status-verbose]
+     ["Display full path names" svn-status-toggle-display-full-path
       :style toggle :selected svn-status-display-full-path]
      )
     ("Trac"
@@ -5346,6 +5355,12 @@ removed again, when a faster parsing and display routine for
   (setq svn-status-sort-status-buffer (not svn-status-sort-status-buffer))
   (message "The %s buffer will %sbe sorted." svn-status-buffer-name
            (if svn-status-sort-status-buffer "" "not ")))
+
+(defun svn-status-toggle-svn-verbose-flag ()
+  "Toggle `svn-status-verbose'. "
+  (interactive)
+  (setq svn-status-verbose (not svn-status-verbose))
+  (message "svn status calls will %suse the -v flag." (if svn-status-verbose "" "not ")))
 
 (defun svn-status-toggle-display-full-path ()
   "Toggle displaying the full path in the `svn-status-buffer-name' buffer"
