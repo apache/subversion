@@ -1187,10 +1187,10 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
-                                      const char *path,
-                                      apr_hash_t *mergeinhash,
-                                      apr_pool_t *pool);
+svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
+                                     const char *path,
+                                     apr_hash_t *mergeinhash,
+                                     apr_pool_t *pool);
 
 /** Retrieve merge info for multiple nodes.
  *
@@ -1208,11 +1208,11 @@ svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_fs_get_merge_info(apr_hash_t **minfohash,
-                                   svn_fs_root_t *root,
-                                   const apr_array_header_t *paths,
-                                   svn_boolean_t include_parents,
-                                   apr_pool_t *pool);
+svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
+                                  svn_fs_root_t *root,
+                                  const apr_array_header_t *paths,
+                                  svn_boolean_t include_parents,
+                                  apr_pool_t *pool);
 
 /** Merge changes between two nodes into a third node.
  *

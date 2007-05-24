@@ -158,12 +158,12 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
 /* Request a merge-info-report from the URL attached to SESSION,
    and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
-svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
-                            apr_hash_t **mergeinfo,
-                            const apr_array_header_t *paths,
-                            svn_revnum_t revision,
-                            svn_boolean_t include_parents,
-                            apr_pool_t *pool)
+svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
+                           apr_hash_t **mergeinfo,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t revision,
+                           svn_boolean_t include_parents,
+                           apr_pool_t *pool)
 {
   svn_error_t *err;
   static const char minfo_request_head[]

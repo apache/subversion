@@ -783,7 +783,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_pool_t *pool);
 
 /**
- * Fetch the merge info for @a paths at @a rev, and save it to @a
+ * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
  * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
  * (from @a paths) to hashes mapping merged-from paths (of @c char *)
  * to revision range lists (of @c apr_array_header_t * with @c
@@ -797,12 +797,12 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,
-                                   apr_hash_t **mergeoutput,
-                                   const apr_array_header_t *paths,
-                                   svn_revnum_t revision,
-                                   svn_boolean_t include_parents,
-                                   apr_pool_t *pool);
+svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
+                                  apr_hash_t **mergeoutput,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t revision,
+                                  svn_boolean_t include_parents,
+                                  apr_pool_t *pool);
 
 /**
  * Ask the RA layer to update a working copy.

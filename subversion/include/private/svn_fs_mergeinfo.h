@@ -1,5 +1,5 @@
 /*
- * svn_fs_merge_info.h: Declarations for the APIs of libsvn_fs_util to
+ * svn_fs_mergeinfo.h: Declarations for the APIs of libsvn_fs_util to
  * be consumed by only fs_* libs.
  *
  * ====================================================================
@@ -56,7 +56,7 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn,
    error if the mergeinfo store does not exist or doesn't use the
    'mergeinfo' schema.  */
 svn_error_t *
-svn_fs_mergeinfo__get_merge_info(apr_hash_t **mergeinfo,
+svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
                                  svn_fs_root_t *root,
                                  const apr_array_header_t *paths,
                                  svn_boolean_t include_parents,

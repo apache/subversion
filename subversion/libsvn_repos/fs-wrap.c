@@ -551,14 +551,14 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
 
 
 svn_error_t *
-svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
-                            svn_repos_t *repos,
-                            const apr_array_header_t *paths,
-                            svn_revnum_t rev,
-                            svn_boolean_t include_parents,
-                            svn_repos_authz_func_t authz_read_func,
-                            void *authz_read_baton,
-                            apr_pool_t *pool)
+svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
+                           svn_repos_t *repos,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t rev,
+                           svn_boolean_t include_parents,
+                           svn_repos_authz_func_t authz_read_func,
+                           void *authz_read_baton,
+                           apr_pool_t *pool)
 {
   apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
   svn_fs_root_t *root;
@@ -605,8 +605,8 @@ svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
      us to protect the name of where a change was merged from, but not
      the change itself. */
   if (readable_paths->nelts > 0)
-    SVN_ERR(svn_fs_get_merge_info(mergeinfo, root, readable_paths,
-                                  include_parents, pool));
+    SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths,
+                                 include_parents, pool));
   else
     *mergeinfo = NULL;
 
