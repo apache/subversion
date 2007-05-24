@@ -316,15 +316,15 @@ This can be either absolute or looked up on `exec-path'."
   :type 'file
   :group 'psvn)
 
-(defcustom svn-status-svn-environment-var-list '("LANG=C")
+(defcustom svn-status-svn-environment-var-list '("LC_MESSAGES=C")
   "*A list of environment variables that should be set for that svn process.
 Each element is either a string \"VARIABLE=VALUE\" which will be added to
 the environment when svn is run, or just \"VARIABLE\" which causes that
 variable to be entirely removed from the environment.
 
-You could set this for example to '(\"LANG=C\")
-
-Please report, if you have good experiences with the setting '(\LC_MESSAGES=C\")"
+The default setting is '(\LC_MESSAGES=C\"). This ensures that the svn command
+line client does not output localized strings. psvn.el relies on the english
+messages."
   :type '(repeat string)
   :group 'psvn)
 (put 'svn-status-svn-environment-var-list 'risky-local-variable t)
@@ -484,9 +484,9 @@ The function `svn-status-remove-control-M' can be useful for that hook")
 (when (eq system-type 'windows-nt)
   (add-hook 'svn-post-process-svn-output-hook 'svn-status-remove-control-M))
 
-(defvar svn-status-coding-system nil
-  "A special coding system is needed for the output of svn.
-svn-status-coding-system is used in svn-run, if it is not nil.")
+(defvar svn-status-svn-process-coding-system locale-coding-system
+  "The coding system that is used for the svn command line client.
+It is used in svn-run, if it is not nil.")
 
 (defvar svn-status-svn-file-coding-system 'undecided-unix
   "The coding system that is used to save files that are loaded as
@@ -1144,8 +1144,6 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
             (setq arglist (car arglist)))
           (save-excursion
             (set-buffer proc-buf)
-            (when svn-status-coding-system
-              (setq buffer-file-coding-system svn-status-coding-system))
             (setq buffer-read-only nil)
             (buffer-disable-undo)
             (fundamental-mode)
@@ -1174,6 +1172,9 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                     ;; such cases, the user should start ssh-agent and
                     ;; then run ssh-add explicitly.
                     (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist)))
+                  (when svn-status-svn-process-coding-system
+                    (set-process-coding-system svn-proc svn-status-svn-process-coding-system
+                                               svn-status-svn-process-coding-system))
                   (set-process-sentinel svn-proc 'svn-process-sentinel)
                   (when svn-status-track-user-input
                     (set-process-filter svn-proc 'svn-process-filter)))
