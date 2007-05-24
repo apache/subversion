@@ -298,14 +298,14 @@ typedef struct root_vtable_t
                         svn_fs_root_t *ancestor_root,
                         const char *ancestor_path,
                         apr_pool_t *pool);
-  svn_error_t *(*change_merge_info)(svn_fs_root_t *root, const char *path,
-                                    apr_hash_t *info,
-                                    apr_pool_t *pool);
-  svn_error_t *(*get_merge_info)(apr_hash_t **minfohash,
-                                 svn_fs_root_t *root, 
-                                 const apr_array_header_t *paths,
-                                 svn_boolean_t include_parents,
-                                 apr_pool_t *pool);
+  svn_error_t *(*change_mergeinfo)(svn_fs_root_t *root, const char *path,
+                                   apr_hash_t *info,
+                                   apr_pool_t *pool);
+  svn_error_t *(*get_mergeinfo)(apr_hash_t **minfohash,
+                                svn_fs_root_t *root, 
+                                const apr_array_header_t *paths,
+                                svn_boolean_t include_parents,
+                                apr_pool_t *pool);
 } root_vtable_t;
 
 

@@ -980,7 +980,7 @@ deliver_report(request_rec *r,
         }
       else if (strcmp(doc->root->name, "merge-info-report") == 0)
         {
-          return dav_svn__get_merge_info_report(resource, doc, output);
+          return dav_svn__get_mergeinfo_report(resource, doc, output);
         }
 
       /* NOTE: if you add a report, don't forget to add it to the

@@ -241,12 +241,12 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
 svn_error_t * svn_ra_dav__abort_commit(void *session_baton,
                                        void *edit_baton);
 
-svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
-                                         apr_hash_t **mergeinfo,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t revision,
-                                         svn_boolean_t include_parents,
-                                         apr_pool_t *pool);
+svn_error_t * svn_ra_dav__get_mergeinfo(svn_ra_session_t *session,
+                                        apr_hash_t **mergeinfo,
+                                        const apr_array_header_t *paths,
+                                        svn_revnum_t revision,
+                                        svn_boolean_t include_parents,
+                                        apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
                                     const svn_ra_reporter3_t **reporter,
