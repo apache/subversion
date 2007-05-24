@@ -4783,12 +4783,13 @@ def mergeinfo_inheritance(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  setup_branch(sbox)
+  wc_disk, wc_status = setup_branch(sbox)
 
   # Some paths we'll care about
   A_COPY_path      = os.path.join(wc_dir, "A_COPY")
   B_COPY_path      = os.path.join(wc_dir, "A_COPY", "B")
   beta_COPY_path   = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
+  E_COPY_path      = os.path.join(wc_dir, "A_COPY", "B", "E")
   omega_COPY_path  = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
   D_COPY_path      = os.path.join(wc_dir, "A_COPY", "D")
   G_COPY_path      = os.path.join(wc_dir, "A_COPY", "D", "G")
@@ -5027,6 +5028,80 @@ def mergeinfo_inheritance(sbox):
                                      [],
                                      'propget', SVN_PROP_MERGE_INFO,
                                      omega_COPY_path)
+
+  # Given a merge target *without* any of the following:
+  #
+  #   1) Explicit merge info set on itself in the WC
+  #   2) Any WC ancestor to inherit mergeinfo from
+  #   3) Any merge info for the target in the repository
+  #
+  # Check that the target still inherits merge info from it's nearest
+  # repository ancestor.
+  #
+  # Commit all the merges thus far
+  expected_output = wc.State(wc_dir, {
+    'A_COPY'           : Item(verb='Sending'),
+    'A_COPY/B'         : Item(verb='Sending'),
+    'A_COPY/B/E/beta'  : Item(verb='Sending'),
+    'A_COPY/D'         : Item(verb='Sending'),
+    'A_COPY/D/G/rho'   : Item(verb='Sending'),
+    'A_COPY/D/H/omega' : Item(verb='Sending'),
+    'A_COPY/D/H/psi'   : Item(verb='Sending'),
+    })
+  wc_status.tweak('A_COPY', 'A_COPY/B', 'A_COPY/B/E/beta', 'A_COPY/D',
+                  'A_COPY/D/G/rho', 'A_COPY/D/H/omega', 'A_COPY/D/H/psi',
+                  wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        wc_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
+
+  # Copy the subtree A_COPY/B/E from the working copy, making the
+  # disconnected WC E_only.
+  other_wc = sbox.add_wc_path('E_only')
+  svntest.actions.duplicate_dir(E_COPY_path, other_wc)
+
+  # Update the disconnected WC it so it will get the most recent merge info
+  # from the repos when merging.
+  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [], 'up',
+                                     other_wc)
+
+  # Merge r5:4 into the root of the disconnected WC.
+  # E_only has no explicit merge info and since it's the root of the WC
+  # cannot inherit and merge info from a working copy ancestor path. Nor
+  # does it have any merge info explicitly set on it in the repository.
+  # An ancestor path on the repository side, A_COPY/B does have the merge
+  # info '/A/B:1,3,5' however and E_only should inherit this, resulting in
+  # merge info of 'A/B/E:1,3' after the removal of r5.
+  short_other_wc_path = shorten_path_kludge(other_wc)
+  expected_output = wc.State(short_other_wc_path,
+                             {'beta' : Item(status='U ')})
+  expected_status = wc.State(short_other_wc_path, {
+    ''      : Item(status=' M', wc_rev=7),
+    'alpha' : Item(status='  ', wc_rev=7),
+    'beta'  : Item(status='M ', wc_rev=7),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1,3'}),
+    'alpha' : Item("This is the file 'alpha'.\n"),
+    'beta'  : Item("This is the file 'beta'.\n"),
+    })
+  expected_skip = wc.State(short_other_wc_path, { })
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_other_wc_path, '5', '4',
+                                         sbox.repo_url + \
+                                         '/A/B/E',
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1)
+  finally:
+    os.chdir(saved_cwd)
 
 
 def mergeinfo_elision(sbox):
@@ -6052,7 +6127,7 @@ test_list = [ None,
               avoid_repeated_merge_using_inherited_merge_info,
               avoid_repeated_merge_on_subtree_with_merge_info,
               obey_reporter_api_semantics_while_doing_subtree_merges,
-              mergeinfo_inheritance,
+              XFail(mergeinfo_inheritance),
               mergeinfo_elision,
               mergeinfo_inheritance_and_discontinuous_ranges,
               XFail(merge_to_target_with_copied_children),
