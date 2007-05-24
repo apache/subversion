@@ -250,6 +250,24 @@ delete_entry(const char *path,
 }
 
 
+static struct dir_baton *
+make_dir_baton(struct edit_baton *edit_baton,
+               struct dir_baton *parent_baton,
+               const char *full_path,
+               svn_boolean_t was_copied,
+               svn_revnum_t base_revision,
+               apr_pool_t *pool)
+{
+  struct dir_baton *db;
+  db = apr_pcalloc(pool, sizeof(*db));
+  db->edit_baton = edit_baton;
+  db->parent = parent_baton;
+  db->pool = pool;
+  db->path = full_path;
+  db->was_copied = was_copied;
+  db->base_rev = base_revision;
+  return db;
+}
 
 
 static svn_error_t *
@@ -260,7 +278,6 @@ add_directory(const char *path,
               apr_pool_t *pool,
               void **child_baton)
 {
-  struct dir_baton *new_dirb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   const char *full_path = svn_path_join(eb->base_path, path, pool);
@@ -340,18 +357,10 @@ add_directory(const char *path,
   svn_pool_destroy(subpool);
 
   /* Build a new dir baton for this directory. */
-  new_dirb = apr_pcalloc(pool, sizeof(*new_dirb));
-  new_dirb->edit_baton = eb;
-  new_dirb->parent = pb;
-  new_dirb->pool = pool;
-  new_dirb->path = full_path;
-  new_dirb->was_copied = was_copied;
-  new_dirb->base_rev = SVN_INVALID_REVNUM;
-
-  *child_baton = new_dirb;
+  *child_baton = make_dir_baton(eb, pb, full_path, was_copied, 
+                                SVN_INVALID_REVNUM, pool);
   return SVN_NO_ERROR;
 }
-
 
 
 static svn_error_t *
@@ -361,7 +370,6 @@ open_directory(const char *path,
                apr_pool_t *pool,
                void **child_baton)
 {
-  struct dir_baton *new_dirb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
@@ -375,16 +383,9 @@ open_directory(const char *path,
                              _("Path '%s' not present"),
                              path);
 
-  /* Build a new dir baton for this directory */
-  new_dirb = apr_pcalloc(pool, sizeof(*new_dirb));
-  new_dirb->edit_baton = eb;
-  new_dirb->parent = pb;
-  new_dirb->pool = pool;
-  new_dirb->path = full_path;
-  new_dirb->was_copied = pb->was_copied;
-  new_dirb->base_rev = base_revision;
-
-  *child_baton = new_dirb;
+  /* Build a new dir baton for this directory. */
+  *child_baton = make_dir_baton(eb, pb, full_path, pb->was_copied, 
+                                base_revision, pool);
   return SVN_NO_ERROR;
 }
 
