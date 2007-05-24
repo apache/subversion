@@ -2,7 +2,7 @@
  * mergeinfo-test.c -- test the merge info functions
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,6 +21,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_mergeinfo.h"
 #include "private/svn_mergeinfo_private.h"
@@ -134,6 +135,43 @@ test_parse_single_line_mergeinfo(const char **msg,
 }
 
 static const char *single_mergeinfo = "/trunk: 5,7-9,10,11,13,14";
+
+static svn_error_t *
+test_mergeinfo_dup(const char **msg,
+                   svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  apr_hash_t *orig_mergeinfo, *copied_mergeinfo;
+  apr_pool_t *subpool;
+  apr_array_header_t *rangelist;
+  
+  *msg = "copy a mergeinfo data structure";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Assure that copies which should be empty turn out that way. */
+  subpool = svn_pool_create(pool);
+  orig_mergeinfo = apr_hash_make(subpool);
+  copied_mergeinfo = svn_mergeinfo_dup(orig_mergeinfo, subpool);
+  if (apr_hash_count(copied_mergeinfo) != 0)
+    return fail(pool, "Copied merge info should be empty");
+
+  /* Create some merge info, copy it using another pool, then destroy
+     the pool with which the original merge info was created. */
+  SVN_ERR(svn_mergeinfo_parse(&orig_mergeinfo, single_mergeinfo, subpool));
+  copied_mergeinfo = svn_mergeinfo_dup(orig_mergeinfo, pool);
+  apr_pool_destroy(subpool);
+  if (apr_hash_count(copied_mergeinfo) != 1)
+    return fail(pool, "Copied merge info should contain one merge source");
+  rangelist = apr_hash_get(copied_mergeinfo, "/trunk", APR_HASH_KEY_STRING);
+  if (rangelist->nelts != 3)
+    return fail(pool, "Copied merge info should contain 3 revision ranges, "
+                "rather than the %d it contains", rangelist->nelts);
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 test_parse_combine_rangeinfo(const char **msg,
@@ -596,6 +634,7 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_parse_single_line_mergeinfo),
+    SVN_TEST_PASS(test_mergeinfo_dup),
     SVN_TEST_PASS(test_parse_combine_rangeinfo),
     SVN_TEST_PASS(test_parse_broken_mergeinfo),
     SVN_TEST_PASS(test_parse_multi_line_mergeinfo),

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -170,6 +170,13 @@ svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, apr_hash_t *mergeinput,
  */
 svn_error_t *
 svn_mergeinfo_sort(apr_hash_t *mergeinput, apr_pool_t *pool);
+
+/** Return a deep copy of @a mergeinfo, allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+apr_hash_t *
+svn_mergeinfo_dup(apr_hash_t *mergeinfo, apr_pool_t *pool);
 
 /** Return a deep copy of @a rangelist, allocated in @a pool.
  *
