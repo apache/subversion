@@ -560,7 +560,6 @@ get_merge_changed_rangelist(apr_array_header_t **rangelist,
   apr_array_header_t *curr_rangelist, *prev_rangelist;
   apr_array_header_t *deleted, *changed;
   apr_pool_t *subpool;
-  int i;
 
   if (rev == 0)
     {
