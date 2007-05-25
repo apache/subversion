@@ -586,7 +586,7 @@ svn_rangelist_to_revs(apr_array_header_t **revs,
 {
   int i;
 
-  *revs = apr_array_make(pool, 1, sizeof(svn_revnum_t));
+  *revs = apr_array_make(pool, rangelist->nelts, sizeof(svn_revnum_t));
 
   for (i = 0; i < rangelist->nelts; i++)
     {
