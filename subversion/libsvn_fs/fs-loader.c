@@ -155,7 +155,6 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
                              fst->fs_type);
 
   {
-    apr_status_t status;
     svn_error_t *err;
     svn_error_t *err2;
 
