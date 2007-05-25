@@ -927,6 +927,13 @@ def check_merge_results(log_chain, expected_merges):
   for rev in expected_merges.keys():
     try:
       log = [x for x in log_chain if x['revision'] == rev][0]
+      actual = log['merges']
+      expected = expected_merges[rev]
+
+      if actual != expected:
+        raise SVNUnexpectedLogs((("Merging revisions in rev %d not correct; " +
+                                "expecting ") % rev) + str(expected) +
+                                ", found " + str(actual), log_chain)
     except IndexError:
       raise SVNUnexpectedLogs("Merged revision '%d' missing" % rev, log_chain)
 
@@ -957,7 +964,7 @@ def simple_merge_sensitive_log(sbox):
 
     log_chain = parse_log_output(output)
     expected_merges = {
-      1 : 7, 3 : 7, 4 : 7, 5 : 7, 6 : 7,
+      1 : [2], 3 : [7], 4 : [7], 6 : [7],
       }
     check_merge_results(log_chain, expected_merges)
 
@@ -988,7 +995,7 @@ test_list = [ None,
               log_base_peg,
               log_verbose,
               log_parser,
-              XFail(simple_merge_sensitive_log),
+              simple_merge_sensitive_log,
              ]
 
 if __name__ == '__main__':
