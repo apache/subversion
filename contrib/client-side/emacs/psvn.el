@@ -3764,7 +3764,7 @@ user can enter a new file name, or an existing directory: this is used as the ar
                 (setq moved t))
             (message "Not acting on %s" original-name))))
         (when moved
-          (message "psvn: moved %s to %s" original-name dest)
+          (message "psvn: did '%s' from %s to %s" command original-name dest)
           ;; Silently rename the visited file of any buffer visiting this file.
           (when (get-file-buffer original-name)
             (with-current-buffer (get-file-buffer original-name)
