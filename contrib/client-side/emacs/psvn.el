@@ -269,6 +269,13 @@ This can be toggled with \\[svn-status-toggle-sort-status-buffer]."
   :type 'boolean
   :group 'psvn)
 
+(defcustom svn-status-ediff-delete-temporary-files nil
+  "*Whether to delete temporary ediff files. If set to ask, ask the user"
+  :type '(choice (const t)
+                 (const nil)
+                 (const ask))
+  :group 'psvn)
+
 (defcustom svn-status-changelog-style 'changelog
   "*The changelog style that is used for `svn-file-add-to-changelog'.
 Possible values are:
@@ -4109,27 +4116,37 @@ If ARG then prompt for revision to diff against."
          (default-directory (svn-status-base-dir))
          (my-buffer (find-file-noselect (caar svn-status-get-specific-revision-file-info)))
          (base-buff (find-file-noselect (cdar svn-status-get-specific-revision-file-info)))
-         (svn-transient-buffers (list base-buff))
+         (svn-transient-buffers (list my-buffer base-buff))
          (startup-hook '(svn-ediff-startup-hook)))
     (ediff-buffers base-buff my-buffer startup-hook)))
 
 (defun svn-ediff-startup-hook ()
+  ;; (message "svn-ediff-startup-hook: ediff-after-quit-hook-internal: %S" ediff-after-quit-hook-internal)
   (add-hook 'ediff-after-quit-hook-internal
-        `(lambda ()
-           (svn-ediff-exit-hook
-        ',ediff-after-quit-destination-buffer ',svn-transient-buffers))
-        nil 'local))
+            `(lambda ()
+               (svn-ediff-exit-hook
+                ',ediff-after-quit-destination-buffer ',svn-transient-buffers))
+            nil 'local))
 
 (defun svn-ediff-exit-hook (svn-buf tmp-bufs)
+  ;; (message "svn-ediff-exit-hook: svn-buf: %s, tmp-bufs: %s" svn-buf tmp-bufs)
   ;; kill the temp buffers (and their associated windows)
   (dolist (tb tmp-bufs)
     (when (and tb (buffer-live-p tb) (not (buffer-modified-p tb)))
-      (let ((win (get-buffer-window tb t)))
-    (when win (delete-window win))
-    (kill-buffer tb))))
+      (let* ((win (get-buffer-window tb t))
+             (file-name (buffer-file-name))
+             (is-temp-file (numberp (string-match "~[0-9]+~" file-name))))
+        ;; (message "svn-ediff-exit-hook - is-temp-file: %s, temp-buf:: %s - %s " is-temp-file (current-buffer) file-name)
+        (when (and win (> (count-windows) 1)
+                   (delete-window win)))
+        (kill-buffer tb)
+        (when (and is-temp-file svn-status-ediff-delete-temporary-files)
+          (when (or (eq svn-status-ediff-delete-temporary-files t)
+                    (y-or-n-p (format "Delete File '%s' ? " file-name)))
+            (delete-file file-name))))))
   ;; switch back to the *svn* buffer
   (when (and svn-buf (buffer-live-p svn-buf)
-         (not (get-buffer-window svn-buf t)))
+             (not (get-buffer-window svn-buf t)))
     (ignore-errors (switch-to-buffer svn-buf))))
 
 
@@ -4968,7 +4985,7 @@ When called with a prefix argument, ask the user for the revision."
         (let* ((ediff-after-quit-destination-buffer cur-buf)
                (newer-buffer (find-file-noselect upper-rev-file-name))
                (base-buff (find-file-noselect lower-rev-file-name))
-               (svn-transient-buffers (list newer-buffer))
+               (svn-transient-buffers (list base-buff newer-buffer))
                (startup-hook '(svn-ediff-startup-hook)))
           (ediff-buffers base-buff newer-buffer startup-hook))
       (message "No file at point"))))
