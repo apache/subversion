@@ -142,11 +142,11 @@ static void sasl_mutex_free_cb(void *mutex)
 }
 #endif /* APR_HAS_THREADS */
 
-apr_status_t svn_ra_svn__sasl_common_init(void)
+apr_status_t svn_ra_svn__sasl_common_init(apr_pool_t *pool)
 {
   apr_status_t apr_err = APR_SUCCESS;
 
-  sasl_pool = svn_pool_create(NULL);
+  sasl_pool = svn_pool_create(pool);
   sasl_ctx_count = 1;
   apr_pool_cleanup_register(sasl_pool, NULL, sasl_done_cb, 
                             apr_pool_cleanup_null);
@@ -163,9 +163,9 @@ apr_status_t svn_ra_svn__sasl_common_init(void)
   return apr_err;
 }
 
-static svn_error_t *sasl_init_cb(void)
+static svn_error_t *sasl_init_cb(apr_pool_t *pool)
 {
-  if (svn_ra_svn__sasl_common_init() != APR_SUCCESS
+  if (svn_ra_svn__sasl_common_init(pool) != APR_SUCCESS
       || sasl_client_init(NULL) != SASL_OK)
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             _("Could not initialize the SASL library"));
@@ -174,7 +174,7 @@ static svn_error_t *sasl_init_cb(void)
 
 svn_error_t *svn_ra_svn__sasl_init(void)
 {
-  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, sasl_init_cb));
+  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, sasl_init_cb, NULL));
   return SVN_NO_ERROR;
 }
 
