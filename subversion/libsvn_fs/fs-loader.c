@@ -174,10 +174,10 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
     err = initfunc(my_version, vtable, common_pool);
     err2 = release_fs_mutex();
     if (err)
-    {
-      svn_error_clear(err2);
-      return err;
-    }
+      {
+        svn_error_clear(err2);
+        return err;
+      }
     if (err2)
       return err2;
   }
@@ -373,10 +373,10 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   err = vtable->create(*fs_p, path, pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
-  {
-    svn_error_clear(err2);
-    return err;
-  }
+    {
+     svn_error_clear(err2);
+      return err;
+    }
   return err2;
 }
 
@@ -394,10 +394,10 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   err = vtable->open(*fs_p, path, pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
-  {
-    svn_error_clear(err2);
-    return err;
-  }
+    {
+      svn_error_clear(err2);
+      return err;
+    }
   return err2;
 }
 
@@ -447,10 +447,10 @@ svn_fs_recover(const char *path,
   err = vtable->open_for_recovery(fs, path, pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
-  {
-    svn_error_clear(err2);
-    return err;
-  }
+    {
+      svn_error_clear(err2);
+      return err;
+    }
   if (! err2)
     err2 = vtable->recover(fs, cancel_func, cancel_baton, pool);
   return err2;
@@ -477,10 +477,10 @@ svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
   err = vtable->create(fs, path, fs->pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
-  {
-    svn_error_clear(err2);
-    return err;
-  }
+    {
+      svn_error_clear(err2);
+      return err;
+    }
   return err2;
 }
 
@@ -496,10 +496,10 @@ svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
   err = vtable->open(fs, path, fs->pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
-  {
-    svn_error_clear(err2);
-    return err;
-  }
+    {
+      svn_error_clear(err2);
+      return err;
+    }
   return err2;
 }
 
@@ -1115,8 +1115,7 @@ svn_fs_print_modules(svn_stringbuf_t *output,
         }
 
       line = apr_psprintf(iterpool, "* fs_%s : %s\n",
-                          defn->fsap_name,
-                          vtable->get_description());
+                          defn->fsap_name, vtable->get_description());
       svn_stringbuf_appendcstr(output, line);
     }
 
