@@ -102,7 +102,7 @@ typedef struct
 
 
 /* Iniitalize the BDB back-end's private stuff. */
-svn_error_t *svn_fs_bdb__init(void);
+svn_error_t *svn_fs_bdb__init(apr_pool_t* pool);
 
 
 /* Allocate the Berkeley DB descriptor BDB and open the environment.

@@ -26,7 +26,7 @@
 
 svn_error_t*
 svn_atomic__init_once(volatile svn_atomic_t *global_status,
-                      svn_error_t *(*init_func)(void))
+                      svn_error_t *(*init_func)(apr_pool_t*), apr_pool_t* pool)
 {
   /* We have to call init_func exactly once.  Because APR
      doesn't have statically-initialized mutexes, we implement a poor
@@ -37,7 +37,7 @@ svn_atomic__init_once(volatile svn_atomic_t *global_status,
 
   if (status == SVN_ATOMIC_UNINITIALIZED)
     {
-      svn_error_t *err = init_func();
+      svn_error_t *err = init_func(pool);
       if (err)
         {
 #ifdef APR_HAS_THREADS
