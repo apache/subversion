@@ -238,6 +238,10 @@ svn_client__suggest_merge_sources(const char *path_or_url,
 
   SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, revision,
                                    ctx, pool));
+
+  if (!mergeinfo)
+    return SVN_NO_ERROR;
+
   for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *path;
