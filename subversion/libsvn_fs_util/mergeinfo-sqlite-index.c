@@ -587,6 +587,66 @@ get_merge_info_for_path(sqlite3 *db,
 }
 
 
+/* Get the mergeinfo for all of the children of PATH in REV.  Return the 
+   results in PATH_MERGEINFO.  PATH_MERGEINFO should already be created
+   prior to calling this function, but it's value may change as additional
+   mergeinfos are added to it.  */
+static svn_error_t *
+get_mergeinfo_for_children(sqlite3 *db,
+                           const char *path,
+                           svn_revnum_t rev,
+                           apr_hash_t **path_mergeinfo,
+                           apr_pool_t *pool)
+{
+  sqlite3_stmt *stmt;
+  int sqlite_result;
+  char *like_path;
+
+  /* Get all paths under us. */
+  SQLITE_ERR(sqlite3_prepare(db,
+                             "SELECT MAX(revision), path "
+                             "FROM mergeinfo_changed "
+                             "WHERE path LIKE ? AND revision <= ?;",
+                             -1, &stmt, NULL), db);
+
+  like_path = apr_psprintf(pool, "%s%%", path);
+
+  SQLITE_ERR(sqlite3_bind_text(stmt, 1, like_path, -1, SQLITE_TRANSIENT), db);
+  SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
+
+  sqlite_result = sqlite3_step(stmt);
+  while (sqlite_result != SQLITE_DONE)
+    {
+      sqlite_int64 lastmerged_rev;
+      const char *merged_path;
+
+      if (sqlite_result == SQLITE_ERROR)
+        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                                sqlite3_errmsg(db));
+
+      lastmerged_rev = sqlite3_column_int64(stmt, 0);
+      merged_path = sqlite3_column_text(stmt, 1);
+
+      /* If we've got a merged revision, go get the merge info from the db */
+      if (lastmerged_rev > 0)
+        {
+          apr_hash_t *db_mergeinfo;
+
+          SVN_ERR(parse_mergeinfo_from_db(db, merged_path, lastmerged_rev,
+                                          &db_mergeinfo, pool));
+
+          SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
+        }
+
+      sqlite_result = sqlite3_step(stmt);
+    }
+
+  SQLITE_ERR(sqlite3_finalize(stmt), db);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Get the merge info for a set of paths.  */
 svn_error_t *
 svn_fs_mergeinfo__get_merge_info(apr_hash_t **mergeinfo,
@@ -634,6 +694,52 @@ svn_fs_mergeinfo__get_merge_info(apr_hash_t **mergeinfo,
                        mergeinfo_buf->data);
         }
     }
+  SQLITE_ERR(sqlite3_close(db), db);
+  return SVN_NO_ERROR;
+}
+
+/* Get all the mergeinfo for all the children for each path.  Return a hash of
+   mergeinfo hashes, keyed on the input paths.  */
+svn_error_t *
+svn_fs_mergeinfo__get_children_mergeinfo(apr_hash_t **mergeinfo,
+                                         svn_fs_root_t *root,
+                                         const apr_array_header_t *paths,
+                                         apr_pool_t *pool)
+{
+  apr_hash_t *mergeinfo_str;
+  svn_revnum_t rev;
+  sqlite3 *db;
+  int i;
+
+  SVN_ERR(svn_fs_mergeinfo__get_merge_info(&mergeinfo_str, root, paths, TRUE,
+                                           pool));
+
+  /* This is an inlining of svn_fs_revision_root_revision(), which we cannot
+     call from here, because it would be a circular dependency. */
+  rev = root->is_txn_root ? SVN_INVALID_REVNUM : root->rev;
+
+  SVN_ERR(open_db(&db, root->fs->path, pool));
+
+  *mergeinfo = apr_hash_make(pool);
+
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      const char *mergeinfo_path_str = apr_hash_get(*mergeinfo, path,
+                                                           APR_HASH_KEY_STRING);
+      apr_hash_t *path_mergeinfo;
+     
+      if (mergeinfo_path_str)
+        SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, mergeinfo_path_str, pool));
+      else
+        path_mergeinfo = apr_hash_make(pool);
+
+      SVN_ERR(get_mergeinfo_for_children(db, path, rev, &path_mergeinfo,
+                                         pool));
+
+      apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, path_mergeinfo);
+    }
+
   SQLITE_ERR(sqlite3_close(db), db);
   return SVN_NO_ERROR;
 }
