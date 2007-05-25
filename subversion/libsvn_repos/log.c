@@ -28,8 +28,20 @@
 #include "svn_string.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "repos.h"
 
+static svn_error_t *
+send_change_rev(const apr_array_header_t *paths,
+                svn_revnum_t rev,
+                svn_fs_t *fs,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t include_merged_revisions,
+                svn_repos_authz_func_t authz_read_func,
+                void *authz_read_baton,
+                svn_log_message_receiver2_t receiver,
+                void *receiver_baton,
+                apr_pool_t *pool);
 
 
 svn_error_t *
@@ -499,6 +511,108 @@ next_history_rev(apr_array_header_t *histories)
   return next_rev;
 }
 
+/* Get a RANGELIST of the combined mergeinfo for PATHS at REV. */
+static svn_error_t *
+get_combined_rangelist(apr_array_header_t **rangelist,
+                       svn_fs_t *fs,
+                       svn_revnum_t rev,
+                       const apr_array_header_t *paths,
+                       apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  apr_hash_index_t *hi;
+  apr_hash_t *mergeinfo;
+  
+  *rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_fs_get_children_mergeinfo(&mergeinfo, root, paths, pool));
+
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_t *path_mergeinfo;
+      apr_hash_index_t *mhi;
+
+      apr_hash_this(hi, NULL, NULL, (void *)&path_mergeinfo);
+
+      for (mhi = apr_hash_first(pool, path_mergeinfo); mhi;
+           mhi = apr_hash_next(mhi))
+        {
+          apr_array_header_t *path_rangelist;
+          
+          apr_hash_this(mhi, NULL, NULL, (void *)&path_rangelist); 
+          SVN_ERR(svn_rangelist_merge(rangelist, path_rangelist, pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Determine all the revisions which were merged into PATHS in REV.  Return
+   them as a new RANGELIST.  */
+static svn_error_t *
+get_merge_changed_rangelist(apr_array_header_t **rangelist,
+                            svn_fs_t *fs,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t rev,
+                            apr_pool_t *pool)
+{
+  apr_array_header_t *curr_rangelist, *prev_rangelist;
+  apr_array_header_t *deleted, *changed;
+  apr_pool_t *subpool;
+  int i;
+
+  if (rev == 0)
+    {
+      *rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+      return SVN_NO_ERROR;
+    }
+
+  subpool = svn_pool_create(pool);
+
+  SVN_ERR(get_combined_rangelist(&curr_rangelist, fs, rev, paths, subpool));
+  SVN_ERR(get_combined_rangelist(&prev_rangelist, fs, rev - 1, paths, subpool));
+
+  SVN_ERR(svn_rangelist_diff(&deleted, &changed, prev_rangelist, curr_rangelist,
+                             subpool));
+  SVN_ERR(svn_rangelist_merge(&changed, deleted, subpool));
+
+  *rangelist = svn_rangelist_dup(changed, pool);
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Same as send_change_rev(), only send all the revisions in RANGELIST.  Also,
+   INCLUDE_MERGED_REVISIONS is assumed to be TRUE. */
+static svn_error_t *
+send_child_revs(const apr_array_header_t *paths,
+                const apr_array_header_t *rangelist,
+                svn_fs_t *fs,
+                svn_boolean_t discover_changed_paths,
+                svn_repos_authz_func_t authz_read_func,
+                void *authz_read_baton,
+                svn_log_message_receiver2_t receiver,
+                void *receiver_baton,
+                apr_pool_t *pool)
+{
+  apr_array_header_t *revs;
+  int i;
+
+  SVN_ERR(svn_rangelist_to_revs(&revs, rangelist, pool));
+
+  for (i = 0; i < revs->nelts; i++)
+    {
+      svn_revnum_t rev = APR_ARRAY_IDX(revs, i, svn_revnum_t);
+
+      SVN_ERR(send_change_rev(paths, rev, fs, discover_changed_paths, TRUE,
+                              authz_read_func, authz_read_baton,
+                              receiver, receiver_baton, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Pass history information about REV to RECEIVER with its RECEIVER_BATON.
  *
  * FS is used with REV to fetch the interesting history information,
@@ -506,11 +620,16 @@ next_history_rev(apr_array_header_t *histories)
  *
  * The detect_changed function is used if either AUTHZ_READ_FUNC is
  * not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
+ *
+ * If INCLUDE_MERGED_REVISIONS is TRUE, also pass history information to
+ * RECEIVER for any revisions which were merged in a result of REV.
  */
 static svn_error_t *
-send_change_rev(svn_revnum_t rev,
+send_change_rev(const apr_array_header_t *paths,
+                svn_revnum_t rev,
                 svn_fs_t *fs,
                 svn_boolean_t discover_changed_paths,
+                svn_boolean_t include_merged_revisions,
                 svn_repos_authz_func_t authz_read_func,
                 void *authz_read_baton,
                 svn_log_message_receiver2_t receiver,
@@ -520,6 +639,8 @@ send_change_rev(svn_revnum_t rev,
   svn_string_t *author, *date, *message;
   apr_hash_t *r_props, *changed_paths = NULL;
   svn_log_entry_t *log_entry;
+  apr_uint64_t nbr_children = 0;
+  apr_array_header_t *rangelist;
 
   SVN_ERR(svn_fs_revision_proplist(&r_props, fs, rev, pool));
   author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
@@ -571,6 +692,14 @@ send_change_rev(svn_revnum_t rev,
         changed_paths = NULL;
     }
 
+  /* Check to see if we need to include any extra merged revisions. */
+  if (include_merged_revisions)
+    {
+      SVN_ERR(get_merge_changed_rangelist(&rangelist, fs, paths, rev, pool));
+
+      nbr_children = svn_rangelist_count_revs(rangelist);
+    }
+
   log_entry = svn_log_entry_create(pool);
 
   log_entry->changed_paths = changed_paths;
@@ -578,10 +707,16 @@ send_change_rev(svn_revnum_t rev,
   log_entry->author = author ? author->data : NULL;
   log_entry->date = date ? date->data : NULL;
   log_entry->message = message ? message->data : NULL;
+  log_entry->nbr_children = nbr_children;
 
   SVN_ERR((*receiver)(receiver_baton,
                       log_entry,
                       pool));
+
+  if (nbr_children > 0)
+    SVN_ERR(send_child_revs(paths, rangelist, fs, discover_changed_paths,
+                            authz_read_func, authz_read_baton, receiver,
+                            receiver_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -672,8 +807,9 @@ svn_repos_get_logs4(svn_repos_t *repos,
           svn_pool_clear(iterpool);
           if (start > end)
             rev = hist_end - i;
-          SVN_ERR(send_change_rev(rev, fs,
+          SVN_ERR(send_change_rev(paths, rev, fs,
                                   discover_changed_paths,
+                                  include_merged_revisions,
                                   authz_read_func, authz_read_baton,
                                   receiver, receiver_baton, iterpool));
         }
@@ -770,8 +906,9 @@ svn_repos_get_logs4(svn_repos_t *repos,
              streamily right now. */
           if (start > end)
             {
-              SVN_ERR(send_change_rev(current, fs,
+              SVN_ERR(send_change_rev(paths, current, fs,
                                       discover_changed_paths,
+                                      include_merged_revisions,
                                       authz_read_func, authz_read_baton,
                                       receiver, receiver_baton,
                                       iterpool));
@@ -796,9 +933,10 @@ svn_repos_get_logs4(svn_repos_t *repos,
       for (i = 0; i < revs->nelts; ++i)
         {
           svn_pool_clear(iterpool);
-          SVN_ERR(send_change_rev(APR_ARRAY_IDX(revs, revs->nelts - i - 1,
-                                                svn_revnum_t),
+          SVN_ERR(send_change_rev(paths, APR_ARRAY_IDX(revs, revs->nelts - i - 1,
+                                                       svn_revnum_t),
                                   fs, discover_changed_paths,
+                                  include_merged_revisions,
                                   authz_read_func, authz_read_baton,
                                   receiver, receiver_baton, iterpool));
           if (limit && i + 1 >= limit)
