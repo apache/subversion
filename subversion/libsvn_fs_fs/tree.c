@@ -3176,7 +3176,8 @@ static root_vtable_t root_vtable = {
   fs_get_file_delta_stream,
   fs_merge,
   fs_change_merge_info, 
-  svn_fs_mergeinfo__get_mergeinfo
+  svn_fs_mergeinfo__get_mergeinfo,
+  svn_fs_mergeinfo__get_children_mergeinfo
 };
 
 /* Construct a new root object in FS, allocated from POOL.  */

@@ -312,6 +312,10 @@ typedef struct root_vtable_t
                                 const apr_array_header_t *paths,
                                 svn_boolean_t include_parents,
                                 apr_pool_t *pool);
+  svn_error_t *(*get_children_mergeinfo)(apr_hash_t **mergeinfo,
+                                         svn_fs_root_t *root,
+                                         const apr_array_header_t *paths,
+                                         apr_pool_t *pool);
 } root_vtable_t;
 
 

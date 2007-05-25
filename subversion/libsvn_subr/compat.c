@@ -62,3 +62,46 @@ svn_compat_wrap_commit_callback(svn_commit_callback2_t *callback2,
   *callback2 = commit_wrapper_callback;
 }
 
+
+/* Baton for use with svn_compat_wrap_log_receiver */
+struct log_wrapper_baton {
+  void *baton;
+  svn_log_message_receiver_t receiver;
+};
+
+/* This implements svn_log_message_receiver2_t. */
+static svn_error_t *
+log_wrapper_callback(void *baton,
+                     svn_log_entry_t *log_entry,
+                     apr_pool_t *pool)
+{
+  struct log_wrapper_baton *lwb = baton;
+
+  if (lwb->receiver)
+    return lwb->receiver(lwb->baton,
+                         log_entry->changed_paths,
+                         log_entry->revision,
+                         log_entry->author,
+                         log_entry->date,
+                         log_entry->message,
+                         pool);
+
+  return SVN_NO_ERROR;
+}
+
+void
+svn_compat_wrap_log_receiver(svn_log_message_receiver2_t *receiver2,
+                             void **receiver2_baton,
+                             svn_log_message_receiver_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool)
+{
+  struct log_wrapper_baton *lwb = apr_palloc(pool, sizeof(*lwb));
+
+  /* Set the user provided old format callback in the baton. */
+  lwb->baton = receiver_baton;
+  lwb->receiver = receiver;
+
+  *receiver2_baton = lwb;
+  *receiver2 = log_wrapper_callback;
+}

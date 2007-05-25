@@ -2,7 +2,7 @@
  * mergeinfo.c:  Merge info parsing and handling
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -560,6 +560,47 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
   /* The items that are present in to, but not in from, must have been
      added.  */
   SVN_ERR(svn_rangelist_remove(added, from, to, pool));
+  return SVN_NO_ERROR;
+}
+
+apr_uint64_t
+svn_rangelist_count_revs(apr_array_header_t *rangelist)
+{
+  apr_uint64_t nbr_revs = 0;
+  int i;
+
+  for (i = 0; i < rangelist->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                               svn_merge_range_t *);
+      nbr_revs += range->end - range->start + 1;
+    }
+
+  return nbr_revs;
+}
+
+svn_error_t *
+svn_rangelist_to_revs(apr_array_header_t **revs,
+                      const apr_array_header_t *rangelist,
+                      apr_pool_t *pool)
+{
+  int i;
+
+  *revs = apr_array_make(pool, 1, sizeof(svn_revnum_t));
+
+  for (i = 0; i < rangelist->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                               svn_merge_range_t *);
+      svn_revnum_t rev = range->start;
+
+      while (rev <= range->end)
+        {
+          APR_ARRAY_PUSH(*revs, svn_revnum_t) = rev;
+          rev += 1;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 

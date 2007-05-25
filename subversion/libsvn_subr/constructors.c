@@ -2,7 +2,7 @@
  * constructors.c :  Constructors for various data structures.
  *
  * ====================================================================
- * Copyright (c) 2005-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -117,4 +117,12 @@ svn_dirent_dup(const svn_dirent_t *dirent,
   new_dirent->last_author = apr_pstrdup(pool, dirent->last_author);
 
   return new_dirent;
+}
+
+svn_log_entry_t *
+svn_log_entry_create(apr_pool_t *pool)
+{
+  svn_log_entry_t *log_entry = apr_pcalloc(pool, sizeof(*log_entry));
+
+  return log_entry;
 }
