@@ -51,6 +51,7 @@ Blanket commit access:
            lgo   Lieven Govaerts <lgo@mobsol.be>
        hwright   Hyrum Wright <hyrum_wright@mail.utexas.edu>
     vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
+       kameshj   Kamesh Jayachandran <kamesh@collab.net>
 
 Commit access for specific areas:
 
@@ -102,7 +103,6 @@ Commit access for specific areas:
        madanus   Madan U S <madanus@gmail.com>               (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
-       kameshj   Kamesh Jayachandran <kamesh@collab.net>     (svntest)
         aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
 
