@@ -484,7 +484,6 @@ base_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 /* Creating a new filesystem */
 
 static fs_vtable_t fs_vtable = {
-  base_serialized_init,
   svn_fs_base__youngest_rev,
   svn_fs_base__revision_prop,
   svn_fs_base__revision_proplist,
@@ -624,7 +623,8 @@ open_databases(svn_fs_t *fs, svn_boolean_t create,
 
 
 static svn_error_t *
-base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+            apr_pool_t *common_pool)
 {
   int format = SVN_FS_BASE__FORMAT_NUMBER;
   
@@ -647,7 +647,7 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   if (svn_err) goto error;
 
   SVN_ERR(svn_fs_mergeinfo__create_index(path, pool));
-  return SVN_NO_ERROR;
+  return base_serialized_init(fs, common_pool, pool);
 
 error:
   svn_error_clear(cleanup_fs(fs));
@@ -680,7 +680,8 @@ check_format(int format)
 }
 
 static svn_error_t *
-base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+          apr_pool_t *common_pool)
 {
   int format;
 
@@ -707,8 +708,7 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Now we've got a format number no matter what. */
   ((base_fs_data_t *) fs->fsap_data)->format = format;
   SVN_ERR(check_format(format));
-
-  return SVN_NO_ERROR;
+  return base_serialized_init(fs, common_pool, pool);
 
  error:
   svn_error_clear(cleanup_fs(fs));
@@ -751,7 +751,8 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
 }
 
 static svn_error_t *
-base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+                       apr_pool_t *common_pool)
 {
   /* Just stash the path in the fs pointer - it's all we really need. */
   fs->path = apr_pstrdup(fs->pool, path);
@@ -1197,7 +1198,7 @@ static fs_library_vtable_t library_vtable = {
 
 svn_error_t *
 svn_fs_base__init(const svn_version_t *loader_version,
-                  fs_library_vtable_t **vtable)
+                  fs_library_vtable_t **vtable, apr_pool_t* common_pool)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -1214,7 +1215,7 @@ svn_fs_base__init(const svn_version_t *loader_version,
                              loader_version->major);
   SVN_ERR(svn_ver_check_list(base_version(), checklist));
   SVN_ERR(check_bdb_version());
-  SVN_ERR(svn_fs_bdb__init());
+  SVN_ERR(svn_fs_bdb__init(common_pool));
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;

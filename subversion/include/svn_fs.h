@@ -94,7 +94,10 @@ typedef struct svn_fs_t svn_fs_t;
  * effort to bootstrap a mutex for protecting data common to FS
  * objects; however, there is a small window of failure.  Also, a
  * small amount of data will be leaked if the Subversion FS library is
- * dynamically unloaded.
+ * dynamically unloaded, and using the bdb FS can potentially segfault
+ * or invoke other undefined behavior if this function is not called
+ * with an appropriate pool (such as the pool the module was loaded into)
+ * when loaded dynamically.
  *
  * If this function is called multiple times before the pool passed to
  * the first call is destroyed or cleared, the later calls will have
