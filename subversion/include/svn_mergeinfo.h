@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -159,6 +159,17 @@ svn_rangelist_to_stringbuf(svn_stringbuf_t **output,
  */
 apr_uint64_t
 svn_rangelist_count_revs(apr_array_header_t *rangelist);
+
+/** Take an array of @c svn_merge_range_t *'s in @a rangelist, and convert it
+ * to an array of @c svn_revnum_t's in @a revs.  If @a rangelist contains
+ * no elements, return an empty array.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_rangelist_to_revs(apr_array_header_t **revs,
+                      apr_array_header_t *rangelist,
+                      apr_pool_t *pool);
 
 /** Take a hash of mergeinfo in @a mergeinput, and convert it back to
  * a text format mergeinfo in @a output.  If @a input contains no
