@@ -166,6 +166,8 @@ test_mergeinfo_dup(const char **msg,
   if (apr_hash_count(copied_mergeinfo) != 1)
     return fail(pool, "Copied merge info should contain one merge source");
   rangelist = apr_hash_get(copied_mergeinfo, "/trunk", APR_HASH_KEY_STRING);
+  if (! rangelist)
+    return fail(pool, "Expected copied merge info; got nothing");
   if (rangelist->nelts != 3)
     return fail(pool, "Copied merge info should contain 3 revision ranges, "
                 "rather than the %d it contains", rangelist->nelts);
