@@ -88,6 +88,7 @@ reset_log_item(struct log_baton *lb)
   lb->log_entry->date          = NULL;
   lb->log_entry->message       = NULL;
   lb->log_entry->changed_paths = NULL;
+  lb->log_entry->nbr_children  = 0;
 
   svn_pool_clear(lb->subpool);
 }
