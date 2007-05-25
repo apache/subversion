@@ -581,7 +581,7 @@ svn_rangelist_count_revs(apr_array_header_t *rangelist)
 
 svn_error_t *
 svn_rangelist_to_revs(apr_array_header_t **revs,
-                      apr_array_header_t *rangelist,
+                      const apr_array_header_t *rangelist,
                       apr_pool_t *pool)
 {
   int i;
