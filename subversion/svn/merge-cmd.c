@@ -151,10 +151,10 @@ svn_cl__merge(apr_getopt_t *os,
      sourcepaths. */
   if (sourcepath1 && sourcepath2 && strcmp(targetpath, "") == 0)
     {
-      /* If the sourcepath is a url, it can only refer to a target in the
+      /* If the sourcepath is a URL, it can only refer to a target in the
          current working directory. 
          However, if the sourcepath is a local path, it can refer to a target
-         somewhere deeper in the directory structure*/
+         somewhere deeper in the directory structure. */
       if (svn_path_is_url(sourcepath1)) 
         {
           char *sp1_basename, *sp2_basename;

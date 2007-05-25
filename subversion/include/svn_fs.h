@@ -94,7 +94,10 @@ typedef struct svn_fs_t svn_fs_t;
  * effort to bootstrap a mutex for protecting data common to FS
  * objects; however, there is a small window of failure.  Also, a
  * small amount of data will be leaked if the Subversion FS library is
- * dynamically unloaded.
+ * dynamically unloaded, and using the bdb FS can potentially segfault
+ * or invoke other undefined behavior if this function is not called
+ * with an appropriate pool (such as the pool the module was loaded into)
+ * when loaded dynamically.
  *
  * If this function is called multiple times before the pool passed to
  * the first call is destroyed or cleared, the later calls will have
@@ -1187,10 +1190,10 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
-                                      const char *path,
-                                      apr_hash_t *mergeinhash,
-                                      apr_pool_t *pool);
+svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
+                                     const char *path,
+                                     apr_hash_t *mergeinhash,
+                                     apr_pool_t *pool);
 
 /** Retrieve merge info for multiple nodes.
  *
@@ -1208,11 +1211,11 @@ svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_fs_get_merge_info(apr_hash_t **minfohash,
-                                   svn_fs_root_t *root,
-                                   const apr_array_header_t *paths,
-                                   svn_boolean_t include_parents,
-                                   apr_pool_t *pool);
+svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
+                                  svn_fs_root_t *root,
+                                  const apr_array_header_t *paths,
+                                  svn_boolean_t include_parents,
+                                  apr_pool_t *pool);
 
 /** Retrive combined mergeinfo for multiple nodes, and their children.
  *

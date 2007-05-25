@@ -66,14 +66,19 @@ typedef struct fs_library_vtable_t
      this statement, now that the minor version has increased. */
   const svn_version_t *(*get_version)(void);
 
-  svn_error_t *(*create)(svn_fs_t *fs, const char *path, apr_pool_t *pool);
-  svn_error_t *(*open)(svn_fs_t *fs, const char *path, apr_pool_t *pool);
+  /* The open/create/open_for_recovery functions are serialized so that they
+     may use the common_pool parameter to allocate fs-global objects such as
+     the bdb env cache. */
+  svn_error_t *(*create)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+                         apr_pool_t *common_pool);
+  svn_error_t *(*open)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+                       apr_pool_t *common_pool);
   /* open_for_recovery() is like open(), but used to fill in an fs pointer
-     that will be passed to recover() after the filesystem's serialized_init()
-     is called.  We assume that the open() method might not be immediately
-     appropriate for recovery. */
+     that will be passed to recover().  We assume that the open() method
+     might not be immediately appropriate for recovery. */
   svn_error_t *(*open_for_recovery)(svn_fs_t *fs, const char *path,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *pool,
+                                    apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
   svn_error_t *(*hotcopy)(const char *src_path, const char *dest_path,
                           svn_boolean_t clean, apr_pool_t *pool);
@@ -101,19 +106,31 @@ typedef struct fs_library_vtable_t
    library vtable. The LOADER_VERSION parameter must remain first in
    the list, and the function must use the C calling convention on all
    platforms, so that the init functions can safely read the version
-   parameter.
+   parameter.  The COMMON_POOL parameter must be a pool with a greater
+   lifetime than the fs module so that fs global state can be kept
+   in it and cleaned up on termination before the fs module is unloaded.
+   Calls to these functions are globally serialized so that they have
+   exclusive access to the COMMON_POOL parameter.
 
    ### need to force this to be __cdecl on Windows... how?? */
 typedef svn_error_t *(*fs_init_func_t)(const svn_version_t *loader_version,
-                                       fs_library_vtable_t **vtable);
+                                       fs_library_vtable_t **vtable,
+                                       apr_pool_t* common_pool);
 
 /* Here are the declarations for the FS module init functions.  If we
    are using DSO loading, they won't actually be linked into
-   libsvn_fs. */
+   libsvn_fs.  Note that these private functions have a common_pool
+   parameter that may be used for fs module scoped variables such as
+   the bdb cache.  This will be the same common_pool that is passed
+   to the create and open functions and these init functions (as well
+   as the open and create functions) are globally serialized so that
+   they have exclusive access to the common_pool. */
 svn_error_t *svn_fs_base__init(const svn_version_t *loader_version,
-                               fs_library_vtable_t **vtable);
+                               fs_library_vtable_t **vtable,
+                               apr_pool_t* common_pool);
 svn_error_t *svn_fs_fs__init(const svn_version_t *loader_version,
-                             fs_library_vtable_t **vtable);
+                             fs_library_vtable_t **vtable,
+                             apr_pool_t* common_pool);
 
 
 
@@ -121,17 +138,6 @@ svn_error_t *svn_fs_fs__init(const svn_version_t *loader_version,
 
 typedef struct fs_vtable_t
 {
-  /* The FS loader library invokes serialized_init after a create or
-     open call, with the new FS object as its first parameter.  Calls
-     to serialized_init are globally serialized, so the FS module
-     function has exclusive access to COMMON_POOL.  The same
-     COMMON_POOL will be passed for every FS object created during the
-     lifetime of the pool passed to svn_fs_initialize(), or during the
-     lifetime of the process if svn_fs_initialize() is not invoked.
-     Temporary allocations can be made in POOL. */
-  svn_error_t *(*serialized_init)(svn_fs_t *fs, apr_pool_t *common_pool,
-                                  apr_pool_t *pool);
-
   svn_error_t *(*youngest_rev)(svn_revnum_t *youngest_p, svn_fs_t *fs,
                                apr_pool_t *pool);
   svn_error_t *(*revision_prop)(svn_string_t **value_p, svn_fs_t *fs,
@@ -298,14 +304,14 @@ typedef struct root_vtable_t
                         svn_fs_root_t *ancestor_root,
                         const char *ancestor_path,
                         apr_pool_t *pool);
-  svn_error_t *(*change_merge_info)(svn_fs_root_t *root, const char *path,
-                                    apr_hash_t *info,
-                                    apr_pool_t *pool);
-  svn_error_t *(*get_merge_info)(apr_hash_t **minfohash,
-                                 svn_fs_root_t *root, 
-                                 const apr_array_header_t *paths,
-                                 svn_boolean_t include_parents,
-                                 apr_pool_t *pool);
+  svn_error_t *(*change_mergeinfo)(svn_fs_root_t *root, const char *path,
+                                   apr_hash_t *info,
+                                   apr_pool_t *pool);
+  svn_error_t *(*get_mergeinfo)(apr_hash_t **minfohash,
+                                svn_fs_root_t *root, 
+                                const apr_array_header_t *paths,
+                                svn_boolean_t include_parents,
+                                apr_pool_t *pool);
   svn_error_t *(*get_children_mergeinfo)(apr_hash_t **mergeinfo,
                                          svn_fs_root_t *root,
                                          const apr_array_header_t *paths,

@@ -32,16 +32,16 @@
 #include "svn_private_config.h"
 
 svn_error_t *
-svn_client__get_repos_merge_info(svn_ra_session_t *ra_session,
-                                 apr_hash_t **target_mergeinfo,
-                                 const char *rel_path,
-                                 svn_revnum_t rev,
-                                 apr_pool_t *pool)
+svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
+                                apr_hash_t **target_mergeinfo,
+                                const char *rel_path,
+                                svn_revnum_t rev,
+                                apr_pool_t *pool)
 {
   apr_hash_t *repos_mergeinfo;
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
-  SVN_ERR(svn_ra_get_merge_info(ra_session, &repos_mergeinfo, rel_paths,
+  SVN_ERR(svn_ra_get_mergeinfo(ra_session, &repos_mergeinfo, rel_paths,
                                 rev, TRUE, pool));
 
   /* Grab only the merge info provided for REL_PATH. */
@@ -55,12 +55,12 @@ svn_client__get_repos_merge_info(svn_ra_session_t *ra_session,
 }
 
 svn_error_t *
-svn_client__parse_merge_info(apr_hash_t **mergeinfo,
-                             const svn_wc_entry_t *entry,
-                             const char *wcpath,
-                             svn_wc_adm_access_t *adm_access,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *pool)
+svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
+                            const svn_wc_entry_t *entry,
+                            const char *wcpath,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool)
 {
   apr_hash_t *props = apr_hash_make(pool);
   const svn_string_t *propval;
@@ -81,10 +81,10 @@ svn_client__parse_merge_info(apr_hash_t **mergeinfo,
 }
 
 svn_error_t *
-svn_client__record_wc_merge_info(const char *wcpath,
-                                 apr_hash_t *mergeinfo,
-                                 svn_wc_adm_access_t *adm_access,
-                                 apr_pool_t *pool)
+svn_client__record_wc_mergeinfo(const char *wcpath,
+                                apr_hash_t *mergeinfo,
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool)
 {
   svn_string_t *mergeinfo_str;
 

@@ -190,6 +190,13 @@ svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, apr_hash_t *mergeinput,
 svn_error_t *
 svn_mergeinfo_sort(apr_hash_t *mergeinput, apr_pool_t *pool);
 
+/** Return a deep copy of @a mergeinfo, allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+apr_hash_t *
+svn_mergeinfo_dup(apr_hash_t *mergeinfo, apr_pool_t *pool);
+
 /** Return a deep copy of @a rangelist, allocated in @a pool.
  *
  * @since New in 1.5.

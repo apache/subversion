@@ -640,19 +640,19 @@ make_reporter(svn_ra_session_t *session,
 
 
 static svn_error_t *
-svn_ra_local__get_merge_info(svn_ra_session_t *session,
-                             apr_hash_t **mergeinfo,
-                             const apr_array_header_t *paths,
-                             svn_revnum_t revision,
-                             svn_boolean_t include_parents,
-                             apr_pool_t *pool)
+svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
+                            apr_hash_t **mergeinfo,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t revision,
+                            svn_boolean_t include_parents,
+                            apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
   apr_hash_t *tmp_mergeinfo;
 
-  SVN_ERR(svn_repos_fs_get_merge_info(&tmp_mergeinfo, baton->repos, paths,
-                                      revision, include_parents,
-                                      NULL, NULL, pool));
+  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_mergeinfo, baton->repos, paths,
+                                     revision, include_parents,
+                                     NULL, NULL, pool));
   if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
     {
       const void *key;
@@ -1394,7 +1394,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_commit_editor,
   svn_ra_local__get_file,
   svn_ra_local__get_dir,
-  svn_ra_local__get_merge_info,
+  svn_ra_local__get_mergeinfo,
   svn_ra_local__do_update,
   svn_ra_local__do_switch,
   svn_ra_local__do_status,

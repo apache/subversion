@@ -1472,11 +1472,11 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      }
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_fs_get_merge_info(&mergeinfo, b->repos,
-                                          canonical_paths, rev,
-                                          include_parents,
-                                          authz_check_access_cb_func(b), b,
-                                          pool));
+  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repos,
+                                         canonical_paths, rev,
+                                         include_parents,
+                                         authz_check_access_cb_func(b), b,
+                                         pool));
   if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)
     {
       const void *key;

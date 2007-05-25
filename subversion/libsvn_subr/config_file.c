@@ -984,9 +984,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### The format of the entries is:"                                  NL
         "###   file-name-pattern = propname[=value][;propname[=value]...]"   NL
         "### The file-name-pattern can contain wildcards (such as '*' and"   NL
-        "### '?').  All entries which match will be applied to the file."    NL
-        "### Note that auto-props functionality must be enabled, which"      NL
-        "### is typically done by setting the 'enable-auto-props' option."   NL
+        "### '?').  All entries which match (case-insensitively) will be"    NL
+        "### applied to the file.  Note that auto-props functionality"       NL
+        "### must be enabled, which is typically done by setting the"        NL
+        "### 'enable-auto-props' option."                                    NL
         "# *.c = svn:eol-style=native"                                       NL
         "# *.cpp = svn:eol-style=native"                                     NL
         "# *.h = svn:eol-style=native"                                       NL

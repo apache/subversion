@@ -219,7 +219,8 @@
 
 ;;; user setable variables
 (defcustom svn-status-verbose t
-  "*Add '-v' to svn status call."
+  "*Add '-v' to svn status call.
+This can be toggled with \\[svn-status-toggle-svn-verbose-flag]."
   :type 'boolean
   :group 'psvn)
 (defcustom svn-log-edit-file-name "++svn-log++"
@@ -266,6 +267,13 @@ listing may then become incorrect.
 
 This can be toggled with \\[svn-status-toggle-sort-status-buffer]."
   :type 'boolean
+  :group 'psvn)
+
+(defcustom svn-status-ediff-delete-temporary-files nil
+  "*Whether to delete temporary ediff files. If set to ask, ask the user"
+  :type '(choice (const t)
+                 (const nil)
+                 (const ask))
   :group 'psvn)
 
 (defcustom svn-status-changelog-style 'changelog
@@ -315,15 +323,15 @@ This can be either absolute or looked up on `exec-path'."
   :type 'file
   :group 'psvn)
 
-(defcustom svn-status-svn-environment-var-list '("LANG=C")
+(defcustom svn-status-svn-environment-var-list '("LC_MESSAGES=C")
   "*A list of environment variables that should be set for that svn process.
 Each element is either a string \"VARIABLE=VALUE\" which will be added to
 the environment when svn is run, or just \"VARIABLE\" which causes that
 variable to be entirely removed from the environment.
 
-You could set this for example to '(\"LANG=C\")
-
-Please report, if you have good experiences with the setting '(\LC_MESSAGES=C\")"
+The default setting is '(\LC_MESSAGES=C\"). This ensures that the svn command
+line client does not output localized strings. psvn.el relies on the english
+messages."
   :type '(repeat string)
   :group 'psvn)
 (put 'svn-status-svn-environment-var-list 'risky-local-variable t)
@@ -483,9 +491,9 @@ The function `svn-status-remove-control-M' can be useful for that hook")
 (when (eq system-type 'windows-nt)
   (add-hook 'svn-post-process-svn-output-hook 'svn-status-remove-control-M))
 
-(defvar svn-status-coding-system nil
-  "A special coding system is needed for the output of svn.
-svn-status-coding-system is used in svn-run, if it is not nil.")
+(defvar svn-status-svn-process-coding-system locale-coding-system
+  "The coding system that is used for the svn command line client.
+It is used in svn-run, if it is not nil.")
 
 (defvar svn-status-svn-file-coding-system 'undecided-unix
   "The coding system that is used to save files that are loaded as
@@ -1143,8 +1151,6 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
             (setq arglist (car arglist)))
           (save-excursion
             (set-buffer proc-buf)
-            (when svn-status-coding-system
-              (setq buffer-file-coding-system svn-status-coding-system))
             (setq buffer-read-only nil)
             (buffer-disable-undo)
             (fundamental-mode)
@@ -1173,6 +1179,9 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                     ;; such cases, the user should start ssh-agent and
                     ;; then run ssh-add explicitly.
                     (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist)))
+                  (when svn-status-svn-process-coding-system
+                    (set-process-coding-system svn-proc svn-status-svn-process-coding-system
+                                               svn-status-svn-process-coding-system))
                   (set-process-sentinel svn-proc 'svn-process-sentinel)
                   (when svn-status-track-user-input
                     (set-process-filter svn-proc 'svn-process-filter)))
@@ -1487,8 +1496,12 @@ The results are used to build the `svn-status-info' variable."
           (dir)
           (revision-width svn-status-default-revision-width)
           (author-width svn-status-default-author-width)
-          (svn-marks-length (if (and svn-status-verbose svn-status-remote)
-                                8 6))
+          (svn-marks-length (if svn-status-verbose
+                                (if svn-status-remote
+                                    8 6)
+                              (if svn-status-remote
+                                  ;; not verbose
+                                  8 7)))
           (dir-set '("."))
           (externals-map (make-hash-table :test 'equal))
           (skip-double-external-dir-entry-name nil))
@@ -1532,7 +1545,7 @@ The results are used to build the `svn-status-info' variable."
                 svn-with-history-mark (elt svn-marks 3) ; 4th column - + or blank
                 svn-switched-mark (elt svn-marks 4)     ; 5th column - S or blank
                 svn-repo-locked-mark (elt svn-marks 5)) ; 6th column - K,O,T,B or blank
-          (if (and svn-status-verbose svn-status-remote)
+          (when svn-status-remote
               (setq svn-update-mark (elt svn-marks 7))) ; 8th column - * or blank
           (when (eq svn-property-mark ?\ )     (setq svn-property-mark nil))
           (when (eq svn-wc-locked-mark ?\ )    (setq svn-wc-locked-mark nil))
@@ -1542,6 +1555,7 @@ The results are used to build the `svn-status-info' variable."
           (when (eq svn-repo-locked-mark ?\ )  (setq svn-repo-locked-mark nil))
           (forward-char svn-marks-length)
           (skip-chars-forward " ")
+          ;; (message "after marks: '%s'" (buffer-substring (point) (line-end-position)))
           (cond
            ((looking-at "\\([-?]\\|[0-9]+\\) +\\([-?]\\|[0-9]+\\) +\\([^ ]+\\) *\\(.+\\)$")
             (setq local-rev (svn-parse-rev-num (match-string 1))
@@ -1792,6 +1806,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-options-map (kbd "s") 'svn-status-save-state)
   (define-key svn-status-mode-options-map (kbd "l") 'svn-status-load-state)
   (define-key svn-status-mode-options-map (kbd "x") 'svn-status-toggle-sort-status-buffer)
+  (define-key svn-status-mode-options-map (kbd "v") 'svn-status-toggle-svn-verbose-flag)
   (define-key svn-status-mode-options-map (kbd "f") 'svn-status-toggle-display-full-path)
   (define-key svn-status-mode-options-map (kbd "t") 'svn-status-set-trac-project-root)
   (define-key svn-status-mode-options-map (kbd "n") 'svn-status-set-module-name)
@@ -1873,9 +1888,11 @@ A and B must be line-info's."
      ["Set Short module name" svn-status-set-module-name t]
      ["Set Changelog style" svn-status-set-changelog-style t]
      ["Set Branch list" svn-status-set-branch-list t]
-     ["Toggle sorting of *svn-status* buffer" svn-status-toggle-sort-status-buffer
+     ["Sort the *svn-status* buffer" svn-status-toggle-sort-status-buffer
       :style toggle :selected svn-status-sort-status-buffer]
-     ["Toggle display of full path names" svn-status-toggle-display-full-path
+     ["Use -v for svn status calls" svn-status-toggle-svn-verbose-flag
+      :style toggle :selected svn-status-verbose]
+     ["Display full path names" svn-status-toggle-display-full-path
       :style toggle :selected svn-status-display-full-path]
      )
     ("Trac"
@@ -3747,7 +3764,7 @@ user can enter a new file name, or an existing directory: this is used as the ar
                 (setq moved t))
             (message "Not acting on %s" original-name))))
         (when moved
-          (message "psvn: moved %s to %s" original-name dest)
+          (message "psvn: did '%s' from %s to %s" command original-name dest)
           ;; Silently rename the visited file of any buffer visiting this file.
           (when (get-file-buffer original-name)
             (with-current-buffer (get-file-buffer original-name)
@@ -4099,27 +4116,37 @@ If ARG then prompt for revision to diff against."
          (default-directory (svn-status-base-dir))
          (my-buffer (find-file-noselect (caar svn-status-get-specific-revision-file-info)))
          (base-buff (find-file-noselect (cdar svn-status-get-specific-revision-file-info)))
-         (svn-transient-buffers (list base-buff))
+         (svn-transient-buffers (list my-buffer base-buff))
          (startup-hook '(svn-ediff-startup-hook)))
     (ediff-buffers base-buff my-buffer startup-hook)))
 
 (defun svn-ediff-startup-hook ()
+  ;; (message "svn-ediff-startup-hook: ediff-after-quit-hook-internal: %S" ediff-after-quit-hook-internal)
   (add-hook 'ediff-after-quit-hook-internal
-        `(lambda ()
-           (svn-ediff-exit-hook
-        ',ediff-after-quit-destination-buffer ',svn-transient-buffers))
-        nil 'local))
+            `(lambda ()
+               (svn-ediff-exit-hook
+                ',ediff-after-quit-destination-buffer ',svn-transient-buffers))
+            nil 'local))
 
 (defun svn-ediff-exit-hook (svn-buf tmp-bufs)
+  ;; (message "svn-ediff-exit-hook: svn-buf: %s, tmp-bufs: %s" svn-buf tmp-bufs)
   ;; kill the temp buffers (and their associated windows)
   (dolist (tb tmp-bufs)
     (when (and tb (buffer-live-p tb) (not (buffer-modified-p tb)))
-      (let ((win (get-buffer-window tb t)))
-    (when win (delete-window win))
-    (kill-buffer tb))))
+      (let* ((win (get-buffer-window tb t))
+             (file-name (buffer-file-name))
+             (is-temp-file (numberp (string-match "~[0-9]+~" file-name))))
+        ;; (message "svn-ediff-exit-hook - is-temp-file: %s, temp-buf:: %s - %s " is-temp-file (current-buffer) file-name)
+        (when (and win (> (count-windows) 1)
+                   (delete-window win)))
+        (kill-buffer tb)
+        (when (and is-temp-file svn-status-ediff-delete-temporary-files)
+          (when (or (eq svn-status-ediff-delete-temporary-files t)
+                    (y-or-n-p (format "Delete File '%s' ? " file-name)))
+            (delete-file file-name))))))
   ;; switch back to the *svn* buffer
   (when (and svn-buf (buffer-live-p svn-buf)
-         (not (get-buffer-window svn-buf t)))
+             (not (get-buffer-window svn-buf t)))
     (ignore-errors (switch-to-buffer svn-buf))))
 
 
@@ -4958,7 +4985,7 @@ When called with a prefix argument, ask the user for the revision."
         (let* ((ediff-after-quit-destination-buffer cur-buf)
                (newer-buffer (find-file-noselect upper-rev-file-name))
                (base-buff (find-file-noselect lower-rev-file-name))
-               (svn-transient-buffers (list newer-buffer))
+               (svn-transient-buffers (list base-buff newer-buffer))
                (startup-hook '(svn-ediff-startup-hook)))
           (ediff-buffers base-buff newer-buffer startup-hook))
       (message "No file at point"))))
@@ -5346,6 +5373,12 @@ removed again, when a faster parsing and display routine for
   (setq svn-status-sort-status-buffer (not svn-status-sort-status-buffer))
   (message "The %s buffer will %sbe sorted." svn-status-buffer-name
            (if svn-status-sort-status-buffer "" "not ")))
+
+(defun svn-status-toggle-svn-verbose-flag ()
+  "Toggle `svn-status-verbose'. "
+  (interactive)
+  (setq svn-status-verbose (not svn-status-verbose))
+  (message "svn status calls will %suse the -v flag." (if svn-status-verbose "" "not ")))
 
 (defun svn-status-toggle-display-full-path ()
   "Toggle displaying the full path in the `svn-status-buffer-name' buffer"

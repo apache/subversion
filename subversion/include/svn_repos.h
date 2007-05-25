@@ -1226,7 +1226,7 @@ svn_repos_get_logs(svn_repos_t *repos,
 /* Retrieving merge info. */
 
 /**
- * Fetch the merge info for @a paths at @a rev, and save it to @a
+ * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
  * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
  * (from @a paths) to textual (@c char *) representations of merge
  * info (as managed by svn_mergeinfo.h), or @c NULL if there is no
@@ -1239,7 +1239,7 @@ svn_repos_get_logs(svn_repos_t *repos,
  *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
- * of each path which merge info was requested for (from @a paths).
+ * of each path which mergeinfo was requested for (from @a paths).
  * Silently omit unreadable paths from the request for merge info.
  *
  * Use @a pool for temporary allocations.
@@ -1247,14 +1247,14 @@ svn_repos_get_logs(svn_repos_t *repos,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_repos_fs_get_merge_info(apr_hash_t **mergeoutput,
-                            svn_repos_t *repos,
-                            const apr_array_header_t *paths,
-                            svn_revnum_t revision,
-                            svn_boolean_t include_parents,
-                            svn_repos_authz_func_t authz_read_func,
-                            void *authz_read_baton,
-                            apr_pool_t *pool);
+svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
+                           svn_repos_t *repos,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t revision,
+                           svn_boolean_t include_parents,
+                           svn_repos_authz_func_t authz_read_func,
+                           void *authz_read_baton,
+                           apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/
