@@ -51,8 +51,11 @@ struct log_receiver_baton
   /* Don't print log message body nor its line count. */
   svn_boolean_t omit_log_message;
 
-  /* Stack with keeps track of merge revision nesting. */
+  /* Stack which keeps track of merge revision nesting. */
   apr_array_header_t *merge_stack;
+
+  /* Pool for permanent allocations. */
+  apr_pool_t *pool;
 };
 
 /* Structure to hold merging revisions, and the number of children they have
@@ -276,7 +279,7 @@ log_message_receiver(void *baton,
 
   if (log_entry->nbr_children > 0)
     {
-      struct merge_frame *frame = apr_palloc(pool, sizeof(*frame));
+      struct merge_frame *frame = apr_palloc(lb->pool, sizeof(*frame));
     
       frame->merge_rev = log_entry->revision;
       frame->child_count = log_entry->nbr_children;
@@ -543,6 +546,7 @@ svn_cl__log(apr_getopt_t *os,
   lb.cancel_baton = ctx->cancel_baton;
   lb.omit_log_message = opt_state->quiet;
   lb.merge_stack = apr_array_make(pool, 1, sizeof(svn_revnum_t));
+  lb.pool = pool;
   
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
