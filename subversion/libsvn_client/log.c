@@ -261,14 +261,15 @@ svn_client__suggest_merge_sources(const char *path_or_url,
 
 
 svn_error_t *
-svn_client_log3(const apr_array_header_t *targets,
+svn_client_log4(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
                 const svn_opt_revision_t *start,
                 const svn_opt_revision_t *end,
                 int limit,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
-                svn_log_message_receiver_t receiver,
+                svn_boolean_t include_merged_revisions,
+                svn_log_message_receiver2_t receiver,
                 void *receiver_baton,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
@@ -481,36 +482,63 @@ svn_client_log3(const apr_array_header_t *targets,
               SVN_ERR(svn_client__get_revision_number
                       (&end_revnum, ra_session, end, target, pool));
 
-            err = svn_ra_get_log(ra_session,
-                                 condensed_targets,
-                                 start_revnum,
-                                 end_revnum,
-                                 limit,
-                                 discover_changed_paths,
-                                 strict_node_history,
-                                 receiver,
-                                 receiver_baton,
-                                 pool);
+            err = svn_ra_get_log2(ra_session,
+                                  condensed_targets,
+                                  start_revnum,
+                                  end_revnum,
+                                  limit,
+                                  discover_changed_paths,
+                                  strict_node_history,
+                                  include_merged_revisions,
+                                  receiver,
+                                  receiver_baton,
+                                  pool);
             if (err)
               break;
           }
       }
     else  /* both revisions are static, so no loop needed */
       {
-        err = svn_ra_get_log(ra_session,
-                             condensed_targets,
-                             start_revnum,
-                             end_revnum,
-                             limit,
-                             discover_changed_paths,
-                             strict_node_history,
-                             receiver,
-                             receiver_baton,
-                             pool);
+        err = svn_ra_get_log2(ra_session,
+                              condensed_targets,
+                              start_revnum,
+                              end_revnum,
+                              limit,
+                              discover_changed_paths,
+                              strict_node_history,
+                              include_merged_revisions,
+                              receiver,
+                              receiver_baton,
+                              pool);
       }
   
     return err;
   }
+}
+
+svn_error_t *
+svn_client_log3(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_log_message_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  svn_log_message_receiver2_t receiver2;
+  void *receiver2_baton;
+
+  svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
+                               receiver, receiver_baton,
+                               pool);
+
+  return svn_client_log4(targets, peg_revision, start, end, limit,
+                         discover_changed_paths, strict_node_history, FALSE,
+                         receiver2, receiver2_baton, ctx, pool);
 }
 
 svn_error_t *

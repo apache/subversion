@@ -1179,7 +1179,8 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                int limit,
                                svn_boolean_t discover_changed_paths,
                                svn_boolean_t strict_node_history,
-                               svn_log_message_receiver_t receiver,
+                               svn_boolean_t include_merged_revisions,
+                               svn_log_message_receiver2_t receiver,
                                void *receiver_baton, apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
@@ -1193,6 +1194,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   svn_revnum_t rev, copy_rev;
   svn_log_changed_path_t *change;
   int nreceived = 0;
+  apr_uint64_t nbr_children;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "log"));
   if (paths)
@@ -1203,9 +1205,10 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bbn)", start, end,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bbnb)", start, end,
                                  discover_changed_paths, strict_node_history,
-                                 (apr_uint64_t) limit));
+                                 (apr_uint64_t) limit,
+                                 include_merged_revisions));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Read the log messages. */
@@ -1218,9 +1221,9 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log entry not a list"));
-      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr(?c)(?c)(?c)",
+      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr(?c)(?c)(?c)?n",
                                      &cplist, &rev, &author, &date,
-                                     &message));
+                                     &message, &nbr_children));
       if (cplist->nelts > 0)
         {
           /* Interpret the changed-paths list. */
@@ -1248,8 +1251,18 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
         cphash = NULL;
 
       if (! (limit && ++nreceived > limit))
-        SVN_ERR(receiver(receiver_baton, cphash, rev, author, date, message,
-                         subpool));
+        {
+          svn_log_entry_t *log_entry = svn_log_entry_create(subpool);
+
+          log_entry->changed_paths = cphash;
+          log_entry->revision = rev;
+          log_entry->author = author;
+          log_entry->date = date;
+          log_entry->message = message;
+          log_entry->nbr_children = nbr_children;
+
+          SVN_ERR(receiver(receiver_baton, log_entry, subpool));
+        }
 
       apr_pool_clear(subpool);
     }

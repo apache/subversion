@@ -1730,6 +1730,9 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each target.
  *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a targets will also be returned.
+ *
  * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
  * return the error @c SVN_ERR_CLIENT_BAD_REVISION.
  *
@@ -1745,6 +1748,29 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
+ * @since New in 1.5.
+ */
+
+svn_error_t *
+svn_client_log4(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                svn_log_message_receiver2_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_log4(), but using @c svn_log_message_receiver_t
+ * instead of @c svn_log_message_receiver2_t.  Also, @a
+ * include_merged_revisions is set to @c FALSE.
+ *
+ * @deprecated Provided for compatibility with the 1.4 API.
  * @since New in 1.4.
  */
 svn_error_t *
