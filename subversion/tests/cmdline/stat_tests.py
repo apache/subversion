@@ -1511,6 +1511,48 @@ def status_dash_u_deleted_directories(sbox):
   finally:
     os.chdir(was_cwd)
 
+#----------------------------------------------------------------------
+
+# Test for issue #2737: show obstructed status for versioned directories
+# replaced by local directories.
+def status_dash_u_type_change(sbox):
+  "status -u on versioned items whose type changed"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  was_cwd = os.getcwd()
+
+  os.chdir(wc_dir)
+  try:
+    # Change the versioned file iota into an unversioned dir.
+    os.remove('iota')
+    os.mkdir('iota')
+
+    xout = ["~               1   iota\n",
+            "Status against revision:      1\n" ]
+
+    svntest.actions.run_and_verify_svn(None,
+                                       xout,
+                                       [],
+                                       "status", "-u")
+
+    # Change the versioned directory A into an unversioned dir.
+    svntest.main.safe_rmtree('A')
+    os.mkdir('A')
+
+    expected = svntest.actions.UnorderedOutput(
+           ["~               1   iota\n",
+            "~               1   A\n",
+            "Status against revision:      1\n" ])
+
+    svntest.actions.run_and_verify_svn(None,
+                                       expected,
+                                       [],
+                                       "status", "-u")
+  finally:
+    os.chdir(was_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -1545,7 +1587,8 @@ test_list = [ None,
               status_nonrecursive_update,
               status_dash_u_deleted_directories,
               status_depth_local,
-              status_depth_update
+              status_depth_update,
+              XFail(status_dash_u_type_change),
              ]
 
 if __name__ == '__main__':
