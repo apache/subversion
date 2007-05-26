@@ -2049,18 +2049,21 @@ do_merge(const char *initial_URL1,
      far MERGE_B->TARGET's immediate children.  If TARGET_WCPATH
      is an immdediate child of MERGE_B->TARGET don't even attempt to
      elide since TARGET_WCPATH can't elide to itself. */
-  target_count = svn_path_component_count(target_wcpath);
-  merge_target_count = svn_path_component_count(merge_b->target);
-
-  if (target_count - merge_target_count > 1)
+  if (!merge_b->dry_run)
     {
-      svn_stringbuf_t *elision_limit_path =
-        svn_stringbuf_create(target_wcpath, pool);
-      svn_path_remove_components(elision_limit_path,
-                                 target_count - merge_target_count - 1);
-      SVN_ERR(svn_client__elide_mergeinfo(target_wcpath,
-                                          elision_limit_path->data, entry,
-                                          adm_access, ctx, pool));
+      target_count = svn_path_component_count(target_wcpath);
+      merge_target_count = svn_path_component_count(merge_b->target);
+
+      if (target_count - merge_target_count > 1)
+        {
+          svn_stringbuf_t *elision_limit_path =
+            svn_stringbuf_create(target_wcpath, pool);
+          svn_path_remove_components(elision_limit_path,
+                                     target_count - merge_target_count - 1);
+          SVN_ERR(svn_client__elide_mergeinfo(target_wcpath,
+                                              elision_limit_path->data, entry,
+                                              adm_access, ctx, pool));
+        }
     }
 
   /* Sleep to ensure timestamp integrity. */
@@ -2368,20 +2371,22 @@ do_single_file_merge(const char *initial_URL1,
      far MERGE_B->TARGET's immediate children.  If TARGET_WCPATH
      is an immdediate child of MERGE_B->TARGET don't even attempt to
      elide since TARGET_WCPATH can't elide to itself. */
-  target_count = svn_path_component_count(target_wcpath);
-  merge_target_count = svn_path_component_count(merge_b->target);
-
-  if (target_count - merge_target_count > 1)
+  if (!merge_b->dry_run)
     {
-      svn_stringbuf_t *elision_limit_path =
-        svn_stringbuf_create(target_wcpath, pool);
-      svn_path_remove_components(elision_limit_path,
-                                 target_count - merge_target_count - 1);
-      SVN_ERR(svn_client__elide_mergeinfo(target_wcpath,
-                                          elision_limit_path->data, entry,
-                                          adm_access, ctx, pool));
-    }
+      target_count = svn_path_component_count(target_wcpath);
+      merge_target_count = svn_path_component_count(merge_b->target);
 
+      if (target_count - merge_target_count > 1)
+        {
+          svn_stringbuf_t *elision_limit_path =
+            svn_stringbuf_create(target_wcpath, pool);
+          svn_path_remove_components(elision_limit_path,
+                                     target_count - merge_target_count - 1);
+          SVN_ERR(svn_client__elide_mergeinfo(target_wcpath,
+                                              elision_limit_path->data, entry,
+                                              adm_access, ctx, pool));
+        }
+    }
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
 
@@ -2632,13 +2637,15 @@ svn_client_merge3(const char *source1,
 
       /* The merge of the actual target is complete.  See if the target's
          immediate children's mergeinfo elides to the target. */
-      SVN_ERR(elide_children(children_with_mergeinfo, target_wcpath,
-                             entry, adm_access, ctx, pool));
+      if (!dry_run)
+        SVN_ERR(elide_children(children_with_mergeinfo, target_wcpath,
+                               entry, adm_access, ctx, pool));
     }
 
   /* The final mergeinfo on TARGET_WCPATH may itself elide. */
-  SVN_ERR(svn_client__elide_mergeinfo(target_wcpath, NULL, entry,
-                                      adm_access, ctx, pool));
+  if (!dry_run)
+    SVN_ERR(svn_client__elide_mergeinfo(target_wcpath, NULL, entry,
+                                        adm_access, ctx, pool));
 
   SVN_ERR(svn_wc_adm_close(adm_access));
 
@@ -2854,13 +2861,15 @@ svn_client_merge_peg3(const char *source,
 
       /* The merge of the actual target is complete.  See if the target's
          immediate children's mergeinfo elides to the target. */
-      SVN_ERR(elide_children(children_with_mergeinfo, target_wcpath,
-                             entry, adm_access, ctx, pool));
+      if (!dry_run)
+        SVN_ERR(elide_children(children_with_mergeinfo, target_wcpath,
+                               entry, adm_access, ctx, pool));
     }
 
   /* The final mergeinfo on TARGET_WCPATH may itself elide. */
-  SVN_ERR(svn_client__elide_mergeinfo(target_wcpath, NULL, entry,
-                                      adm_access, ctx, pool));
+  if (!dry_run)
+    SVN_ERR(svn_client__elide_mergeinfo(target_wcpath, NULL, entry,
+                                        adm_access, ctx, pool));
 
   SVN_ERR(svn_wc_adm_close(adm_access));
 
