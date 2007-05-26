@@ -51,10 +51,11 @@ struct log_receiver_baton
   /* Don't print log message body nor its line count. */
   svn_boolean_t omit_log_message;
 
-  /* Stack which keeps track of merge revision nesting. */
+  /* Stack which keeps track of merge revision nesting, using 
+     struct merge_frame *'s  */
   apr_array_header_t *merge_stack;
 
-  /* Pool for permanent allocations. */
+  /* Pool for persistent allocations. */
   apr_pool_t *pool;
 };
 
@@ -68,7 +69,7 @@ struct merge_frame
   svn_revnum_t merge_rev;
 
   /* The number of outstanding children. */
-  apr_uint64_t child_count;
+  apr_uint64_t children_remaining;
 };
 
 
@@ -264,8 +265,8 @@ log_message_receiver(void *baton,
 
       /* Decrement the child_counter, and check to see if we have any more
          children.  If not, pop the stack.  */
-      frame->child_count -= 1;
-      if (frame->child_count == 0)
+      frame->children_remaining--;
+      if (frame->children_remaining == 0)
         apr_array_pop(lb->merge_stack);
     }
 
@@ -282,7 +283,7 @@ log_message_receiver(void *baton,
       struct merge_frame *frame = apr_palloc(lb->pool, sizeof(*frame));
     
       frame->merge_rev = log_entry->revision;
-      frame->child_count = log_entry->nbr_children;
+      frame->children_remaining = log_entry->nbr_children;
 
       APR_ARRAY_PUSH(lb->merge_stack, struct merge_frame *) = frame;
     }
@@ -545,7 +546,7 @@ svn_cl__log(apr_getopt_t *os,
   lb.cancel_func = ctx->cancel_func;
   lb.cancel_baton = ctx->cancel_baton;
   lb.omit_log_message = opt_state->quiet;
-  lb.merge_stack = apr_array_make(pool, 1, sizeof(svn_revnum_t));
+  lb.merge_stack = apr_array_make(pool, 1, sizeof(struct merge_frame *));
   lb.pool = pool;
   
   if (! opt_state->quiet)
