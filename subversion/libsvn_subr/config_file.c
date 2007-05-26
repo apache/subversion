@@ -971,9 +971,14 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### releasing locks on files."                                      NL
         "# no-unlock = yes"                                                  NL
         "### Set mime-types-file to a MIME type registry file, used to"      NL
-        "### provide hints to Subversion's MIME type auto-detection algorithm."
-                                                                             NL
+        "### provide hints to Subversion's MIME type auto-detection"         NL
+        "### algorithm."                                                     NL
         "# mime-types-file = /path/to/mime.types"                            NL
+        "### Set preserved-conflict-file-exts to a whitespace-delimited"     NL
+        "### list of patterns matching file extensions which should be"      NL
+        "### preserved in generated conflict file names.  By default,"       NL
+        "### conflict files use custom extensions."                          NL
+        "# preserved-conflict-file-exts = doc ppt xls od?"                   NL
         "### Set enable-auto-props to 'yes' to enable automatic properties"  NL
         "### for 'svn add' and 'svn import', it defaults to 'no'."           NL
         "### Automatic properties are defined in the section 'auto-props'."  NL
