@@ -2832,6 +2832,9 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
+ * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
+ * svn_config_t's.
+ *
  * @a target_revision is a pointer to a revision location which, after
  * successful completion of the drive of this editor, will be
  * populated with the revision to which the working copy was updated.
@@ -2872,6 +2875,7 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
                                        const char *diff3_cmd,
+                                       apr_hash_t *config,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -2880,7 +2884,10 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
 
 /**
  * Similar to svn_wc_get_update_editor3() but with the
- * allow_unver_obstructions parameter always set to false.
+ * allow_unver_obstructions parameter always set to false, config set
+ * to NULL, and @a depth set according to @a recurse: if @a recurse is
+ * true, pass @c svn_depth_infinity, if false, pass @c
+ * svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -2949,6 +2956,9 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
+ * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
+ * svn_config_t's.
+ *
  * @a target_revision is a pointer to a revision location which, after
  * successful completion of the drive of this editor, will be
  * populated with the revision to which the working copy was updated.
@@ -2976,6 +2986,7 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
                                        const char *diff3_cmd,
+                                       apr_hash_t *config,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -2983,9 +2994,10 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
 
 /**
  * Similar to svn_wc_get_switch_editor3() but with the
- * allow_unver_obstructions parameter always set to false, and
- * @a depth set according to @a recurse: if @a recurse is true, 
- * pass @c svn_depth_infinity, if false, pass @c svn_depth_files.
+ * allow_unver_obstructions parameter always set to false, config set
+ * to NULL, and @a depth set according to @a recurse: if @a recurse is
+ * true, pass @c svn_depth_infinity, if false, pass @c
+ * svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */

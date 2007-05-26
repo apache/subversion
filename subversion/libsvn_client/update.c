@@ -199,7 +199,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
-                                    diff3_cmd,
+                                    diff3_cmd, ctx->config,
                                     &update_editor, &update_edit_baton,
                                     traversal_info,
                                     pool));
