@@ -931,9 +931,9 @@ def check_merge_results(log_chain, expected_merges):
       expected = expected_merges[rev]
 
       if actual != expected:
-        raise SVNUnexpectedLogs((("Merging revisions in rev %d not correct; " +
-                                "expecting ") % rev) + str(expected) +
-                                ", found " + str(actual), log_chain)
+        raise SVNUnexpectedLogs("Merging revisions in rev %d not correct; " +
+                                "expecting %s, found %s" % 
+                                (rev, str(expected), str(actual)), log_chain)
     except IndexError:
       raise SVNUnexpectedLogs("Merged revision '%d' missing" % rev, log_chain)
 
