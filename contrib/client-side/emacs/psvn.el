@@ -5258,8 +5258,12 @@ You can send raw data to the process via \\[svn-process-send-string]."
     (setq default-directory old-process-default-dir)
     (goto-char (point-min))
     (let ((case-fold-search t))
-      (when (search-forward "repository root: " nil t)
-        (buffer-substring-no-properties (point) (svn-point-at-eol)))))))
+      (if (search-forward "repository root: " nil t)
+          (buffer-substring-no-properties (point) (svn-point-at-eol))
+        (when (search-forward "repository uuid: " nil t)
+          (message "psvn.el: Detected an old svn working copy in '%s'. Please check it out again to get a 'Repository Root' entry in the svn info output."
+                   default-directory)
+          (concat "Svn Repo UUID: " (buffer-substring-no-properties (point) (svn-point-at-eol)))))))))
 
 (defun svn-status-base-dir (&optional start-directory)
   "Find the svn root directory for the current working copy.
