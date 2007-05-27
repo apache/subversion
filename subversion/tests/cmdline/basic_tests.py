@@ -1922,8 +1922,7 @@ def basic_rm_urls_one_repo(sbox):
     'A/C'   : Item(status='D '),
     })
 
-  # Create expected disk tree for the update -- 
-  #    look!  binary contents, and a binary property!
+  # Create expected disk tree for the update
   expected_disk.remove('A/B/F', 'A/C')
 
   # Create expected status tree for the update.
