@@ -1935,6 +1935,65 @@ def basic_rm_urls_one_repo(sbox):
                                         expected_disk,
                                         expected_status)
 
+def basic_rm_urls_multi_repos(sbox):
+  "remotely remove directories from two repositories"
+
+  sbox.build()
+  repo_url = sbox.repo_url
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+
+  # create a second repository and working copy
+  other_repo_dir, other_repo_url = sbox.add_repo_path("other")
+  print other_repo_url
+  
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
+  other_wc_dir = sbox.add_wc_path("other")
+  svntest.actions.run_and_verify_svn("Unexpected error during co",
+                                     SVNAnyOutput, [], "co",
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     other_repo_url,
+                                     other_wc_dir)
+
+  # Remotely delete two x two directories in the two repositories
+  F_url = repo_url + '/A/B/F'
+  C_url = repo_url + '/A/C'
+  F2_url = other_repo_url + '/A/B/F'
+  C2_url = other_repo_url + '/A/C'
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', 'log_msg', 
+                                     F_url, C_url, F2_url, C2_url)
+
+  # Check that the two rm's to each of the repositories were handled in one
+  # revision (per repo)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F' : Item(status='D '),
+    'A/C'   : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/F', 'A/C')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev = 2)
+  expected_status.remove('A/B/F', 'A/C')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  expected_status = svntest.actions.get_virginal_state(other_wc_dir, 2)
+  expected_status.tweak(wc_rev = 2)
+  expected_status.remove('A/B/F', 'A/C')
+  expected_output = svntest.wc.State(other_wc_dir, {
+    'A/B/F' : Item(status='D '),
+    'A/C'   : Item(status='D '),
+    })
+
+  svntest.actions.run_and_verify_update(other_wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
 
 ########################################################################
 # Run the tests
@@ -1978,6 +2037,7 @@ test_list = [ None,
               delete_keep_local,
               windows_paths_in_repos,
               basic_rm_urls_one_repo,
+              XFail(basic_rm_urls_multi_repos),
              ]
 
 if __name__ == '__main__':
