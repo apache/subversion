@@ -365,6 +365,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
 
           /* We need to read the full entry of the directory from its
              own "this dir", if available. */
+          if (svn_wc__adm_missing(adm_access, this_full_path))
+            continue;
           SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access,
                                       this_full_path, iterpool));
           SVN_ERR(svn_wc_entry(&subdir_entry, this_full_path, subdir_access,
