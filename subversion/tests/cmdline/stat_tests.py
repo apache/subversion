@@ -1543,7 +1543,7 @@ def status_dash_u_type_change(sbox):
 
     expected = svntest.actions.UnorderedOutput(
            ["~               1   iota\n",
-            "~               1   A\n",
+            "~              ?    A\n",
             "Status against revision:      1\n" ])
 
     svntest.actions.run_and_verify_svn(None,
@@ -1588,7 +1588,7 @@ test_list = [ None,
               status_dash_u_deleted_directories,
               status_depth_local,
               status_depth_update,
-              XFail(status_dash_u_type_change),
+              status_dash_u_type_change,
              ]
 
 if __name__ == '__main__':
