@@ -971,6 +971,40 @@ def simple_merge_sensitive_log(sbox):
   finally:
     os.chdir(saved_cwd)
   
+def log_single_change(sbox):
+  "test log -c for a single change"
+
+  guarantee_repos_and_wc(sbox)
+  repo_url = sbox.repo_url
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
+                                                   '-c', 4, repo_url)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [4])
+
+def log_changes_range(sbox):
+  "test log -c on range of changes"
+
+  guarantee_repos_and_wc(sbox)
+  repo_url = sbox.repo_url
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-c', '2:5', repo_url)
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2, 3, 4, 5])
+
+def log_changes_list(sbox):
+  "test log -c on comma-separated list of changes"
+
+  guarantee_repos_and_wc(sbox)
+  repo_url = sbox.repo_url
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-c', '2,5,7', repo_url)
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2, 5, 7])
 
 
 ########################################################################
@@ -996,6 +1030,9 @@ test_list = [ None,
               log_verbose,
               log_parser,
               simple_merge_sensitive_log,
+              XFail(log_single_change),
+              XFail(log_changes_range),
+              XFail(log_changes_list),
              ]
 
 if __name__ == '__main__':
