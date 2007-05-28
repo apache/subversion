@@ -1341,12 +1341,12 @@ def switch_with_obstructing_local_adds(sbox):
   expected_disk.add({
     "A/B/F/gamma"     : Item("This is the file 'gamma'.\n"),
     "A/B/F/G"         : Item(),
-    "A/B/F/G/pi"      : Item("""<<<<<<< .mine
-This is the OBSTRUCTING file 'pi'.
-=======
-This is the file 'pi'.
->>>>>>> .r1
-"""),
+    "A/B/F/G/pi"      : Item("\n".join(["<<<<<<< .mine",
+                                        "This is the OBSTRUCTING file 'pi'.",
+                                        "=======",
+                                        "This is the file 'pi'.",
+                                        ">>>>>>> .r1",
+                                        ""])),
     "A/B/F/G/rho"     : Item("This is the file 'rho'.\n"),
     "A/B/F/G/tau"     : Item("This is the file 'tau'.\n"),
     "A/B/F/G/upsilon" : Item("This is the unversioned file 'upsilon'.\n"),

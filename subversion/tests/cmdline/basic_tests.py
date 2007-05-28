@@ -585,20 +585,22 @@ def basic_conflict(sbox):
   
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu', contents="""This is the file 'mu'.
-<<<<<<< .mine
-Conflicting appended text for mu
-=======
-Original appended text for mu
->>>>>>> .r2
-""")
-  expected_disk.tweak('A/D/G/rho', contents="""This is the file 'rho'.
-<<<<<<< .mine
-Conflicting appended text for rho
-=======
-Original appended text for rho
->>>>>>> .r2
-""")
+  expected_disk.tweak('A/mu',
+                      contents="\n".join(["This is the file 'mu'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for mu",
+                                          "=======",
+                                          "Original appended text for mu",
+                                          ">>>>>>> .r2",
+                                          ""]))
+  expected_disk.tweak('A/D/G/rho',
+                      contents="\n".join(["This is the file 'rho'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for rho",
+                                          "=======",
+                                          "Original appended text for rho",
+                                          ">>>>>>> .r2",
+                                          ""]))
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, '2')
