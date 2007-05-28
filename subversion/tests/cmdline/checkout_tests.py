@@ -602,19 +602,19 @@ def co_with_obstructing_local_adds(sbox):
     'A/D/H/I/J'     : Item(),
     'A/D/H/I/K'     : Item(),
     'A/D/H/I/K/xi'  : Item("This is file 'xi'\n"),
-    'A/D/H/I/K/eta' : Item("""<<<<<<< .mine
-This is WC file 'eta'
-=======
-This is REPOS file 'eta'
->>>>>>> .r2
-"""),
+    'A/D/H/I/K/eta' : Item("\n".join(["<<<<<<< .mine",
+                                      "This is WC file 'eta'",
+                                      "=======",
+                                      "This is REPOS file 'eta'",
+                                      ">>>>>>> .r2",
+                                      ""])),
     'A/D/H/I/L'     : Item(),
-    'A/D/kappa'     : Item("""<<<<<<< .mine
-This is WC file 'kappa'
-=======
-This is REPOS file 'kappa'
->>>>>>> .r2
-"""),
+    'A/D/kappa'     : Item("\n".join(["<<<<<<< .mine",
+                                      "This is WC file 'kappa'",
+                                      "=======",
+                                      "This is REPOS file 'kappa'",
+                                      ">>>>>>> .r2",
+                                      ""])),
     })
 
   # Create expected status tree for the update.  Since the obstructing

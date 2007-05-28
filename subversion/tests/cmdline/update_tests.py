@@ -542,20 +542,22 @@ def update_to_resolve_text_conflicts(sbox):
   
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu', contents= """This is the file 'mu'.
-<<<<<<< .mine
-Conflicting appended text for mu
-=======
-Original appended text for mu
->>>>>>> .r2
-""")
-  expected_disk.tweak('A/D/G/rho', contents="""This is the file 'rho'.
-<<<<<<< .mine
-Conflicting appended text for rho
-=======
-Original appended text for rho
->>>>>>> .r2
-""")
+  expected_disk.tweak('A/mu',
+                      contents="\n".join(["This is the file 'mu'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for mu",
+                                          "=======",
+                                          "Original appended text for mu",
+                                          ">>>>>>> .r2",
+                                          ""]))
+  expected_disk.tweak('A/D/G/rho',
+                      contents="\n".join(["This is the file 'rho'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for rho",
+                                          "=======",
+                                          "Original appended text for rho",
+                                          ">>>>>>> .r2",
+                                          ""]))
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
@@ -2261,13 +2263,13 @@ def update_wc_with_replaced_file(sbox):
     'iota' : Item(status='C ', wc_rev='2'),
     })
   expected_disk = svntest.main.greek_state.copy()    
-  expected_disk.tweak('iota', contents = 
-    """<<<<<<< .mine
-=======
-This is the file 'iota'.
-New line in 'iota'
->>>>>>> .r2
-""")
+  expected_disk.tweak('iota',
+                      contents="\n".join(["<<<<<<< .mine",
+                                          "=======",
+                                          "This is the file 'iota'.",
+                                          "New line in 'iota'",
+                                          ">>>>>>> .r2",
+                                          ""]))
   conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -2308,14 +2310,14 @@ New line in 'iota'
     'iota' : Item(status='C ', wc_rev='-', copied='+'),
     })
   expected_disk = svntest.main.greek_state.copy()    
-  expected_disk.tweak('iota', contents =
-    """<<<<<<< .mine
-This is the file 'mu'.
-=======
-This is the file 'iota'.
-New line in 'iota'
->>>>>>> .r2
-""")
+  expected_disk.tweak('iota',
+                      contents="\n".join(["<<<<<<< .mine",
+                                          "This is the file 'mu'.",
+                                          "=======",
+                                          "This is the file 'iota'.",
+                                          "New line in 'iota'",
+                                          ">>>>>>> .r2",
+                                          ""]))
   conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -2501,27 +2503,29 @@ def update_with_obstructing_additions(sbox):
     'A/C/nu'        : Item("This is the file 'nu'\n"),
     'A/D/H/I'       : Item(),
     'A/D/H/I/J'     : Item(props={'propname1' : 'propval-WC'}),
-    'A/D/H/I/J/eta' : Item("""<<<<<<< .mine
-This is WC file 'eta'
-=======
-This is REPOS file 'eta'
->>>>>>> .r2
-"""),
+    'A/D/H/I/J/eta' : Item("\n".join(["<<<<<<< .mine",
+                                      "This is WC file 'eta'",
+                                      "=======",
+                                      "This is REPOS file 'eta'",
+                                      ">>>>>>> .r2",
+                                      ""])),
     'A/D/H/I/K'     : Item(props={'propname1' : 'propval-SAME'}),
     'A/D/H/I/K/xi'  : Item("This is the file 'xi'\n"),
     'A/D/H/I/L'     : Item(),
-    'A/D/kappa'     : Item("""<<<<<<< .mine
-This is WC file 'kappa'
-=======
-This is REPOS file 'kappa'
->>>>>>> .r2
-""", props={'propname1' : 'propval-WC'}),
-    'A/D/epsilon'     : Item("""<<<<<<< .mine
-This is WC file 'epsilon'
-=======
-This is REPOS file 'epsilon'
->>>>>>> .r2
-""", props={'propname1' : 'propval-SAME'}),
+    'A/D/kappa'     : Item("\n".join(["<<<<<<< .mine",
+                                      "This is WC file 'kappa'",
+                                      "=======",
+                                      "This is REPOS file 'kappa'",
+                                      ">>>>>>> .r2",
+                                      ""]),
+                           props={'propname1' : 'propval-WC'}),
+    'A/D/epsilon'     : Item("\n".join(["<<<<<<< .mine",
+                                        "This is WC file 'epsilon'",
+                                        "=======",
+                                        "This is REPOS file 'epsilon'",
+                                        ">>>>>>> .r2",
+                                        ""]),
+                             props={'propname1' : 'propval-SAME'}),
     'A/D/zeta'   : Item("This is the file 'zeta'\n",
                         props={'propname1' : 'propval-WC'}),
     })
@@ -2715,20 +2719,23 @@ def update_conflicted(sbox):
     'A/mu': Item(status='CC'),
     'A/D': Item(status=' C'),
     })
-  expected_disk.tweak('iota', contents="""This is the file 'iota'.
-<<<<<<< .mine
-Conflicting appended text for iota
-=======
-Original appended text for iota
->>>>>>> .r2
-""")
-  expected_disk.tweak('A/mu', contents="""This is the file 'mu'.
-<<<<<<< .mine
-Conflicting appended text for mu
-=======
-Original appended text for mu
->>>>>>> .r2
-""", props={'prop': 'conflictval'})
+  expected_disk.tweak('iota',
+                      contents="\n".join(["This is the file 'iota'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for iota",
+                                          "=======",
+                                          "Original appended text for iota",
+                                          ">>>>>>> .r2",
+                                          ""]))
+  expected_disk.tweak('A/mu',
+                      contents="\n".join(["This is the file 'mu'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for mu",
+                                          "=======",
+                                          "Original appended text for mu",
+                                          ">>>>>>> .r2",
+                                          ""]),
+                      props={'prop': 'conflictval'})
   expected_disk.tweak('A/B/lambda', 'A/D', props={'prop': 'conflictval'})
 
   expected_status.tweak(wc_rev=2)
