@@ -1945,8 +1945,6 @@ def basic_rm_urls_multi_repos(sbox):
 
   # create a second repository and working copy
   other_repo_dir, other_repo_url = sbox.add_repo_path("other")
-  print other_repo_url
-  
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
   other_wc_dir = sbox.add_wc_path("other")
   svntest.actions.run_and_verify_svn("Unexpected error during co",
@@ -1974,7 +1972,6 @@ def basic_rm_urls_multi_repos(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/F', 'A/C')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev = 2)
   expected_status.remove('A/B/F', 'A/C')
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1983,7 +1980,6 @@ def basic_rm_urls_multi_repos(sbox):
                                         expected_status)
 
   expected_status = svntest.actions.get_virginal_state(other_wc_dir, 2)
-  expected_status.tweak(wc_rev = 2)
   expected_status.remove('A/B/F', 'A/C')
   expected_output = svntest.wc.State(other_wc_dir, {
     'A/B/F' : Item(status='D '),
