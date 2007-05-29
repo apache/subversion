@@ -587,12 +587,12 @@ def skip_test_when_no_authz_available():
   if test_area_url.startswith('file://'):
     raise Skip
 
-def write_restrictive_svnserve_conf(repo_dir):
+def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."
 
   fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
-  fp.write("[general]\nanon-access = none\nauth-access = write\n"
-           "authz-db = authz\n")
+  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
+           "authz-db = authz\n" % anon_access)
   if enable_sasl == 1:
     fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
   else:
