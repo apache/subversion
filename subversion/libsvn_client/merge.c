@@ -1823,10 +1823,8 @@ do_merge(const char *initial_URL1,
       URL2 = initial_URL2;
       path1 = initial_path1;
       path2 = initial_path2;
-      revision1 = apr_pcalloc(pool, sizeof(*revision1));
-      *revision1 = assumed_initial_revision1;
-      revision2 = apr_pcalloc(pool, sizeof(*revision2));
-      *revision2 = assumed_initial_revision2;
+      revision1 = &assumed_initial_revision1;
+      revision2 = &assumed_initial_revision2;
     }
   
 
@@ -2177,10 +2175,8 @@ do_single_file_merge(const char *initial_URL1,
       URL2 = initial_URL2;
       path1 = initial_path1;
       path2 = initial_path2;
-      revision1 = apr_pcalloc(pool, sizeof(*revision1));
-      *revision1 = assumed_initial_revision1;
-      revision2 = apr_pcalloc(pool, sizeof(*revision2));
-      *revision2 = assumed_initial_revision2;
+      revision1 = &assumed_initial_revision1;
+      revision2 = &assumed_initial_revision2;
     }
 
   /* reparent RA session to URL1. */
