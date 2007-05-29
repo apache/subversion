@@ -2309,6 +2309,8 @@ do_single_file_merge(const char *initial_URL1,
           notify->kind = svn_node_file;
           notify->content_state = text_state;
           notify->prop_state = prop_state;
+          if (notify->content_state == svn_wc_notify_state_missing)
+            notify->action = svn_wc_notify_skip;
           notification_receiver(&notify_b, notify, pool);
         }
 
