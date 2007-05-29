@@ -125,13 +125,28 @@ copyfrom_info_receiver(void *baton,
           changed_path = val;
 
           /* Consider only the path we're interested in. */
-          /* ### FIXME: Look for moved parents of target_path. */
           if (changed_path->copyfrom_path &&
               SVN_IS_VALID_REVNUM(changed_path->copyfrom_rev) &&
-              strcmp(path, copyfrom_info->target_path) == 0)
+              svn_path_is_ancestor(path, copyfrom_info->target_path))
             {
-              copyfrom_info->path = apr_pstrdup(copyfrom_info->pool,
-                                                changed_path->copyfrom_path);
+              /* Copy source found!  Determine path and note revision. */
+              if (strcmp(path, copyfrom_info->target_path) == 0)
+                {
+                  /* We have the details for a direct copy to
+                     copyfrom_info->target_path. */
+                  copyfrom_info->path =
+                    apr_pstrdup(copyfrom_info->pool,
+                                changed_path->copyfrom_path);
+                }
+              else
+                {
+                  /* We have a parent of copyfrom_info->target_path. */
+                  copyfrom_info->path =
+                    apr_pstrcat(copyfrom_info->pool,
+                                changed_path->copyfrom_path,
+                                copyfrom_info->target_path +
+                                strlen(path), NULL);
+                }
               copyfrom_info->rev = changed_path->copyfrom_rev;
               break;
             }
