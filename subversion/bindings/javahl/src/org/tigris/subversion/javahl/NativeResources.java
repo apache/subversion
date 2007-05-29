@@ -47,6 +47,8 @@ class NativeResources
      */
     public static synchronized void loadNativeLibrary()
     {
+        UnsatisfiedLinkError loadException = null;
+
         // If the user specified the fully qualified path to the
         // native library, try loading that first.
         try
@@ -62,32 +64,39 @@ class NativeResources
         }
         catch (UnsatisfiedLinkError ex)
         {
-            // ignore that error to try again
+            // Since the user explicitly specified this path, this is
+            // the best error to return if no other method succeeds.
+            loadException = ex;
         }
 
         // Try to load the library by its name.  Failing that, try to
         // load it by its old name.
-        try
-        {
-            System.loadLibrary("svnjavahl-1");
-            init();
-            return;
-        }
-        catch (UnsatisfiedLinkError ex)
+        String[] libraryNames = {"svnjavahl-1", "libsvnjavahl-1", "svnjavahl"};
+        for (int i = 0; i < libraryNames.length; i++)
         {
             try
             {
-                System.loadLibrary("libsvnjavahl-1");
+                System.loadLibrary(libraryNames[i]);
                 init();
                 return;
             }
-            catch (UnsatisfiedLinkError e)
+            catch (UnsatisfiedLinkError ex)
             {
-                System.loadLibrary("svnjavahl");
-                init();
-                return;
+                if (loadException == null)
+                {
+                    loadException = ex;
+                }
             }
         }
+
+        // Re-throw the most relevant exception.
+        if (loadException == null)
+        {
+            // This could only happen as the result of a programming error.
+            loadException = new UnsatisfiedLinkError("Unable to load JavaHL " +
+                                                     "native library");
+        }
+        throw loadException;
     }
 
     /**
