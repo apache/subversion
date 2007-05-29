@@ -507,11 +507,11 @@ def test_list_mixin(list_class=TestList, rand_elem=None):
               assignval = []
           else:
             assignval.append(1)
-        assert (extended_set_or_none(x, slice(start, end, step), assignval) == 
+        assert (extended_set_or_none(x, slice(start, end, step), assignval) ==
                 extended_set_or_none(y, slice(start, end, step), assignval))
 
       # Check that x == y in a variety of ways.
-      
+
       if len(x) != 0:
         for i4 in range(20):
           i3 = random.randrange(-2*len(x), 2*len(x))

@@ -31,7 +31,7 @@ class Txn(object):
            for example, when directories within the repository are moved
            or copied, since these copies are not new."""
 
-        self.ignore_func = ignore_func 
+        self.ignore_func = ignore_func
 
     def autoprop(self, autoprop_func):
         """Setup a callback function which automatically sets up
@@ -80,7 +80,7 @@ class Txn(object):
         parent.open(path, "DELETE", kind)
 
     def mkdir(self, path):
-        """Create a directory at PATH.""" 
+        """Create a directory at PATH."""
 
         path = self.session._relative_path(path)
 
@@ -97,7 +97,7 @@ class Txn(object):
                 message = ("Can't create directory '%s': "
                            "Path obstructed by file" % path)
             raise SubversionException(SVN_ERR_BAD_URL, message)
-            
+
         parent.open(path, "ADD", svn_node_dir)
 
         # Trigger autoprop_func on new directory adds
@@ -224,7 +224,7 @@ class Txn(object):
         self.commit_callback = svn_commit_callback2_t(_txn_commit_callback)
         (editor, editor_baton) = self.session._get_commit_editor(message,
             self.commit_callback, commit_baton, self.pool)
-        
+
         child_baton = c_void_p()
         try:
             self.root.replay(editor[0], self.session, base_rev, editor_baton)
@@ -282,7 +282,7 @@ class Txn(object):
             total_path = "%s/%s" % (total_path, path_component)
             if copyfrom_path:
                 copyfrom_path = "%s/%s" % (copyfrom_path, path_component)
- 
+
         if parent.ops.has_key(path):
             node = parent.open(path)
             if node.action == "DELETE":
@@ -341,7 +341,7 @@ class _txn_operation(object):
                                             copyfrom_path = copyfrom_path,
                                             copyfrom_rev = copyfrom_rev,
                                             local_path = local_path)
-            return self.ops[path] 
+            return self.ops[path]
 
     def replay(self, editor, session, base_rev, baton):
         subpool = Pool()

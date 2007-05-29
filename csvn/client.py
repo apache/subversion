@@ -221,7 +221,7 @@ class ClientSession(object):
         return kind.value
 
     def list(self, path, rev = SVN_INVALID_REVNUM, fields = SVN_DIRENT_ALL):
-        """List the contents of the specified directory PATH@REV. This 
+        """List the contents of the specified directory PATH@REV. This
            function returns a dictionary, which maps entry names to
            directory entries (svn_dirent_t objects).
 
