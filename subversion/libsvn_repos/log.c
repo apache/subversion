@@ -526,7 +526,7 @@ get_combined_rangelist(apr_array_header_t **rangelist,
   *rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
-  SVN_ERR(svn_fs_get_children_mergeinfo(&mergeinfo, root, paths, pool));
+  SVN_ERR(svn_fs_get_mergeinfo_for_tree(&mergeinfo, root, paths, pool));
 
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {

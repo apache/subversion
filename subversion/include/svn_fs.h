@@ -1217,7 +1217,7 @@ svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                                   svn_boolean_t include_parents,
                                   apr_pool_t *pool);
 
-/** Retrive combined mergeinfo for multiple nodes, and their children.
+/** Retrieve combined mergeinfo for multiple nodes, and their children.
  *
  * @a mergeinfo is filled with mergeinfo for each of the @a paths and
  * their children, stored as a mergeinfo hash.  It will never be @c NULL,
@@ -1232,7 +1232,7 @@ svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_fs_get_children_mergeinfo(apr_hash_t **mergeinfo,
+svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                               svn_fs_root_t *root,
                               const apr_array_header_t *paths,
                               apr_pool_t *pool);

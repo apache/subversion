@@ -35,6 +35,11 @@
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
 
+/* This is a macro implementation of svn_fs_revision_root_revision(), which
+   we cannot call from here, because it would create a circular dependency. */
+#define REV_ROOT_REV(root)       \
+  ((root)->is_txn_root? SVN_INVALID_REVNUM : (root)->rev);
+
 /* We want to cache that we saw no mergeinfo for a path as well,
    so we use a -1 converted to a pointer to represent this. */
 #define NEGATIVE_CACHE_RESULT ((void *)(-1))
@@ -669,10 +674,7 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
   if (root->is_txn_root)
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
-  /* This is an inlining of svn_fs_revision_root_revision(), which we cannot
-     call from here, because it would be a circular dependency. */
-  rev = root->is_txn_root ? SVN_INVALID_REVNUM : root->rev;
-
+  rev = REV_ROOT_REV(root);
   SVN_ERR(open_db(&db, root->fs->path, pool));
 
   *mergeinfo = apr_hash_make(pool);
@@ -703,10 +705,8 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
   return SVN_NO_ERROR;
 }
 
-/* Get all the mergeinfo for all the children for each path.  Return a hash of
-   mergeinfo hashes, keyed on the input paths.  */
 svn_error_t *
-svn_fs_mergeinfo__get_children_mergeinfo(apr_hash_t **mergeinfo,
+svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                                          svn_fs_root_t *root,
                                          const apr_array_header_t *paths,
                                          apr_pool_t *pool)
@@ -719,10 +719,7 @@ svn_fs_mergeinfo__get_children_mergeinfo(apr_hash_t **mergeinfo,
   SVN_ERR(svn_fs_mergeinfo__get_mergeinfo(&mergeinfo_str, root, paths, TRUE,
                                           pool));
 
-  /* This is an inlining of svn_fs_revision_root_revision(), which we cannot
-     call from here, because it would be a circular dependency. */
-  rev = root->is_txn_root ? SVN_INVALID_REVNUM : root->rev;
-
+  rev = REV_ROOT_REV(root);
   SVN_ERR(open_db(&db, root->fs->path, pool));
 
   *mergeinfo = apr_hash_make(pool);
@@ -730,12 +727,12 @@ svn_fs_mergeinfo__get_children_mergeinfo(apr_hash_t **mergeinfo,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      const char *mergeinfo_path_str = apr_hash_get(*mergeinfo, path,
-                                                           APR_HASH_KEY_STRING);
+      const char *path_mergeinfo_str = apr_hash_get(*mergeinfo, path,
+                                                    APR_HASH_KEY_STRING);
       apr_hash_t *path_mergeinfo;
      
-      if (mergeinfo_path_str)
-        SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, mergeinfo_path_str, pool));
+      if (path_mergeinfo_str)
+        SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, path_mergeinfo_str, pool));
       else
         path_mergeinfo = apr_hash_make(pool);
 
