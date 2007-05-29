@@ -194,8 +194,8 @@ void SVNClient::setPrompt(Prompter *prompter)
 void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             Revision &revisionStart,
                             Revision &revisionEnd, bool stopOnCopy,
-                            bool discoverPaths, long limit,
-                            LogMessageCallback *callback)
+                            bool discoverPaths, bool includeMergedRevisions,
+                            long limit, LogMessageCallback *callback)
 {
     Pool requestPool;
 
@@ -208,13 +208,14 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     Targets target(path);
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
-    SVN_JNI_ERR(svn_client_log3(targets,
+    SVN_JNI_ERR(svn_client_log4(targets,
                                 pegRevision.revision(),
                                 revisionStart.revision(),
                                 revisionEnd.revision(),
                                 limit,
                                 discoverPaths,
                                 stopOnCopy,
+                                includeMergedRevisions,
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }

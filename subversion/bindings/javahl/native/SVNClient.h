@@ -127,7 +127,7 @@ class SVNClient :public SVNBase
   void logMessages(const char *path, Revision &pegRevision,
                    Revision &revisionStart,
                    Revision &revisionEnd, bool stopOnCopy,
-                   bool discoverPaths, long limit,
+                   bool discoverPaths, bool includeMergedRevisions, long limit,
                    LogMessageCallback *callback);
   void setPrompt(Prompter *prompter);
   void password(const char *pi_password);

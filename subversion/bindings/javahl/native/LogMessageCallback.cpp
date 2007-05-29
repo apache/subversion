@@ -44,34 +44,21 @@ LogMessageCallback::~LogMessageCallback()
 }
 
 svn_error_t *
-LogMessageCallback::callback(void *baton, apr_hash_t *changed_paths,
-                             svn_revnum_t rev, const char *author,
-                             const char *date, const char *msg,
+LogMessageCallback::callback(void *baton,
+                             svn_log_entry_t *log_entry,
                              apr_pool_t *pool)
 {
   if (baton)
-    return ((LogMessageCallback *)baton)->singleMessage(changed_paths, rev,
-                                                        author, date, msg,
-                                                        pool);
+    return ((LogMessageCallback *)baton)->singleMessage(log_entry, pool);
 
   return SVN_NO_ERROR;
 }
 
 /**
  * Callback called for a single log message
- * @param changed_paths a hash containing the paths that were changed in
- *                      the commit
- * @param revision      the revision number for the commit
- * @param author        the author of the commit
- * @param date          the date of the commit
- * @param msg           the log message for the commit
- * @param pool          memory pool for the use of this function
  */
 svn_error_t *
-LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
-                                  svn_revnum_t rev,
-                                  const char *author, const char *date,
-                                  const char *msg, apr_pool_t *pool)
+LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -112,21 +99,21 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
     }
 
   apr_time_t commit_time = -1;
-  if (date != NULL && *date != '\0')
-    SVN_ERR(svn_time_from_cstring(&commit_time, date, pool));
+  if (log_entry->date != NULL && *log_entry->date != '\0')
+    SVN_ERR(svn_time_from_cstring(&commit_time, log_entry->date, pool));
 
-  jstring jauthor = JNIUtil::makeJString(author);
+  jstring jauthor = JNIUtil::makeJString(log_entry->author);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
   jobjectArray jChangedPaths = NULL;
-  if (changed_paths)
+  if (log_entry->changed_paths)
     {
       apr_array_header_t *sorted_paths;
       int i;
 
       /* Get an array of sorted hash keys. */
-      sorted_paths = svn_sort__hash(changed_paths,
+      sorted_paths = svn_sort__hash(log_entry->changed_paths,
                                     svn_sort_compare_items_as_paths,
                                     pool);
 
@@ -141,7 +128,7 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
           const char *path = (const char *)item->key;
           svn_log_changed_path_t *log_item
             = (svn_log_changed_path_t *)
-            apr_hash_get(changed_paths, item->key, item->klen);
+            apr_hash_get(log_entry->changed_paths, item->key, item->klen);
 
           jstring jpath = JNIUtil::makeJString(path);
           if (JNIUtil::isJavaExceptionThrown())
@@ -178,14 +165,14 @@ LogMessageCallback::singleMessage(apr_hash_t *changed_paths,
         }
     }
 
-  jstring jmessage = JNIUtil::makeJString(msg);
+  jstring jmessage = JNIUtil::makeJString(log_entry->message);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
   env->CallVoidMethod(m_callback,
                       sm_mid,
                       jChangedPaths,
-                      (jlong)rev,
+                      (jlong)log_entry->revision,
                       jauthor,
                       (jlong)commit_time,
                       jmessage);
