@@ -818,12 +818,12 @@ svn_fs_get_mergeinfo(apr_hash_t **minfohash,
 }
 
 svn_error_t *
-svn_fs_get_children_mergeinfo(apr_hash_t **mergeinfo,
+svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                               svn_fs_root_t *root,
                               const apr_array_header_t *paths,
                               apr_pool_t *pool)
 {
-  return root->vtable->get_children_mergeinfo(mergeinfo, root, paths,
+  return root->vtable->get_mergeinfo_for_tree(mergeinfo, root, paths,
                                               pool);
 }
 
