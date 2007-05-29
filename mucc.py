@@ -8,7 +8,7 @@
 
 import os
 from csvn.core import *
-from csvn.client import ClientSession, ClientURI, User
+from csvn.client import RemoteRepository, RepositoryURI, User
 from optparse import OptionParser
 
 usage = """python mucc.py [OPTION]... [ACTION]...
@@ -55,7 +55,7 @@ actions = []
 pool = Pool()
 action = None
 if root_url:
-    anchor = ClientURI(root_url)
+    anchor = RepositoryURI(root_url)
 else:
     anchor = None
 states = None
@@ -84,7 +84,7 @@ for arg in args:
         elif state == "file":
             action.append(arg)
         elif state == "url":
-            arg = ClientURI(arg)
+            arg = RepositoryURI(arg)
             if anchor:
                 arg = anchor.join(arg)
             action.append(arg)
@@ -102,7 +102,7 @@ for arg in args:
             else:
                 ancestor = arg
 
-session = ClientSession(ancestor, user=User(username=options.username))
+session = RemoteRepository(ancestor, user=User(username=options.username))
 txn = session.txn()
 
 # Carry out the transaction

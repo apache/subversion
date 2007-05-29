@@ -38,7 +38,7 @@ else:
     start_rev = 1
     end_rev = "HEAD"
 
-session = ClientSession(repos_url, user=User(options.username))
+session = RepositorySession(repos_url, user=User(options.username))
 
 if end_rev == "HEAD":
     end_rev = session.latest_revnum()

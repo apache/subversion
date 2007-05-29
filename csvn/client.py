@@ -125,14 +125,14 @@ class User(object):
             svn_cancel_func_t(), NULL, self.pool)
 
 
-class ClientURI(object):
+class RepositoryURI(object):
     """A URI to an object in a Subversion repository, stored internally in
        encoded format.
 
        When you supply URIs to a RemoteClient, or a transaction"""
 
     def __init__(self, uri, encoded=True):
-        """Create a ClientURI object from a URI. If encoded=True, the
+        """Create a RepositoryURI object from a URI. If encoded=True, the
            input string may be URI-encoded."""
         pool = Pool()
         if not encoded:
@@ -143,12 +143,12 @@ class ClientURI(object):
         """Join this URI and the specified relative URI,
            adding a slash if necessary."""
         pool = Pool()
-        return ClientURI(svn_path_join(self, uri, pool))
+        return RepositoryURI(svn_path_join(self, uri, pool))
 
     def dirname(self):
         """Get the parent directory of this URI"""
         pool = Pool()
-        return ClientURI(svn_path_dirname(self, pool))
+        return RepositoryURI(svn_path_dirname(self, pool))
 
     def relative_path(self, uri, encoded=True):
         """Convert the supplied URI to a decoded path, relative to me."""
@@ -161,13 +161,13 @@ class ClientURI(object):
     def longest_ancestor(self, uri):
         """Get the longest ancestor of this URI and another URI"""
         pool = Pool()
-        return ClientURI(svn_path_get_longest_ancestor(self, uri, pool))
+        return RepositoryURI(svn_path_get_longest_ancestor(self, uri, pool))
 
     def __str__(self):
         """Return the URI as a string"""
         return self._as_parameter_
 
-class ClientSession(object):
+class RemoteRepository(object):
 
     def __init__(self, url, user=None):
         """Open a new session to URL with the specified USER.
@@ -175,7 +175,7 @@ class ClientSession(object):
 
         self.pool = Pool()
         self.iterpool = Pool()
-        self.url = ClientURI(url)
+        self.url = RepositoryURI(url)
         self.user = user
 
         self.client = POINTER(svn_client_ctx_t)()
@@ -343,15 +343,15 @@ class ClientSession(object):
     # Private. Convert a repository-relative copyfrom path into a proper
     # copyfrom URI
     def _abs_copyfrom_path(self, path):
-        return self.url.join(ClientURI(path, False))
+        return self.url.join(RepositoryURI(path, False))
 
-class LocalClient(object):
+class LocalRepository(object):
     """A client which accesses the repository directly. This class
        may allow you to perform some administrative actions which
        cannot be performed remotely (e.g. create repositories,
        dump repositories, etc.)
 
-       Unlike ClientSession, the functions in this class do not
+       Unlike RemoteRepository, the functions in this class do not
        accept URIs, and instead only accept local filesystem
        paths.
 
