@@ -29,6 +29,7 @@ from svntest.main import write_authz_file
 # (abbreviation)
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip
 
 ######################################################################
 # Tests
@@ -808,6 +809,39 @@ def authz_locking(sbox):
                                         None, None,
                                         mu_path)
   
+# test for issue #2712: if anon-access == read, svnserve should also check
+# authz to determine whether a checkout/update is actually allowed for
+# anonymous users, and, if not, attempt authentication.
+def authz_svnserve_anon_access_read(sbox):
+  "authz issue #2712"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build(create_wc = False)
+  B_path = os.path.join(sbox.wc_dir, 'A', 'B')
+  B_url = sbox.repo_url + '/A/B'
+  D_path = os.path.join(sbox.wc_dir, 'A', 'D')
+  D_url = sbox.repo_url + '/A/D'
+
+  # We want a svnserve.conf with anon-access = read.
+  write_restrictive_svnserve_conf(sbox.repo_dir, "read")
+
+  # Give jrandom read access to /A/B.  Anonymous users can only
+  # access /A/D.
+  write_authz_file(sbox, { "/A/B" : "jrandom = r",
+                           "/A/D" : "* = r" })
+
+  # Perform a checkout of /A/B, expecting to see no errors.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     B_url, B_path)
+
+  # Anonymous users should be able to check out /A/D.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     D_url, D_path)
 
 ########################################################################
 # Run the tests
@@ -826,6 +860,8 @@ test_list = [ None,
               authz_aliases,
               authz_validate,
               authz_locking,
+              Skip(authz_svnserve_anon_access_read,
+                   svntest.main.is_ra_type_dav()),
              ]
 
 if __name__ == '__main__':
