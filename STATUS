@@ -115,15 +115,3 @@ Veto-blocked changes:
      -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
 
 Approved changes:
-
-  * r25095, -099, -104, -105, -107
-    Fix security flaw in 'svn prop*' commands [CVE-2007-2448]
-    Branch: 1.4.x-r25095 (-r25119:HEAD)
-    Justification:
-      Security flaw (albeit not one we consider a serious one).
-    Notes:
-      This bug was fixed in the process of adding a new API, but we don't
-      want to backport the new API stuff.  So review the backport branch
-      changes, not the original commits.
-    Votes:
-      +1: cmpilato, dlr, hwright
