@@ -125,7 +125,10 @@ def commit_file_keep_lock(sbox):
 
   # make a change and commit it, holding lock
   svntest.main.file_append(file_path, "Tweak!\n")
-  svntest.main.run_svn(None, 'commit', '-m', '', '--no-unlock', file_path)
+  svntest.main.run_svn(None, 'commit', '-m', '', '--no-unlock',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       file_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
@@ -151,7 +154,10 @@ def commit_file_unlock(sbox):
 
   # make a change and commit it, allowing lock to be released
   svntest.main.file_append(file_path, "Tweak!\n")
-  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+  svntest.main.run_svn(None, 'commit', '-m', '',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       file_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
@@ -436,7 +442,10 @@ def update_while_needing_lock(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', iota_path)
   svntest.main.file_append(iota_path, "This line added in r2.\n")
-  svntest.main.run_svn(None, 'commit', '-m', '', iota_path) # auto-unlocks
+  svntest.main.run_svn(None, 'commit',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', iota_path) # auto-unlocks
 
   # Backdate to r2.
   svntest.main.run_svn(None, 'update', '-r2', iota_path)
