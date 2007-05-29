@@ -1050,29 +1050,13 @@ get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
                                   pool));
 
   /* We may get an entry with abrieviated information from TARGET_WCPATH's
-     parent.  This limited entry does not have a URL and probably means
-     TARGET_WCPATH is missing or that the access for TARGET_WCPATH is not in
-     ADM_ACCESS's baton set (i.e. ADM_ACCESS was opened for TARGET_WCPATH's
-     parent with lock depth == 0).  Either way we can't get accurate merge
-     info for TARGET_WCPATH. */
+     parent if TARGET_WCPATH is missing.  These limited entries do not have
+     a URL and without that we cannot get accurate merge info for
+     TARGET_WCPATH. */
   if (! (*entry)->url)
-    {
-      svn_node_kind_t wc_kind;
-
-      SVN_ERR(svn_io_check_path(target_wcpath, &wc_kind, pool));
-      if (wc_kind == svn_node_none)
-        {
-          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                   _("Path '%s' is missing"),
-                                   svn_path_local_style(target_wcpath, pool));
-        }
-      else
-        {
-          return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL, 
-                                   _("Cannot find a URL for '%s'"),
-                                   svn_path_local_style(target_wcpath, pool));
-        }
-    }
+    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL, 
+                             _("Entry '%s' has no URL"),
+                             svn_path_local_style(target_wcpath, pool));
 
   /* ### FIXME: dionisos sez: "We can have schedule 'normal' files
      ### with a copied parameter of TRUE and a revision number of
