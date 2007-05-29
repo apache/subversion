@@ -38,14 +38,12 @@ class LogMessageCallback
   LogMessageCallback(jobject jcallback);
   ~LogMessageCallback();
 
-  static svn_error_t *callback(void *baton, apr_hash_t *changed_paths,
-                               svn_revnum_t rev, const char *author,
-                               const char *date, const char *msg,
+  static svn_error_t *callback(void *baton,
+                               svn_log_entry_t *log_entry,
                                apr_pool_t *pool);
  protected:
-  svn_error_t *singleMessage(apr_hash_t *changed_paths, svn_revnum_t rev,
-                             const char *author, const char *date,
-                             const char *msg, apr_pool_t *pool);
+  svn_error_t *singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool);
+
  private:
   /**
    * This a local reference to the Java object.

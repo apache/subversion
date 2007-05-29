@@ -258,6 +258,8 @@ public interface SVNClientInterface
      * @param stopOnCopy    do not continue on copy operations
      * @param discoverPath  returns the paths of the changed items in the
      *                      returned objects
+     * @param includeMergedRevisions include log messages for revisions which
+     *                               were merged.
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @param callback      the object to receive the log messages
@@ -266,8 +268,8 @@ public interface SVNClientInterface
     void logMessages(String path, Revision pegRevision,
                      Revision revisionStart,
                      Revision revisionEnd, boolean stopOnCopy,
-                     boolean discoverPath, long limit,
-                     LogMessageCallback callback)
+                     boolean discoverPath, boolean includeMergedRevisions,
+                     long limit, LogMessageCallback callback)
             throws ClientException;
 
     /**
