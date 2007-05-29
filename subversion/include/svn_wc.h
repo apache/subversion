@@ -2049,9 +2049,6 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * function, then when the edit drive is completed, @a *edit_revision
  * will contain the revision delivered via that interface.
  *
- * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
- * svn_config_t's.
- *
  * Assuming the target is a directory, then:
  * 
  *   - If @a get_all is false, then only locally-modified entries will be
@@ -2073,6 +2070,10 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * If @a no_ignore is set, statuses that would typically be ignored
  * will instead be reported.
  *
+ * @a ignore_patterns is an array of file patterns matching
+ * unversioned files to ignore for the purposes of status reporting,
+ * or @c NULL if the default set of ignorable file patterns should be used.
+ *
  * If @a cancel_func is non-null, call it with @a cancel_baton while building 
  * the @a statushash to determine if the client has cancelled the operation.
  *
@@ -2091,10 +2092,10 @@ svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
                                        svn_revnum_t *edit_revision,
                                        svn_wc_adm_access_t *anchor,
                                        const char *target,
-                                       apr_hash_t *config,
                                        svn_depth_t depth,
                                        svn_boolean_t get_all,
                                        svn_boolean_t no_ignore,
+                                       apr_array_header_t *ignore_patterns,
                                        svn_wc_status_func2_t status_func,
                                        void *status_baton,
                                        svn_cancel_func_t cancel_func,
@@ -2103,9 +2104,11 @@ svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
                                        apr_pool_t *pool);
 
 /*
- * Like svn_wc_get_status_editor3(), but with @a recurse instead of @a depth.
- * If @a recurse is true, behave as if for @c svn_depth_infinity; else
- * if @a recurse is false, behave as if for @c svn_depth_files.
+ * Like svn_wc_get_status_editor3(), but with @ignore_patterns
+ * provided from the corresponding value in @a config, and @a recurse
+ * instead of @a depth.  If @a recurse is true, behave as if for @c
+ * svn_depth_infinity; else if @a recurse is false, behave as if for
+ * @c svn_depth_files.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.

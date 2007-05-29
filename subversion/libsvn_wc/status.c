@@ -72,9 +72,6 @@ struct edit_baton
      well as in each statushash entry. */
   svn_revnum_t *target_revision;
 
-  /* Subversion configuration hash. */
-  apr_hash_t *config;
-
   /* Status function/baton. */
   svn_wc_status_func2_t status_func;
   void *status_baton;
@@ -794,7 +791,7 @@ get_dir_status(struct edit_baton *eb,
                const svn_wc_entry_t *parent_entry,
                svn_wc_adm_access_t *adm_access,
                const char *entry,
-               apr_array_header_t *ignores,
+               apr_array_header_t *ignore_patterns,
                svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
@@ -886,15 +883,15 @@ get_dir_status(struct edit_baton *eb,
                                    entry_entry,
                                    dirent_p ? dirent_p->kind : svn_node_none,
                                    dirent_p ? dirent_p->special : FALSE,
-                                   ignores, depth, get_all, 
+                                   ignore_patterns, depth, get_all, 
                                    no_ignore, status_func, status_baton, 
                                    cancel_func, cancel_baton, subpool));
         }
       /* Otherwise, if it exists, send its unversioned status. */
       else if (dirent_p)
         {
-          if (ignores && ! patterns)
-            SVN_ERR(collect_ignore_patterns(&patterns, ignores, 
+          if (ignore_patterns && ! patterns)
+            SVN_ERR(collect_ignore_patterns(&patterns, ignore_patterns, 
                                             adm_access, subpool));
           SVN_ERR(send_unversioned_item(entry, dirent_p->kind,
                                         dirent_p->special, adm_access, 
@@ -943,8 +940,8 @@ get_dir_status(struct edit_baton *eb,
 
       svn_pool_clear(iterpool);
 
-      if (ignores && ! patterns)
-        SVN_ERR(collect_ignore_patterns(&patterns, ignores, 
+      if (ignore_patterns && ! patterns)
+        SVN_ERR(collect_ignore_patterns(&patterns, ignore_patterns, 
                                         adm_access, subpool));
 
       /* Make an unversioned status item for KEY, and put it into our
@@ -987,7 +984,7 @@ get_dir_status(struct edit_baton *eb,
       SVN_ERR(handle_dir_entry(eb, adm_access, key, dir_entry, val,
                                dirent_p ? dirent_p->kind : svn_node_none,
                                dirent_p ? dirent_p->special : FALSE,
-                               ignores, 
+                               ignore_patterns, 
                                depth == svn_depth_infinity ? depth 
                                                            : svn_depth_empty,
                                get_all, no_ignore, 
@@ -2040,10 +2037,10 @@ svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
                           svn_revnum_t *edit_revision,
                           svn_wc_adm_access_t *anchor,
                           const char *target,
-                          apr_hash_t *config,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
+                          apr_array_header_t *ignore_patterns,
                           svn_wc_status_func2_t status_func,
                           void *status_baton,
                           svn_cancel_func_t cancel_func,
@@ -2059,7 +2056,6 @@ svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
   eb->default_depth     = depth;
   eb->target_revision   = edit_revision;
   eb->adm_access        = anchor;
-  eb->config            = config;
   eb->get_all           = get_all;
   eb->no_ignore         = no_ignore;
   eb->status_func       = status_func;
@@ -2074,12 +2070,22 @@ svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
   eb->repos_locks       = NULL;
   eb->repos_root        = NULL;
 
+  /* Use the caller-provided ignore patterns if provided; the build-time
+     configured defaults otherwise. */
+  if (ignore_patterns)
+    {
+      eb->ignores = ignore_patterns;
+    }
+  else
+    {
+      eb->ignores = apr_array_make(pool, 16, sizeof(const char *));
+      svn_cstring_split_append(eb->ignores, SVN_CONFIG_DEFAULT_GLOBAL_IGNORES, 
+                               "\n\r\t\v ", FALSE, pool);
+    }
+
   /* The edit baton's status structure maps to PATH, and the editor
      have to be aware of whether that is the anchor or the target. */
   SVN_ERR(svn_wc_status2(&(eb->anchor_status), eb->anchor, anchor, pool));
-
-  /* Get the set of default ignores. */
-  SVN_ERR(svn_wc_get_default_ignores(&(eb->ignores), eb->config, pool));
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -2126,16 +2132,18 @@ svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
+  apr_array_header_t *ignores;
+  SVN_ERR(svn_wc_get_default_ignores(&ignores, config, pool));
   return svn_wc_get_status_editor3(editor,
                                    edit_baton,
                                    set_locks_baton,
                                    edit_revision,
                                    anchor,
                                    target,
-                                   config,
                                    SVN_DEPTH_FROM_RECURSE(recurse),
                                    get_all,
                                    no_ignore,
+                                   ignores,
                                    status_func,
                                    status_baton,
                                    cancel_func,
@@ -2181,14 +2189,16 @@ svn_wc_get_status_editor(const svn_delta_editor_t **editor,
                          apr_pool_t *pool)
 {
   struct old_status_func_cb_baton *b = apr_pcalloc(pool, sizeof(*b));
+  apr_array_header_t *ignores;
   b->original_func = status_func;
   b->original_baton = status_baton;
-
+  SVN_ERR(svn_wc_get_default_ignores(&ignores, config, pool));
   return svn_wc_get_status_editor3(editor, edit_baton, NULL, edit_revision,
-                                   anchor, target, config,
+                                   anchor, target, 
                                    SVN_DEPTH_FROM_RECURSE(recurse),
-                                   get_all, no_ignore, old_status_func_cb,
-                                   b, cancel_func, cancel_baton,
+                                   get_all, no_ignore, ignores,
+                                   old_status_func_cb, b, 
+                                   cancel_func, cancel_baton,
                                    traversal_info, pool);
 }
 
@@ -2206,6 +2216,7 @@ svn_wc_status_set_repos_locks(void *edit_baton,
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc_get_default_ignores(apr_array_header_t **patterns,

@@ -220,6 +220,7 @@ svn_client_status3(svn_revnum_t *result_rev,
   void *edit_baton, *set_locks_baton;
   const svn_wc_entry_t *entry = NULL;
   struct status_baton sb;
+  apr_array_header_t *ignores;
   svn_error_t *err;
 
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
@@ -260,9 +261,10 @@ svn_client_status3(svn_revnum_t *result_rev,
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
+  SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
   SVN_ERR(svn_wc_get_status_editor3(&editor, &edit_baton, &set_locks_baton,
                                     &edit_revision, anchor_access, target,
-                                    ctx->config, depth, get_all, no_ignore,
+                                    depth, get_all, no_ignore, ignores,
                                     tweak_status, &sb, ctx->cancel_func,
                                     ctx->cancel_baton, traversal_info,
                                     pool));

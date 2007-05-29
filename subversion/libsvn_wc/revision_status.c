@@ -86,7 +86,6 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_revnum_t edit_revision;
-
   svn_wc_revision_status_t *result = apr_palloc(pool, sizeof(**result_p));
   *result_p = result;
 
@@ -110,10 +109,10 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
   SVN_ERR(svn_wc_get_status_editor3(&editor, &edit_baton, NULL,
                                     &edit_revision, anchor_access, target,
-                                    NULL  /* config */,
                                     svn_depth_infinity,
                                     TRUE  /* get_all */,
                                     FALSE /* no_ignore */,
+                                    NULL  /* ignore_patterns */,
                                     analyze_status, &sb,
                                     cancel_func, cancel_baton,
                                     NULL  /* traversal_info */,
