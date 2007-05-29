@@ -2832,8 +2832,13 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
- * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
- * svn_config_t's.
+ * @a preserved_exts is an array of filename patterns which, when
+ * matched against the extensions of versioned files, determine for
+ * which such files any related generated conflict files will preserve
+ * the original file's extension as their own.  If a file's extension
+ * does not match any of the patterns in @a preserved_exts (which is
+ * certainly the case if @a preserved_exts is @c NULL or empty),
+ * generated conflict files will carry Subversion's custom extensions.
  *
  * @a target_revision is a pointer to a revision location which, after
  * successful completion of the drive of this editor, will be
@@ -2875,7 +2880,7 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
                                        const char *diff3_cmd,
-                                       apr_hash_t *config,
+                                       apr_array_header_t *preserved_exts,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -2884,10 +2889,10 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
 
 /**
  * Similar to svn_wc_get_update_editor3() but with the
- * allow_unver_obstructions parameter always set to false, config set
- * to NULL, and @a depth set according to @a recurse: if @a recurse is
- * true, pass @c svn_depth_infinity, if false, pass @c
- * svn_depth_files.
+ * @a allow_unver_obstructions parameter always set to false, 
+ * @a preserved_exts set to NULL, and @a depth set according to @a
+ * recurse: if @a recurse is true, pass @c svn_depth_infinity, if
+ * false, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -2956,8 +2961,13 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
- * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
- * svn_config_t's.
+ * @a preserved_exts is an array of filename patterns which, when
+ * matched against the extensions of versioned files, determine for
+ * which such files any related generated conflict files will preserve
+ * the original file's extension as their own.  If a file's extension
+ * does not match any of the patterns in @a preserved_exts (which is
+ * certainly the case if @a preserved_exts is @c NULL or empty),
+ * generated conflict files will carry Subversion's custom extensions.
  *
  * @a target_revision is a pointer to a revision location which, after
  * successful completion of the drive of this editor, will be
@@ -2986,7 +2996,7 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
                                        const char *diff3_cmd,
-                                       apr_hash_t *config,
+                                       apr_array_header_t *preserved_exts,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -2994,10 +3004,10 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
 
 /**
  * Similar to svn_wc_get_switch_editor3() but with the
- * allow_unver_obstructions parameter always set to false, config set
- * to NULL, and @a depth set according to @a recurse: if @a recurse is
- * true, pass @c svn_depth_infinity, if false, pass @c
- * svn_depth_files.
+ * @a allow_unver_obstructions parameter always set to false,
+ * @a preserved_exts set to NULL, and @a depth set according to @a
+ * recurse: if @a recurse is true, pass @c svn_depth_infinity, if
+ * false, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */

@@ -76,6 +76,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   svn_wc_adm_access_t *path_adm_access;
   apr_array_header_t *children_with_mergeinfo;
   apr_hash_t *children_with_mergeinfo_hash;
+  const char *preserved_exts_str;
+  apr_array_header_t *preserved_exts;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config, 
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -171,6 +173,14 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                               SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
 
+  /* See which files the user wants to preserve the extension of when
+     conflict files are made. */
+  svn_config_get(cfg, &preserved_exts_str, SVN_CONFIG_SECTION_MISCELLANY,
+                 SVN_CONFIG_OPTION_PRESERVED_CF_EXTS, "");
+  preserved_exts = *preserved_exts_str 
+    ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, pool)
+    : NULL;
+
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, entry->url,
                                                anchor, adm_access,
@@ -199,7 +209,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
-                                    diff3_cmd, ctx->config,
+                                    diff3_cmd, preserved_exts,
                                     &update_editor, &update_edit_baton,
                                     traversal_info,
                                     pool));
