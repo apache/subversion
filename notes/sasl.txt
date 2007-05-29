@@ -143,6 +143,9 @@ Contents
 
   All 1.x clients, with or without Cyrus SASL support, will be able to
   authenticate against all 1.x servers that do not have Cyrus SASL enabled.
+  Note that the CRAM-MD5 and ANONYMOUS mechanisms are actually built into
+  Subversion, so you'll be able to use them even if the corresponding Cyrus
+  SASL plugins are missing.
   
   1.x clients without Cyrus SASL support will be able to authenticate against
   1.5+ servers with SASL enabled, provided the server allows the CRAM-MD5
