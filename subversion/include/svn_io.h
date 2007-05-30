@@ -1051,69 +1051,69 @@ svn_error_t *svn_io_detect_mimetype(const char **mimetype,
                                     apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_open(), which see.  @a fname is utf8-encoded. */
+/** Wrapper for apr_file_open().  @a fname is utf8-encoded. */
 svn_error_t *
 svn_io_file_open(apr_file_t **new_file, const char *fname,
                  apr_int32_t flag, apr_fileperms_t perm,
                  apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_close(), which see. */
+/** Wrapper for apr_file_close(). */
 svn_error_t *
 svn_io_file_close(apr_file_t *file, apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_getc(), which see. */
+/** Wrapper for apr_file_getc(). */
 svn_error_t *
 svn_io_file_getc(char *ch, apr_file_t *file, apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_info_get(), which see. */
+/** Wrapper for apr_file_info_get(). */
 svn_error_t *
 svn_io_file_info_get(apr_finfo_t *finfo, apr_int32_t wanted, 
                      apr_file_t *file, apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_read(), which see. */
+/** Wrapper for apr_file_read(). */
 svn_error_t *
 svn_io_file_read(apr_file_t *file, void *buf, 
                  apr_size_t *nbytes, apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_read_full(), which see. */
+/** Wrapper for apr_file_read_full(). */
 svn_error_t *
 svn_io_file_read_full(apr_file_t *file, void *buf, 
                       apr_size_t nbytes, apr_size_t *bytes_read,
                       apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_seek(), which see. */
+/** Wrapper for apr_file_seek(). */
 svn_error_t *
 svn_io_file_seek(apr_file_t *file, apr_seek_where_t where, 
                  apr_off_t *offset, apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_write(), which see. */
+/** Wrapper for apr_file_write(). */
 svn_error_t *
 svn_io_file_write(apr_file_t *file, const void *buf, 
                   apr_size_t *nbytes, apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_write_full(), which see. */
+/** Wrapper for apr_file_write_full(). */
 svn_error_t *
 svn_io_file_write_full(apr_file_t *file, const void *buf, 
                        apr_size_t nbytes, apr_size_t *bytes_written,
                        apr_pool_t *pool);
 
 
-/** Wrapper for apr_stat(), which see.  @a fname is utf8-encoded. */
+/** Wrapper for apr_stat().  @a fname is utf8-encoded. */
 svn_error_t *
 svn_io_stat(apr_finfo_t *finfo, const char *fname,
             apr_int32_t wanted, apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_rename(), which see.  @a from_path and @a to_path
- * are utf8-encoded.
+/** Wrapper for apr_file_rename().  @a from_path and @a to_path are
+ * utf8-encoded.
  */
 svn_error_t *
 svn_io_file_rename(const char *from_path, const char *to_path,
@@ -1133,7 +1133,7 @@ svn_io_file_move(const char *from_path, const char *to_path,
                  apr_pool_t *pool);
 
 
-/** Wrapper for apr_dir_make(), which see.  @a path is utf8-encoded. */
+/** Wrapper for apr_dir_make().  @a path is utf8-encoded. */
 svn_error_t *
 svn_io_dir_make(const char *path, apr_fileperms_t perm, apr_pool_t *pool);
 
@@ -1157,12 +1157,12 @@ svn_error_t *
 svn_io_dir_make_sgid(const char *path, apr_fileperms_t perm,
                      apr_pool_t *pool);
 
-/** Wrapper for apr_dir_open(), which see.  @a dirname is utf8-encoded. */
+/** Wrapper for apr_dir_open().  @a dirname is utf8-encoded. */
 svn_error_t *
 svn_io_dir_open(apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool);
 
 
-/** Wrapper for apr_dir_remove(), which see.  @a dirname is utf8-encoded.
+/** Wrapper for apr_dir_remove().  @a dirname is utf8-encoded.
  * @note This function has this name to avoid confusion with
  * svn_io_remove_dir2(), which is recursive.
  */
