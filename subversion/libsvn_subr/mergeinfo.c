@@ -425,7 +425,8 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.end = elt1->end;
                 }
 
-              combine_with_lastrange(&lastrange, &tmp_range, TRUE, *output, pool);
+              combine_with_lastrange(&lastrange, &tmp_range, TRUE, 
+                                     *output, pool);
             }
 
           /* Set up the rest of the whiteboard range for further
@@ -440,7 +441,8 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.start = elt1->start;
                   tmp_range.end = elt2->end;
                   
-                  combine_with_lastrange(&lastrange, &tmp_range, TRUE, *output, pool);
+                  combine_with_lastrange(&lastrange, &tmp_range, TRUE, 
+                                         *output, pool);
                 }
 
               wboardelt.start = elt2->end + 1;
