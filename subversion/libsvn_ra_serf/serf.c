@@ -151,6 +151,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->bkt_alloc =
           serf_bucket_allocator_create(serf_sess->pool, NULL, NULL);
   serf_sess->conns[0]->session = serf_sess;
+  serf_sess->conns[0]->last_status_code = -1;
 
   /* fetch the DNS record for this host */
   status = apr_sockaddr_info_get(&serf_sess->conns[0]->address, url.hostname,
