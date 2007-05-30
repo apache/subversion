@@ -727,7 +727,7 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      const char *path_mergeinfo_str = apr_hash_get(*mergeinfo, path,
+      const char *path_mergeinfo_str = apr_hash_get(mergeinfo_str, path,
                                                     APR_HASH_KEY_STRING);
       apr_hash_t *path_mergeinfo;
      
