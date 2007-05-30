@@ -2115,6 +2115,7 @@ finish_report(void *report_baton,
       sess->conns[i]->hostinfo = sess->conns[0]->hostinfo;
       sess->conns[i]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[i]->using_compression = sess->conns[0]->using_compression;
+      sess->conns[i]->last_status_code = -1;
       sess->conns[i]->ssl_context = NULL;
       sess->conns[i]->session = sess;
       sess->conns[i]->auth_header = sess->auth_header;
