@@ -92,7 +92,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_finalize
 JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_SVNClient_getAdminDirectoryName
   (JNIEnv* env, jobject jthis)
 {
-    JNIEntry(Client, getAdminDirectoryName);
+    JNIEntry(SVNClient, getAdminDirectoryName);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if (cl == NULL)
     {
@@ -110,7 +110,7 @@ JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_SVNClient_getAdminDi
 JNIEXPORT jboolean JNICALL Java_org_tigris_subversion_javahl_SVNClient_isAdminDirectory
   (JNIEnv* env, jobject jthis, jstring jname)
 {
-    JNIEntry(Client, isAdminDirectory);
+    JNIEntry(SVNClient, isAdminDirectory);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if (cl == NULL)
     {
@@ -133,7 +133,7 @@ JNIEXPORT jboolean JNICALL Java_org_tigris_subversion_javahl_SVNClient_isAdminDi
 JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_SVNClient_getLastPath
   (JNIEnv* env, jobject jthis)
 {
-    JNIEntry(Client, getLastPath);
+    JNIEntry(SVNClient, getLastPath);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if(cl == NULL)
     {
