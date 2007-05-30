@@ -486,7 +486,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_verify
   (JNIEnv *env, jobject jthis, jstring jpath, jobject jmessageout, 
    jobject jrevisionStart, jobject jrevisionEnd)
 {
-    JNIEntry(SVNAdmin, dump);
+    JNIEntry(SVNAdmin, verify);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if(cl == NULL)
     {
@@ -528,7 +528,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_verify
 JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_lslocks
   (JNIEnv *env, jobject jthis, jstring jpath)
 {
-    JNIEntry(SVNAdmin, lstxns);
+    JNIEntry(SVNAdmin, lslocks);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
     if(cl == NULL)
     {

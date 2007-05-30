@@ -116,11 +116,3 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r25208
-    Fix error reporting for several JavaHL native APIs.
-    Justification:
-      Improve error reporting from native code (which can already be
-      difficult to debug).
-    Branch: TBD
-    Votes:
-      +1: dlr, blair
