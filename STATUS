@@ -66,6 +66,16 @@ Candidate changes:
     Votes:
       +1: lgo
 
+  * r25208
+    Fix error reporting for several JavaHL native APIs.
+    Justification:
+      Improve error reporting from native code (which can already be
+      difficult to debug).
+    Notes:
+      Merge conflicts due to formatting changes and javahl directory move.
+    Votes:
+      +1: dlr
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
