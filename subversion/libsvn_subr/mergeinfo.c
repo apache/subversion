@@ -893,7 +893,7 @@ svn_mergeinfo_dup(apr_hash_t *mergeinfo, apr_pool_t *pool)
     {
       apr_hash_this(hi, &path, &pathlen, &rangelist);
       apr_hash_set(new_mergeinfo, apr_pstrmemdup(pool, path, pathlen), pathlen,
-                   svn_rangelist_dup((apr_array_header_t *)rangelist, pool));
+                   svn_rangelist_dup((apr_array_header_t *) rangelist, pool));
     }
 
   return new_mergeinfo;
