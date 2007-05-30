@@ -82,7 +82,7 @@ class NativeResources
             }
             catch (UnsatisfiedLinkError ex)
             {
-                if (loadException == null)
+                if (null == loadException)
                 {
                     loadException = ex;
                 }
@@ -90,7 +90,7 @@ class NativeResources
         }
 
         // Re-throw the most relevant exception.
-        if (loadException == null)
+        if (null == loadException)
         {
             // This could only happen as the result of a programming error.
             loadException = new UnsatisfiedLinkError("Unable to load JavaHL " +
