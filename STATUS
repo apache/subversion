@@ -64,8 +64,7 @@ Candidate changes:
     Justification:
       Data loss, small local fix
     Votes:
-      +1: lgo (only for r25076, -77)
-      +1: hwright
+      +1: hwright, lgo
 
 Veto-blocked changes:
 
