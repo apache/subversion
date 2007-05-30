@@ -6193,8 +6193,89 @@ def copy_src_detection_bug_if_target_has_many_ancestors_in_same_commit(sbox):
   svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-g')
   os.chdir(saved_cwd)
 
+def prop_add_to_child_with_mergeinfo(sbox):
+  "merge adding prop to child of merge target works"
 
+  # Test for Issue #2781 Prop add to child of merge target corrupts WC if
+  # child has merge info.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = setup_branch(sbox)
+
+  # Some paths we'll care about
+  beta_path = os.path.join(wc_dir, "A", "B", "E", "beta")
+  beta_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
+  B_COPY_path = os.path.join(wc_dir, "A_COPY", "B")
   
+  # Set a non-mergeinfo prop on a file.
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property 'prop:name' set on '" +
+                                      beta_path + "'\n"], [], 'ps',
+                                     'prop:name', 'propval', beta_path)
+  expected_disk.tweak('A/B/E/beta', props={'prop:name' : 'propval'})
+  expected_status.tweak('A/B/E/beta', wc_rev=7)
+  expected_output = wc.State(wc_dir,
+                             {'A/B/E/beta' : Item(verb='Sending')})
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
+
+  # Merge r4:5 from A/B/E/beta into A_COPY/B/E/beta.
+  short_beta_COPY_path = shorten_path_kludge(beta_COPY_path)
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_svn(None,['U    ' +
+                                       short_beta_COPY_path +'\n'],
+                                       [], 'merge', '-c5',
+                                       sbox.repo_url + '/A/B/E/beta',
+                                       short_beta_COPY_path)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Merge r6:7 into A_COPY/B.  In issue #2781 this adds a bogus
+  # and incomplete entry in A_COPY/B/.svn/entries for 'beta'.
+  short_B_COPY_path = shorten_path_kludge(B_COPY_path)
+  expected_output = wc.State(short_B_COPY_path, {
+    'E/beta' : Item(status=' U'),
+    })
+  expected_status = wc.State(short_B_COPY_path, {
+    ''        : Item(status=' M', wc_rev=2),
+    'E'       : Item(status='  ', wc_rev=2),
+    'E/alpha' : Item(status='  ', wc_rev=2),
+    'E/beta'  : Item(status='MM', wc_rev=2),
+    'lambda'  : Item(status='  ', wc_rev=2),
+    'F'       : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,7'}),
+    'E'       : Item(),
+    'E/alpha' : Item("This is the file 'alpha'.\n"),
+    'E/beta'  : Item(contents="New content",
+                     props={SVN_PROP_MERGE_INFO : '/A/B/E/beta:1,5,7',
+                            'prop:name' : 'propval'}),
+    'F'       : Item(),
+    'lambda'  : Item("This is the file 'lambda'.\n")
+    })
+  expected_skip = wc.State(short_B_COPY_path, { })
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_B_COPY_path, '6', '7',
+                                         sbox.repo_url + \
+                                         '/A/B',
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -6254,6 +6335,7 @@ test_list = [ None,
               merge_with_implicit_target_file,
               XFail(empty_rev_range_mergeinfo),
               XFail(copy_src_detection_bug_if_target_has_many_ancestors_in_same_commit),
+              XFail(prop_add_to_child_with_mergeinfo),
              ]
 
 if __name__ == '__main__':
