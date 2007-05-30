@@ -1872,8 +1872,6 @@ do_merge(const char *initial_URL1,
             }
           else
             {
-              /* ### Handle WC-local reverts which have modified our merge
-                 ### info. */
               apr_hash_t *merges;
               SVN_ERR(determine_merges_performed(&merges, target_wcpath,
                                                  &range, &notify_b, pool));
@@ -2220,8 +2218,6 @@ do_single_file_merge(const char *initial_URL1,
             }
           else
             {
-              /* ### Handle WC-local reverts which have modified our
-                 ### merge info. */
               apr_hash_t *merges;
               SVN_ERR(determine_merges_performed(&merges, target_wcpath,
                                                  &range, &notify_b, pool));
