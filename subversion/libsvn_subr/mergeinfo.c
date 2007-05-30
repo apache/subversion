@@ -890,8 +890,8 @@ svn_mergeinfo_dup(apr_hash_t *mergeinfo, apr_pool_t *pool)
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       apr_hash_this(hi, &path, &pathlen, &rangelist);
-      apr_hash_set(new_mergeinfo, path, pathlen,
-                   svn_rangelist_dup((apr_array_header_t *) rangelist, pool));
+      apr_hash_set(new_mergeinfo, apr_pstrmemdup(pool, path, pathlen), pathlen,
+                   svn_rangelist_dup((apr_array_header_t *)rangelist, pool));
     }
 
   return new_mergeinfo;
@@ -906,9 +906,9 @@ svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool)
 
   for (i = 0; i < rangelist->nelts; i++)
     {
-      svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
-      *range = *APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-      APR_ARRAY_PUSH(new_rl, svn_merge_range_t *) = range;
+      APR_ARRAY_PUSH(new_rl, svn_merge_range_t *) =
+        svn_merge_range_dup(APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *),
+                            pool);
     }
 
   return new_rl;
