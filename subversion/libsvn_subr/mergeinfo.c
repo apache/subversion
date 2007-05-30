@@ -884,12 +884,13 @@ svn_mergeinfo_dup(apr_hash_t *mergeinfo, apr_pool_t *pool)
   apr_hash_t *new_mergeinfo = apr_hash_make(pool);
   apr_hash_index_t *hi;
   const void *path;
+  apr_ssize_t pathlen;
   void *rangelist;
 
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_this(hi, &path, NULL, &rangelist);
-      apr_hash_set(new_mergeinfo, path, APR_HASH_KEY_STRING,
+      apr_hash_this(hi, &path, &pathlen, &rangelist);
+      apr_hash_set(new_mergeinfo, path, pathlen,
                    svn_rangelist_dup((apr_array_header_t *) rangelist, pool));
     }
 
