@@ -6148,6 +6148,53 @@ def empty_rev_range_mergeinfo(sbox):
      "  " + SVN_PROP_MERGE_INFO + " : /A:1\n"])
   svntest.actions.run_and_verify_svn(None, expected, [], 'pl', '-vR', wc_dir)
 
+
+def copy_src_detection_bug_if_target_has_many_ancestors_in_same_commit(sbox):
+  "incorrect copy source detection"
+
+  # Incorrect copy source detection if many ancestor of target exists 
+  # in the same commit as that of copy.
+
+  # Copy A/B as A/copy-of-B
+  # Copy A/C as A/copy-of-B/C
+  # Commit results in r2.
+  # From A/copy-of-B/C do merge -g. This merge should implicitly detect the 
+  # merge source to be A/C.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  A_B_path = os.path.join(A_path, 'B')
+  A_C_path = os.path.join(A_path, 'C')
+  A_copy_of_B_path = os.path.join(A_path, 'copy-of-B')
+  A_copy_of_B_C_path = os.path.join(A_copy_of_B_path, 'C')
+  svntest.main.run_svn(None, 'cp', A_B_path, A_copy_of_B_path)
+  svntest.main.run_svn(None, 'cp', A_C_path, A_copy_of_B_path)
+  expected_output = wc.State(wc_dir, {
+    'A/copy-of-B'   : Item(verb='Adding'),
+    'A/copy-of-B/C' : Item(verb='Adding')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/copy-of-B'            : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/lambda'     : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/E'          : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/E/alpha'    : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/E/beta'     : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/F'          : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/C'          : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+  saved_cwd = os.getcwd()
+  os.chdir(A_copy_of_B_C_path)
+  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-g')
+  os.chdir(saved_cwd)
+
+
+  
 ########################################################################
 # Run the tests
 
@@ -6206,6 +6253,7 @@ test_list = [ None,
               XFail(merge_to_path_with_switched_children),
               merge_with_implicit_target_file,
               XFail(empty_rev_range_mergeinfo),
+              XFail(copy_src_detection_bug_if_target_has_many_ancestors_in_same_commit),
              ]
 
 if __name__ == '__main__':
