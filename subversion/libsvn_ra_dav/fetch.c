@@ -1536,7 +1536,7 @@ getlocks_end_element(void *userdata, int state,
 
   /* Just skip unknown elements. */
   if (elm == NULL)
-    return SVN_NO_ERROR;;
+    return SVN_NO_ERROR;
 
   switch (elm->id)
     {
