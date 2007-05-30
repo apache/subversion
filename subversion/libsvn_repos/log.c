@@ -31,6 +31,17 @@
 #include "svn_mergeinfo.h"
 #include "repos.h"
 
+/* Pass history information about REV to RECEIVER with its RECEIVER_BATON.
+ *
+ * FS is used with REV to fetch the interesting history information,
+ * such as author, date, etc.
+ *
+ * The detect_changed function is used if either AUTHZ_READ_FUNC is
+ * not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
+ *
+ * If INCLUDE_MERGED_REVISIONS is TRUE, also pass history information to
+ * RECEIVER for any revisions which were merged in a result of REV.
+ */
 static svn_error_t *
 send_change_rev(const apr_array_header_t *paths,
                 svn_revnum_t rev,
@@ -511,7 +522,8 @@ next_history_rev(apr_array_header_t *histories)
   return next_rev;
 }
 
-/* Get a RANGELIST of the combined mergeinfo for PATHS at REV. */
+/* Return the combined rangelists for everyone's mergeinfo for the
+   PATHS tree at REV in *RANGELIST.  Perform all allocations in POOL. */
 static svn_error_t *
 get_combined_rangelist(apr_array_header_t **rangelist,
                        svn_fs_t *fs,
@@ -522,28 +534,31 @@ get_combined_rangelist(apr_array_header_t **rangelist,
   svn_fs_root_t *root;
   apr_hash_index_t *hi;
   apr_hash_t *mergeinfo;
+  apr_pool_t *subpool = svn_pool_create(pool);
   
-  *rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
+  SVN_ERR(svn_fs_get_mergeinfo_for_tree(&mergeinfo, root, paths, subpool));
 
-  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
-  SVN_ERR(svn_fs_get_mergeinfo_for_tree(&mergeinfo, root, paths, pool));
+  *rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
 
-  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       apr_hash_t *path_mergeinfo;
       apr_hash_index_t *mhi;
 
       apr_hash_this(hi, NULL, NULL, (void *)&path_mergeinfo);
 
-      for (mhi = apr_hash_first(pool, path_mergeinfo); mhi;
+      for (mhi = apr_hash_first(subpool, path_mergeinfo); mhi;
            mhi = apr_hash_next(mhi))
         {
           apr_array_header_t *path_rangelist;
           
-          apr_hash_this(mhi, NULL, NULL, (void *)&path_rangelist); 
+          apr_hash_this(mhi, NULL, NULL, (void *) &path_rangelist); 
           SVN_ERR(svn_rangelist_merge(rangelist, path_rangelist, pool));
         }
     }
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -561,9 +576,10 @@ get_merge_changed_rangelist(apr_array_header_t **rangelist,
   apr_array_header_t *deleted, *changed;
   apr_pool_t *subpool;
 
+  /* Revision 0 is always empty. */
   if (rev == 0)
     {
-      *rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+      *rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
       return SVN_NO_ERROR;
     }
 
@@ -582,7 +598,7 @@ get_merge_changed_rangelist(apr_array_header_t **rangelist,
   return SVN_NO_ERROR;
 }
 
-/* Same as send_change_rev(), only send all the revisions in RANGELIST.  Also,
+/* Same as send_change_rev(), but send all the revisions in RANGELIST.  Also,
    INCLUDE_MERGED_REVISIONS is assumed to be TRUE. */
 static svn_error_t *
 send_child_revs(const apr_array_header_t *paths,
@@ -596,33 +612,29 @@ send_child_revs(const apr_array_header_t *paths,
                 apr_pool_t *pool)
 {
   apr_array_header_t *revs;
+  apr_pool_t *subpool, *iterpool;
   int i;
 
-  SVN_ERR(svn_rangelist_to_revs(&revs, rangelist, pool));
+  subpool = svn_pool_create(pool);
 
+  SVN_ERR(svn_rangelist_to_revs(&revs, rangelist, subpool));
+
+  iterpool = svn_pool_create(subpool);
   for (i = 0; i < revs->nelts; i++)
     {
       svn_revnum_t rev = APR_ARRAY_IDX(revs, i, svn_revnum_t);
 
+      svn_pool_clear(iterpool);
       SVN_ERR(send_change_rev(paths, rev, fs, discover_changed_paths, TRUE,
                               authz_read_func, authz_read_baton,
-                              receiver, receiver_baton, pool));
+                              receiver, receiver_baton, iterpool));
     }
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
 
-/* Pass history information about REV to RECEIVER with its RECEIVER_BATON.
- *
- * FS is used with REV to fetch the interesting history information,
- * such as author, date, etc.
- *
- * The detect_changed function is used if either AUTHZ_READ_FUNC is
- * not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
- *
- * If INCLUDE_MERGED_REVISIONS is TRUE, also pass history information to
- * RECEIVER for any revisions which were merged in a result of REV.
- */
 static svn_error_t *
 send_change_rev(const apr_array_header_t *paths,
                 svn_revnum_t rev,
