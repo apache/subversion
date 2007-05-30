@@ -108,7 +108,7 @@ open_root(void *edit_baton,
           void **root_baton)
 {
   struct item_baton *ib = create_item_baton(edit_baton, "",
-                                            svn_node_dir, pool);;
+                                            svn_node_dir, pool);
 
   *root_baton = ib;
   return SVN_NO_ERROR;
