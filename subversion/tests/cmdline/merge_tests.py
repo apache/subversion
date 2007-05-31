@@ -6189,9 +6189,11 @@ def copy_src_detection_bug_if_target_has_many_ancestors_in_same_commit(sbox):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
   saved_cwd = os.getcwd()
-  os.chdir(A_copy_of_B_C_path)
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-g')
-  os.chdir(saved_cwd)
+  try:
+    os.chdir(A_copy_of_B_C_path)
+    svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-g')
+  finally:
+    os.chdir(saved_cwd)
 
 def prop_add_to_child_with_mergeinfo(sbox):
   "merge adding prop to child of merge target works"
