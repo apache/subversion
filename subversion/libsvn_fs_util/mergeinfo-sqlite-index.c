@@ -619,7 +619,7 @@ get_mergeinfo_for_children(sqlite3 *db,
                              "WHERE path LIKE ? AND revision <= ?;",
                              -1, &stmt, NULL), db);
 
-  like_path = apr_psprintf(pool, "%s%%", path);
+  like_path = apr_psprintf(pool, "%s/%%", path);
 
   SQLITE_ERR(sqlite3_bind_text(stmt, 1, like_path, -1, SQLITE_TRANSIENT), db);
   SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
