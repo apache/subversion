@@ -228,10 +228,10 @@ svn_fs_t *svn_repos_fs(svn_repos_t *repos);
  * means deleting copied, unused logfiles for a Berkeley DB source
  * repository.
  */
-svn_error_t * svn_repos_hotcopy(const char *src_path,
-                                const char *dst_path,
-                                svn_boolean_t clean_logs,
-                                apr_pool_t *pool);
+svn_error_t *svn_repos_hotcopy(const char *src_path,
+                               const char *dst_path,
+                               svn_boolean_t clean_logs,
+                               apr_pool_t *pool);
 
 /**
  * Run database recovery procedures on the repository at @a path,
