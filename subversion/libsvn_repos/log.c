@@ -570,11 +570,11 @@ get_combined_rangelist(apr_array_header_t **rangelist,
 /* Determine all the revisions which were merged into PATHS in REV.  Return
    them as a new RANGELIST.  */
 static svn_error_t *
-get_merge_changed_rangelist(apr_array_header_t **rangelist,
-                            svn_fs_t *fs,
-                            const apr_array_header_t *paths,
-                            svn_revnum_t rev,
-                            apr_pool_t *pool)
+get_merged_rev_rangelist(apr_array_header_t **rangelist,
+                         svn_fs_t *fs,
+                         const apr_array_header_t *paths,
+                         svn_revnum_t rev,
+                         apr_pool_t *pool)
 {
   apr_array_header_t *curr_rangelist, *prev_rangelist;
   apr_array_header_t *deleted, *changed;
@@ -717,7 +717,7 @@ send_change_rev(const apr_array_header_t *paths,
   /* Check to see if we need to include any extra merged revisions. */
   if (include_merged_revisions)
     {
-      SVN_ERR(get_merge_changed_rangelist(&rangelist, fs, paths, rev, pool));
+      SVN_ERR(get_merged_rev_rangelist(&rangelist, fs, paths, rev, pool));
 
       nbr_children = svn_rangelist_count_revs(rangelist);
     }
