@@ -198,6 +198,17 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (props->nelts)
     {
+      /* svn_wc_merge_props() requires ADM_ACCESS be the access for the
+         parent of PATH. But with the advent of merge tracking,
+         discover_and_merge_children() may call this (indirectly) with
+         the access for the merge_b->target instead (issue #2781).
+         So if we have the wrong access, get the right one. */
+      if (svn_path_compare_paths(svn_wc_adm_access_path(adm_access),
+                                 path) != 0)
+        SVN_ERR(svn_wc_adm_probe_try3(&adm_access, adm_access, path,
+                                      TRUE, -1, merge_b->ctx->cancel_func,
+                                      merge_b->ctx->cancel_baton, subpool));
+
       err = svn_wc_merge_props(state, path, adm_access, original_props, props,
                                FALSE, merge_b->dry_run, subpool);
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND

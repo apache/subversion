@@ -6337,7 +6337,7 @@ test_list = [ None,
               merge_with_implicit_target_file,
               XFail(empty_rev_range_mergeinfo),
               XFail(copy_src_detection_bug_if_target_has_many_ancestors_in_same_commit),
-              XFail(prop_add_to_child_with_mergeinfo),
+              prop_add_to_child_with_mergeinfo,
              ]
 
 if __name__ == '__main__':
