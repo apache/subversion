@@ -2475,6 +2475,24 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
   return SVN_NO_ERROR;
 }
 
+/* Return whether the merge source (SRC_URL) is from a different
+   repository from the merge target (ENTRY), to avoid later
+   erroneously setting merge info on the target. */
+static APR_INLINE svn_error_t *
+from_same_repos(svn_boolean_t *same_repos, const char *src_url,
+                const svn_wc_entry_t *entry, svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  const char *src_root;
+  svn_ra_session_t *ra_session;
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, src_url, NULL,
+                                               NULL, NULL, FALSE, TRUE, ctx,
+                                               pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &src_root, pool));
+  *same_repos = svn_path_is_ancestor(src_root, entry->repos) ? TRUE : FALSE;
+  return SVN_NO_ERROR;
+}
+
 /*-----------------------------------------------------------------------*/
 
 /*** Public APIs. ***/
@@ -2558,23 +2576,10 @@ svn_client_merge3(const char *source1,
   merge_cmd_baton.add_necessitated_merge = FALSE;
   merge_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool) : NULL);
   merge_cmd_baton.ctx = ctx;
-
-  /* Remember if merge source is a different repos from the target so we
-     don't set merge info. */
-  {
-    svn_ra_session_t *ra_session;
-    const char *source_root;
-
-    /* No need to check URL2 since if it's from a different repository
-       than URL1, then the whole merge will fail anyway. */
-    SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL1, NULL,
-                                                 NULL, NULL, FALSE,
-                                                 TRUE, ctx, pool));
-    SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
-    merge_cmd_baton.same_repos =
-      svn_path_is_ancestor(source_root, entry->repos) ? TRUE : FALSE;
-  }
-
+  /* No need to check URL2, since if it's from a different repository
+     than URL1, then the whole merge will fail anyway. */
+  SVN_ERR(from_same_repos(&merge_cmd_baton.same_repos, URL1, entry, ctx,
+                          pool));
   merge_cmd_baton.pool = pool;
 
   /* Set up the diff3 command, so various callers don't have to. */
@@ -2806,21 +2811,8 @@ svn_client_merge_peg3(const char *source,
   merge_cmd_baton.add_necessitated_merge = FALSE;
   merge_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool) : NULL);
   merge_cmd_baton.ctx = ctx;
-
-  /* Remember if merge source is a different repos from the target so we
-     don't set merge info. */
-  {
-    svn_ra_session_t *ra_session;
-    const char *source_root;
-
-    SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
-                                                 NULL, NULL, FALSE,
-                                                 TRUE, ctx, pool));
-    SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
-    merge_cmd_baton.same_repos =
-      svn_path_is_ancestor(source_root, entry->repos) ? TRUE : FALSE;
-  }
-
+  SVN_ERR(from_same_repos(&merge_cmd_baton.same_repos, URL, entry, ctx,
+                          pool));
   merge_cmd_baton.pool = pool;
 
   /* Set up the diff3 command, so various callers don't have to. */
