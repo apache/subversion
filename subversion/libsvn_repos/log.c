@@ -39,6 +39,8 @@
  * The detect_changed function is used if either AUTHZ_READ_FUNC is
  * not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
  *
+ * If DESCENDING_ORDER is true, send child messages in descending order.
+ *
  * If INCLUDE_MERGED_REVISIONS is TRUE, also pass history information to
  * RECEIVER for any revisions which were merged in a result of REV.
  */
@@ -48,6 +50,7 @@ send_change_rev(const apr_array_header_t *paths,
                 svn_fs_t *fs,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t include_merged_revisions,
+                svn_boolean_t descending_order,
                 svn_repos_authz_func_t authz_read_func,
                 void *authz_read_baton,
                 svn_log_message_receiver2_t receiver,
@@ -605,6 +608,7 @@ send_child_revs(const apr_array_header_t *paths,
                 const apr_array_header_t *rangelist,
                 svn_fs_t *fs,
                 svn_boolean_t discover_changed_paths,
+                svn_boolean_t descending_order,
                 svn_repos_authz_func_t authz_read_func,
                 void *authz_read_baton,
                 svn_log_message_receiver2_t receiver,
@@ -618,6 +622,9 @@ send_child_revs(const apr_array_header_t *paths,
   subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_rangelist_to_revs(&revs, rangelist, subpool));
+  if (descending_order)
+    qsort(revs->elts, revs->nelts, revs->elt_size,
+          svn_sort_compare_revisions);
 
   iterpool = svn_pool_create(subpool);
   for (i = 0; i < revs->nelts; i++)
@@ -626,6 +633,7 @@ send_child_revs(const apr_array_header_t *paths,
 
       svn_pool_clear(iterpool);
       SVN_ERR(send_change_rev(paths, rev, fs, discover_changed_paths, TRUE,
+                              descending_order,
                               authz_read_func, authz_read_baton,
                               receiver, receiver_baton, iterpool));
     }
@@ -641,6 +649,7 @@ send_change_rev(const apr_array_header_t *paths,
                 svn_fs_t *fs,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t include_merged_revisions,
+                svn_boolean_t descending_order,
                 svn_repos_authz_func_t authz_read_func,
                 void *authz_read_baton,
                 svn_log_message_receiver2_t receiver,
@@ -726,6 +735,7 @@ send_change_rev(const apr_array_header_t *paths,
 
   if (nbr_children > 0)
     SVN_ERR(send_child_revs(paths, rangelist, fs, discover_changed_paths,
+                            descending_order,
                             authz_read_func, authz_read_baton, receiver,
                             receiver_baton, pool));
 
@@ -762,6 +772,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
   svn_revnum_t current;
   apr_array_header_t *histories;
   svn_boolean_t any_histories_left = TRUE;
+  svn_boolean_t descending_order;
   int send_count = 0;
   svn_fs_root_t *root;
   int i;
@@ -784,8 +795,10 @@ svn_repos_get_logs4(svn_repos_t *repos,
       (SVN_ERR_FS_NO_SUCH_REVISION, 0,
        _("No such revision %ld"), end);
 
+  descending_order = start >= end;
+
   /* Get an ordered copy of the start and end. */
-  if (start > end)
+  if (descending_order)
     {
       hist_start = end;
       hist_end = start;
@@ -816,11 +829,12 @@ svn_repos_get_logs4(svn_repos_t *repos,
           svn_revnum_t rev = hist_start + i;
 
           svn_pool_clear(iterpool);
-          if (start > end)
+          if (descending_order)
             rev = hist_end - i;
           SVN_ERR(send_change_rev(paths, rev, fs,
                                   discover_changed_paths,
                                   include_merged_revisions,
+                                  descending_order,
                                   authz_read_func, authz_read_baton,
                                   receiver, receiver_baton, iterpool));
         }
@@ -915,11 +929,12 @@ svn_repos_get_logs4(svn_repos_t *repos,
         {
           /* If they wanted it in reverse order we can send it completely
              streamily right now. */
-          if (start > end)
+          if (descending_order)
             {
               SVN_ERR(send_change_rev(paths, current, fs,
                                       discover_changed_paths,
                                       include_merged_revisions,
+                                      descending_order,
                                       authz_read_func, authz_read_baton,
                                       receiver, receiver_baton,
                                       iterpool));
@@ -948,6 +963,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
                                                        svn_revnum_t),
                                   fs, discover_changed_paths,
                                   include_merged_revisions,
+                                  descending_order,
                                   authz_read_func, authz_read_baton,
                                   receiver, receiver_baton, iterpool));
           if (limit && i + 1 >= limit)
