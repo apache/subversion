@@ -158,7 +158,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t keep_local;      /* delete path only from repository */
   apr_hash_t *revprop_table;     /* table with revision properties to set */
   svn_boolean_t parents;         /* create intermediate directories */
-  svn_boolean_t merge_sensitive; /* use/display extra merge information */
+  svn_boolean_t use_merge_history; /* use/display extra merge information */
 
 } svn_cl__opt_state_t;
 
