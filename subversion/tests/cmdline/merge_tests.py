@@ -5346,7 +5346,7 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
                                        ['U    ' +
                                        os.path.join("D", "G", "rho") + '\n'],
                                        [], 'merge', '-c4',
-                                       '--merge-sensitive')
+                                       '--use-merge-history')
   finally:
     os.chdir(saved_cwd)
 

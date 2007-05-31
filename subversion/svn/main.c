@@ -204,7 +204,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "using the name=value format")},
   {"parents",       svn_cl__parents_opt, 0,
                     N_("make intermediate directories")},
-  {"merge-sensitive", 'g', 0,
+  {"use-merge-history", 'g', 0,
                     N_("use/display additional information from merge "
                        "history")},
   {0,               0, 0, 0}
@@ -1378,7 +1378,7 @@ main(int argc, const char *argv[])
         opt_state.parents = TRUE;
         break;
       case 'g':
-        opt_state.merge_sensitive = TRUE;
+        opt_state.use_merge_history = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
