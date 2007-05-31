@@ -657,25 +657,23 @@ get_mergeinfo_for_children(sqlite3 *db,
 }
 
 
-/* Get the merge info for a set of paths.  */
-svn_error_t *
-svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
-                                svn_fs_root_t *root,
-                                const apr_array_header_t *paths,
-                                svn_boolean_t include_parents,
-                                apr_pool_t *pool)
+static svn_error_t *
+get_mergeinfo(sqlite3 *db,
+              apr_hash_t **mergeinfo,
+              svn_fs_root_t *root,
+              const apr_array_header_t *paths,
+              svn_boolean_t include_parents,
+              apr_pool_t *pool)
 {
   apr_hash_t *mergeinfo_cache = apr_hash_make(pool);
-  sqlite3 *db;
-  int i;
   svn_revnum_t rev;
+  int i;
 
   /* We require a revision root. */
   if (root->is_txn_root)
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
   rev = REV_ROOT_REV(root);
-  SVN_ERR(open_db(&db, root->fs->path, pool));
 
   *mergeinfo = apr_hash_make(pool);
   for (i = 0; i < paths->nelts; i++)
@@ -701,7 +699,24 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
                        mergeinfo_buf->data);
         }
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Get the merge info for a set of paths.  */
+svn_error_t *
+svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
+                                svn_fs_root_t *root,
+                                const apr_array_header_t *paths,
+                                svn_boolean_t include_parents,
+                                apr_pool_t *pool)
+{
+  sqlite3 *db;
+
+  SVN_ERR(open_db(&db, root->fs->path, pool));
+  SVN_ERR(get_mergeinfo(db, mergeinfo, root, paths, include_parents, pool));
   SQLITE_ERR(sqlite3_close(db), db);
+
   return SVN_NO_ERROR;
 }
 
@@ -716,11 +731,10 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
   sqlite3 *db;
   int i;
 
-  SVN_ERR(svn_fs_mergeinfo__get_mergeinfo(&mergeinfo_str, root, paths, TRUE,
-                                          pool));
+  SVN_ERR(open_db(&db, root->fs->path, pool));
+  SVN_ERR(get_mergeinfo(db, &mergeinfo_str, root, paths, TRUE, pool));
 
   rev = REV_ROOT_REV(root);
-  SVN_ERR(open_db(&db, root->fs->path, pool));
 
   *mergeinfo = apr_hash_make(pool);
 
