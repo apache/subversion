@@ -106,6 +106,9 @@ history index).
 * Account for merge info differences for switched directories when
   gathering and setting merge info.  (pburba)
 
+* Merging to out of date target can lead to corrupt merge info,
+  issue #2786.
+
 * Support --depth option for merge: Limit search for children with merge
   info to depth and set appropriate merge info at depth.
 
