@@ -6149,11 +6149,11 @@ def empty_rev_range_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, expected, [], 'pl', '-vR', wc_dir)
 
 
-def copy_src_detection_bug_if_target_has_many_ancestors_in_same_commit(sbox):
-  "incorrect copy source detection"
+def detect_copy_src_for_target_with_multiple_ancestors(sbox):
+  "detect copy src for target with multiple ancestors"
 
-  # Incorrect copy source detection if many ancestor of target exists 
-  # in the same commit as that of copy.
+  # This tests that copy source detection is correct in the case where
+  # many ancestors of a target exist in the same commit as a copy of target.
 
   # Copy A/B as A/copy-of-B
   # Copy A/C as A/copy-of-B/C
@@ -6194,6 +6194,12 @@ def copy_src_detection_bug_if_target_has_many_ancestors_in_same_commit(sbox):
     svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-g')
   finally:
     os.chdir(saved_cwd)
+
+  expected_status.tweak('A/copy-of-B/C',  status=' M')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_svn(None, ["/A/C:2\n"], [],
+                                     'propget', SVN_PROP_MERGE_INFO,
+                                     A_copy_of_B_C_path)
 
 def prop_add_to_child_with_mergeinfo(sbox):
   "merge adding prop to child of merge target works"
@@ -6336,7 +6342,7 @@ test_list = [ None,
               XFail(merge_to_path_with_switched_children),
               merge_with_implicit_target_file,
               XFail(empty_rev_range_mergeinfo),
-              XFail(copy_src_detection_bug_if_target_has_many_ancestors_in_same_commit),
+              XFail(detect_copy_src_for_target_with_multiple_ancestors),
               prop_add_to_child_with_mergeinfo,
              ]
 
