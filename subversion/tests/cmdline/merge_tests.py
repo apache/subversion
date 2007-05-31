@@ -6284,6 +6284,61 @@ def prop_add_to_child_with_mergeinfo(sbox):
   finally:
     os.chdir(saved_cwd)
 
+def diff_repos_does_not_update_mergeinfo(sbox):
+  "don't set mergeinfo when merging from another repo"
+
+  # Test for issue #2788.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = setup_branch(sbox)
+
+  # Create a second repository with the same greek tree
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path("other")
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 6, 1)
+
+  # Merge r3:4 (using implied peg revisions) from 'other' repos into
+  # A_COPY/D/G.  Merge should succeed, but no merge info should be set.
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_G_COPY_path = shorten_path_kludge(os.path.join(wc_dir,
+                                                       "A_COPY", "D", "G"))
+  saved_cwd = os.getcwd()
+
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_svn(None, ['U    ' +
+                                       os.path.join(short_G_COPY_path,
+                                                    "rho") + '\n'],
+                                       [], 'merge', '-c4',
+                                       other_repo_url + '/A/D/G',
+                                       short_G_COPY_path)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Merge r4:5 (using explicit peg revisions) from 'other' repos into
+  # A_COPY/B/E.  Merge should succeed, but no merge info should be set.
+  short_E_COPY_path = shorten_path_kludge(os.path.join(wc_dir,
+                                                       "A_COPY", "B", "E"))
+
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_svn(None, ['U    ' +
+                                       os.path.join(short_E_COPY_path,
+                                                    "beta") +'\n'],
+                                       [], 'merge',
+                                       other_repo_url + '/A/B/E@4',
+                                       other_repo_url + '/A/B/E@5',
+                                       short_E_COPY_path)
+  finally:
+    os.chdir(saved_cwd)
+
+  expected_status.tweak('A_COPY/D/G/rho', 'A_COPY/B/E/beta', status='M ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -6344,6 +6399,7 @@ test_list = [ None,
               XFail(empty_rev_range_mergeinfo),
               XFail(detect_copy_src_for_target_with_multiple_ancestors),
               prop_add_to_child_with_mergeinfo,
+              XFail(diff_repos_does_not_update_mergeinfo),
              ]
 
 if __name__ == '__main__':
