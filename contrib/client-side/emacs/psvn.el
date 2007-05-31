@@ -323,13 +323,13 @@ This can be either absolute or looked up on `exec-path'."
   :type 'file
   :group 'psvn)
 
-(defcustom svn-status-svn-environment-var-list '("LC_MESSAGES=C")
+(defcustom svn-status-svn-environment-var-list '("LC_MESSAGES=C" "LC_ALL=")
   "*A list of environment variables that should be set for that svn process.
 Each element is either a string \"VARIABLE=VALUE\" which will be added to
 the environment when svn is run, or just \"VARIABLE\" which causes that
 variable to be entirely removed from the environment.
 
-The default setting is '(\LC_MESSAGES=C\"). This ensures that the svn command
+The default setting is '(\"LC_MESSAGES=C\" \"LC_ALL=\"). This ensures that the svn command
 line client does not output localized strings. psvn.el relies on the english
 messages."
   :type '(repeat string)
@@ -5713,6 +5713,10 @@ working directory."
     (insert "and send it to the author (stefan@xsteve.at) to allow easier debugging\n\n")
     (insert "Revisions:\n")
     (svn-insert-indented-lines (svn-status-version))
+    (insert "Language environment:\n")
+    (dolist (elem (svn-process-environment))
+      (when (member (car (split-string elem "=")) '("LC_MESSAGES" "LC_ALL" "LANG"))
+        (insert (format "  %s\n" elem))))
     (insert "\nLast svn commands:\n")
     (svn-insert-indented-lines (svn-status-last-commands))
     (insert (format "\nContent of the <%s> buffer:\n" last-output-buffer-name))
