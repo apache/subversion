@@ -127,6 +127,9 @@ struct merge_cmd_baton {
   svn_boolean_t force;
   svn_boolean_t record_only;          /* Whether to only record merge info. */
   svn_boolean_t dry_run;
+  svn_boolean_t same_repos;           /* Whether the merge source repository
+                                         is the same repository as the
+                                         target. */
   const char *added_path;             /* Set to the dir path whenever the
                                          dir is added as a child of a
                                          versioned dir (dry-run only) */
@@ -1877,7 +1880,7 @@ do_merge(const char *initial_URL1,
          merge for the specified range. */
       if (merge_b->record_only)
         {
-          if (merge_b->dry_run)
+          if (merge_b->dry_run || !merge_b->same_repos)
             {
               return SVN_NO_ERROR;
             }
@@ -2009,7 +2012,7 @@ do_merge(const char *initial_URL1,
 
       if (notify_b.same_urls)
         {
-          if (!merge_b->dry_run)
+          if (!merge_b->dry_run && merge_b->same_repos)
             {
               /* Update the WC merge info here to account for our new
                  merges, minus any unresolved conflicts and skips. */
@@ -2223,7 +2226,7 @@ do_single_file_merge(const char *initial_URL1,
          merge for the specified range. */
       if (merge_b->record_only)
         {
-          if (merge_b->dry_run)
+          if (merge_b->dry_run || !merge_b->same_repos)
             {
               return SVN_NO_ERROR;
             }
@@ -2328,7 +2331,7 @@ do_single_file_merge(const char *initial_URL1,
 
       if (notify_b.same_urls)
         {
-          if (!merge_b->dry_run)
+          if (!merge_b->dry_run && merge_b->same_repos)
             {
               /* Update the WC merge info here to account for our new
                  merges, minus any unresolved conflicts and skips. */
@@ -2555,6 +2558,23 @@ svn_client_merge3(const char *source1,
   merge_cmd_baton.add_necessitated_merge = FALSE;
   merge_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool) : NULL);
   merge_cmd_baton.ctx = ctx;
+
+  /* Remember if merge source is a different repos from the target so we
+     don't set merge info. */
+  {
+    svn_ra_session_t *ra_session;
+    const char *source_root;
+
+    /* No need to check URL2 since if it's from a different repository
+       than URL1, then the whole merge will fail anyway. */
+    SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL1, NULL,
+                                                 NULL, NULL, FALSE,
+                                                 TRUE, ctx, pool));
+    SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
+    merge_cmd_baton.same_repos =
+      svn_path_is_ancestor(source_root, entry->repos) ? TRUE : FALSE;
+  }
+
   merge_cmd_baton.pool = pool;
 
   /* Set up the diff3 command, so various callers don't have to. */
@@ -2786,6 +2806,21 @@ svn_client_merge_peg3(const char *source,
   merge_cmd_baton.add_necessitated_merge = FALSE;
   merge_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool) : NULL);
   merge_cmd_baton.ctx = ctx;
+
+  /* Remember if merge source is a different repos from the target so we
+     don't set merge info. */
+  {
+    svn_ra_session_t *ra_session;
+    const char *source_root;
+
+    SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
+                                                 NULL, NULL, FALSE,
+                                                 TRUE, ctx, pool));
+    SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
+    merge_cmd_baton.same_repos =
+      svn_path_is_ancestor(source_root, entry->repos) ? TRUE : FALSE;
+  }
+
   merge_cmd_baton.pool = pool;
 
   /* Set up the diff3 command, so various callers don't have to. */

@@ -6399,7 +6399,7 @@ test_list = [ None,
               XFail(empty_rev_range_mergeinfo),
               XFail(detect_copy_src_for_target_with_multiple_ancestors),
               prop_add_to_child_with_mergeinfo,
-              XFail(diff_repos_does_not_update_mergeinfo),
+              diff_repos_does_not_update_mergeinfo,
              ]
 
 if __name__ == '__main__':
