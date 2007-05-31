@@ -639,6 +639,7 @@ send_child_revs(const apr_array_header_t *paths,
                               receiver, receiver_baton, iterpool));
     }
 
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
