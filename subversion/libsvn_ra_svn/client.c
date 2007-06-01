@@ -1205,7 +1205,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bbn(b))", start, end,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bbnb)", start, end,
                                  discover_changed_paths, strict_node_history,
                                  (apr_uint64_t) limit,
                                  include_merged_revisions));
