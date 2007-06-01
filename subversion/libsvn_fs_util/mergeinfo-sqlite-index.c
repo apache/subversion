@@ -656,7 +656,8 @@ get_mergeinfo_for_children(sqlite3 *db,
   return SVN_NO_ERROR;
 }
 
-
+/* Get the mergeinfo for a set of paths, returned as a hash of mergeinfo
+   hashs keyed by each path. */
 static svn_error_t *
 get_mergeinfo(sqlite3 *db,
               apr_hash_t **mergeinfo,
@@ -683,6 +684,24 @@ get_mergeinfo(sqlite3 *db,
                                      mergeinfo_cache, include_parents, pool));
     }
 
+  return SVN_NO_ERROR;
+}
+
+/* Get the merge info for a set of paths.  */
+svn_error_t *
+svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
+                                svn_fs_root_t *root,
+                                const apr_array_header_t *paths,
+                                svn_boolean_t include_parents,
+                                apr_pool_t *pool)
+{
+  sqlite3 *db;
+  int i;
+
+  SVN_ERR(open_db(&db, root->fs->path, pool));
+  SVN_ERR(get_mergeinfo(db, mergeinfo, root, paths, include_parents, pool));
+  SQLITE_ERR(sqlite3_close(db), db);
+
   for (i = 0; i < paths->nelts; i++)
     {
       svn_stringbuf_t *mergeinfo_buf;
@@ -700,22 +719,6 @@ get_mergeinfo(sqlite3 *db,
         }
     }
 
-  return SVN_NO_ERROR;
-}
-
-/* Get the merge info for a set of paths.  */
-svn_error_t *
-svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
-                                svn_fs_root_t *root,
-                                const apr_array_header_t *paths,
-                                svn_boolean_t include_parents,
-                                apr_pool_t *pool)
-{
-  sqlite3 *db;
-
-  SVN_ERR(open_db(&db, root->fs->path, pool));
-  SVN_ERR(get_mergeinfo(db, mergeinfo, root, paths, include_parents, pool));
-  SQLITE_ERR(sqlite3_close(db), db);
 
   return SVN_NO_ERROR;
 }
@@ -726,28 +729,22 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                                          const apr_array_header_t *paths,
                                          apr_pool_t *pool)
 {
-  apr_hash_t *mergeinfo_str;
   svn_revnum_t rev;
   sqlite3 *db;
   int i;
 
   SVN_ERR(open_db(&db, root->fs->path, pool));
-  SVN_ERR(get_mergeinfo(db, &mergeinfo_str, root, paths, TRUE, pool));
+  SVN_ERR(get_mergeinfo(db, mergeinfo, root, paths, TRUE, pool));
 
   rev = REV_ROOT_REV(root);
-
-  *mergeinfo = apr_hash_make(pool);
 
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      const char *path_mergeinfo_str = apr_hash_get(mergeinfo_str, path,
-                                                    APR_HASH_KEY_STRING);
-      apr_hash_t *path_mergeinfo;
+      apr_hash_t *path_mergeinfo = apr_hash_get(*mergeinfo, path,
+                                                APR_HASH_KEY_STRING);
      
-      if (path_mergeinfo_str)
-        SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, path_mergeinfo_str, pool));
-      else
+      if (!path_mergeinfo)
         path_mergeinfo = apr_hash_make(pool);
 
       SVN_ERR(get_mergeinfo_for_children(db, path, rev, &path_mergeinfo,
