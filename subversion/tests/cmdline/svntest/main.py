@@ -622,6 +622,16 @@ def use_editor(func):
   os.environ['SVN_EDITOR'] = svneditor_script
   os.environ['SVNTEST_EDITOR_FUNC'] = func
 
+
+def merge_notify_line(revstart, revend=None):
+  """Return an expected output line that describes the beginning of a
+  merge operation on revisions REVSTART through REVEND."""
+  if (revend is None):
+    return "--- Merging revision %ld:\n" % revstart
+  else:
+    return "--- Merging revisions %ld-%ld:\n" % (revstart, revend)
+
+
 ######################################################################
 # Functions which check the test configuration
 # (useful for conditional XFails)
