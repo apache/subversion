@@ -263,13 +263,14 @@ by these commands may be added at some point in the future (e.g. for
 use by third-party clients like <a href="http://tortoisesvn.tigris.org/"
 >TortoiseSVN</a>).</p>
 
-<p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
-single-character shortcut (<code>-g</code>), will be introduced for the 
-toggle merge information.  Using it will enable these commands to show the
-additional information gleaned from parsing and processing the merge info
-on the targets in question.  This switch will also work with
-<code>--xml</code> to include additional merge information.  The new
-functionality added by <code>--merge-sensitive</code> is as follows.</p>
+<p>A new switch, <code>--use-merge-history</code>, along with a
+corresponding single-character shortcut (<code>-g</code>), will be
+introduced for the toggle merge information.  Using it will enable these
+commands to show the additional information gleaned from parsing and
+processing the merge info on the targets in question.  This switch will
+also work with <code>--xml</code> to include additional merge
+information.  The new functionality added by
+<code>--use-merge-history</code> is as follows.</p>
 
 <dl>
   <dt><code>svn log</code></dt>
@@ -287,7 +288,7 @@ functionality added by <code>--merge-sensitive</code> is as follows.</p>
 
   <p>For instance, if Alice was the original author of r12, Bob was the
   orginial author of r14, and Chuck merged them both r12 and r14 as part
-  of r24, the output of <code>svn log --merge-sensitive</code>
+  of r24, the output of <code>svn log --use-merge-history</code>
   will look like this:</p>
   <pre>
 ------------------------------------------------------------------------
@@ -306,8 +307,8 @@ Result of a merge from: r24
 Fix frapnalyzer bug in frobnicator.
   </pre>
 
-  <p>Using the same example, the output of <code>svn log --merge-sensitive
-  --verbose</code> will look like:</p>
+  <p>Using the same example, the output of <code>svn log
+  --use-merge-history --verbose</code> will look like:</p>
 
   <pre>
 ------------------------------------------------------------------------
@@ -335,7 +336,7 @@ Fix frapnalyzer bug in frobnicator.
   </pre>
 
   <p>If r12 was itself a merge of r9 and r10, <code>svn log
-  --merge-sensitive</code> for r24 will look like this:</p>
+  --use-merge-history</code> for r24 will look like this:</p>
 
   <pre>
 ------------------------------------------------------------------------
@@ -379,7 +380,7 @@ Whitespace fixes.  No functional change.
 </dl>
 
 <p>For commits which remove merge info (e.g. reverts),
-<code>--merge-sensitive</code> will trace back to the original author.  For
+<code>--use-merge-history</code> will trace back to the original author.  For
 example if Alice makes a commit to code previously modified by Bob (committed
 with no merge history), and Alice's commit is subsequently reverted by Chris,
 we should show Bob as the author.  If Bob's commit was itself the result of a
@@ -400,7 +401,8 @@ merge, we should recurse until we find a commit which did not add merge info
 been suggested:</p>
 
 <ul>
-  <li>A configuration option to always enable <code>--merge-sensitive</code>.
+  <li>A configuration option to always enable
+  <code>--use-merge-history</code>.
   </li>
 </ul>
 
