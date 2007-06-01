@@ -127,6 +127,7 @@ svn_wc_create_notify(const char *path,
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
   ret->changelist_name = NULL;
+  ret->merge_range = NULL;
 
   return ret;
 }
@@ -161,6 +162,8 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify,
     }
   if (ret->changelist_name)
     ret->changelist_name = apr_pstrdup(pool, ret->changelist_name);
+  if (ret->merge_range)
+    ret->merge_range = svn_merge_range_dup(ret->merge_range, pool);
 
   return ret;
 }

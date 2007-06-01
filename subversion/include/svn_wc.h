@@ -733,7 +733,11 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_changelist_clear,
 
   /** Failed to update a path's changelist association. @since New in 1.5. */
-  svn_wc_notify_changelist_failed
+  svn_wc_notify_changelist_failed,
+
+  /** A merge operation (to path) has begun.  See @c merge_range in
+      @c svn_wc_notify_t.  @since New in 1.5   */
+  svn_wc_notify_merge_begin,
 
 } svn_wc_notify_action_t;
 
@@ -840,6 +844,9 @@ typedef struct svn_wc_notify_t {
   /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
    * cases, it is @c NULL. */
   const char *changelist_name;
+  /** When @c action is @c svn_wc_notify_merge_begin.  In all other
+      cases, it is @c NULL.  */
+  svn_merge_range_t *merge_range;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
