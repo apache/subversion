@@ -1554,10 +1554,6 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_uint64_t limit, include_merged_revs_param;
   log_baton_t lb;
 
-  /* Parse the arguments.  The usual optional element pattern "(?n)"
-     isn't used for the limit argument because pre-1.3 clients don't
-     know to send it.  Nor is the pattern used for the include_merged_revisions
-     argument, because pre-1.5 clients don't know to send it, either. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?B", &paths,
                                  &start_rev, &end_rev, &changed_paths,
                                  &strict_node, &limit,
