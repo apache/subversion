@@ -366,11 +366,12 @@ module Svn
           paths = [path]
         end
         revision ||= Svn::Core::INVALID_REVNUM
-        results = Repos.fs_get_merge_info(self, paths, revision,
+        results = Repos.fs_get_mergeinfo(self, paths, revision,
                                           include_parents, authz_read_func)
         results = results[path] if path
         results
       end
+      alias_method :mergeinfo, :merge_info
 
       private
       def setup_report_baton(baton)
