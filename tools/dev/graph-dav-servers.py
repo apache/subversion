@@ -9,6 +9,7 @@
 # Be warned this this script has many dependencies that don't ship with Python.
 
 import sys
+import os
 import fileinput
 import datetime
 import time
@@ -17,8 +18,10 @@ from matplotlib.dates import date2num
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib.pylab import *
+import Image
 
 OUTPUT_FILE = '../../www/images/svn-dav-securityspace-survey.png'
+OUTPUT_IMAGE_WIDTH = 800
 
 STATS = """1/1/2003       70
 2/1/2003                 158
@@ -124,6 +127,22 @@ def draw_graph(dates, counts):
   png = open(OUTPUT_FILE, 'w')
   savefig(png)
   png.close()
+  os.rename(OUTPUT_FILE, OUTPUT_FILE + ".tmp.png")
+  try:
+    im = Image.open(OUTPUT_FILE + ".tmp.png", 'r')
+    (width, height) = im.size
+    print "Original size: %d x %d pixels" % (width, height)
+    scale = float(OUTPUT_IMAGE_WIDTH) / float(width)
+    width = OUTPUT_IMAGE_WIDTH
+    height = int(float(height) * scale)
+    print "Final size: %d x %d pixels" % (width, height)
+    im = im.resize((width, height), Image.ANTIALIAS)
+    im.save(OUTPUT_FILE, im.format)
+    os.unlink(OUTPUT_FILE + ".tmp.png")
+  except Exception, e:
+    sys.stderr.write("Error attempting to resize the graphic: %s\n" % (str(e)))
+    os.rename(OUTPUT_FILE + ".tmp.png", OUTPUT_FILE)
+    raise
   close()
 
 
