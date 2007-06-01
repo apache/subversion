@@ -17,7 +17,7 @@ history index).
   '-r 2:3,9:12').  Client tools will use this to best support
   cherry-picking.  Command-line client UI to follow post-1.5.
 
-  * Write libsvn_client API.  (lundblad)
+  * Write libsvn_client API.
 
   * Write corresponding JavaHL bindings.  (dlr/markphip)
 
@@ -87,7 +87,7 @@ history index).
 
   * Improve merge algorithm used for target trees with child paths
     that contain differing merge info, per Peter Lundblad's
-    suggestions. (lundblad)
+    suggestions.
 
 * Treat all revisions from a 'copy' source as merge info for the
   destination.  This equates to turning all those revs into actual
