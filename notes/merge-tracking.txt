@@ -87,7 +87,8 @@ history index).
 
   * Improve merge algorithm used for target trees with child paths
     that contain differing merge info, per Peter Lundblad's
-    suggestions.
+    suggestions.  See the following thread:
+    http://subversion.tigris.org/servlets/BrowseList?list=dev&by=thread&from=565086
 
 * Treat all revisions from a 'copy' source as merge info for the
   destination.  This equates to turning all those revs into actual
