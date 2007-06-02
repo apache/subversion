@@ -364,6 +364,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                      svn_boolean_t strict_node_history,
                      svn_boolean_t include_merged_revisions,
                      svn_log_message_receiver2_t receiver,
+                     svn_boolean_t omit_log_text,
                      void *receiver_baton,
                      apr_pool_t *pool)
 {
@@ -433,6 +434,13 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
     {
       svn_ra_serf__add_tag_buckets(buckets,
                                    "S:include-merged-revisions", NULL,
+                                   session->bkt_alloc);
+    }
+
+  if (omit_log_text)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:omit-log-text", NULL,
                                    session->bkt_alloc);
     }
 

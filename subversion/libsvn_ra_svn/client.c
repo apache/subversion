@@ -1180,6 +1180,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                svn_boolean_t discover_changed_paths,
                                svn_boolean_t strict_node_history,
                                svn_boolean_t include_merged_revisions,
+                               svn_boolean_t omit_log_text,
                                svn_log_message_receiver2_t receiver,
                                void *receiver_baton, apr_pool_t *pool)
 {
@@ -1205,10 +1206,11 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bbnb)", start, end,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bbnbb)", start, end,
                                  discover_changed_paths, strict_node_history,
                                  (apr_uint64_t) limit,
-                                 include_merged_revisions));
+                                 include_merged_revisions,
+                                 omit_log_text));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Read the log messages. */
