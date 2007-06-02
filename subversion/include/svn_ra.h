@@ -1152,6 +1152,9 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
+ * If @a omit_log_text is set, the contents of the log message will not
+ * be returned.
+ *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
  *
@@ -1176,13 +1179,15 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
                              svn_boolean_t include_merged_revisions,
+                             svn_boolean_t omit_log_text,
                              svn_log_message_receiver2_t receiver,
                              void *receiver_baton,
                              apr_pool_t *pool);
 
 /**
  * Similar to svn_ra_get_log2(), but uses @c svn_log_message_receiver_t
- * instead of @c svn_log_message_recevier2_t.
+ * instead of @c svn_log_message_recevier2_t.  Also @a omit_log_text is
+ * always set to @c FALSE.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.

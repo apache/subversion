@@ -361,6 +361,7 @@ static svn_error_t *compat_get_log(void *session_baton,
   return VTBL.get_log(session_baton, paths, start, end, 0, /* limit */
                       discover_changed_paths, strict_node_history,
                       FALSE, /* include_merged_revisions */
+                      FALSE, /* omit_log_text */
                       receiver2, receiver2_baton, pool);
 }
 

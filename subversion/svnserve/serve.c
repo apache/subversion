@@ -1548,21 +1548,28 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
   svn_boolean_t changed_paths, strict_node, include_merged_revisions;
+  svn_boolean_t omit_log_text;
   apr_array_header_t *paths, *full_paths;
   svn_ra_svn_item_t *elt;
   int i;
-  apr_uint64_t limit, include_merged_revs_param;
+  apr_uint64_t limit, include_merged_revs_param, omit_log_text_param;
   log_baton_t lb;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?B", &paths,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?BB", &paths,
                                  &start_rev, &end_rev, &changed_paths,
                                  &strict_node, &limit,
-                                 &include_merged_revs_param));
+                                 &include_merged_revs_param,
+                                 &omit_log_text_param));
 
   if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
     include_merged_revisions = FALSE;
   else
     include_merged_revisions = include_merged_revs_param;
+
+  if (omit_log_text_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    omit_log_text = FALSE;
+  else
+    omit_log_text = omit_log_text_param;
 
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is 
@@ -1591,7 +1598,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.conn = conn;
   err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
-                            include_merged_revisions, FALSE,
+                            include_merged_revisions, omit_log_text,
                             authz_check_access_cb_func(b), b, log_receiver,
                             &lb, pool);
 
