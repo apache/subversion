@@ -396,12 +396,18 @@
 
 /* svn_delta_path_driver() mutates its 'paths' argument (by sorting it),
    despite the fact that it is notionally an input parameter - hence, the
-   lack of 'const' in that one case. */
+   lack of 'const' in that one case. 
+   
+   svn_wc_get_update_editor3() and svn_wc_get_switch_editor3() aren't changing 
+   their 'preserved_exts' argument, but it is forwarded to 
+   svn_cstring_match_glob_list which also doesn't modify it, but does not have 
+   const in its prototype.  */
 %apply const apr_array_header_t *STRINGLIST {
   const apr_array_header_t *args,
   const apr_array_header_t *diff_options,
   apr_array_header_t *paths,
-  const apr_array_header_t *targets
+  const apr_array_header_t *targets,
+  apr_array_header_t *preserved_exts
 };
 
 /* -----------------------------------------------------------------------
