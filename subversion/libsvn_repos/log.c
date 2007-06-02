@@ -41,6 +41,8 @@
  * not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
  *
  * If DESCENDING_ORDER is true, send child messages in descending order.
+ * 
+ * If OMIT_LOG_TEXT is true, don't send the log text to RECEIVER.
  *
  * If INCLUDE_MERGED_REVISIONS is TRUE, also pass history information to
  * RECEIVER for any revisions which were merged in a result of REV.
@@ -51,6 +53,7 @@ send_change_rev(const apr_array_header_t *paths,
                 svn_fs_t *fs,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t include_merged_revisions,
+                svn_boolean_t omit_log_text,
                 svn_boolean_t descending_order,
                 svn_repos_authz_func_t authz_read_func,
                 void *authz_read_baton,
@@ -609,6 +612,7 @@ send_child_revs(const apr_array_header_t *paths,
                 const apr_array_header_t *rangelist,
                 svn_fs_t *fs,
                 svn_boolean_t discover_changed_paths,
+                svn_boolean_t omit_log_text,
                 svn_boolean_t descending_order,
                 svn_repos_authz_func_t authz_read_func,
                 void *authz_read_baton,
@@ -634,7 +638,7 @@ send_child_revs(const apr_array_header_t *paths,
 
       svn_pool_clear(iterpool);
       SVN_ERR(send_change_rev(paths, rev, fs, discover_changed_paths, TRUE,
-                              descending_order,
+                              omit_log_text, descending_order,
                               authz_read_func, authz_read_baton,
                               receiver, receiver_baton, iterpool));
     }
@@ -651,6 +655,7 @@ send_change_rev(const apr_array_header_t *paths,
                 svn_fs_t *fs,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t include_merged_revisions,
+                svn_boolean_t omit_log_text,
                 svn_boolean_t descending_order,
                 svn_repos_authz_func_t authz_read_func,
                 void *authz_read_baton,
@@ -714,6 +719,10 @@ send_change_rev(const apr_array_header_t *paths,
         changed_paths = NULL;
     }
 
+  /* Intentionally omit the log message if requested. */
+  if (omit_log_text)
+    message = NULL;
+
   /* Check to see if we need to include any extra merged revisions. */
   if (include_merged_revisions)
     {
@@ -737,7 +746,7 @@ send_change_rev(const apr_array_header_t *paths,
 
   if (nbr_children > 0)
     SVN_ERR(send_child_revs(paths, rangelist, fs, discover_changed_paths,
-                            descending_order,
+                            omit_log_text, descending_order,
                             authz_read_func, authz_read_baton, receiver,
                             receiver_baton, pool));
 
@@ -759,6 +768,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
                     svn_boolean_t discover_changed_paths,
                     svn_boolean_t strict_node_history,
                     svn_boolean_t include_merged_revisions,
+                    svn_boolean_t omit_log_text,
                     svn_repos_authz_func_t authz_read_func,
                     void *authz_read_baton,
                     svn_log_message_receiver2_t receiver,
@@ -836,7 +846,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
           SVN_ERR(send_change_rev(paths, rev, fs,
                                   discover_changed_paths,
                                   include_merged_revisions,
-                                  descending_order,
+                                  omit_log_text, descending_order,
                                   authz_read_func, authz_read_baton,
                                   receiver, receiver_baton, iterpool));
         }
@@ -936,7 +946,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
               SVN_ERR(send_change_rev(paths, current, fs,
                                       discover_changed_paths,
                                       include_merged_revisions,
-                                      descending_order,
+                                      omit_log_text, descending_order,
                                       authz_read_func, authz_read_baton,
                                       receiver, receiver_baton,
                                       iterpool));
@@ -965,7 +975,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
                                                        svn_revnum_t),
                                   fs, discover_changed_paths,
                                   include_merged_revisions,
-                                  descending_order,
+                                  omit_log_text, descending_order,
                                   authz_read_func, authz_read_baton,
                                   receiver, receiver_baton, iterpool));
           if (limit && i + 1 >= limit)
@@ -976,6 +986,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_repos_get_logs3(svn_repos_t *repos,
@@ -1000,7 +1011,7 @@ svn_repos_get_logs3(svn_repos_t *repos,
 
   return svn_repos_get_logs4(repos, paths, start, end, limit,
                              discover_changed_paths, strict_node_history,
-                             FALSE, authz_read_func, authz_read_baton,
+                             FALSE, FALSE, authz_read_func, authz_read_baton,
                              receiver2, receiver2_baton,
                              pool);
 }

@@ -1591,7 +1591,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.conn = conn;
   err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
-                            include_merged_revisions,
+                            include_merged_revisions, FALSE,
                             authz_check_access_cb_func(b), b, log_receiver,
                             &lb, pool);
 

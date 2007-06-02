@@ -1127,6 +1127,9 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each path.
  *
+ * If @a omit_log_text is set, the text of the log message will not be
+ * returned.
+ *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
  *
@@ -1156,6 +1159,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
                     svn_boolean_t discover_changed_paths,
                     svn_boolean_t strict_node_history,
                     svn_boolean_t include_merged_revisions,
+                    svn_boolean_t omit_log_text,
                     svn_repos_authz_func_t authz_read_func,
                     void *authz_read_baton,
                     svn_log_message_receiver2_t receiver,
@@ -1165,6 +1169,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
 /**
  * Same as svn_repos_get_logs4(), but with @a receiver being a 
  * @c svn_log_message_receiver_t instead of @c svn_log_message_receiver2_t.
+ * Also, @a omit_log_text is set to @c FALSE.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
