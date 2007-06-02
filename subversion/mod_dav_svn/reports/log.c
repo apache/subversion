@@ -220,6 +220,7 @@ dav_svn__log_report(const dav_resource *resource,
   svn_boolean_t discover_changed_paths = FALSE;      /* off by default */
   svn_boolean_t strict_node_history = FALSE;         /* off by default */
   svn_boolean_t include_merged_revisions = FALSE;    /* off by default */
+  svn_boolean_t omit_log_text = FALSE;
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 1, sizeof(const char *));
   svn_stringbuf_t *comma_separated_paths =
@@ -257,6 +258,8 @@ dav_svn__log_report(const dav_resource *resource,
         strict_node_history = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "include-merged-revisions") == 0)
         include_merged_revisions = TRUE; /* presence indicates positivity */
+      else if (strcmp(child->name, "omit-log-text") == 0)
+        omit_log_text = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "path") == 0)
         {
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
@@ -301,7 +304,7 @@ dav_svn__log_report(const dav_resource *resource,
                              discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
-                             FALSE,
+                             omit_log_text,
                              dav_svn__authz_read_func(&arb),
                              &arb,
                              log_receiver,
