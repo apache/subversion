@@ -325,6 +325,17 @@ public class Status implements java.io.Serializable
     }
 
     /**
+     * Returns the last date the item was changed measured in the
+     * number of microseconds since 00:00:00 January 1, 1970 UTC.
+     * @return the last time the item was changed.
+     * @since 1.5
+     */
+    public long getLastChangedDateMicros()
+    {
+        return lastChangedDate;
+    }
+
+    /**
      * Returns the author of the last changed or null
      * @return name of author if versioned, null otherwise
      */
@@ -622,6 +633,17 @@ public class Status implements java.io.Serializable
     }
 
     /**
+     * Returns the lock creation date measured in the number of
+     * microseconds since 00:00:00 January 1, 1970 UTC.
+     * @return the lock creation date
+     * @since 1.5
+     */
+    public long getLockCreationDateMicros()
+    {
+        return lockCreationDate;
+    }
+
+    /**
      * Returns the lock as in the repository
      * @return the lock as in the repository
      * @since 1.2
@@ -659,6 +681,17 @@ public class Status implements java.io.Serializable
     public Date getReposLastCmtDate()
     {
         return microsecondsToDate(reposLastCmtDate);
+    }
+
+    /**
+     * Return the last committed date measured in the number of
+     * microseconds since 00:00:00 January 1, 1970 UTC.
+     * @return the last committed date
+     * @since 1.5
+     */
+    public long getReposLastCmtDateMicros()
+    {
+        return reposLastCmtDate;
     }
 
     /**
