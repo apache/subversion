@@ -284,6 +284,7 @@ svn_client_log4(const apr_array_header_t *targets,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
+                svn_boolean_t omit_log_text,
                 svn_log_message_receiver2_t receiver,
                 void *receiver_baton,
                 svn_client_ctx_t *ctx,
@@ -505,7 +506,7 @@ svn_client_log4(const apr_array_header_t *targets,
                                   discover_changed_paths,
                                   strict_node_history,
                                   include_merged_revisions,
-                                  FALSE,
+                                  omit_log_text,
                                   receiver,
                                   receiver_baton,
                                   pool);
@@ -523,7 +524,7 @@ svn_client_log4(const apr_array_header_t *targets,
                               discover_changed_paths,
                               strict_node_history,
                               include_merged_revisions,
-                              FALSE,
+                              omit_log_text,
                               receiver,
                               receiver_baton,
                               pool);
@@ -555,7 +556,7 @@ svn_client_log3(const apr_array_header_t *targets,
 
   return svn_client_log4(targets, peg_revision, start, end, limit,
                          discover_changed_paths, strict_node_history, FALSE,
-                         receiver2, receiver2_baton, ctx, pool);
+                         FALSE, receiver2, receiver2_baton, ctx, pool);
 }
 
 svn_error_t *

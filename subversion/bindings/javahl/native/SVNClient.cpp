@@ -216,6 +216,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                                 discoverPaths,
                                 stopOnCopy,
                                 includeMergedRevisions,
+                                false,
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }

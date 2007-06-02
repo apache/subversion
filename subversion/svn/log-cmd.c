@@ -569,6 +569,7 @@ svn_cl__log(apr_getopt_t *os,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
+                              opt_state->quiet,
                               log_message_receiver_xml,
                               &lb,
                               ctx,
@@ -579,13 +580,6 @@ svn_cl__log(apr_getopt_t *os,
     }
   else  /* default output format */
     {
-      /* ### Ideally, we'd also pass the `quiet' flag through to the
-       * repository code, so we wouldn't waste bandwith sending the
-       * log message bodies back only to have the client ignore them.
-       * However, that's an implementation detail; as far as the user
-       * is concerned, the result of 'svn log --quiet' is the same
-       * either way.
-       */
       SVN_ERR(svn_client_log4(targets,
                               &peg_revision,
                               &(opt_state->start_revision),
@@ -594,6 +588,7 @@ svn_cl__log(apr_getopt_t *os,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
+                              opt_state->quiet,
                               log_message_receiver,
                               &lb,
                               ctx,
