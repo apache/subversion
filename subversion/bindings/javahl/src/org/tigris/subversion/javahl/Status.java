@@ -316,8 +316,8 @@ public class Status implements java.io.Serializable
 
     /**
      * Returns the last date the item was changed or null
-     * @return the last time the item was changed.
-     * or null if not available
+     * @return the last time the item was changed or null if not
+     * available
      */
     public Date getLastChangedDate()
     {
