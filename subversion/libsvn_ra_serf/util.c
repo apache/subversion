@@ -911,6 +911,11 @@ handle_response(serf_request_t *request,
     {
       return status;
     }
+  if (!sl.version && (APR_STATUS_IS_EOF(status) ||
+                      APR_STATUS_IS_EAGAIN(status)))
+    {
+      return status;
+    }
 
   status = serf_bucket_response_wait_for_headers(response);
   if (status)
