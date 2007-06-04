@@ -221,6 +221,10 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
       /* Changelist operation failed. */
       return org_tigris_subversion_javahl_NotifyAction_changelist_failed;
 
+    case svn_wc_notify_merge_begin:
+      /* A merge operation has begun. */
+      return org_tigris_subversion_javahl_NotifyAction_merge_begin;
+
     default:
       return -1;
     }
