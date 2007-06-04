@@ -103,7 +103,8 @@ log_receiver(void *baton,
 
   if (log_entry->nbr_children)
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                              "<S:nbr-children>%ld</S:nbr-children>" DEBUG_CR,
+                              "<S:nbr-children>%" APR_INT64_T_FMT 
+                              "</S:nbr-children>" DEBUG_CR,
                               log_entry->nbr_children));
 
   if (log_entry->changed_paths)
