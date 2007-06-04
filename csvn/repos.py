@@ -429,7 +429,7 @@ class _LogMessageReceiver(CallbackReceiver):
     def receive(baton, changed_paths, revision, author, date, message, pool):
         self = cast(baton, py_object).value
 
-        entry = _types.LogEntry()
+        entry = LogEntry()
 
         # Save information about the log entry
         entry.revision = revision
