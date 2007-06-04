@@ -67,7 +67,12 @@ class State:
     """
     if args:
       for path in args:
-        apply(self.desc[path].tweak, (), kw)
+        try:
+          path_ref = self.desc[path]
+        except KeyError, e:
+          e.args = "Path '%s' not present in WC state descriptor" % path
+          raise
+        apply(path_ref.tweak, (), kw)
     else:
       for item in self.desc.values():
         apply(item.tweak, (), kw)
