@@ -121,42 +121,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                              _("Entry '%s' has no URL"),
                              svn_path_local_style(anchor, pool));
 
-  /* Figure out the real depth for the update, using sophisticated
-     techniques from http://en.wikipedia.org/wiki/Bone_divination. */
-  if (depth == svn_depth_unknown)
-    {
-      SVN_ERR(svn_io_check_path(path, &kind, pool));
-      if (kind == svn_node_none || kind == svn_node_file)
-        depth = svn_depth_infinity;
-      else if (kind == svn_node_dir)
-        {
-          if (adm_access == dir_access)
-            depth = entry->depth;
-          else
-            {
-              /* I'm not sure this situation can ever happen in real
-                 life, but svn_wc_adm_open_anchor() doesn't explicitly
-                 prohibit it, so we must be prepared. */
-              const svn_wc_entry_t *tmp_ent;
-              SVN_ERR(svn_wc_entry(&tmp_ent, path, dir_access, FALSE, pool));
-              if (tmp_ent)
-                depth = tmp_ent->depth;
-              else
-                return svn_error_createf
-                  (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                   _("'%s' is not a working copy directory"),
-                   svn_path_local_style(path, pool));
-            }
-        }
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-             _("'%s' is neither a file nor a directory"),
-             svn_path_local_style(path, pool));
-        }
-    }
-
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */
   if (revision->kind == svn_opt_revision_number)
@@ -243,7 +207,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  if ((depth == svn_depth_infinity) && (! ignore_externals))
+  if ((depth == svn_depth_infinity || depth == svn_depth_unknown)
+      && (! ignore_externals))
     SVN_ERR(svn_client__handle_externals(traversal_info, 
                                          TRUE, /* update unchanged ones */
                                          use_sleep, ctx, pool));
