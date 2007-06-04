@@ -989,7 +989,8 @@ svn_repos_get_logs4(svn_repos_t *repos,
       for (i = 0; i < revs->nelts; ++i)
         {
           svn_pool_clear(iterpool);
-          SVN_ERR(send_change_rev(paths, APR_ARRAY_IDX(revs, revs->nelts - i - 1,
+          SVN_ERR(send_change_rev(paths, APR_ARRAY_IDX(revs,
+                                                       revs->nelts - i - 1,
                                                        svn_revnum_t),
                                   fs, discover_changed_paths,
                                   include_merged_revisions,
