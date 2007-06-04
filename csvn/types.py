@@ -164,24 +164,6 @@ class Array(ListMixin):
             for i in xrange(-diff):
                 apr_array_pop(self)
 
-def _stream_read(baton, buffer, l):
-    f = cast(baton, py_object).value
-    s = f.read(l[0])
-    memmove(buffer, string, len(s))
-    l[0] = len(s)
-    return SVN_NO_ERROR
-
-def _stream_write(baton, data, l):
-    f = cast(baton, py_object).value
-    s = string_at(data.raw, l[0])
-    f.write(s)
-    return SVN_NO_ERROR
-
-def _stream_close(baton):
-    f = cast(baton, py_object).value
-    f.close()
-    return SVN_NO_ERROR
-
 class Stream(object):
 
     def __init__(self, buffer, disown=False):
@@ -191,12 +173,33 @@ class Stream(object):
         self.buffer = buffer
         baton = c_void_p(id(buffer))
         self.stream = svn_stream_create(baton, self.pool)
-        svn_stream_set_read(self.stream, svn_read_fn_t(_stream_read))
-        svn_stream_set_write(self.stream, svn_write_fn_t(_stream_write))
+        svn_stream_set_read(self.stream, svn_read_fn_t(self._read))
+        svn_stream_set_write(self.stream, svn_write_fn_t(self._write))
         if not disown:
-            svn_stream_set_close(self.stream, svn_close_fn_t(_stream_close))
+            svn_stream_set_close(self.stream, svn_close_fn_t(self._close))
 
     _as_parameter_ = property(fget=lambda self: self.stream)
+
+    def _read(baton, buffer, l):
+        f = cast(baton, py_object).value
+        s = f.read(l[0])
+        memmove(buffer, string, len(s))
+        l[0] = len(s)
+        return SVN_NO_ERROR
+    _read = staticmethod(_read)
+
+    def _write(baton, data, l):
+        f = cast(baton, py_object).value
+        s = string_at(data.raw, l[0])
+        f.write(s)
+        return SVN_NO_ERROR
+    _write = staticmethod(_write)
+
+    def _close(baton):
+        f = cast(baton, py_object).value
+        f.close()
+        return SVN_NO_ERROR
+    _close = staticmethod(_close)
 
 class SvnStringPtr(object):
 
