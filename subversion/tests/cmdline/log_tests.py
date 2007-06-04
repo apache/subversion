@@ -964,7 +964,7 @@ def simple_merge_sensitive_log(sbox):
 
     log_chain = parse_log_output(output)
     expected_merges = {
-      1 : [2], 3 : [7], 4 : [7], 6 : [7],
+      1 : [7], 3 : [7], 4 : [7], 6 : [7],
       }
     check_merge_results(log_chain, expected_merges)
 
