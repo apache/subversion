@@ -1,4 +1,5 @@
 from csvn.repos import *
+from csvn.auth import User
 import time, sys, gc
 from optparse import OptionParser
 import textwrap

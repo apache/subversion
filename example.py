@@ -1,4 +1,5 @@
 from csvn.repos import *
+from csvn.auth import User
 import os
 
 if os.path.exists("/tmp/test-repos"):
