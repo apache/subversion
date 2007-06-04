@@ -335,7 +335,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      svn_cl__config_dir_opt} },
 
   { "copy", svn_cl__copy, {"cp"}, N_
-    ("Duplicate something in working copy or repository, remembering history.\n"
+    ("Duplicate something in working copy or repository, remembering\n"
+     "history.\n"
      "usage: copy SRC[@REV]... DST\n"
      "\n"
      "When copying multiple sources, they will be added as children of DST, \n"
