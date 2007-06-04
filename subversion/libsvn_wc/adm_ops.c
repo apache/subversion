@@ -89,9 +89,10 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                                 &write_required,
                                 svn_wc_adm_access_pool(dirpath)));
 
-  if (depth == svn_depth_files
-      || depth == svn_depth_immediates
-      || depth == svn_depth_infinity)
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
+  if (depth > svn_depth_empty)
     {
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
@@ -135,9 +136,15 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
             }
       
           /* If a directory and recursive... */
-          else if ((depth == svn_depth_infinity)
+          else if ((depth == svn_depth_infinity
+                    || depth == svn_depth_immediates)
                    && (current_entry->kind == svn_node_dir))
             {
+              svn_depth_t depth_below_here = depth;
+
+              if (depth == svn_depth_immediates)
+                depth_below_here = svn_depth_empty;
+
               /* If the directory is 'missing', remove it.  This is safe as 
                  long as this function is only called as a helper to 
                  svn_wc__do_update_cleanup, since the update will already have 
@@ -170,7 +177,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                   SVN_ERR(tweak_entries
                           (child_access, child_url, repos, new_rev,
                            notify_func, notify_baton, remove_missing_dirs,
-                           depth, exclude_paths, subpool));
+                           depth_below_here, exclude_paths, subpool));
                 }
             }
         }
