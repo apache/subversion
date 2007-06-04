@@ -5,38 +5,6 @@ from csvn.ext.callback_receiver import CallbackReceiver
 from txn import Txn
 import os
 
-class _LogMessageReceiver(CallbackReceiver):
-
-    def collect(self, session, start_rev, end_rev, paths, limit, verbose,
-                stop_on_copy):
-        self.verbose = verbose
-        pool = Pool()
-        baton = c_void_p(id(self))
-        receiver = svn_log_message_receiver_t(self.receive)
-        svn_ra_get_log(session, paths, start_rev, end_rev,
-                       limit, verbose, stop_on_copy, receiver,
-                       baton, pool)
-
-    def receive(baton, changed_paths, revision, author, date, message, pool):
-        self = cast(baton, py_object).value
-
-        entry = _types.LogEntry()
-
-        # Save information about the log entry
-        entry.revision = revision
-        entry.author = str(author)
-        entry.date = _types.SvnDate(date)
-        entry.message = str(message)
-
-        if self.verbose:
-            entry.changed_paths = Hash(POINTER(svn_log_changed_path_t),
-              changed_paths, dup = svn_log_changed_path_dup)
-        else:
-            entry.changed_paths = None
-
-        self.send(entry)
-    receive = staticmethod(receive)
-
 class RepositoryURI(object):
     """A URI to an object in a Subversion repository, stored internally in
        encoded format.
@@ -147,7 +115,7 @@ class RemoteRepository(object):
            bitwise OR of all the SVN_DIRENT_ fields you would like to
            have returned to you.
         """
-        dirents = Hash(POINTER(svn_dirent_t), None)
+        dirents = _types.Hash(POINTER(svn_dirent_t), None)
         svn_ra_get_dir2(self, dirents.byref(), NULL, NULL, path,
                         rev, fields, dirents.pool)
         return dirents
@@ -158,7 +126,7 @@ class RemoteRepository(object):
 
            If REV is not specified, we look at the latest revision of the
            repository."""
-        stream = Stream(buffer)
+        stream = _types.Stream(buffer)
         svn_ra_get_file(self, path, rev, stream, NULL, NULL, stream.pool)
 
     def info(self, path, rev = None):
@@ -180,7 +148,8 @@ class RemoteRepository(object):
            If REV is not specified, we look at the latest revision of the
            repository."""
 
-        props = Hash(POINTER(svn_string_t), None, wrapper=SvnStringPtr)
+        props = _types.Hash(POINTER(svn_string_t), None,
+                   wrapper=_types.SvnStringPtr)
         status = self.check_path(path, rev)
         if status == svn_node_dir:
             svn_ra_get_dir2(self, NULL, NULL, props.byref(), path,
@@ -234,7 +203,7 @@ class RemoteRepository(object):
 
         """
 
-        paths = Array(c_char_p, paths is None and [""] or paths)
+        paths = _types.Array(c_char_p, paths is None and [""] or paths)
         return iter(_LogMessageReceiver(self, start_rev, end_rev, paths,
                                         limit, verbose, stop_on_copy))
 
@@ -432,3 +401,48 @@ class _fs_root(object):
         svn_fs_check_path(byref(kind), self, path, self.iterpool)
 
         return kind.value
+
+class LogEntry(object):
+    """REVISION, AUTHOR, DATE, and MESSAGE are straightforward, and
+       contain what you expect. DATE is a csvn.types.SvnDate object.
+
+       If no information about the paths changed in this revision is
+       available, CHANGED_PATHS will be None. Otherwise, CHANGED_PATHS
+       will contain a dictionary which maps every path committed
+       in REVISION to svn_log_changed_path_t pointers."""
+
+    __slots__ = ['changed_paths', 'revision',
+                 'author', 'date', 'message']
+
+class _LogMessageReceiver(CallbackReceiver):
+
+    def collect(self, session, start_rev, end_rev, paths, limit, verbose,
+                stop_on_copy):
+        self.verbose = verbose
+        pool = Pool()
+        baton = c_void_p(id(self))
+        receiver = svn_log_message_receiver_t(self.receive)
+        svn_ra_get_log(session, paths, start_rev, end_rev,
+                       limit, verbose, stop_on_copy, receiver,
+                       baton, pool)
+
+    def receive(baton, changed_paths, revision, author, date, message, pool):
+        self = cast(baton, py_object).value
+
+        entry = _types.LogEntry()
+
+        # Save information about the log entry
+        entry.revision = revision
+        entry.author = str(author)
+        entry.date = _types.SvnDate(date)
+        entry.message = str(message)
+
+        if self.verbose:
+            entry.changed_paths = _types.Hash(POINTER(svn_log_changed_path_t),
+              changed_paths, dup = svn_log_changed_path_dup)
+        else:
+            entry.changed_paths = None
+
+        self.send(entry)
+    receive = staticmethod(receive)
+
