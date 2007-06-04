@@ -200,11 +200,10 @@ class Stream(object):
 
 class SvnStringPtr(object):
 
-    @staticmethod
     def to_param(obj, pool):
         return svn_string_ncreate(obj, len(obj), pool)
+    to_param = staticmethod(to_param)
 
-    @staticmethod
     def from_param(obj):
 
         assert isinstance(obj[0], svn_string_t)
@@ -212,5 +211,5 @@ class SvnStringPtr(object):
         # Convert from a raw svn_string_t object. Pass in the length, so that
         # we handle binary property values with embedded NULLs correctly.
         return string_at(obj[0].data.raw, obj[0].len)
-
+    from_param = staticmethod(from_param)
 
