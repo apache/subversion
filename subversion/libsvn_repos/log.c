@@ -532,7 +532,7 @@ next_history_rev(apr_array_header_t *histories)
 /* Return the combined rangelists for everyone's mergeinfo for the
    PATHS tree at REV in *RANGELIST.  Perform all allocations in POOL. */
 static svn_error_t *
-get_combined_rangelist(apr_array_header_t **rangelist,
+get_combined_mergeinfo(apr_hash_t **mergeinfo,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
                        const apr_array_header_t *paths,
@@ -540,29 +540,22 @@ get_combined_rangelist(apr_array_header_t **rangelist,
 {
   svn_fs_root_t *root;
   apr_hash_index_t *hi;
-  apr_hash_t *mergeinfo;
+  apr_hash_t *tree_mergeinfo;
   apr_pool_t *subpool = svn_pool_create(pool);
   
+  /* Get the mergeinfo for each tree roots in PATHS. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
-  SVN_ERR(svn_fs_get_mergeinfo_for_tree(&mergeinfo, root, paths, subpool));
+  SVN_ERR(svn_fs_get_mergeinfo_for_tree(&tree_mergeinfo, root, paths, pool));
 
-  *rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  *mergeinfo = apr_hash_make(pool);
 
-  for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
+  /* Merge all the mergeinfos into one mergeinfo */
+  for (hi = apr_hash_first(subpool, tree_mergeinfo); hi; hi = apr_hash_next(hi))
     {
       apr_hash_t *path_mergeinfo;
-      apr_hash_index_t *mhi;
 
       apr_hash_this(hi, NULL, NULL, (void *)&path_mergeinfo);
-
-      for (mhi = apr_hash_first(subpool, path_mergeinfo); mhi;
-           mhi = apr_hash_next(mhi))
-        {
-          apr_array_header_t *path_rangelist;
-          
-          apr_hash_this(mhi, NULL, NULL, (void *) &path_rangelist); 
-          SVN_ERR(svn_rangelist_merge(rangelist, path_rangelist, pool));
-        }
+      SVN_ERR(svn_mergeinfo_merge(mergeinfo, path_mergeinfo, pool));
     }
 
   svn_pool_destroy(subpool);
@@ -570,36 +563,59 @@ get_combined_rangelist(apr_array_header_t **rangelist,
   return SVN_NO_ERROR;
 }
 
+/* Combine and return in *RANGELIST the various rangelists for each bit of
+   MERGEINFO.  */
+static svn_error_t *
+combine_mergeinfo_rangelists(apr_array_header_t **rangelist,
+                             apr_hash_t *mergeinfo,
+                             apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  *rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+
+  /* Iterate over each path's rangelist, and merge them into RANGELIST. */
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      apr_array_header_t *path_rangelist;
+
+      apr_hash_this(hi, NULL, NULL, (void *)&path_rangelist);
+      SVN_ERR(svn_rangelist_merge(rangelist, path_rangelist, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Determine all the revisions which were merged into PATHS in REV.  Return
    them as a new RANGELIST.  */
 static svn_error_t *
-get_merged_rev_rangelist(apr_array_header_t **rangelist,
+get_merged_rev_mergeinfo(apr_hash_t **mergeinfo,
                          svn_fs_t *fs,
                          const apr_array_header_t *paths,
                          svn_revnum_t rev,
                          apr_pool_t *pool)
 {
-  apr_array_header_t *curr_rangelist, *prev_rangelist;
-  apr_array_header_t *deleted, *changed;
+  apr_hash_t *curr_mergeinfo, *prev_mergeinfo;
+  apr_hash_t *deleted, *changed;
   apr_pool_t *subpool;
 
   /* Revision 0 is always empty. */
   if (rev == 0)
     {
-      *rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+      *mergeinfo = apr_hash_make(pool);
       return SVN_NO_ERROR;
     }
 
   subpool = svn_pool_create(pool);
 
-  SVN_ERR(get_combined_rangelist(&curr_rangelist, fs, rev, paths, subpool));
-  SVN_ERR(get_combined_rangelist(&prev_rangelist, fs, rev - 1, paths, subpool));
+  SVN_ERR(get_combined_mergeinfo(&curr_mergeinfo, fs, rev, paths, subpool));
+  SVN_ERR(get_combined_mergeinfo(&prev_mergeinfo, fs, rev - 1, paths, subpool));
 
-  SVN_ERR(svn_rangelist_diff(&deleted, &changed, prev_rangelist, curr_rangelist,
+  SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
                              subpool));
-  SVN_ERR(svn_rangelist_merge(&changed, deleted, subpool));
+  SVN_ERR(svn_mergeinfo_merge(&changed, deleted, subpool));
 
-  *rangelist = svn_rangelist_dup(changed, pool);
+  *mergeinfo = svn_mergeinfo_dup(changed, pool);
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
@@ -668,6 +684,7 @@ send_change_rev(const apr_array_header_t *paths,
   svn_log_entry_t *log_entry;
   apr_uint64_t nbr_children = 0;
   apr_array_header_t *rangelist;
+  apr_hash_t *mergeinfo;
 
   SVN_ERR(svn_fs_revision_proplist(&r_props, fs, rev, pool));
   author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
@@ -726,7 +743,8 @@ send_change_rev(const apr_array_header_t *paths,
   /* Check to see if we need to include any extra merged revisions. */
   if (include_merged_revisions)
     {
-      SVN_ERR(get_merged_rev_rangelist(&rangelist, fs, paths, rev, pool));
+      SVN_ERR(get_merged_rev_mergeinfo(&mergeinfo, fs, paths, rev, pool));
+      SVN_ERR(combine_mergeinfo_rangelists(&rangelist, mergeinfo, pool));
 
       nbr_children = svn_rangelist_count_revs(rangelist);
     }
