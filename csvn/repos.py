@@ -1,35 +1,9 @@
 import csvn.core as svn
 from csvn.core import *
+import csvn.types as _types
 from csvn.ext.callback_receiver import CallbackReceiver
 from txn import Txn
 import os
-
-class SvnDate(str):
-
-    def as_apr_time_t(self):
-        """Return this date to an apr_time_t object"""
-        pool = Pool()
-        when = apr_time_t()
-        svn_time_from_cstring(byref(when), self, pool)
-        return when
-
-    def as_human_string(self):
-        """Return this date to a human-readable date"""
-        pool = Pool()
-        return str(svn_time_to_human_cstring(self.as_apr_time_t(), pool))
-
-class LogEntry(object):
-    """REVISION, AUTHOR, DATE, and MESSAGE are straightforward, and
-       contain what you expect. DATE is an SvnDate object.
-
-       If no information about the paths changed in this revision is
-       available, CHANGED_PATHS will be None. Otherwise, CHANGED_PATHS
-       will contain a dictionary which maps every path committed
-       in REVISION to svn_log_changed_path_t pointers."""
-
-    __slots__ = ['changed_paths', 'revision',
-                 'author', 'date', 'message']
-
 
 class _LogMessageReceiver(CallbackReceiver):
 
@@ -46,12 +20,12 @@ class _LogMessageReceiver(CallbackReceiver):
     def receive(baton, changed_paths, revision, author, date, message, pool):
         self = cast(baton, py_object).value
 
-        entry = LogEntry()
+        entry = _types.LogEntry()
 
         # Save information about the log entry
         entry.revision = revision
         entry.author = str(author)
-        entry.date = SvnDate(date)
+        entry.date = _types.SvnDate(date)
         entry.message = str(message)
 
         if self.verbose:
@@ -62,68 +36,6 @@ class _LogMessageReceiver(CallbackReceiver):
 
         self.send(entry)
     receive = staticmethod(receive)
-
-class User(object):
-
-    def __init__(self, username=None, password=None):
-        """Create a user object which represents a user
-           with the specified username and password."""
-
-        self._username = username
-        self._password = password
-        self.pool = Pool()
-
-    def username(self):
-        """Return the current username.
-
-           By default, this function just returns the username
-           which was supplied in the constructor, but subclasses
-           may behave differently."""
-        return self._username
-
-    def password(self):
-        """Return the current password.
-
-           By default, this function just returns the password
-           which was supplied in the constructor, but subclasses
-           may behave differently."""
-        return self._password
-
-    def allow_access(self, requested_access, path):
-        """Check whether the current user has the REQUESTED_ACCESS
-           to PATH.
-
-           If PATH is None, this function should check if the
-           REQUESTED_ACCESS is granted for at least one path
-           in the repository.
-
-           REQUESTED_ACCESS is an integer which may consist of
-           any combination of the following fields:
-              svn_authz_read:      The path can be read
-              svn_authz_write:     The path can be altered
-              svn_authz_recursive: The other access credentials
-                                   are recursive.
-
-           By default, this function always returns True, but
-           subclasses may behave differently.
-
-           This function is used by the "Repository" class to check
-           permissions (see repos.py).
-
-           FIXME: This function isn't currently used, because we
-           haven't implemented higher-level authz yet.
-        """
-
-        return True
-
-    def setup_auth_baton(self, auth_baton):
-
-        # Setup the auth baton using the default options from the
-        # command-line client
-        svn_cmdline_setup_auth_baton(auth_baton, TRUE,
-            self._username, self._password, NULL, TRUE, NULL,
-            svn_cancel_func_t(), NULL, self.pool)
-
 
 class RepositoryURI(object):
     """A URI to an object in a Subversion repository, stored internally in
@@ -171,7 +83,8 @@ class RemoteRepository(object):
 
     def __init__(self, url, user=None):
         """Open a new session to URL with the specified USER.
-           USER must be an object that implements the 'User' interface."""
+           USER must be an object that implements the
+           'csvn.auth.User' interface."""
 
         self.pool = Pool()
         self.iterpool = Pool()
@@ -287,11 +200,11 @@ class RemoteRepository(object):
     def log(self, start_rev, end_rev, paths=None, limit=0, verbose=FALSE,
             stop_on_copy=FALSE):
         """A generator function which returns information about the revisions
-           between START_REV and END_REV. Each return value is a LogEntry
-           object which describes a revision.
+           between START_REV and END_REV. Each return value is a
+           csvn.types.LogEntry object which describes a revision.
 
            For details on what fields are contained in a LogEntry object,
-           please see the LogEntry documentation.
+           please see the documentation from csvn.types.LogEntry.
 
            You can iterate through the log information for several revisions
            using a regular for loop. For example:
@@ -358,7 +271,7 @@ class LocalRepository(object):
        By default, this class does not perform any checks to verify
        permissions, assuming that the specified user has full
        administrative access to the repository. To teach this class
-       to enforce an authz policy, you must subclass User
+       to enforce an authz policy, you must subclass csvn.auth.User
        and implement the allow_access function.
     """
 
@@ -366,7 +279,7 @@ class LocalRepository(object):
         """Open the repository at PATH. If create is True,
            create a new repository.
 
-           If specified, user must be a User instance.
+           If specified, user must be a csvn.auth.User instance.
         """
         self.pool = Pool()
         self.iterpool = Pool()
