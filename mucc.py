@@ -8,7 +8,7 @@
 
 import os
 from csvn.core import *
-from csvn.client import RemoteRepository, RepositoryURI, User
+from csvn.repos import RemoteRepository, RepositoryURI, User
 from optparse import OptionParser
 
 usage = """python mucc.py [OPTION]... [ACTION]...

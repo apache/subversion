@@ -1,4 +1,4 @@
-from csvn.client import *
+from csvn.repos import *
 import time, sys, gc
 from optparse import OptionParser
 import textwrap
@@ -38,7 +38,7 @@ else:
     start_rev = 1
     end_rev = "HEAD"
 
-session = RepositorySession(repos_url, user=User(options.username))
+session = RemoteRepository(repos_url, user=User(options.username))
 
 if end_rev == "HEAD":
     end_rev = session.latest_revnum()

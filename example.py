@@ -1,4 +1,4 @@
-from csvn.client import *
+from csvn.repos import *
 import os
 
 if os.path.exists("/tmp/test-repos"):

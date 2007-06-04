@@ -5,7 +5,7 @@
 # Remove properties from the given URL.
 
 from csvn.core import *
-from csvn.client import RepositorySession, RepositoryURI, User
+from csvn.repos import RemoteRepository, RepositoryURI, User
 from optparse import OptionParser
 
 usage = """python trunkify.py [OPTION]... URL
@@ -44,7 +44,7 @@ elif options.file:
 else:
     commit_message = "Move project into new directory '%s'." % new_dir_name
 
-s = RepositorySession(repos_url, user=User(username=options.username))
+s = RemoteRepository(repos_url, user=User(username=options.username))
 
 txn = s.txn()
 
