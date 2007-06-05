@@ -1792,7 +1792,7 @@ do_merge(const char *initial_URL1,
   svn_boolean_t indirect;
   svn_opt_revision_t assumed_initial_revision1, assumed_initial_revision2;
   apr_size_t target_count, merge_target_count;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *subpool;
 
   /* Establish first RA session to initial_URL1. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_URL1, NULL,
@@ -1921,6 +1921,8 @@ do_merge(const char *initial_URL1,
         APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = &range;
     }
 
+  subpool = svn_pool_create(pool);
+
   /* Revisions from the requested range which have already been merged
      may create holes in range to merge.  Loop over the revision
      ranges we have left to merge, getting an editor for each range,
@@ -2047,6 +2049,9 @@ do_merge(const char *initial_URL1,
             svn_hash__clear(notify_b.skipped_paths);
         }
     }
+
+  apr_pool_destroy(subpool);
+
   /* MERGE_B->TARGET hasn't been merged yet so only elide as
      far MERGE_B->TARGET's immediate children.  If TARGET_WCPATH
      is an immdediate child of MERGE_B->TARGET don't even attempt to
@@ -2141,7 +2146,7 @@ do_single_file_merge(const char *initial_URL1,
   svn_boolean_t indirect = FALSE;
   apr_size_t target_count, merge_target_count;
   svn_opt_revision_t assumed_initial_revision1, assumed_initial_revision2;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *subpool;
 
   /* Establish first RA session to URL1. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session1, initial_URL1, NULL,
@@ -2268,6 +2273,8 @@ do_single_file_merge(const char *initial_URL1,
         APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = &range;
     }
 
+  subpool = svn_pool_create(pool);
+
   for (i = 0; i < remaining_ranges->nelts; i++)
     {
       svn_wc_notify_t *n;
@@ -2376,6 +2383,8 @@ do_single_file_merge(const char *initial_URL1,
             svn_hash__clear(notify_b.skipped_paths);
         }
     }
+
+  apr_pool_destroy(subpool);
 
   /* MERGE_B->TARGET hasn't been merged yet so only elide as
      far MERGE_B->TARGET's immediate children.  If TARGET_WCPATH
