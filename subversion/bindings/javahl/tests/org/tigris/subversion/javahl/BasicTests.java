@@ -2318,7 +2318,8 @@ public class BasicTests extends SVNTests
     {
         // build the test setup
         OneTest thisTest = new OneTest();
-        Notify2 notify = new Notify2(){
+        Notify2 notify = new Notify2()
+        {
             public void onNotify(NotifyInformation info)
             {
                 client.isAdminDirectory(".svn");
@@ -2334,7 +2335,8 @@ public class BasicTests extends SVNTests
     {
         // build the test setup
         OneTest thisTest = new OneTest();
-        Notify2 notify = new Notify2(){
+        Notify2 notify = new Notify2()
+        {
             public void onNotify(NotifyInformation info)
             {
                 try
