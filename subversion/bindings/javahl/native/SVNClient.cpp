@@ -2095,6 +2095,10 @@ SVNClient::getCopySource(const char *path, Revision &revision)
         JNIUtil::handleSVNError(err);
         return NULL;
     }
+
+    if (!SVN_IS_VALID_REVNUM(copyfromRev))
+        // "path" has no copy source.
+        return NULL;
     return CopySources::makeJCopySource(copyfromPath, copyfromRev,
                                         requestPool);
 }
