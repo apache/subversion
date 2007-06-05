@@ -861,7 +861,7 @@ test_list = [ None,
               authz_validate,
               authz_locking,
               Skip(authz_svnserve_anon_access_read,
-                   svntest.main.is_ra_type_dav()),
+                   svntest.main.is_ra_type_dav),
              ]
 
 if __name__ == '__main__':
