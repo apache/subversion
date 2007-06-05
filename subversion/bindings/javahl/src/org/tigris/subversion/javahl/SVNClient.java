@@ -1016,11 +1016,12 @@ public class SVNClient implements SVNClientInterface
     {
         for (int i = 0; i < revisions.length; i++)
         {
-        	Revision from = revisions[i].getFromRevision();
-        	if (from instanceof Revision.Number) {
-        		long revNum = ((Revision.Number) from).getNumber();
-        		from = new Revision.Number(revNum - 1);
-        	}
+            Revision from = revisions[i].getFromRevision();
+            if (from instanceof Revision.Number)
+            {
+                long revNum = ((Revision.Number) from).getNumber();
+                from = new Revision.Number(revNum - 1);
+            }
             this.merge(path, pegRevision, from,
                        revisions[i].getToRevision(), localPath, force, depth,
                        ignoreAncestry, dryRun);
