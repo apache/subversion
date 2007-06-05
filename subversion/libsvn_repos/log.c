@@ -32,35 +32,6 @@
 #include "svn_mergeinfo.h"
 #include "repos.h"
 
-/* Pass history information about REV to RECEIVER with its RECEIVER_BATON.
- *
- * FS is used with REV to fetch the interesting history information,
- * such as author, date, etc.
- *
- * The detect_changed function is used if either AUTHZ_READ_FUNC is
- * not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
- *
- * If DESCENDING_ORDER is true, send child messages in descending order.
- * 
- * If OMIT_LOG_TEXT is true, don't send the log text to RECEIVER.
- *
- * If INCLUDE_MERGED_REVISIONS is TRUE, also pass history information to
- * RECEIVER for any revisions which were merged in a result of REV.
- */
-static svn_error_t *
-send_change_rev(const apr_array_header_t *paths,
-                svn_revnum_t rev,
-                svn_fs_t *fs,
-                svn_boolean_t discover_changed_paths,
-                svn_boolean_t include_merged_revisions,
-                svn_boolean_t omit_log_text,
-                svn_boolean_t descending_order,
-                svn_repos_authz_func_t authz_read_func,
-                void *authz_read_baton,
-                svn_log_message_receiver2_t receiver,
-                void *receiver_baton,
-                apr_pool_t *pool);
-
 
 svn_error_t *
 svn_repos_check_revision_access(svn_repos_revision_access_level_t *access,
@@ -621,70 +592,19 @@ get_merged_rev_mergeinfo(apr_hash_t **mergeinfo,
   return SVN_NO_ERROR;
 }
 
-/* Same as send_change_rev(), but send all the revisions in RANGELIST.  Also,
-   INCLUDE_MERGED_REVISIONS is assumed to be TRUE. */
+/* Fill LOG_ENTRY with history information in FS at REV. */
 static svn_error_t *
-send_child_revs(const apr_array_header_t *paths,
-                const apr_array_header_t *rangelist,
-                svn_fs_t *fs,
-                svn_boolean_t discover_changed_paths,
-                svn_boolean_t omit_log_text,
-                svn_boolean_t descending_order,
-                svn_repos_authz_func_t authz_read_func,
-                void *authz_read_baton,
-                svn_log_message_receiver2_t receiver,
-                void *receiver_baton,
-                apr_pool_t *pool)
-{
-  apr_array_header_t *revs;
-  apr_pool_t *subpool, *iterpool;
-  int i;
-
-  subpool = svn_pool_create(pool);
-
-  SVN_ERR(svn_rangelist_to_revs(&revs, rangelist, subpool));
-  if (descending_order)
-    qsort(revs->elts, revs->nelts, revs->elt_size,
-          svn_sort_compare_revisions);
-
-  iterpool = svn_pool_create(subpool);
-  for (i = 0; i < revs->nelts; i++)
-    {
-      svn_revnum_t rev = APR_ARRAY_IDX(revs, i, svn_revnum_t);
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(send_change_rev(paths, rev, fs, discover_changed_paths, TRUE,
-                              omit_log_text, descending_order,
-                              authz_read_func, authz_read_baton,
-                              receiver, receiver_baton, iterpool));
-    }
-
-  svn_pool_destroy(iterpool);
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-send_change_rev(const apr_array_header_t *paths,
-                svn_revnum_t rev,
-                svn_fs_t *fs,
-                svn_boolean_t discover_changed_paths,
-                svn_boolean_t include_merged_revisions,
-                svn_boolean_t omit_log_text,
-                svn_boolean_t descending_order,
-                svn_repos_authz_func_t authz_read_func,
-                void *authz_read_baton,
-                svn_log_message_receiver2_t receiver,
-                void *receiver_baton,
-                apr_pool_t *pool)
+fill_log_entry(svn_log_entry_t *log_entry,
+               svn_revnum_t rev,
+               svn_fs_t *fs,
+               svn_boolean_t discover_changed_paths,
+               svn_boolean_t omit_log_text,
+               svn_repos_authz_func_t authz_read_func,
+               void *authz_read_baton,
+               apr_pool_t *pool)
 {
   svn_string_t *author, *date, *message;
   apr_hash_t *r_props, *changed_paths = NULL;
-  svn_log_entry_t *log_entry;
-  apr_uint64_t nbr_children = 0;
-  apr_array_header_t *rangelist;
-  apr_hash_t *mergeinfo;
 
   SVN_ERR(svn_fs_revision_proplist(&r_props, fs, rev, pool));
   author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
@@ -740,6 +660,96 @@ send_change_rev(const apr_array_header_t *paths,
   if (omit_log_text)
     message = NULL;
 
+  log_entry->changed_paths = changed_paths;
+  log_entry->revision = rev;
+  log_entry->author = author ? author->data : NULL;
+  log_entry->date = date ? date->data : NULL;
+  log_entry->message = message ? message->data : NULL;
+
+  return SVN_NO_ERROR;
+}
+
+/* A node in the log tree. */
+struct log_tree_node
+{
+  svn_log_entry_t *log_entry;
+  apr_array_header_t *children;
+};
+
+
+/* Send TREE to RECEIVER using RECEIVER_BATON. */
+static svn_error_t *
+send_log_tree(struct log_tree_node *tree,
+              svn_log_message_receiver2_t receiver,
+              void *receiver_baton,
+              apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  int i;
+
+  tree->log_entry->nbr_children = tree->children->nelts;
+  SVN_ERR((*receiver)(receiver_baton, tree->log_entry, subpool));
+
+  for (i = 0; i < tree->children->nelts; i++)
+    {
+      struct log_tree_node *subtree = APR_ARRAY_IDX(tree->children, i,
+                                                    struct log_tree_node *);
+      SVN_ERR(send_log_tree(subtree, receiver, receiver_baton, subpool));
+    }
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Build a log tree rooted at REV, and optionally pass the log tree history
+ * information to RECEIVER with its RECEIVER_BATON.
+ *
+ * If OUT_TREE is not NULL, set *OUT_TREE to be the generated tree, otherwise,
+ * send the tree using RECEIVER.
+ *
+ * FS is used with REV to fetch the interesting history information,
+ * such as author, date, etc.
+ *
+ * The detect_changed function is used if either AUTHZ_READ_FUNC is
+ * not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
+ *
+ * If DESCENDING_ORDER is true, send child messages in descending order.
+ * 
+ * If OMIT_LOG_TEXT is true, don't send the log text to RECEIVER.
+ *
+ * If INCLUDE_MERGED_REVISIONS is TRUE, include as children of the log tree
+ * history information for any revisions which were merged in a result of REV.
+ */
+static svn_error_t *
+build_log_tree(struct log_tree_node **out_tree,
+               const apr_array_header_t *paths,
+               svn_revnum_t rev,
+               svn_fs_t *fs,
+               svn_boolean_t discover_changed_paths,
+               svn_boolean_t include_merged_revisions,
+               svn_boolean_t omit_log_text,
+               svn_boolean_t descending_order,
+               svn_repos_authz_func_t authz_read_func,
+               void *authz_read_baton,
+               svn_log_message_receiver2_t receiver,
+               void *receiver_baton,
+               apr_pool_t *pool)
+{
+  struct log_tree_node *tree;
+  apr_uint64_t nbr_children = 0;
+  apr_array_header_t *rangelist;
+  apr_hash_t *mergeinfo;
+
+  tree = apr_palloc(pool, sizeof(*tree));
+  tree->children = apr_array_make(pool, 0, sizeof(struct log_tree_node *));
+
+  tree->log_entry = svn_log_entry_create(pool);
+  SVN_ERR(fill_log_entry(tree->log_entry, rev, fs, discover_changed_paths,
+                         omit_log_text, authz_read_func, authz_read_baton,
+                         pool));
+
   /* Check to see if we need to include any extra merged revisions. */
   if (include_merged_revisions)
     {
@@ -749,24 +759,50 @@ send_change_rev(const apr_array_header_t *paths,
       nbr_children = svn_rangelist_count_revs(rangelist);
     }
 
-  log_entry = svn_log_entry_create(pool);
-
-  log_entry->changed_paths = changed_paths;
-  log_entry->revision = rev;
-  log_entry->author = author ? author->data : NULL;
-  log_entry->date = date ? date->data : NULL;
-  log_entry->message = message ? message->data : NULL;
-  log_entry->nbr_children = nbr_children;
-
-  SVN_ERR((*receiver)(receiver_baton,
-                      log_entry,
-                      pool));
-
   if (nbr_children > 0)
-    SVN_ERR(send_child_revs(paths, rangelist, fs, discover_changed_paths,
-                            omit_log_text, descending_order,
-                            authz_read_func, authz_read_baton, receiver,
-                            receiver_baton, pool));
+    {
+      /* Build the subtree, starting at the most recent revision in the 
+         rangelist difference.  The idea is to construct the tree rooted at
+         the current message, and remove any revisions which are included in
+         that tree from the remaining rangelist.  In this way, we can
+         untransitify merged revisions, and make sure that revisions get nested
+         at the appropriate level.
+
+         The drawback is that we basically have to build the tree locally,
+         before sending any of it to the client, because we don't know how 
+         many children we have until we've constructed the tree.  The approach
+         could be time and memory expensive. */
+
+      apr_array_header_t *revisions;
+      int i;
+
+      /* Get the individual revisions, and sort in descending order. */
+      SVN_ERR(svn_rangelist_to_revs(&revisions, rangelist, pool));
+      qsort(revisions->elts, revisions->nelts, revisions->elt_size,
+            svn_sort_compare_revisions);
+
+      /* For each revision, construct a subtree, and fill it. */
+      for (i = 0; i < revisions->nelts; i++)
+        {
+          svn_revnum_t revision = APR_ARRAY_IDX(revisions, i, svn_revnum_t);
+          struct log_tree_node *subtree;
+
+          subtree = apr_palloc(pool, sizeof (*subtree));
+          subtree->children = apr_array_make(pool, 0,
+                                             sizeof(struct log_tree_node *));
+          subtree->log_entry = svn_log_entry_create(pool);
+          APR_ARRAY_PUSH(tree->children, struct log_tree_node *) = subtree;
+
+          SVN_ERR(fill_log_entry(subtree->log_entry, revision, fs,
+                                 discover_changed_paths, omit_log_text,
+                                 authz_read_func, authz_read_baton, pool));
+        }
+    }
+
+  if (out_tree)
+    *out_tree = tree;
+  else
+    SVN_ERR(send_log_tree(tree, receiver, receiver_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -861,12 +897,12 @@ svn_repos_get_logs4(svn_repos_t *repos,
           svn_pool_clear(iterpool);
           if (descending_order)
             rev = hist_end - i;
-          SVN_ERR(send_change_rev(paths, rev, fs,
-                                  discover_changed_paths,
-                                  include_merged_revisions,
-                                  omit_log_text, descending_order,
-                                  authz_read_func, authz_read_baton,
-                                  receiver, receiver_baton, iterpool));
+          SVN_ERR(build_log_tree(NULL, paths, rev, fs,
+                                 discover_changed_paths,
+                                 include_merged_revisions,
+                                 omit_log_text, descending_order,
+                                 authz_read_func, authz_read_baton,
+                                 receiver, receiver_baton, iterpool));
         }
       svn_pool_destroy(iterpool);
       return SVN_NO_ERROR;
@@ -961,13 +997,13 @@ svn_repos_get_logs4(svn_repos_t *repos,
              streamily right now. */
           if (descending_order)
             {
-              SVN_ERR(send_change_rev(paths, current, fs,
-                                      discover_changed_paths,
-                                      include_merged_revisions,
-                                      omit_log_text, descending_order,
-                                      authz_read_func, authz_read_baton,
-                                      receiver, receiver_baton,
-                                      iterpool));
+              SVN_ERR(build_log_tree(NULL, paths, current, fs,
+                                     discover_changed_paths,
+                                     include_merged_revisions,
+                                     omit_log_text, descending_order,
+                                     authz_read_func, authz_read_baton,
+                                     receiver, receiver_baton,
+                                     iterpool));
               if (limit && ++send_count >= limit)
                 break;
             }
@@ -989,14 +1025,14 @@ svn_repos_get_logs4(svn_repos_t *repos,
       for (i = 0; i < revs->nelts; ++i)
         {
           svn_pool_clear(iterpool);
-          SVN_ERR(send_change_rev(paths, APR_ARRAY_IDX(revs,
-                                                       revs->nelts - i - 1,
-                                                       svn_revnum_t),
-                                  fs, discover_changed_paths,
-                                  include_merged_revisions,
-                                  omit_log_text, descending_order,
-                                  authz_read_func, authz_read_baton,
-                                  receiver, receiver_baton, iterpool));
+          SVN_ERR(build_log_tree(NULL, paths, APR_ARRAY_IDX(revs,
+                                                      revs->nelts - i - 1,
+                                                      svn_revnum_t),
+                                 fs, discover_changed_paths,
+                                 include_merged_revisions,
+                                 omit_log_text, descending_order,
+                                 authz_read_func, authz_read_baton,
+                                 receiver, receiver_baton, iterpool));
           if (limit && i + 1 >= limit)
             break;
         }
