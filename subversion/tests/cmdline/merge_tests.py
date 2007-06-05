@@ -6090,27 +6090,32 @@ def empty_rev_range_mergeinfo(sbox):
 
   # Reverse merge r4:2 from A_COPY into A.  This should effectively revert
   # all local mods *including* the empty rev range merge info on A/D/H since
-  # it no longer overrides the mergeinfo on A/D.  The only resulting local mod
-  # should be the empty mergeinfo prop on A.
+  # it no longer overrides the mergeinfo on A/D.  A/D will have empty range
+  # merge info that elides to A.  And since A would only get empty range
+  # merge info and isn't overriding any ancestor path's merge info, no
+  # merge info is set on it either.
   short_A_path = shorten_path_kludge(A_path)
   try:
     os.chdir(svntest.main.work_dir)
-    svntest.actions.run_and_verify_svn(None, ['G    ' +
-                                       os.path.join(short_A_path,
-                                                    "D", "G", "rho") +
-                                       '\n'], [], 'merge', '-r4:2',
+    # Since this merge returns us to the same state returned by
+    # setup_branch() there is no need for run_and_verify_merge().
+    # run_and_verify_svn('merge') and ran_and_verify_status() covers
+    # everything.
+    svntest.actions.run_and_verify_svn(None,
+                                       ['--- Merging revisions 4-3:\n',
+                                        'G    ' +
+                                        os.path.join(short_A_path,
+                                                     "D", "G", "rho") +
+                                        '\n',
+                                        '--- Merging revisions 4-3:\n'],
+                                       [], 'merge', '-r4:2',
                                        sbox.repo_url + '/A_COPY',
                                        short_A_path)
   finally:
     os.chdir(saved_cwd)
 
   # Use wc_status from setup_branch()
-  wc_status.tweak('A', status=' M')
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
-  expected = svntest.actions.UnorderedOutput(
-    ["Properties on '" + A_path + "':\n",
-     "  " + SVN_PROP_MERGE_INFO + " : /A_COPY:\n"])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'pl', '-v', A_path)
 
   # Check that merge info elides if the only difference between a child and
   # parent's mergeinfo are paths that exist only in the child and are mapped
@@ -6153,12 +6158,13 @@ def empty_rev_range_mergeinfo(sbox):
   # A_COPY/D/H and the inherited merge info from A_COPY/B/H.  Since the only
   # difference between the merge info on A/D/H and A/D is the empty range
   # merge info for A_COPY/D/H, A/D/H's merge info should elide to A/D.
-  short_H_path = shorten_path_kludge(A_D_H_path)
   try:
     os.chdir(svntest.main.work_dir)
-    svntest.actions.run_and_verify_svn(None, ['G    ' +
-                                       os.path.join(short_H_path, "psi") +
-                                       '\n'], [], 'merge', '-r3:2',
+    svntest.actions.run_and_verify_svn(None,
+                                       ['--- Merging revision 3:\n',
+                                        'G    ' +
+                                        os.path.join(short_H_path, "psi") +
+                                        '\n'], [], 'merge', '-r3:2',
                                        sbox.repo_url + '/A_COPY/D/H',
                                        short_H_path)
   finally:
@@ -6169,9 +6175,7 @@ def empty_rev_range_mergeinfo(sbox):
   wc_status.tweak('A/D', status=' M')
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
   expected = svntest.actions.UnorderedOutput(
-    ["Properties on '" + A_path + "':\n",
-     "  " + SVN_PROP_MERGE_INFO + " : /A_COPY:\n",
-     "Properties on '" + A_D_path + "':\n",
+    ["Properties on '" + A_D_path + "':\n",
      "  " + SVN_PROP_MERGE_INFO + " : /A_COPY/B:4\n",
      "Properties on '" + A_COPY_path + "':\n",
      "  " + SVN_PROP_MERGE_INFO + " : /A:1\n"])
