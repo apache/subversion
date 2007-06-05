@@ -113,15 +113,6 @@ try:
 except ImportError:
   platform_with_os_wait = False
 
-# The locations of the svn, svnadmin and svnlook binaries, relative to
-# the only scripts that import this file right now (they live in ../).
-# Use --bin to override these defaults.
-svn_binary = os.path.abspath('../../svn/svn' + _exe)
-svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
-svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
-svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
-svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
-
 # The location of our mock svneditor script.
 svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
 
@@ -132,6 +123,21 @@ wc_passwd = 'rayjandom'
 # Username and password used by the working copies for "second user"
 # scenarios
 wc_author2 = 'jconstant' # use the same password as wc_author
+
+######################################################################
+# Global variables set during option parsing.  These should not be used
+# until the variable command_line_parsed has been set to True, as is
+# done in run_tests below.
+command_line_parsed = False
+
+# The locations of the svn, svnadmin and svnlook binaries, relative to
+# the only scripts that import this file right now (they live in ../).
+# Use --bin to override these defaults.
+svn_binary = os.path.abspath('../../svn/svn' + _exe)
+svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
+svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
+svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
+svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 
 # Global variable indicating if we want verbose output.
 verbose_mode = False
@@ -151,8 +157,15 @@ test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
 if windows:
   test_area_url = test_area_url.replace('\\', '/')
 
+# Location to the pristine repository, will be calculated from test_area_url
+# when we know what the user specified for --url.
+pristine_url = None
+
 # Global variable indicating the FS type for repository creations.
 fs_type = None
+
+# End of command-line-set global variables.
+######################################################################
 
 # All temporary repositories and working copies are created underneath
 # this dir, so there's one point at which to mount, e.g., a ramdisk.
@@ -175,10 +188,6 @@ temp_dir = os.path.join(work_dir, 'local_tmp')
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
-
-# Location to the pristine repository, will be calculated from test_area_url
-# when we know what the user specified for --url.
-pristine_url = None
 
 #
 # Our pristine greek-tree state.
@@ -584,6 +593,7 @@ def compare_unordered_output(expected, actual):
 
 def skip_test_when_no_authz_available():
   "skip this test when authz is not available"
+  _check_command_line_parsed()
   if test_area_url.startswith('file://'):
     raise Skip
 
@@ -636,13 +646,21 @@ def merge_notify_line(revstart, revend=None):
 # Functions which check the test configuration
 # (useful for conditional XFails)
 
+def _check_command_line_parsed():
+  """Raise an exception if the command line has not yet been parsed."""
+  if not command_line_parsed:
+    raise Failure("Condition cannot be tested until command line is parsed")
+
 def is_ra_type_dav():
+  _check_command_line_parsed()
   return test_area_url.startswith('http')
 
 def is_ra_type_svn():
+  _check_command_line_parsed()
   return test_area_url.startswith('svn')
 
 def is_fs_type_fsfs():
+  _check_command_line_parsed()
   # This assumes that fsfs is the default fs implementation.
   return (fs_type == 'fsfs' or fs_type is None)
 
@@ -994,6 +1012,7 @@ def run_tests(test_list, serial_only = False):
   global svnlook_binary
   global svnsync_binary
   global svnversion_binary
+  global command_line_parsed
   
   testnums = []
   # Should the tests be listed (as opposed to executed)?
@@ -1054,14 +1073,21 @@ def run_tests(test_list, serial_only = False):
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
-  ######################################################################
-  # Initialization
+  # Calculate pristine_url from test_area_url.
+  pristine_url = test_area_url + '/' + pristine_dir
+  if windows:
+    pristine_url = pristine_url.replace('\\', '/')  
+
   if not svn_bin is None:
     svn_binary = os.path.join(svn_bin, 'svn' + _exe)
     svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
     svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
     svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
     svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
+
+  command_line_parsed = True
+
+  ######################################################################
 
   # Cleanup: if a previous run crashed or interrupted the python
   # interpreter, then `temp_dir' was never removed.  This can cause wonkiness.
@@ -1085,11 +1111,6 @@ def run_tests(test_list, serial_only = False):
   # are only a few tests to run.
   if serial_only or len(testnums) < 2:
     parallel = 0
-
-  # Calculate pristine_url from test_area_url.
-  pristine_url = test_area_url + '/' + pristine_dir
-  if windows:
-    pristine_url = pristine_url.replace('\\', '/')  
 
   # Setup the pristine repository
   actions.setup_pristine_repository()
