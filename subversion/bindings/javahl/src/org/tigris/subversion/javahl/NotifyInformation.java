@@ -127,6 +127,8 @@ public class NotifyInformation extends EventObject
         this.propState = propState;
         this.lockState = lockState;
         this.revision = revision;
+        this.changelistName = changelistName;
+        this.mergeRange = mergeRange;
     }
 
     /**
