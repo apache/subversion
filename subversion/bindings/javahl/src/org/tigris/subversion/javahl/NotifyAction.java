@@ -175,5 +175,10 @@ public interface NotifyAction
         "unlocked",
         "locking failed",
         "unlocking failed",
+        "path exists",
+        "changelist set",
+        "changelist cleared",
+        "changelist failed",
+        "merge begin",
     };
 }
