@@ -815,7 +815,8 @@ def authz_locking(sbox):
 def authz_svnserve_anon_access_read(sbox):
   "authz issue #2712"
 
-  skip_test_when_no_authz_available()
+  if not svntest.main.is_ra_type_svn():
+    raise svntest.Skip
 
   sbox.build(create_wc = False)
   B_path = os.path.join(sbox.wc_dir, 'A', 'B')
@@ -860,8 +861,7 @@ test_list = [ None,
               authz_aliases,
               authz_validate,
               authz_locking,
-              Skip(authz_svnserve_anon_access_read,
-                   svntest.main.is_ra_type_dav),
+              authz_svnserve_anon_access_read,
              ]
 
 if __name__ == '__main__':
