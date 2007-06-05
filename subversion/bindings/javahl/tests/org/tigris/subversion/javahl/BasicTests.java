@@ -749,6 +749,9 @@ public class BasicTests extends SVNTests
         throws SubversionException, IOException
     {
         OneTest thisTest = new OneTest();
+        // Test that getCopySource properly returns null here
+        assertNull(client.getCopySource(thisTest.getWCPath(), Revision.HEAD));
+
         WC wc = thisTest.getWc();
         final Revision firstRevision = Revision.getInstance(1);
         final Revision pegRevision = null;  // Defaults to Revision.HEAD.
@@ -2108,6 +2111,9 @@ public class BasicTests extends SVNTests
     public void testBasicMerge() throws Throwable
     {
         OneTest thisTest = setupAndPerformMerge();
+
+        // test that getMergeInfo returns null
+        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A").toString(), Revision.HEAD));
 
         // modify file A/mu
         File mu = new File(thisTest.getWorkingCopy(), "A/mu");
