@@ -94,8 +94,6 @@ history index).
   destination.  This equates to turning all those revs into actual
   merge info (target merge info = source revs + source merge info).
 
-  * Update func and/or design spec.
-
   * Handle WC -> WC 'copy'/'move' operations.  (dlr)
     http://subversion.tigris.org/merge-tracking/func-spec.html#wc-wc-copy-move
 
@@ -103,6 +101,19 @@ history index).
     indicates that we should purposely break command-line UI
     compatibility here, and instead require an explicit option to
     avoid contacting the repos.
+
+* Account for mirrored merge info when performing cyclic merges.  For
+  example, when trunk is branched, then modified, and the branch is
+  brought up to date with trunk, then the branch is modified, then the
+  branch is merged to the trunk.  To avoid repeated merging of changes
+  to trunk, only the modification to the branch should be applied to
+  trunk.  (dlr)
+
+  * Need an API which can refine the requested merge range from the
+    branch based on a) what changes the branch already represents and
+    b) what revisions were merges from trunk to branch (which should
+    be avoided, to skip replaying changes back to trunk which were
+    made on trunk).
 
 * Account for merge info differences for switched directories when
   gathering and setting merge info.  (pburba)
