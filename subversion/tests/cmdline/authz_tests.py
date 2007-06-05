@@ -819,6 +819,7 @@ def authz_svnserve_anon_access_read(sbox):
     raise svntest.Skip
 
   sbox.build(create_wc = False)
+  svntest.main.safe_rmtree(sbox.wc_dir)
   B_path = os.path.join(sbox.wc_dir, 'A', 'B')
   B_url = sbox.repo_url + '/A/B'
   D_path = os.path.join(sbox.wc_dir, 'A', 'D')
