@@ -4649,8 +4649,8 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
     os.chdir(saved_cwd)
 
 def setup_branch(sbox, branch_only = False):
-  '''Starting with standard greek tree, copy A to A_COPY and make four
-  modifications (setting file contents to "New content") under A:
+  '''Starting with standard greek tree, copy A to A_COPY (r2) and make
+  four modifications (setting file contents to "New content") under A:
   r3 - A/D/H/psi
   r4 - A/D/G/rho
   r5 - A/B/E/beta
