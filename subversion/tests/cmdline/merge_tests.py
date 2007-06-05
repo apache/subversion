@@ -6374,6 +6374,122 @@ def diff_repos_does_not_update_mergeinfo(sbox):
   expected_status.tweak('A_COPY/D/G/rho', 'A_COPY/B/E/beta', status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def avoid_mirrored_revs(sbox):
+  "avoid repeated merges for cyclic merging"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = setup_branch(sbox)
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+
+  # Explicitly sync A_COPY with changes that have occurred on A.
+  short_A_COPY_path = shorten_path_kludge(A_COPY_path)
+  expected_output = wc.State(short_A_COPY_path, {
+    'D/H/psi'   : Item(status='U '),
+    'D/G/rho'   : Item(status='U '),
+    'B/E/beta'  : Item(status='U '),
+    'D/H/omega' : Item(status='U '),
+    })
+  expected_disk = expected_disk.subtree("A")
+  expected_disk.add({'' : Item(props={SVN_PROP_MERGE_INFO : "/A:1,3-6"})})
+  ### There's got to be a more brief way to describe expected_status, perhaps
+  ### using wc.State.subtree("A") and/or some additional code.
+  my_expected_status = wc.State(short_A_COPY_path, {
+    ''          : Item(status=' M', wc_rev=2),
+    'B'         : Item(status='  ', wc_rev=2),
+    'B/lambda'  : Item(status='  ', wc_rev=2),
+    'B/E'       : Item(status='  ', wc_rev=2),
+    'B/E/alpha' : Item(status='  ', wc_rev=2),
+    'B/E/beta'  : Item(status='M ', wc_rev=2),
+    'B/F'       : Item(status='  ', wc_rev=2),
+    'C'         : Item(status='  ', wc_rev=2),
+    'D'         : Item(status='  ', wc_rev=2),
+    'D/gamma'   : Item(status='  ', wc_rev=2),
+    'D/G'       : Item(status='  ', wc_rev=2),
+    'D/G/pi'    : Item(status='  ', wc_rev=2),
+    'D/G/rho'   : Item(status='M ', wc_rev=2),
+    'D/G/tau'   : Item(status='  ', wc_rev=2),
+    'D/H'       : Item(status='  ', wc_rev=2),
+    'D/H/chi'   : Item(status='  ', wc_rev=2),
+    'D/H/omega' : Item(status='M ', wc_rev=2),
+    'D/H/psi'   : Item(status='M ', wc_rev=2),
+    'mu'        : Item(status='  ', wc_rev=2),
+    })
+  expected_skip = wc.State(short_A_COPY_path, {})
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_A_COPY_path, "2", "6",
+                                         sbox.repo_url + "/A",
+                                         expected_output,
+                                         expected_disk,
+                                         my_expected_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Commit the sync of A_COPY with A (creating r7).
+  expected_output = wc.State(wc_dir, {
+    'A_COPY' : Item(verb='Sending'),
+    'A_COPY/B/E/beta' : Item(verb='Sending'),
+    'A_COPY/D/G/rho' : Item(verb='Sending'),
+    'A_COPY/D/H/omega' : Item(verb='Sending'),
+    'A_COPY/D/H/psi' : Item(verb='Sending'),
+    })
+  my_expected_status = expected_status.copy()
+  expected_status.tweak('A_COPY', 'A_COPY/B/E/beta', 'A_COPY/D/G/rho',
+                        'A_COPY/D/H/omega', 'A_COPY/D/H/psi',
+                        status='  ', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
+
+  # Make a mod to A_COPY, and commit it (creating r8).
+  mu_copy_path = os.path.join(A_COPY_path, "mu")
+  svntest.main.file_append(mu_copy_path, "A whole new line.\n")
+
+  expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
+  expected_status.tweak('A_COPY/mu', status='  ', wc_rev=8)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
+
+  # Update to revision 8.
+  #svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+
+  # Merge all unmerged revisions from A_COPY into A.
+  short_A_path = shorten_path_kludge(os.path.join(wc_dir, "A"))
+  expected_output = wc.State(short_A_path, {
+    ''   : Item(status=' U'),
+    'mu' : Item(status='U '),
+    })
+  expected_disk.tweak("", props={SVN_PROP_MERGE_INFO : "/A_COPY:8"})
+  expected_disk.tweak("mu", contents=svntest.main.file_read(mu_copy_path))
+  my_expected_status = expected_status.copy().subtree("A")
+  my_expected_status.wc_dir = short_A_path
+  my_expected_status.add({"" : Item(status=" M", wc_rev=1)})
+  my_expected_status.tweak("mu", status="M ")
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_A_path, None, None,
+                                         sbox.repo_url + "/A_COPY",
+                                         expected_output,
+                                         expected_disk,
+                                         my_expected_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -6435,6 +6551,7 @@ test_list = [ None,
               XFail(detect_copy_src_for_target_with_multiple_ancestors),
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
+              XFail(avoid_mirrored_revs),
              ]
 
 if __name__ == '__main__':
