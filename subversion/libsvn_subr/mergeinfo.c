@@ -29,16 +29,6 @@
 #include "private/svn_mergeinfo_private.h"
 #include "svn_private_config.h"
 
-/* Define a MAX macro if we don't already have one */
-#ifndef MAX
-#define MAX(a, b) ((a) < (b) ? (b) : (a))
-#endif
-
-/* Define a MIN macro if we don't already have one */
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-
 /* Attempt to combine two ranges, IN1 and IN2, and put the result in
    OUTPUT.  Return whether they could be combined. 
    Range overlapping detection algorithm from 
