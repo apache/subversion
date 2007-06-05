@@ -23,6 +23,7 @@
 #include "JNIUtil.h"
 #include "SVNClient.h"
 #include "EnumMapper.h"
+#include "RevisionRange.h"
 
 /**
  * Create a new object and store the Java object.
@@ -172,16 +173,24 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  // ### FIXME: Convert wcNotify->merge_range -> RevisionRange, as in
-  // ### SVNClient::getMergeInfo().
-  jobject jmergeRange = NULL;
+  jobject jMergeRange;
+  if (wcNotify->merge_range)
+    {
+      jMergeRange = RevisionRange::makeJRevisionRange(wcNotify->merge_range);
+      if (jMergeRange == NULL)
+        return;
+    }
+  else
+    {
+      jMergeRange = NULL;
+    }
 
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
                                  jKind, jMimeType, jLock, jErr,
                                  jContentState, jPropState, jLockState,
                                  (jlong) wcNotify->revision, jChangelistName,
-                                 jmergeRange);
+                                 jMergeRange);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

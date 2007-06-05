@@ -2139,16 +2139,40 @@ public class BasicTests extends SVNTests
                                    "log msg", true),
                      4);
 
+        // Add a "begin merge" notification handler.
+        final Revision[] actualRange = new Revision[2];
+        Notify2 notify = new Notify2()
+        {
+            public void onNotify(NotifyInformation info)
+            {
+                if (info.getAction() == NotifyAction.merge_begin)
+                {
+                    RevisionRange r = info.getMergeRange();
+                    actualRange[0] = r.getFromRevision();
+                    actualRange[1] = r.getToRevision();
+                }
+            }
+        };
+        client.notification2(notify);
+
         // merge changes in A to branches/A
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
         // test --dry-run
         client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD,
                      branchPath, false, true, false, true);
+        assertEquals("Notification of beginning of merge reported incorrect " +
+                     "start revision", new Revision.Number(3), actualRange[0]);
+        assertEquals("Notification of beginning of merge reported incorrect " +
+                     "end revision", new Revision.Number(4), actualRange[1]);
 
         // now do the real merge
         client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD,
                      branchPath, false, true, false, false);
+        assertEquals("Notification of beginning of merge reported incorrect " +
+                     "start revision", new Revision.Number(3), actualRange[0]);
+        assertEquals("Notification of beginning of merge reported incorrect " +
+                     "end revision", new Revision.Number(4), actualRange[1]);
 
         // commit the changes so that we can verify merge
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),

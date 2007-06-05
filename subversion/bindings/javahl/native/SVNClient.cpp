@@ -30,6 +30,7 @@
 #include "Pool.h"
 #include "Targets.h"
 #include "Revision.h"
+#include "RevisionRange.h"
 #include "BlameCallback.h"
 #include "ProplistCallback.h"
 #include "LogMessageCallback.h"
@@ -691,27 +692,17 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
         for (int i = 0; i < ranges->nelts; ++i)
         {
             // Convert svn_merge_range_t *'s to Java RevisionRange objects.
-            jclass rangeClazz = env->FindClass(JAVA_PACKAGE "/RevisionRange");
-            static jmethodID rangeCtor = 0;
-            if (rangeCtor == 0)
-            {
-                rangeCtor = env->GetMethodID(rangeClazz, "<init>", "(JJ)V");
-                if (JNIUtil::isJavaExceptionThrown())
-                    return NULL;
-            }
             svn_merge_range_t *range = APR_ARRAY_IDX(ranges, i,
                                                      svn_merge_range_t *);
-            jobject jrevision = env->NewObject(rangeClazz, rangeCtor,
-                                               (jlong) range->start,
-                                               (jlong) range->end);
+            jobject jrange = RevisionRange::makeJRevisionRange(range);
+            if (jrange == NULL)
+                return NULL;
+
+            env->CallBooleanMethod(jranges, addToList, jrange);
             if (JNIUtil::isJavaExceptionThrown())
                 return NULL;
 
-            env->CallBooleanMethod(jranges, addToList, jrevision);
-            if (JNIUtil::isJavaExceptionThrown())
-                return NULL;
-
-            env->DeleteLocalRef(jrevision);
+            env->DeleteLocalRef(jrange);
             if (JNIUtil::isJavaExceptionThrown())
                 return NULL;
         }
