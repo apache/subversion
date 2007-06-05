@@ -633,6 +633,8 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
                                          rev.revision(), ctx,
                                          requestPool.pool()),
                 NULL);
+    if (mergeinfo == NULL)
+        return NULL;
 
     // Transform mergeinfo into Java MergeInfo object.
     jclass clazz = env->FindClass(JAVA_PACKAGE "/MergeInfo");
