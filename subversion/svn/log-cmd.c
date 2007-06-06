@@ -263,11 +263,8 @@ log_message_receiver(void *baton,
                                                                   '\n' : ','));
         }
 
-      /* Decrement the child_counter, and check to see if we have any more
-         children.  If not, pop the stack.  */
+      /* Decrement the child_counter */
       frame->children_remaining--;
-      if (frame->children_remaining == 0)
-        apr_array_pop(lb->merge_stack);
     }
 
   if (! lb->omit_log_message)
@@ -287,6 +284,18 @@ log_message_receiver(void *baton,
 
       APR_ARRAY_PUSH(lb->merge_stack, struct merge_frame *) = frame;
     }
+  else
+    while (lb->merge_stack->nelts > 0)
+      {
+        struct merge_frame *frame = APR_ARRAY_IDX(lb->merge_stack,
+                                                  lb->merge_stack->nelts - 1,
+                                                  struct merge_frame *);
+
+        if (frame->children_remaining == 0)
+          apr_array_pop(lb->merge_stack);
+        else
+          break;
+      }
 
   return SVN_NO_ERROR;
 }
