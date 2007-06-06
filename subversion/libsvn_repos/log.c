@@ -32,6 +32,14 @@
 #include "svn_mergeinfo.h"
 #include "repos.h"
 
+
+/* A node in the log tree. */
+struct log_tree_node
+{
+  svn_log_entry_t *log_entry;
+  apr_array_header_t *children;
+};
+
 /* The actual worker log function, most the arguments are the same as for
    svn_repos_get_logs4(). 
    
@@ -691,14 +699,6 @@ fill_log_entry(svn_log_entry_t *log_entry,
 
   return SVN_NO_ERROR;
 }
-
-/* A node in the log tree. */
-struct log_tree_node
-{
-  svn_log_entry_t *log_entry;
-  apr_array_header_t *children;
-};
-
 
 /* Send TREE to RECEIVER using RECEIVER_BATON. */
 static svn_error_t *
