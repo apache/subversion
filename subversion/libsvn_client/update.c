@@ -261,7 +261,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
          To minimize svn_client__elide_mergeinfo()'s crawls up the
          working copy from each child, run through the array backwards,
          effectively doing a right-left post-order traversal. */
-      for (i = children_with_mergeinfo->nelts -1; i >= 0; i--)
+      for (i = children_with_mergeinfo->nelts - 1; i >= 0; i--)
         {
           const svn_wc_entry_t *child_entry;
           const char *child_wcpath;
