@@ -666,9 +666,28 @@ svn_error_t *
 svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
                    apr_hash_t *from, apr_hash_t *to, apr_pool_t *pool)
 {
-  *deleted = apr_hash_make(pool);
-  *added = apr_hash_make(pool);
-  SVN_ERR(walk_mergeinfo_hash_for_diff(from, to, *deleted, *added, pool));
+  if (from && to == NULL)
+    {
+      *deleted = svn_mergeinfo_dup(from, pool);
+      *added = apr_hash_make(pool);
+    }
+  else if (from == NULL && to)
+    {
+      *deleted = apr_hash_make(pool);
+      *added = svn_mergeinfo_dup(from, pool);
+    }
+  else
+    {
+      *deleted = apr_hash_make(pool);
+      *added = apr_hash_make(pool);
+
+      if (from && to)
+        {
+          SVN_ERR(walk_mergeinfo_hash_for_diff(from, to, *deleted, *added,
+                                               pool));
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 

@@ -48,9 +48,10 @@ svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input,
                     apr_pool_t *pool);
 
 /** Calculate the delta between two hashes of merge info, @a mergefrom
- * and @a mergeto, and place the result in @a deleted and @a added
- * (neither output argument will ever be @c NULL), stored as the usual
- * mapping of paths to arrays of @c svn_merge_range_t.
+ * and @a mergeto (which may be @c NULL), and place the result in @a
+ * deleted and @a added (neither output argument will ever be @c
+ * NULL), stored as the usual mapping of paths to lists of @c
+ * svn_merge_range_t *'s.
  *
  * @since New in 1.5.
  */
