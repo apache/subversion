@@ -109,12 +109,12 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   if (old_mergeinfo_val)
     SVN_ERR(svn_mergeinfo_parse(&old_mergeinfo_hash, old_mergeinfo_val, pool));
   else
-    old_mergeinfo_hash = apr_hash_make(pool);
+    old_mergeinfo_hash = NULL;
 
   if (new_mergeinfo_val)
     SVN_ERR(svn_mergeinfo_parse(&new_mergeinfo_hash, new_mergeinfo_val, pool));
   else
-    new_mergeinfo_hash = apr_hash_make(pool);
+    new_mergeinfo_hash = NULL;
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, old_mergeinfo_hash, 
                              new_mergeinfo_hash, pool));
