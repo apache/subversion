@@ -959,6 +959,7 @@ def merge_sensitive_log_single_revision(sbox):
   # Paths we care about
   wc_dir = sbox.wc_dir
   TRUNK_path = os.path.join(wc_dir, "trunk")
+  BRANCH_B_path = os.path.join(wc_dir, "branches", "b")
 
   # Run the merge sensitive log, and compare results
   saved_cwd = os.getcwd()
@@ -975,6 +976,15 @@ def merge_sensitive_log_single_revision(sbox):
 
   finally:
     os.chdir(saved_cwd)
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r12', BRANCH_B_path)
+  log_chain = parse_log_output(output)
+  expected_merges = {
+      11 : [12],
+    }
+  check_merge_results(log_chain, expected_merges)
+
   
 def log_single_change(sbox):
   "test log -c for a single change"
