@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import re, os
+import re, os, sys
 
 # Our testing module
 import svntest
@@ -938,33 +938,38 @@ def check_merge_results(log_chain, expected_merges):
       raise SVNUnexpectedLogs("Merged revision '%d' missing" % rev, log_chain)
 
 
-def simple_merge_sensitive_log(sbox):
-  "test a simple merge sensitive log scenario"
+def merge_sensitive_log_single_revision(sbox):
+  "test sensitive log on a single revision"
 
-  # Run the mergeinfo_inheritance test from merge_tests.py
-  # This probably breaks all kinds of rules, but for right now, it is the
-  # easiest way to establish some crazy merge info to then test logging on.
-  import merge_tests
-  merge_tests.mergeinfo_inheritance(sbox)
+  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                          'mergetracking_data')
+  dump_str = svntest.main.file_read(os.path.join(data_dir,
+                                                 "basic-merge.dump"),
+                                    "rb")
+
+  # Create a virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  # Load the mergetracking dumpfile into the repos, and check it out the repo
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "co", sbox.repo_url, sbox.wc_dir)
 
   # Paths we care about
   wc_dir = sbox.wc_dir
-  A_COPY_path = os.path.join(wc_dir, "A_COPY")
-
-  # Commit any pending changes
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', 'rev 7',
-                                     wc_dir)
+  TRUNK_path = os.path.join(wc_dir, "trunk")
 
   # Run the merge sensitive log, and compare results
   saved_cwd = os.getcwd()
   try:
-    os.chdir(A_COPY_path)
+    os.chdir(TRUNK_path)
     output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                     '-g')
+                                                     '-g', '-r14')
 
     log_chain = parse_log_output(output)
     expected_merges = {
-      1 : [7], 3 : [7], 6 : [7],
+      13 : [14], 12 : [14], 11 : [14, 12],
       }
     check_merge_results(log_chain, expected_merges)
 
@@ -1029,7 +1034,7 @@ test_list = [ None,
               log_base_peg,
               log_verbose,
               log_parser,
-              simple_merge_sensitive_log,
+              merge_sensitive_log_single_revision,
               XFail(log_single_change),
               XFail(log_changes_range),
               XFail(log_changes_list),
