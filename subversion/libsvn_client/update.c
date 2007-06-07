@@ -253,6 +253,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   else
     {
       int i;
+      apr_pool_t *iterpool = svn_pool_create(pool);
       children_with_mergeinfo = svn_sort__hash(children_with_mergeinfo_hash,
                                                svn_sort_compare_items_as_paths,
                                                pool);
@@ -268,12 +269,14 @@ svn_client__update_internal(svn_revnum_t *result_rev,
           svn_sort__item_t *item = &APR_ARRAY_IDX(children_with_mergeinfo,
                                                   i,
                                                   svn_sort__item_t);
+          apr_pool_clear(iterpool);
           child_wcpath = item->key;
           SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath,
-                                          path_adm_access, FALSE, pool));
+                                          path_adm_access, FALSE, iterpool));
           SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL, child_entry,
-                                              path_adm_access, ctx, pool));
+                                              path_adm_access, ctx, iterpool));
         }
+      apr_pool_destroy(iterpool);
     }
 
   SVN_ERR(svn_wc_adm_close(adm_open_depth ? path_adm_access : adm_access));
