@@ -635,7 +635,7 @@ get_mergeinfo_for_children(sqlite3 *db,
                                 sqlite3_errmsg(db));
 
       lastmerged_rev = sqlite3_column_int64(stmt, 0);
-      merged_path = sqlite3_column_text(stmt, 1);
+      merged_path = (const char *) sqlite3_column_text(stmt, 1);
 
       /* If we've got a merged revision, go get the merge info from the db */
       if (lastmerged_rev > 0)
