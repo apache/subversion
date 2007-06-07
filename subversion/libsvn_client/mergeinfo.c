@@ -24,9 +24,11 @@
 #include "svn_error.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
+#include "svn_sorts.h"
 #include "svn_client.h"
 
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_wc_private.h"
 #include "client.h"
 #include "mergeinfo.h"
 #include "svn_private_config.h"
@@ -105,4 +107,38 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
      ### svn_client__get_prop_from_wc(). */
   return svn_wc_prop_set2(SVN_PROP_MERGE_INFO, mergeinfo_str, wcpath,
                           adm_access, TRUE /* skip checks */, pool);
+}
+
+svn_error_t *
+svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
+                                     svn_wc_adm_access_t *adm_access,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_array_header_t *sorted_children =
+    svn_sort__hash(children_with_mergeinfo, svn_sort_compare_items_as_paths,
+                   pool);
+
+  /* sorted_children is in depth first order.  To minimize
+     svn_client__elide_mergeinfo()'s crawls up the working copy from
+     each child, run through the array backwards, effectively doing a
+     right-left post-order traversal. */
+  for (i = sorted_children->nelts -1; i >= 0; i--)
+    {
+      const svn_wc_entry_t *child_entry;
+      const char *child_wcpath;
+      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_children, i,
+                                              svn_sort__item_t);
+      apr_pool_clear(iterpool);
+      child_wcpath = item->key;
+      SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath, adm_access,
+                                      FALSE, iterpool));
+      SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL, child_entry,
+                                          adm_access, ctx, iterpool));
+    }
+
+  apr_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
 }
