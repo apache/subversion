@@ -674,7 +674,7 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
   else if (from == NULL && to)
     {
       *deleted = apr_hash_make(pool);
-      *added = svn_mergeinfo_dup(from, pool);
+      *added = svn_mergeinfo_dup(to, pool);
     }
   else
     {
