@@ -48,8 +48,8 @@ static svn_error_t *
 do_logs(struct log_tree_node **tree,
         svn_fs_t *fs,
         const apr_array_header_t *paths,
-        svn_revnum_t start,
-        svn_revnum_t end,
+        svn_revnum_t hist_start,
+        svn_revnum_t hist_end,
         int limit,
         svn_boolean_t discover_changed_paths,
         svn_boolean_t strict_node_history,
@@ -880,8 +880,8 @@ static svn_error_t *
 do_logs(struct log_tree_node **tree,
         svn_fs_t *fs,
         const apr_array_header_t *paths,
-        svn_revnum_t start,
-        svn_revnum_t end,
+        svn_revnum_t hist_start,
+        svn_revnum_t hist_end,
         int limit,
         svn_boolean_t discover_changed_paths,
         svn_boolean_t strict_node_history,
@@ -897,8 +897,6 @@ do_logs(struct log_tree_node **tree,
 {
   apr_pool_t *iterpool;
   apr_array_header_t *revs = NULL;
-  svn_revnum_t hist_end = end;
-  svn_revnum_t hist_start = start;
   svn_revnum_t current;
   apr_array_header_t *histories;
   svn_boolean_t any_histories_left = TRUE;
@@ -907,13 +905,6 @@ do_logs(struct log_tree_node **tree,
   int i;
 
   *tree = NULL;
-
-  /* Get an ordered copy of the start and end. */
-  if (descending_order)
-    {
-      hist_start = end;
-      hist_end = start;
-    }
 
   /* If paths were specified, then we only really care about revisions
      in which those paths were changed.  So we ask the filesystem for
@@ -1077,6 +1068,8 @@ svn_repos_get_logs4(svn_repos_t *repos,
   svn_revnum_t head = SVN_INVALID_REVNUM;
   svn_fs_t *fs = repos->fs;
   svn_boolean_t descending_order;
+  svn_revnum_t hist_start = start;
+  svn_revnum_t hist_end = end;
   struct log_tree_node *tree;
 
   /* Setup log range. */
@@ -1099,6 +1092,12 @@ svn_repos_get_logs4(svn_repos_t *repos,
        _("No such revision %ld"), end);
 
   descending_order = start >= end;
+  if (descending_order)
+    {
+      hist_start = end;
+      hist_end = start;
+    }
+
 
   /* If paths were specified, then we only really care about revisions
      in which those paths were changed.  So we ask the filesystem for
@@ -1116,16 +1115,8 @@ svn_repos_get_logs4(svn_repos_t *repos,
       (paths->nelts == 1 &&
        svn_path_is_empty(APR_ARRAY_IDX(paths, 0, const char *))))
     {
-      svn_revnum_t hist_start = start;
-      svn_revnum_t hist_end = end;
       int send_count = 0;
       int i;
-
-      if (descending_order)
-        {
-          hist_start = end;
-          hist_end = start;
-        }
 
       /* They want history for the root path, so every rev has a change. */
       send_count = hist_end - hist_start + 1;
@@ -1149,7 +1140,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(do_logs(&tree, repos->fs, paths, start, end, limit,
+  SVN_ERR(do_logs(&tree, repos->fs, paths, hist_start, hist_end, limit,
                   discover_changed_paths, strict_node_history,
                   include_merged_revisions, omit_log_text,
                   descending_order, TRUE, receiver, receiver_baton,
