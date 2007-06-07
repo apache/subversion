@@ -29,7 +29,6 @@
 #include "svn_time.h"
 #include "svn_path.h"
 #include "svn_config.h"
-#include "svn_sorts.h"
 #include "svn_pools.h"
 #include "client.h"
 #include "mergeinfo.h"
@@ -212,11 +211,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     {
       /* Check if any mergeinfo on PATH or any its children elides as a
          result of the switch. */
-      apr_hash_t *children_with_mergeinfo_hash = apr_hash_make(pool);
+      apr_hash_t *children_with_mergeinfo = apr_hash_make(pool);
       svn_wc_adm_access_t *path_adm_access;
       SVN_ERR(svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path,
                                         pool));
-      err = svn_client__get_prop_from_wc(children_with_mergeinfo_hash,
+      err = svn_client__get_prop_from_wc(children_with_mergeinfo,
                                          SVN_PROP_MERGE_INFO, path, FALSE,
                                          entry, path_adm_access, TRUE, ctx,
                                          pool);
@@ -231,32 +230,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
         }
       else
         {
-          int i;
-          apr_pool_t *iterpool = svn_pool_create(pool);
-          apr_array_header_t *children_with_mergeinfo =
-            svn_sort__hash(children_with_mergeinfo_hash,
-                           svn_sort_compare_items_as_paths, pool);
-
-          /* children_with_mergeinfo is sorted in depth first order.
-             To minimize svn_client__elide_mergeinfo()'s crawls up the
-             working copy from each child, run through the array backwards,
-             effectively doing a right-left post-order traversal. */
-          for (i = children_with_mergeinfo->nelts -1; i >= 0; i--)
-            {
-              const svn_wc_entry_t *child_entry;
-              const char *child_wcpath;
-              svn_sort__item_t *item =
-                &APR_ARRAY_IDX(children_with_mergeinfo, i,
-                               svn_sort__item_t);
-              apr_pool_clear(iterpool);
-              child_wcpath = item->key;
-              SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath,
-                                              adm_access, FALSE, iterpool));
-              SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL,
-                                                  child_entry, adm_access, ctx,
-                                                  iterpool));
-            }
-          apr_pool_destroy(iterpool);
+          SVN_ERR(svn_client__elide_mergeinfo_for_tree(children_with_mergeinfo,
+                                                       adm_access, ctx, pool));
         }
     }
 

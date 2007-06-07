@@ -64,4 +64,12 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
+/* A wrapper which calls svn_client__elide_mergeinfo() on each child
+   in CHILDREN_WITH_MERGEINFO_HASH in depth-first. */
+svn_error_t *
+svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
+                                     svn_wc_adm_access_t *adm_access,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *pool);
+
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */
