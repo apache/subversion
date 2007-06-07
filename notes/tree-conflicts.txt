@@ -13,46 +13,18 @@ adds-with-history (copies).
 SCENARIOS
 =========
 
-Update Scenarios
-----------------
+Update:
 
-'svn update' pulls file deletion atop file with local text mods
-  NOW:  file is silently unversioned
-  NEW:  file is marked as conflicted
+  * update pulls file deletion atop file with local text mods
+  * update pulls file deletion atop file with local prop mods
+  * update pulls dir deletion atop dir with local prop mods
+  * update pulls text mods onto schedule-delete file
+  * update pulls dir deletion atop dir containing deep prop mods
+  * update pulls dir deletion atop dir containing deep text mods
 
-'svn update' pulls file deletion atop file with local prop mods
-  NOW:  file is removed and prop mods are forever lost
-  NEW:  file is marked as conflicted
+Merge:
 
-'svn update' pulls dir deletion atop dir with local prop mods
-  NOW:  directory is removed and prop mods are forever lost
-  NEW:  directory is marked as conflicted
-
-'svn update' pulls text mods onto schedule-delete file
-  NOW:  text mods are silently merged into file's text-base
-  NEW:  file is marked as conflicted
-
-'svn update' pulls dir deletion atop dir containing deep prop mods
-  NOW:  directory is removed and prop mods are forever lost
-  NEW:  modified items are marked as conflicted
-
-'svn update' pulls dir deletion atop dir containing deep text mods
-  NOW:  directory is removed save for modified files (left unversioned)
-  NEW:  modified items are marked as conflicted
-
-
-Merge Scenarios
----------------
-
-'svn merge' file deletion
-  NOW:  file is unversioned; if not locally modified, it is also deleted
-  NEW:  of interest here is not just whether the file is locally
-        modified, but if it has been modified at all since the point
-        in its history that is the common ancestor of the fork of it
-        that was deleted from the merge source.  but what if there was
-        no merge source?  or what if the merge is using two
-        independent lines of history for its source-left and source-right?
-
+  * merge pulls file deletion
 
 
 
@@ -146,3 +118,17 @@ contents can note the details of the tree conflict.
         data we'd like to keep easy track of:  diffs between
         deleted-source and wc base file, and diffs between wc base and
         wc working files.  need more thinkin' 'round these parts...
+
+'svn merge' pulls file modification atop schedule-delete file
+  NOW:  "Skipped missing target" message
+  NEW:  File remains scheduled for deletion, but working file is
+        restored (if missing), marked as conflicted, and contents
+        carry conflict info.
+
+'svn merge' pulls file modification atop missing file
+  NOW:  "Skipped missing target" message
+  NEW:  
+
+'svn merge' pulls file modification atop added file
+  NOW:  Conflict!
+  NEW:  Conflict!
