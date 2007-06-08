@@ -1846,7 +1846,8 @@ public class SVNClient implements SVNClientInterface
                                   long revision,
                                   String author,
                                   long timeMicros,
-                                  String message)
+                                  String message,
+                                  long numberChildren)
         {
             LogMessage msg = new LogMessage(changedPaths,
                                             revision,

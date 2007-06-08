@@ -39,5 +39,6 @@ public interface LogMessageCallback
                               long revision,
                               String author,
                               long timeMicros,
-                              String message);
+                              String message,
+                              long numberChildren);
 }

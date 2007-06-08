@@ -75,7 +75,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
                                 "singleMessage",
                                 "([L"JAVA_PACKAGE"/ChangePath;"
                                 "JLjava/lang/String;"
-                                "JLjava/lang/String;)V");
+                                "JLjava/lang/String;J)V");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
@@ -175,7 +175,8 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
                       (jlong)log_entry->revision,
                       jauthor,
                       (jlong)commit_time,
-                      jmessage);
+                      jmessage,
+                      (jlong)log_entry->nbr_children);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
