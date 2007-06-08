@@ -6660,7 +6660,7 @@ def diff_repos_does_not_update_mergeinfo(sbox):
   expected_status.tweak('A_COPY/D/G/rho', 'A_COPY/B/E/beta', status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-def avoid_mirrored_revs(sbox):
+def avoid_reflected_revs(sbox):
   "avoid repeated merges for cyclic merging"
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -6756,7 +6756,7 @@ def avoid_mirrored_revs(sbox):
     ''   : Item(status=' U'),
     'mu' : Item(status='U '),
     })
-  expected_disk.tweak("", props={SVN_PROP_MERGE_INFO : "/A_COPY:8"})
+  expected_disk.tweak("", props={SVN_PROP_MERGE_INFO : "/A_COPY:7-8"})
   expected_disk.tweak("mu", contents=svntest.main.file_read(mu_copy_path))
   my_expected_status = expected_status.copy().subtree("A")
   my_expected_status.wc_dir = short_A_path
@@ -6837,7 +6837,7 @@ test_list = [ None,
               XFail(detect_copy_src_for_target_with_multiple_ancestors),
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
-              XFail(avoid_mirrored_revs),
+              avoid_reflected_revs,
              ]
 
 if __name__ == '__main__':

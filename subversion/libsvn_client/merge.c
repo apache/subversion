@@ -1356,28 +1356,73 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
 
 /*** Doing the actual merging. ***/
 
+/* Find any merged revision ranges that the merge history for the
+   merge source SRC_URL (between RANGE->start and RANGE->end) has
+   recorded for the merge target ENTRY.  Get the merge info for the
+   source, then get the rangelist for the target (ENTRY) from that
+   merge info, subtract it from *UNREFINED_RANGE, and record the
+   result in *REQUESTED_RANGELIST. */
+static svn_error_t *
+calculate_requested_ranges(apr_array_header_t **requested_rangelist,
+                           svn_merge_range_t *unrefined_range,
+                           const char *src_url, const svn_wc_entry_t *entry,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_client_ctx_t *ctx, apr_pool_t *pool)
+{
+  apr_array_header_t *src_rangelist_for_tgt = NULL;
+  apr_hash_t *added_mergeinfo, *deleted_mergeinfo,
+    *start_mergeinfo, *end_mergeinfo;
+  svn_opt_revision_t revision;
+  revision.kind = svn_opt_revision_number;
+
+  /* Find any merge info added in RANGE. */
+  /* ### svn_ra_get_mergeinfo() might improve efficiency. */
+  revision.value.number = MIN(unrefined_range->start, unrefined_range->end);
+  SVN_ERR(svn_client_get_mergeinfo(&start_mergeinfo, src_url, &revision,
+                                   ctx, pool));
+  revision.value.number = MAX(unrefined_range->start, unrefined_range->end);
+  SVN_ERR(svn_client_get_mergeinfo(&end_mergeinfo, src_url, &revision,
+                                   ctx, pool));
+  SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
+                             start_mergeinfo, end_mergeinfo, pool));
+
+  if (added_mergeinfo)
+    {
+      const char *src_rel_path;
+      SVN_ERR(svn_client__path_relative_to_root(&src_rel_path, entry->url,
+                                                entry->repos, NULL, adm_access,
+                                                pool));
+      src_rangelist_for_tgt = apr_hash_get(added_mergeinfo, src_rel_path,
+                                           APR_HASH_KEY_STRING);
+    }
+
+  *requested_rangelist = apr_array_make(pool, 1, sizeof(unrefined_range));
+  APR_ARRAY_PUSH(*requested_rangelist, svn_merge_range_t *) = unrefined_range;
+  if (src_rangelist_for_tgt)
+    /* Remove overlapping revision ranges from the requested range. */
+    SVN_ERR(svn_rangelist_remove(requested_rangelist, src_rangelist_for_tgt,
+                                 *requested_rangelist, pool));
+  return SVN_NO_ERROR;
+}
+
 /* Calculate a rangelist of svn_merge_range_t *'s -- for use by
    do_merge()'s application of the editor to the WC -- by subtracting
    revisions which have already been merged into the WC from the
-   requested range, and storing what's left in REMAINING_RANGES.
-   TARGET_MERGEINFO is expected to be non-NULL. */
+   requested range(s) REQUESTED_MERGE, and storing what's left in
+   REMAINING_RANGES.  TARGET_MERGEINFO is expected to be non-NULL. */
 static svn_error_t *
 calculate_merge_ranges(apr_array_header_t **remaining_ranges,
                        const char *rel_path,
                        apr_hash_t *target_mergeinfo,
-                       svn_merge_range_t* range,
+                       apr_array_header_t *requested_merge,
                        svn_boolean_t is_revert,
                        apr_pool_t *pool)
 {
-  apr_array_header_t *requested_merge;
   apr_array_header_t *target_rangelist;
 
-  /* Create a rangelist representing the requested merge. */
   if (is_revert)
     /* As we monkey with this data, make a copy of it. */
-    range = svn_merge_range_dup(range, pool);
-  requested_merge = apr_array_make(pool, 1, sizeof(range));
-  APR_ARRAY_PUSH(requested_merge, svn_merge_range_t *) = range;
+    requested_merge = svn_rangelist_dup(requested_merge, pool);
 
   /* If we don't end up removing any revisions from the requested
      range, it'll end up as our sole remaining range. */
@@ -1868,6 +1913,8 @@ do_merge(const char *initial_URL1,
 
   if (notify_b.same_urls)
     {
+      apr_array_header_t *requested_rangelist;
+
       SVN_ERR(get_wc_or_repos_mergeinfo(&target_mergeinfo, &entry,
                                         &indirect, ra_session,
                                         target_wcpath, adm_access,
@@ -1888,6 +1935,8 @@ do_merge(const char *initial_URL1,
           else
             {
               apr_hash_t *merges;
+              /* Blindly record the range specified by the user (rather
+                 than refining it as we do for actual merges). */
               SVN_ERR(determine_merges_performed(&merges, target_wcpath,
                                                  &range, &notify_b, pool));
 
@@ -1903,9 +1952,14 @@ do_merge(const char *initial_URL1,
             }
         }
 
+      /* Determine which of the requested ranges to consider merging... */
+      SVN_ERR(calculate_requested_ranges(&requested_rangelist, &range, URL1,
+                                         entry, adm_access, ctx, pool));
+      /* ...and of those ranges, determine which ones actually still
+         need merging. */
       SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path,
-                                     target_mergeinfo, &range, is_revert,
-                                     pool));
+                                     target_mergeinfo, requested_rangelist,
+                                     is_revert, pool));
     }
   else
     {
@@ -2224,6 +2278,8 @@ do_single_file_merge(const char *initial_URL1,
                                              pool));
   if (notify_b.same_urls)
     {
+      apr_array_header_t *requested_rangelist;
+
       if (merge_type == merge_type_no_op)
         return SVN_NO_ERROR;
 
@@ -2246,6 +2302,8 @@ do_single_file_merge(const char *initial_URL1,
             }
           else
             {
+              /* Blindly record the range specified by the user (rather
+                 than refining it as we do for actual merges). */
               apr_hash_t *merges;
               SVN_ERR(determine_merges_performed(&merges, target_wcpath,
                                                  &range, &notify_b, pool));
@@ -2262,9 +2320,14 @@ do_single_file_merge(const char *initial_URL1,
             }
         }
 
+      /* Determine which of the requested ranges to consider merging... */
+      SVN_ERR(calculate_requested_ranges(&requested_rangelist, &range, URL1,
+                                         entry, adm_access, ctx, pool));
+      /* ...and of those ranges, determine which ones actually still
+         need merging. */
       SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path,
-                                     target_mergeinfo, &range, is_revert,
-                                     pool));
+                                     target_mergeinfo, requested_rangelist,
+                                     is_revert, pool));
     }
   else
     {
