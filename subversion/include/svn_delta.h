@@ -701,11 +701,11 @@ typedef struct svn_delta_editor_t
 
   /** Set @a *root_baton to a baton for the top directory of the change.
    * (This is the top of the subtree being changed, not necessarily
-   * the root of the filesystem.)  Like any other directory baton, the
-   * producer should call @c close_directory on @a root_baton when they're
-   * done.  And like other @c open_* calls, the @a base_revision here is
-   * the current revision of the directory (before getting bumped up
-   * to the new target revision set with @c set_target_revision).
+   * the root of the filesystem.)  As with any other directory baton, the
+   * producer should call @c close_directory on @a root_baton when done.
+   * And as with other @c open_* calls, the @a base_revision here is the
+   * current revision of the directory (before getting bumped up to the
+   * new target revision set with @c set_target_revision).
    *
    * Allocations for the returned @a root_baton should be performed in
    * @a dir_pool. It is also typical to (possibly) save this pool for later
