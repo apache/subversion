@@ -500,25 +500,34 @@ svn_client_add4(const char *path,
 {
   svn_error_t *err, *err2;
   svn_wc_adm_access_t *adm_access;
-  const char *parent_path = svn_path_dirname(path, pool);
+  const char *parent_dir;
 
   if (add_parents)
     {
+      apr_pool_t *subpool;
       const char *abs_path;
-      apr_pool_t *subpool = svn_pool_create(pool);
 
-      SVN_ERR(svn_path_get_absolute(&abs_path, parent_path, subpool));
-      SVN_ERR(add_parent_dirs(abs_path, &adm_access, ctx, subpool));
-        
+      SVN_ERR(svn_path_get_absolute(&abs_path, path, pool));
+      parent_dir = svn_path_dirname(abs_path, pool);
+
+      subpool = svn_pool_create(pool);
+      SVN_ERR(add_parent_dirs(parent_dir, &adm_access, ctx, subpool));
       SVN_ERR(svn_wc_adm_close(adm_access));
       svn_pool_destroy(subpool);
+
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
+                               TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+      err = add(abs_path, recursive, force, no_ignore, adm_access, ctx, pool);
     }
-
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_path,
-                           TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
-                           pool));
-
-  err = add(path, recursive, force, no_ignore, adm_access, ctx, pool);
+  else
+    {
+      parent_dir = svn_path_dirname(path, pool);
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
+                               TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+      err = add(path, recursive, force, no_ignore, adm_access, ctx, pool);
+    }
   
   err2 = svn_wc_adm_close(adm_access);
   if (err2)
