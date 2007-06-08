@@ -31,6 +31,8 @@ history index).
 
   * Need new RA call.
 
+* Add commutative author and revision reporting to 'svn log'. (hwright)
+
 * Handle notifications resulting from a merge.  (sussman)
 
   * Handle multiple notifications for single WC items.
@@ -180,9 +182,7 @@ Implement auditing/reporting and other high-level features.
   determining what to merge. See the following thread for more details:
   http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=127570
 
-* Add commutative author and revision reporting to 'svn log' and 'svn blame'.
-  The 'svn log' portion is currently being implemented on the
-  merge-sensitive-log branch.  (hwright)
+* Add commutative author and revision reporting to 'svn blame'. (hwright)
 
 * Improve heuristics for grokking the source URL parameter to the
   'svn merge -cN URL' command.  See the comments inlined into the
