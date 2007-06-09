@@ -49,6 +49,7 @@
 #include "id.h"
 
 #include "private/svn_fs_mergeinfo.h"
+#include "private/svn_fs_revprop.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -1001,6 +1002,10 @@ svn_fs_fs__hotcopy(const char *src_path,
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS_MERGEINFO__DB_NAME,
                                pool));
 
+  /* Copy the revprop info. */
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS_REVPROP__DB_NAME,
+                               pool));
+
   /* Find the youngest revision from this current file. */
   SVN_ERR(get_youngest(&youngest, dst_path, pool));
 
@@ -1810,6 +1815,8 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path,
                                      svn_fs_fs__path_rev(fs, rev, pool),
                                      pool));
+
+  SVN_ERR(svn_fs_revprop__update_index(fs, rev, proplist, pool));
 
   return SVN_NO_ERROR;
 }  
@@ -4788,6 +4795,7 @@ commit_body(void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_fs_fs__change_txn_prop(cb->txn, SVN_PROP_REVISION_DATE,
                                      &date, pool));
+  SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
 
   /* Move the revprops file into place. */
   revprop_filename = path_txn_props(cb->fs, cb->txn->id, pool);
@@ -4798,6 +4806,10 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Update the merge tracking information index. */
   SVN_ERR(svn_fs_mergeinfo__update_index(cb->txn, new_rev, target_mergeinfo,
                                          pool));
+
+  /* Update the revprop index. */
+  SVN_ERR(svn_fs_revprop__update_index(cb->fs, new_rev, txnprops,
+                                       pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
@@ -4934,6 +4946,7 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* ### this should be before the format file */
   SVN_ERR(svn_fs_mergeinfo__create_index(path, pool));
+  SVN_ERR(svn_fs_revprop__create_index(path, pool));
   return SVN_NO_ERROR;
 }
 
