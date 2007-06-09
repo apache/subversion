@@ -1,0 +1,58 @@
+This branch contains preliminary support for storing revision
+properties in sqlite instead of in their current storage format (a
+directory of files in FSFS; I'm not sure about BDB).
+
+This roughly follows the example of the sqlite mergeinfo index.  The
+internal interface to the revprop database is declared in
+subversion/include/private/svn_fs_revprop.h, making no references to
+sqlite.
+
+It is implemented in subversion/libsvn_fs_util/revprop-sqlite.c.
+
+The current implementation only writes to the database; there are no
+read APIs.  It is only called from FSFS, but it should be
+straightforward to call it from BDB.  There is no API for writing a
+single revprop without setting all of the revprops for that revision.
+As of r25350, we have not yet resolved what to do about handling
+SQLITE_BUSY errors in the mergeinfo code; when this is resolved, the
+same solution should be used here.  (In fact, much of the sqlite code
+should be factored out of mergeinfo-sqlite-index.c and
+revprop-sqlite.c into an internal sqlite support library.)
+
+There are two major open design questions:
+
+* What should the read APIs look like?  What sort of queries should be
+  supported (from the FS level up through the RA level)?  Of course we
+  need to support "get property P from revision R", but with a
+  database, we can also support more sophisticated queries, such as
+  "find all revisions with property P equal to S".
+
+  (One possibility would be to only implement "get property P from
+  revision R" in the first minor version containing this support, and
+  add better query support later.
+
+* Should the database be the canonical store for the data, or just an
+  index?
+
+  Advantages for the former: It avoids redundancy.  Additionally, on
+  filesystems with a large minimum file size (eg, 4K on HFS+), the
+  current FSFS revprop store is space-inefficient; preliminary testing
+  shows that the sqlite revprop DB decreases space usage on HFS+ by a
+  factor of 5-6.
+
+  Advantages for the latter: Reads from sqlite3 do have to wait for
+  writers to be done, unlike reads from FSFS.  The current code has a
+  longer history.
+
+  (The mergeinfo DB is just an index.  There are several key
+  differences between mergeinfo and revprops, though.  First, the
+  mergeinfo index is a parsed version of the mergeinfo property,
+  whereas with revprops the data stored in both places would be
+  precisely the same.  Secondly, the canonical version of the
+  mergeinfo is stored in the immutable filesystem, whereas the
+  canonical version of revprops is just as mutable as the database.)
+
+
+ (Note: while I created this branch, I'm not sure I'll have time to
+  work on it in the near future, and encourage anyone interested to
+  pitch in!  -- glasser )
