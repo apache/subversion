@@ -399,6 +399,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      *                      returned objects
      * @param includeMergedRevisions include log messages for revisions which
      *                               were merged.
+     * @param omitLogText   supress log message text.
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @param callback      the object to receive the messages
@@ -408,7 +409,8 @@ public class SVNClientSynchronized implements SVNClientInterface
                             Revision revisionStart,
                             Revision revisionEnd, boolean stopOnCopy,
                             boolean discoverPath,
-                            boolean includeMergedRevisions, long limit,
+                            boolean includeMergedRevisions,
+                            boolean omitLogText, long limit,
                             LogMessageCallback callback)
             throws ClientException
     {
@@ -416,7 +418,8 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             worker.logMessages(path, pegRevision, revisionStart,
                                revisionEnd, stopOnCopy, discoverPath,
-                               includeMergedRevisions, limit, callback);
+                               includeMergedRevisions, omitLogText, 
+                               limit, callback);
         }
     }
 
