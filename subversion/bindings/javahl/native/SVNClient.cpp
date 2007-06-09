@@ -196,7 +196,8 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             Revision &revisionStart,
                             Revision &revisionEnd, bool stopOnCopy,
                             bool discoverPaths, bool includeMergedRevisions,
-                            long limit, LogMessageCallback *callback)
+                            bool omitLogText, long limit,
+                            LogMessageCallback *callback)
 {
     Pool requestPool;
 
@@ -217,7 +218,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                                 discoverPaths,
                                 stopOnCopy,
                                 includeMergedRevisions,
-                                false,
+                                omitLogText,
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }
