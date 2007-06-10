@@ -44,17 +44,12 @@ def status_unversioned_file_in_current_dir(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  was_cwd = os.getcwd()
-  try:
-    os.chdir(wc_dir)
+  os.chdir(wc_dir)
 
-    svntest.main.file_append('foo', 'a new file')
-
-    svntest.actions.run_and_verify_svn(None, [ "?      foo\n" ], [],
-                                       'stat', 'foo')
-
-  finally:
-    os.chdir(was_cwd)
+  svntest.main.file_append('foo', 'a new file')
+  
+  svntest.actions.run_and_verify_svn(None, [ "?      foo\n" ], [],
+                                     'stat', 'foo')
 
 #----------------------------------------------------------------------
 # Regression for issue #590
@@ -123,19 +118,13 @@ def status_shows_all_in_current_dir(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
-  try:
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'stat', '-vN')
 
-    output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'stat', '-vN')
-
-    if (len(output) != len(os.listdir("."))):
-      raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
+  if (len(output) != len(os.listdir("."))):
+    raise svntest.Failure
 
 
 #----------------------------------------------------------------------
@@ -146,30 +135,24 @@ def status_missing_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  was_cwd = os.getcwd()
-  
   os.chdir(wc_dir)
-  try:
 
-    os.remove('iota')
+  os.remove('iota')
 
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
-    for line in output:
-      if not re.match("! +iota", line):
-        raise svntest.Failure
-
-    # This invocation is for issue #2127.
-    output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'status', '-u', 'iota')
-    found_it = 0
-    for line in output:
-      if re.match("! +1 +iota", line):
-        found_it = 1
-    if not found_it:
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  for line in output:
+    if not re.match("! +iota", line):
       raise svntest.Failure
 
-  finally:
-    os.chdir(was_cwd)
+  # This invocation is for issue #2127.
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'status', '-u', 'iota')
+  found_it = 0
+  for line in output:
+    if re.match("! +1 +iota", line):
+      found_it = 1
+  if not found_it:
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
@@ -179,50 +162,44 @@ def status_type_change(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  was_cwd = os.getcwd()
-
   os.chdir(wc_dir)
-  try:
 
-    # First replace a versioned dir with a file and a versioned file
-    # with a versioned dir.
-    os.rename('iota', 'was_iota')
-    os.rename('A', 'iota')
-    os.rename('was_iota', 'A')
+  # First replace a versioned dir with a file and a versioned file
+  # with a versioned dir.
+  os.rename('iota', 'was_iota')
+  os.rename('A', 'iota')
+  os.rename('was_iota', 'A')
 
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
-    if len(output) != 2:
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  if len(output) != 2:
+    raise svntest.Failure
+  for line in output:
+    if not re.match("~ +(iota|A)", line):
       raise svntest.Failure
-    for line in output:
-      if not re.match("~ +(iota|A)", line):
-        raise svntest.Failure
 
-    # Now change the file that is obstructing the versioned dir into an
-    # unversioned dir.
-    os.remove('A')
-    os.mkdir('A')
+  # Now change the file that is obstructing the versioned dir into an
+  # unversioned dir.
+  os.remove('A')
+  os.mkdir('A')
 
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
-    if len(output) != 2:
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  if len(output) != 2:
+    raise svntest.Failure
+  for line in output:
+    if not re.match("~ +(iota|A)", line):
       raise svntest.Failure
-    for line in output:
-      if not re.match("~ +(iota|A)", line):
-        raise svntest.Failure
 
-    # Now change the versioned dir that is obstructing the file into an
-    # unversioned dir.
-    svntest.main.safe_rmtree('iota')
-    os.mkdir('iota')
+  # Now change the versioned dir that is obstructing the file into an
+  # unversioned dir.
+  svntest.main.safe_rmtree('iota')
+  os.mkdir('iota')
 
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
-    if len(output) != 2:
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  if len(output) != 2:
+    raise svntest.Failure
+  for line in output:
+    if not re.match("~ +(iota|A)", line):
       raise svntest.Failure
-    for line in output:
-      if not re.match("~ +(iota|A)", line):
-        raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
 
@@ -232,39 +209,33 @@ def status_type_change_to_symlink(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  was_cwd = os.getcwd()
-
   os.chdir(wc_dir)
-  try:
 
-    # "broken" symlinks
-    os.remove('iota')
-    os.symlink('foo', 'iota')
-    svntest.main.safe_rmtree('A/D')
-    os.symlink('bar', 'A/D')
+  # "broken" symlinks
+  os.remove('iota')
+  os.symlink('foo', 'iota')
+  svntest.main.safe_rmtree('A/D')
+  os.symlink('bar', 'A/D')
 
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
-    if len(output) != 2:
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  if len(output) != 2:
+    raise svntest.Failure
+  for line in output:
+    if not re.match("~ +(iota|A/D)", line):
       raise svntest.Failure
-    for line in output:
-      if not re.match("~ +(iota|A/D)", line):
-        raise svntest.Failure
 
-    # "valid" symlinks
-    os.remove('iota')
-    os.remove('A/D')
-    os.symlink('A/mu', 'iota')
-    os.symlink('C', 'A/D')
+  # "valid" symlinks
+  os.remove('iota')
+  os.remove('A/D')
+  os.symlink('A/mu', 'iota')
+  os.symlink('C', 'A/D')
 
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
-    if len(output) != 2:
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  if len(output) != 2:
+    raise svntest.Failure
+  for line in output:
+    if not re.match("~ +(iota|A/D)", line):
       raise svntest.Failure
-    for line in output:
-      if not re.match("~ +(iota|A/D)", line):
-        raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
 # Regression test for revision 3686.
@@ -275,33 +246,28 @@ def status_with_new_files_pending(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  was_cwd = os.getcwd()
-
   os.chdir(wc_dir)
-  try:
-    svntest.main.file_append('newfile', 'this is a new file')
-    svntest.main.run_svn(None, 'add', 'newfile')
-    svntest.main.run_svn(None, 'ci', '-m', 'logmsg')
-    svntest.main.run_svn(None, 'up', '-r', '1')
 
-    output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'status', '-u')
+  svntest.main.file_append('newfile', 'this is a new file')
+  svntest.main.run_svn(None, 'add', 'newfile')
+  svntest.main.run_svn(None, 'ci', '-m', 'logmsg')
+  svntest.main.run_svn(None, 'up', '-r', '1')
 
-    # The bug fixed in revision 3686 was a seg fault.  We don't have a
-    # reliable way to detect a seg fault here, since we haven't dealt
-    # with the popen2{Popen3,Popen4} mess in Python yet (the latter two
-    # are classes within the first, which is a module, and the Popen3
-    # class is not the same as os.popen3().  Got that?)  See the Python
-    # docs for details; in the meantime, no output means there was a
-    # problem.
-    for line in output:
-      if line.find('newfile') != -1:
-        break
-    else:
-      raise svntest.Failure
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'status', '-u')
 
-  finally:
-    os.chdir(was_cwd)
+  # The bug fixed in revision 3686 was a seg fault.  We don't have a
+  # reliable way to detect a seg fault here, since we haven't dealt
+  # with the popen2{Popen3,Popen4} mess in Python yet (the latter two
+  # are classes within the first, which is a module, and the Popen3
+  # class is not the same as os.popen3().  Got that?)  See the Python
+  # docs for details; in the meantime, no output means there was a
+  # problem.
+  for line in output:
+    if line.find('newfile') != -1:
+      break
+  else:
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
@@ -311,40 +277,34 @@ def status_for_unignored_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  was_cwd = os.getcwd()
-
   os.chdir(wc_dir)
-  try:
-    # use a temp file to set properties with wildcards in their values
-    # otherwise Win32/VS2005 will expand them
-    svntest.main.file_append('proptmp', 'new*')
-    svntest.main.file_append('newfile', 'this is a new file')
-    os.makedirs('newdir')
-    svntest.main.run_svn(None, 'propset', 'svn:ignore', '-F', 'proptmp', '.')
-    os.remove('proptmp')
 
-    # status on the directory with --no-ignore
-    expected = svntest.actions.UnorderedOutput(
-          ['I      newdir\n',
-           'I      newfile\n',
-           ' M     .\n'])
-    svntest.actions.run_and_verify_svn(None,
-                                       expected,
-                                       [],
-                                       'status', '--no-ignore', '.')
+  # use a temp file to set properties with wildcards in their values
+  # otherwise Win32/VS2005 will expand them
+  svntest.main.file_append('proptmp', 'new*')
+  svntest.main.file_append('newfile', 'this is a new file')
+  os.makedirs('newdir')
+  svntest.main.run_svn(None, 'propset', 'svn:ignore', '-F', 'proptmp', '.')
+  os.remove('proptmp')
 
-    # status specifying the file explicitly on the command line
-    expected = svntest.actions.UnorderedOutput(
-          ['I      newdir\n',
-           'I      newfile\n'])
-    svntest.actions.run_and_verify_svn(None,
-                                       expected,
-                                       [],
-                                       'status', 'newdir', 'newfile')
-  
-  finally:
-    os.chdir(was_cwd)
+  # status on the directory with --no-ignore
+  expected = svntest.actions.UnorderedOutput(
+        ['I      newdir\n',
+         'I      newfile\n',
+         ' M     .\n'])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     'status', '--no-ignore', '.')
 
+  # status specifying the file explicitly on the command line
+  expected = svntest.actions.UnorderedOutput(
+        ['I      newdir\n',
+         'I      newfile\n'])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     'status', 'newdir', 'newfile')
 
 #----------------------------------------------------------------------
 
@@ -354,23 +314,17 @@ def status_for_nonexistent_file(sbox):
   sbox.build()
 
   wc_dir = sbox.wc_dir
-  was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
 
-  try:
-    output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'status',
-                                                     'nonexistent-file')
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'status',
+                                                   'nonexistent-file')
 
-    # there should *not* be a status line printed for the nonexistent file 
-    for line in output:
-      if re.match(" +nonexistent-file", line):
-        raise svntest.Failure
-  
-  finally:
-    os.chdir(was_cwd)
-
+  # there should *not* be a status line printed for the nonexistent file 
+  for line in output:
+    if re.match(" +nonexistent-file", line):
+      raise svntest.Failure
 
 #----------------------------------------------------------------------
 
@@ -385,7 +339,6 @@ def status_nonrecursive_update_different_cwd(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  was_cwd = os.getcwd()
 
   J_url  = sbox.repo_url + '/A/C/J'
   K_path = os.path.join(wc_dir, 'A', 'C', 'K' )
@@ -397,34 +350,30 @@ def status_nonrecursive_update_different_cwd(sbox):
                                      'mkdir', K_path)
 
   os.chdir(wc_dir)
-  try:
-    expected_output = [
-      '       *                                %s\n' % os.path.join("C", "J"),
-      'A               0       ?   ?           %s\n' % os.path.join("C", "K"),
-      '       *        1        1 jrandom      C\n',
-      'Status against revision:      2\n' ]
 
-    os.chdir('A')
-    svntest.actions.run_and_verify_svn(None,
-                                       expected_output,
-                                       [],
-                                       'status', '-v', '-N', '-u', 'C')
+  expected_output = [
+    '       *                                %s\n' % os.path.join("C", "J"),
+    'A               0       ?   ?           %s\n' % os.path.join("C", "K"),
+    '       *        1        1 jrandom      C\n',
+    'Status against revision:      2\n' ]
 
-    expected_output = [
-      '       *                                J\n',
-      'A               0       ?   ?           K\n',
-      '       *        1        1 jrandom      .\n',
-      'Status against revision:      2\n']
+  os.chdir('A')
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_output,
+                                     [],
+                                     'status', '-v', '-N', '-u', 'C')
 
-    os.chdir('C')
-    svntest.actions.run_and_verify_svn(None,
-                                       expected_output,
-                                       [],
-                                       'status', '-v', '-N', '-u', '.')
+  expected_output = [
+    '       *                                J\n',
+    'A               0       ?   ?           K\n',
+    '       *        1        1 jrandom      .\n',
+    'Status against revision:      2\n']
 
-  finally:
-    os.chdir(was_cwd)
-
+  os.chdir('C')
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_output,
+                                     [],
+                                     'status', '-v', '-N', '-u', '.')
 
 
 #----------------------------------------------------------------------
@@ -565,34 +514,31 @@ def status_on_forward_deletion(sbox):
 
   svntest.main.safe_rmtree(wc_dir)
   os.mkdir(wc_dir)
-  saved_cwd = os.getcwd()
-  os.chdir(wc_dir)
-  try:
-    svntest.main.run_svn(None, 'co', '-r1', top_url + "@1", 'wc')
-    # If the bug is present, this will error with
-    #
-    #    subversion/libsvn_wc/lock.c:513: (apr_err=155005)
-    #    svn: Working copy not locked
-    #    svn: directory '' not locked
-    #
-    svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
 
-    # Try again another way; the error would look like this:
-    #
-    #    subversion/libsvn_repos/delta.c:207: (apr_err=160005)
-    #    svn: Invalid filesystem path syntax
-    #    svn: svn_repos_dir_delta: invalid editor anchoring; at least \
-    #       one of the input paths is not a directory and there was   \
-    #       no source entry.
-    #
-    # (Dang!  Hope a user never has to see that :-) ).
-    #
-    svntest.main.safe_rmtree('wc')
-    svntest.main.run_svn(None, 'co', '-r1', A_url + "@1", 'wc')
-    svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
-    
-  finally:
-    os.chdir(saved_cwd)
+  os.chdir(wc_dir)
+
+  svntest.main.run_svn(None, 'co', '-r1', top_url + "@1", 'wc')
+  # If the bug is present, this will error with
+  #
+  #    subversion/libsvn_wc/lock.c:513: (apr_err=155005)
+  #    svn: Working copy not locked
+  #    svn: directory '' not locked
+  #
+  svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
+
+  # Try again another way; the error would look like this:
+  #
+  #    subversion/libsvn_repos/delta.c:207: (apr_err=160005)
+  #    svn: Invalid filesystem path syntax
+  #    svn: svn_repos_dir_delta: invalid editor anchoring; at least \
+  #       one of the input paths is not a directory and there was   \
+  #       no source entry.
+  #
+  # (Dang!  Hope a user never has to see that :-) ).
+  #
+  svntest.main.safe_rmtree('wc')
+  svntest.main.run_svn(None, 'co', '-r1', A_url + "@1", 'wc')
+  svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
 
 #----------------------------------------------------------------------
 
@@ -720,17 +666,14 @@ def status_on_unversioned_dotdot(sbox):
   os.mkdir(new_dir)
   os.mkdir(new_subdir)
   
-  saved_cwd = os.getcwd()
   os.chdir(new_subdir)
-  try:
-    out, err = svntest.main.run_svn(1, 'st', '..')
-    for line in err:
-      if line.find('svn: warning: \'..\' is not a working copy') != -1:
-        break
-    else:
-      raise svntest.Failure
-  finally:
-    os.chdir(saved_cwd)
+
+  out, err = svntest.main.run_svn(1, 'st', '..')
+  for line in err:
+    if line.find('svn: warning: \'..\' is not a working copy') != -1:
+      break
+  else:
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
@@ -784,13 +727,10 @@ def status_on_partially_nonrecursive_wc(sbox):
   # Make the working copy weird in the right way, then try status -u.
   D_wc = sbox.add_wc_path('D')
   svntest.main.run_svn(None, 'co', '-r1', '-N', D_url, D_wc)
-  saved_cwd = os.getcwd()
-  try:
-    os.chdir(D_wc)
-    svntest.main.run_svn(None, 'up', '-r1', 'H')
-    svntest.main.run_svn(None, 'st', '-u')
-  finally:
-    os.chdir(saved_cwd)
+
+  os.chdir(D_wc)
+  svntest.main.run_svn(None, 'up', '-r1', 'H')
+  svntest.main.run_svn(None, 'st', '-u')
 
 
 def missing_dir_in_anchor(sbox):
@@ -1462,54 +1402,52 @@ def status_dash_u_deleted_directories(sbox):
 
   # now run status -u on B and its children
   was_cwd = os.getcwd()
-  try:
-    os.chdir(A_path)
-  
-    # check status -u of B
-    expected = svntest.actions.UnorderedOutput(
-           ["D               1   %s\n" % "B",
-            "D               1   %s\n" % os.path.join("B", "lambda"),
-            "D               1   %s\n" % os.path.join("B", "E"),
-            "D               1   %s\n" % os.path.join("B", "E", "alpha"),
-            "D               1   %s\n" % os.path.join("B", "E", "beta"),
-            "D               1   %s\n" % os.path.join("B", "F"),
-            "Status against revision:      1\n" ])
-    svntest.actions.run_and_verify_svn(None,
-                                       expected,
-                                       [],
-                                       "status", "-u", "B")
 
-    # again, but now from inside B, should give the same output
-    os.chdir("B")
-    expected = svntest.actions.UnorderedOutput(
-           ["D               1   %s\n" % ".",
-            "D               1   %s\n" % "lambda",
-            "D               1   %s\n" % "E",
-            "D               1   %s\n" % os.path.join("E", "alpha"),
-            "D               1   %s\n" % os.path.join("E", "beta"),
-            "D               1   %s\n" % "F",
-            "Status against revision:      1\n" ])
-    svntest.actions.run_and_verify_svn(None,
-                                       expected,
-                                       [],
-                                       "status", "-u", ".")
+  os.chdir(A_path)
 
-    # check status -u of B/E
-    expected = svntest.actions.UnorderedOutput(
-           ["D               1   %s\n" % os.path.join("B", "E"),
-            "D               1   %s\n" % os.path.join("B", "E", "alpha"),
-            "D               1   %s\n" % os.path.join("B", "E", "beta"),
-            "Status against revision:      1\n" ])
-    
-    os.chdir(was_cwd)
-    os.chdir(A_path)
-    svntest.actions.run_and_verify_svn(None,
-                                       expected,
-                                       [],
-                                       "status", "-u",
-                                       os.path.join("B", "E"))
-  finally:
-    os.chdir(was_cwd)
+  # check status -u of B
+  expected = svntest.actions.UnorderedOutput(
+         ["D               1   %s\n" % "B",
+          "D               1   %s\n" % os.path.join("B", "lambda"),
+          "D               1   %s\n" % os.path.join("B", "E"),
+          "D               1   %s\n" % os.path.join("B", "E", "alpha"),
+          "D               1   %s\n" % os.path.join("B", "E", "beta"),
+          "D               1   %s\n" % os.path.join("B", "F"),
+          "Status against revision:      1\n" ])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "B")
+
+  # again, but now from inside B, should give the same output
+  os.chdir("B")
+  expected = svntest.actions.UnorderedOutput(
+         ["D               1   %s\n" % ".",
+          "D               1   %s\n" % "lambda",
+          "D               1   %s\n" % "E",
+          "D               1   %s\n" % os.path.join("E", "alpha"),
+          "D               1   %s\n" % os.path.join("E", "beta"),
+          "D               1   %s\n" % "F",
+          "Status against revision:      1\n" ])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", ".")
+
+  # check status -u of B/E
+  expected = svntest.actions.UnorderedOutput(
+         ["D               1   %s\n" % os.path.join("B", "E"),
+          "D               1   %s\n" % os.path.join("B", "E", "alpha"),
+          "D               1   %s\n" % os.path.join("B", "E", "beta"),
+          "Status against revision:      1\n" ])
+
+  os.chdir(was_cwd)
+  os.chdir(A_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u",
+                                     os.path.join("B", "E"))
 
 #----------------------------------------------------------------------
 
@@ -1521,37 +1459,33 @@ def status_dash_u_type_change(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  was_cwd = os.getcwd()
-
   os.chdir(wc_dir)
-  try:
-    # Change the versioned file iota into an unversioned dir.
-    os.remove('iota')
-    os.mkdir('iota')
 
-    xout = ["~               1   iota\n",
-            "Status against revision:      1\n" ]
+  # Change the versioned file iota into an unversioned dir.
+  os.remove('iota')
+  os.mkdir('iota')
 
-    svntest.actions.run_and_verify_svn(None,
-                                       xout,
-                                       [],
-                                       "status", "-u")
+  xout = ["~               1   iota\n",
+          "Status against revision:      1\n" ]
 
-    # Change the versioned directory A into an unversioned dir.
-    svntest.main.safe_rmtree('A')
-    os.mkdir('A')
+  svntest.actions.run_and_verify_svn(None,
+                                     xout,
+                                     [],
+                                     "status", "-u")
 
-    expected = svntest.actions.UnorderedOutput(
-           ["~               1   iota\n",
-            "~              ?    A\n",
-            "Status against revision:      1\n" ])
+  # Change the versioned directory A into an unversioned dir.
+  svntest.main.safe_rmtree('A')
+  os.mkdir('A')
 
-    svntest.actions.run_and_verify_svn(None,
-                                       expected,
-                                       [],
-                                       "status", "-u")
-  finally:
-    os.chdir(was_cwd)
+  expected = svntest.actions.UnorderedOutput(
+         ["~               1   iota\n",
+          "~              ?    A\n",
+          "Status against revision:      1\n" ])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u")
 
 ########################################################################
 # Run the tests

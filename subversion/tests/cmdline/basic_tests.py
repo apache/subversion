@@ -101,13 +101,9 @@ def basic_status(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, output)
 
-  current_dir = os.getcwd()
-  try:
-    os.chdir(os.path.join(wc_dir, 'A'))
-    output = svntest.actions.get_virginal_state("..", 1)
-    svntest.actions.run_and_verify_status("..", output)
-  finally:
-    os.chdir(current_dir)
+  os.chdir(os.path.join(wc_dir, 'A'))
+  output = svntest.actions.get_virginal_state("..", 1)
+  svntest.actions.run_and_verify_status("..", output)
   
 #----------------------------------------------------------------------
 
@@ -1335,15 +1331,13 @@ def basic_ls(sbox):
   # what we expect below.
 
   cwd = os.getcwd()
-  try:
-    os.chdir(wc_dir)
-    svntest.actions.run_and_verify_svn("ls implicit current directory",
-                                       ["A/\n", "iota\n"],
-                                       [], 'ls',
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd)
-  finally:
-    os.chdir(cwd)
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn("ls implicit current directory",
+                                     ["A/\n", "iota\n"],
+                                     [], 'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd)
+  os.chdir(cwd)
 
   svntest.actions.run_and_verify_svn('ls the root of working copy',
                                      ['A/\n', 'iota\n'],
@@ -1652,20 +1646,15 @@ def basic_info(sbox):
 
   sbox.build()
 
-  cwd = os.getcwd()
-  try:
-    os.chdir(sbox.wc_dir)
+  os.chdir(sbox.wc_dir)
 
-    # Check that "info" works with 0, 1 and more than 1 explicit targets.
-    output, errput = svntest.main.run_svn(None, 'info')
-    check_paths(output, ['.'])
-    output, errput = svntest.main.run_svn(None, 'info', 'iota')
-    check_paths(output, ['iota'])
-    output, errput = svntest.main.run_svn(None, 'info', 'iota', '.')
-    check_paths(output, ['iota', '.'])
-
-  finally:
-    os.chdir(cwd)
+  # Check that "info" works with 0, 1 and more than 1 explicit targets.
+  output, errput = svntest.main.run_svn(None, 'info')
+  check_paths(output, ['.'])
+  output, errput = svntest.main.run_svn(None, 'info', 'iota')
+  check_paths(output, ['iota'])
+  output, errput = svntest.main.run_svn(None, 'info', 'iota', '.')
+  check_paths(output, ['iota', '.'])
 
 def repos_root(sbox):
   "check that repos root gets set on checkout"

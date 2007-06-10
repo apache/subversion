@@ -16,7 +16,7 @@
 ######################################################################
 
 import sys     # for argv[]
-import os      # for popen2()
+import os
 import shutil  # for rmtree()
 import re
 import stat    # for ST_MODE
@@ -846,6 +846,7 @@ class TestRunner:
     os.environ['SVNTEST_EDITOR_FUNC'] = ''
     actions.no_sleep_for_timestamps()
 
+    saved_dir = os.getcwd()
     try:
       rc = apply(self.pred.run, (), kw)
       if rc is not None:
@@ -880,6 +881,8 @@ class TestRunner:
       result = 1
       print 'UNEXPECTED EXCEPTION:'
       traceback.print_exc(file=sys.stdout)
+      
+    os.chdir(saved_dir)
     result = self.pred.convert_result(result)
     print self.pred.run_text(result),
     self._print_name()

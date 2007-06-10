@@ -126,20 +126,18 @@ def diff_check_repo_subset(wc_dir, repo_subset, check_fn, do_diff_r):
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
-  try:
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', repo_subset)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', repo_subset)
+  if check_fn(diff_output):
+    return 1
+
+  if do_diff_r:
+    diff_output, err_output = svntest.main.run_svn(None,
+                                                   'diff', '-r', 'HEAD',
+                                                   repo_subset)
     if check_fn(diff_output):
       return 1
 
-    if do_diff_r:
-      diff_output, err_output = svntest.main.run_svn(None,
-                                                     'diff', '-r', 'HEAD',
-                                                     repo_subset)
-      if check_fn(diff_output):
-        return 1
-
-  finally:
-    os.chdir(was_cwd)
+  os.chdir(was_cwd)
 
   return 0
 
@@ -302,29 +300,27 @@ def change_diff_commit_diff(wc_dir, revision, change_fn, check_fn):
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
-  try:
-    svntest.main.run_svn(None, 'up', '-r', 'HEAD')
+  svntest.main.run_svn(None, 'up', '-r', 'HEAD')
 
-    change_fn()
+  change_fn()
 
-    # diff without revision doesn't use an editor
-    diff_output, err_output = svntest.main.run_svn(None, 'diff')
-    if check_fn(diff_output):
-      raise svntest.Failure
+  # diff without revision doesn't use an editor
+  diff_output, err_output = svntest.main.run_svn(None, 'diff')
+  if check_fn(diff_output):
+    raise svntest.Failure
 
-    # diff with revision runs an editor
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', 'HEAD')
-    if check_fn(diff_output):
-      raise svntest.Failure
+  # diff with revision runs an editor
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', 'HEAD')
+  if check_fn(diff_output):
+    raise svntest.Failure
 
-    svntest.main.run_svn(None, 'ci', '-m', 'log msg')
-    svntest.main.run_svn(None, 'up')
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', revision)
-    if check_fn(diff_output):
-      raise svntest.Failure
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None, 'up')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', revision)
+  if check_fn(diff_output):
+    raise svntest.Failure
 
-  finally:
-    os.chdir(was_cwd)
+  os.chdir(was_cwd)
 
 ######################################################################
 # check the diff
@@ -335,14 +331,11 @@ def just_diff(wc_dir, rev_check, check_fn):
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
-  try:
-    diff_output, err_output = svntest.main.run_svn(None,
-                                                   'diff', '-r', rev_check)
-    if check_fn(diff_output):
-      raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
+  diff_output, err_output = svntest.main.run_svn(None,
+                                                 'diff', '-r', rev_check)
+  if check_fn(diff_output):
+    raise svntest.Failure
+  os.chdir(was_cwd)
 
 ######################################################################
 # update, check the diff
@@ -353,11 +346,9 @@ def update_diff(wc_dir, rev_up, rev_check, check_fn):
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
-  try:
-    svntest.main.run_svn(None, 'up', '-r', rev_up)
+  svntest.main.run_svn(None, 'up', '-r', rev_up)
 
-  finally:
-    os.chdir(was_cwd)
+  os.chdir(was_cwd)
 
   just_diff(wc_dir, rev_check, check_fn)
 
@@ -370,14 +361,12 @@ def repo_diff(wc_dir, rev1, rev2, check_fn):
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
-  try:
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r',
-                                                   `rev2` + ':' + `rev1`)
-    if check_fn(diff_output):
-      raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 `rev2` + ':' + `rev1`)
+  if check_fn(diff_output):
+    raise svntest.Failure
 
-  finally:
-    os.chdir(was_cwd)
+  os.chdir(was_cwd)
 
 ######################################################################
 # Tests
@@ -510,13 +499,11 @@ def diff_repo_subset(sbox):
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
-  try:
-    update_a_file()
-    add_a_file()
-    add_a_file_in_a_subdir()
+  update_a_file()
+  add_a_file()
+  add_a_file_in_a_subdir()
 
-  finally:
-    os.chdir(was_cwd)
+  os.chdir(was_cwd)
 
   if diff_check_update_a_file_repo_subset(wc_dir):
     raise svntest.Failure
@@ -560,80 +547,75 @@ def diff_pure_repository_update_a_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
-  try:
-    # rev 2
-    update_a_file()
-    svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  # rev 2
+  update_a_file()
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
-    # rev 3
-    add_a_file_in_a_subdir()
-    svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  # rev 3
+  add_a_file_in_a_subdir()
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
-    # rev 4
-    add_a_file()
-    svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  # rev 4
+  add_a_file()
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
-    # rev 5
-    update_added_file()
-    svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  # rev 5
+  update_added_file()
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
-    svntest.main.run_svn(None, 'up', '-r', '2')
+  svntest.main.run_svn(None, 'up', '-r', '2')
 
-    url = sbox.repo_url
+  url = sbox.repo_url
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '2',
-                                                   '--username',
-                                                   svntest.main.wc_author,
-                                                   '--password',
-                                                   svntest.main.wc_passwd,
-                                                   url)
-    if check_update_a_file(diff_output): raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '2',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd,
+                                                 url)
+  if check_update_a_file(diff_output): raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2',
-                                                   '--username',
-                                                   svntest.main.wc_author,
-                                                   '--password',
-                                                   svntest.main.wc_passwd)
-    if check_update_a_file(diff_output): raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd)
+  if check_update_a_file(diff_output): raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '3',
-                                                   '--username',
-                                                   svntest.main.wc_author,
-                                                   '--password',
-                                                   svntest.main.wc_passwd,
-                                                   url)
-    if check_add_a_file_in_a_subdir(diff_output): raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '3',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd,
+                                                 url)
+  if check_add_a_file_in_a_subdir(diff_output): raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3',
-                                                   '--username',
-                                                   svntest.main.wc_author,
-                                                   '--password',
-                                                   svntest.main.wc_passwd)
-    if check_add_a_file_in_a_subdir(diff_output): raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd)
+  if check_add_a_file_in_a_subdir(diff_output): raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '5',
-                                                   '--username',
-                                                   svntest.main.wc_author,
-                                                   '--password',
-                                                   svntest.main.wc_passwd,
-                                                   url)
-    if check_update_added_file(diff_output): raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '5',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd,
+                                                 url)
+  if check_update_added_file(diff_output): raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '4:5',
-                                                   '--username',
-                                                   svntest.main.wc_author,
-                                                   '--password',
-                                                   svntest.main.wc_passwd)
-    if check_update_added_file(diff_output): raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '4:5',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd)
+  if check_update_added_file(diff_output): raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', 'head')
-    if check_add_a_file_in_a_subdir_reverse(diff_output): raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', 'head')
+  if check_add_a_file_in_a_subdir_reverse(diff_output): raise svntest.Failure
 
 
 # test 10
@@ -655,37 +637,32 @@ def diff_only_property_change(sbox):
   expected_reverse_output[4] = "   - native\n"
 
 
-  current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset',
-                                       'svn:eol-style', 'native', 'iota')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'svn:eol-style', 'native', 'iota')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'empty-msg')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'empty-msg')
 
-    svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                       'diff', '-r', '1:2')
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r', '1:2')
 
-    svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                       'diff', '-c', '2')
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-c', '2')
 
-    svntest.actions.run_and_verify_svn(None, expected_reverse_output, [],
-                                       'diff', '-r', '2:1')
+  svntest.actions.run_and_verify_svn(None, expected_reverse_output, [],
+                                     'diff', '-r', '2:1')
 
-    svntest.actions.run_and_verify_svn(None, expected_reverse_output, [],
-                                       'diff', '-c', '-2')
+  svntest.actions.run_and_verify_svn(None, expected_reverse_output, [],
+                                     'diff', '-c', '-2')
 
-    svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                       'diff', '-r', '1')
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r', '1')
 
-    svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                       'diff', '-r', 'PREV', 'iota')
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r', 'PREV', 'iota')
 
-
-  finally:
-    os.chdir(current_dir)
 
 
 #----------------------------------------------------------------------
@@ -1122,78 +1099,74 @@ def diff_targets(sbox):
   "select diff targets"
 
   sbox.build()
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    update_a_file()
-    add_a_file()
 
-    update_path = os.path.join('A', 'B', 'E', 'alpha')
-    add_path = os.path.join('A', 'B', 'E', 'theta')
-    parent_path = os.path.join('A', 'B', 'E')
-    update_url = sbox.repo_url + '/A/B/E/alpha'
-    parent_url = sbox.repo_url + '/A/B/E'
+  update_a_file()
+  add_a_file()
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                   update_path, add_path)
-    if check_update_a_file(diff_output) or check_add_a_file(diff_output):
-      raise svntest.Failure
+  update_path = os.path.join('A', 'B', 'E', 'alpha')
+  add_path = os.path.join('A', 'B', 'E', 'theta')
+  parent_path = os.path.join('A', 'B', 'E')
+  update_url = sbox.repo_url + '/A/B/E/alpha'
+  parent_url = sbox.repo_url + '/A/B/E'
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                   update_path)
-    if check_update_a_file(diff_output) or not check_add_a_file(diff_output):
-      raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 update_path, add_path)
+  if check_update_a_file(diff_output) or check_add_a_file(diff_output):
+    raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                   '--old', parent_path,
-                                                   'alpha', 'theta')
-    if check_update_a_file(diff_output) or check_add_a_file(diff_output):
-      raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 update_path)
+  if check_update_a_file(diff_output) or not check_add_a_file(diff_output):
+    raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                   '--old', parent_path,
-                                                   'theta')
-    if not check_update_a_file(diff_output) or check_add_a_file(diff_output):
-      raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 '--old', parent_path,
+                                                 'alpha', 'theta')
+  if check_update_a_file(diff_output) or check_add_a_file(diff_output):
+    raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 '--old', parent_path,
+                                                 'theta')
+  if not check_update_a_file(diff_output) or check_add_a_file(diff_output):
+    raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
-                                                   update_path, add_path)
+  diff_output, err_output = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
-    regex = 'svn: Unable to find repository location for \'.*\''
-    for line in err_output:
-      if re.match(regex, line):
-        break
-    else:
-      raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
+                                                 update_path, add_path)
 
-    diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
-                                                   add_path)
-    for line in err_output:
-      if re.match(regex, line):
-        break
-    else:
-      raise svntest.Failure
+  regex = 'svn: Unable to find repository location for \'.*\''
+  for line in err_output:
+    if re.match(regex, line):
+      break
+  else:
+    raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
-                                                   '--old', parent_path,
-                                                   'alpha', 'theta')
-    regex = 'svn: \'.*\' was not found in the repository'
-    for line in err_output:
-      if re.match(regex, line):
-        break
-    else:
-      raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
+                                                 add_path)
+  for line in err_output:
+    if re.match(regex, line):
+      break
+  else:
+    raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2',
-                                                   '--old', parent_path,
-                                                   'alpha')
-    if check_update_a_file(diff_output) or not check_add_a_file(diff_output):
-      raise svntest.Failure
+  diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
+                                                 '--old', parent_path,
+                                                 'alpha', 'theta')
+  regex = 'svn: \'.*\' was not found in the repository'
+  for line in err_output:
+    if re.match(regex, line):
+      break
+  else:
+    raise svntest.Failure
 
-  finally:
-    os.chdir(was_cwd)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2',
+                                                 '--old', parent_path,
+                                                 'alpha')
+  if check_update_a_file(diff_output) or not check_add_a_file(diff_output):
+    raise svntest.Failure
   
 
 #----------------------------------------------------------------------
@@ -1472,79 +1445,74 @@ def diff_renamed_file(sbox):
 
   sbox.build()
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    pi_path = os.path.join('A', 'D', 'G', 'pi')
-    pi2_path = os.path.join('A', 'D', 'pi2')
-    svntest.main.file_write(pi_path, "new pi")
+  pi_path = os.path.join('A', 'D', 'G', 'pi')
+  pi2_path = os.path.join('A', 'D', 'pi2')
+  svntest.main.file_write(pi_path, "new pi")
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log msg')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg')
 
-    svntest.main.file_append(pi_path, "even more pi")
+  svntest.main.file_append(pi_path, "even more pi")
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log msg')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg')
 
-    svntest.main.run_svn(None, 'mv', pi_path, pi2_path)
+  svntest.main.run_svn(None, 'mv', pi_path, pi2_path)
 
-    # Repos->WC diff of the file
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
-                                                   pi2_path)
+  # Repos->WC diff of the file
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                 pi2_path)
 
-    if check_diff_output(diff_output,
-                         pi2_path,
-                         'M') :
-      raise svntest.Failure
+  if check_diff_output(diff_output,
+                       pi2_path,
+                       'M') :
+    raise svntest.Failure
 
-    svntest.main.file_append(pi2_path, "new pi")
+  svntest.main.file_append(pi2_path, "new pi")
 
-    # Repos->WC of the directory
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
-                                                   os.path.join('A', 'D'))
+  # Repos->WC of the directory
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                 os.path.join('A', 'D'))
 
-    if check_diff_output(diff_output,
-                         pi_path,
-                         'D') :
-      raise svntest.Failure
+  if check_diff_output(diff_output,
+                       pi_path,
+                       'D') :
+    raise svntest.Failure
 
-    if check_diff_output(diff_output,
-                         pi2_path,
-                         'M') :
-      raise svntest.Failure
+  if check_diff_output(diff_output,
+                       pi2_path,
+                       'M') :
+    raise svntest.Failure
 
-    # WC->WC of the file
-    diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                   pi2_path)
-    if check_diff_output(diff_output,
-                         pi2_path,
-                         'M') :
-      raise svntest.Failure
+  # WC->WC of the file
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 pi2_path)
+  if check_diff_output(diff_output,
+                       pi2_path,
+                       'M') :
+    raise svntest.Failure
 
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log msg')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg')
 
-    # Repos->WC diff of file after the rename.
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
-                                                   pi2_path)
-    if check_diff_output(diff_output,
-                         pi2_path,
-                         'M') :
-      raise svntest.Failure
+  # Repos->WC diff of file after the rename.
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                 pi2_path)
+  if check_diff_output(diff_output,
+                       pi2_path,
+                       'M') :
+    raise svntest.Failure
 
-    # Repos->repos diff after the rename.
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3',
-                                                   pi2_path)
-    if check_diff_output(diff_output,
-                         os.path.join('A', 'D', 'pi'),
-                         'M') :
-      raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
+  # Repos->repos diff after the rename.
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3',
+                                                 pi2_path)
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'pi'),
+                       'M') :
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 def diff_within_renamed_dir(sbox):
@@ -1552,50 +1520,45 @@ def diff_within_renamed_dir(sbox):
 
   sbox.build()
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
-                                     os.path.join('A', 'D', 'I'))
-    # svntest.main.run_svn(None, 'ci', '-m', 'log_msg')
-    svntest.main.file_write(os.path.join('A', 'D', 'I', 'pi'), "new pi")
+  svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
+                                   os.path.join('A', 'D', 'I'))
+  # svntest.main.run_svn(None, 'ci', '-m', 'log_msg')
+  svntest.main.file_write(os.path.join('A', 'D', 'I', 'pi'), "new pi")
 
-    # Check a repos->wc diff
-    diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                   os.path.join('A', 'D', 'I', 'pi'))
-    if check_diff_output(diff_output,
-                         os.path.join('A', 'D', 'I', 'pi'),
-                         'M') :
-      raise svntest.Failure
+  # Check a repos->wc diff
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 os.path.join('A', 'D', 'I', 'pi'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'M') :
+    raise svntest.Failure
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log msg')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg')
 
-    # Check repos->wc after commit
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
-                                                   os.path.join('A', 'D', 'I', 'pi'))
-    if check_diff_output(diff_output,
-                         os.path.join('A', 'D', 'I', 'pi'),
-                         'M') :
-      raise svntest.Failure
+  # Check repos->wc after commit
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                 os.path.join('A', 'D', 'I', 'pi'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'M') :
+    raise svntest.Failure
 
-    # Test the diff while within the moved directory
-    os.chdir(os.path.join('A','D','I'))
+  # Test the diff while within the moved directory
+  os.chdir(os.path.join('A','D','I'))
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1')
 
-    if check_diff_output(diff_output, 'pi', 'M') :
-      raise svntest.Failure
+  if check_diff_output(diff_output, 'pi', 'M') :
+    raise svntest.Failure
 
-    # Test a repos->repos diff while within the moved directory
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+  # Test a repos->repos diff while within the moved directory
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
 
-    if check_diff_output(diff_output, 'pi', 'M') :
-      raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
+  if check_diff_output(diff_output, 'pi', 'M') :
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 def diff_prop_on_named_dir(sbox):
@@ -1610,26 +1573,22 @@ def diff_prop_on_named_dir(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'p', 'v', 'A')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', '')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propdel', 'p', 'A')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', '')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'p', 'v', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', '')
 
-    diff_output, err_output = svntest.main.run_svn(None,
-                                                   'diff', '-r2:3', 'A')
-    # Check that the result contains a "-" line.
-    verify_expected_output(diff_output, "   - v")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propdel', 'p', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', '')
 
-  finally:
-    os.chdir(current_dir)
+  diff_output, err_output = svntest.main.run_svn(None,
+                                                 'diff', '-r2:3', 'A')
+  # Check that the result contains a "-" line.
+  verify_expected_output(diff_output, "   - v")
 
 #----------------------------------------------------------------------
 def diff_keywords(sbox):
@@ -1795,67 +1754,62 @@ def diff_renamed_dir(sbox):
 
   sbox.build()
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
-                                     os.path.join('A', 'D', 'I'))
+  svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
+                                   os.path.join('A', 'D', 'I'))
 
-    # Check a repos->wc diff
-    diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                   os.path.join('A', 'D'))
-    if check_diff_output(diff_output,
-                         os.path.join('A', 'D', 'G', 'pi'),
-                         'D') :
-      raise svntest.Failure
-    if check_diff_output(diff_output,
-                         os.path.join('A', 'D', 'I', 'pi'),
-                         'A') :
-      raise svntest.Failure
+  # Check a repos->wc diff
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 os.path.join('A', 'D'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi'),
+                       'D') :
+    raise svntest.Failure
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'A') :
+    raise svntest.Failure
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log msg')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg')
 
-    # Check repos->wc after commit
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
-                                                   os.path.join('A', 'D'))
-    if check_diff_output(diff_output,
-                         os.path.join('A', 'D', 'G', 'pi'),
-                         'D') :
-      raise svntest.Failure
-    if check_diff_output(diff_output,
-                         os.path.join('A', 'D', 'I', 'pi'),
-                         'A') :
-      raise svntest.Failure
+  # Check repos->wc after commit
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                 os.path.join('A', 'D'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi'),
+                       'D') :
+    raise svntest.Failure
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'A') :
+    raise svntest.Failure
 
-    # Test a repos->repos diff after commit
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
-    if check_diff_output(diff_output,
-                         os.path.join('A', 'D', 'G', 'pi'),
-                         'D') :
-      raise svntest.Failure
-    if check_diff_output(diff_output,
-                         os.path.join('A', 'D', 'I', 'pi'),
-                         'A') :
-      raise svntest.Failure
+  # Test a repos->repos diff after commit
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi'),
+                       'D') :
+    raise svntest.Failure
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'A') :
+    raise svntest.Failure
 
-    # Test the diff while within the moved directory
-    os.chdir(os.path.join('A','D','I'))
+  # Test the diff while within the moved directory
+  os.chdir(os.path.join('A','D','I'))
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1')
 
-    if check_diff_output(diff_output, 'pi', 'A') :
-      raise svntest.Failure
+  if check_diff_output(diff_output, 'pi', 'A') :
+    raise svntest.Failure
 
-    # Test a repos->repos diff while within the moved directory
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+  # Test a repos->repos diff while within the moved directory
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
 
-    if check_diff_output(diff_output, 'pi', 'A') :
-      raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
+  if check_diff_output(diff_output, 'pi', 'A') :
+    raise svntest.Failure
 
 
 #----------------------------------------------------------------------
@@ -1884,67 +1838,64 @@ def diff_property_changes_to_base(sbox):
   expected_output_r2_r1[10] = "   - r2value\n"
 
 
-  current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset',
-                                       'fileprop', 'r2value', 'iota')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset',
-                                       'dirprop', 'r2value', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'fileprop', 'r2value', 'iota')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'empty-msg')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'dirprop', 'r2value', 'A')
 
-    # Check that forward and reverse repos-repos diffs are as expected.
-    expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
-    svntest.actions.run_and_verify_svn(None, expected, [],
-                                       'diff', '-r', '1:2')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'empty-msg')
 
-    expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
-    svntest.actions.run_and_verify_svn(None, expected, [],
-                                       'diff', '-r', '2:1')
+  # Check that forward and reverse repos-repos diffs are as expected.
+  expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
+  svntest.actions.run_and_verify_svn(None, expected, [],
+                                     'diff', '-r', '1:2')
 
-    # Now check repos->WORKING, repos->BASE, and BASE->repos.
-    # (BASE is r1, and WORKING has no local mods, so this should produce
-    # the same output as above).
-    expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
-    svntest.actions.run_and_verify_svn(None, expected, [],
-                                       'diff', '-r', '1')
+  expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
+  svntest.actions.run_and_verify_svn(None, expected, [],
+                                     'diff', '-r', '2:1')
 
-    svntest.actions.run_and_verify_svn(None, expected, [],
-                                       'diff', '-r', '1:BASE')
+  # Now check repos->WORKING, repos->BASE, and BASE->repos.
+  # (BASE is r1, and WORKING has no local mods, so this should produce
+  # the same output as above).
+  expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
+  svntest.actions.run_and_verify_svn(None, expected, [],
+                                     'diff', '-r', '1')
 
-    expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
-    svntest.actions.run_and_verify_svn(None, expected, [],
-                                       'diff', '-r', 'BASE:1')
+  svntest.actions.run_and_verify_svn(None, expected, [],
+                                     'diff', '-r', '1:BASE')
 
-    # Modify some properties.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset',
-                                       'fileprop', 'workingvalue', 'iota')
+  expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
+  svntest.actions.run_and_verify_svn(None, expected, [],
+                                     'diff', '-r', 'BASE:1')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset',
-                                       'dirprop', 'workingvalue', 'A')
+  # Modify some properties.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'fileprop', 'workingvalue', 'iota')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset',
-                                       'fileprop', 'workingvalue', 'A/mu')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'dirprop', 'workingvalue', 'A')
 
-    # Check that the earlier diffs against BASE are unaffected by the
-    # presence of local mods.
-    expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
-    svntest.actions.run_and_verify_svn(None, expected, [],
-                                       'diff', '-r', '1:BASE')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'fileprop', 'workingvalue', 'A/mu')
 
-    expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
-    svntest.actions.run_and_verify_svn(None, expected, [],
-                                       'diff', '-r', 'BASE:1')
-  finally:
-    os.chdir(current_dir)
+  # Check that the earlier diffs against BASE are unaffected by the
+  # presence of local mods.
+  expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
+  svntest.actions.run_and_verify_svn(None, expected, [],
+                                     'diff', '-r', '1:BASE')
+
+  expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
+  svntest.actions.run_and_verify_svn(None, expected, [],
+                                     'diff', '-r', 'BASE:1')
 
 def diff_schedule_delete(sbox):
   "scheduled deleted"
@@ -2002,46 +1953,41 @@ def diff_schedule_delete(sbox):
   expected_output_base_working[3] = "+++ foo\t(working copy)\n"
 
   wc_dir = sbox.wc_dir
-  current_dir = os.getcwd()
   os.chdir(wc_dir)
 
-  try:
-    svntest.main.file_append('foo', "xxx\n")
-    svntest.main.run_svn(None, 'add', 'foo')
-    svntest.main.run_svn(None, 'ci', '-m', 'log msg r2')
+  svntest.main.file_append('foo', "xxx\n")
+  svntest.main.run_svn(None, 'add', 'foo')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg r2')
 
-    svntest.main.file_append('foo', "yyy\n")
-    svntest.main.run_svn(None, 'ci', '-m', 'log msg r3')
+  svntest.main.file_append('foo', "yyy\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg r3')
 
-    # Update everyone's BASE to r3, and mark 'foo' as schedule-deleted.
-    svntest.main.run_svn(None, 'up')
-    svntest.main.run_svn(None, 'rm', 'foo')
+  # Update everyone's BASE to r3, and mark 'foo' as schedule-deleted.
+  svntest.main.run_svn(None, 'up')
+  svntest.main.run_svn(None, 'rm', 'foo')
 
-    # A file marked as schedule-delete should act as if were not present
-    # in WORKING, but diffs against BASE should remain unaffected.
+  # A file marked as schedule-delete should act as if were not present
+  # in WORKING, but diffs against BASE should remain unaffected.
 
-    # 1. repos-wc diff: file not present in repos.
-    svntest.actions.run_and_verify_svn(None, [], [],
-                                       'diff', '-r', '1')
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_base, [],
-                                       'diff', '-r', '1:BASE')
-    svntest.actions.run_and_verify_svn(None, expected_output_base_r1, [],
-                                       'diff', '-r', 'BASE:1')
+  # 1. repos-wc diff: file not present in repos.
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'diff', '-r', '1')
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_base, [],
+                                     'diff', '-r', '1:BASE')
+  svntest.actions.run_and_verify_svn(None, expected_output_base_r1, [],
+                                     'diff', '-r', 'BASE:1')
 
-    # 2. repos-wc diff: file present in repos.
-    svntest.actions.run_and_verify_svn(None, expected_output_r2_working, [],
-                                       'diff', '-r', '2')
-    svntest.actions.run_and_verify_svn(None, expected_output_r2_base, [],
-                                       'diff', '-r', '2:BASE')
-    svntest.actions.run_and_verify_svn(None, expected_output_base_r2, [],
-                                       'diff', '-r', 'BASE:2')
+  # 2. repos-wc diff: file present in repos.
+  svntest.actions.run_and_verify_svn(None, expected_output_r2_working, [],
+                                     'diff', '-r', '2')
+  svntest.actions.run_and_verify_svn(None, expected_output_r2_base, [],
+                                     'diff', '-r', '2:BASE')
+  svntest.actions.run_and_verify_svn(None, expected_output_base_r2, [],
+                                     'diff', '-r', 'BASE:2')
 
-    # 3. wc-wc diff.
-    svntest.actions.run_and_verify_svn(None, expected_output_base_working, [],
-                                       'diff')
-
-  finally:
-    os.chdir(current_dir)
+  # 3. wc-wc diff.
+  svntest.actions.run_and_verify_svn(None, expected_output_base_working, [],
+                                     'diff')
 
 #----------------------------------------------------------------------
 def diff_mime_type_changes(sbox):
@@ -2068,50 +2014,45 @@ def diff_mime_type_changes(sbox):
     "-revision 2 text.\n" ]
 
 
-  current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    # Append some text to iota (r2).
-    svntest.main.file_append('iota', "revision 2 text.\n")
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log_msg')
+  # Append some text to iota (r2).
+  svntest.main.file_append('iota', "revision 2 text.\n")
 
-    # Check that forward and reverse repos-BASE diffs are as expected.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
-                                       'diff', '-r', '1:BASE')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log_msg')
 
-    svntest.actions.run_and_verify_svn(None, expected_output_wc_r1, [],
-                                       'diff', '-r', 'BASE:1')
+  # Check that forward and reverse repos-BASE diffs are as expected.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
+                                     'diff', '-r', '1:BASE')
 
-    # Mark iota as a binary file in the working copy.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'svn:mime-type',
-                                       'application/octet-stream', 'iota')
+  svntest.actions.run_and_verify_svn(None, expected_output_wc_r1, [],
+                                     'diff', '-r', 'BASE:1')
 
-    # Check that the earlier diffs against BASE are unaffected by the
-    # presence of local svn:mime-type property mods.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
-                                       'diff', '-r', '1:BASE')
+  # Mark iota as a binary file in the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:mime-type',
+                                     'application/octet-stream', 'iota')
 
-    svntest.actions.run_and_verify_svn(None, expected_output_wc_r1, [],
-                                       'diff', '-r', 'BASE:1')
+  # Check that the earlier diffs against BASE are unaffected by the
+  # presence of local svn:mime-type property mods.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
+                                     'diff', '-r', '1:BASE')
 
-    # Commit the change (r3) (so that BASE has the binary MIME type), then
-    # mark iota as a text file again in the working copy.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log_msg')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propdel', 'svn:mime-type', 'iota')
+  svntest.actions.run_and_verify_svn(None, expected_output_wc_r1, [],
+                                     'diff', '-r', 'BASE:1')
 
-    # Now diffs against BASE will fail, but diffs against WORKNG should be
-    # fine.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
-                                       'diff', '-r', '1')
+  # Commit the change (r3) (so that BASE has the binary MIME type), then
+  # mark iota as a text file again in the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log_msg')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propdel', 'svn:mime-type', 'iota')
 
-
-  finally:
-    os.chdir(current_dir)
+  # Now diffs against BASE will fail, but diffs against WORKNG should be
+  # fine.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
+                                     'diff', '-r', '1')
 
 
 #----------------------------------------------------------------------
@@ -2142,57 +2083,54 @@ def diff_prop_change_local_propmod(sbox):
     "   + newworkingvalue\n",
     "\n" ]
 
-  current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    # Set a property on A/ and iota, and commit them (r2).
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'dirprop',
-                                       'r2value', 'A')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'fileprop',
-                                       'r2value', 'iota')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log_msg')
 
-    # Change the property values on A/ and iota, and commit them (r3).
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'dirprop',
-                                       'r3value', 'A')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'fileprop',
-                                       'r3value', 'iota')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log_msg')
+  # Set a property on A/ and iota, and commit them (r2).
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'dirprop',
+                                     'r2value', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'fileprop',
+                                     'r2value', 'iota')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log_msg')
 
-    # Finally, change the property values one last time.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'dirprop',
-                                       'workingvalue', 'A')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'fileprop',
-                                       'workingvalue', 'iota')
-    # And also add some properties that only exist in WORKING.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'newdirprop',
-                                       'newworkingvalue', 'A')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'newfileprop',
-                                       'newworkingvalue', 'iota')
+  # Change the property values on A/ and iota, and commit them (r3).
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'dirprop',
+                                     'r3value', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'fileprop',
+                                     'r3value', 'iota')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log_msg')
 
-    # Now, if we diff r2 to WORKING, we've got three property values
-    # to consider: r2value (in the repository), r3value (in BASE), and
-    # workingvalue (in WORKING).
-    # The diff should only show the r2->WORKING change.
-    #
-    # We also need to make sure that the 'new' (WORKING only) properties
-    # are included in the output, since they won't be listed in a simple
-    # BASE->r2 diff.
-    expected = svntest.actions.UnorderedOutput(expected_output_r2_wc)
-    svntest.actions.run_and_verify_svn(None, expected, [],
-                                       'diff', '-r', '2')
-  finally:
-    os.chdir(current_dir)
+  # Finally, change the property values one last time.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'dirprop',
+                                     'workingvalue', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'fileprop',
+                                     'workingvalue', 'iota')
+  # And also add some properties that only exist in WORKING.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'newdirprop',
+                                     'newworkingvalue', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'newfileprop',
+                                     'newworkingvalue', 'iota')
+
+  # Now, if we diff r2 to WORKING, we've got three property values
+  # to consider: r2value (in the repository), r3value (in BASE), and
+  # workingvalue (in WORKING).
+  # The diff should only show the r2->WORKING change.
+  #
+  # We also need to make sure that the 'new' (WORKING only) properties
+  # are included in the output, since they won't be listed in a simple
+  # BASE->r2 diff.
+  expected = svntest.actions.UnorderedOutput(expected_output_r2_wc)
+  svntest.actions.run_and_verify_svn(None, expected, [],
+                                     'diff', '-r', '2')
 
 
 #----------------------------------------------------------------------
@@ -2239,44 +2177,39 @@ def diff_repos_wc_add_with_props(sbox):
   expected_output_r1_r3_a = expected_output_r1_r3[:12] + \
     expected_output_r1_r3[18:] + expected_output_r1_r3[12:18]
 
-  current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    # Create directory X, file foo, and file X/bar, and commit them (r2).
-    os.makedirs('X')
-    svntest.main.file_append('foo', "content\n")
-    svntest.main.file_append(os.path.join('X', 'bar'), "content\n")
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'add', 'X', 'foo')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log_msg')
 
-    # Set a property on all three items, and commit them (r3).
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'propname',
-                                       'propvalue', 'X', 'foo',
-                                       os.path.join('X', 'bar'))
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log_msg')
+  # Create directory X, file foo, and file X/bar, and commit them (r2).
+  os.makedirs('X')
+  svntest.main.file_append('foo', "content\n")
+  svntest.main.file_append(os.path.join('X', 'bar'), "content\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', 'X', 'foo')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log_msg')
 
-    # Now, if we diff r1 to WORKING or BASE, we should see the content
-    # addition for foo and X/bar, and property additions for all three.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
-                                       'diff', '-r', '1')
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
-                                       'diff', '-r', '1:BASE')
+  # Set a property on all three items, and commit them (r3).
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'propname',
+                                     'propvalue', 'X', 'foo',
+                                     os.path.join('X', 'bar'))
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log_msg')
 
-    # Update the BASE and WORKING revisions to r1.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'up', '-r', '1')
+  # Now, if we diff r1 to WORKING or BASE, we should see the content
+  # addition for foo and X/bar, and property additions for all three.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+                                     'diff', '-r', '1')
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+                                     'diff', '-r', '1:BASE')
 
-    # If we diff BASE to r3, we should see the same output as above.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_r3_a, [],
-                                       'diff', '-r', 'BASE:3')
+  # Update the BASE and WORKING revisions to r1.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '-r', '1')
 
-
-  finally:
-    os.chdir(current_dir)
+  # If we diff BASE to r3, we should see the same output as above.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_r3_a, [],
+                                     'diff', '-r', 'BASE:3')
 
 
 #----------------------------------------------------------------------
@@ -2299,17 +2232,11 @@ def diff_nonrecursive_checkout_deleted_dir(sbox):
 
   svntest.main.run_svn(None, 'co', '-N', A_prime_url, wc)
 
-  saved_cwd = os.getcwd()
+  os.chdir(wc)
 
-  try:
-    os.chdir(wc)
-
-    # We don't particular care about the output here, just that it doesn't
-    # segfault.
-    svntest.main.run_svn(None, 'diff', '-r1')
-
-  finally:
-    os.chdir(saved_cwd)
+  # We don't particular care about the output here, just that it doesn't
+  # segfault.
+  svntest.main.run_svn(None, 'diff', '-r1')
 
 
 #----------------------------------------------------------------------
@@ -2338,29 +2265,25 @@ def diff_repos_working_added_dir(sbox):
     "+content\n",
     "+more content\n" ]
 
-  current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    # Create directory X and file X/bar, and commit them (r2).
-    os.makedirs('X')
-    svntest.main.file_append(os.path.join('X', 'bar'), "content\n")
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'add', 'X')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log_msg')
 
-    # Make a local modification to X/bar.
-    svntest.main.file_append(os.path.join('X', 'bar'), "more content\n")
+  # Create directory X and file X/bar, and commit them (r2).
+  os.makedirs('X')
+  svntest.main.file_append(os.path.join('X', 'bar'), "content\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', 'X')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log_msg')
 
-    # Now, if we diff r1 to WORKING or BASE, we should see the content
-    # addition for X/bar, and (for WORKING) the local modification.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_BASE, [],
-                                       'diff', '-r', '1:BASE')
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_WORKING, [],
-                                       'diff', '-r', '1')
+  # Make a local modification to X/bar.
+  svntest.main.file_append(os.path.join('X', 'bar'), "more content\n")
 
-  finally:
-    os.chdir(current_dir)
+  # Now, if we diff r1 to WORKING or BASE, we should see the content
+  # addition for X/bar, and (for WORKING) the local modification.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_BASE, [],
+                                     'diff', '-r', '1:BASE')
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_WORKING, [],
+                                     'diff', '-r', '1')
 
 
 #----------------------------------------------------------------------
@@ -2370,35 +2293,31 @@ def diff_base_repos_moved(sbox):
 
   sbox.build()
 
-  current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    oldfile = 'iota'
-    newfile = 'kappa'
 
-    # Move, modify and commit a file
-    svntest.main.run_svn(None, 'mv', oldfile, newfile)
-    svntest.main.file_write(newfile, "new content\n")
-    svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', '')
+  oldfile = 'iota'
+  newfile = 'kappa'
 
-    # Check that a base->repos diff shows deleted and added lines.
-    # It's not clear whether we expect a file-change diff or
-    # a file-delete plus file-add.  The former is currently produced if we
-    # explicitly request a diff of the file itself, and the latter if we
-    # request a tree diff which just happens to contain the file.
-    out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                                  'diff', '-rBASE:1', newfile)
-    if check_diff_output(out, newfile, 'M'):
-      raise svntest.Failure
+  # Move, modify and commit a file
+  svntest.main.run_svn(None, 'mv', oldfile, newfile)
+  svntest.main.file_write(newfile, "new content\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', '')
 
-    # Diff should recognise that the item's name has changed, and mention both
-    # the current and the old name in parentheses, in the right order.
-    if (out[2][:3] != '---' or out[2].find('kappa)') == -1 or
-        out[3][:3] != '+++' or out[3].find('iota)') == -1):
-      raise svntest.Failure
+  # Check that a base->repos diff shows deleted and added lines.
+  # It's not clear whether we expect a file-change diff or
+  # a file-delete plus file-add.  The former is currently produced if we
+  # explicitly request a diff of the file itself, and the latter if we
+  # request a tree diff which just happens to contain the file.
+  out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+                                                'diff', '-rBASE:1', newfile)
+  if check_diff_output(out, newfile, 'M'):
+    raise svntest.Failure
 
-  finally:
-    os.chdir(current_dir)
+  # Diff should recognise that the item's name has changed, and mention both
+  # the current and the old name in parentheses, in the right order.
+  if (out[2][:3] != '---' or out[2].find('kappa)') == -1 or
+      out[3][:3] != '+++' or out[3].find('iota)') == -1):
+    raise svntest.Failure
 
 
 #----------------------------------------------------------------------
@@ -2409,22 +2328,18 @@ def diff_added_subtree(sbox):
 
   sbox.build()
 
-  current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    # Roll the wc back to r0 (i.e. an empty wc).
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'up', '-r0')
 
-    # We shouldn't get any errors when we request a diff showing the
-    # addition of the greek tree.  The diff contains additions of files
-    # and directories with parents that don't currently exist in the wc,
-    # which is what we're testing here.
-    svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                       'diff', '-r', 'BASE:1')
+  # Roll the wc back to r0 (i.e. an empty wc).
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '-r0')
 
-  finally:
-    os.chdir(current_dir)
+  # We shouldn't get any errors when we request a diff showing the
+  # addition of the greek tree.  The diff contains additions of files
+  # and directories with parents that don't currently exist in the wc,
+  # which is what we're testing here.
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+                                     'diff', '-r', 'BASE:1')
 
 #----------------------------------------------------------------------
 def basic_diff_summarize(sbox):
