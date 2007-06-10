@@ -1277,20 +1277,17 @@ def commit_from_long_dir(sbox):
   # random behaviour, but still caused the test to fail
   extra_name = 'xx'
 
-  try:
-    os.chdir(wc_dir)
-    os.mkdir(extra_name)
-    os.chdir(extra_name)
+  os.chdir(wc_dir)
+  os.mkdir(extra_name)
+  os.chdir(extra_name)
 
-    svntest.actions.run_and_verify_commit(abs_wc_dir,
-                                          expected_output,
-                                          None,
-                                          None,
-                                          None, None,
-                                          None, None,
-                                          abs_wc_dir)
-  finally:
-    os.chdir(was_dir)
+  svntest.actions.run_and_verify_commit(abs_wc_dir,
+                                        expected_output,
+                                        None,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        abs_wc_dir)
   
 #----------------------------------------------------------------------
 
@@ -1348,21 +1345,20 @@ def commit_current_dir(sbox):
   svntest.main.run_svn(None, 'propset', 'pname', 'pval', wc_dir)
 
   was_cwd = os.getcwd()
-  try:
-    os.chdir(wc_dir)
 
-    expected_output = svntest.wc.State('.', {
-      '.' : Item(verb='Sending'),
-      })
-    svntest.actions.run_and_verify_commit('.',
-                                          expected_output,
-                                          None,
-                                          None,
-                                          None, None,
-                                          None, None,
-                                          '.')
-  finally:
-    os.chdir(was_cwd)
+  os.chdir(wc_dir)
+
+  expected_output = svntest.wc.State('.', {
+    '.' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit('.',
+                                        expected_output,
+                                        None,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        '.')
+  os.chdir(was_cwd)
 
   # I can't get the status check to work as part of run_and_verify_commit.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1770,22 +1766,17 @@ def from_wc_top_with_bad_editor(sbox):
   svntest.actions.run_and_verify_svn("Unexpected failure from propset.",
                                      SVNAnyOutput, [],
                                      'pset', 'fish', 'food', wc_dir)
-  was_cwd = os.getcwd()
-  try:
-    os.chdir(wc_dir)
-    out, err = svntest.actions.run_and_verify_svn(
-      "Commit succeeded when should have failed.",
-      None, SVNAnyOutput,
-      'ci', '--editor-cmd', 'no_such-editor')
+  os.chdir(wc_dir)
+  out, err = svntest.actions.run_and_verify_svn(
+    "Commit succeeded when should have failed.",
+    None, SVNAnyOutput,
+    'ci', '--editor-cmd', 'no_such-editor')
 
-    err = string.join(map(string.strip, err), ' ')
-    if not (re.match(".*no_such-editor.*", err)
-            and re.match(".*Commit failed.*", err)):
-      print "Commit failed, but not in the way expected."
-      raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
+  err = string.join(map(string.strip, err), ' ')
+  if not (re.match(".*no_such-editor.*", err)
+          and re.match(".*Commit failed.*", err)):
+    print "Commit failed, but not in the way expected."
+    raise svntest.Failure
   
 
 def mods_in_schedule_delete(sbox):

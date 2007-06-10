@@ -1171,16 +1171,16 @@ def wc_copy_parent_into_child(sbox):
   # lock the non-working copy parent directory.
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  try:
-    svntest.actions.run_and_verify_svn(None,
-                                       ['\n', 'Committed revision 2.\n'], [],
-                                       'cp',
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
-                                       '-m', 'a larger can',
-                                       '.', F_B_url)
-  finally:
-    os.chdir(was_cwd)
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 2.\n'], [],
+                                     'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'a larger can',
+                                     '.', F_B_url)
+
+  os.chdir(was_cwd)
 
   # Do an update to verify the copy worked
   expected_output = svntest.wc.State(wc_dir, {
@@ -1912,13 +1912,12 @@ def force_move(sbox):
                 ]
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  try:
-    svntest.actions.run_and_verify_svn(None, move_output,
-                                       [],
-                                       'move',
-                                       file_name, "dest")
-  finally:
-    os.chdir(was_cwd)
+
+  svntest.actions.run_and_verify_svn(None, move_output,
+                                     [],
+                                     'move',
+                                     file_name, "dest")
+  os.chdir(was_cwd)
 
   # check for the new content
   file_handle = file(os.path.join(wc_dir, "dest"), "r")
@@ -2851,11 +2850,8 @@ def move_to_relative_paths(sbox):
 
   current_dir = os.getcwd()
   os.chdir(E_path)
-  
-  try:
-    svntest.main.run_svn(None, 'mv', 'beta', rel_path)
-  finally:
-    os.chdir(current_dir)
+  svntest.main.run_svn(None, 'mv', 'beta', rel_path)
+  os.chdir(current_dir)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -2876,11 +2872,8 @@ def move_from_relative_paths(sbox):
 
   current_dir = os.getcwd()
   os.chdir(F_path)
-  
-  try:
-    svntest.main.run_svn(None, 'mv', beta_rel_path, '.')
-  finally:
-    os.chdir(current_dir)
+  svntest.main.run_svn(None, 'mv', beta_rel_path, '.')
+  os.chdir(current_dir)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -2901,11 +2894,8 @@ def copy_to_relative_paths(sbox):
 
   current_dir = os.getcwd()
   os.chdir(E_path)
-  
-  try:
-    svntest.main.run_svn(None, 'cp', 'beta', rel_path)
-  finally:
-    os.chdir(current_dir)
+  svntest.main.run_svn(None, 'cp', 'beta', rel_path)
+  os.chdir(current_dir)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -2925,11 +2915,8 @@ def copy_from_relative_paths(sbox):
 
   current_dir = os.getcwd()
   os.chdir(F_path)
-  
-  try:
-    svntest.main.run_svn(None, 'cp', beta_rel_path, '.')
-  finally:
-    os.chdir(current_dir)
+  svntest.main.run_svn(None, 'cp', beta_rel_path, '.')
+  os.chdir(current_dir)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({

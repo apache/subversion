@@ -424,17 +424,12 @@ def plain_log(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log')
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log')
 
-    log_chain = parse_log_output(output)
-    check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
-    
-  finally:
-    os.chdir(was_cwd)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
 
 
 #----------------------------------------------------------------------
@@ -443,38 +438,33 @@ def versioned_log_message(sbox):
 
   sbox.build()
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    iota_path = os.path.join('iota')
-    mu_path = os.path.join('A', 'mu')
-    log_path = os.path.join('A', 'D', 'H', 'omega')
-    
-    svntest.main.file_append(iota_path, "2")
-    
-    # try to check in a change using a versioned file as your log entry.
-    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                       'ci', '-F', log_path)
+  iota_path = os.path.join('iota')
+  mu_path = os.path.join('A', 'mu')
+  log_path = os.path.join('A', 'D', 'H', 'omega')
 
-    # force it.  should not produce any errors.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-F', log_path, '--force-log')
+  svntest.main.file_append(iota_path, "2")
 
-    svntest.main.file_append(mu_path, "2")
+  # try to check in a change using a versioned file as your log entry.
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                     'ci', '-F', log_path)
 
-    # try the same thing, but specifying the file to commit explicitly.
-    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                       'ci', '-F', log_path, mu_path)
+  # force it.  should not produce any errors.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-F', log_path, '--force-log')
 
-    # force it...  should succeed.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci',
-                                       '-F', log_path,
-                                       '--force-log', mu_path)
+  svntest.main.file_append(mu_path, "2")
 
-  finally:
-    os.chdir(was_cwd)
+  # try the same thing, but specifying the file to commit explicitly.
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                     'ci', '-F', log_path, mu_path)
+
+  # force it...  should succeed.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci',
+                                     '-F', log_path,
+                                     '--force-log', mu_path)
 
 
 #----------------------------------------------------------------------
@@ -533,33 +523,24 @@ def log_with_path_args(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    output, err = svntest.actions.run_and_verify_svn(
-      None, None, [],
-      'log', sbox.repo_url, 'A/D/G', 'A/D/H')
+  output, err = svntest.actions.run_and_verify_svn(
+    None, None, [],
+    'log', sbox.repo_url, 'A/D/G', 'A/D/H')
 
-    log_chain = parse_log_output(output)
-    check_log_chain(log_chain, [8, 6, 5, 3, 1])
-
-  finally:
-    os.chdir(was_cwd)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [8, 6, 5, 3, 1])
 
 #----------------------------------------------------------------------
 def dynamic_revision(sbox):
   "'svn log -r COMMITTED' of dynamic/local WC rev"
 
   guarantee_repos_and_wc(sbox)
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    for rev in ('HEAD', 'BASE', 'COMMITTED', 'PREV'):
-      svntest.actions.run_and_verify_svn(None, None, [], 'log', '-r', rev)
-  finally:
-    os.chdir(was_cwd)
+  for rev in ('HEAD', 'BASE', 'COMMITTED', 'PREV'):
+    svntest.actions.run_and_verify_svn(None, None, [], 'log', '-r', rev)
 
 #----------------------------------------------------------------------
 def log_wc_with_peg_revision(sbox):
@@ -963,19 +944,18 @@ def merge_sensitive_log_single_revision(sbox):
 
   # Run the merge sensitive log, and compare results
   saved_cwd = os.getcwd()
-  try:
-    os.chdir(TRUNK_path)
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                     '-g', '-r14')
 
-    log_chain = parse_log_output(output)
-    expected_merges = {
-      13 : [14], 12 : [14], 11 : [14, 12],
-      }
-    check_merge_results(log_chain, expected_merges)
+  os.chdir(TRUNK_path)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r14')
 
-  finally:
-    os.chdir(saved_cwd)
+  log_chain = parse_log_output(output)
+  expected_merges = {
+    13 : [14], 12 : [14], 11 : [14, 12],
+    }
+  check_merge_results(log_chain, expected_merges)
+
+  os.chdir(saved_cwd)
 
   output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
                                                    '-g', '-r12', BRANCH_B_path)
