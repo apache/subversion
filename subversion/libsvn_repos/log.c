@@ -40,28 +40,17 @@ struct log_tree_node
   apr_array_header_t *children;
 };
 
-/* The actual worker log function, most the arguments are the same as for
-   svn_repos_get_logs4(). 
-   
-   Build a log tree, and put it in *TREE, or send it if SEND_TREE is TRUE. */
 static svn_error_t *
-do_logs(struct log_tree_node **tree,
-        svn_fs_t *fs,
-        const apr_array_header_t *paths,
-        svn_revnum_t hist_start,
-        svn_revnum_t hist_end,
-        int limit,
-        svn_boolean_t discover_changed_paths,
-        svn_boolean_t strict_node_history,
-        svn_boolean_t include_merged_revisions,
-        svn_boolean_t omit_log_text,
-        svn_boolean_t descending_order,
-        svn_boolean_t send_tree,
-        svn_log_message_receiver2_t receiver,
-        void *receiver_baton,
-        svn_repos_authz_func_t authz_read_func,
-        void *authz_read_baton,
-        apr_pool_t *pool);
+do_merged_log(struct log_tree_node **tree,
+              svn_fs_t *fs,
+              const char *path,
+              svn_revnum_t rev,
+              svn_boolean_t discover_changed_paths,
+              svn_boolean_t omit_log_text,
+              svn_boolean_t descending_order,
+              svn_repos_authz_func_t authz_read_func,
+              void *authz_read_baton,
+              apr_pool_t *pool);
 
 
 svn_error_t *
@@ -789,8 +778,6 @@ build_log_tree(struct log_tree_node **out_tree,
                svn_boolean_t include_merged_revisions,
                svn_boolean_t omit_log_text,
                svn_boolean_t descending_order,
-               svn_log_message_receiver2_t receiver,
-               void *receiver_baton,
                svn_repos_authz_func_t authz_read_func,
                void *authz_read_baton,
                apr_pool_t *pool)
@@ -845,20 +832,15 @@ build_log_tree(struct log_tree_node **out_tree,
           svn_revnum_t revision = APR_ARRAY_IDX(revisions, i, svn_revnum_t);
           struct log_tree_node *subtree;
           const char *merge_source;
-          apr_array_header_t *sub_paths = apr_array_make(pool, 1,
-                                                         sizeof(const char *));
 
           /* Figure out where the source of this revision was, given our
              mergeinfo. */
           SVN_ERR(find_merge_source(&merge_source, revision, mergeinfo, pool));
-          APR_ARRAY_PUSH(sub_paths, const char *) = merge_source;
 
-          SVN_ERR(do_logs(&subtree, fs, sub_paths, revision, revision, 0,
-                          discover_changed_paths, FALSE,
-                          include_merged_revisions, omit_log_text,
-                          descending_order, FALSE, receiver, receiver_baton,
-                          authz_read_func, authz_read_baton,
-                          pool));
+          SVN_ERR(do_merged_log(&subtree, fs, merge_source, revision,
+                                discover_changed_paths, omit_log_text,
+                                descending_order, authz_read_func,
+                                authz_read_baton, pool));
 
           if (subtree)
             APR_ARRAY_PUSH(tree->children, struct log_tree_node *) = subtree;
@@ -955,6 +937,61 @@ get_path_histories(apr_array_header_t **histories,
 }
 
 static svn_error_t *
+do_merged_log(struct log_tree_node **tree,
+              svn_fs_t *fs,
+              const char *path,
+              svn_revnum_t rev,
+              svn_boolean_t discover_changed_paths,
+              svn_boolean_t omit_log_text,
+              svn_boolean_t descending_order,
+              svn_repos_authz_func_t authz_read_func,
+              void *authz_read_baton,
+              apr_pool_t *pool)
+{
+  apr_array_header_t *histories;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_array_header_t *paths = apr_array_make(subpool, 1, sizeof(const char *));
+  svn_boolean_t changed;
+  int i;
+
+  /* We only really care about revisions in which those paths were changed.
+     So we ask the filesystem for all the revisions in which any of the
+     paths was changed.  */
+  APR_ARRAY_PUSH(paths, const char *) = path;
+  SVN_ERR(get_path_histories(&histories, fs, paths, rev, rev, TRUE,
+                             authz_read_func, authz_read_baton, subpool));
+
+  /* Check for this path in the list of histories. */
+  for (i = 0; i < histories->nelts; i++)
+    {
+      struct path_info *info = APR_ARRAY_IDX(histories, i,
+                                             struct path_info *);
+
+      /* Check history for this path in current rev. */
+      SVN_ERR(check_history(&changed, info, fs, rev, TRUE,
+                            authz_read_func, authz_read_baton, rev, subpool));
+    }
+
+  /* If any of the paths changed in this rev then set the output. */
+  if (changed)
+    {
+      SVN_ERR(build_log_tree(tree, paths, rev, fs,
+                             discover_changed_paths,
+                             TRUE, omit_log_text, descending_order,
+                             authz_read_func, authz_read_baton,
+                             pool));
+    }
+  else
+    {
+      *tree = NULL;
+    }
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 do_logs(struct log_tree_node **tree,
         svn_fs_t *fs,
         const apr_array_header_t *paths,
@@ -1026,7 +1063,6 @@ do_logs(struct log_tree_node **tree,
                                      discover_changed_paths,
                                      include_merged_revisions,
                                      omit_log_text, descending_order,
-                                     receiver, receiver_baton,
                                      authz_read_func, authz_read_baton,
                                      pool));
               if (send_tree)
@@ -1058,7 +1094,6 @@ do_logs(struct log_tree_node **tree,
                                  fs, discover_changed_paths,
                                  include_merged_revisions,
                                  omit_log_text, descending_order,
-                                 receiver, receiver_baton,
                                  authz_read_func, authz_read_baton, pool));
           if (send_tree)
             SVN_ERR(send_log_tree(*tree, receiver, receiver_baton, pool));
@@ -1154,7 +1189,6 @@ svn_repos_get_logs4(svn_repos_t *repos,
                                  discover_changed_paths,
                                  include_merged_revisions,
                                  omit_log_text, descending_order,
-                                 receiver, receiver_baton,
                                  authz_read_func, authz_read_baton,
                                  pool));
           SVN_ERR(send_log_tree(tree, receiver, receiver_baton, pool));
