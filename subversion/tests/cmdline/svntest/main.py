@@ -667,6 +667,9 @@ def is_fs_type_fsfs():
 def is_os_windows():
   return (os.name == 'nt')
 
+def is_non_posix_os():
+  return (os.name != 'posix')
+
 ######################################################################
 # Sandbox handling
 

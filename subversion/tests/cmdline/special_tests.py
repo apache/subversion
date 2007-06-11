@@ -628,19 +628,19 @@ def update_obstructing_symlink(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(general_symlink, (os.name != 'posix')),
-              Skip(replace_file_with_symlink, (os.name != 'posix')),
-              Skip(import_export_symlink, (os.name != 'posix')),
-              Skip(copy_tree_with_symlink, (os.name != 'posix')),
-              Skip(replace_symlink_with_file, (os.name != 'posix')),
-              Skip(remove_symlink, (os.name != 'posix')),
-              Skip(merge_symlink_into_file, (os.name != 'posix')),
-              Skip(merge_file_into_symlink, (os.name != 'posix')),
+              Skip(general_symlink, svntest.main.is_non_posix_os),
+              Skip(replace_file_with_symlink, svntest.main.is_non_posix_os),
+              Skip(import_export_symlink, svntest.main.is_non_posix_os),
+              Skip(copy_tree_with_symlink, svntest.main.is_non_posix_os),
+              Skip(replace_symlink_with_file, svntest.main.is_non_posix_os),
+              Skip(remove_symlink, svntest.main.is_non_posix_os),
+              Skip(merge_symlink_into_file, svntest.main.is_non_posix_os),
+              Skip(merge_file_into_symlink, svntest.main.is_non_posix_os),
               checkout_repo_with_symlinks,
-              XFail(Skip(diff_symlink_to_dir, (os.name != 'posix'))),
+              XFail(Skip(diff_symlink_to_dir, svntest.main.is_non_posix_os)),
               checkout_repo_with_unknown_special_type,
               replace_symlink_with_dir,
-              Skip(update_obstructing_symlink, (os.name != 'posix')),
+              Skip(update_obstructing_symlink, svntest.main.is_non_posix_os),
              ]
 
 if __name__ == '__main__':

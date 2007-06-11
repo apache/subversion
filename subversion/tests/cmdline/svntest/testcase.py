@@ -159,25 +159,37 @@ class XFail(TestCase):
 class Skip(TestCase):
   """A test that will be skipped if condition COND is true."""
 
-  def __init__(self, test_case, cond=1):
+  def __init__(self, test_case, cond_func=lambda:1):
+    """Create an Skip instance based on TEST_CASE.  COND_FUNC is a
+    callable that is evaluated at test run time and should return a
+    boolean value.  If COND_FUNC returns true, then TEST_CASE is
+    skipped; otherwise, TEST_CASE is run normally.  
+    The evaluation of COND_FUNC is deferred so that it can base its 
+    decision on useful bits of information that are not available at 
+    __init__ time (like the fact that we're running over a 
+    particular RA layer)."""
+
     TestCase.__init__(self)
     self.test_case = create_test_case(test_case)
-    self.cond = cond
-    if self.cond:
-      self._list_mode_text = 'SKIP'
+    self.cond_func = cond_func
+    try:
+      if self.cond_func():
+        self._list_mode_text = 'SKIP'
+    except Failure:
+      pass
     # Delegate most methods to self.test_case:
     self.get_description = self.test_case.get_description
     self.get_sandbox_name = self.test_case.get_sandbox_name
     self.convert_result = self.test_case.convert_result
 
   def need_sandbox(self):
-    if self.cond:
+    if self.cond_func():
       return 0
     else:
       return self.test_case.need_sandbox()
 
   def run(self, sandbox=None):
-    if self.cond:
+    if self.cond_func():
       raise svntest.Skip
     elif self.need_sandbox():
       return self.test_case.run(sandbox=sandbox)
