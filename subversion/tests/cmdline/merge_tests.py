@@ -6095,6 +6095,7 @@ def empty_rev_range_mergeinfo(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
+  os.chdir(saved_cwd)
 
   # Reverse the previous merge -- Test Area 2c.
   #
