@@ -81,6 +81,9 @@ util_sqlite_exec(sqlite3 *db, const char *sql,
   return SVN_NO_ERROR;
 }
 
+/* Time (in milliseconds) to wait for sqlite locks before giving up. */
+#define BUSY_TIMEOUT 10000
+
 /* The version number of the schema used to store the merge info index. */
 #define MERGE_INFO_INDEX_SCHEMA_FORMAT 1
 
@@ -164,6 +167,8 @@ open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
   const char *db_path = svn_path_join(repos_path, 
                                       SVN_FS_MERGEINFO__DB_NAME, pool);
   SQLITE_ERR(sqlite3_open(db_path, db), *db);
+  /* Retry until timeout when database is busy. */
+  SQLITE_ERR(sqlite3_busy_timeout(*db, BUSY_TIMEOUT), *db);
 #ifdef SQLITE3_DEBUG
   sqlite3_trace(*db, sqlite_tracer, *db);
 #endif
