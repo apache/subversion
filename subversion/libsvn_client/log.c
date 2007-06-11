@@ -33,6 +33,7 @@
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_sorts.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -112,17 +113,19 @@ copyfrom_info_receiver(void *baton,
 
   if (changed_paths)
     {
-      apr_hash_index_t *hi;
-      char *path;
+      int i;
+      const char *path;
       svn_log_changed_path_t *changed_path;
+      /* Sort paths into depth-first order. */
+      apr_array_header_t *sorted_changed_paths =
+        svn_sort__hash(changed_paths, svn_sort_compare_items_as_paths, pool);
 
-      for (hi = apr_hash_first(NULL, changed_paths);
-           hi;
-           hi = apr_hash_next(hi))
+      for (i = (sorted_changed_paths->nelts -1) ; i >= 0 ; i--)
         {
-          void *val;
-          apr_hash_this(hi, (void *) &path, NULL, &val);
-          changed_path = val;
+          svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_changed_paths, i,
+                                                  svn_sort__item_t);
+          path = item->key;
+          changed_path = item->value;
 
           /* Consider only the path we're interested in. */
           if (changed_path->copyfrom_path &&
