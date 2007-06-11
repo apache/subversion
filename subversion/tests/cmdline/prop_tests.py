@@ -28,6 +28,8 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
+def is_non_posix_and_non_windows_os():
+  return svntest.main.is_non_posix_os() and sys.platform != 'win32'
 
 # Helper functions
 def check_prop(name, path, exp_out):
@@ -1366,8 +1368,7 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              Skip(revprop_change, (os.name != 'posix'
-                                    and sys.platform != 'win32')),
+              Skip(revprop_change, is_non_posix_and_non_windows_os),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,

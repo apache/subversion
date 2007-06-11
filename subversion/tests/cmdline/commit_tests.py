@@ -33,6 +33,9 @@ Item = svntest.wc.StateItem
 # Utilities
 #
 
+def is_non_posix_os_or_cygwin_platform():
+  return svntest.main.is_non_posix_os() or sys.platform == 'cygwin'
+
 def get_standard_state(wc_dir):
   """Return a status list reflecting the local mods made by
   make_standard_slew_of_changes()."""
@@ -2406,7 +2409,7 @@ test_list = [ None,
               commit_with_bad_log_message,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
-              Skip(tab_test, (os.name != 'posix' or sys.platform == 'cygwin')),
+              Skip(tab_test, is_non_posix_os_or_cygwin_platform),
               local_mods_are_not_commits,
               post_commit_hook_test,
               commit_same_folder_in_targets,

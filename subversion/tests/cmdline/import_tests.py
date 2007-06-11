@@ -369,7 +369,7 @@ enable-auto-props = yes
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(import_executable, (os.name != 'posix')),
+              Skip(import_executable, svntest.main.is_non_posix_os),
               import_ignores,
               import_avoid_empty_revision,
               import_no_ignores,

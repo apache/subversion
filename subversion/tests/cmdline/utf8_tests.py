@@ -146,7 +146,7 @@ if localematch:
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(basic_utf8_conversion, 1)
+              Skip(basic_utf8_conversion)
              ]
 
 if __name__ == '__main__':
