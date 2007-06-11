@@ -1026,12 +1026,14 @@ do_logs(svn_fs_t *fs,
      where a path was changed to the array, or if they wanted
      history in reverse order just send it to them right away.
   */
+  iterpool = svn_pool_create(pool);
   for (current = hist_end;
        current >= hist_start && any_histories_left;
        current = next_history_rev(histories))
     {
       svn_boolean_t changed = FALSE;
       any_histories_left = FALSE;
+      svn_pool_clear(iterpool);
 
       for (i = 0; i < histories->nelts; i++)
         {
@@ -1061,8 +1063,8 @@ do_logs(svn_fs_t *fs,
                                      include_merged_revisions,
                                      omit_log_text, descending_order,
                                      authz_read_func, authz_read_baton,
-                                     pool));
-              SVN_ERR(send_log_tree(tree, receiver, receiver_baton, pool));
+                                     iterpool));
+              SVN_ERR(send_log_tree(tree, receiver, receiver_baton, iterpool));
 
               if (limit && ++send_count >= limit)
                 break;
@@ -1086,19 +1088,22 @@ do_logs(svn_fs_t *fs,
         {
           struct log_tree_node *tree;
 
+          svn_pool_clear(iterpool);
           SVN_ERR(build_log_tree(&tree, paths, APR_ARRAY_IDX(revs,
                                                       revs->nelts - i - 1,
                                                       svn_revnum_t),
                                  fs, discover_changed_paths,
                                  include_merged_revisions,
                                  omit_log_text, descending_order,
-                                 authz_read_func, authz_read_baton, pool));
-          SVN_ERR(send_log_tree(tree, receiver, receiver_baton, pool));
+                                 authz_read_func, authz_read_baton, iterpool));
+          SVN_ERR(send_log_tree(tree, receiver, receiver_baton, iterpool));
 
           if (limit && i + 1 >= limit)
             break;
         }
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1170,6 +1175,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
     {
       int send_count = 0;
       int i;
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       /* They want history for the root path, so every rev has a change. */
       send_count = hist_end - hist_start + 1;
@@ -1178,6 +1184,8 @@ svn_repos_get_logs4(svn_repos_t *repos,
       for (i = 0; i < send_count; ++i)
         {
           struct log_tree_node *tree;
+
+          svn_pool_clear(iterpool);
           svn_revnum_t rev = hist_start + i;
 
           if (descending_order)
@@ -1187,9 +1195,11 @@ svn_repos_get_logs4(svn_repos_t *repos,
                                  include_merged_revisions,
                                  omit_log_text, descending_order,
                                  authz_read_func, authz_read_baton,
-                                 pool));
-          SVN_ERR(send_log_tree(tree, receiver, receiver_baton, pool));
+                                 iterpool));
+          SVN_ERR(send_log_tree(tree, receiver, receiver_baton, iterpool));
         }
+      svn_pool_destroy(iterpool);
+
       return SVN_NO_ERROR;
     }
 
