@@ -930,6 +930,7 @@ def merge_sensitive_log_single_revision(sbox):
 
   # Create a virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.safe_rmtree(sbox.wc_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
 
   # Load the mergetracking dumpfile into the repos, and check it out the repo
