@@ -6382,7 +6382,8 @@ def detect_copy_src_for_target_with_multiple_ancestors(sbox):
                                         None, None, None, None, wc_dir)
   saved_cwd = os.getcwd()
   os.chdir(A_copy_of_B_C_path)
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-g')
+  svntest.actions.run_and_verify_svn(None, svntest.main.merge_notify_line(2),
+                                     [], 'merge', '-g')
   os.chdir(saved_cwd)
 
   expected_status.tweak('A/copy-of-B/C',  status=' M')
@@ -6696,7 +6697,7 @@ test_list = [ None,
               XFail(merge_to_path_with_switched_children),
               merge_with_implicit_target_file,
               XFail(empty_rev_range_mergeinfo),
-              XFail(detect_copy_src_for_target_with_multiple_ancestors),
+              detect_copy_src_for_target_with_multiple_ancestors,
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
               avoid_reflected_revs,
