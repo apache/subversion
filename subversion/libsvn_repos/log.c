@@ -874,8 +874,7 @@ get_path_histories(apr_array_header_t **histories,
   apr_pool_t *iterpool;
   int i;
 
-  /*
-     Create a history object for each path so we can walk through
+  /* Create a history object for each path so we can walk through
      them all at the same time until we have all changes or LIMIT
      is reached.
 
