@@ -992,8 +992,7 @@ do_merged_log(struct log_tree_node **tree,
 }
 
 static svn_error_t *
-do_logs(struct log_tree_node **tree,
-        svn_fs_t *fs,
+do_logs(svn_fs_t *fs,
         const apr_array_header_t *paths,
         svn_revnum_t hist_start,
         svn_revnum_t hist_end,
@@ -1003,7 +1002,6 @@ do_logs(struct log_tree_node **tree,
         svn_boolean_t include_merged_revisions,
         svn_boolean_t omit_log_text,
         svn_boolean_t descending_order,
-        svn_boolean_t send_tree,
         svn_log_message_receiver2_t receiver,
         void *receiver_baton,
         svn_repos_authz_func_t authz_read_func,
@@ -1017,8 +1015,6 @@ do_logs(struct log_tree_node **tree,
   svn_boolean_t any_histories_left = TRUE;
   int send_count = 0;
   int i;
-
-  *tree = NULL;
 
   /* We only really care about revisions in which those paths were changed.
      So we ask the filesystem for all the revisions in which any of the
@@ -1059,14 +1055,15 @@ do_logs(struct log_tree_node **tree,
              streamily right now. */
           if (descending_order)
             {
-              SVN_ERR(build_log_tree(tree, paths, current, fs,
+              struct log_tree_node *tree;
+
+              SVN_ERR(build_log_tree(&tree, paths, current, fs,
                                      discover_changed_paths,
                                      include_merged_revisions,
                                      omit_log_text, descending_order,
                                      authz_read_func, authz_read_baton,
                                      pool));
-              if (send_tree)
-                SVN_ERR(send_log_tree(*tree, receiver, receiver_baton, pool));
+              SVN_ERR(send_log_tree(tree, receiver, receiver_baton, pool));
 
               if (limit && ++send_count >= limit)
                 break;
@@ -1088,15 +1085,16 @@ do_logs(struct log_tree_node **tree,
          history in forward order. */
       for (i = 0; i < revs->nelts; ++i)
         {
-          SVN_ERR(build_log_tree(tree, paths, APR_ARRAY_IDX(revs,
+          struct log_tree_node *tree;
+
+          SVN_ERR(build_log_tree(&tree, paths, APR_ARRAY_IDX(revs,
                                                       revs->nelts - i - 1,
                                                       svn_revnum_t),
                                  fs, discover_changed_paths,
                                  include_merged_revisions,
                                  omit_log_text, descending_order,
                                  authz_read_func, authz_read_baton, pool));
-          if (send_tree)
-            SVN_ERR(send_log_tree(*tree, receiver, receiver_baton, pool));
+          SVN_ERR(send_log_tree(tree, receiver, receiver_baton, pool));
 
           if (limit && i + 1 >= limit)
             break;
@@ -1127,7 +1125,6 @@ svn_repos_get_logs4(svn_repos_t *repos,
   svn_boolean_t descending_order;
   svn_revnum_t hist_start = start;
   svn_revnum_t hist_end = end;
-  struct log_tree_node *tree;
 
   /* Setup log range. */
   SVN_ERR(svn_fs_youngest_rev(&head, fs, pool));
@@ -1181,6 +1178,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
         send_count = limit;
       for (i = 0; i < send_count; ++i)
         {
+          struct log_tree_node *tree;
           svn_revnum_t rev = hist_start + i;
 
           if (descending_order)
@@ -1196,10 +1194,10 @@ svn_repos_get_logs4(svn_repos_t *repos,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(do_logs(&tree, repos->fs, paths, hist_start, hist_end, limit,
+  SVN_ERR(do_logs(repos->fs, paths, hist_start, hist_end, limit,
                   discover_changed_paths, strict_node_history,
                   include_merged_revisions, omit_log_text,
-                  descending_order, TRUE, receiver, receiver_baton,
+                  descending_order, receiver, receiver_baton,
                   authz_read_func, authz_read_baton, pool));
 
   return SVN_NO_ERROR;
