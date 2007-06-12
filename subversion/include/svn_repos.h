@@ -2213,7 +2213,7 @@ svn_repos_revision_access_level_t;
  * @since New in 1.5.
  */
 svn_error_t *
-svn_repos_check_revision_access(svn_repos_revision_access_level_t *access,
+svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
                                 svn_repos_t *repos,
                                 svn_revnum_t revision,
                                 svn_repos_authz_func_t authz_read_func,
