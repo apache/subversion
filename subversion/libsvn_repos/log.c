@@ -54,7 +54,7 @@ do_merged_log(struct log_tree_node **tree,
 
 
 svn_error_t *
-svn_repos_check_revision_access(svn_repos_revision_access_level_t *access,
+svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
                                 svn_repos_t *repos,
                                 svn_revnum_t revision,
                                 svn_repos_authz_func_t authz_read_func,
@@ -70,7 +70,7 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access,
   apr_pool_t *subpool;
 
   /* By default, we'll grant full read access to REVISION. */
-  *access = svn_repos_revision_access_full;
+  *access_level = svn_repos_revision_access_full;
 
   /* No auth-checking function?  We're done. */
   if (! authz_read_func)
@@ -151,11 +151,11 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access,
 
   /* Either every changed path was unreadable... */
   if (! found_readable)
-    *access = svn_repos_revision_access_none;
+    *access_level = svn_repos_revision_access_none;
 
   /* ... or some changed path was unreadable... */
   else if (found_unreadable)
-    *access = svn_repos_revision_access_partial;
+    *access_level = svn_repos_revision_access_partial;
 
   /* ... or every changed path was readable (the default). */
   return SVN_NO_ERROR;
