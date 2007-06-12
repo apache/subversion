@@ -31,8 +31,6 @@ history index).
 
   * Need new RA call.
 
-* Add commutative author and revision reporting to 'svn log'. (hwright)
-
 * Handle notifications resulting from a merge.  (sussman)
 
   * Handle multiple notifications for single WC items.
