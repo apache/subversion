@@ -29,6 +29,7 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 def is_non_posix_and_non_windows_os():
+  """lambda function to skip revprop_change test"""
   return svntest.main.is_non_posix_os() and sys.platform != 'win32'
 
 # Helper functions
