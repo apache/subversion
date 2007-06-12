@@ -155,8 +155,19 @@
 
 #ifdef SWIGPYTHON
 %typemap(in) apr_hash_t *PROPHASH
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
 {
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+
   $1 = svn_swig_py_prophash_from_dict($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
 }
 #endif
 
@@ -186,14 +197,9 @@
   apr_hash_t *target_props,
   apr_hash_t *source_props,
   apr_hash_t *hash,
-  apr_hash_t *props
-};
-#endif
-
-#if defined(SWIGRUBY)
-%apply apr_hash_t *PROPHASH {
+  apr_hash_t *props,
   apr_hash_t *revprop_table
-}
+};
 #endif
 
 /* -----------------------------------------------------------------------
