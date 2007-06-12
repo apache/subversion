@@ -252,6 +252,24 @@ def run_and_verify_dump(repo_dir):
 
   return output
 
+
+def load_repo(sbox, dumpfile_path = None, dump_str = None):
+  "Loads the dumpfile into sbox"
+  if not dump_str:
+    dump_str = main.file_read(dumpfile_path, "rb")
+
+  # Create a virgin repos and working copy
+  main.safe_rmtree(sbox.repo_dir, 1)
+  main.safe_rmtree(sbox.wc_dir, 1)
+  main.create_repos(sbox.repo_dir)
+
+  # Load the mergetracking dumpfile into the repos, and check it out the repo
+  run_and_verify_load(sbox.repo_dir, dump_str)
+  run_and_verify_svn(None, None, [], "co", sbox.repo_url, sbox.wc_dir)
+
+  return dump_str
+
+
 ######################################################################
 # Subversion Actions
 #

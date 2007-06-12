@@ -687,15 +687,11 @@ V 27
 PROPS-END
 """
 
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
-  URL = sbox.repo_url
-
   # load dumpfile with control character into repos to get
   # a log with control char content
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  svntest.actions.load_repo(sbox, dump_str=dump_str)
+
+  URL = sbox.repo_url
 
   # run log
   output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
@@ -922,21 +918,9 @@ def check_merge_results(log_chain, expected_merges):
 def merge_sensitive_log_single_revision(sbox):
   "test sensitive log on a single revision"
 
-  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                          'mergetracking_data')
-  dump_str = svntest.main.file_read(os.path.join(data_dir,
-                                                 "basic-merge.dump"),
-                                    "rb")
-
-  # Create a virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.safe_rmtree(sbox.wc_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
-  # Load the mergetracking dumpfile into the repos, and check it out the repo
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     "co", sbox.repo_url, sbox.wc_dir)
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
 
   # Paths we care about
   wc_dir = sbox.wc_dir

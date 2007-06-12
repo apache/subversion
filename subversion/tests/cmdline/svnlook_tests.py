@@ -313,12 +313,8 @@ text
 
 """
 
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
   # load dumpfile with inconsistent newlines into repos.
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  svntest.actions.load_repo(sbox, dump_str=dump_str)
 
   output, errput = svntest.main.run_svnlook("info", sbox.repo_dir, "-r1")
   if errput:
