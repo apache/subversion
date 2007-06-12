@@ -389,6 +389,8 @@ svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
           SVN_ERR(initfunc(svn_ra_version(), &vtable, pool));
 
           SVN_ERR(check_ra_version(vtable->get_version(), scheme));
+
+          break;
         }
     }
     
