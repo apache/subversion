@@ -918,6 +918,7 @@ dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t text_deltas = TRUE;
   svn_depth_t depth = svn_depth_unknown;
   svn_boolean_t saw_depth = FALSE;
+  svn_boolean_t saw_recursive = FALSE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
   dav_svn__authz_read_baton arb;
@@ -1048,6 +1049,7 @@ dav_svn__update_report(const dav_resource *resource,
              When both "depth" and "recursive" are sent, we don't
              bother to check if they're mutually consistent, we just
              let depth dominate. */  
+          saw_recursive = TRUE;
         }
       if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
         {
@@ -1075,6 +1077,9 @@ dav_svn__update_report(const dav_resource *resource,
         }
     }
           
+    if (!saw_depth && !saw_recursive && (depth == svn_depth_unknown))
+      depth = svn_depth_infinity;
+
   /* If the client never sent a <src-path> element, it's old and
      sending a style of report that we no longer allow. */
   if (! src_path)
