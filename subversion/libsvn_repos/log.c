@@ -1184,9 +1184,9 @@ svn_repos_get_logs4(svn_repos_t *repos,
       for (i = 0; i < send_count; ++i)
         {
           struct log_tree_node *tree;
+          svn_revnum_t rev = hist_start + i;
 
           svn_pool_clear(iterpool);
-          svn_revnum_t rev = hist_start + i;
 
           if (descending_order)
             rev = hist_end - i;
