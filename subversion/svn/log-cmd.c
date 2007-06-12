@@ -433,8 +433,39 @@ log_message_receiver_xml(void *baton,
       svn_cl__xml_tagged_cdata(&sb, pool, "msg", msg);
     }
 
-  /* </logentry> */
-  svn_xml_make_close_tag(&sb, pool, "logentry");
+  if (lb->merge_stack->nelts > 0)
+    APR_ARRAY_IDX(lb->merge_stack, lb->merge_stack->nelts - 1,
+                  struct merge_frame *)->children_remaining--;
+
+  if (log_entry->nbr_children > 0 )
+    {
+      struct merge_frame *frame = apr_palloc(lb->pool, sizeof(*frame));
+
+      frame->children_remaining = log_entry->nbr_children;
+      APR_ARRAY_PUSH(lb->merge_stack, struct merge_frame *) = frame;
+    }
+  else
+    {
+      while (lb->merge_stack->nelts > 0)
+        {
+          struct merge_frame *frame = APR_ARRAY_IDX(lb->merge_stack,
+                                                    lb->merge_stack->nelts - 1,
+                                                    struct merge_frame *);
+
+          if (frame->children_remaining == 0)
+            {
+              svn_xml_make_close_tag(&sb, pool, "logentry");
+              apr_array_pop(lb->merge_stack);
+            }
+          else
+            {
+              break;
+            }
+        }
+
+      /* </logentry> */
+      svn_xml_make_close_tag(&sb, pool, "logentry");
+    }
 
   SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
 
