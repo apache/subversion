@@ -301,7 +301,8 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
 
   exit_code = 0
 
-  if platform_with_os_wait:
+  #if platform_with_os_wait:
+  if False:
     pid, wait_code = os.wait()
 
     exit_code = int(wait_code / 256)
