@@ -516,6 +516,17 @@ effect, this method implements a preorder traversal of the log message tree.</p>
 <p>(For convenience, we may want to consolidate all the data parameters of
 <code>svn_log_message_receiver_t</code> into a single structure.)</p>
 
+<p>A revision, R, is considered a <em>merging revision</em> if the mergeinfo
+for any path for which the log was requested changed between R and R-1.  The
+difference in the mergeinfo, both added revisions and removed revisions,
+between R and R-1 indicates the revisions which are children of R.</p>
+
+<p>The exception for this is the case of a copy which is the creation of a
+branch.  When a branch is created, the mergeinfo for R-1 is empty, and the
+mergeinfo for R is 1:R-1.  In this case, the revision should not be considered
+a merging revision, and none of the revisions R:R-1 should be shown as R's
+children.</p>
+
 </div>  <!-- audit-log -->
 
 <div class="h4" id="audit-blame">
