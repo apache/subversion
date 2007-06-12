@@ -454,6 +454,11 @@ Whitespace fixes.  No functional change.
   messages will be in revision number order, but changes will be presented in
   the order they were actually made.</p>
   
+  <p>Output for <code>svn log -g --xml</code> will exploit the tree structure
+  of XML to include child messages as subelements of the corresponding parent
+  log messages.  Consumers can use the location of a particular log message in
+  the tree to determine its ancestry.</p>
+
   </dd>
 
   <dt><code>svn blame</code></dt>
