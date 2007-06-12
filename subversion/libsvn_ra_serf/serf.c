@@ -121,12 +121,12 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_pool_create(&serf_sess->pool, pool);
   serf_sess->bkt_alloc = serf_bucket_allocator_create(serf_sess->pool, NULL,
                                                       NULL);
-  serf_sess->cached_props = apr_hash_make(pool);
+  serf_sess->cached_props = apr_hash_make(serf_sess->pool);
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
 
   /* todo: reuse serf context across sessions */
-  serf_sess->context = serf_context_create(pool);
+  serf_sess->context = serf_context_create(serf_sess->pool);
 
   apr_uri_parse(serf_sess->pool, repos_URL, &url);
   serf_sess->repos_url = url;
@@ -138,16 +138,17 @@ svn_ra_serf__open(svn_ra_session_t *session,
     }
   serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
 
-  SVN_ERR(load_config(serf_sess, config, pool));
+  SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 
   /* register cleanups */
   apr_pool_cleanup_register(serf_sess->pool, serf_sess,
                             svn_ra_serf__cleanup_serf_session,
                             apr_pool_cleanup_null);
 
-  serf_sess->conns = apr_palloc(pool, sizeof(*serf_sess->conns) * 4);
+  serf_sess->conns = apr_palloc(serf_sess->pool, sizeof(*serf_sess->conns) * 4);
 
-  serf_sess->conns[0] = apr_pcalloc(pool, sizeof(*serf_sess->conns[0]));
+  serf_sess->conns[0] = apr_pcalloc(serf_sess->pool,
+                                    sizeof(*serf_sess->conns[0]));
   serf_sess->conns[0]->bkt_alloc =
           serf_bucket_allocator_create(serf_sess->pool, NULL, NULL);
   serf_sess->conns[0]->session = serf_sess;
@@ -155,7 +156,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   /* fetch the DNS record for this host */
   status = apr_sockaddr_info_get(&serf_sess->conns[0]->address, url.hostname,
-                                 APR_UNSPEC, url.port, 0, pool);
+                                 APR_UNSPEC, url.port, 0, serf_sess->pool);
   if (status)
     {
       return svn_error_createf(status, NULL,
@@ -676,7 +677,9 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 
   if (!*uuid)
     {
-      abort();
+      return svn_error_create(APR_EGENERAL, NULL,
+                              _("The UUID property was not found on the "
+                                "resource or any of its parents"));
     }
 
   return SVN_NO_ERROR;
