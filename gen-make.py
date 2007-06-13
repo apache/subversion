@@ -112,6 +112,9 @@ def _usage_exit():
   print "  --with-neon=DIR"
   print "           the Neon sources are in DIR"
   print
+  print "  --without-neon"
+  print "           Don't build Neon sources (if present)"
+  print
   print "  --with-serf=DIR"
   print "           the Serf sources are in DIR"
   print
@@ -198,6 +201,7 @@ if __name__ == '__main__':
                             'with-apr-iconv=',
                             'with-berkeley-db=',
                             'with-neon=',
+                            'without-neon',
                             'with-serf=',
                             'with-httpd=',
                             'with-libintl=',
