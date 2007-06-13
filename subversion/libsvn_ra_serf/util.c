@@ -211,7 +211,6 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
 {
     svn_ra_serf__connection_t *conn = data;
     svn_ra_serf__session_t *session = conn->session;
-    apr_port_t port;
     svn_error_t *error;
     void *creds;
 

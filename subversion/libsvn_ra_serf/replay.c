@@ -405,10 +405,10 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
 {
   replay_context_t *ctx = userData;
   replay_state_e state;
-  replay_info_t *info;
+
+  UNUSED_CTX(ctx);
 
   state = parser->state->current_state;
-  info = parser->state->private;
 
   if (state == REPORT &&
       strcmp(name.name, "editor-report") == 0)
@@ -439,6 +439,7 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
   else if ((state == APPLY_TEXTDELTA) &&
            strcmp(name.name, "apply-textdelta") == 0)
     {
+      replay_info_t *info = parser->state->private;
       SVN_ERR(svn_stream_close(info->stream));
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -446,11 +447,9 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
            (strcmp(name.name, "change-file-prop") == 0 ||
             strcmp(name.name, "change-dir-prop") == 0))
     {
-      prop_info_t *info;
+      prop_info_t *info = parser->state->private;
       const svn_string_t *prop_val;
-
-      info = parser->state->private;
-
+      
       if (info->del_prop == TRUE)
         {
           prop_val = NULL;
@@ -481,6 +480,8 @@ cdata_replay(svn_ra_serf__xml_parser_t *parser,
 {
   replay_context_t *replay_ctx = userData;
   replay_state_e state;
+
+  UNUSED_CTX(replay_ctx);
 
   state = parser->state->current_state;
 
