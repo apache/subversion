@@ -393,6 +393,8 @@ cdata_propfind(svn_ra_serf__xml_parser_t *parser,
   prop_state_e state;
   prop_info_t *info;
 
+  UNUSED_CTX(ctx);
+
   state = parser->state->current_state;
   info = parser->state->private;
 

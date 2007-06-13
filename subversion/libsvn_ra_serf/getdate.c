@@ -139,6 +139,8 @@ cdata_getdate(svn_ra_serf__xml_parser_t *parser,
   date_state_e state;
   date_info_t *info;
 
+  UNUSED_CTX(date_ctx);
+
   state = parser->state->current_state;
   info = parser->state->private;
 

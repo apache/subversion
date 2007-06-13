@@ -331,6 +331,8 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
   log_state_e state;
   log_info_t *info;
 
+  UNUSED_CTX(log_ctx);
+
   state = parser->state->current_state;
   info = parser->state->private;
 

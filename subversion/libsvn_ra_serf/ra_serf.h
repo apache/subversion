@@ -32,6 +32,11 @@
 #include "svn_dav.h"
 
 
+/** Use this to silence compiler warnings about unused parameters. */
+#define UNUSED_CTX(x) ((void)(x))
+
+
+
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 
 /* A serf connection and optionally associated SSL context.  */
