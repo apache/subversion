@@ -221,7 +221,8 @@ svn_fs_type(const char **fs_type, const char *path, apr_pool_t *pool)
   apr_file_t *file;
   apr_size_t len;
 
-  /* Read the fsap-name file to get the FSAP name, or assume the default. */
+  /* Read the fsap-name file to get the FSAP name, or assume the (old)
+     default. */
   filename = svn_path_join(path, FS_TYPE_FILENAME, pool);
   err = svn_io_file_open(&file, filename, APR_READ|APR_BUFFERED, 0, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
