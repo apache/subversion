@@ -39,6 +39,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.serf_path = None
     self.serf_lib = None
     self.bdb_path = 'db4-win32'
+    self.without_neon = False
     self.neon_path = 'neon'
     self.neon_ver = 25005
     self.httpd_path = None
@@ -79,6 +80,8 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.serf_path = val
       elif opt == '--with-neon':
         self.neon_path = val
+      elif opt == '--without-neon':
+        self.without_neon = True
       elif opt == '--with-httpd':
         self.httpd_path = val
         del self.skip_sections['mod_dav_svn']
@@ -309,7 +312,7 @@ class WinGeneratorBase(GeneratorBase):
       install_targets = filter(lambda x: x.name != 'serf', install_targets)
       install_targets = filter(lambda x: x.name != 'libsvn_ra_serf',
                                install_targets)
-    else:
+    if self.without_neon:
       install_targets = filter(lambda x: x.name != 'neon', install_targets)
       install_targets = filter(lambda x: x.name != 'libsvn_ra_dav',
                                install_targets)
@@ -762,7 +765,8 @@ class WinGeneratorBase(GeneratorBase):
 
     if self.serf_lib:
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
-    else:
+
+    if self.neon_lib:
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_DAV")
 
     # check we have sasl
@@ -1010,7 +1014,7 @@ class WinGeneratorBase(GeneratorBase):
                         ))
 
   def write_neon_project_file(self, name):
-    if self.serf_lib:
+    if self.without_neon:
       return
 
     neon_path = os.path.abspath(self.neon_path)
