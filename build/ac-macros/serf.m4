@@ -15,9 +15,6 @@ AC_DEFUN(SVN_LIB_SERF,
     if test "$withval" = "yes" ; then
       AC_MSG_ERROR([--with-serf requires an argument.])
     else
-      if test "$svn_lib_neon" = "yes"; then
-        AC_MSG_ERROR([neon and serf can't be used at the same time.])
-      fi
       AC_MSG_NOTICE([serf library configuration])
       serf_prefix=$withval
       save_cppflags="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"

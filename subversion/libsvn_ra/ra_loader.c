@@ -35,14 +35,26 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dso.h"
+#include "svn_config.h"
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
 
-/* ### this file maps URL schemes to particular RA libraries. This is not
-   ### entirely correct, as a single scheme could potentially be served
-   ### by more than one loader. However, we can ignore that until we
-   ### actually run into a conflict within the scheme portion of a URL. */
+/* ### This file maps URL schemes to particular RA libraries.
+   ### Currently, the only pair of RA libraries which support the same
+   ### protocols are dav and serf.  svn_ra_open2 makes the assumption
+   ### that this is the case; that their 'schemes' fields are both
+   ### dav_schemes; and that "dav" is listed first.
+
+   ### Note: users can choose which dav library to use with the
+   ### http-library preference in .subversion/servers; currently it is
+   ### only supported in the [global] section, not the host-specific
+   ### sections.  Additionally, it is ignored by any code which uses
+   ### the pre-1.2 API svn_ra_get_ra_library instead of svn_ra_open. */
+
+#if defined(SVN_LIBSVN_CLIENT_LINKS_RA_DAV) && defined (SVN_LIBSVN_CLIENT_LINKS_RA_SERF)
+#define MUST_CHOOSE_DAV
+#endif
 
 
 /* These are the URI schemes that the respective libraries *may* support.
@@ -369,6 +381,25 @@ svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
   svn_ra_session_t *session;
   const struct ra_lib_defn *defn;
   const svn_ra__vtable_t *vtable = NULL;
+#ifdef MUST_CHOOSE_DAV
+  svn_config_t *servers = NULL;
+  const char *http_library = "dav";
+
+  if (config)
+    {
+      servers = apr_hash_get(config, SVN_CONFIG_CATEGORY_SERVERS,
+                             APR_HASH_KEY_STRING);
+      if (servers)
+        {
+          svn_config_get(servers, &http_library, SVN_CONFIG_SECTION_GLOBAL,
+                         SVN_CONFIG_OPTION_HTTP_LIBRARY, "dav");
+          if (strcmp(http_library, "dav") != 0 &&
+              strcmp(http_library, "serf") != 0)
+            return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                                    _("Invalid config: unknown HTTP library"));
+        }
+    }
+#endif
 
   /* Find the library. */
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
@@ -378,6 +409,12 @@ svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
       if ((scheme = has_scheme_of(defn, repos_URL)))
         {
           svn_ra__init_func_t initfunc = defn->initfunc;
+
+#ifdef MUST_CHOOSE_DAV
+          if (defn->schemes == dav_schemes 
+              && strcmp(defn->ra_name, http_library) != 0)
+            continue;
+#endif
 
           if (! initfunc)
             SVN_ERR(load_ra_module(&initfunc, NULL, defn->ra_name,
