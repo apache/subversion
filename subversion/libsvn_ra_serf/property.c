@@ -495,7 +495,7 @@ check_cache(apr_hash_t *ret_props,
  *
  * This function will not block waiting for the response.  If the
  * request can be satisfied from a local cache, set PROP_CTX to NULL
- * as a signel to callers of that fact.  Otherwise, callers are 
+ * as a signal to callers of that fact.  Otherwise, callers are 
  * expected to call svn_ra_serf__wait_for_props().
  */
 svn_error_t *
