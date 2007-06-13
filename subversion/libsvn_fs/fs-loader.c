@@ -328,9 +328,7 @@ default_warning_func(void *baton, svn_error_t *err)
 svn_fs_t *
 svn_fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
 {
-  svn_fs_t *fs;
-
-  fs = apr_palloc(pool, sizeof(*fs));
+  svn_fs_t *fs = apr_palloc(pool, sizeof(*fs));
   fs->pool = pool;
   fs->path = NULL;
   fs->warning = default_warning_func;
