@@ -23,13 +23,11 @@ history index).
 
 * Provide a libsvn_client API capable of listing "all unmerged
   revisions".  Client tools will use this to allow the user to select
-  the revisions to merge (e.g. a la 'svn merge --show-available [URL]').
+  the revisions to merge via 'svn log --merges-available-from=[URL]'.
   (kamesh)
 
   * Always recurse (in case child merge info differs), but support the
     --depth option.
-
-  * Need new RA call.
 
 * Handle notifications resulting from a merge.  (sussman)
 
