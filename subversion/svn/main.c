@@ -207,7 +207,11 @@ const apr_getopt_option_t svn_cl__options[] =
   {"use-merge-history", 'g', 0,
                     N_("use/display additional information from merge "
                        "history")},
-  {0,               0, 0, 0}
+  {"accept", svn_cl__accept_opt, 1,
+                    N_("specify automatic conflict resolution source\n"
+                       "                            "
+                       "('left', 'right', or 'working')")},
+  {0,               0, 0, 0},
 };
 
 
@@ -696,7 +700,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  remove conflict markers; it merely removes the conflict-related\n"
      "  artifact files and allows PATH to be committed again.\n"),
     {svn_cl__targets_opt, 'R', svn_cl__depth_opt, 'q',
-     svn_cl__config_dir_opt} },
+     svn_cl__config_dir_opt, svn_cl__accept_opt} },
 
   { "revert", svn_cl__revert, {0}, N_
     ("Restore pristine working copy file (undo most local edits).\n"
@@ -1005,6 +1009,7 @@ main(int argc, const char *argv[])
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
   opt_state.depth = svn_depth_unknown;
+  opt_state.accept_ = svn_accept_default;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -1381,6 +1386,21 @@ main(int argc, const char *argv[])
       case 'g':
         opt_state.use_merge_history = TRUE;
         break;
+      case svn_cl__accept_opt:
+        opt_state.accept_ = svn_accept_from_word(opt_arg);
+
+        /* We need to make sure that the value passed to the accept flag
+         * was one of the available options.  Since svn_accept_invalid is what
+         * gets set when one of the three expected are not passed, checking
+         * for this as part of the command line parsing makes sense. */
+        if (opt_state.accept_ == svn_accept_invalid)
+          {
+            return svn_cmdline_handle_exit_error
+            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("'%s' is not a valid accept value; try "
+                                 "'left', 'right', or 'working'"),
+                               opt_arg), pool, "svn: ");
+          }
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */

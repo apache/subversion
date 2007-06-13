@@ -2573,11 +2573,33 @@ svn_client_revert(const apr_array_header_t *paths,
  * @{
  */
 
+/**
+ * Similar to svn_client_resolved2(), but without automatic conflict
+ * resolution support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+svn_error_t *
+svn_client_resolved(const char *path,
+                    svn_boolean_t recursive,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
 /** Remove the 'conflicted' state on a working copy @a path.  This will
  * not semantically resolve conflicts;  it just allows @a path to be
  * committed in the future.  The implementation details are opaque.
  * If @a recursive is set, recurse below @a path, looking for conflicts 
  * to resolve.
+ *
+ * @a accept_ is the argument used to facilitate automatic conflict resolution.
+ * If @a accept_ is svn_accept_left, the contents of the conflicted file will
+ * be replaced with the prestine contents of the pre-modification base file
+ * contents.  If @a accept_ is svn_accept_right, the contents of the conflicted
+ * file will be replaced with the post-conflict base file contents.  If @a
+ * accept_ is svn_accept_working, the contents of the conflicted file will be
+ * the content of the pre-conflict working copy file.  If @a accept_ is
+ * svn_accept_default, conflict resolution will be handled just like before
+ * automatic conflict resolution was availble.
  *
  * ### TODO(sd): I don't see any reason to change this recurse parameter
  * ### to a depth, but making a note to re-check this logic later.
@@ -2585,12 +2607,15 @@ svn_client_revert(const apr_array_header_t *paths,
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-null,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
-svn_client_resolved(const char *path,
-                    svn_boolean_t recursive,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_resolved2(const char *path,
+                     svn_boolean_t recursive,
+                     svn_accept_t accept_,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 
 /** @} */
