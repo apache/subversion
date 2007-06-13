@@ -2482,6 +2482,16 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * property conflicts are resolved.  If @a recurse is true, then search
  * recursively for conflicts to resolve.
  *
+ * @a accept_ is the argument used to facilitate automatic conflict resolution.
+ * If @a accept_ is svn_accept_left, the contents of the conflicted file will
+ * be replaced with the prestine contents of the pre-modification base file
+ * contents.  If @a accept_ is svn_accept_right, the contents of the conflicted
+ * file will be replaced with the post-conflict base file contents.  If @a
+ * accept_ is svn_accept_working, the contents of the conflicted file will be
+ * the content of the pre-conflict working copy file.  If @a accept_ is
+ * svn_accept_default, conflict resolution will be handled just like before
+ * automatic conflict resolution was availble.
+ *
  * @a adm_access is an access baton, with a write lock, for @a path.
  *
  * Needless to say, this function doesn't touch conflict markers or
@@ -2503,7 +2513,26 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * property conflict resolution was requested, and it was successful, then 
  * success gets reported.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_resolved_conflict3(const char *path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t resolve_text,
+                                       svn_boolean_t resolve_props,
+                                       svn_boolean_t recurse,
+                                       svn_accept_t accept_,
+                                       svn_wc_notify_func2_t notify_func,
+                                       void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_wc_resolved_conflict3(), but without automatic conflict
+ * resolution support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_resolved_conflict2(const char *path,
                                        svn_wc_adm_access_t *adm_access,
