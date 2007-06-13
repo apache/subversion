@@ -691,9 +691,10 @@ svn_ra_serf__bucket_propfind_create(svn_ra_serf__connection_t *conn,
  * serf context for the properties listed in LOOKUP_PROPS at URL for
  * DEPTH ("0","1","infinity").
  *
- * This function will not block waiting for the response.  Instead, the
- * caller is expected to call context_run and wait for the PROP_CTX->done
- * flag to be set.
+ * This function will not block waiting for the response.  If the
+ * request can be satisfied from a local cache, set PROP_CTX to NULL
+ * as a signel to callers of that fact.  Otherwise, callers are 
+ * expected to call svn_ra_serf__wait_for_props().
  */
 svn_error_t *
 svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
