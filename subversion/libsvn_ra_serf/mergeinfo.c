@@ -108,8 +108,9 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
       if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path)
         {
           apr_hash_t *path_mergeinfo;
-          SVN_ERR(svn_mergeinfo_parse(mergeinfo_ctx->curr_info->data,
-                                      &path_mergeinfo, mergeinfo_ctx->pool));
+          SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, 
+                                      mergeinfo_ctx->curr_info->data, 
+                                      mergeinfo_ctx->pool));
           apr_hash_set(mergeinfo_ctx->result, mergeinfo_ctx->curr_path,
                        APR_HASH_KEY_STRING, path_mergeinfo);
         }
