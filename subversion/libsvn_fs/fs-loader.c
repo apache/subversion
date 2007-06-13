@@ -375,7 +375,7 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   err2 = release_fs_mutex();
   if (err)
     {
-     svn_error_clear(err2);
+      svn_error_clear(err2);
       return err;
     }
   return err2;
