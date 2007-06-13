@@ -369,7 +369,10 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
                                  NULL, session->pool);
     }
 
-  SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
+  if (prop_ctx)
+    {
+      SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
+    }
 
   *ret_path = path;
   *ret_prop_ctx = prop_ctx;
@@ -396,7 +399,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
                            session, rel_path,
                            revision, check_path_props, pool));
 
-  if (svn_ra_serf__propfind_status_code(prop_ctx) == 404)
+  if (prop_ctx && (svn_ra_serf__propfind_status_code(prop_ctx) == 404))
     {
       *kind = svn_node_none;
     }
@@ -604,8 +607,11 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
                                  path, revision, "1", all_props, TRUE,
                                  NULL, session->pool);
-      
-      SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
+
+      if (prop_ctx)
+        {
+          SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
+        }
 
       /* We're going to create two hashes to help the walker along.
        * We're going to return the 2nd one back to the caller as it
