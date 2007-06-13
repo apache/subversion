@@ -140,6 +140,9 @@ typedef struct dir_context_t {
   /* How many pending changes we have left in this directory. */
   unsigned int ref_count;
 
+  /* Is this directory being added?  (Otherwise, just opened.) */
+  svn_boolean_t added;
+
   /* Our parent */
   struct dir_context_t *parent_dir;
 
@@ -1169,6 +1172,7 @@ add_directory(const char *path,
   dir->parent_dir = parent;
   dir->commit = parent->commit;
 
+  dir->added = TRUE;
   dir->base_revision = SVN_INVALID_REVNUM;
   dir->copy_revision = copyfrom_revision;
   dir->copy_path = copyfrom_path;
@@ -1269,6 +1273,7 @@ open_directory(const char *path,
   dir->parent_dir = parent;
   dir->commit = parent->commit;
 
+  dir->added = FALSE;
   dir->base_revision = base_revision;
   dir->name = path;
   dir->changed_props = apr_hash_make(dir->pool);
@@ -1396,11 +1401,15 @@ add_file(const char *path,
   new_file->changed_props = apr_hash_make(new_file->pool);
   new_file->removed_props = apr_hash_make(new_file->pool);
 
-  /* Ensure that the file doesn't exist by doing a HEAD on the resource -
-   * only if we haven't deleted it in this commit already.
+  /* Ensure that the file doesn't exist by doing a HEAD on the
+   * resource, but only if we haven't deleted it in this commit
+   * already, or if the parent directory was also added (without
+   * history) in this commit.
    */
-  if (!apr_hash_get(dir->commit->deleted_entries,
-                    new_file->name, APR_HASH_KEY_STRING))
+  if ((!dir->added)
+      || (dir->copy_path)
+      || (!apr_hash_get(dir->commit->deleted_entries,
+                        new_file->name, APR_HASH_KEY_STRING)))
     {
       svn_ra_serf__simple_request_context_t *head_ctx;
       svn_ra_serf__handler_t *handler;
