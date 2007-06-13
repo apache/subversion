@@ -175,7 +175,7 @@ class Skip(TestCase):
     try:
       if self.cond_func():
         self._list_mode_text = 'SKIP'
-    except Failure:
+    except svntest.Failure:
       pass
     # Delegate most methods to self.test_case:
     self.get_description = self.test_case.get_description
