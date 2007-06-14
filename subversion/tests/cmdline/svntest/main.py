@@ -349,7 +349,7 @@ def create_config_dir(cfgdir,
 
   # config file names
   cfgfile_cfg = os.path.join(cfgdir, 'config')
-  cfgfile_srv = os.path.join(cfgdir, 'server')
+  cfgfile_srv = os.path.join(cfgdir, 'servers')
 
   # create the directory
   if not os.path.isdir(cfgdir):
