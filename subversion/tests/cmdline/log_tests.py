@@ -950,6 +950,38 @@ def merge_sensitive_log_single_revision(sbox):
     }
   check_merge_results(log_chain, expected_merges)
 
+
+def merge_sensitive_log_branching_revision(sbox):
+  "test 'svn log -g' on a branching revision"
+
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
+
+  # Paths we care about
+  wc_dir = sbox.wc_dir
+  BRANCH_B_path = os.path.join(wc_dir, "branches", "b")
+  TRUNK_path = os.path.join(wc_dir, "trunk")
+
+  # Run log on a copying revision
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r10', BRANCH_B_path)
+
+  # Parse and check output.  There should be no extra revisions.
+  logchain = parse_log_output(output)
+  if len(logchain) != 1 or logchain[0]['revision'] != 10:
+    raise SVNUnexpectedLogs("Expecting only r10", logchain)
+
+  # Run log on a non-copying revision that adds mergeinfo
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r6', TRUNK_path)
+
+  # Parse and check output.  There should be one extra revision.
+  logchain = parse_log_output(output)
+  if len(logchain) != 2 or (logchain[0]['revision'] != 6
+                            or logchain[1]['revision'] != 4):
+    raise SVNUnexpectedLogs("Expecting both r6 and r4", logchain)
+
   
 def log_single_change(sbox):
   "test log -c for a single change"
@@ -1010,6 +1042,7 @@ test_list = [ None,
               log_verbose,
               log_parser,
               merge_sensitive_log_single_revision,
+              XFail(merge_sensitive_log_branching_revision),
               XFail(log_single_change),
               XFail(log_changes_range),
               XFail(log_changes_list),
