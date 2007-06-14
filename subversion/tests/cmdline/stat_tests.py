@@ -26,6 +26,7 @@ from svntest import wc, SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -1498,7 +1499,8 @@ test_list = [ None,
               status_shows_all_in_current_dir,
               status_missing_file,
               status_type_change,
-              Skip(status_type_change_to_symlink, svntest.main.is_non_posix_os),
+              SkipUnless(status_type_change_to_symlink,
+                         svntest.main.is_posix_os),
               status_with_new_files_pending,
               status_for_unignored_file,
               status_for_nonexistent_file,

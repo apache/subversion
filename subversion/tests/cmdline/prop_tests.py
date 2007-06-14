@@ -25,12 +25,13 @@ import svntest
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 def is_non_posix_and_non_windows_os():
   """lambda function to skip revprop_change test"""
-  return svntest.main.is_non_posix_os() and sys.platform != 'win32'
+  return (not svntest.main.is_posix_os()) and sys.platform != 'win32'
 
 # Helper functions
 def check_prop(name, path, exp_out):

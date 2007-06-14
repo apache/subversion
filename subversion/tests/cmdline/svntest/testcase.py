@@ -157,7 +157,7 @@ class XFail(TestCase):
 
 
 class Skip(TestCase):
-  """A test that will be skipped if condition COND is true."""
+  """A test that will be skipped if its conditional is true."""
 
   def __init__(self, test_case, cond_func=lambda:1):
     """Create an Skip instance based on TEST_CASE.  COND_FUNC is a
@@ -173,7 +173,7 @@ class Skip(TestCase):
     self.test_case = create_test_case(test_case)
     self.cond_func = cond_func
     try:
-      if self.cond_func():
+      if self.conditional():
         self._list_mode_text = 'SKIP'
     except svntest.Failure:
       pass
@@ -183,18 +183,34 @@ class Skip(TestCase):
     self.convert_result = self.test_case.convert_result
 
   def need_sandbox(self):
-    if self.cond_func():
+    if self.conditional():
       return 0
     else:
       return self.test_case.need_sandbox()
 
   def run(self, sandbox=None):
-    if self.cond_func():
+    if self.conditional():
       raise svntest.Skip
     elif self.need_sandbox():
       return self.test_case.run(sandbox=sandbox)
     else:
       return self.test_case.run()
+
+  def conditional(self):
+    """Invoke SELF.cond_func(), and return the result evaluated
+    against the expected value."""
+    return self.cond_func()
+
+
+class SkipUnless(Skip):
+  """A test that will be skipped if its conditional is false."""
+
+  def __init__(self, test_case, cond_func):
+    Skip.__init__(self, test_case, cond_func)
+
+  def conditional(self):
+    "Return the negation of SELF.cond_func()."
+    return not self.cond_func()
 
 
 def create_test_case(func):

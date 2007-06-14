@@ -25,6 +25,7 @@ import svntest
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -605,19 +606,19 @@ def update_obstructing_symlink(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(general_symlink, svntest.main.is_non_posix_os),
-              Skip(replace_file_with_symlink, svntest.main.is_non_posix_os),
-              Skip(import_export_symlink, svntest.main.is_non_posix_os),
-              Skip(copy_tree_with_symlink, svntest.main.is_non_posix_os),
-              Skip(replace_symlink_with_file, svntest.main.is_non_posix_os),
-              Skip(remove_symlink, svntest.main.is_non_posix_os),
-              Skip(merge_symlink_into_file, svntest.main.is_non_posix_os),
-              Skip(merge_file_into_symlink, svntest.main.is_non_posix_os),
+              SkipUnless(general_symlink, svntest.main.is_posix_os),
+              SkipUnless(replace_file_with_symlink, svntest.main.is_posix_os),
+              SkipUnless(import_export_symlink, svntest.main.is_posix_os),
+              SkipUnless(copy_tree_with_symlink, svntest.main.is_posix_os),
+              SkipUnless(replace_symlink_with_file, svntest.main.is_posix_os),
+              SkipUnless(remove_symlink, svntest.main.is_posix_os),
+              SkipUnless(merge_symlink_into_file, svntest.main.is_posix_os),
+              SkipUnless(merge_file_into_symlink, svntest.main.is_posix_os),
               checkout_repo_with_symlinks,
-              XFail(Skip(diff_symlink_to_dir, svntest.main.is_non_posix_os)),
+              XFail(SkipUnless(diff_symlink_to_dir, svntest.main.is_posix_os)),
               checkout_repo_with_unknown_special_type,
               replace_symlink_with_dir,
-              Skip(update_obstructing_symlink, svntest.main.is_non_posix_os),
+              SkipUnless(update_obstructing_symlink, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':

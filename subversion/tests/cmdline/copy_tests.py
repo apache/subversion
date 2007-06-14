@@ -27,6 +27,7 @@ from svntest.main import SVN_PROP_MERGE_INFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -3689,7 +3690,8 @@ test_list = [ None,
               copy_files_with_properties,
               copy_delete_commit,
               mv_and_revert_directory,
-              Skip(copy_preserve_executable_bit, svntest.main.is_non_posix_os),
+              SkipUnless(copy_preserve_executable_bit,
+                         svntest.main.is_posix_os),
               wc_to_repos,
               repos_to_wc,
               copy_to_root,
