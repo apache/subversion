@@ -1239,25 +1239,29 @@ class WinGeneratorBase(GeneratorBase):
   def _find_neon(self):
     "Find the neon version"
     msg = 'WARNING: Unable to determine neon version\n'
-    try:
-      self.neon_lib = "libneon"
-      fp = open(os.path.join(self.neon_path, '.version'))
-      txt = fp.read()
-      vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
-                   .search(txt)
-  
-      if vermatch:
-        version = (int(vermatch.group(1)),
-                   int(vermatch.group(2)),
-                   int(vermatch.group(3)))
-        # build/ac-macros/swig.m4 explains the next incantation
-        self.neon_ver = int('%d%02d%03d' % version)
-        msg = 'Found neon version %d.%d.%d\n' % version
-        if self.neon_ver < 25005:
-          msg = 'WARNING: Neon version 0.25.5 or higher is required'
-    except:
-      msg = 'WARNING: Error while determining neon version\n'
+    if self.without_neon:
       self.neon_lib = None
+      msg = 'Not attempting to find neon\n'
+    else:
+      try:
+        self.neon_lib = "libneon"
+        fp = open(os.path.join(self.neon_path, '.version'))
+        txt = fp.read()
+        vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
+                     .search(txt)
+  
+        if vermatch:
+          version = (int(vermatch.group(1)),
+                     int(vermatch.group(2)),
+                     int(vermatch.group(3)))
+          # build/ac-macros/swig.m4 explains the next incantation
+          self.neon_ver = int('%d%02d%03d' % version)
+          msg = 'Found neon version %d.%d.%d\n' % version
+          if self.neon_ver < 25005:
+            msg = 'WARNING: Neon version 0.25.5 or higher is required'
+      except:
+        msg = 'WARNING: Error while determining neon version\n'
+        self.neon_lib = None
 
     sys.stderr.write(msg)
 
