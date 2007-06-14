@@ -27,6 +27,7 @@ from prop_tests import check_prop
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -1552,8 +1553,8 @@ test_list = [ None,
               lock_several_files,
               lock_switched_files,
               lock_uri_encoded,
-              Skip(lock_and_exebit1, svntest.main.is_non_posix_os),
-              Skip(lock_and_exebit2, svntest.main.is_non_posix_os),
+              SkipUnless(lock_and_exebit1, svntest.main.is_posix_os),
+              SkipUnless(lock_and_exebit2, svntest.main.is_posix_os),
               commit_xml_unsafe_file_unlock,
               repos_lock_with_info,
               unlock_already_unlocked_files,

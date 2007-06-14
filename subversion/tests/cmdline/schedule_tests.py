@@ -26,6 +26,7 @@ from svntest import SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -624,7 +625,7 @@ test_list = [ None,
               revert_add_files,
               revert_add_directories,
               revert_nested_adds,
-              Skip(revert_add_executable, svntest.main.is_non_posix_os),
+              SkipUnless(revert_add_executable, svntest.main.is_posix_os),
               revert_delete_files,
               revert_delete_dirs,
               unschedule_missing_added,

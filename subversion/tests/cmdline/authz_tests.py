@@ -30,6 +30,7 @@ from svntest.main import write_authz_file
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 
 ######################################################################
 # Tests
@@ -815,9 +816,6 @@ def authz_locking(sbox):
 def authz_svnserve_anon_access_read(sbox):
   "authz issue #2712"
 
-  if not svntest.main.is_ra_type_svn():
-    raise svntest.Skip
-
   sbox.build(create_wc = False)
   svntest.main.safe_rmtree(sbox.wc_dir)
   B_path = os.path.join(sbox.wc_dir, 'A', 'B')
@@ -862,7 +860,8 @@ test_list = [ None,
               authz_aliases,
               authz_validate,
               authz_locking,
-              authz_svnserve_anon_access_read,
+              SkipUnless(authz_svnserve_anon_access_read,
+                         svntest.main.is_ra_type_svn),
              ]
 
 if __name__ == '__main__':

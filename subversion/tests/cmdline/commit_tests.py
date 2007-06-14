@@ -25,6 +25,7 @@ from svntest import SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -34,7 +35,7 @@ Item = svntest.wc.StateItem
 #
 
 def is_non_posix_os_or_cygwin_platform():
-  return svntest.main.is_non_posix_os() or sys.platform == 'cygwin'
+  return (not svntest.main.is_posix_os()) or sys.platform == 'cygwin'
 
 def get_standard_state(wc_dir):
   """Return a status list reflecting the local mods made by
