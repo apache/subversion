@@ -3163,7 +3163,7 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
 {
   unsigned int i;
   apr_pool_t *subpool;
-  const char *unique_path, *name, *prefix;
+  const char *unique_path, *prefix;
 
   /* Try to create directories named "<txndir>/<rev>-<uniquifier>.txn". */
   prefix = svn_path_join_many(pool, fs->path, PATH_TXNS_DIR,
@@ -3180,7 +3180,7 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
       if (! err)
         {
           /* We succeeded.  Return the basename minus the ".txn" extension. */
-          name = svn_path_basename(unique_path, subpool);
+          const char *name = svn_path_basename(unique_path, subpool);
           *id_p = apr_pstrndup(pool, name,
                                strlen(name) - strlen(PATH_EXT_TXN));
           svn_pool_destroy(subpool);
