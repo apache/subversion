@@ -2,6 +2,11 @@
 #
 # A wrapper for invoking a thrid-party diff program (e.g. Mac OS X opendiff)
 # from 'svn diff --diff-cmd=diff-wrap.sh ARGS... > /dev/null'.
+#
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
 
 if [ $# -lt 2 ]; then
     echo "usage: $0 [ignored args...] file1 file2" >&2
@@ -19,4 +24,4 @@ done
 
 # Call the diff command (change the following line to make sense for your
 # merge program).
-$DIFF $*
+exec $DIFF $*
