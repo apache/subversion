@@ -119,11 +119,28 @@ contents can note the details of the tree conflict.
 
 'svn update' pulls file replacement atop modified file
 
+  NOW:  Update is obstructed unless --force is provided.
+
+  NEW:  
+
 'svn update' pulls dir replacement atop deep-modified directory
 
 'svn update' pulls file-to-dir replacement atop modified file
 
+  NOW:  Behaves as a two-step action: delete over modified file (see
+        above), then directory add over modified file (which is 
+        disallowed, even if --force is supplied).
+
+  NEW:  
+ 
 'svn update' pulls dir-to-file replacement atop deep-modified directory
+
+  NOW:  Behaves as a two-step action: delete over deep-modified
+        directory (see above), then file add (which fails because
+        there's already a directory in place leftover from the
+        delete step.
+
+  NEW:  
 
 'svn merge' pulls file deletion
 
