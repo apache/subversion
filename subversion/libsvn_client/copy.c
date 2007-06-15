@@ -419,7 +419,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
   SVN_ERR(get_implied_mergeinfo(ra_session, target_mergeinfo,
                                 src_rel_path, src_path, src_revnum, pool));
   SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
-                                          src_path, src_revnum, pool));
+                                          src_path, src_revnum,
+                                          svn_mergeinfo_inherited, pool));
 
   /* Combine and return all merge info. */
   if (src_mergeinfo)

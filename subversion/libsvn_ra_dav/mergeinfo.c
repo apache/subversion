@@ -155,7 +155,7 @@ svn_ra_dav__get_mergeinfo(svn_ra_session_t *session,
                           apr_hash_t **mergeinfo,
                           const apr_array_header_t *paths,
                           svn_revnum_t revision,
-                          svn_boolean_t include_parents,
+                          svn_mergeinfo_inheritance_t inherit,
                           apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -175,13 +175,11 @@ svn_ra_dav__get_mergeinfo(svn_ra_session_t *session,
                            apr_psprintf(pool,
                                         "<S:revision>%ld"
                                         "</S:revision>", revision));
-  if (include_parents)
-    {
-      svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(pool,
-                                            "<S:include-parents/>"));
-    }
-
+  svn_stringbuf_appendcstr(request_body,
+                           apr_psprintf(pool,
+                                        "<S:inherit>%s"
+                                        "</S:inherit>",
+                                        svn_inheritance_to_word(inherit)));
   if (paths)
     {
       for (i = 0; i < paths->nelts; i++)

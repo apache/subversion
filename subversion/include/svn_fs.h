@@ -1204,8 +1204,8 @@ svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
  *
  * @a paths indicate the paths you are requesting information for
  *
- * When @a include_parents is @c TRUE, include inherited merge info
- * from parent directories of @a paths.
+ * @a inherit indicates whether explicit, explicit or inherited, or
+ * only inherited merge info for @paths is retrieved.
  *
  * Do any necessary temporary allocation in @a pool.
  *
@@ -1214,7 +1214,7 @@ svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
 svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                                   svn_fs_root_t *root,
                                   const apr_array_header_t *paths,
-                                  svn_boolean_t include_parents,
+                                  svn_mergeinfo_inheritance_t inherit,
                                   apr_pool_t *pool);
 
 /** Retrieve combined mergeinfo for multiple nodes, and their children.

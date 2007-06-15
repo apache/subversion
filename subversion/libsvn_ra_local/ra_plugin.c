@@ -644,15 +644,14 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             apr_hash_t **mergeinfo,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
-                            svn_boolean_t include_parents,
+                            svn_mergeinfo_inheritance_t inherit,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
   apr_hash_t *tmp_mergeinfo;
 
   SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_mergeinfo, baton->repos, paths,
-                                     revision, include_parents,
-                                     NULL, NULL, pool));
+                                     revision, inherit, NULL, NULL, pool));
   if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
     {
       const void *key;
