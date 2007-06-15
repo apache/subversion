@@ -45,12 +45,16 @@ Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
      ra_serf:       PROPFIND, REPORT              ('update-report')
                     ... then many PROPFIND/GETs on many parallel connections
 
-  * svn switch:     OPTIONS, PROPFIND, REPORT     ('update-report')
+    svn update only                               ('merge-info-report')
+
+  * svn switch:     OPTIONS, PROPFIND, REPORT     ('update-report',
+                                                   'merge-info-report')
 
   * svn diff:       OPTIONS, PROPFIND, REPORT     ('update-report')
                     ... then many GETs
 
-  * svn merge:      OPTIONS, PROPFIND, REPORT     ('update-report')
+  * svn merge:      OPTIONS, PROPFIND, REPORT     ('update-report',
+                                                   'merge-info-report')
                     ... then many GETs
 
   * svn status -u:  OPTIONS, PROPFIND, REPORT     ('update-report' and
@@ -325,3 +329,28 @@ Response:
     </S:log-item>
     ...multiple log-items for each returned revision...
   </S:log-report>
+
+merge-info-report
+----------
+
+Purpose: Get the merge info for a path at a particular revision.
+
+Target URL: URL of item we're getting merge info for.
+
+Request:
+
+  <S:merge-info-report xmlns:S="svn:">
+    <S:revision>1</S:revision>
+    <S:include-parents/>
+    <S:path>/A/B/E/alpha</S:path>
+  </S:merge-info-report>
+
+Response:
+
+  <?xml version="1.0" encoding="utf-8"?>
+  <S:merge-info-report xmlns:S="svn:" xmlns:D="DAV:">
+    <S:merge-info-item>
+      <S:merge-info-path>/A_COPY/B/E</S:merge-info-path>
+      <S:merge-info-info>/A/B/E:1,3-4</S:merge-info-info>
+    </S:merge-info-item>
+  </S:merge-info-report>
