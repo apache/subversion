@@ -1077,8 +1077,8 @@ dav_svn__update_report(const dav_resource *resource,
         }
     }
           
-    if (!saw_depth && !saw_recursive && (depth == svn_depth_unknown))
-      depth = svn_depth_infinity;
+  if (!saw_depth && !saw_recursive && (depth == svn_depth_unknown))
+    depth = svn_depth_infinity;
 
   /* If the client never sent a <src-path> element, it's old and
      sending a style of report that we no longer allow. */
