@@ -1263,7 +1263,7 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
       apr_hash_index_t *hi;
       void *val;
       const void *key;
-      const char *path;
+      const char *new_path;
       apr_array_header_t *rangelist;
 
       mergeinfo = apr_hash_make(subpool);
@@ -1272,9 +1272,9 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
            hi = apr_hash_next(hi))
         {
           apr_hash_this(hi, &key, NULL, &val);
-          path = svn_path_join((const char *) key, path_suffix, subpool);
+          new_path = svn_path_join((const char *) key, path_suffix, subpool);
           rangelist = val;
-          apr_hash_set(mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+          apr_hash_set(mergeinfo, new_path, APR_HASH_KEY_STRING, rangelist);
         }
     }
   else
@@ -1329,8 +1329,6 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
         may still yet occur if CHILD_NONEMPTY_MERGEINFO, which no longer
         contains any paths unique to it that map to empty revision ranges,
         is equivalent to PARENT_MERGEINFO. */
-      svn_boolean_t equal_mergeinfo;
-
       SVN_ERR(svn_mergeinfo__equals(&equal_mergeinfo,
                                     child_nonempty_mergeinfo,
                                     mergeinfo, subpool));
