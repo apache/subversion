@@ -602,6 +602,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 44,
              "Representation is being written")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_TXN_NAME_TOO_LONG,
+             SVN_ERR_FS_CATEGORY_START + 45,
+             "The generated transaction name is too long")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

@@ -19,7 +19,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <apr.h>
+#include <apr_network_io.h>
+#include "private/svn_fs_private.h"
 #include "key-gen.h"
+
+/* The Berkeley DB backend uses a key as a transaction name and the
+   maximum key size must be less than the maximum transaction name
+   length. */
+#if MAX_KEY_SIZE > SVN_FS_TXN_MAX_LEN
+#error The MAX_KEY_SIZE used for BDB txn names is greater than SVN_FS_TXN_MAX_LEN.
+#endif
 
 
 /*** Keys for reps and strings. ***/
