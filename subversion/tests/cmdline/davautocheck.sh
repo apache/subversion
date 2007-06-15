@@ -192,7 +192,8 @@ HTTPD_PORT=$(($RANDOM+1024))
 HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
 HTTPD_CFG="$HTTPD_ROOT/cfg"
 HTTPD_PID="$HTTPD_ROOT/pid"
-HTTPD_LOG="$HTTPD_ROOT/log"
+HTTPD_ACCESS_LOG="$HTTPD_ROOT/access_log"
+HTTPD_ERROR_LOG="$HTTPD_ROOT/error_log"
 HTTPD_MIME_TYPES="$HTTPD_ROOT/mime.types"
 BASE_URL="http://localhost:$HTTPD_PORT"
 HTTPD_USERS="$HTTPD_ROOT/users"
@@ -227,7 +228,9 @@ Group               $(groups | awk '{print $1}')
 Listen              localhost:$HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
-ErrorLog            "$HTTPD_LOG"
+LogFormat           "%h %l %u %t \"%r\" %>s %b" common
+CustomLog           "$HTTPD_ACCESS_LOG" common
+ErrorLog            "$HTTPD_ERROR_LOG"
 LogLevel            Debug
 ServerRoot          "$HTTPD_ROOT"
 DocumentRoot        "$HTTPD_ROOT"
@@ -330,8 +333,11 @@ say "Finished testing..."
 
 kill $(cat "$HTTPD_PID")
 
+query 'Browse server access log' n \
+  && less "$HTTPD_ACCESS_LOG"
+
 query 'Browse server error log' n \
-  && less "$HTTPD_LOG"
+  && less "$HTTPD_ERROR_LOG"
 
 query 'Delete HTTPD root directory' y \
   && rm -fr "$HTTPD_ROOT/"
