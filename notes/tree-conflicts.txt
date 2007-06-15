@@ -34,7 +34,8 @@ CMPILATO'S BRAINSTORMING
 
 This whole thing is, I think, basically about ensuring that the
 history of a file isn't allowed to fork and then suffer the
-unceremonious death of one of the two resulting lines of history.
+unceremonious death of one of the two resulting lines of history when
+the streams are rejoined.
 
 When doing an update, we don't have to worry that the working copy
 base file has deviated from the line of history that's being deleted
@@ -82,53 +83,81 @@ file slot pointing to a dropped file named <versionedfile>.trej.  It's
 contents can note the details of the tree conflict.
 
 'svn update' pulls file deletion atop file with local text mods
-  NOW:  file is silently unversioned
-  NEW:  file is marked as added-with-history (as of the revision
+
+  NOW:  File is silently unversioned.
+
+  NEW:  File is marked as added-with-history (as of the revision
         previously in the working copy), and placed into a state of
-        conflict.  there are no conflict markers, but the .trej file
-        note that our file was deleted in the repository.  user can
+        conflict.  There are no conflict markers, but the .trej file
+        notes that our file was deleted in the repository.  User can
         see mods with 'svn diff'; revert still works; resolved+commit
         undoes the deletion and commits the users's mods.
 
 'svn update' pulls text mods onto schedule-delete file
-  NOW:  text mods are silently merged into file's text-base
-  NEW:  file remains scheduled for deletion, text-base is up-to-date,
+
+  NOW:  Text mods are silently merged into file's text-base and file
+        remains scheduled for deletion.
+
+  NEW:  File remains scheduled for deletion, text-base is up-to-date,
         but file is marked as conflict, and .trej file notes that
-        the file was modified in the repository.
+        the file was modified in the repository.  
+
+        QUESTION: Should .trej file contain the diff of those mods
+        from the repository?
 
 'svn update' pulls dir deletion atop dir containing deep text mods
-  NOW:  directory is removed save for modified files (left unversioned)
-  NEW:  modified files are marked as added-with-history (as of their
+
+  NOW:  Directory is removed save for modified files (left
+        unversioned).
+
+  NEW:  Modified files are marked as added-with-history (as of their
         working copy revisions), placed into a state of conflict, with
         .trej files noting the deletion of the parent directory.
         Intermediate directories are marked as added (no history) and
         in conflict, with their .trej files noting the deletion of the
         directory.
 
+'svn update' pulls file replacement atop modified file
+
+'svn update' pulls dir replacement atop deep-modified directory
+
+'svn update' pulls file-to-dir replacement atop modified file
+
+'svn update' pulls dir-to-file replacement atop deep-modified directory
+
 'svn merge' pulls file deletion
-  NOW:  if there's nothing at the target location to delete, the
+
+  NOW:  If there's nothing at the target location to delete, the
         target is "skipped" (?); otherwise the target is removed from
         version control and, if not locally modified, deleted.
-  NEW:  all file deletions that would affect a local file and that come
+
+  NEW:  All file deletions that would affect a local file and that come
         via merge get sanity-checked, with the client pulling the
         left-side source version of the file down and comparing its
-        contents with the to-be-deleted working file.  if they are
+        contents with the to-be-deleted working file.  If they are
         equivalent and there are no local mods to the file, it is
-        removed from version control.  otherwise, we have two sets of
+        removed from version control.  Otherwise, we have two sets of
         data we'd like to keep easy track of:  diffs between
         deleted-source and wc base file, and diffs between wc base and
-        wc working files.  need more thinkin' 'round these parts...
+        wc working files.  
+        NOTE:  Need more thinkin' 'round these parts...
 
 'svn merge' pulls file modification atop schedule-delete file
-  NOW:  "Skipped missing target" message
+
+  NOW:  "Skipped missing target" message.
+
   NEW:  File remains scheduled for deletion, but working file is
         restored (if missing), marked as conflicted, and contents
         carry conflict info.
 
 'svn merge' pulls file modification atop missing file
-  NOW:  "Skipped missing target" message
+
+  NOW:  "Skipped missing target" message.
+
   NEW:  
 
 'svn merge' pulls file modification atop added file
+
   NOW:  Conflict!
+
   NEW:  Conflict!
