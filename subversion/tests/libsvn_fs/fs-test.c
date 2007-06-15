@@ -123,6 +123,9 @@ trivial_transaction(const char **msg,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   const char *txn_name;
+  int is_invalid_char[256];
+  int i;
+  const char *p;
 
   *msg = "begin a txn, check its name, then close it";
 
@@ -141,6 +144,27 @@ trivial_transaction(const char **msg,
   if (! txn_name)
     return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
                             "Got a NULL txn name.");
+
+  /* Test that the txn name contains only valid characters.  See
+     svn_fs.h for the list of valid characters. */
+  for (i = 0; i < sizeof(is_invalid_char)/sizeof(*is_invalid_char); ++i)
+    is_invalid_char[i] = 1;
+  for (i = '0'; i <= '9'; ++i)
+    is_invalid_char[i] = 0;
+  for (i = 'a'; i <= 'z'; ++i)
+    is_invalid_char[i] = 0;
+  for (i = 'A'; i <= 'Z'; ++i)
+    is_invalid_char[i] = 0;
+  for (p = "-."; *p; ++p)
+    is_invalid_char[(unsigned char) *p] = 0;
+
+  for (p = txn_name; *p; ++p)
+    {
+      if (is_invalid_char[(unsigned char) *p])
+        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                 "The txn name '%s' contains an illegal '%c' "
+                                 "character", txn_name, *p);
+    }
 
   return SVN_NO_ERROR;
 }
