@@ -310,7 +310,7 @@ typedef struct root_vtable_t
   svn_error_t *(*get_mergeinfo)(apr_hash_t **minfohash,
                                 svn_fs_root_t *root, 
                                 const apr_array_header_t *paths,
-                                svn_boolean_t include_parents,
+                                svn_mergeinfo_inheritance_t inherit,
                                 apr_pool_t *pool);
   svn_error_t *(*get_mergeinfo_for_tree)(apr_hash_t **mergeinfo,
                                          svn_fs_root_t *root,

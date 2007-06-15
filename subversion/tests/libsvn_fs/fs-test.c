@@ -4489,10 +4489,12 @@ get_mergeinfo(const char **msg,
 
   paths = apr_array_make(pool, 1, sizeof (const char *));
   APR_ARRAY_PUSH(paths, const char *) = "/A/E";
-  SVN_ERR(svn_fs_get_mergeinfo(&result, revision_root, paths, TRUE, pool));
+  SVN_ERR(svn_fs_get_mergeinfo(&result, revision_root, paths,
+                               svn_mergeinfo_inherited, pool));
   paths = apr_array_make(pool, 1, sizeof (const char *));
   APR_ARRAY_PUSH(paths, const char *) = "/A/B/E";
-  SVN_ERR(svn_fs_get_mergeinfo(&result, revision_root, paths, TRUE, pool));
+  SVN_ERR(svn_fs_get_mergeinfo(&result, revision_root, paths,
+                               svn_mergeinfo_inherited, pool));
   return SVN_NO_ERROR;
 }
 

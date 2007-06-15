@@ -52,7 +52,8 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
 
   /* These get determined from the request document. */
   svn_revnum_t rev = SVN_INVALID_REVNUM;
-  svn_boolean_t include_parents = FALSE;  /* off by default */
+  /* By default look for explicit mergeinfo only. */
+  svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 0, sizeof(const char *));
 
@@ -76,8 +77,11 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
 
       if (strcmp(child->name, "revision") == 0)
         rev = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
-      else if (strcmp(child->name, "include-parents") == 0)
-        include_parents = 1;
+      else if (strcmp(child->name, "inherit") == 0)
+        {
+          inherit = svn_inheritance_from_word(
+            dav_xml_get_cdata(child, resource->pool, 1));
+        }
       else if (strcmp(child->name, "path") == 0)
         {
           const char *target;
@@ -100,8 +104,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
 
 
   serr = svn_repos_fs_get_mergeinfo(&mergeinfo, repos->repos, paths, rev,
-                                    include_parents,
-                                    dav_svn__authz_read_func(&arb),
+                                    inherit, dav_svn__authz_read_func(&arb),
                                     &arb, resource->pool);
   if (serr)
     {

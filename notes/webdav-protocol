@@ -337,11 +337,16 @@ Purpose: Get the merge info for a path at a particular revision.
 
 Target URL: URL of item we're getting merge info for.
 
+Note: <S:inherit> is a representation of the svn_mergeinfo_inheritance_t
+      struct and can have the values 'explicit', 'inherited', or
+      'nearest-ancestor'.  The default value is 'explicit' if <S:inherit>
+      is not present or has any other value than those three. 
+
 Request:
 
   <S:merge-info-report xmlns:S="svn:">
     <S:revision>1</S:revision>
-    <S:include-parents/>
+    <S:inherit>inherited</S:inherit>
     <S:path>/A/B/E/alpha</S:path>
   </S:merge-info-report>
 

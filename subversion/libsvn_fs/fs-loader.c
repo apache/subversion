@@ -811,11 +811,10 @@ svn_error_t *
 svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
-                     svn_boolean_t include_parents,
+                     svn_mergeinfo_inheritance_t inherit,
                      apr_pool_t *pool)
 {
-  return root->vtable->get_mergeinfo(minfohash, root, paths, include_parents,
-                                     pool);
+  return root->vtable->get_mergeinfo(minfohash, root, paths, inherit, pool);
 }
 
 svn_error_t *

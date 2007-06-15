@@ -1052,6 +1052,8 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          apr_hash_t **mergeinfo,
                                          const apr_array_header_t *paths,
                                          svn_revnum_t revision,
-                                         svn_boolean_t include_parents,
+                                         svn_mergeinfo_inheritance_t inherit,
                                          apr_pool_t *pool);
+
+
 
