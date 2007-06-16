@@ -6263,7 +6263,7 @@ def empty_rev_range_mergeinfo(sbox):
                                         "':\n",
                                         '  prop:name : propval\n',
                                         '  svn:mergeinfo : ' +
-                                        '/A_COPY/B/E/beta:5\r\n',
+                                        '/A_COPY/B/E/beta:5\n',
                                         '/A_COPY/D/H/omega:3-4\n'], [],
                                        'pl', '-vR', other_omega_path)
 
@@ -6313,7 +6313,7 @@ def empty_rev_range_mergeinfo(sbox):
                                         "':\n",
                                         '  prop:name : propval\n',
                                         '  svn:mergeinfo : ' +
-                                        '/A_COPY/B/E/beta:5\r\n',
+                                        '/A_COPY/B/E/beta:5\n',
                                         '/A_COPY/D/H/omega:3\n'], [],
                                        'pl', '-vR', other_omega_path)
   merge_r4_into_Other_A_D_H_omega()
