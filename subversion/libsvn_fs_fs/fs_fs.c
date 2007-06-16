@@ -22,9 +22,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <sys/types.h>
-#ifdef HAVE_UNISTD_H
-#include <unistd.h> /* for getpid() */
-#endif
 
 #include <apr_general.h>
 #include <apr_pools.h>
@@ -60,6 +57,9 @@
 
 #ifdef WIN32
 #include <windows.h> /* for getpid() */
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h> /* for getpid() */
 #endif
 
 /* An arbitrary maximum path length, so clients can't run us out of memory
@@ -3196,13 +3196,8 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
   process_id = getpid();
   now = apr_time_now();
 
-#ifdef WIN32
-  unique_basename = apr_psprintf(pool, "%s-%05d-%I64d",
-                                  hostname_str, process_id, now);
-#else
-  unique_basename = apr_psprintf(pool, "%s-%05d-%lld",
-                                  hostname_str, process_id, now);
-#endif
+  unique_basename = apr_psprintf(pool, "%s-%05d-%" APR_TIME_T_FMT,
+                                 hostname_str, process_id, now);
 
   if (strlen(unique_basename) + 6 > SVN_FS_TXN_MAX_LEN)
     {
