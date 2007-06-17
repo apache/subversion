@@ -3199,14 +3199,14 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
   unique_basename = apr_psprintf(pool, "%s-%05d-%" APR_TIME_T_FMT,
                                  hostname_str, process_id, now);
 
-  if (strlen(unique_basename) + 6 > SVN_FS_TXN_MAX_LEN)
+  if (strlen(unique_basename) + 6 > SVN_FS__TXN_MAX_LEN)
     {
       return svn_error_createf(SVN_ERR_FS_TXN_NAME_TOO_LONG,
                                NULL,
                                _("The auto-generated transaction name "
                                  "'%s-XXXXX' is longer than the maximum "
                                  "transaction name length %d"),
-                               unique_basename, SVN_FS_TXN_MAX_LEN);
+                               unique_basename, SVN_FS__TXN_MAX_LEN);
     }
 
   prefix = svn_path_join_many(pool, fs->path, PATH_TXNS_DIR, unique_basename,

@@ -42,7 +42,7 @@ extern "C" {
 
    Use APRMAXHOSTLEN + 63 just to have some extra space.
  */
-#define SVN_FS_TXN_MAX_LEN (APRMAXHOSTLEN+63)
+#define SVN_FS__TXN_MAX_LEN (APRMAXHOSTLEN+63)
 
 #ifdef __cplusplus
 }
