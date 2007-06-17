@@ -285,8 +285,8 @@ static svn_error_t *ra_svn_finish_report(void *baton,
 
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, b->pool, "finish-report", ""));
   SVN_ERR(handle_auth_request(b->sess_baton, b->pool));
-  SVN_ERR(svn_ra_svn_drive_editor(b->conn, b->pool, b->editor, b->edit_baton,
-                                  NULL));
+  SVN_ERR(svn_ra_svn_drive_editor2(b->conn, b->pool, b->editor, b->edit_baton,
+                                   NULL, FALSE));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, b->pool, ""));
   return SVN_NO_ERROR;
 }
