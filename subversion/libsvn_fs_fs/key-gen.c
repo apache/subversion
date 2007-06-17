@@ -26,8 +26,8 @@
 /* The Berkeley DB backend uses a key as a transaction name and the
    maximum key size must be less than the maximum transaction name
    length. */
-#if MAX_KEY_SIZE > SVN_FS_TXN_MAX_LEN
-#error The MAX_KEY_SIZE used for BDB txn names is greater than SVN_FS_TXN_MAX_LEN.
+#if MAX_KEY_SIZE > SVN_FS__TXN_MAX_LEN
+#error The MAX_KEY_SIZE used for BDB txn names is greater than SVN_FS__TXN_MAX_LEN.
 #endif
 
 

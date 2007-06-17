@@ -63,7 +63,7 @@ read_txn(const char *pathname, apr_pool_t *pool)
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_size_t len;
   svn_error_t *err = SVN_NO_ERROR;
-  char *txn_name = apr_palloc(pool, SVN_FS_TXN_MAX_LEN+1);
+  char *txn_name = apr_palloc(pool, SVN_FS__TXN_MAX_LEN+1);
   int i;
 
   /* Try up to 10 times to read the txn name, retrying on ESTALE
@@ -89,7 +89,7 @@ read_txn(const char *pathname, apr_pool_t *pool)
           break;
         }
 
-      len = SVN_FS_TXN_MAX_LEN;
+      len = SVN_FS__TXN_MAX_LEN;
       err = svn_io_read_length_line(activity_file, txn_name, &len, iterpool);
       if (err)
         {
