@@ -11,7 +11,7 @@
     tree of operation structures.  The tree of operation structures is
     used to drive an RA commit editor to produce a single commit.
 
-    To build this client, type 'make mucc' from the root of your
+    To build this client, type 'make svnmucc' from the root of your
     Subversion source directory.
 */
 
@@ -28,7 +28,7 @@
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {
   if (err)
-    svn_handle_error2(err, stderr, FALSE, "mucc: ");
+    svn_handle_error2(err, stderr, FALSE, "svnmucc: ");
   svn_error_clear(err);
   if (pool)
     svn_pool_destroy(pool);
@@ -77,7 +77,7 @@ open_tmp_file(apr_file_t **fp,
 
   /* Open a unique file;  use APR_DELONCLOSE. */
   return svn_io_open_unique_file2(fp, NULL, 
-                                  svn_path_join(temp_dir, "mucc", pool), 
+                                  svn_path_join(temp_dir, "svnmucc", pool), 
                                   ".tmp", svn_io_file_del_on_close, pool);
 }
 
@@ -534,7 +534,7 @@ usage(apr_pool_t *pool, int exit_val)
   FILE *stream = exit_val == EXIT_SUCCESS ? stdout : stderr;
   const char msg[] =
     "Multiple URL Command Client (for Subversion)\n"
-    "\nUsage: mucc [OPTION]... [ACTION]...\n"
+    "\nUsage: svnmucc [OPTION]... [ACTION]...\n"
     "\nActions:\n"
     "  cp REV URL1 URL2      copy URL1@REV to URL2\n"
     "  mkdir URL             create new directory URL\n"
@@ -568,7 +568,7 @@ insufficient(apr_pool_t *pool)
 int
 main(int argc, const char **argv)
 {
-  apr_pool_t *pool = init("mucc");
+  apr_pool_t *pool = init("svnmucc");
   apr_array_header_t *actions = apr_array_make(pool, 1, 
                                                sizeof(struct action *));
   const char *anchor = NULL;
@@ -585,7 +585,7 @@ main(int argc, const char **argv)
     {"help", 'h', 0, ""},
     {NULL, 0, 0, NULL}
   };
-  const char *message = "committed using mucc";
+  const char *message = "committed using svnmucc";
   const char *username = NULL, *password = NULL;
   const char *root_url = NULL, *extra_args_file = NULL;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
