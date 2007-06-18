@@ -1151,6 +1151,9 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
             (setq arglist (car arglist)))
           (save-excursion
             (set-buffer proc-buf)
+            (unless (file-executable-p default-directory)
+              (message "psvn: workaround in %s needed, %s does no longer exist" (current-buffer) default-directory)
+              (cd (expand-file-name "~")))
             (setq buffer-read-only nil)
             (buffer-disable-undo)
             (fundamental-mode)
