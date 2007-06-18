@@ -135,6 +135,9 @@ to FSFS or from FSFS to BDB?</a></li>
 <li><a href="#binary-files">How does Subversion handle binary files?</a></li>
 <li><a href="#terse-diff">How can I make <tt>svn diff</tt> show me
     just the names of the changed files, not their contents?</a></li>
+<li>
+  <a href="#sorry-no-globbing">How can I use wildcards or globbing to move many files at once?</a>
+</li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -2107,6 +2110,46 @@ Version 1.4 of the <tt>svn diff</tt> command will have a "--summarize"
 option.
 </div>
 
+<div class="h3" id="sorry-no-globbing" title="sorry-no-globbing">
+<h3>How can I use wildcards or globbing to move many files at once?</h3>
+<p>
+You want to do something like
+<pre>
+svn mv svn://server/trunk/stuff/* svn://server/trunk/some-other-dir
+</pre>
+but it fails with 
+<pre>
+svn: Path 'svn://server/trunk/stuff/*' does not exist in revision 123
+</pre>
+... or some other inscrutable error message.
+
+The short, unhappy answer is: there's no built-in way to do this; many
+commands, like <tt>mv</tt>, refuse to take an arbitrary number of
+arguments ... and in any case, Subversion doesn't expand wildcards like
+"*" the way the shell does.
+
+If you happen to have a working copy that contains all the source
+files as well as the destination directory, then you can exploit your
+shell's wildcard feature to do the move, like this (for Bash):
+<pre>
+  for i in stuff/*; do svn mv $i some-other-dir; done
+  svn ci -m "moved all the stuff into some other dir"
+</pre>
+
+In any case, you can always accumulate a list of the names of the
+source files, and then run "svn mv" on each item in that list, like
+this:
+<pre>
+        s=svn://server/trunk/stuff/
+        svn ls "$s"  | \
+        while read f
+           do svn mv "$s/$f" svn://server/trunk/some-other-dir -m "Moved just one file"
+        done
+</pre>
+Note, however, that this will generate one commit per source file;
+that's in contrast to the above method (using a working copy) which
+generates just one commit total.
+</div>
 
 </div>
 
