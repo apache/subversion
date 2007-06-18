@@ -389,22 +389,22 @@ I.    INTRODUCTION
            alternative to Neon for accessing Subversion repositories
            over http:// and https:// URLs.  serf is designed as an
            asynchronous library which can take advantage of HTTP
-           pipelining, so ra_serf may be more efficient than the
-           Neon-based ra_dav and better for HTTP proxy caches.  The
-           serf library can be found at:
+           pipelining, so ra_serf may be more efficient than ra_neon
+           and better for HTTP proxy caches.  The serf library can be
+           found at:
 
                http://code.google.com/p/serf/
 
-           In order to use ra_serf instead of ra_dav, you must install
+           In order to use ra_serf instead of ra_neon, you must install
            serf, and run Subversion's ./configure with the argument
-           --with-serf.  (To only use ra_serf and not ra_dav, you
+           --with-serf.  (To only use ra_serf and not ra_neon, you
            should also use --without-neon.)  If serf is installed in a
            non-standard place, you should use
 
                --with-serf=/path/to/serf/install
 
-           instead.  If you build with both ra_dav and ra_serf,
-           Subversion will use ra_dav by default; add "http-library =
+           instead.  If you build with both ra_neon and ra_serf,
+           Subversion will use ra_neon by default; add "http-library =
            serf" to the [global] section of your ~/.subversion/servers
            file to use ra_serf instead.
 

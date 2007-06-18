@@ -360,7 +360,7 @@ def basic_copy_and_move_files(sbox):
 #----------------------------------------------------------------------
 
 # This test passes over ra_local certainly; we're adding it because at
-# one time it failed over ra_dav.  Specifically, it failed when
+# one time it failed over ra_neon.  Specifically, it failed when
 # mod_dav_svn first started sending vsn-rsc-urls as "CR/path", and was
 # sending bogus CR/paths for items within copied subtrees.
 
@@ -1225,7 +1225,7 @@ def wc_copy_parent_into_child(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
-# Issue 1419: at one point ra_dav->get_uuid() was failing on a
+# Issue 1419: at one point ra_neon->get_uuid() was failing on a
 # non-existent public URL, which prevented us from resurrecting files
 # (svn cp -rOLD URL wc).
 
@@ -1511,7 +1511,7 @@ def double_uri_escaping_1814(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-m', 'r2',
                                      orig_url, new_url)
 
-  # This had failed with ra_dav because "foo bar" would be double-encoded
+  # This had failed with ra_neon because "foo bar" would be double-encoded
   # "foo bar" ==> "foo%20bar" ==> "foo%2520bar"
   svntest.actions.run_and_verify_svn(None, None, [], 'ls', ('-r'+str(orig_rev)),
                                      '-R', base_url)

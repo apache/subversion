@@ -215,7 +215,7 @@ static const svn_ra_serf__dav_props_t repos_root_props[] =
   { NULL }
 };
 
-/* WC props compatibility with ra_dav. */
+/* WC props compatibility with ra_neon. */
 #define SVN_RA_SERF__WC_NAMESPACE SVN_PROP_WC_PREFIX "ra_dav:"
 #define SVN_RA_SERF__WC_ACTIVITY_URL SVN_RA_SERF__WC_NAMESPACE "activity-url"
 #define SVN_RA_SERF__WC_CHECKED_IN_URL SVN_RA_SERF__WC_NAMESPACE "version-url"

@@ -133,12 +133,12 @@ MOD_AUTHZ_SVN="$ABS_BUILDDIR/subversion/mod_authz_svn/.libs/mod_authz_svn.so"
 [ -r "$MOD_DAV_SVN" ] \
   || fail "dav_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_dav/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
+export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
 
 CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
 ldd "$CLIENT_CMD" | grep -q 'not found' \
   && fail "Subversion client couldn't be fully linked at run-time"
-"$CLIENT_CMD" --version | egrep -q '^[*] ra_(dav|serf)' \
+"$CLIENT_CMD" --version | egrep -q '^[*] ra_(neon|serf)' \
   || fail "Subversion client couldn't find and/or load ra_dav library"
 
 httpd="$($APXS -q PROGNAME)"

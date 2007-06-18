@@ -48,10 +48,10 @@ the build directory:
    $ ../../../../svn/subversion/tests/cmdline/basic_tests.py
 
 
-Running over ra_dav
--------------------
+Running over mod_dav_svn
+------------------------
 
-Running a script over ra_dav is basically the same, but you have to
+Running a script over mod_dav_svn is basically the same, but you have to
 set up httpd 2.0 first (on the same machine, since the tests create
 repositories on the fly), and pass a URL argument to the test scripts.
 
@@ -87,7 +87,7 @@ set the User and Group directives in httpd.conf, something like this:
    User yourusernamehere
    Group users
 
-You need to run the tests over ra_dav with authentication enabled, so
+You need to run the tests over mod_dav_svn with authentication enabled, so
 just drop the following 2-line snippet into the
 /usr/local/apache2/conf/users file [1]:
 
@@ -96,9 +96,9 @@ jrandom:xCGl35kV9oWCY
 jconstant:xCGl35kV9oWCY
 ----------------------------
 
-Now, (re)start Apache and run the tests over ra_dav.
+Now, (re)start Apache and run the tests over mod_dav_svn.
 
-You can run a test script over ra_dav:
+You can run a test script over DAV:
 
    $ ./basic_tests.py --url http://localhost
    $ ./basic_tests.py --url http://localhost 3
@@ -111,7 +111,7 @@ or
 If you run httpd on a port other than 80, you can specify the port in
 the URL: "http://localhost:15835" for example.
 
-To run all tests over ra_dav, pass BASE_URL when running 'make check'
+To run all tests over DAV, pass BASE_URL when running 'make check'
 from the top of the build dir:
 
    $ make check BASE_URL=http://localhost

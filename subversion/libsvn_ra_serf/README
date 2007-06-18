@@ -18,9 +18,9 @@ ra_serf can be enabled with the following configure flags:
  (Alternatively, just use --with-serf, and add "http-library = serf" to 
   your ~/.subversion/servers file to choose ra_serf at runtime.)
 
-For more about how ra_serf/ra_dav talk WebDAV, consult notes/webdav-protocol.
+For more about how ra_serf/ra_neon talk WebDAV, consult notes/webdav-protocol.
 
-Working copies are interchangable between ra_serf and ra_dav.  (They both use
+Working copies are interchangable between ra_serf and ra_neon.  (They both use
 the svn:wc:ra_dav:version-url property to store the latest revision of a file.)
 
 Completed tasks

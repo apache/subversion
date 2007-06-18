@@ -1037,7 +1037,7 @@ def diff_base_to_repos(sbox):
   
 
 #----------------------------------------------------------------------
-# This is a simple regression test for issue #891, whereby ra_dav's
+# This is a simple regression test for issue #891, whereby ra_neon's
 # REPORT request would fail, because the object no longer exists in HEAD.
 
 def diff_deleted_in_head(sbox):

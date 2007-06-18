@@ -164,8 +164,8 @@ dnl no neon found, print out a message telling the user what to do
 AC_DEFUN(SVN_DOWNLOAD_NEON,
 [
   echo ""
-  echo "An appropriate version of neon could not be found, so libsvn_ra_dav"
-  echo "will not be built.  If you want to build libsvn_ra_dav, please either"
+  echo "An appropriate version of neon could not be found, so libsvn_ra_neon"
+  echo "will not be built.  If you want to build libsvn_ra_neon, please either"
   echo "install neon ${NEON_RECOMMENDED_VER} on this system"
   echo ""
   echo "or"

@@ -34,7 +34,7 @@
 
 #include "svn_private_config.h"
 
-#include "ra_dav.h"
+#include "ra_neon.h"
 #include <assert.h>
 
 
@@ -48,7 +48,7 @@ xml_parser_cleanup(void *baton)
 }
 
 static ne_xml_parser *
-xml_parser_create(svn_ra_dav__request_t *req)
+xml_parser_create(svn_ra_neon__request_t *req)
 {
   ne_xml_parser *p = ne_xml_create();
 
@@ -75,13 +75,13 @@ xml_parser_create(svn_ra_dav__request_t *req)
  * for our custom error parser - could use the ne_basic.h interfaces.
  */
 
-static const svn_ra_dav__xml_elm_t multistatus_elements[] =
+static const svn_ra_neon__xml_elm_t multistatus_elements[] =
   { { "DAV:", "multistatus", ELEM_multistatus, 0 },
     { "DAV:", "response", ELEM_response, 0 },
     { "DAV:", "responsedescription", ELEM_responsedescription,
-      SVN_RA_DAV__XML_CDATA },
-    { "DAV:", "status", ELEM_status, SVN_RA_DAV__XML_CDATA },
-    { "DAV:", "href", ELEM_href, SVN_RA_DAV__XML_CDATA },
+      SVN_RA_NEON__XML_CDATA },
+    { "DAV:", "status", ELEM_status, SVN_RA_NEON__XML_CDATA },
+    { "DAV:", "href", ELEM_href, SVN_RA_NEON__XML_CDATA },
 
     /* We start out basic and are not interested in propstat */
     { "", "", ELEM_unknown, 0 },
@@ -90,14 +90,14 @@ static const svn_ra_dav__xml_elm_t multistatus_elements[] =
 
 
 static const int multistatus_nesting_table[][4] =
-  { { ELEM_root, ELEM_multistatus, SVN_RA_DAV__XML_INVALID },
+  { { ELEM_root, ELEM_multistatus, SVN_RA_NEON__XML_INVALID },
     { ELEM_multistatus, ELEM_response, ELEM_responsedescription,
-      SVN_RA_DAV__XML_DECLINE },
-    { ELEM_responsedescription, SVN_RA_DAV__XML_INVALID },
-    { ELEM_response, ELEM_href, ELEM_status, SVN_RA_DAV__XML_DECLINE },
-    { ELEM_status, SVN_RA_DAV__XML_INVALID },
-    { ELEM_href, SVN_RA_DAV__XML_INVALID },
-    { SVN_RA_DAV__XML_DECLINE },
+      SVN_RA_NEON__XML_DECLINE },
+    { ELEM_responsedescription, SVN_RA_NEON__XML_INVALID },
+    { ELEM_response, ELEM_href, ELEM_status, SVN_RA_NEON__XML_DECLINE },
+    { ELEM_status, SVN_RA_NEON__XML_INVALID },
+    { ELEM_href, SVN_RA_NEON__XML_INVALID },
+    { SVN_RA_NEON__XML_DECLINE },
   };
 
 
@@ -124,7 +124,7 @@ typedef struct
   svn_stringbuf_t *want_cdata;
   svn_stringbuf_t *cdata;
 
-  svn_ra_dav__request_t *req;
+  svn_ra_neon__request_t *req;
   svn_stringbuf_t *description;
   svn_boolean_t contains_error;
 } multistatus_baton_t;
@@ -134,16 +134,16 @@ start_207_element(int *elem, void *baton, int parent,
                   const char *nspace, const char *name, const char **atts)
 {
   multistatus_baton_t *b = baton;
-  const svn_ra_dav__xml_elm_t *elm =
-    svn_ra_dav__lookup_xml_elem(multistatus_elements, nspace, name);
-  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  const svn_ra_neon__xml_elm_t *elm =
+    svn_ra_neon__lookup_xml_elem(multistatus_elements, nspace, name);
+  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_NEON__XML_DECLINE;
 
 
   if (*elem < 1) /* ! > 0 */
     return SVN_NO_ERROR;
 
-  /* We're guaranteed to have ELM now: SVN_RA_DAV__XML_DECLINE < 1 */
-  if (elm->flags & SVN_RA_DAV__XML_CDATA)
+  /* We're guaranteed to have ELM now: SVN_RA_NEON__XML_DECLINE < 1 */
+  if (elm->flags & SVN_RA_NEON__XML_CDATA)
     {
       svn_stringbuf_setempty(b->cdata);
       b->want_cdata = b->cdata;
@@ -201,14 +201,14 @@ end_207_element(void *baton, int state,
 
 
 static ne_xml_parser *
-multistatus_parser_create(svn_ra_dav__request_t *req)
+multistatus_parser_create(svn_ra_neon__request_t *req)
 {
   multistatus_baton_t *b = apr_pcalloc(req->pool, sizeof(*b));
   ne_xml_parser *multistatus_parser =
-    svn_ra_dav__xml_parser_create(req, ne_accept_207,
-                                  start_207_element,
-                                  svn_ra_dav__xml_collect_cdata,
-                                  end_207_element, b);
+    svn_ra_neon__xml_parser_create(req, ne_accept_207,
+                                   start_207_element,
+                                   svn_ra_neon__xml_collect_cdata,
+                                   end_207_element, b);
   return multistatus_parser;
 }
 
@@ -224,7 +224,7 @@ dav_request_cleanup(void *baton);
 static apr_status_t
 dav_request_sess_cleanup(void *baton)
 {
-  svn_ra_dav__request_t *req = baton;
+  svn_ra_neon__request_t *req = baton;
 
   /* Make sure we don't run the 'child' cleanup anymore:
      the pool it refers to probably doesn't exist anymore when it
@@ -240,7 +240,7 @@ dav_request_sess_cleanup(void *baton)
 static apr_status_t
 dav_request_cleanup(void *baton)
 {
-  svn_ra_dav__request_t *req = baton;
+  svn_ra_neon__request_t *req = baton;
   apr_pool_cleanup_run(req->sess->pool, req, dav_request_sess_cleanup);
 
   return APR_SUCCESS;
@@ -278,13 +278,13 @@ path_from_url(const char *url)
   return p;
 }
 
-svn_ra_dav__request_t *
-svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
-                           const char *method, const char *url,
-                           apr_pool_t *pool)
+svn_ra_neon__request_t *
+svn_ra_neon__request_create(svn_ra_neon__session_t *sess,
+                            const char *method, const char *url,
+                            apr_pool_t *pool)
 {
   apr_pool_t *reqpool = svn_pool_create(pool);
-  svn_ra_dav__request_t *req = apr_pcalloc(reqpool, sizeof(*req));
+  svn_ra_neon__request_t *req = apr_pcalloc(reqpool, sizeof(*req));
 
   /* We never want to send Neon an absolute URL, since that can cause
      problems with some servers (for example, those that may be accessed
@@ -324,7 +324,7 @@ compressed_body_reader_cleanup(void *baton)
 }
 
 static void
-attach_ne_body_reader(svn_ra_dav__request_t *req,
+attach_ne_body_reader(svn_ra_neon__request_t *req,
                       ne_accept_response accpt,
                       ne_block_reader reader,
                       void *userdata)
@@ -346,8 +346,8 @@ attach_ne_body_reader(svn_ra_dav__request_t *req,
 
 typedef struct
 {
-  svn_ra_dav__request_t *req;
-  svn_ra_dav__block_reader real_reader;
+  svn_ra_neon__request_t *req;
+  svn_ra_neon__block_reader real_reader;
   void *real_baton;
 } body_reader_wrapper_baton_t;
 
@@ -360,7 +360,7 @@ body_reader_wrapper(void *userdata, const char *data, size_t len)
     /* We already had an error? Bail out. */
     return 1;
 
-  SVN_RA_DAV__REQ_ERR
+  SVN_RA_NEON__REQ_ERR
     (b->req,
      b->real_reader(b->real_baton, data, len));
 
@@ -371,10 +371,10 @@ body_reader_wrapper(void *userdata, const char *data, size_t len)
 }
 
 void
-svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
-                                     ne_accept_response accpt,
-                                     svn_ra_dav__block_reader reader,
-                                     void *userdata)
+svn_ra_neon__add_response_body_reader(svn_ra_neon__request_t *req,
+                                      ne_accept_response accpt,
+                                      svn_ra_neon__block_reader reader,
+                                      void *userdata)
 {
   body_reader_wrapper_baton_t *b = apr_palloc(req->pool, sizeof(*b));
 
@@ -387,14 +387,14 @@ svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
 
 
 
-const svn_ra_dav__xml_elm_t *
-svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
-                            const char *nspace,
-                            const char *name)
+const svn_ra_neon__xml_elm_t *
+svn_ra_neon__lookup_xml_elem(const svn_ra_neon__xml_elm_t *table,
+                             const char *nspace,
+                             const char *name)
 {
   /* placeholder for `unknown' element if it's present */
-  const svn_ra_dav__xml_elm_t *elem_unknown = NULL;
-  const svn_ra_dav__xml_elm_t *elem;
+  const svn_ra_neon__xml_elm_t *elem_unknown = NULL;
+  const svn_ra_neon__xml_elm_t *elem;
 
   for(elem = table; elem->nspace; ++elem)
     {
@@ -414,8 +414,8 @@ svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
 }
 
 svn_error_t *
-svn_ra_dav__xml_collect_cdata(void *baton, int state,
-                              const char *cdata, size_t len)
+svn_ra_neon__xml_collect_cdata(void *baton, int state,
+                               const char *cdata, size_t len)
 {
   svn_stringbuf_t **b = baton;
 
@@ -427,7 +427,7 @@ svn_ra_dav__xml_collect_cdata(void *baton, int state,
 
 
 
-void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
+void svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src)
 {
   ne_uri parsed_url;
 
@@ -444,7 +444,7 @@ void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
 }
 
 static svn_error_t *
-generate_error(svn_ra_dav__request_t *req, apr_pool_t *pool)
+generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
 {
   int errcode = SVN_ERR_RA_DAV_REQUEST_FAILED;
   const char *context =
@@ -473,7 +473,7 @@ generate_error(svn_ra_dav__request_t *req, apr_pool_t *pool)
                               " please relocate")
                           : _("Repository moved temporarily to '%s';"
                               " please relocate"),
-                          svn_ra_dav__request_get_location(req, pool)));
+                          svn_ra_neon__request_get_location(req, pool)));
 
         default:
           return svn_error_create
@@ -518,9 +518,9 @@ generate_error(svn_ra_dav__request_t *req, apr_pool_t *pool)
 
 
 /* Custom function of type ne_accept_response. */
-static int ra_dav_error_accepter(void *userdata,
-                                 ne_request *req,
-                                 const ne_status *st)
+static int ra_neon_error_accepter(void *userdata,
+                                  ne_request *req,
+                                  const ne_status *st)
 {
   /* Before, this function was being run for *all* responses including
      the 401 auth challenge.  In neon 0.24.x that was harmless.  But
@@ -542,12 +542,12 @@ static int ra_dav_error_accepter(void *userdata,
 }
 
 
-static const svn_ra_dav__xml_elm_t error_elements[] =
+static const svn_ra_neon__xml_elm_t error_elements[] =
 {
   { "DAV:", "error", ELEM_error, 0 },
   { "svn:", "error", ELEM_svn_error, 0 },
   { "http://apache.org/dav/xmlns", "human-readable", 
-    ELEM_human_readable, SVN_RA_DAV__XML_CDATA },
+    ELEM_human_readable, SVN_RA_NEON__XML_CDATA },
 
   /* ### our validator doesn't yet recognize the rich, specific
          <D:some-condition-failed/> objects as defined by DeltaV.*/
@@ -556,8 +556,8 @@ static const svn_ra_dav__xml_elm_t error_elements[] =
 };
 
 
-static int validate_error_elements(svn_ra_dav__xml_elmid parent,
-                                   svn_ra_dav__xml_elmid child)
+static int validate_error_elements(svn_ra_neon__xml_elmid parent,
+                                   svn_ra_neon__xml_elmid child)
 {
   switch (parent)
     {
@@ -565,18 +565,18 @@ static int validate_error_elements(svn_ra_dav__xml_elmid parent,
       if (child == ELEM_error)
         return child;
       else
-        return SVN_RA_DAV__XML_INVALID;
+        return SVN_RA_NEON__XML_INVALID;
 
     case ELEM_error:
       if (child == ELEM_svn_error
           || child == ELEM_human_readable)
         return child;
       else
-        return SVN_RA_DAV__XML_DECLINE;  /* ignore if something else
+        return SVN_RA_NEON__XML_DECLINE;  /* ignore if something else
                                             was in there */
 
     default:
-      return SVN_RA_DAV__XML_DECLINE;
+      return SVN_RA_NEON__XML_DECLINE;
     }
 
   /* NOTREACHED */
@@ -610,10 +610,10 @@ static int
 start_err_element(void *baton, int parent,
                   const char *nspace, const char *name, const char **atts)
 {
-  const svn_ra_dav__xml_elm_t *elm
-    = svn_ra_dav__lookup_xml_elem(error_elements, nspace, name);
+  const svn_ra_neon__xml_elm_t *elm
+    = svn_ra_neon__lookup_xml_elem(error_elements, nspace, name);
   int acc = elm
-    ? validate_error_elements(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+    ? validate_error_elements(parent, elm->id) : SVN_RA_NEON__XML_DECLINE;
   error_parser_baton_t *b = baton;
   svn_error_t **err = &(b->tmp_err);
 
@@ -725,7 +725,7 @@ error_parser_baton_cleanup(void *baton)
 }
 
 static ne_xml_parser *
-error_parser_create(svn_ra_dav__request_t *req)
+error_parser_create(svn_ra_neon__request_t *req)
 {
   error_parser_baton_t *b = apr_palloc(req->pool, sizeof(*b));
   ne_xml_parser *error_parser;
@@ -750,7 +750,7 @@ error_parser_create(svn_ra_dav__request_t *req)
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
-  attach_ne_body_reader(req, ra_dav_error_accepter,
+  attach_ne_body_reader(req, ra_neon_error_accepter,
                         ne_xml_parse_v, error_parser);
 
   return error_parser;
@@ -764,21 +764,21 @@ error_parser_create(svn_ra_dav__request_t *req)
 
 typedef struct
 {
-  svn_ra_dav__request_t *req;
+  svn_ra_neon__request_t *req;
   apr_file_t *body_file;
 } body_provider_baton_t;
 
-static ssize_t ra_dav_body_provider(void *userdata,
-                                    char *buffer,
-                                    size_t buflen)
+static ssize_t ra_neon_body_provider(void *userdata,
+                                     char *buffer,
+                                     size_t buflen)
 {
   body_provider_baton_t *b = userdata;
-  svn_ra_dav__request_t *req = b->req;
+  svn_ra_neon__request_t *req = b->req;
   apr_file_t *body_file = b->body_file;
 
   if (req->sess->callbacks &&
       req->sess->callbacks->cancel_func)
-    SVN_RA_DAV__REQ_ERR
+    SVN_RA_NEON__REQ_ERR
       (req, (req->sess->callbacks->cancel_func)(req->sess->callback_baton));
 
   if (req->err)
@@ -789,7 +789,7 @@ static ssize_t ra_dav_body_provider(void *userdata,
     {
       /* This is the beginning of a new body pull. Rewind the file. */
       apr_off_t offset = 0;
-      SVN_RA_DAV__REQ_ERR
+      SVN_RA_NEON__REQ_ERR
         (b->req,
          svn_io_file_seek(body_file, APR_SET, &offset, req->iterpool));
       return (req->err ? -1 : 0);
@@ -807,7 +807,7 @@ static ssize_t ra_dav_body_provider(void *userdata,
               return 0;
             }
 
-          SVN_RA_DAV__REQ_ERR(req, err);
+          SVN_RA_NEON__REQ_ERR(req, err);
           return -1;
         }
       else
@@ -816,8 +816,8 @@ static ssize_t ra_dav_body_provider(void *userdata,
 }
 
 
-svn_error_t *svn_ra_dav__set_neon_body_provider(svn_ra_dav__request_t *req,
-                                                apr_file_t *body_file)
+svn_error_t *svn_ra_neon__set_neon_body_provider(svn_ra_neon__request_t *req,
+                                                 apr_file_t *body_file)
 {
   apr_status_t status;
   apr_finfo_t finfo;
@@ -832,7 +832,7 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(svn_ra_dav__request_t *req,
   b->req = req;
 
   ne_set_request_body_provider(req->ne_req, (size_t) finfo.size,
-                               ra_dav_body_provider, b);
+                               ra_neon_body_provider, b);
   return SVN_NO_ERROR;
 }
 
@@ -841,11 +841,11 @@ typedef struct spool_reader_baton_t
 {
   const char *spool_file_name;
   apr_file_t *spool_file;
-  svn_ra_dav__request_t *req;
+  svn_ra_neon__request_t *req;
 } spool_reader_baton_t;
 
 
-/* This implements the svn_ra_dav__block_reader() callback interface. */
+/* This implements the svn_ra_neon__block_reader() callback interface. */
 static svn_error_t *
 spool_reader(void *userdata,
              const char *buf,
@@ -862,7 +862,7 @@ spool_reader(void *userdata,
 
 
 static svn_error_t *
-parse_spool_file(svn_ra_dav__session_t *ras,
+parse_spool_file(svn_ra_neon__session_t *ras,
                  const char *spool_file_name,
                  ne_xml_parser *success_parser,
                  apr_pool_t *pool)
@@ -905,13 +905,13 @@ parse_spool_file(svn_ra_dav__session_t *ras,
  * error code is returned to the parser.
  */
 typedef struct {
-  svn_ra_dav__request_t *req;
+  svn_ra_neon__request_t *req;
   ne_xml_parser *parser;
 
   void *baton;
-  svn_ra_dav__startelm_cb_t startelm_cb;
-  svn_ra_dav__cdata_cb_t cdata_cb;
-  svn_ra_dav__endelm_cb_t endelm_cb;
+  svn_ra_neon__startelm_cb_t startelm_cb;
+  svn_ra_neon__cdata_cb_t cdata_cb;
+  svn_ra_neon__endelm_cb_t endelm_cb;
 } parser_wrapper_baton_t;
 
 static int
@@ -922,15 +922,15 @@ wrapper_startelm_cb(void *baton,
                     const char **atts)
 {
   parser_wrapper_baton_t *pwb = baton;
-  int elem = SVN_RA_DAV__XML_DECLINE;
+  int elem = SVN_RA_NEON__XML_DECLINE;
 
   if (pwb->startelm_cb)
-    SVN_RA_DAV__REQ_ERR
+    SVN_RA_NEON__REQ_ERR
       (pwb->req,
        pwb->startelm_cb(&elem, pwb->baton, parent, nspace, name, atts));
 
-  if (elem == SVN_RA_DAV__XML_INVALID)
-    SVN_RA_DAV__REQ_ERR
+  if (elem == SVN_RA_NEON__XML_INVALID)
+    SVN_RA_NEON__REQ_ERR
       (pwb->req,
        svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL));
 
@@ -946,7 +946,7 @@ wrapper_cdata_cb(void *baton, int state, const char *cdata, size_t len)
   parser_wrapper_baton_t *pwb = baton;
 
   if (pwb->cdata_cb)
-    SVN_RA_DAV__REQ_ERR
+    SVN_RA_NEON__REQ_ERR
       (pwb->req,
        pwb->cdata_cb(pwb->baton, state, cdata, len));
 
@@ -965,7 +965,7 @@ wrapper_endelm_cb(void *baton,
   parser_wrapper_baton_t *pwb = baton;
 
   if (pwb->endelm_cb)
-    SVN_RA_DAV__REQ_ERR
+    SVN_RA_NEON__REQ_ERR
       (pwb->req,
        pwb->endelm_cb(pwb->baton, state, nspace, name));
 
@@ -979,13 +979,13 @@ static int
 wrapper_reader_cb(void *baton, const char *data, size_t len)
 {
   parser_wrapper_baton_t *pwb = baton;
-  svn_ra_dav__session_t *sess = pwb->req->sess;
+  svn_ra_neon__session_t *sess = pwb->req->sess;
 
   if (pwb->req->err)
     return 1;
 
   if (sess->callbacks->cancel_func)
-    SVN_RA_DAV__REQ_ERR
+    SVN_RA_NEON__REQ_ERR
       (pwb->req,
        (sess->callbacks->cancel_func)(sess->callback_baton));
 
@@ -996,12 +996,12 @@ wrapper_reader_cb(void *baton, const char *data, size_t len)
 }
 
 ne_xml_parser *
-svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req,
-                              ne_accept_response accpt,
-                              svn_ra_dav__startelm_cb_t startelm_cb,
-                              svn_ra_dav__cdata_cb_t cdata_cb,
-                              svn_ra_dav__endelm_cb_t endelm_cb,
-                              void *baton)
+svn_ra_neon__xml_parser_create(svn_ra_neon__request_t *req,
+                               ne_accept_response accpt,
+                               svn_ra_neon__startelm_cb_t startelm_cb,
+                               svn_ra_neon__cdata_cb_t cdata_cb,
+                               svn_ra_neon__endelm_cb_t endelm_cb,
+                               void *baton)
 {
   ne_xml_parser *p = xml_parser_create(req);
   parser_wrapper_baton_t *pwb = apr_palloc(req->pool, sizeof(*pwb));
@@ -1029,17 +1029,17 @@ typedef struct cancellation_baton_t
 {
   ne_block_reader real_cb;
   void *real_userdata;
-  svn_ra_dav__request_t *req;
+  svn_ra_neon__request_t *req;
 } cancellation_baton_t;
 
 static int
 cancellation_callback(void *userdata, const char *block, size_t len)
 {
   cancellation_baton_t *b = userdata;
-  svn_ra_dav__session_t *ras = b->req->sess;
+  svn_ra_neon__session_t *ras = b->req->sess;
 
   if (ras->callbacks->cancel_func)
-    SVN_RA_DAV__REQ_ERR
+    SVN_RA_NEON__REQ_ERR
       (b->req,
        (ras->callbacks->cancel_func)(ras->callback_baton));
 
@@ -1051,7 +1051,7 @@ cancellation_callback(void *userdata, const char *block, size_t len)
 
 
 static cancellation_baton_t *
-get_cancellation_baton(svn_ra_dav__request_t *req,
+get_cancellation_baton(svn_ra_neon__request_t *req,
                        ne_block_reader real_cb,
                        void *real_userdata,
                        apr_pool_t *pool)
@@ -1065,42 +1065,42 @@ get_cancellation_baton(svn_ra_dav__request_t *req,
   return b;
 }
 
-/* See doc string for svn_ra_dav__parsed_request. */
+/* See doc string for svn_ra_neon__parsed_request. */
 static svn_error_t *
-parsed_request(svn_ra_dav__session_t *ras,
+parsed_request(svn_ra_neon__session_t *ras,
                const char *method,
                const char *url,
                const char *body,
                apr_file_t *body_file,
                void set_parser(ne_xml_parser *parser,
                                void *baton),
-               svn_ra_dav__startelm_cb_t startelm_cb,
-               svn_ra_dav__cdata_cb_t cdata_cb,
-               svn_ra_dav__endelm_cb_t endelm_cb,
+               svn_ra_neon__startelm_cb_t startelm_cb,
+               svn_ra_neon__cdata_cb_t cdata_cb,
+               svn_ra_neon__endelm_cb_t endelm_cb,
                void *baton,
                apr_hash_t *extra_headers,
                int *status_code,
                svn_boolean_t spool_response,
                apr_pool_t *pool)
 {
-  svn_ra_dav__request_t *req;
+  svn_ra_neon__request_t *req;
   ne_xml_parser *success_parser = NULL;
   const char *msg;
   spool_reader_baton_t spool_reader_baton;
 
   /* create/prep the request */
-  req = svn_ra_dav__request_create(ras, method, url, pool);
+  req = svn_ra_neon__request_create(ras, method, url, pool);
 
   if (body == NULL)
-    SVN_ERR(svn_ra_dav__set_neon_body_provider(req, body_file));
+    SVN_ERR(svn_ra_neon__set_neon_body_provider(req, body_file));
 
   /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req->ne_req, "Content-Type", "text/xml");
 
   /* create a parser to read the normal response body */
-  success_parser = svn_ra_dav__xml_parser_create(req, NULL,
-                                                 startelm_cb, cdata_cb,
-                                                 endelm_cb, baton);
+  success_parser = svn_ra_neon__xml_parser_create(req, NULL,
+                                                  startelm_cb, cdata_cb,
+                                                  endelm_cb, baton);
 
   /* if our caller is interested in having access to this parser, call
      the SET_PARSER callback with BATON. */
@@ -1124,8 +1124,8 @@ parsed_request(svn_ra_dav__session_t *ras,
                                        req->pool));
       spool_reader_baton.req = req;
 
-      svn_ra_dav__add_response_body_reader(req, ne_accept_2xx, spool_reader,
-                                           &spool_reader_baton);
+      svn_ra_neon__add_response_body_reader(req, ne_accept_2xx, spool_reader,
+                                            &spool_reader_baton);
     }
   else
     attach_ne_body_reader(req, ne_accept_2xx, cancellation_callback,
@@ -1133,12 +1133,12 @@ parsed_request(svn_ra_dav__session_t *ras,
                                                  success_parser, pool));
 
   /* run the request and get the resulting status code. */
-  SVN_ERR(svn_ra_dav__request_dispatch(status_code,
-                                       req, extra_headers, body,
-                                       (strcmp(method, "PROPFIND") == 0)
-                                       ? 207 : 200,
-                                       0, /* not used */
-                                       pool));
+  SVN_ERR(svn_ra_neon__request_dispatch(status_code,
+                                        req, extra_headers, body,
+                                        (strcmp(method, "PROPFIND") == 0)
+                                        ? 207 : 200,
+                                        0, /* not used */
+                                        pool));
 
   if (spool_response)
     {
@@ -1146,7 +1146,7 @@ parsed_request(svn_ra_dav__session_t *ras,
       (void) apr_file_close(spool_reader_baton.spool_file);
 
       /* The success parser may set an error value in req->err */
-      SVN_RA_DAV__REQ_ERR
+      SVN_RA_NEON__REQ_ERR
         (req, parse_spool_file(ras, spool_reader_baton.spool_file_name,
                                success_parser, req->pool));
       if (req->err)
@@ -1167,28 +1167,28 @@ parsed_request(svn_ra_dav__session_t *ras,
                                "in the response: %s (%s)"),
                              method, msg, url);
 
-  svn_ra_dav__request_destroy(req);
+  svn_ra_neon__request_destroy(req);
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_ra_dav__parsed_request(svn_ra_dav__session_t *sess,
-                           const char *method,
-                           const char *url,
-                           const char *body,
-                           apr_file_t *body_file,
-                           void set_parser(ne_xml_parser *parser,
-                                           void *baton),
-                           svn_ra_dav__startelm_cb_t startelm_cb,
-                           svn_ra_dav__cdata_cb_t cdata_cb,
-                           svn_ra_dav__endelm_cb_t endelm_cb,
-                           void *baton,
-                           apr_hash_t *extra_headers,
-                           int *status_code,
-                           svn_boolean_t spool_response,
-                           apr_pool_t *pool)
+svn_ra_neon__parsed_request(svn_ra_neon__session_t *sess,
+                            const char *method,
+                            const char *url,
+                            const char *body,
+                            apr_file_t *body_file,
+                            void set_parser(ne_xml_parser *parser,
+                                            void *baton),
+                            svn_ra_neon__startelm_cb_t startelm_cb,
+                            svn_ra_neon__cdata_cb_t cdata_cb,
+                            svn_ra_neon__endelm_cb_t endelm_cb,
+                            void *baton,
+                            apr_hash_t *extra_headers,
+                            int *status_code,
+                            svn_boolean_t spool_response,
+                            apr_pool_t *pool)
 {
   SVN_ERR_W(parsed_request(sess, method, url, body, body_file,
                            set_parser,
@@ -1202,53 +1202,53 @@ svn_ra_dav__parsed_request(svn_ra_dav__session_t *sess,
 
 
 svn_error_t *
-svn_ra_dav__simple_request(int *code,
-                           svn_ra_dav__session_t *ras,
-                           const char *method,
-                           const char *url,
-                           apr_hash_t *extra_headers,
-                           const char *body,
-                           int okay_1, int okay_2, apr_pool_t *pool)
+svn_ra_neon__simple_request(int *code,
+                            svn_ra_neon__session_t *ras,
+                            const char *method,
+                            const char *url,
+                            apr_hash_t *extra_headers,
+                            const char *body,
+                            int okay_1, int okay_2, apr_pool_t *pool)
 {
-  svn_ra_dav__request_t *req =
-    svn_ra_dav__request_create(ras, method, url, pool);
+  svn_ra_neon__request_t *req =
+    svn_ra_neon__request_create(ras, method, url, pool);
 
   /* we don't need the status parser: it's attached to the request
      and detected errors will be returned there... */
   (void) multistatus_parser_create(req);
 
-  /* svn_ra_dav__request_dispatch() adds the custom error response
+  /* svn_ra_neon__request_dispatch() adds the custom error response
      reader.  Neon will take care of the Content-Length calculation */
-  SVN_ERR(svn_ra_dav__request_dispatch(code, req, extra_headers, 
-                                       body ? body : "", 
-                                       okay_1, okay_2, pool));
-  svn_ra_dav__request_destroy(req);
+  SVN_ERR(svn_ra_neon__request_dispatch(code, req, extra_headers, 
+                                        body ? body : "", 
+                                        okay_1, okay_2, pool));
+  svn_ra_neon__request_destroy(req);
 
   return SVN_NO_ERROR;
 }
 
 void
-svn_ra_dav__add_depth_header(apr_hash_t *extra_headers, int depth)
+svn_ra_neon__add_depth_header(apr_hash_t *extra_headers, int depth)
 {
   /*  assert(extra_headers != NULL);
-  assert(depth == SVN_RA_DAV__DEPTH_ZERO
-         || depth == SVN_RA_DAV__DEPTH_ONE
-         || depth == SVN_RA_DAV__DEPTH_INFINITE); */
+  assert(depth == SVN_RA_NEON__DEPTH_ZERO
+         || depth == SVN_RA_NEON__DEPTH_ONE
+         || depth == SVN_RA_NEON__DEPTH_INFINITE); */
   apr_hash_set(extra_headers, "Depth", APR_HASH_KEY_STRING,
-               (depth == SVN_RA_DAV__DEPTH_INFINITE)
-               ? "infinity" : (depth == SVN_RA_DAV__DEPTH_ZERO) ? "0" : "1");
+               (depth == SVN_RA_NEON__DEPTH_INFINITE)
+               ? "infinity" : (depth == SVN_RA_NEON__DEPTH_ZERO) ? "0" : "1");
 
   return;
 }
 
 
 svn_error_t *
-svn_ra_dav__copy(svn_ra_dav__session_t *ras,
-                 svn_boolean_t overwrite,
-                 int depth,
-                 const char *src,
-                 const char *dst,
-                 apr_pool_t *pool)
+svn_ra_neon__copy(svn_ra_neon__session_t *ras,
+                  svn_boolean_t overwrite,
+                  int depth,
+                  const char *src,
+                  const char *dst,
+                  apr_pool_t *pool)
 {
   const char *abs_dst;
   apr_hash_t *extra_headers = apr_hash_make(pool);
@@ -1258,17 +1258,17 @@ svn_ra_dav__copy(svn_ra_dav__session_t *ras,
   apr_hash_set(extra_headers, "Destination", APR_HASH_KEY_STRING, abs_dst);
   apr_hash_set(extra_headers, "Overwrite", APR_HASH_KEY_STRING,
                overwrite ? "T" : "F");
-  svn_ra_dav__add_depth_header(extra_headers, depth);
+  svn_ra_neon__add_depth_header(extra_headers, depth);
 
-  return svn_ra_dav__simple_request(NULL, ras, "COPY", src, extra_headers,
-                                    NULL, 201, 204, pool);
+  return svn_ra_neon__simple_request(NULL, ras, "COPY", src, extra_headers,
+                                     NULL, 201, 204, pool);
 }
 
 
 
 svn_error_t *
-svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras,
-                                  apr_pool_t *pool)
+svn_ra_neon__maybe_store_auth_info(svn_ra_neon__session_t *ras,
+                                   apr_pool_t *pool)
 {
   /* No auth_baton?  Never mind. */
   if (! ras->callbacks->auth_baton)
@@ -1283,13 +1283,13 @@ svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras,
 
 
 svn_error_t *
-svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
-                                               svn_ra_dav__session_t *ras,
-                                               apr_pool_t *pool)
+svn_ra_neon__maybe_store_auth_info_after_result(svn_error_t *err,
+                                                svn_ra_neon__session_t *ras,
+                                                apr_pool_t *pool)
 {
   if (! err || (err->apr_err != SVN_ERR_RA_NOT_AUTHORIZED))
     {
-      svn_error_t *err2 = svn_ra_dav__maybe_store_auth_info(ras, pool);
+      svn_error_t *err2 = svn_ra_neon__maybe_store_auth_info(ras, pool);
       if (err2 && ! err)
         return err2;
       else if (err)
@@ -1304,13 +1304,13 @@ svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
 
 
 svn_error_t *
-svn_ra_dav__request_dispatch(int *code_p,
-                             svn_ra_dav__request_t *req,
-                             apr_hash_t *extra_headers,
-                             const char *body,
-                             int okay_1,
-                             int okay_2,
-                             apr_pool_t *pool)
+svn_ra_neon__request_dispatch(int *code_p,
+                              svn_ra_neon__request_t *req,
+                              apr_hash_t *extra_headers,
+                              const char *body,
+                              int okay_1,
+                              int okay_2,
+                              apr_pool_t *pool)
 {
   ne_xml_parser *error_parser;
   const ne_status *statstruct;
@@ -1369,8 +1369,8 @@ svn_ra_dav__request_dispatch(int *code_p,
 
 
 const char *
-svn_ra_dav__request_get_location(svn_ra_dav__request_t *request,
-                                 apr_pool_t *pool)
+svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
+                                  apr_pool_t *pool)
 {
   const char *val = ne_get_response_header(request->ne_req, "Location");
   return val ? apr_pstrdup(pool, val) : NULL;
