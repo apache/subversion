@@ -2020,6 +2020,7 @@ Currently this is:
   `svn-log-edit-buffer-name'
   *svn-property-edit*
   *svn-log*
+  *svn-info*
 When called with a prefix argument, ARG, switch back to the window configuration that was
 in use before `svn-status' was called."
   (interactive "P")
@@ -2027,7 +2028,7 @@ in use before `svn-status' was called."
          (when svn-status-initial-window-configuration
            (set-window-configuration svn-status-initial-window-configuration)))
         (t
-         (let ((bl `(,svn-log-edit-buffer-name "*svn-property-edit*" "*svn-log*" ,svn-process-buffer-name)))
+         (let ((bl `(,svn-log-edit-buffer-name "*svn-property-edit*" "*svn-log*" "*svn-info*" ,svn-process-buffer-name)))
            (while bl
              (when (get-buffer (car bl))
                (bury-buffer (car bl)))
