@@ -314,7 +314,7 @@ class WinGeneratorBase(GeneratorBase):
                                install_targets)
     if self.without_neon:
       install_targets = filter(lambda x: x.name != 'neon', install_targets)
-      install_targets = filter(lambda x: x.name != 'libsvn_ra_dav',
+      install_targets = filter(lambda x: x.name != 'libsvn_ra_neon',
                                install_targets)
 
     dll_targets = []
@@ -767,7 +767,7 @@ class WinGeneratorBase(GeneratorBase):
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
 
     if self.neon_lib:
-      fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_DAV")
+      fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_NEON")
 
     # check we have sasl
     if self.sasl_path:

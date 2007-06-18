@@ -97,7 +97,7 @@ def test_misc(sbox):
   expect('uuid', [ uuid + '\n' ], run_svnlook('uuid', repo_dir))
 
   # it would be nice to test the author too, but the current test framework
-  # does not pull a username when testing over ra_dav or ra_svn,
+  # does not pull a username when testing over ra_neon or ra_svn,
   # so the commits have an empty author.
 
   expect('log', [ 'log msg\n' ], run_svnlook('log', repo_dir))

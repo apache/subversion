@@ -42,9 +42,9 @@
 
 /* ### This file maps URL schemes to particular RA libraries.
    ### Currently, the only pair of RA libraries which support the same
-   ### protocols are dav and serf.  svn_ra_open2 makes the assumption
+   ### protocols are neon and serf.  svn_ra_open2 makes the assumption
    ### that this is the case; that their 'schemes' fields are both
-   ### dav_schemes; and that "dav" is listed first.
+   ### dav_schemes; and that "neon" is listed first.
 
    ### Note: users can choose which dav library to use with the
    ### http-library preference in .subversion/servers; currently it is
@@ -52,7 +52,7 @@
    ### sections.  Additionally, it is ignored by any code which uses
    ### the pre-1.2 API svn_ra_get_ra_library instead of svn_ra_open. */
 
-#if defined(SVN_LIBSVN_CLIENT_LINKS_RA_DAV) && defined (SVN_LIBSVN_CLIENT_LINKS_RA_SERF)
+#if defined(SVN_LIBSVN_CLIENT_LINKS_RA_NEON) && defined (SVN_LIBSVN_CLIENT_LINKS_RA_SERF)
 #define MUST_CHOOSE_DAV
 #endif
 
@@ -60,14 +60,14 @@
 /* These are the URI schemes that the respective libraries *may* support.
  * The schemes actually supported may be a subset of the schemes listed below.
  * This can't be determine until the library is loaded.
- * (Currently, this applies to the https scheme of ra_dav, which is only
+ * (Currently, this applies to the https scheme, which is only
  * available if SSL is supported.) */
 static const char * const dav_schemes[] = { "http", "https", NULL };
 static const char * const svn_schemes[] = { "svn", NULL };
 static const char * const local_schemes[] = { "file", NULL };
 
 static const struct ra_lib_defn {
-  /* the name of this RA library (e.g. "dav" or "local") */
+  /* the name of this RA library (e.g. "neon" or "local") */
   const char *ra_name;
 
   const char * const *schemes;
@@ -76,10 +76,10 @@ static const struct ra_lib_defn {
   svn_ra_init_func_t compat_initfunc;
 } ra_libraries[] = {
   {
-    "dav",
+    "neon",
     dav_schemes,
-#ifdef SVN_LIBSVN_CLIENT_LINKS_RA_DAV
-    svn_ra_dav__init,
+#ifdef SVN_LIBSVN_CLIENT_LINKS_RA_NEON
+    svn_ra_neon__init,
     svn_ra_dav_init
 #endif
   },
@@ -383,7 +383,7 @@ svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
   const svn_ra__vtable_t *vtable = NULL;
 #ifdef MUST_CHOOSE_DAV
   svn_config_t *servers = NULL;
-  const char *http_library = "dav";
+  const char *http_library = "neon";
 
   if (config)
     {
@@ -392,8 +392,8 @@ svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
       if (servers)
         {
           svn_config_get(servers, &http_library, SVN_CONFIG_SECTION_GLOBAL,
-                         SVN_CONFIG_OPTION_HTTP_LIBRARY, "dav");
-          if (strcmp(http_library, "dav") != 0 &&
+                         SVN_CONFIG_OPTION_HTTP_LIBRARY, "neon");
+          if (strcmp(http_library, "neon") != 0 &&
               strcmp(http_library, "serf") != 0)
             return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
                                     _("Invalid config: unknown HTTP library"));
@@ -1100,7 +1100,7 @@ svn_ra_get_ra_library(svn_ra_plugin_t **library,
    implementation for svn_ra_foo_init which returns a "not implemented"
    error. */
 
-#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_DAV
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_NEON
 svn_error_t *
 svn_ra_dav_init(int abi_version,
                 apr_pool_t *pool,
@@ -1108,7 +1108,7 @@ svn_ra_dav_init(int abi_version,
 {
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 }
-#endif /* ! SVN_LIBSVN_CLIENT_LINKS_RA_DAV */
+#endif /* ! SVN_LIBSVN_CLIENT_LINKS_RA_NEON */
 
 #ifndef SVN_LIBSVN_CLIENT_LINKS_RA_SVN
 svn_error_t *

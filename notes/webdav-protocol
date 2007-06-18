@@ -40,7 +40,7 @@ Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
   * svn checkout / svn export / svn update:
    (do_update RA interface)
 
-     ra_dav:        PROPFIND, REPORT              ('update-report' w/send-all)
+     ra_neon:       PROPFIND, REPORT              ('update-report' w/send-all)
 
      ra_serf:       PROPFIND, REPORT              ('update-report')
                     ... then many PROPFIND/GETs on many parallel connections
@@ -98,7 +98,7 @@ Write Commands  :  (MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL, MOVE,
   may try to remove the transaction with a DELETE.
 
   * svn commit:
-     ra_dav:        OPTIONS, PROPFIND, MKACTIVITY, 
+     ra_neon:       OPTIONS, PROPFIND, MKACTIVITY, 
                     {CHECKOUT, COPY, MOVE, DELETE, PROPPATCH, PUT, MKCOL},
                     MERGE (DELETE)
 
@@ -136,7 +136,7 @@ Write Commands  :  (MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL, MOVE,
 Remembering Our Location
 ========================
 
-For a file in our WC, both ra_serf and ra_dav will store the checked-in href
+For a file in our WC, both ra_serf and ra_neon will store the checked-in href
 (where the original text-base and properties can be found) in the
 svn:wc:ra_dav:version-url wcprop.
 
@@ -157,7 +157,7 @@ send two extra headers:
 
 The server may choose not to return svndiff content but return full-text.
 
-(ra_dav has this same functionality, but is largely just dead code.)
+(ra_neon has this same functionality, but is largely just dead code.)
 
 Example
 -------

@@ -40,7 +40,7 @@
 #include "svn_xml.h"
 #include "svn_private_config.h"
 
-#include "ra_dav.h"
+#include "ra_neon.h"
 
 #define DEFAULT_HTTP_TIMEOUT 3600
 
@@ -68,7 +68,7 @@ static int request_auth(void *userdata, const char *realm, int attempt,
                         char *username, char *password)
 {
   svn_error_t *err;
-  svn_ra_dav__session_t *ras = userdata;
+  svn_ra_neon__session_t *ras = userdata;
   void *creds;
   svn_auth_cred_simple_t *simple_creds;  
 
@@ -165,7 +165,7 @@ server_ssl_callback(void *userdata,
                     int failures,
                     const ne_ssl_certificate *cert)
 {
-  svn_ra_dav__session_t *ras = userdata;
+  svn_ra_neon__session_t *ras = userdata;
   svn_auth_cred_ssl_server_trust_t *server_creds = NULL;
   void *creds;
   svn_auth_iterstate_t *state;
@@ -236,7 +236,7 @@ server_ssl_callback(void *userdata,
 }
 
 static svn_boolean_t
-client_ssl_decrypt_cert(svn_ra_dav__session_t *ras,
+client_ssl_decrypt_cert(svn_ra_neon__session_t *ras,
                         const char *cert_file,
                         ne_ssl_client_cert *clicert)
 {
@@ -292,7 +292,7 @@ client_ssl_callback(void *userdata, ne_session *sess,
                     const ne_ssl_dname *const *dnames,
                     int dncount)
 {
-  svn_ra_dav__session_t *ras = userdata;
+  svn_ra_neon__session_t *ras = userdata;
   ne_ssl_client_cert *clicert = NULL;
   void *creds;
   svn_auth_iterstate_t *state;
@@ -574,17 +574,17 @@ static int proxy_auth(void *userdata,
   return 0;
 }
 
-#define RA_DAV_DESCRIPTION \
-  N_("Module for accessing a repository via WebDAV (DeltaV) protocol.")
+#define RA_NEON_DESCRIPTION \
+  N_("Module for accessing a repository via WebDAV protocol using Neon.")
 
 static const char *
-ra_dav_get_description(void)
+ra_neon_get_description(void)
 {
-  return _(RA_DAV_DESCRIPTION);
+  return _(RA_NEON_DESCRIPTION);
 }
 
 static const char * const *
-ra_dav_get_schemes(apr_pool_t *pool)
+ra_neon_get_schemes(apr_pool_t *pool)
 {
   static const char *schemes_no_ssl[] = { "http", NULL };
   static const char *schemes_ssl[] = { "http", "https", NULL };
@@ -600,7 +600,7 @@ typedef struct neonprogress_baton_t
 } neonprogress_baton_t;
 
 static void
-ra_dav_neonprogress(void *baton, off_t progress, off_t total)
+ra_neon_neonprogress(void *baton, off_t progress, off_t total)
 {
   const neonprogress_baton_t *neonprogress_baton = baton;
   if (neonprogress_baton->progress_func)
@@ -635,17 +635,17 @@ parse_url(ne_uri *uri, const char *url)
 }
 
 static svn_error_t *
-svn_ra_dav__open(svn_ra_session_t *session,
-                 const char *repos_URL,
-                 const svn_ra_callbacks2_t *callbacks,
-                 void *callback_baton,
-                 apr_hash_t *config,
-                 apr_pool_t *pool)
+svn_ra_neon__open(svn_ra_session_t *session,
+                  const char *repos_URL,
+                  const svn_ra_callbacks2_t *callbacks,
+                  void *callback_baton,
+                  apr_hash_t *config,
+                  apr_pool_t *pool)
 {
   apr_size_t len;
   ne_session *sess, *sess2;
   ne_uri *uri = apr_pcalloc(pool, sizeof(*uri));
-  svn_ra_dav__session_t *ras;
+  svn_ra_neon__session_t *ras;
   int is_ssl_session;
   svn_boolean_t compression;
   svn_config_t *cfg;
@@ -856,19 +856,19 @@ svn_ra_dav__open(svn_ra_session_t *session,
   neonprogress_baton->pool = pool;
   neonprogress_baton->progress_baton = callbacks->progress_baton;
   neonprogress_baton->progress_func = callbacks->progress_func;
-  ne_set_progress(sess, ra_dav_neonprogress, neonprogress_baton);
-  ne_set_progress(sess2, ra_dav_neonprogress, neonprogress_baton);
+  ne_set_progress(sess, ra_neon_neonprogress, neonprogress_baton);
+  ne_set_progress(sess2, ra_neon_neonprogress, neonprogress_baton);
   session->priv = ras;
 
   return SVN_NO_ERROR;
 }
 
 
-static svn_error_t *svn_ra_dav__reparent(svn_ra_session_t *session,
-                                         const char *url,
-                                         apr_pool_t *pool)
+static svn_error_t *svn_ra_neon__reparent(svn_ra_session_t *session,
+                                          const char *url,
+                                          apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
   ne_uri *uri = apr_pcalloc(session->pool, sizeof(*uri));
 
   SVN_ERR(parse_url(uri, url));
@@ -880,20 +880,20 @@ static svn_error_t *svn_ra_dav__reparent(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *svn_ra_dav__get_repos_root(svn_ra_session_t *session,
-                                               const char **url,
-                                               apr_pool_t *pool)
+static svn_error_t *svn_ra_neon__get_repos_root(svn_ra_session_t *session,
+                                                const char **url,
+                                                apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
 
   if (! ras->repos_root)
     {
       svn_string_t bc_relative;
       svn_stringbuf_t *url_buf;
 
-      SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative,
-                                            NULL, ras, ras->url->data,
-                                            SVN_INVALID_REVNUM, pool));
+      SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, &bc_relative,
+                                             NULL, ras, ras->url->data,
+                                             SVN_INVALID_REVNUM, pool));
 
       /* Remove as many path components from the URL as there are components
          in bc_relative. */
@@ -908,25 +908,25 @@ static svn_error_t *svn_ra_dav__get_repos_root(svn_ra_session_t *session,
 }
 
 
-static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
-                                            const char **uuid,
-                                            apr_pool_t *pool)
+static svn_error_t *svn_ra_neon__do_get_uuid(svn_ra_session_t *session,
+                                             const char **uuid,
+                                             apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
 
   if (! ras->uuid)
     {
-      svn_ra_dav__resource_t *rsrc;
+      svn_ra_neon__resource_t *rsrc;
       const char *lopped_path;
       const svn_string_t *uuid_propval;
 
-      SVN_ERR(svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
-                                                    ras, ras->url->data,
-                                                    pool));
-      SVN_ERR(svn_ra_dav__maybe_store_auth_info(ras, pool));
+      SVN_ERR(svn_ra_neon__search_for_starting_props(&rsrc, &lopped_path,
+                                                     ras, ras->url->data,
+                                                     pool));
+      SVN_ERR(svn_ra_neon__maybe_store_auth_info(ras, pool));
 
       uuid_propval = apr_hash_get(rsrc->propset,
-                                  SVN_RA_DAV__PROP_REPOSITORY_UUID,
+                                  SVN_RA_NEON__PROP_REPOSITORY_UUID,
                                   APR_HASH_KEY_STRING);
       if (uuid_propval == NULL)
         /* ### better error reporting... */
@@ -948,48 +948,48 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
 
 
 static const svn_version_t *
-ra_dav_version(void)
+ra_neon_version(void)
 {
   SVN_VERSION_BODY;
 }
 
-static const svn_ra__vtable_t dav_vtable = {
-  ra_dav_version,
-  ra_dav_get_description,
-  ra_dav_get_schemes,
-  svn_ra_dav__open,
-  svn_ra_dav__reparent,
-  svn_ra_dav__get_latest_revnum,
-  svn_ra_dav__get_dated_revision,
-  svn_ra_dav__change_rev_prop,
-  svn_ra_dav__rev_proplist,
-  svn_ra_dav__rev_prop,
-  svn_ra_dav__get_commit_editor,
-  svn_ra_dav__get_file,
-  svn_ra_dav__get_dir,
-  svn_ra_dav__get_mergeinfo,
-  svn_ra_dav__do_update,
-  svn_ra_dav__do_switch,
-  svn_ra_dav__do_status,
-  svn_ra_dav__do_diff,
-  svn_ra_dav__get_log,
-  svn_ra_dav__do_check_path,
-  svn_ra_dav__do_stat,
-  svn_ra_dav__do_get_uuid,
-  svn_ra_dav__get_repos_root,
-  svn_ra_dav__get_locations,
-  svn_ra_dav__get_file_revs,
-  svn_ra_dav__lock,
-  svn_ra_dav__unlock,
-  svn_ra_dav__get_lock,
-  svn_ra_dav__get_locks,
-  svn_ra_dav__replay,
+static const svn_ra__vtable_t neon_vtable = {
+  ra_neon_version,
+  ra_neon_get_description,
+  ra_neon_get_schemes,
+  svn_ra_neon__open,
+  svn_ra_neon__reparent,
+  svn_ra_neon__get_latest_revnum,
+  svn_ra_neon__get_dated_revision,
+  svn_ra_neon__change_rev_prop,
+  svn_ra_neon__rev_proplist,
+  svn_ra_neon__rev_prop,
+  svn_ra_neon__get_commit_editor,
+  svn_ra_neon__get_file,
+  svn_ra_neon__get_dir,
+  svn_ra_neon__get_mergeinfo,
+  svn_ra_neon__do_update,
+  svn_ra_neon__do_switch,
+  svn_ra_neon__do_status,
+  svn_ra_neon__do_diff,
+  svn_ra_neon__get_log,
+  svn_ra_neon__do_check_path,
+  svn_ra_neon__do_stat,
+  svn_ra_neon__do_get_uuid,
+  svn_ra_neon__get_repos_root,
+  svn_ra_neon__get_locations,
+  svn_ra_neon__get_file_revs,
+  svn_ra_neon__lock,
+  svn_ra_neon__unlock,
+  svn_ra_neon__get_lock,
+  svn_ra_neon__get_locks,
+  svn_ra_neon__replay,
 };
 
 svn_error_t *
-svn_ra_dav__init(const svn_version_t *loader_version,
-                 const svn_ra__vtable_t **vtable,
-                 apr_pool_t *pool)
+svn_ra_neon__init(const svn_version_t *loader_version,
+                  const svn_ra__vtable_t **vtable,
+                  apr_pool_t *pool)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -998,7 +998,7 @@ svn_ra_dav__init(const svn_version_t *loader_version,
       { NULL, NULL }
     };
 
-  SVN_ERR(svn_ver_check_list(ra_dav_version(), checklist));
+  SVN_ERR(svn_ver_check_list(ra_neon_version(), checklist));
 
   /* Simplified version check to make sure we can safely use the
      VTABLE parameter. The RA loader does a more exhaustive check. */
@@ -1006,19 +1006,19 @@ svn_ra_dav__init(const svn_version_t *loader_version,
     {
       return svn_error_createf
         (SVN_ERR_VERSION_MISMATCH, NULL,
-         _("Unsupported RA loader version (%d) for ra_dav"),
+         _("Unsupported RA loader version (%d) for ra_neon"),
          loader_version->major);
     }
 
-  *vtable = &dav_vtable;
+  *vtable = &neon_vtable;
 
   return SVN_NO_ERROR;
 }
 
 /* Compatibility wrapper for the 1.1 and before API. */
-#define NAME "ra_dav"
-#define DESCRIPTION RA_DAV_DESCRIPTION
-#define VTBL dav_vtable
-#define INITFUNC svn_ra_dav__init
+#define NAME "ra_neon"
+#define DESCRIPTION RA_NEON_DESCRIPTION
+#define VTBL neon_vtable
+#define INITFUNC svn_ra_neon__init
 #define COMPAT_INITFUNC svn_ra_dav_init
 #include "../libsvn_ra/wrapper_template.h"

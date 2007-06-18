@@ -1,5 +1,5 @@
 /*
- * ra-dav-local.c :  basic tests for the RA LOCAL library
+ * ra-local-test.c :  basic tests for the RA LOCAL library
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.

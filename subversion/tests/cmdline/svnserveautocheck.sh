@@ -54,7 +54,7 @@ fi
 # for it and "make check-clean".
 SVNSERVE_PID=$ABS_BUILDDIR/subversion/tests/svnserveautocheck.pid
 
-export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_dav/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
+export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
 
 SERVER_CMD="$ABS_BUILDDIR/subversion/svnserve/svnserve"
 

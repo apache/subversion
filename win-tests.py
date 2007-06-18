@@ -331,7 +331,7 @@ class Svnserve:
     print 'Svnserve.stop not implemented'
 
 class Httpd:
-  "Run httpd for ra_dav tests"
+  "Run httpd for DAV tests"
   def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port

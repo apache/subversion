@@ -2077,7 +2077,7 @@ do_merge(const char *initial_URL1,
      contents. Although a session can be used for multiple requests, it
      appears that they must be sequential. Since the first request, for
      the diff, is still being processed the first session cannot be
-     reused. This applies to ra_dav, ra_local does not appears to have
+     reused. This applies to ra_neon, ra_local does not appears to have
      this limitation. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, URL1, NULL,
                                                NULL, NULL, FALSE, TRUE,

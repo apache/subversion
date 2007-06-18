@@ -794,7 +794,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   ssl-client-cert-password   Client Key password, if needed."   NL
         "###   http-library               Which library to use for http/https"
                                                                              NL
-        "###                              connections (dav or serf)"         NL
+        "###                              connections (neon or serf)"        NL
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL
         "### of 0, i.e. zero, causes a builtin default to be used."          NL
