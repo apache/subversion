@@ -33,21 +33,6 @@ def is_non_posix_and_non_windows_os():
   """lambda function to skip revprop_change test"""
   return (not svntest.main.is_posix_os()) and sys.platform != 'win32'
 
-# Helper functions
-def check_prop(name, path, exp_out):
-  """Verify that property NAME on PATH has a value of EXP_OUT"""
-  # Not using run_svn because binary_mode must be set
-  out, err = svntest.main.run_command(svntest.main.svn_binary, None, 1,
-                                      'pg', '--strict', name, path,
-                                      '--config-dir', 
-                                      svntest.main.default_config_dir)
-  if out != exp_out:
-    print "svn pg --strict", name, "output does not match expected."
-    print "Expected standard output: ", exp_out, "\n"
-    print "Actual standard output: ", out, "\n"
-    raise svntest.Failure
-
-
 ######################################################################
 # Tests
 
@@ -857,41 +842,41 @@ def prop_value_conversions(sbox):
   # part of the prop value and it doesn't get converted in the pipe.
 
   # Check svn:mime-type
-  check_prop('svn:mime-type', iota_path, ['text/html'])
-  check_prop('svn:mime-type', mu_path, ['text/html'])
+  svntest.actions.check_prop('svn:mime-type', iota_path, ['text/html'])
+  svntest.actions.check_prop('svn:mime-type', mu_path, ['text/html'])
 
   # Check svn:eol-style
-  check_prop('svn:eol-style', iota_path, ['native'])
-  check_prop('svn:eol-style', mu_path, ['native'])
+  svntest.actions.check_prop('svn:eol-style', iota_path, ['native'])
+  svntest.actions.check_prop('svn:eol-style', mu_path, ['native'])
 
   # Check svn:ignore
-  check_prop('svn:ignore', A_path,
-             ['*.o'+os.linesep, 'foo.c'+os.linesep])
-  check_prop('svn:ignore', B_path,
-             ['*.o'+os.linesep, 'foo.c'+os.linesep])
+  svntest.actions.check_prop('svn:ignore', A_path,
+                             ['*.o'+os.linesep, 'foo.c'+os.linesep])
+  svntest.actions.check_prop('svn:ignore', B_path,
+                             ['*.o'+os.linesep, 'foo.c'+os.linesep])
 
   # Check svn:externals
-  check_prop('svn:externals', A_path,
-             ['foo http://foo.com/repos'+os.linesep])
-  check_prop('svn:externals', B_path,
-             ['foo http://foo.com/repos'+os.linesep])
+  svntest.actions.check_prop('svn:externals', A_path,
+                             ['foo http://foo.com/repos'+os.linesep])
+  svntest.actions.check_prop('svn:externals', B_path,
+                             ['foo http://foo.com/repos'+os.linesep])
 
   # Check svn:keywords
-  check_prop('svn:keywords', iota_path, ['Rev Date'])
-  check_prop('svn:keywords', mu_path, ['Rev  Date'])
+  svntest.actions.check_prop('svn:keywords', iota_path, ['Rev Date'])
+  svntest.actions.check_prop('svn:keywords', mu_path, ['Rev  Date'])
 
   # Check svn:executable
-  check_prop('svn:executable', iota_path, ['*'])
-  check_prop('svn:executable', lambda_path, ['*'])
-  check_prop('svn:executable', mu_path, ['*'])
+  svntest.actions.check_prop('svn:executable', iota_path, ['*'])
+  svntest.actions.check_prop('svn:executable', lambda_path, ['*'])
+  svntest.actions.check_prop('svn:executable', mu_path, ['*'])
 
   # Check other props
-  check_prop('svn:some-prop', lambda_path, ['bar'])
-  check_prop('svn:some-prop', mu_path, [' bar baz'])
-  check_prop('svn:some-prop', iota_path, ['bar'+os.linesep])
-  check_prop('some-prop', lambda_path, ['bar'])
-  check_prop('some-prop', mu_path,[' bar baz'])
-  check_prop('some-prop', iota_path, ['bar\n'])
+  svntest.actions.check_prop('svn:some-prop', lambda_path, ['bar'])
+  svntest.actions.check_prop('svn:some-prop', mu_path, [' bar baz'])
+  svntest.actions.check_prop('svn:some-prop', iota_path, ['bar'+os.linesep])
+  svntest.actions.check_prop('some-prop', lambda_path, ['bar'])
+  svntest.actions.check_prop('some-prop', mu_path,[' bar baz'])
+  svntest.actions.check_prop('some-prop', iota_path, ['bar\n'])
 
 
 #----------------------------------------------------------------------
@@ -983,11 +968,11 @@ def binary_props(sbox):
                                         None, None, None, None, None, 0)
     
   # Now, check those properties.
-  check_prop('prop_zb', B_path_bak, [prop_zb])
-  check_prop('prop_ff', iota_path_bak, [prop_ff])
-  check_prop('prop_xml', lambda_path_bak, [prop_xml])
-  check_prop('prop_binx', mu_path_bak, [prop_binx])
-  check_prop('prop_binx', A_path_bak, [prop_binx])
+  svntest.actions.check_prop('prop_zb', B_path_bak, [prop_zb])
+  svntest.actions.check_prop('prop_ff', iota_path_bak, [prop_ff])
+  svntest.actions.check_prop('prop_xml', lambda_path_bak, [prop_xml])
+  svntest.actions.check_prop('prop_binx', mu_path_bak, [prop_binx])
+  svntest.actions.check_prop('prop_binx', A_path_bak, [prop_binx])
 
 #----------------------------------------------------------------------
 

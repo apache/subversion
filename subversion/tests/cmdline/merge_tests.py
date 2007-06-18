@@ -6070,9 +6070,10 @@ def empty_rev_range_mergeinfo(sbox):
   #
   # Manually set some merge info on A/D.
   svntest.actions.run_and_verify_svn(None,
-                                     ["property 'svn:mergeinfo' set on '" +
-                                      A_D_path + "'\n"], [], 'ps',
-                                     'svn:mergeinfo', '/A_COPY/B:4', A_D_path)
+                                     ["property '" + SVN_PROP_MERGE_INFO +
+                                      "' set on '" + A_D_path + "'\n"], [],
+                                     'ps', SVN_PROP_MERGE_INFO,
+                                     '/A_COPY/B:4', A_D_path)
 
   # Merge r2:3 into A/D/H
   #
@@ -6258,14 +6259,12 @@ def empty_rev_range_mergeinfo(sbox):
       'omega' : Item(status=' M', wc_rev=6),
       })
     svntest.actions.run_and_verify_status(other_wc, expected_status)
-    svntest.actions.run_and_verify_svn(None,
-                                       ["Properties on '" + other_omega_path +
-                                        "':\n",
-                                        '  prop:name : propval\n',
-                                        '  svn:mergeinfo : ' +
-                                        '/A_COPY/B/E/beta:5\n',
-                                        '/A_COPY/D/H/omega:3-4\n'], [],
-                                       'pl', '-vR', other_omega_path)
+
+    # Check properties with multiline values in eol sensitive manner.
+    svntest.actions.check_prop(SVN_PROP_MERGE_INFO, other_omega_path,
+                               ['/A_COPY/B/E/beta:5' + os.linesep,
+                                '/A_COPY/D/H/omega:3-4'])
+    svntest.actions.check_prop('prop:name', other_omega_path, ['propval'])
 
   merge_r5_into_Other_A_D_H_omega()
 
@@ -6308,14 +6307,13 @@ def empty_rev_range_mergeinfo(sbox):
       'omega' : Item(status=' M', wc_rev=6),
       })
     svntest.actions.run_and_verify_status(other_wc, expected_status)
-    svntest.actions.run_and_verify_svn(None,
-                                       ["Properties on '" + other_omega_path +
-                                        "':\n",
-                                        '  prop:name : propval\n',
-                                        '  svn:mergeinfo : ' +
-                                        '/A_COPY/B/E/beta:5\n',
-                                        '/A_COPY/D/H/omega:3\n'], [],
-                                       'pl', '-vR', other_omega_path)
+
+    # Check properties with multiline values in eol sensitive manner.
+    svntest.actions.check_prop(SVN_PROP_MERGE_INFO, other_omega_path,
+                               ['/A_COPY/B/E/beta:5' + os.linesep,
+                                '/A_COPY/D/H/omega:3'])
+    svntest.actions.check_prop('prop:name', other_omega_path, ['propval'])
+
   merge_r4_into_Other_A_D_H_omega()
 
   # Reverse the previous merge of r5 -- Test Area 2e.
@@ -6338,7 +6336,7 @@ def empty_rev_range_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      ["Properties on '" + other_omega_path +
                                       "':\n",
-                                      '  svn:mergeinfo : ' +
+                                      '  ' + SVN_PROP_MERGE_INFO + ' : ' +
                                       '/A_COPY/D/H/omega:3\n'], [],
                                      'pl', '-vR', other_omega_path)
 
