@@ -40,6 +40,45 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
    error if this is not the case.  */
 svn_error_t *svn_fs__check_fs(svn_fs_t *fs);
 
+/* Constructing nice error messages for roots.  */
+
+/* Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
+   for PATH in ROOT. ROOT is of type svn_fs_root_t *. */
+#define SVN_FS__NOT_FOUND(root, path) (                        \
+  root->is_txn_root ?                                          \
+    svn_error_createf                                          \
+      (SVN_ERR_FS_NOT_FOUND, 0,                                \
+       _("File not found: transaction '%s', path '%s'"),       \
+       root->txn, path)                                        \
+  :                                                            \
+    svn_error_createf                                          \
+      (SVN_ERR_FS_NOT_FOUND, 0,                                \
+       _("File not found: revision %ld, path '%s'"),           \
+       root->rev, path)                                        \
+  )
+
+
+/* Build a detailed `file already exists' message for PATH in ROOT.
+   ROOT is of type svn_fs_root_t *. */
+#define SVN_FS__ALREADY_EXISTS(root, path) (                                   \
+  root->is_txn_root ?                                                          \
+    svn_error_createf                                                          \
+      (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
+       _("File already exists: filesystem '%s', transaction '%s', path '%s'"), \
+       root->fs->path, root->txn, path)                                        \
+  :                                                                            \
+    svn_error_createf                                                          \
+      (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
+       _("File already exists: filesystem '%s', revision %ld, path '%s'"),     \
+       root->fs->path, root->rev, path)                                        \
+  )
+
+/* ROOT is of type svn_fs_root_t *. */
+#define SVN_FS__NOT_TXN(root)                         \
+  svn_error_create                                    \
+    (SVN_ERR_FS_NOT_TXN_ROOT, NULL,                   \
+     _("Root object must be a transaction root"))
+
 /* SVN_FS__ERR_NOT_MUTABLE: the caller attempted to change a node 
    outside of a transaction. FS is of type "svn_fs_t *". */
 #define SVN_FS__ERR_NOT_MUTABLE(fs, rev, path_in_repo)                   \
