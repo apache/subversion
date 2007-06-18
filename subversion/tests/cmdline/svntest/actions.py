@@ -1063,4 +1063,17 @@ script which always reports errors."""
   main.create_python_hook_script (hook_path, 'import sys; '
     'sys.stderr.write("Post-commit hook failed"); '
     'sys.exit(1)')
+
+def check_prop(name, path, exp_out):
+  """Verify that property NAME on PATH has a value of EXP_OUT"""
+  # Not using run_svn because binary_mode must be set
+  out, err = main.run_command(main.svn_binary, None, 1, 'pg', '--strict',
+                              name, path, '--config-dir',
+                              main.default_config_dir)
+  if out != exp_out:
+    print "svn pg --strict", name, "output does not match expected."
+    print "Expected standard output: ", exp_out, "\n"
+    print "Actual standard output: ", out, "\n"
+    raise Failure
+
 ### End of file.
