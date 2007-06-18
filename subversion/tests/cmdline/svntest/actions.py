@@ -64,8 +64,7 @@ def do_sleep_for_timestamps():
   os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'yes'
 
 def setup_pristine_repository():
-  """Create the pristine repository, 'svn import' the greek tree and 
-  checkout the pristine working copy"""
+  """Create the pristine repository and 'svn import' the greek tree"""
 
   # these directories don't exist out of the box, so we may have to create them
   if not os.path.exists(main.general_wc_dir):
