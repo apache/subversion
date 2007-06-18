@@ -4137,7 +4137,7 @@ If ARG then prompt for revision to diff against."
   (dolist (tb tmp-bufs)
     (when (and tb (buffer-live-p tb) (not (buffer-modified-p tb)))
       (let* ((win (get-buffer-window tb t))
-             (file-name (buffer-file-name))
+             (file-name (buffer-file-name tb))
              (is-temp-file (numberp (string-match "~\\([0-9]+\\|BASE\\)~" file-name))))
         ;; (message "svn-ediff-exit-hook - is-temp-file: %s, temp-buf:: %s - %s " is-temp-file (current-buffer) file-name)
         (when (and win (> (count-windows) 1)
