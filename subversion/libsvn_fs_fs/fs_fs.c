@@ -975,7 +975,8 @@ get_youngest(svn_revnum_t *youngest_p,
 {
   char *buf;
 
-  SVN_ERR(read_current(svn_path_join(fs_path, PATH_CURRENT, pool), &buf, pool));
+  SVN_ERR(read_current(svn_path_join(fs_path, PATH_CURRENT, pool),
+                       &buf, pool));
   
   *youngest_p = SVN_STR_TO_REV(buf);
   
