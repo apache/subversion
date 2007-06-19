@@ -1483,7 +1483,7 @@ svn_error_t *svn_io_file_lock2(const char *lock_file,
   apr_int32_t flags;
   apr_status_t apr_err;
 
-  if(exclusive == TRUE)
+  if (exclusive == TRUE)
     locktype = APR_FLOCK_EXCLUSIVE;
 
   flags = APR_READ;
