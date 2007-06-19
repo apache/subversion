@@ -1429,7 +1429,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   else
     depth = recurse ? svn_depth_infinity : svn_depth_empty;
 
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read, target, FALSE));
+  SVN_ERR(trivial_auth_request(conn, pool, b));
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
