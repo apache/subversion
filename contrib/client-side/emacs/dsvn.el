@@ -6,7 +6,7 @@
 ;;	Mattias Engdegård <mattias@virtutech.com>
 ;; Maintainer: David Kågedal <david@virtutech.com>
 ;; Created: 27 Jan 2006
-;; Version: 1.2
+;; Version: 1.3
 ;; Keywords: docs
 
 ;; This program is free software; you can redistribute it and/or
@@ -112,6 +112,7 @@
 ;;; Code:
 
 (require 'vc)
+(require 'log-edit)
 
 (defconst svn-status-msg-col   1)
 (defconst svn-status-flags-col 11)
@@ -291,15 +292,9 @@ Argument ARG are the command line arguments."
   (let ((status-buf (current-buffer))
         (commit-buf (get-buffer-create "*svn commit*")))
     (switch-to-buffer-other-window commit-buf)
-    (text-mode)
+    (log-edit 'svn-confirm-commit)
     (make-local-variable 'svn-status-buf)
-    (setq svn-status-buf status-buf)
-    ;;(setq buffer-file-coding-system 'utf-8)
-    (local-set-key "\C-c\C-c" 'svn-confirm-commit)
-    (when (boundp 'vc-log-entry-mode)
-      (set-keymap-parent (current-local-map) vc-log-entry-mode))
-    (message (substitute-command-keys
-	   "Enter a commit message. Type \\[svn-confirm-commit] when done"))))
+    (setq svn-status-buf status-buf)))
 
 (defun svn-confirm-commit ()
   "Commit changes with the current buffer as commit message."
