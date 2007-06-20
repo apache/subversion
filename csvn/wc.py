@@ -17,6 +17,11 @@ class WC(object):
         svn_client_create_context(byref(self.client), self.pool)
         self._as_parameter_ = POINTER(svn_ra_session_t)()
 
+        self.client[0].notify_func2 = \
+            svn_wc_notify_func2_t(self._notify_func_wrapper)
+        self.client[0].notify_baton2 = cast(id(self), c_void_p)
+        self._notify_func = None
+
     def copy(self, src, dest, rev = ""):
         """Copy SRC to DEST"""
 
@@ -83,4 +88,21 @@ class WC(object):
         """Build a canonicalized path to an item in the WC"""
         return svn_path_canonicalize(os.path.join(self.path, path),
                                      self.iterpool)
+
+    def set_notify_func(self, notify_func):
+        """Setup a callback so that you can be notified when paths are
+           affected by WC operations. When paths are affected, we will
+           call the function with an svn_wc_notify_t object.
+
+           For details on the contents of an svn_wc_notify_t object,
+           see the documentation for svn_wc_notify_t."""
+        self._notify_func = notify_func
+
+    # A helper function which invokes the user notify function with
+    # the appropriate arguments.
+    def _notify_func_wrapper(baton, notify, pool):
+        self = cast(baton, py_object).value
+        if self._notify_func:
+            self._notify_func(notify[0])
+    _notify_func_wrapper = staticmethod(_notify_func_wrapper)
 
