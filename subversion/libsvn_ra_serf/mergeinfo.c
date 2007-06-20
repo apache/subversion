@@ -21,6 +21,7 @@
 
 #include "svn_ra.h"
 #include "svn_xml.h"
+#include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_private_config.h"
 #include "svn_mergeinfo.h"
@@ -64,24 +65,24 @@ start_element(svn_ra_serf__xml_parser_t *parser,
   mergeinfo_state_e state;
 
   state = parser->state->current_state;
-  if (state == NONE && strcmp(name.name, "mergeinfo-report") == 0)
+  if (state == NONE && strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_REPORT);
     }
   else if (state == MERGE_INFO_REPORT &&
-           strcmp(name.name, "mergeinfo-item") == 0)
+           strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_ITEM);
       mergeinfo_ctx->curr_path = NULL;
       svn_stringbuf_setempty(mergeinfo_ctx->curr_info);
     }
   else if (state == MERGE_INFO_ITEM &&
-           strcmp(name.name, "mergeinfo-path") == 0)
+           strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_PATH);
     }
   else if (state == MERGE_INFO_ITEM &&
-           strcmp(name.name, "mergeinfo-info") == 0)
+           strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_INFO);
     }
@@ -98,12 +99,12 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
   state = parser->state->current_state;
 
   if (state == MERGE_INFO_REPORT &&
-      strcmp(name.name, "mergeinfo-report") == 0)
+      strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == MERGE_INFO_ITEM 
-           && strcmp(name.name, "mergeinfo-item") == 0)
+           && strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
       if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path)
         {
@@ -117,12 +118,12 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == MERGE_INFO_PATH 
-           && strcmp(name.name, "mergeinfo-path") == 0)
+           && strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == MERGE_INFO_INFO 
-           && strcmp(name.name, "mergeinfo-info") == 0)
+           && strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -167,10 +168,11 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
-  static const char minfo_request_head[]
-    = "<S:mergeinfo-report xmlns:S=\"" SVN_XML_NAMESPACE "\">";
+  static const char minfo_request_head[] =
+    "<S:" SVN_DAV__MERGEINFO_REPORT " xmlns:S=\"" SVN_XML_NAMESPACE "\">";
 
-  static const char minfo_request_tail[] = "</S:mergeinfo-report>";
+  static const char minfo_request_tail[] =
+    "</S:" SVN_DAV__MERGEINFO_REPORT ">";
   int i;
 
   mergeinfo_context_t *mergeinfo_ctx;
@@ -193,9 +195,10 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   serf_bucket_aggregate_append(buckets, tmp);
 
   svn_ra_serf__add_tag_buckets(buckets,
-                               "S:revision", apr_ltoa(pool, revision),
+                               "S:" SVN_DAV__REVISION,
+                               apr_ltoa(pool, revision),
                                session->bkt_alloc);
-  svn_ra_serf__add_tag_buckets(buckets, "S:inherit",
+  svn_ra_serf__add_tag_buckets(buckets, "S:" SVN_DAV__INHERIT,
                                svn_inheritance_to_word(inherit),
                                session->bkt_alloc);
   if (paths)
@@ -205,7 +208,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
           const char *this_path =
             apr_xml_quote_string(pool, APR_ARRAY_IDX(paths, i, const char *),
                                  0);
-          svn_ra_serf__add_tag_buckets(buckets, "S:path", 
+          svn_ra_serf__add_tag_buckets(buckets, "S:" SVN_DAV__PATH, 
                                        this_path, session->bkt_alloc);
         }
     }
