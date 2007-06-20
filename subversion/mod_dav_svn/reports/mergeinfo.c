@@ -115,7 +115,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
 
   serr = dav_svn__send_xml(bb, output,
                            DAV_XML_HEADER DEBUG_CR
-                           "<S:merge-info-report xmlns:S=\"" SVN_XML_NAMESPACE
+                           "<S:mergeinfo-report xmlns:S=\"" SVN_XML_NAMESPACE
                            "\" " "xmlns:D=\"DAV:\">" DEBUG_CR);
   if (serr)
     {
@@ -134,10 +134,10 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
            hi = apr_hash_next(hi))
         {
           const char *path, *info;
-          const char itemformat[] = "<S:merge-info-item>" DEBUG_CR
-            "<S:merge-info-path>%s</S:merge-info-path>" DEBUG_CR
-            "<S:merge-info-info>%s</S:merge-info-info>" DEBUG_CR
-            "</S:merge-info-item>";
+          const char itemformat[] = "<S:mergeinfo-item>" DEBUG_CR
+            "<S:mergeinfo-path>%s</S:mergeinfo-path>" DEBUG_CR
+            "<S:mergeinfo-info>%s</S:mergeinfo-info>" DEBUG_CR
+            "</S:mergeinfo-item>";
 
           apr_hash_this(hi, &key, NULL, &value);
           path = key;
@@ -157,7 +157,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
         }
     }
 
-  if ((serr = dav_svn__send_xml(bb, output, "</S:merge-info-report>"
+  if ((serr = dav_svn__send_xml(bb, output, "</S:mergeinfo-report>"
                                 DEBUG_CR)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -170,14 +170,14 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   if (paths->nelts == 0)
-    action = "get-merge-info";
+    action = "get-mergeinfo";
   else if (paths->nelts == 1)
-    action = apr_psprintf(resource->pool, "get-merge-info '%s'",
+    action = apr_psprintf(resource->pool, "get-mergeinfo '%s'",
                           svn_path_uri_encode(APR_ARRAY_IDX
                                               (paths, 0, const char *),
                                               resource->pool));
   else
-    action = apr_psprintf(resource->pool, "get-merge-info-partial '%s'",
+    action = apr_psprintf(resource->pool, "get-mergeinfo-partial '%s'",
                           svn_path_uri_encode(APR_ARRAY_IDX
                                               (paths, 0, const char *),
                                               resource->pool));
