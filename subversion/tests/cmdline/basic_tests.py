@@ -101,13 +101,9 @@ def basic_status(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, output)
 
-  current_dir = os.getcwd()
-  try:
-    os.chdir(os.path.join(wc_dir, 'A'))
-    output = svntest.actions.get_virginal_state("..", 1)
-    svntest.actions.run_and_verify_status("..", output)
-  finally:
-    os.chdir(current_dir)
+  os.chdir(os.path.join(wc_dir, 'A'))
+  output = svntest.actions.get_virginal_state("..", 1)
+  svntest.actions.run_and_verify_status("..", output)
   
 #----------------------------------------------------------------------
 
@@ -1335,15 +1331,13 @@ def basic_ls(sbox):
   # what we expect below.
 
   cwd = os.getcwd()
-  try:
-    os.chdir(wc_dir)
-    svntest.actions.run_and_verify_svn("ls implicit current directory",
-                                       ["A/\n", "iota\n"],
-                                       [], 'ls',
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd)
-  finally:
-    os.chdir(cwd)
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn("ls implicit current directory",
+                                     ["A/\n", "iota\n"],
+                                     [], 'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd)
+  os.chdir(cwd)
 
   svntest.actions.run_and_verify_svn('ls the root of working copy',
                                      ['A/\n', 'iota\n'],
@@ -1423,7 +1417,7 @@ def nonexistent_repository(sbox):
 
 
 #----------------------------------------------------------------------
-# Issue 1064. This test is only useful if running over ra_dav
+# Issue 1064. This test is only useful if running over a non-local RA
 # with authentication enabled, otherwise it will pass trivially.
 def basic_auth_cache(sbox):
   "basic auth caching"
@@ -1652,20 +1646,15 @@ def basic_info(sbox):
 
   sbox.build()
 
-  cwd = os.getcwd()
-  try:
-    os.chdir(sbox.wc_dir)
+  os.chdir(sbox.wc_dir)
 
-    # Check that "info" works with 0, 1 and more than 1 explicit targets.
-    output, errput = svntest.main.run_svn(None, 'info')
-    check_paths(output, ['.'])
-    output, errput = svntest.main.run_svn(None, 'info', 'iota')
-    check_paths(output, ['iota'])
-    output, errput = svntest.main.run_svn(None, 'info', 'iota', '.')
-    check_paths(output, ['iota', '.'])
-
-  finally:
-    os.chdir(cwd)
+  # Check that "info" works with 0, 1 and more than 1 explicit targets.
+  output, errput = svntest.main.run_svn(None, 'info')
+  check_paths(output, ['.'])
+  output, errput = svntest.main.run_svn(None, 'info', 'iota')
+  check_paths(output, ['iota'])
+  output, errput = svntest.main.run_svn(None, 'info', 'iota', '.')
+  check_paths(output, ['iota', '.'])
 
 def repos_root(sbox):
   "check that repos root gets set on checkout"
@@ -1993,6 +1982,211 @@ def basic_rm_urls_multi_repos(sbox):
                                         expected_disk,
                                         expected_status)
 
+#-----------------------------------------------------------------------
+def automatic_conflict_resolution(sbox):
+  "automatic conflict resolution"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Make a couple of local mods to files which will be committed
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  svntest.main.file_append(mu_path, 'Original appended text for mu\n')
+  svntest.main.file_append(lambda_path, 'Original appended text for lambda\n')
+  svntest.main.file_append(rho_path, 'Original appended text for rho\n')
+  svntest.main.file_append(omega_path, 'Original appended text for omega\n')
+
+  # Make a couple of local mods to files which will be conflicted
+  mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
+  lambda_path_backup = os.path.join(wc_backup, 'A', 'B', 'lambda')
+  rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
+  omega_path_backup = os.path.join(wc_backup, 'A', 'D', 'H', 'omega')
+  svntest.main.file_append(mu_path_backup,
+                             'Conflicting appended text for mu\n')
+  svntest.main.file_append(lambda_path_backup,
+                             'Conflicting appended text for lambda\n')
+  svntest.main.file_append(rho_path_backup,
+                             'Conflicting appended text for rho\n')
+  svntest.main.file_append(omega_path_backup,
+                             'Conflicting appended text for omega\n')
+
+  # Created expected output tree for 'svn ci'
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    'A/B/lambda' : Item(verb='Sending'),
+    'A/D/G/rho' : Item(verb='Sending'),
+    'A/D/H/omega' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but lambda, mu and rho should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/H/omega',
+                        wc_rev=2)
+
+  # Commit.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Create expected output tree for an update of the wc_backup.
+  expected_output = wc.State(wc_backup, {
+    'A/mu' : Item(status='C '),
+    'A/B/lambda' : Item(status='C '),
+    'A/D/G/rho' : Item(status='C '),
+    'A/D/H/omega' : Item(status='C '),
+    })
+
+  # Create expected disk tree for the update.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/lambda',
+                      contents="\n".join([
+    "This is the file 'lambda'.",
+    "<<<<<<< .mine",
+    "Conflicting appended text for lambda",
+    "=======",
+    "Original appended text for lambda",
+    ">>>>>>> .r2",
+    ""]))
+  expected_disk.tweak('A/mu',
+                      contents="\n".join(["This is the file 'mu'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for mu",
+                                          "=======",
+                                          "Original appended text for mu",
+                                          ">>>>>>> .r2",
+                                          ""]))
+  expected_disk.tweak('A/D/G/rho',
+                      contents="\n".join(["This is the file 'rho'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for rho",
+                                          "=======",
+                                          "Original appended text for rho",
+                                          ">>>>>>> .r2",
+                                          ""]))
+  expected_disk.tweak('A/D/H/omega',
+                      contents="\n".join(["This is the file 'omega'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for omega",
+                                          "=======",
+                                          "Original appended text for omega",
+                                          ">>>>>>> .r2",
+                                          ""]))
+
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(wc_backup, '2')
+  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/H/omega',
+                        status='C ')
+
+  # "Extra" files that we expect to result from the conflicts.
+  # These are expressed as list of regexps.  What a cool system!  :-)
+  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
+                 'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine',
+                 'omega.*\.r1', 'omega.*\.r2', 'omega.*\.mine',
+                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
+
+  # Do the update and check the results in three ways.
+  # All "extra" files are passed to detect_conflict_files().
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files)
+
+  # verify that the extra_files list is now empty.
+  if len(extra_files) != 0:
+    # Because we want to be a well-behaved test, we silently raise if
+    # the test fails.  However, these two print statements would
+    # probably reveal the cause for the failure, if they were
+    # uncommented:
+    #
+    # print "Not all extra reject files have been accounted for:"
+    # print extra_files
+    ### we should raise a less generic error here. which?
+    raise svntest.Failure
+
+  # So now lambda, mu and rho are all in a "conflicted" state.  Run 'svn
+  # resolved' with the respective "--accept[mine|orig|repo]" flag.
+
+  # Run 'svn resolved --accept=NOTVALID.  Using omega for the test.
+  svntest.actions.run_and_verify_svn("Resolved command", None,
+                                     "svn: 'NOTVALID' is not a valid accept value; "
+                                     "try 'left', 'right', or 'working'\n",
+                                     'resolved',
+                                     '--accept=NOTVALID',
+                                     omega_path_backup)
+
+  # Run 'svn resolved --accept=left.  Using lambda for the test.
+  svntest.actions.run_and_verify_svn("Resolved command", None, [],
+                                     'resolved',
+                                     '--accept=left',
+                                     lambda_path_backup)
+
+  # Run 'svn resolved --accept=working.  Using mu for the test.
+  svntest.actions.run_and_verify_svn("Resolved command", None, [],
+                                     'resolved',
+                                     '--accept=working',
+                                     mu_path_backup)
+
+  # Run 'svn resolved --accept=right.  Using rho for the test.
+  svntest.actions.run_and_verify_svn("Resolved command", None, [],
+                                     'resolved',
+                                     '--accept=right',
+                                     rho_path_backup)
+
+  # Set the expected disk contents for the test
+  expected_disk = svntest.main.greek_state.copy()
+
+  expected_disk.tweak('A/B/lambda', contents="This is the file 'lambda'.\n")
+  expected_disk.tweak('A/mu', contents="This is the file 'mu'.\n"
+                      "Conflicting appended text for mu\n")
+  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n"
+                      "Original appended text for rho\n")
+  expected_disk.tweak('A/D/H/omega',
+                      contents="\n".join(["This is the file 'omega'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for omega",
+                                          "=======",
+                                          "Original appended text for omega",
+                                          ">>>>>>> .r2",
+                                          ""]))
+
+  # Set the expected extra files for the test
+  extra_files = ['omega.*\.r1', 'omega.*\.r2', 'omega.*\.mine',]
+
+  # Set the expected status for the test
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/H/omega',
+                        wc_rev=2)
+
+  expected_status.tweak('A/mu', status='M ')
+  expected_status.tweak('A/B/lambda', status='M ')
+  expected_status.tweak('A/D/G/rho', status='  ')
+  expected_status.tweak('A/D/H/omega', status='C ')
+
+  # Set the expected output for the test
+  expected_output = wc.State(wc_backup, {})
+
+  # Do the update and check the results in three ways.
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files)
+
+#----------------------------------------------------------------------
+
 ########################################################################
 # Run the tests
 
@@ -2036,6 +2230,7 @@ test_list = [ None,
               windows_paths_in_repos,
               basic_rm_urls_one_repo,
               XFail(basic_rm_urls_multi_repos),
+              automatic_conflict_resolution,
              ]
 
 if __name__ == '__main__':

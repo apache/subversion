@@ -108,8 +108,9 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
       if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path)
         {
           apr_hash_t *path_mergeinfo;
-          SVN_ERR(svn_mergeinfo_parse(mergeinfo_ctx->curr_info->data,
-                                      &path_mergeinfo, mergeinfo_ctx->pool));
+          SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, 
+                                      mergeinfo_ctx->curr_info->data, 
+                                      mergeinfo_ctx->pool));
           apr_hash_set(mergeinfo_ctx->result, mergeinfo_ctx->curr_path,
                        APR_HASH_KEY_STRING, path_mergeinfo);
         }
@@ -162,7 +163,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            apr_hash_t **mergeinfo,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
-                           svn_boolean_t include_parents,
+                           svn_mergeinfo_inheritance_t inherit,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -194,13 +195,9 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:revision", apr_ltoa(pool, revision),
                                session->bkt_alloc);
-
-  if (include_parents)
-    {
-      svn_ra_serf__add_tag_buckets(buckets, "S:include-parents", 
-                                   NULL, session->bkt_alloc);
-    }
-
+  svn_ra_serf__add_tag_buckets(buckets, "S:inherit",
+                               svn_inheritance_to_word(inherit),
+                               session->bkt_alloc);
   if (paths)
     {
       for (i = 0; i < paths->nelts; i++)

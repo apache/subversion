@@ -269,7 +269,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
 
 /** The property name *prefix* that makes a property a "WC property". 
  *
- * For example, ra_dav might store a versioned-resource url as a WC
+ * For example, WebDAV RA implementations might store a versioned-resource url as a WC
  * prop like this:
  *
  *<pre>    name = svn:wc:dav_url

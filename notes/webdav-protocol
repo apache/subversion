@@ -40,17 +40,21 @@ Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
   * svn checkout / svn export / svn update:
    (do_update RA interface)
 
-     ra_dav:        PROPFIND, REPORT              ('update-report' w/send-all)
+     ra_neon:       PROPFIND, REPORT              ('update-report' w/send-all)
 
      ra_serf:       PROPFIND, REPORT              ('update-report')
                     ... then many PROPFIND/GETs on many parallel connections
 
-  * svn switch:     OPTIONS, PROPFIND, REPORT     ('update-report')
+    svn update only                               ('merge-info-report')
+
+  * svn switch:     OPTIONS, PROPFIND, REPORT     ('update-report',
+                                                   'merge-info-report')
 
   * svn diff:       OPTIONS, PROPFIND, REPORT     ('update-report')
                     ... then many GETs
 
-  * svn merge:      OPTIONS, PROPFIND, REPORT     ('update-report')
+  * svn merge:      OPTIONS, PROPFIND, REPORT     ('update-report',
+                                                   'merge-info-report')
                     ... then many GETs
 
   * svn status -u:  OPTIONS, PROPFIND, REPORT     ('update-report' and
@@ -94,7 +98,7 @@ Write Commands  :  (MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL, MOVE,
   may try to remove the transaction with a DELETE.
 
   * svn commit:
-     ra_dav:        OPTIONS, PROPFIND, MKACTIVITY, 
+     ra_neon:       OPTIONS, PROPFIND, MKACTIVITY, 
                     {CHECKOUT, COPY, MOVE, DELETE, PROPPATCH, PUT, MKCOL},
                     MERGE (DELETE)
 
@@ -132,7 +136,7 @@ Write Commands  :  (MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL, MOVE,
 Remembering Our Location
 ========================
 
-For a file in our WC, both ra_serf and ra_dav will store the checked-in href
+For a file in our WC, both ra_serf and ra_neon will store the checked-in href
 (where the original text-base and properties can be found) in the
 svn:wc:ra_dav:version-url wcprop.
 
@@ -153,7 +157,7 @@ send two extra headers:
 
 The server may choose not to return svndiff content but return full-text.
 
-(ra_dav has this same functionality, but is largely just dead code.)
+(ra_neon has this same functionality, but is largely just dead code.)
 
 Example
 -------
@@ -325,3 +329,33 @@ Response:
     </S:log-item>
     ...multiple log-items for each returned revision...
   </S:log-report>
+
+merge-info-report
+----------
+
+Purpose: Get the merge info for a path at a particular revision.
+
+Target URL: URL of item we're getting merge info for.
+
+Note: <S:inherit> is a representation of the svn_mergeinfo_inheritance_t
+      struct and can have the values 'explicit', 'inherited', or
+      'nearest-ancestor'.  The default value is 'explicit' if <S:inherit>
+      is not present or has any other value than those three. 
+
+Request:
+
+  <S:merge-info-report xmlns:S="svn:">
+    <S:revision>1</S:revision>
+    <S:inherit>inherited</S:inherit>
+    <S:path>/A/B/E/alpha</S:path>
+  </S:merge-info-report>
+
+Response:
+
+  <?xml version="1.0" encoding="utf-8"?>
+  <S:merge-info-report xmlns:S="svn:" xmlns:D="DAV:">
+    <S:merge-info-item>
+      <S:merge-info-path>/A_COPY/B/E</S:merge-info-path>
+      <S:merge-info-info>/A/B/E:1,3-4</S:merge-info-info>
+    </S:merge-info-item>
+  </S:merge-info-report>

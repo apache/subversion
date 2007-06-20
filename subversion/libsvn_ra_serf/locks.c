@@ -290,6 +290,8 @@ cdata_lock(svn_ra_serf__xml_parser_t *parser,
   lock_state_e state;
   lock_prop_info_t *info;
 
+  UNUSED_CTX(lock_ctx);
+
   state = parser->state->current_state;
   info = parser->state->private;
 

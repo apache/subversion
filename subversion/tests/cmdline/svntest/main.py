@@ -16,7 +16,7 @@
 ######################################################################
 
 import sys     # for argv[]
-import os      # for popen2()
+import os
 import shutil  # for rmtree()
 import re
 import stat    # for ST_MODE
@@ -349,7 +349,7 @@ def create_config_dir(cfgdir,
 
   # config file names
   cfgfile_cfg = os.path.join(cfgdir, 'config')
-  cfgfile_srv = os.path.join(cfgdir, 'server')
+  cfgfile_srv = os.path.join(cfgdir, 'servers')
 
   # create the directory
   if not os.path.isdir(cfgdir):
@@ -667,6 +667,9 @@ def is_fs_type_fsfs():
 def is_os_windows():
   return (os.name == 'nt')
 
+def is_posix_os():
+  return (os.name == 'posix')
+
 ######################################################################
 # Sandbox handling
 
@@ -803,8 +806,11 @@ class SpawnTest(threading.Thread):
     
     self.result, self.stdout_lines, self.stderr_lines =\
                                          spawn_process(command, 1, None, *args)
-    sys.stdout.write('.')
+    # don't trust the exitcode, will not be correct on Windows
+    if filter(lambda x: x[:6] == 'FAIL: ', self.stdout_lines):
+      self.result = 1
     self.tests.append(self)
+    sys.stdout.write('.')
 
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
@@ -846,6 +852,7 @@ class TestRunner:
     os.environ['SVNTEST_EDITOR_FUNC'] = ''
     actions.no_sleep_for_timestamps()
 
+    saved_dir = os.getcwd()
     try:
       rc = apply(self.pred.run, (), kw)
       if rc is not None:
@@ -880,6 +887,8 @@ class TestRunner:
       result = 1
       print 'UNEXPECTED EXCEPTION:'
       traceback.print_exc(file=sys.stdout)
+      
+    os.chdir(saved_dir)
     result = self.pred.convert_result(result)
     print self.pred.run_text(result),
     self._print_name()

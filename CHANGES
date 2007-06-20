@@ -37,7 +37,7 @@ http://svn.collab.net/repos/svn/tags/1.4.4
      - fixed: ra_do_{update,switch,status} don't work with Perl delta editors
            (r20667, r22311)
  * SWIG/python bindings:
-     - fixed: memory leak whenever C APIs returned errors (r21453, r23468)
+     - fixed: memory leak whenever C APIs returned errors (r23521)
  * SWIG/ruby bindings:
      - fixed: typos in method Svn::Wc#merge_prop_diffs and docs (r23405, -6)
 

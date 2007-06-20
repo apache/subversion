@@ -237,8 +237,12 @@ the enterprise.</p>
 <li><p><b>Universal Subversion Installer</b></p>
 <p><em>Maintainer:
 <a href="mailto:jwhitlock@collab.net">Jeremy Whitlock</a></em></p>
-<p>Completely self-contained Universal Subversion installer with JavaHL bindings.  
-The latest release can be found here: <a href="http://downloads.open.collab.net/binaries.html">http://downloads.open.collab.net/binaries.html</a>.</p>
+<p>Universal Subversion binary containing standard repository access
+layers, file system backends, Apache Subversion modules, and all
+Subversion language bindings maintained by the Subversion project.
+The latest release can be found here: <a
+href="http://downloads.open.collab.net/binaries.html"
+>http://downloads.open.collab.net/binaries.html</a>.</p>
 </li>
 
 <li><p><b>Installation using Fink</b></p>
@@ -278,23 +282,13 @@ href="http://metissian.com/projects/macosx/subversion/"
 href="http://subversion.tigris.org/faq.html#portability">the
 FAQ</a>.</p>
 
-<p><em>Maintainer:
-<a href="mailto:users@subversion.tigris.org?bcc=brane@xbc.nu"
->Branko &#268;ibej</a></em></p>
+<p>If you plan to install the <tt>mod_dav_svn</tt> Apache module, note
+that Apache 2.0 and Apache 2.2 are not binary-compatible.  Thus there
+are two types of Subverison command-line binary/library packages for
+Windows -- ones built to use with Apache 2.0, and ones built to use
+Apache 2.2.  If you're using Apache as your Subversion server, be sure
+to download the correct package.</p>
 
-<p>The latest command-line binaries and libraries for Windows can be
-found in <a
-href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91"
->this directory</a> of the file-sharing area.  The packages are ".zip"
-files.</p>
-
-<div style="background-color: yellow; color: red;">
-<p>Note that the Apache modules included in this
-package was compiled against Apache HTTP Server 2.0, and thus will
-<em>not</em> work with Apache HTTP Server 2.2.</p>
-</div>
-
-<div style="background-color: yellow; color: red;">
 <p><strong>WARNING:</strong> Subversion 1.2 (and later) win32 binaries
 use BerkeleyDB 4.3.  If you already have BDB 4.2 repositories running
 on Windows, then installing these particular binaries will force you
@@ -302,6 +296,21 @@ to upgrade your repositories to BDB 4.3.  It's not difficult, just be
 ready to do so.  Read the <a
 href="http://subversion.tigris.org/faq.html#bdb43-upgrade">FAQ</a>.</p>
 </div>
+
+<p><em>Maintainers: <a
+href="mailto:users@subversion.tigris.org?bcc=brane@xbc.nu" >Branko
+&#268;ibej</a> and <a href="djheap@gmail.com">D.J. Heap</a></em></p>
+
+<ol>
+  <li><a
+  href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91">Win32
+  packages built against Apache 2.0</a></li>
+
+  <li><a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=8100&expandFolder=8100&folderID=8100">Win32
+packages built against Apache 2.2</a></li> </ol> </ul>
+</ol>
+
 
 <p><em>Maintainer:
 <a href="mailto:troy@ebswift.com">Troy Simpson</a></em></p>
@@ -329,7 +338,7 @@ mailing lists.</p>
 href="http://downloads.open.collab.net/collabnet-subversion.html">CollabNet
 Subversion</a> is Subversion compiled and tested by
 CollabNet, and deployed with CollabNet's recommended configuration for
-the enterprise.</p>
+the enterprise.  Compatible with Apache 2.0.</p>
 
 </div>
 

@@ -40,6 +40,30 @@ module Svn
       teardown
     end
 
+    def paths
+      files + directories
+    end
+
+    def files
+      @added_files + @deleted_files + @updated_files + @copied_files
+    end
+
+    def directories
+      @added_dirs + @deleted_dirs + @updated_dirs + @copied_dirs
+    end
+
+    def sub_paths(prefix)
+      prefixes = prefix.split(/\/+/)
+      results = []
+      paths.each do |path,|
+        paths = path.split(/\/+/)
+        if prefixes.size < paths.size and prefixes == paths[0, prefixes.size]
+          results << paths[prefixes.size]
+        end
+      end
+      results
+    end
+
     private
     def setup(path, rev)
       @path = path

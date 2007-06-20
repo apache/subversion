@@ -70,6 +70,25 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.assert_(dirents.has_key('README2.txt'))
     self.assertEqual(dirents['README2.txt'].kind,core.svn_node_file)
 
+  def test_commit3(self):
+    commit_info = []
+    def my_callback(info, pool):
+      commit_info.append(info)
+
+    revprops = {"svn:log": "foobar", "testprop": ""}
+    editor, edit_baton = ra.get_commit_editor3(self.ra_ctx, revprops, my_callback, None, False)
+    root = editor.open_root(edit_baton, 4)
+    self.assertNotEqual(root, None)
+    child = editor.add_directory("bla3", root, None, 0)
+    self.assertNotEqual(child, None)
+    editor.close_edit(edit_baton)
+
+    info = commit_info[0]
+    self.assertEqual(info.revision, fs.youngest_rev(self.fs))
+    revprops['svn:author'] = info.author
+    revprops['svn:date'] = info.date
+    self.assertEqual(ra.rev_proplist(self.ra_ctx, info.revision), revprops)
+
   def test_commit2(self):
     def my_callback(info, pool):
         self.assertEqual(info.revision, fs.youngest_rev(self.fs))

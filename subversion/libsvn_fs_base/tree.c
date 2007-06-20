@@ -382,46 +382,6 @@ svn_fs_base__revision_root(svn_fs_root_t **root_p,
 
 
 
-/* Constructing nice error messages for roots.  */
-
-/* Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
-   for PATH in ROOT. */
-#define NOT_FOUND(r, p) (                                \
-  r->is_txn_root ?                                       \
-    svn_error_createf                                    \
-      (SVN_ERR_FS_NOT_FOUND, 0,                          \
-       _("File not found: transaction '%s', path '%s'"), \
-       r->txn, p)                                        \
-  :                                                      \
-    svn_error_createf                                    \
-      (SVN_ERR_FS_NOT_FOUND, 0,                          \
-       _("File not found: revision %ld, path '%s'"),     \
-       r->rev, p)                                        \
-  )
-
-
-/* Build a detailed `file already exists' message for PATH in ROOT.  */
-#define ALREADY_EXISTS(r, p) (                                                 \
-  r->is_txn_root ?                                                             \
-    svn_error_createf                                                          \
-      (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
-       _("File already exists: filesystem '%s', transaction '%s', path '%s'"), \
-       r->fs->path, r->txn, p)                                                 \
-  :                                                                            \
-    svn_error_createf                                                          \
-      (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
-       _("File already exists: filesystem '%s', revision %ld, path '%s'"),     \
-       r->fs->path, r->rev, p)                                                 \
-  )
-
-
-#define NOT_TXN(r)                                 \
-  svn_error_create                                 \
-    (SVN_ERR_FS_NOT_TXN_ROOT, NULL,                \
-     _("Root object must be a transaction root"))
-
-
-
 /* Getting dag nodes for roots.  */
 
 
@@ -757,7 +717,7 @@ open_path(parent_path_t **parent_path_p,
                 {
                   /* Build a better error message than svn_fs_base__dag_open
                      can provide, giving the root and full path name.  */
-                  return NOT_FOUND(root, path);
+                  return SVN_FS__NOT_FOUND(root, path);
                 }
             }
 
@@ -1272,7 +1232,7 @@ base_change_merge_info(svn_fs_root_t *root,
   struct change_merge_info_args args;
 
   if (! root->is_txn_root)
-    return NOT_TXN(root);
+    return SVN_FS__NOT_TXN(root);
   args.root = root;
   args.path = path;
   SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &args.value, merge_info,
@@ -1367,7 +1327,7 @@ base_change_node_prop(svn_fs_root_t *root,
   struct change_node_prop_args args;
 
   if (! root->is_txn_root)
-    return NOT_TXN(root);
+    return SVN_FS__NOT_TXN(root);
 
   args.root  = root;
   args.path  = path;
@@ -2582,7 +2542,7 @@ base_merge(const char **conflict_p,
   svn_fs_t *fs;
 
   if (! target_root->is_txn_root)
-    return NOT_TXN(target_root);
+    return SVN_FS__NOT_TXN(target_root);
 
   /* Paranoia. */
   fs = ancestor_root->fs;
@@ -2697,7 +2657,7 @@ txn_body_make_dir(void *baton,
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
   if (parent_path->node)
-    return ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path);
 
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we
@@ -2736,7 +2696,7 @@ base_make_dir(svn_fs_root_t *root,
   struct make_dir_args args;
 
   if (! root->is_txn_root)
-    return NOT_TXN(root);
+    return SVN_FS__NOT_TXN(root);
 
   args.root = root;
   args.path = path;
@@ -2765,7 +2725,7 @@ txn_body_delete(void *baton,
   const char *txn_id = root->txn;
 
   if (! root->is_txn_root)
-    return NOT_TXN(root);
+    return SVN_FS__NOT_TXN(root);
 
   SVN_ERR(open_path(&parent_path, root, path, 0, txn_id, 
                     trail, trail->pool));
@@ -2957,7 +2917,7 @@ copy_helper(svn_fs_root_t *from_root,
        from_root->fs->path, to_root->fs->path);
 
   if (! to_root->is_txn_root)
-    return NOT_TXN(to_root);
+    return SVN_FS__NOT_TXN(to_root);
 
   if (from_root->is_txn_root)
     return svn_error_create
@@ -3104,7 +3064,7 @@ txn_body_make_file(void *baton,
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
   if (parent_path->node)
-    return ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path);
 
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we
@@ -3864,7 +3824,7 @@ base_node_history(svn_fs_history_t **history_p,
   /* And we require that the path exist in the root. */
   SVN_ERR(base_check_path(&kind, root, path, pool));
   if (kind == svn_node_none)
-    return NOT_FOUND(root, path);
+    return SVN_FS__NOT_FOUND(root, path);
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history(root->fs,

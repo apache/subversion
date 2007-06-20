@@ -589,6 +589,17 @@ svn_string_t *svn_fs_unparse_id(const svn_fs_id_t *id,
  * and lower-case), digits, `-', and `.', from the ASCII character
  * set.
  *
+ * The Subversion filesystem will make a best effort to not reuse
+ * transaction names.  The Berkeley DB backend generates transaction
+ * names using a sequence, or a counter, which is stored in the BDB
+ * database.  Each new transaction increments the counter.  The
+ * current value of the counter is not serialized into a filesystem
+ * dump file, so dumping and restoring the repository will reset the
+ * sequence and reuse transaction names.  The FSFS backend generates a
+ * transaction name using the hostname, process ID and current time in
+ * microseconds since 00:00:00 January 1, 1970 UTC.  So it is
+ * extremely unlikely that a transaction name will be reused.
+ *
  * @defgroup svn_fs_txns filesystem transactions
  * @{
  */
@@ -1204,8 +1215,8 @@ svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
  *
  * @a paths indicate the paths you are requesting information for
  *
- * When @a include_parents is @c TRUE, include inherited merge info
- * from parent directories of @a paths.
+ * @a inherit indicates whether explicit, explicit or inherited, or
+ * only inherited merge info for @paths is retrieved.
  *
  * Do any necessary temporary allocation in @a pool.
  *
@@ -1214,7 +1225,7 @@ svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
 svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                                   svn_fs_root_t *root,
                                   const apr_array_header_t *paths,
-                                  svn_boolean_t include_parents,
+                                  svn_mergeinfo_inheritance_t inherit,
                                   apr_pool_t *pool);
 
 /** Retrieve combined mergeinfo for multiple nodes, and their children.

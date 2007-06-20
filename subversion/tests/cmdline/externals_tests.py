@@ -612,14 +612,13 @@ def modify_and_update_receive_new_external(sbox):
   # Now cd into A/B and try updating
   was_cwd = os.getcwd()
   os.chdir(B_path)
-  try:
-    # Once upon a time there was a core-dump here
-    
-    svntest.actions.run_and_verify_svn("update failed",
-                                       SVNAnyOutput, [], 'up' )
 
-  finally:
-    os.chdir(was_cwd)
+  # Once upon a time there was a core-dump here
+    
+  svntest.actions.run_and_verify_svn("update failed",
+                                     SVNAnyOutput, [], 'up' )
+
+  os.chdir(was_cwd)
 
   probe_paths_exist([os.path.join(B_path, "exdir_Z")])
 

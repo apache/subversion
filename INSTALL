@@ -110,7 +110,8 @@ I.    INTRODUCTION
          client to be able to speak HTTP... though we still recommend
          that your client be built to speak both HTTP and svnserve
          protocols.  Your client can be compiled against either
-         libneon or libserf, as they offer competing implementations.
+         libneon or libserf (or both), as they offer competing
+         implementations.
 
       * OpenSSL (OPTIONAL for client and server)
 
@@ -332,8 +333,11 @@ I.    INTRODUCTION
         neon and serf are competing implementations of HTTP client
         libraries.  If you want your client to be able to speak to an
         Apache server (via a http:// or https:// URL), you must link
-        against one of these libraries.  Though optional, we strongly
-        recommend this.
+        against at least one of these libraries.  Though optional, we
+        strongly recommend this.
+
+        (If you link against both, you can configure which one is used
+        in your ~/.subversion/servers configuration file.)
 
         a.  Neon library 0.25 or 0.26 (http://www.webdav.org/neon/)
 
@@ -385,21 +389,24 @@ I.    INTRODUCTION
            alternative to Neon for accessing Subversion repositories
            over http:// and https:// URLs.  serf is designed as an
            asynchronous library which can take advantage of HTTP
-           pipelining, so ra_serf may be more efficient than the
-           Neon-based ra_dav and better for HTTP proxy caches.  The
-           serf library can be found at:
+           pipelining, so ra_serf may be more efficient than ra_neon
+           and better for HTTP proxy caches.  The serf library can be
+           found at:
 
                http://code.google.com/p/serf/
 
-           In order to use ra_serf instead of ra_dav, you must install
-           ra_serf, and run Subversion's ./configure with the
-           arguments --with-serf and --without-neon. (The latter isn't
-           required if you don't actually have Neon.)  If serf is
-           installed in a non-standard place, you should use
+           In order to use ra_serf instead of ra_neon, you must install
+           serf, and run Subversion's ./configure with the argument
+           --with-serf.  (To only use ra_serf and not ra_neon, you
+           should also use --without-neon.)  If serf is installed in a
+           non-standard place, you should use
 
                --with-serf=/path/to/serf/install
 
-           instead.
+           instead.  If you build with both ra_neon and ra_serf,
+           Subversion will use ra_neon by default; add "http-library =
+           serf" to the [global] section of your ~/.subversion/servers
+           file to use ra_serf instead.
 
            For more information on serf and Subversion's ra_serf, see
            the file subversion/libsvn_ra_serf/README.

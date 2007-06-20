@@ -38,13 +38,14 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 apr_hash_t **target_mergeinfo,
                                 const char *rel_path,
                                 svn_revnum_t rev,
+                                svn_mergeinfo_inheritance_t inherit,
                                 apr_pool_t *pool)
 {
   apr_hash_t *repos_mergeinfo;
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
-  SVN_ERR(svn_ra_get_mergeinfo(ra_session, &repos_mergeinfo, rel_paths,
-                                rev, TRUE, pool));
+  SVN_ERR(svn_ra_get_mergeinfo(ra_session, &repos_mergeinfo, rel_paths, rev,
+                               inherit, pool));
 
   /* Grab only the merge info provided for REL_PATH. */
   if (repos_mergeinfo)

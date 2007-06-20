@@ -22,11 +22,9 @@ import re, os, stat
 # Our testing module
 import svntest
 
-# A helper function for examining svn:needs-lock
-from prop_tests import check_prop
-
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -374,9 +372,9 @@ def enforce_lock(sbox):
   svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '      ', mu_path)
 
   # Check svn:needs-lock
-  check_prop('svn:needs-lock', iota_path, ['*'])
-  check_prop('svn:needs-lock', lambda_path, ['*'])
-  check_prop('svn:needs-lock', mu_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', iota_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', lambda_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', mu_path, ['*'])
 
   svntest.main.run_svn(None, 'commit',
                        '--username', svntest.main.wc_author,
@@ -1552,8 +1550,8 @@ test_list = [ None,
               lock_several_files,
               lock_switched_files,
               lock_uri_encoded,
-              Skip(lock_and_exebit1, (os.name != 'posix')),
-              Skip(lock_and_exebit2, (os.name != 'posix')),
+              SkipUnless(lock_and_exebit1, svntest.main.is_posix_os),
+              SkipUnless(lock_and_exebit2, svntest.main.is_posix_os),
               commit_xml_unsafe_file_unlock,
               repos_lock_with_info,
               unlock_already_unlocked_files,

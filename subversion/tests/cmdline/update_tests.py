@@ -890,12 +890,10 @@ def update_single_file(sbox):
   was_cwd = os.getcwd()
   os.chdir(os.path.join(wc_dir, 'A'))
 
-  try:
-    ### Can't get run_and_verify_update to work having done the chdir.
-    svntest.actions.run_and_verify_svn("update failed", None, [],
-                                       'up', '-r', '1', 'mu')
-  finally:
-    os.chdir(was_cwd)
+  ### Can't get run_and_verify_update to work having done the chdir.
+  svntest.actions.run_and_verify_svn("update failed", None, [],
+                                     'up', '-r', '1', 'mu')
+  os.chdir(was_cwd)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1174,7 +1172,7 @@ def new_dir_with_spaces(sbox):
                                      sbox.repo_url
                                      + '/A/spacey%20dir')
 
-  # Update, and make sure ra_dav doesn't choke on the space.
+  # Update, and make sure ra_neon doesn't choke on the space.
   expected_output = svntest.wc.State(wc_dir, {
     'A/spacey dir'       : Item(status='A '),
     })
@@ -1582,21 +1580,17 @@ def update_xml_unsafe_dir(sbox):
                                         None, None, None, None, wc_dir)
 
   # chdir into the funky path, and update from there.
-  was_cwd = os.getcwd()
   os.chdir(test_path)
-  try:
-    expected_output = wc.State('', {
-      })
-    expected_disk = wc.State('', {
-      })
-    expected_status = wc.State('', {
-      '' : Item(status='  ', wc_rev=2),
-      })
-    svntest.actions.run_and_verify_update('', expected_output, expected_disk,
-                                          expected_status)
-                                          
-  finally:
-    os.chdir(was_cwd)
+
+  expected_output = wc.State('', {
+    })
+  expected_disk = wc.State('', {
+    })
+  expected_status = wc.State('', {
+    '' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_update('', expected_output, expected_disk,
+                                        expected_status)
 
 #----------------------------------------------------------------------
 # eol-style handling during update with conflicts, scenario 1:
@@ -2889,19 +2883,18 @@ def mergeinfo_update_elision(sbox):
     })
   expected_skip = wc.State(short_B_COPY_path, { })
   saved_cwd = os.getcwd()
-  try:
-    os.chdir(svntest.main.work_dir)
-    svntest.actions.run_and_verify_merge(short_B_COPY_path, '2', '5',
-                                         sbox.repo_url + \
-                                         '/A/B',
-                                         expected_output,
-                                         expected_merge_disk,
-                                         expected_merge_status,
-                                         expected_skip,
-                                         None, None, None, None,
-                                         None, 1)
-  finally:
-    os.chdir(saved_cwd)
+
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_B_COPY_path, '2', '5',
+                                       sbox.repo_url + \
+                                       '/A/B',
+                                       expected_output,
+                                       expected_merge_disk,
+                                       expected_merge_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+  os.chdir(saved_cwd)
 
   # r6 - Commit the merge
   expected_output = wc.State(wc_dir,
@@ -2951,19 +2944,19 @@ def mergeinfo_update_elision(sbox):
     })
   expected_skip = wc.State(short_alpha_COPY_path, { })
   saved_cwd = os.getcwd()
-  try:
-    os.chdir(svntest.main.work_dir)
-    # run_and_verify_merge doesn't support merging to a file WCPATH
-    # so use run_and_verify_svn.
-    svntest.actions.run_and_verify_svn(None,
-                                       [svntest.main.merge_notify_line(3, 5),
-                                        'U    ' + \
-                                        short_alpha_COPY_path + '\n'],
-                                       [], 'merge', '-r2:5',
-                                       sbox.repo_url + '/A/B/E/alpha',
-                                       short_alpha_COPY_path)
-  finally:
-    os.chdir(saved_cwd)
+
+  os.chdir(svntest.main.work_dir)
+  # run_and_verify_merge doesn't support merging to a file WCPATH
+  # so use run_and_verify_svn.
+  svntest.actions.run_and_verify_svn(None,
+                                     [svntest.main.merge_notify_line(3, 5),
+                                      'U    ' + \
+                                      short_alpha_COPY_path + '\n'],
+                                     [], 'merge', '-r2:5',
+                                     sbox.repo_url + '/A/B/E/alpha',
+                                     short_alpha_COPY_path)
+
+  os.chdir(saved_cwd)
 
   expected_alpha_status = wc.State(alpha_COPY_path, {
     ''        : Item(status='MM', wc_rev=5),
@@ -3022,19 +3015,19 @@ def mergeinfo_update_elision(sbox):
     })
   expected_skip = wc.State(short_E_COPY_path, { })
   saved_cwd = os.getcwd()
-  try:
-    os.chdir(svntest.main.work_dir)
-    svntest.actions.run_and_verify_merge(short_E_COPY_path, '6', '7',
-                                         sbox.repo_url + \
-                                         '/A/B/E',
-                                         expected_output,
-                                         expected_merge_disk,
-                                         expected_merge_status,
-                                         expected_skip,
-                                         None, None, None, None,
-                                         None, 1)
-  finally:
-    os.chdir(saved_cwd)
+
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_E_COPY_path, '6', '7',
+                                       sbox.repo_url + \
+                                       '/A/B/E',
+                                       expected_output,
+                                       expected_merge_disk,
+                                       expected_merge_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
+  os.chdir(saved_cwd)
 
   # r8 - Commit the merge
   expected_output = wc.State(wc_dir,
@@ -3090,19 +3083,19 @@ def mergeinfo_update_elision(sbox):
     })
   expected_skip = wc.State(short_B_COPY_path, { })
   saved_cwd = os.getcwd()
-  try:
-    os.chdir(svntest.main.work_dir)
-    svntest.actions.run_and_verify_merge(short_B_COPY_path, '6', '7',
-                                         sbox.repo_url + \
-                                         '/A/B',
-                                         expected_output,
-                                         expected_merge_disk,
-                                         expected_merge_status,
-                                         expected_skip,
-                                         None, None, None, None,
-                                         None, 1,alpha_COPY_path)
-  finally:
-    os.chdir(saved_cwd)
+
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_B_COPY_path, '6', '7',
+                                       sbox.repo_url + \
+                                       '/A/B',
+                                       expected_output,
+                                       expected_merge_disk,
+                                       expected_merge_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1,alpha_COPY_path)
+
+  os.chdir(saved_cwd)
 
   # Update just A/B_COPY/E.  The mergeinfo (r1,3-5,7) reset on
   # A/B_COPY/E by the udpate is identical to the local info on

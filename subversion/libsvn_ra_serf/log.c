@@ -331,6 +331,8 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
   log_state_e state;
   log_info_t *info;
 
+  UNUSED_CTX(log_ctx);
+
   state = parser->state->current_state;
   info = parser->state->private;
 
@@ -467,7 +469,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                      session, session->conns[0],
                                      session->repos_url.path, pool));
 
-  /* At this point, we may have a deleted file.  So, we'll match ra_dav's
+  /* At this point, we may have a deleted file.  So, we'll match ra_neon's
    * behavior and use the larger of start or end as our 'peg' rev.
    */
   peg_rev = (start > end) ? start : end;

@@ -50,6 +50,8 @@ def _usage_exit():
   print "  --list               : print test doc strings only"
   print "  --enable-sasl        : enable Cyrus SASL authentication for"
   print "                         svnserve"
+  print "  -p, --parallel       : run multiple tests in parallel"
+
   sys.exit(0)
 
 CMDLINE_TEST_SCRIPT_PATH = 'subversion/tests/cmdline/'
@@ -75,11 +77,11 @@ for section in gen_obj.sections.values():
     dll_basename = section.name + "-" + str(gen_obj.version) + ".dll"
     svn_dlls.append(os.path.join("subversion", section.name, dll_basename))
 
-opts, args = my_getopt(sys.argv[1:], 'hrdvcu:f:',
+opts, args = my_getopt(sys.argv[1:], 'hrdvcpu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'help', 'list',
-                        'enable-sasl', 'bin='])
+                        'enable-sasl', 'bin=', 'parallel'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -95,6 +97,7 @@ httpd_port = None
 list_tests = None
 enable_sasl = None
 svn_bin = None
+parallel = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -128,6 +131,8 @@ for opt, val in opts:
     base_url = "svn://localhost/"
   elif opt == '--bin':
     svn_bin = val
+  elif opt in ('-p', '--parallel'):
+    parallel = 1
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -326,7 +331,7 @@ class Svnserve:
     print 'Svnserve.stop not implemented'
 
 class Httpd:
-  "Run httpd for ra_dav tests"
+  "Run httpd for DAV tests"
   def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
@@ -505,7 +510,8 @@ import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
                            base_url, fs_type, 1, cleanup, 
-                           enable_sasl, list_tests, svn_bin)
+                           enable_sasl, parallel, list_tests, 
+                           svn_bin)
 old_cwd = os.getcwd()
 try:
   os.chdir(abs_builddir)

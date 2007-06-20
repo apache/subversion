@@ -352,7 +352,7 @@ public class SVNClient implements SVNClientInterface
         MyLogMessageCallback callback = new MyLogMessageCallback();
 
         logMessages(path, revisionEnd, revisionStart, revisionEnd,
-                    stopOnCopy, discoverPath, false, limit, callback);
+                    stopOnCopy, discoverPath, false, false, limit, callback);
 
         return callback.getMessages();
     }
@@ -368,6 +368,7 @@ public class SVNClient implements SVNClientInterface
      *                      returned objects
      * @param includeMergedRevisions include log messages for revisions which
      *                               were merged.
+     * @param omitLogText   supress log message text.
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @return array of LogMessages
@@ -380,6 +381,7 @@ public class SVNClient implements SVNClientInterface
                                    boolean stopOnCopy,
                                    boolean discoverPath,
                                    boolean includeMergedRevisions,
+                                   boolean omitLogText,
                                    long limit,
                                    LogMessageCallback callback)
             throws ClientException;

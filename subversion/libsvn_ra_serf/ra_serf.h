@@ -32,6 +32,11 @@
 #include "svn_dav.h"
 
 
+/** Use this to silence compiler warnings about unused parameters. */
+#define UNUSED_CTX(x) ((void)(x))
+
+
+
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 
 /* A serf connection and optionally associated SSL context.  */
@@ -210,7 +215,7 @@ static const svn_ra_serf__dav_props_t repos_root_props[] =
   { NULL }
 };
 
-/* WC props compatibility with ra_dav. */
+/* WC props compatibility with ra_neon. */
 #define SVN_RA_SERF__WC_NAMESPACE SVN_PROP_WC_PREFIX "ra_dav:"
 #define SVN_RA_SERF__WC_ACTIVITY_URL SVN_RA_SERF__WC_NAMESPACE "activity-url"
 #define SVN_RA_SERF__WC_CHECKED_IN_URL SVN_RA_SERF__WC_NAMESPACE "version-url"
@@ -686,9 +691,10 @@ svn_ra_serf__bucket_propfind_create(svn_ra_serf__connection_t *conn,
  * serf context for the properties listed in LOOKUP_PROPS at URL for
  * DEPTH ("0","1","infinity").
  *
- * This function will not block waiting for the response.  Instead, the
- * caller is expected to call context_run and wait for the PROP_CTX->done
- * flag to be set.
+ * This function will not block waiting for the response.  If the
+ * request can be satisfied from a local cache, set PROP_CTX to NULL
+ * as a signal to callers of that fact.  Otherwise, callers are 
+ * expected to call svn_ra_serf__wait_for_props().
  */
 svn_error_t *
 svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
@@ -920,7 +926,7 @@ svn_ra_serf__do_diff(svn_ra_session_t *session,
                      void **report_baton,
                      svn_revnum_t revision,
                      const char *diff_target,
-                     svn_boolean_t recurse,
+                     svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t text_deltas,
                      const char *versus_url,
@@ -934,7 +940,7 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
                        void **report_baton,
                        const char *status_target,
                        svn_revnum_t revision,
-                       svn_boolean_t recurse,
+                       svn_depth_t depth,
                        const svn_delta_editor_t *status_editor,
                        void *status_baton,
                        apr_pool_t *pool);
@@ -945,7 +951,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        void **report_baton,
                        svn_revnum_t revision_to_update_to,
                        const char *update_target,
-                       svn_boolean_t recurse,
+                       svn_depth_t depth,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
                        apr_pool_t *pool);
@@ -956,7 +962,7 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        void **report_baton,
                        svn_revnum_t revision_to_switch_to,
                        const char *switch_target,
-                       svn_boolean_t recurse,
+                       svn_depth_t depth,
                        const char *switch_url,
                        const svn_delta_editor_t *switch_editor,
                        void *switch_baton,
@@ -1046,6 +1052,8 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          apr_hash_t **mergeinfo,
                                          const apr_array_header_t *paths,
                                          svn_revnum_t revision,
-                                         svn_boolean_t include_parents,
+                                         svn_mergeinfo_inheritance_t inherit,
                                          apr_pool_t *pool);
+
+
 

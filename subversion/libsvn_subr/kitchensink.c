@@ -32,6 +32,19 @@ svn_uuid_generate(apr_pool_t *pool)
   return uuid_str;
 }
 
+svn_accept_t
+svn_accept_from_word(const char *word)
+{
+  if (strcmp(word, "left") == 0)
+    return svn_accept_left;
+  if (strcmp(word, "working") == 0)
+    return svn_accept_working;
+  if (strcmp(word, "right") == 0)
+    return svn_accept_right;
+  /* Return svn_accept_invalid which means that the passed string is not
+   * a recognized accept option. */
+  return svn_accept_invalid;
+}
 
 const char *
 svn_depth_to_word(svn_depth_t depth)
@@ -74,4 +87,29 @@ svn_depth_from_word(const char *word)
   /* There's no special value for invalid depth, and no convincing
      reason to make one yet, so just fall back to unknown depth. */
   return svn_depth_unknown;
+}
+
+const char *
+svn_inheritance_to_word(svn_mergeinfo_inheritance_t inherit)
+{
+  switch (inherit)
+    {
+    case svn_mergeinfo_inherited:
+      return "inherited";
+    case svn_mergeinfo_nearest_ancestor:
+      return "nearest-ancestor";
+    default:
+      return "explicit";
+    }
+}
+
+
+svn_mergeinfo_inheritance_t
+svn_inheritance_from_word(const char *word)
+{
+  if (strcmp(word, "inherited") == 0)
+    return svn_mergeinfo_inherited;
+  if (strcmp(word, "nearest-ancestor") == 0)
+    return svn_mergeinfo_nearest_ancestor;
+  return svn_mergeinfo_explicit;
 }

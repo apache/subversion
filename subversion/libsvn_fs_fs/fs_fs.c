@@ -21,6 +21,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <errno.h>
+#include <sys/types.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>
@@ -54,6 +55,13 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
+
+#ifdef WIN32
+#include <windows.h> /* for getpid() */
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h> /* for getpid() */
+#endif
 
 /* An arbitrary maximum path length, so clients can't run us out of memory
  * by giving us arbitrarily large paths. */
@@ -968,7 +976,8 @@ get_youngest(svn_revnum_t *youngest_p,
 {
   char *buf;
 
-  SVN_ERR(read_current(svn_path_join(fs_path, PATH_CURRENT, pool), &buf, pool));
+  SVN_ERR(read_current(svn_path_join(fs_path, PATH_CURRENT, pool),
+                       &buf, pool));
   
   *youngest_p = SVN_STR_TO_REV(buf);
   
@@ -3168,14 +3177,48 @@ static svn_error_t *
 create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
                apr_pool_t *pool)
 {
+  char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
+  pid_t process_id;
+  apr_time_t now;
   unsigned int i;
   apr_pool_t *subpool;
-  const char *unique_path, *name, *prefix;
+  const char *unique_basename, *unique_path, *prefix;
+  char *p;
+  apr_status_t apr_err;
 
-  /* Try to create directories named "<txndir>/<rev>-<uniquifier>.txn". */
-  prefix = svn_path_join_many(pool, fs->path, PATH_TXNS_DIR,
-                              apr_psprintf(pool, "%ld", rev), NULL);
+  /* Try to create directories for the transaction named
+     "<txndir>/<hostname>-<pid>-<time>-<uniquifier>.txn".  Any periods
+     in the hostname are replaced with hyphens because FSFS cannot
+     work with periods in the transaction name.  It would be nice to
+     use underscores instead of hyphens, but svn_fs.h guarantees that
+     transaction names contain only letters (upper- and lower-case),
+     digits, `-', and `.', from the ASCII character set. */
+  apr_err = apr_gethostname(hostname_str, sizeof(hostname_str), pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get local hostname"));
 
+  for (p = hostname_str; *p; ++p)
+    if ('.' == *p)
+      *p = '-';
+
+  process_id = getpid();
+  now = apr_time_now();
+
+  unique_basename = apr_psprintf(pool, "%s-%05d-%" APR_TIME_T_FMT,
+                                 hostname_str, process_id, now);
+
+  if (strlen(unique_basename) + 6 > SVN_FS__TXN_MAX_LEN)
+    {
+      return svn_error_createf(SVN_ERR_FS_TXN_NAME_TOO_LONG,
+                               NULL,
+                               _("The auto-generated transaction name "
+                                 "'%s-XXXXX' is longer than the maximum "
+                                 "transaction name length %d"),
+                               unique_basename, SVN_FS__TXN_MAX_LEN);
+    }
+
+  prefix = svn_path_join_many(pool, fs->path, PATH_TXNS_DIR, unique_basename,
+                              NULL);
   subpool = svn_pool_create(pool);
   for (i = 1; i <= 99999; i++)
     {
@@ -3187,7 +3230,7 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
       if (! err)
         {
           /* We succeeded.  Return the basename minus the ".txn" extension. */
-          name = svn_path_basename(unique_path, subpool);
+          const char *name = svn_path_basename(unique_path, subpool);
           *id_p = apr_pstrndup(pool, name,
                                strlen(name) - strlen(PATH_EXT_TXN));
           svn_pool_destroy(subpool);

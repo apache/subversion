@@ -237,6 +237,8 @@ cdata_getlocks(svn_ra_serf__xml_parser_t *parser,
   lock_state_e state;
   lock_info_t *info;
 
+  UNUSED_CTX(lock_ctx);
+
   state = parser->state->current_state;
   info = parser->state->private;
 
@@ -300,7 +302,6 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets, *tmp;
   const char *req_url;
   int status_code;
 

@@ -25,6 +25,7 @@ import svntest
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -466,16 +467,9 @@ def merge_file_into_symlink(sbox):
 def checkout_repo_with_symlinks(sbox):
   "checkout a repository containing symlinks"
 
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
-  # Load the dumpfile into the repos.
-  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                          'special_tests_data')
-  dump_str = svntest.main.file_read(os.path.join(data_dir,
-                                                 "symlink.dump"), "rb")
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'special_tests_data',
+                                               'symlink.dump'))
   
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'from': Item(status='A '),
@@ -537,16 +531,9 @@ def diff_symlink_to_dir(sbox):
 def checkout_repo_with_unknown_special_type(sbox):
   "checkout repository with unknown special file type"
 
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
-  # Load the dumpfile into the repos.
-  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                          'special_tests_data')
-  dump_str = svntest.main.file_read(os.path.join(data_dir,
-                                                 "bad-special-type.dump"), "rb")
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'special_tests_data',
+                                               'bad-special-type.dump'))
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'special': Item(status='A '),
@@ -562,22 +549,13 @@ def checkout_repo_with_unknown_special_type(sbox):
 def replace_symlink_with_dir(sbox):
   "replace a special file with a directory"
 
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'special_tests_data',
+                                               'symlink.dump'))
+                                                    
   wc_dir = sbox.wc_dir
   from_path = os.path.join(wc_dir, 'from')
 
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.safe_rmtree(sbox.wc_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
-  # Load the dumpfile into the repos.
-  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                          'special_tests_data')
-  dump_str = svntest.main.file_read(os.path.join(data_dir,
-                                                 "symlink.dump"), "rb")
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
-  svntest.main.run_svn(1, 'co', sbox.repo_url, wc_dir)
-                                                    
   # Now replace the symlink with a directory and try to commit, we
   # should get an error
   os.remove(from_path);
@@ -628,19 +606,19 @@ def update_obstructing_symlink(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(general_symlink, (os.name != 'posix')),
-              Skip(replace_file_with_symlink, (os.name != 'posix')),
-              Skip(import_export_symlink, (os.name != 'posix')),
-              Skip(copy_tree_with_symlink, (os.name != 'posix')),
-              Skip(replace_symlink_with_file, (os.name != 'posix')),
-              Skip(remove_symlink, (os.name != 'posix')),
-              Skip(merge_symlink_into_file, (os.name != 'posix')),
-              Skip(merge_file_into_symlink, (os.name != 'posix')),
+              SkipUnless(general_symlink, svntest.main.is_posix_os),
+              SkipUnless(replace_file_with_symlink, svntest.main.is_posix_os),
+              SkipUnless(import_export_symlink, svntest.main.is_posix_os),
+              SkipUnless(copy_tree_with_symlink, svntest.main.is_posix_os),
+              SkipUnless(replace_symlink_with_file, svntest.main.is_posix_os),
+              SkipUnless(remove_symlink, svntest.main.is_posix_os),
+              SkipUnless(merge_symlink_into_file, svntest.main.is_posix_os),
+              SkipUnless(merge_file_into_symlink, svntest.main.is_posix_os),
               checkout_repo_with_symlinks,
-              XFail(Skip(diff_symlink_to_dir, (os.name != 'posix'))),
+              XFail(SkipUnless(diff_symlink_to_dir, svntest.main.is_posix_os)),
               checkout_repo_with_unknown_special_type,
               replace_symlink_with_dir,
-              Skip(update_obstructing_symlink, (os.name != 'posix')),
+              SkipUnless(update_obstructing_symlink, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':

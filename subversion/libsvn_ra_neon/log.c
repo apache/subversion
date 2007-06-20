@@ -32,7 +32,7 @@
 #include "svn_xml.h"
 #include "../libsvn_ra/ra_loader.h"
 
-#include "ra_dav.h"
+#include "ra_neon.h"
 
 
 
@@ -42,7 +42,7 @@
 struct log_baton
 {
   /*WARNING: WANT_CDATA should stay the first element in the baton:
-    svn_ra_dav__xml_collect_cdata() assumes the baton starts with a stringbuf.
+    svn_ra_neon__xml_collect_cdata() assumes the baton starts with a stringbuf.
   */
   svn_stringbuf_t *want_cdata;
   svn_stringbuf_t *cdata;
@@ -95,7 +95,7 @@ reset_log_item(struct log_baton *lb)
 
 
 /*
- * This implements the `svn_ra_dav__xml_startelm_cb' prototype.
+ * This implements the `svn_ra_neon__xml_startelm_cb' prototype.
  */
 static svn_error_t *
 log_start_element(int *elem, void *baton, int parent,
@@ -104,31 +104,31 @@ log_start_element(int *elem, void *baton, int parent,
   const char *copyfrom_path, *copyfrom_revstr;
   svn_revnum_t copyfrom_rev;
   struct log_baton *lb = baton;
-  static const svn_ra_dav__xml_elm_t log_report_elements[] =
+  static const svn_ra_neon__xml_elm_t log_report_elements[] =
     {
       { SVN_XML_NAMESPACE, "log-report", ELEM_log_report, 0 },
       { SVN_XML_NAMESPACE, "log-item", ELEM_log_item, 0 },
-      { SVN_XML_NAMESPACE, "date", ELEM_log_date, SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "date", ELEM_log_date, SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "added-path", ELEM_added_path,
-        SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "deleted-path", ELEM_deleted_path,
-        SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "modified-path", ELEM_modified_path,
-        SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path,
-        SVN_RA_DAV__XML_CDATA },
-      { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
+      { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
-        SVN_RA_DAV__XML_CDATA },
-      { "DAV:", "comment", ELEM_comment, SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
+      { "DAV:", "comment", ELEM_comment, SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "nbr-children", ELEM_nbr_children,
-        SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
       { NULL }
     };
-  const svn_ra_dav__xml_elm_t *elm
-    = svn_ra_dav__lookup_xml_elem(log_report_elements, nspace, name);
+  const svn_ra_neon__xml_elm_t *elm
+    = svn_ra_neon__lookup_xml_elem(log_report_elements, nspace, name);
 
-  *elem = elm ? elm->id : SVN_RA_DAV__XML_DECLINE;
+  *elem = elm ? elm->id : SVN_RA_NEON__XML_DECLINE;
   if (!elm)
     return SVN_NO_ERROR;
 
@@ -199,7 +199,7 @@ log_start_element(int *elem, void *baton, int parent,
 
 
 /*
- * This implements the `svn_ra_dav__xml_endelm_cb' prototype.
+ * This implements the `svn_ra_neon__xml_endelm_cb' prototype.
  */
 static svn_error_t *
 log_end_element(void *baton, int state,
@@ -313,18 +313,18 @@ log_end_element(void *baton, int state,
 }
 
 
-svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
-                                  const apr_array_header_t *paths,
-                                  svn_revnum_t start,
-                                  svn_revnum_t end,
-                                  int limit,
-                                  svn_boolean_t discover_changed_paths,
-                                  svn_boolean_t strict_node_history,
-                                  svn_boolean_t include_merged_revisions,
-                                  svn_boolean_t omit_log_text,
-                                  svn_log_message_receiver2_t receiver,
-                                  void *receiver_baton,
-                                  apr_pool_t *pool)
+svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
+                                   const apr_array_header_t *paths,
+                                   svn_revnum_t start,
+                                   svn_revnum_t end,
+                                   int limit,
+                                   svn_boolean_t discover_changed_paths,
+                                   svn_boolean_t strict_node_history,
+                                   svn_boolean_t include_merged_revisions,
+                                   svn_boolean_t omit_log_text,
+                                   svn_log_message_receiver2_t receiver,
+                                   void *receiver_baton,
+                                   apr_pool_t *pool)
 {
   /* The Plan: Send a request to the server for a log report.
    * Somewhere in mod_dav_svn, there will be an implementation, R, of
@@ -338,7 +338,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
    */
 
   int i;
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct log_baton lb;
   svn_string_t bc_url, bc_relative;
@@ -435,27 +435,27 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
      baseline-collection URL, which we get from the largest of the
      START and END revisions. */
   use_rev = (start > end) ? start : end;
-  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                        ras, ras->url->data, use_rev,
-                                        pool));
+  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                         ras, ras->url->data, use_rev,
+                                         pool));
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             pool);
 
 
-  err = svn_ra_dav__parsed_request(ras,
-                                   "REPORT",
-                                   final_bc_url,
-                                   request_body->data,
-                                   0,  /* ignored */
-                                   NULL,
-                                   log_start_element,
-                                   svn_ra_dav__xml_collect_cdata,
-                                   log_end_element,
-                                   &lb,
-                                   NULL,
-                                   NULL,
-                                   FALSE,
-                                   pool);
+  err = svn_ra_neon__parsed_request(ras,
+                                    "REPORT",
+                                    final_bc_url,
+                                    request_body->data,
+                                    0,  /* ignored */
+                                    NULL,
+                                    log_start_element,
+                                    svn_ra_neon__xml_collect_cdata,
+                                    log_end_element,
+                                    &lb,
+                                    NULL,
+                                    NULL,
+                                    FALSE,
+                                    pool);
   svn_pool_destroy(lb.subpool);
 
   if (err && lb.limit_compat_bailout)
