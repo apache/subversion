@@ -3862,12 +3862,21 @@ Forcing the deletion can also be used to delete files not under svn control."
 
 (defun svn-status-update-cmd (arg)
   "Run svn update.
-When called with a prefix argument, ask the user for the revision to update to."
+When called with a prefix argument, ask the user for the revision to update to.
+When called with a negative prefix argument, only update the selected files."
   (interactive "P")
-  (let ((rev (when arg (svn-status-read-revision-string (format "Directory: %s: Run svn update -r " default-directory)))))
-    (message "Running svn-update for %s" default-directory)
-    ;;TODO: use file names also??
-    (svn-run t t 'update "update" (when rev (list "-r" rev)))))
+  (let* ((selective-update (or (and (numberp arg) (< arg 0)) (eq arg '-)))
+         (rev (when arg (svn-status-read-revision-string
+                         (if selective-update
+                             (format "Selected entries: Run svn update -r ")
+                           (format "Directory: %s: Run svn update -r " default-directory))
+                         (if selective-update "HEAD" nil)))))
+    (if selective-update
+        (progn
+          (message "Running svn-update for %s" (svn-status-marked-file-names))
+          (svn-run t t 'update "update" (when rev (list "-r" rev)) (svn-status-marked-file-names)))
+      (message "Running svn-update for %s" default-directory)
+      (svn-run t t 'update "update" (when rev (list "-r" rev))))))
 
 (defun svn-status-commit ()
   "Commit selected files.
