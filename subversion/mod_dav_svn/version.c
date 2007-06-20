@@ -978,7 +978,7 @@ deliver_report(request_rec *r,
         {
           return dav_svn__replay_report(resource, doc, output);
         }
-      else if (strcmp(doc->root->name, "merge-info-report") == 0)
+      else if (strcmp(doc->root->name, "mergeinfo-report") == 0)
         {
           return dav_svn__get_mergeinfo_report(resource, doc, output);
         }

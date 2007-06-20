@@ -499,7 +499,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "file-revs-report" },
   { SVN_XML_NAMESPACE, "get-locks-report" },
   { SVN_XML_NAMESPACE, "replay-report" },
-  { SVN_XML_NAMESPACE, "merge-info-report" },
+  { SVN_XML_NAMESPACE, "mergeinfo-report" },
   { NULL, NULL },
 };
 
