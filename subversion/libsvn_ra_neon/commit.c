@@ -102,9 +102,9 @@ typedef struct
 
 typedef struct
 {
-  apr_file_t *tmpfile;
-  svn_stringbuf_t *fname;
-  const char *base_checksum;    /* hex md5 of base text; may be null */
+  apr_file_t *tmpfile;        /* may be NULL for content-less file */
+  svn_stringbuf_t *fname;     /* may be NULL for content-less file */
+  const char *base_checksum;  /* hex md5 of base text; may be null */
 } put_baton_t;
 
 typedef struct
@@ -114,6 +114,7 @@ typedef struct
   apr_hash_t *prop_changes; /* name/values pairs of new/changed properties. */
   apr_array_header_t *prop_deletes; /* names of properties to delete. */
   svn_boolean_t created; /* set if this is an add rather than an update */
+  svn_boolean_t copied; /* set if this object was copied */
   apr_pool_t *pool; /* the pool from open_foo() / add_foo() */
   put_baton_t *put_baton;  /* baton for this file's PUT request */
   const char *token;       /* file's lock token, if available */
@@ -849,12 +850,14 @@ static svn_error_t * commit_add_dir(const char *path,
 
       /* Have neon do the COPY. */
       SVN_ERR(svn_ra_neon__copy(parent->cc->ras,
-                                1,                  /* overwrite */
-                                SVN_RA_NEON__DEPTH_INFINITE,
-                                                   /* always copy dirs deeply */
-                                copy_src,           /* source URI */
-                                child->rsrc->wr_url,/* dest URI */
+                                1,                   /* overwrite */
+                                SVN_RA_NEON__DEPTH_INFINITE, /* deep copy */
+                                copy_src,            /* source URI */
+                                child->rsrc->wr_url, /* dest URI */
                                 workpool));
+      
+      /* Remember that this object was copied. */
+      child->copied = TRUE;
     }
 
   /* Add this path to the valid targets hash. */
@@ -1049,6 +1052,9 @@ static svn_error_t * commit_add_file(const char *path,
                                 copy_src,        /* source URI */
                                 file->rsrc->wr_url,/* dest URI */
                                 workpool));
+
+      /* Remember that this object was copied. */
+      file->copied = TRUE;
     }
 
   /* Add this path to the valid targets hash. */
@@ -1185,6 +1191,16 @@ static svn_error_t * commit_close_file(void *file_baton,
   resource_baton_t *file = file_baton;
   commit_ctx_t *cc = file->cc;
 
+  /* If this is a newly added file, not copied, and the editor driver
+     didn't call apply_textdelta(), then we'll pretend they *did* call
+     apply_textdelta() and described a zero-byte empty file. */
+  if ((! file->put_baton) && file->created && (! file->copied))
+    {
+      /* Make a dummy put_baton, with NULL fields to indicate that
+         we're dealing with a content-less (zero-byte) file. */
+      file->put_baton = apr_pcalloc(file->pool, sizeof(*(file->put_baton)));
+    }
+
   if (file->put_baton)
     {
       put_baton_t *pb = file->put_baton;
@@ -1196,8 +1212,6 @@ static svn_error_t * commit_close_file(void *file_baton,
       request = svn_ra_neon__request_create(cc->ras, "PUT", url, pool);
 
       extra_headers = apr_hash_make(request->pool);
-      svn_ra_neon__set_header(extra_headers, "Content-Type",
-                              SVN_SVNDIFF_MIME_TYPE);
 
       if (file->token)
         svn_ra_neon__set_header
@@ -1209,15 +1223,27 @@ static svn_error_t * commit_close_file(void *file_baton,
                         file->token));
 
       if (pb->base_checksum)
-        svn_ra_neon__set_header(extra_headers, SVN_DAV_BASE_FULLTEXT_MD5_HEADER,
+        svn_ra_neon__set_header(extra_headers, 
+                                SVN_DAV_BASE_FULLTEXT_MD5_HEADER,
                                 pb->base_checksum);
 
       if (text_checksum)
-        svn_ra_neon__set_header
-          (extra_headers, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
+        svn_ra_neon__set_header(extra_headers, 
+                                SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, 
+                                text_checksum);
 
-      /* Give the file to neon. The provider will rewind the file. */
-      SVN_ERR(svn_ra_neon__set_neon_body_provider(request, pb->tmpfile));
+      if (pb->tmpfile)
+        {
+          svn_ra_neon__set_header(extra_headers, "Content-Type",
+                                  SVN_SVNDIFF_MIME_TYPE);
+
+          /* Give the file to neon. The provider will rewind the file. */
+          SVN_ERR(svn_ra_neon__set_neon_body_provider(request, pb->tmpfile));
+        }
+      else
+        {
+          ne_set_request_body_buffer(request->ne_req, "", 0);
+        }
 
       /* run the request and get the resulting status code (and svn_error_t) */
       SVN_ERR(svn_ra_neon__request_dispatch(NULL, request, extra_headers, NULL,
@@ -1226,8 +1252,11 @@ static svn_error_t * commit_close_file(void *file_baton,
                                             pool));
       svn_ra_neon__request_destroy(request);
       
-      /* we're done with the file.  this should delete it. */
-      (void) apr_file_close(pb->tmpfile);
+      if (pb->tmpfile)
+        {
+          /* we're done with the file.  this should delete it. */
+          (void) apr_file_close(pb->tmpfile);
+        }
     }
 
   /* Perform all of the property changes on the file. Note that we
