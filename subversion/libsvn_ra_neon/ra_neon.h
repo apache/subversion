@@ -1,5 +1,5 @@
 /*
- * ra_dav.h :  private declarations for the RA/DAV module
+ * ra_neon.h : Private declarations for the Neon-based DAV RA module.
  *
  * ====================================================================
  * Copyright (c) 2000-2007 CollabNet.  All rights reserved.

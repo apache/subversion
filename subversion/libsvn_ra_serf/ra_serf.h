@@ -1,5 +1,5 @@
 /*
- * ra_serf.h :  headers file for ra_serf
+ * ra_serf.h : Private declarations for the Serf-based DAV RA module.
  *
  * ====================================================================
  * Copyright (c) 2006 CollabNet.  All rights reserved.
