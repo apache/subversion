@@ -30,6 +30,7 @@
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_mergeinfo.h"
+#include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
 
 #include "ra_neon.h"
@@ -50,7 +51,7 @@ struct mergeinfo_baton
 
 static const svn_ra_neon__xml_elm_t mergeinfo_report_elements[] =
   {
-    { SVN_XML_NAMESPACE, "mergeinfo-report", ELEM_mergeinfo_report, 0 },
+    { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT, ELEM_mergeinfo_report, 0 },
     { SVN_XML_NAMESPACE, "mergeinfo-item", ELEM_mergeinfo_item, 0 },
     { SVN_XML_NAMESPACE, "mergeinfo-path", ELEM_mergeinfo_path,
       SVN_RA_NEON__XML_CDATA },
@@ -164,10 +165,12 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct mergeinfo_baton mb;
 
-  static const char minfo_report_head[]
-    = "<S:mergeinfo-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
+  static const char minfo_report_head[] =
+    "<S:" SVN_DAV__MERGEINFO_REPORT " xmlns:S=\"" SVN_XML_NAMESPACE "\">"
+    DEBUG_CR;
 
-  static const char minfo_report_tail[] = "</S:mergeinfo-report>" DEBUG_CR;
+  static const char minfo_report_tail[] =
+    "</S:" SVN_DAV__MERGEINFO_REPORT ">" DEBUG_CR;
 
   /* Construct the request body. */
   svn_stringbuf_appendcstr(request_body, minfo_report_head);
