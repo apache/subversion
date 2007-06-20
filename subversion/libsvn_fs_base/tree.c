@@ -3088,7 +3088,7 @@ txn_body_make_file(void *baton,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_base__dag_get_id(child),
-                     svn_fs_path_change_add, 0, 0, trail, trail->pool));
+                     svn_fs_path_change_add, 1, 0, trail, trail->pool));
 
   return SVN_NO_ERROR;
 }

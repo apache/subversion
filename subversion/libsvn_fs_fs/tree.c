@@ -2135,7 +2135,7 @@ fs_make_file(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(child),
-                     svn_fs_path_change_add, 0, 0, SVN_INVALID_REVNUM, NULL,
+                     svn_fs_path_change_add, 1, 0, SVN_INVALID_REVNUM, NULL,
                      pool));
 
   return SVN_NO_ERROR;
