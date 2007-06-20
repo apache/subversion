@@ -31,12 +31,12 @@ XFail = svntest.testcase.XFail
 # Utilities
 #
 
-def write_restrictive_svnserve_conf(repo_dir):
+def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."
   
   fp = open(svntest.main.get_svnserve_conf_file_path(repo_dir), 'w')
-  fp.write("[general]\nanon-access = none\nauth-access = write\n"
-           "password-db = passwd\nauthz-db = authz\n")
+  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
+           "password-db = passwd\nauthz-db = authz\n" % anon_access)
   fp.close()
 
 def write_authz_file(sbox, rules, sections=None):
@@ -896,6 +896,40 @@ def authz_locking(sbox):
                                         None, None,
                                         mu_path)
   
+# test for issue #2712: if anon-access == read, svnserve should also check
+# authz to determine whether a checkout/update is actually allowed for
+# anonymous users, and, if not, attempt authentication.
+def authz_svnserve_anon_access_read(sbox):
+  "authz issue #2712"
+
+  if not svntest.main.test_area_url.startswith('svn'):
+    raise svntest.Skip
+
+  sbox.build(create_wc = False)
+  B_path = os.path.join(sbox.wc_dir, 'A', 'B')
+  B_url = sbox.repo_url + '/A/B'
+  D_path = os.path.join(sbox.wc_dir, 'A', 'D')
+  D_url = sbox.repo_url + '/A/D'
+
+  # We want a svnserve.conf with anon-access = read.
+  write_restrictive_svnserve_conf(sbox.repo_dir, "read")
+
+  # Give jrandom read access to /A/B.  Anonymous users can only
+  # access /A/D.
+  write_authz_file(sbox, { "/A/B" : "jrandom = r",
+                           "/A/D" : "* = r" })
+
+  # Perform a checkout of /A/B, expecting to see no errors.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     B_url, B_path)
+
+  # Anonymous users should be able to check out /A/D.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     D_url, D_path)
 
 ########################################################################
 # Run the tests
@@ -916,6 +950,7 @@ test_list = [ None,
               authz_partial_export_test,
               authz_validate,
               authz_locking,
+              authz_svnserve_anon_access_read,
              ]
 
 if __name__ == '__main__':

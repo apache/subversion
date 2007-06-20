@@ -1243,14 +1243,17 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  const char *target;
+  const char *target, *full_path;
   svn_boolean_t recurse;
 
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb", &rev, &target,
                                  &recurse));
   target = svn_path_canonicalize(target, pool);
-  SVN_ERR(trivial_auth_request(conn, pool, b));
+  full_path = svn_path_join(b->fs_path->data, target, pool);
+  /* Check authorization and authenticate the user if necessary. */
+  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read, full_path, FALSE));
+  
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
@@ -1327,6 +1330,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   target = svn_path_canonicalize(target, pool);
   versus_url = svn_path_canonicalize(versus_url, pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
+
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
