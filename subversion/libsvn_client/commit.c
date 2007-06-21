@@ -245,7 +245,7 @@ import_file(const svn_delta_editor_t *editor,
   if (is_special)
     {
       apr_hash_set(properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING,
-                   svn_string_create(SVN_PROP_BOOLEAN_VALUE, pool));
+                   svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
       SVN_ERR(editor->change_file_prop(file_baton, SVN_PROP_SPECIAL,
                                        apr_hash_get(properties,
                                                     SVN_PROP_SPECIAL,
