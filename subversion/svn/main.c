@@ -608,7 +608,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  1. Edits versioned prop in working copy or repository.\n"
      "  2. Edits unversioned remote prop on repos revision.\n"
-     "     TARGET only determines which repository to access.\n"),
+     "     TARGET only determines which repository to access.\n"
+     "\n"
+     "See 'svn help propset' for more on property setting.\n"),
     {'r', svn_cl__revprop_opt, SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
      svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
@@ -669,7 +671,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      LastChangedRevision\n"
      "      Id                       - A compressed summary of the previous\n"
      "                                   4 keywords.\n"
-     "    svn:executable - If present, make the file executable.\n"
+     "    svn:executable - If present, make the file executable.  Use\n"
+     "      'svn propdel svn:executable PATH...' to clear.\n"
      "    svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'.\n"
      "    svn:mime-type  - The mimetype of the file.  Used to determine\n"
      "      whether to merge the file, and how to serve it from Apache.\n"
@@ -682,7 +685,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "        foo/bar -r 1234 http://example.com/repos/zag\n"
      "    svn:needs-lock - If present, indicates that the file should be locked\n"
      "      before it is modified.  Makes the working copy file read-only\n"
-     "      when it is not locked.\n"
+     "      when it is not locked.  Use 'svn propdel svn:needs-lock PATH...'\n"
+     "      to clear.\n"
+     "\n"
      "  The svn:keywords, svn:executable, svn:eol-style, svn:mime-type and\n"
      "  svn:needs-lock properties cannot be set on a directory.  A non-recursive\n"
      "  attempt will fail, and a recursive attempt will set the property\n"

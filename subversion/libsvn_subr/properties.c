@@ -219,6 +219,20 @@ svn_prop_diffs(apr_array_header_t **propdiffs,
 
 
 svn_boolean_t
+svn_prop_is_boolean(const char *prop_name)
+{
+  /* If we end up with more than 3 of these, we should probably put
+     them in a table and use bsearch.  With only three, it doesn't
+     make any speed difference.  */
+  if (strcmp(prop_name, SVN_PROP_EXECUTABLE) == 0
+      || strcmp(prop_name, SVN_PROP_NEEDS_LOCK) == 0
+      || strcmp(prop_name, SVN_PROP_SPECIAL) == 0)
+    return TRUE;
+  return FALSE;
+}
+
+
+svn_boolean_t
 svn_prop_needs_translation(const char *propname)
 {
   /* ### Someday, we may want to be picky and choosy about which

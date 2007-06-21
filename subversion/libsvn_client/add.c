@@ -238,7 +238,7 @@ add_file(const char *path,
     /* This must be a special file. */
     SVN_ERR(svn_wc_prop_set2
             (SVN_PROP_SPECIAL,
-             svn_string_create(SVN_PROP_SPECIAL_VALUE, pool),
+             svn_string_create(SVN_PROP_BOOLEAN_VALUE, pool),
              path, adm_access, FALSE, pool));
   else if (properties)
     {
