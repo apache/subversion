@@ -205,7 +205,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"parents",       svn_cl__parents_opt, 0,
                     N_("make intermediate directories")},
   {"use-merge-history", 'g', 0,
-                    N_("use/display additional information from merge "
+                    N_("use/display additional information from merge\n"
+                       "                             "
                        "history")},
   {"accept", svn_cl__accept_opt, 1,
                     N_("specify automatic conflict resolution source\n"
