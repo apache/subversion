@@ -59,12 +59,6 @@ from svntest import wc
 #####################################################################
 # Global stuff
 
-### Grandfather in SVNTreeUnequal, which used to live here.  If you're
-# ever feeling saucy, you could go through the testsuite and change
-# main.SVNTreeUnequal to test.SVNTreeUnequal.
-import tree
-SVNTreeUnequal = tree.SVNTreeUnequal
-
 class SVNProcessTerminatedBySignal(Failure):
   "Exception raised if a spawned process segfaulted, aborted, etc."
   pass
