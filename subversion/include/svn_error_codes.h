@@ -169,7 +169,15 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 4,
              "Bogus mime-type")
 
-  /* UNUSED error slot:                  + 5 */
+  /** @since New in 1.5.
+   *
+   * Note that there was an unused slot sitting here at
+   * SVN_ERR_BAD_CATEGORY_START + 5, so error codes after this aren't
+   * necessarily "New in 1.5" just because they come later.
+   */
+  SVN_ERRDEF(SVN_ERR_BAD_PROPERTY_VALUE,
+             SVN_ERR_BAD_CATEGORY_START + 5,
+             "Wrong or unexpected property value")
 
   SVN_ERRDEF(SVN_ERR_BAD_VERSION_FILE_FORMAT,
              SVN_ERR_BAD_CATEGORY_START + 6,

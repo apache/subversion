@@ -368,7 +368,7 @@ def enforce_lock(sbox):
 
   # svn:needs-lock value should be forced to a '*'
   svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '', lambda_path)
+  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '*', lambda_path)
   svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '      ', mu_path)
 
   # Check svn:needs-lock

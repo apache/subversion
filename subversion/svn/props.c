@@ -192,3 +192,34 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
 
     return SVN_NO_ERROR;
 }
+
+
+void
+svn_cl__check_boolean_prop_val(const char *propname, const char *propval)
+{
+  if (svn_prop_is_boolean(propname)
+      && (propval[0] == '\0'
+          || strcmp(propval, "no") == 0
+          || strcmp(propval, "off") == 0
+          || strcmp(propval, "false") == 0
+          /* Test for the ends-in-a-newline variants, because someone
+             might have used propedit with an editor that appends
+             newlines.  (Or maybe we should just chop all leading and
+             trailing whitespace first, and just strcmp() on the
+             result?  But I'm not sure those kinds of values happen
+             often enough for that to be worthwhile.) */
+          || strcmp(propval, "\n") == 0
+          || strcmp(propval, "no\n") == 0
+          || strcmp(propval, "off\n") == 0
+          || strcmp(propval, "false\n") == 0))
+    {
+      svn_error_t *err = svn_error_createf
+        (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
+         _("To turn off the %s property, use 'svn propdel';\n"
+           "setting the property to '%s' will not turn it off."),
+           propname, propval);
+      svn_handle_warning(stderr, err);
+      svn_error_clear(err);
+    }
+}
+

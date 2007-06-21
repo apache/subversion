@@ -819,7 +819,7 @@ def prop_value_conversions(sbox):
 
   # svn:executable value should be forced to a '*'
   set_prop('svn:executable', 'foo', iota_path)
-  set_prop('svn:executable', '', lambda_path)
+  set_prop('svn:executable', '*', lambda_path)
   set_prop('svn:executable', '      ', mu_path)
 
   # Anything else should be untouched
