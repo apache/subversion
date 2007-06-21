@@ -464,9 +464,11 @@ const char *svn_cl__node_kind_str(svn_node_kind_t kind);
  * PROPVAL looks like an attempt to turn the property off (i.e., it's
  * "off", "no", "false", or ""), then print a warning to the user that
  * setting the property to this value might not do what they expect.
+ * Perform temporary allocations in POOL.
  */
 void svn_cl__check_boolean_prop_val(const char *propname,
-                                    const char *propval);
+                                    const char *propval,
+                                    apr_pool_t *pool);
 
 
 #ifdef __cplusplus
