@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_subst.h"
 #include "svn_props.h"
+#include "svn_string.h"
 #include "svn_opt.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
@@ -195,23 +196,21 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
 
 
 void
-svn_cl__check_boolean_prop_val(const char *propname, const char *propval)
+svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
+                               apr_pool_t *pool)
 {
-  if (svn_prop_is_boolean(propname)
-      && (propval[0] == '\0'
-          || strcmp(propval, "no") == 0
-          || strcmp(propval, "off") == 0
-          || strcmp(propval, "false") == 0
-          /* Test for the ends-in-a-newline variants, because someone
-             might have used propedit with an editor that appends
-             newlines.  (Or maybe we should just chop all leading and
-             trailing whitespace first, and just strcmp() on the
-             result?  But I'm not sure those kinds of values happen
-             often enough for that to be worthwhile.) */
-          || strcmp(propval, "\n") == 0
-          || strcmp(propval, "no\n") == 0
-          || strcmp(propval, "off\n") == 0
-          || strcmp(propval, "false\n") == 0))
+  svn_stringbuf_t *propbuf;
+
+  if (!svn_prop_is_boolean(propname))
+    return;
+
+  propbuf = svn_stringbuf_create(propval, pool);
+  svn_stringbuf_strip_whitespace(propbuf);
+
+  if (propbuf->data[0] == '\0'
+      || strcmp(propbuf->data, "no") == 0
+      || strcmp(propbuf->data, "off") == 0
+      || strcmp(propbuf->data, "false") == 0)
     {
       svn_error_t *err = svn_error_createf
         (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
