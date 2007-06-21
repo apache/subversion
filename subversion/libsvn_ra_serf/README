@@ -13,10 +13,12 @@ The latest serf sources can be fetched via SVN at:
   http://serf.googlecode.com/svn/trunk/
 
 ra_serf can be enabled with the following configure flags:
+ "--with-serf=/path/to/serf/install"
+As Neon is currently Subversion's default RA DAV layer, you also need
+to add "http-library = serf" to your ~/.subversion/servers file to
+choose ra_serf at runtime.  Alternately, you can build with only
+support for ra_serf:
  "--without-neon --with-serf=/path/to/serf/install"
- (You need to disable neon and point at serf.)
- (Alternatively, just use --with-serf, and add "http-library = serf" to 
-  your ~/.subversion/servers file to choose ra_serf at runtime.)
 
 For more about how ra_serf/ra_neon talk WebDAV, consult notes/webdav-protocol.
 
