@@ -214,7 +214,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  *
  * @since New in 1.5.
  */
-#define SVN_PROP_BOOLEAN_VALUE "*"
+#define SVN_PROP_BOOLEAN_TRUE "*"
 
 /** The mime-type of a given file. */
 #define SVN_PROP_MIME_TYPE  SVN_PROP_PREFIX "mime-type"
@@ -234,9 +234,9 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
 /** The value to force the executable property to when set.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
- * Use @c SVN_PROP_BOOLEAN_VALUE instead.
+ * Use @c SVN_PROP_BOOLEAN_TRUE instead.
  */
-#define SVN_PROP_EXECUTABLE_VALUE SVN_PROP_BOOLEAN_VALUE
+#define SVN_PROP_EXECUTABLE_VALUE SVN_PROP_BOOLEAN_TRUE
 
 /** Set to TRUE ('*') if we want a file to be set to read-only when
  * not locked.  FALSE is indicated by deleting the property. */
@@ -245,9 +245,9 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
 /** The value to force the needs-lock property to when set.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
- * Use @c SVN_PROP_BOOLEAN_VALUE instead.
+ * Use @c SVN_PROP_BOOLEAN_TRUE instead.
  */
-#define SVN_PROP_NEEDS_LOCK_VALUE SVN_PROP_BOOLEAN_VALUE
+#define SVN_PROP_NEEDS_LOCK_VALUE SVN_PROP_BOOLEAN_TRUE
 
 /** Set if the file should be treated as a special file. */
 #define SVN_PROP_SPECIAL  SVN_PROP_PREFIX "special"
@@ -255,9 +255,9 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
 /** The value to force the special property to when set.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
- * Use @c SVN_PROP_BOOLEAN_VALUE instead.
+ * Use @c SVN_PROP_BOOLEAN_TRUE instead.
  */
-#define SVN_PROP_SPECIAL_VALUE SVN_PROP_BOOLEAN_VALUE
+#define SVN_PROP_SPECIAL_VALUE SVN_PROP_BOOLEAN_TRUE
 
 /** Describes external items to check out into this directory. 
  *

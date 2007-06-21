@@ -1449,7 +1449,7 @@ svn_wc_prop_get(const svn_string_t **value,
         }
       if (svn_prop_is_boolean(name))
         {
-          *value = svn_string_create(SVN_PROP_BOOLEAN_VALUE, pool);
+          *value = svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool);
           assert(*value != NULL);
           return SVN_NO_ERROR;
         }
@@ -1631,8 +1631,8 @@ svn_wc_prop_set2(const char *name,
      hash that outlives this function. */
   static const svn_string_t boolean_value =
     {
-      SVN_PROP_BOOLEAN_VALUE,
-      sizeof(SVN_PROP_BOOLEAN_VALUE) - 1
+      SVN_PROP_BOOLEAN_TRUE,
+      sizeof(SVN_PROP_BOOLEAN_TRUE) - 1
     };
 
   if (prop_kind == svn_prop_wc_kind)
