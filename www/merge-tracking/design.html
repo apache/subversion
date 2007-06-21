@@ -56,13 +56,20 @@ in this section.</p>
 <h3>Goals</h3>
 
 <p>The goal of the Merge History portion of the design is to track the
-information needed by the operations outlined by the <a
-href="requirements.html">use cases</a> (e.g. the revision numbers
+information needed by the operations outlined by the majority of the
+<a href="requirements.html">use cases</a> (e.g. the revision numbers
 being merged by a merge operation), and keeping this information in
 the right places as various operations (<code>copy</code>,
 <code>delete</code>, <code>add</code>, etc.) are performed.  This
 portion of the design does <em>not</em> encompass the operations
-themselves.</p>
+themselves, and is insufficient for handling cyclic merging (e.g. of
+so-called "reflected" revisions).  For details on problems with cyclic
+merging (caused by lack of tracking of multiple parents for a change),
+see <a
+href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=127537"
+>this thread</a>, especially <a
+href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=127570"
+>this follow-up</a>.</p>
 
 <p>The goals:</p>
 
