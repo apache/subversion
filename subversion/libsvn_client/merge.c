@@ -1801,7 +1801,8 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
          prefix of "path". */
       len = strlen(target_wcpath);
       if (len < strlen(path))
-        rel_path = apr_pstrcat(subpool, repos_rel_path, "/", path + len);
+        rel_path = apr_pstrcat(subpool, repos_rel_path, "/", path + len + 1,
+                               NULL);
       else
         rel_path = repos_rel_path;
       rangelist = apr_hash_get(mergeinfo, rel_path, APR_HASH_KEY_STRING);
