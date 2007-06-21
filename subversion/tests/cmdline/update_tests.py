@@ -69,7 +69,7 @@ def detect_extra_files(node, extra_files):
           return
 
   print "Found unexpected object:", node.name
-  raise svntest.main.SVNTreeUnequal
+  raise svntest.tree.SVNTreeUnequal
 
 
 
