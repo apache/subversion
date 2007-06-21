@@ -15,7 +15,8 @@ Contents
    2. User Interface
    3. Examples
    4. Implementation Strategy
-   5. Current Status
+   5. Compatability Matters
+   6. Current Status
 
 1. Design
 =========
