@@ -104,6 +104,7 @@ Commit access for specific areas:
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
         aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
+        dustin   Dustin J. Mitchell <dustin@zmanda.com>      (svnmerge)
 
   Translation of message files:
 
