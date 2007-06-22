@@ -126,11 +126,3 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r23494
-    Avoid crash from svndumpfilter on Windows due to use of
-    Microsoft-deprecated %n sprintf() format specifier to collect the
-    number of characters written.
-    Justification:
-      User reported problem (multiple reports), small fix.
-    Votes:
-      +1: dlr, malcolm, kameshj
