@@ -671,14 +671,15 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
+  const char *vcc_url;
 
   props = apr_hash_make(pool);
 
+  SVN_ERR(svn_ra_serf__get_repos_root(ra_session, &vcc_url, pool));
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      session->repos_url.path,
-                                      SVN_INVALID_REVNUM, "0",
+                                      vcc_url, SVN_INVALID_REVNUM, "0",
                                       uuid_props, pool));
-  *uuid = svn_ra_serf__get_prop(props, session->repos_url.path,
+  *uuid = svn_ra_serf__get_prop(props, vcc_url,
                                 SVN_DAV_PROP_NS_DAV, "repository-uuid");
 
   if (!*uuid)
