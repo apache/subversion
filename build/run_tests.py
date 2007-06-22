@@ -5,13 +5,14 @@
 
 '''usage: python run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
                     [--verbose] [--cleanup] [--enable-sasl] [--parallel]
-                    <abs_srcdir> <abs_builddir>
+                    [--http-library=<http-library>] <abs_srcdir> <abs_builddir>
                     <prog ...>
 
-The optional base-url, fs-type, verbose, parallel, enable-sasl, and
-cleanup options, and the first two parameters are passed unchanged to
-the TestHarness constructor.  All other parameters are names of test
-programs.  '''
+The optional base-url, fs-type, http-library, verbose, parallel,
+enable-sasl, and cleanup options, and the first two parameters are
+passed unchanged to the TestHarness constructor.  All other parameters
+are names of test programs.
+'''
 
 import os, sys
 
@@ -26,14 +27,16 @@ class TestHarness:
   '''
 
   def __init__(self, abs_srcdir, abs_builddir, logfile,
-               base_url=None, fs_type=None, verbose=None, cleanup=None,
-               enable_sasl=None, parallel=None, list_tests=None, svn_bin=None):
+               base_url=None, fs_type=None, http_library=None, verbose=None,
+               cleanup=None, enable_sasl=None, parallel=None, list_tests=None,
+               svn_bin=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
     LOGFILE is the name of the log file.
     BASE_URL is the base url for DAV tests.
     FS_TYPE is the FS type for repository creation.
+    HTTP_LIBRARY is the HTTP library for DAV-based communications.
     SVN_BIN is the path where the svn binaries are installed.
     '''
     self.srcdir = abs_srcdir
@@ -41,6 +44,7 @@ class TestHarness:
     self.logfile = logfile
     self.base_url = base_url
     self.fs_type = fs_type
+    self.http_library = http_library
     self.verbose = verbose
     self.cleanup = cleanup
     self.enable_sasl = enable_sasl
@@ -120,6 +124,8 @@ class TestHarness:
       cmdline.append('--cleanup')
     if self.fs_type is not None:
       cmdline.append(quote('--fs-type=' + self.fs_type))
+    if self.http_library is not None:
+      cmdline.append(quote('--http-library=' + self.http_library))
     if self.list_tests is not None:
       cmdline.append('--list')
     if self.svn_bin is not None:
@@ -176,8 +182,8 @@ class TestHarness:
 def main():
   try:
     opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
-                           ['url=', 'fs-type=', 'verbose', 'cleanup', 
-                            'enable-sasl', 'parallel'])
+                           ['url=', 'fs-type=', 'verbose', 'cleanup',
+                            'http-library=', 'enable-sasl', 'parallel'])
   except getopt.GetoptError:
     args = []
 
@@ -185,13 +191,15 @@ def main():
     print __doc__
     sys.exit(2)
 
-  base_url, fs_type, verbose, cleanup, enable_sasl, parallel = \
-            None, None, None, None, None, None
+  base_url, fs_type, verbose, cleanup, enable_sasl, http_library, parallel = \
+            None, None, None, None, None, None, None
   for opt, val in opts:
     if opt in ('-u', '--url'):
       base_url = val
     elif opt in ('-f', '--fs-type'):
       fs_type = val
+    elif opt in ('--http-library'):
+      http_library = val
     elif opt in ('-v', '--verbose'):
       verbose = 1
     elif opt in ('-c', '--cleanup'):
@@ -205,7 +213,8 @@ def main():
 
   th = TestHarness(args[0], args[1],
                    os.path.abspath('tests.log'),
-                   base_url, fs_type, verbose, cleanup, enable_sasl, parallel)
+                   base_url, fs_type, http_library, verbose,
+                   cleanup, enable_sasl, parallel)
 
   failed = th.run(args[2:])
   if failed:
