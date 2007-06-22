@@ -1395,40 +1395,6 @@ svn_wc_prop_list(apr_hash_t **props,
   return svn_wc__load_props(NULL, props, adm_access, entry->name, pool);
 }
 
-/* Return true if NAME is the name of a boolean svn: namespace
-   property.  */
-
-static svn_boolean_t
-is_boolean_property(const char *name)
-{
-  /* If we end up with more than 3 of these, we should probably put
-     them in a table and use bsearch.  With only three, it doesn't
-     make any speed difference.  */
-  if (strcmp(name, SVN_PROP_EXECUTABLE) == 0)
-    return TRUE;
-  else if (strcmp(name, SVN_PROP_NEEDS_LOCK) == 0)
-    return TRUE;
-  else if (strcmp(name, SVN_PROP_SPECIAL) == 0)
-    return TRUE;
-  return FALSE;
-}
-
-/* If NAME is a boolean svn: namespace property, return the value that
-   represents true for that property.  The result is allocated in
-   POOL. */
-
-static svn_string_t *
-value_of_boolean_prop(const char *name, apr_pool_t *pool)
-{
-  if (strcmp(name, SVN_PROP_EXECUTABLE) == 0)
-    return svn_string_create(SVN_PROP_EXECUTABLE_VALUE, pool);
-  else if (strcmp(name, SVN_PROP_NEEDS_LOCK) == 0)
-    return svn_string_create(SVN_PROP_NEEDS_LOCK_VALUE, pool);
-  else if (strcmp(name, SVN_PROP_SPECIAL) == 0)
-    return svn_string_create(SVN_PROP_SPECIAL_VALUE, pool);
-  return NULL;
-}
-
 /* Determine if PROPNAME is contained in the list of space separated
    values STRING.  */
 
@@ -1481,9 +1447,9 @@ svn_wc_prop_get(const svn_string_t **value,
           *value = NULL;
           return SVN_NO_ERROR;
         }
-      if (is_boolean_property(name))
+      if (svn_prop_is_boolean(name))
         {
-          *value = value_of_boolean_prop(name, pool);
+          *value = svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool);
           assert(*value != NULL);
           return SVN_NO_ERROR;
         }
@@ -1660,6 +1626,14 @@ svn_wc_prop_set2(const char *name,
   const char *base_name;
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   const svn_wc_entry_t *entry;
+  
+  /* Keep this static, it may get stored (for read-only purposes) in a
+     hash that outlives this function. */
+  static const svn_string_t boolean_value =
+    {
+      SVN_PROP_BOOLEAN_TRUE,
+      sizeof(SVN_PROP_BOOLEAN_TRUE) - 1
+    };
 
   if (prop_kind == svn_prop_wc_kind)
     return svn_wc__wcprop_set(name, value, path, adm_access, TRUE, pool);
@@ -1714,13 +1688,7 @@ svn_wc_prop_set2(const char *name,
         {
           /* Since we only check if the property exists or not, force the
              property value to a specific value */
-          static const svn_string_t executable_value =
-            {
-              SVN_PROP_EXECUTABLE_VALUE,
-              sizeof(SVN_PROP_EXECUTABLE_VALUE) - 1
-            };
-
-          value = &executable_value;
+          value = &boolean_value;
           SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
         }
     }
@@ -1737,13 +1705,7 @@ svn_wc_prop_set2(const char *name,
         {
           /* Since we only check if the property exists or not, force the
              property value to a specific value */
-          static const svn_string_t needs_lock_value =
-            {
-              SVN_PROP_NEEDS_LOCK_VALUE,
-              sizeof(SVN_PROP_NEEDS_LOCK_VALUE) - 1
-            };
-
-          value = &needs_lock_value;
+          value = &boolean_value;
           /* And we'll set the file to read-only at commit time. */
         }
     }

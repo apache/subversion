@@ -69,7 +69,7 @@ def detect_extra_files(node, extra_files):
           return
 
   print "Found unexpected object:", node.name
-  raise svntest.main.SVNTreeUnequal
+  raise svntest.tree.SVNTreeUnequal
 
 
 
@@ -1172,7 +1172,7 @@ def new_dir_with_spaces(sbox):
                                      sbox.repo_url
                                      + '/A/spacey%20dir')
 
-  # Update, and make sure ra_dav doesn't choke on the space.
+  # Update, and make sure ra_neon doesn't choke on the space.
   expected_output = svntest.wc.State(wc_dir, {
     'A/spacey dir'       : Item(status='A '),
     })

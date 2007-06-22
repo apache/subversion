@@ -44,20 +44,15 @@ capabilities (history sensitive merging, etc.).  The design is based
 on Dan Berlin's <a
 href="http://svn.haxx.se/dev/archive-2006-04/0916.shtml">proposal</a>
 <small>(Message-Id:
-&lt;1146242044.23718.1.camel@dberlin0-corp.corp.google.com&gt;)</small>.</p>
-
-<p style="color: red">The following content has been temporarily
-superseded by <a
-href="http://svn.collab.net/repos/svn/trunk/notes/merge-tracking.txt">notes
-on the development branch</a>, which contain some changes not listed
-in this section.</p>
+&lt;1146242044.23718.1.camel@dberlin0-corp.corp.google.com&gt;), and
+subsequent edits</small>.</p>
 
 <div class="h3">
 <h3>Goals</h3>
 
 <p>The goal of the Merge History portion of the design is to track the
-information needed by the operations outlined by the <a
-href="requirements.html">use cases</a> (e.g. the revision numbers
+information needed by the operations outlined by the majority of the
+<a href="requirements.html">use cases</a> (e.g. the revision numbers
 being merged by a merge operation), and keeping this information in
 the right places as various operations (<code>copy</code>,
 <code>delete</code>, <code>add</code>, etc.) are performed.  This
@@ -73,18 +68,17 @@ themselves.</p>
 
   <li>To not need to contact the server more than we already do now to
   determine which revisions have been merged in a file or directory
-  (ie some contact is acceptable, asking the server about each file is
+  (e.g. some contact is acceptable, asking the server about each file is
   not).</li>
 
-  <li>To be able to edit merge information in a human editable
-  form.</li>
+  <li>To be able to edit merge information in a human-readable form.</li>
 
   <li>For the information to be stored in a space efficient manner,
   and to be able to determine the revisions merged into a given
   file/director in a time efficient manner.</li>
 
   <li>Still getting a conservatively correct answer (not worse than
-  what we have now) when no merge info is specified.</li>
+  what we have now) when no merge info is available.</li>
 
   <li>To be able to collect, transmit, and keep this information up to
   date as much as possible on the client side.</li>
@@ -93,13 +87,23 @@ themselves.</p>
   answer queries.</li>
 </ul>
 
-<p><em>Pre-notes:</em> Whether to store info in revprops, or just on
-dirs and files, is still an open question.  It makes certain semantics
-clearer on what operations do below and how to proceed easier.  The
-question is whether it is efficient enough time wise when we go to
-retrieve merge info, and whether it complicates what merge has to do
-too much.  It also removes all of the listed <a
-href="#merge-history-prereqs">prerequisites</a>.</p>
+<p>Non-goals for <em>the 1.5 design</em> include:</p>
+
+<ul>
+  <li>Doing actual <a href="func-spec.html#as-merge">history sensitive
+  merging</a>.  Subversion does not yet have sufficient support for
+  creation of fully accurate change set graphs, which are necessary to
+  handle cyclic merging (e.g. of so-called "reflected"
+  revisions, also known as repeated bi-directional mergeing).  For
+  details on this problem (caused by lack of tracking of multiple
+  parents for a change), see <a
+  href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=127537"
+  >this discussion thread</a>, and especially <a
+  href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=127570"
+  >this follow-up</a>.</li>
+
+  <li>Curing cancer (aka being all things to all people).</li>
+</ul>
 
 </div>  <!-- goals -->
 
@@ -108,19 +112,47 @@ href="#merge-history-prereqs">prerequisites</a>.</p>
 
 <p>The first question that many people ask is "where should we store
 the merge information?" (what we store will be covered next).  A merge
-history property, named <code>SVN_MERGE_PROPERTY</code>
-(e.g. <code>svn:mergeinfo</code>) stored in the revision properties,
-directory properties, and file properties.  Each will store the
-<em>full</em>, <em>complete</em> list of current merged in changes, as
-far as it knows.  This ensures that the merge algorithm and other
-consumers do not have to walk back revisions in order to get the
-transitive closure of the revision list.</p>
+history property, named <code>SVN_PROP_MERGE_INFO</code>
+(e.g. <code>svn:mergeinfo</code>) stored in directory and file
+properties.  Each will store the <em>full</em>, <em>complete</em> list
+of current merged-in changes, as far as it knows.  This ensures that
+the merge algorithm and other consumers do not have to walk back
+through old revisions in order to compute a complete list of merge
+information for a path.</p>
 
-<p>The way we choose which of file, dir, revprop merge info to use in
-case of conflicts simple system of inheritance <a
+<p>Directly merged into the item means changes from any merge that
+have affected this path, which includes merges into parents,
+grandparents, etc., that had some affect on the path.</p>
+
+<p>Doing this storage of complete information at each point makes
+manual editing safe, because the changes to a path's merge info are
+localized to that path.</p>
+
+<p>However, as a space optimization, if the information on a
+sub-directory or file is exactly the same as the merge information for
+its parent directory, it <em>may</em> be elided in favor of that
+parent information.  This eliding may is done on the fly, but could
+also be done during a postpass (e.g. a <code>svnadmin
+mergeinfo-optimize</code>).  Eliding information means that an
+implementation may have to walk parent directories in order to gather
+information about merge info (however, this may have been necessary
+anyways).  It is expected that directory trees are not that deep, and
+the lookup of merge info properties quick enough (due to indexing,
+etc.), to make this eliding not affect performance too much.</p>
+
+<p>Eliding will never affect the semantics of merge information, as it
+should only be performed in the case when it was exactly the same, and
+if it was exactly the same, it could not have had an effect on the
+merge results.</p>
+
+<p>Any path may have merge info attached to it.</p>
+
+<p>The way we choose which path's merge info to use in case of
+conflicts simple system of inheritance <a
 href="#merge-history-footnotes">[1]</a> where the "most specific"
 place wins.  This means that if the property is set on a file, that
-completely overrides the directory and revision level properties.</p>
+completely overrides the directory level properties for the directory
+containing the file.</p>
 
 <p>The way we choose which to store to depends on how much and where
 you merge, and will be covered in the semantics.</p>
@@ -134,12 +166,12 @@ everywhere.</p>
 <p>As for what is stored:</p>
 
 <p>A survey of the community shows a slight preference for a human
-editable storage format along the lines of how svnmerge stores its
-merge info (e.g. path name and list of revisions).  Binary storage of
-such information would buy, on average, a 2-3 byte decrease per
-revision/range in size over ASCII <a
-href="merge-history-footnotes">[2]</a>, while making it not directly
-human readable/editable.</p>
+editable storage format along the lines of how
+<code>svnmerge.py</code> stores its merge info (e.g. path name and
+list of revisions).  Binary storage of such information would buy, on
+average, a 2-3 byte decrease per revision/range in size over ASCII <a
+href="#merge-history-footnotes">[2]</a>, while making it not directly
+human-readable/editable.</p>
 
 <p>The revisions we have merged <em>into</em> something are
 represented as a path, a colon, and then a comma separated revision
@@ -162,12 +194,12 @@ range end and beginning points are separated by "-".</p>
   <td>revisionrange | REVISION</td>
 </tr>
 <tr>
-  <td>revisionlist</td>
+  <td>rangelist</td>
   <td>revisioneelement (COMMA revisioneelement)*</td>
 </tr>
 <tr>
   <td>revisionline</td>
-  <td>PATHNAME COLON revisionlist</td>
+  <td>PATHNAME COLON rangelist</td>
 </tr>
 <tr>
   <td>top</td>
@@ -176,17 +208,24 @@ range end and beginning points are separated by "-".</p>
 </table>
 </div>  <!-- merge-info-grammar -->
 
+<p>This merge history ("top"), existing on a path specifies all the
+changes that have ever been merged into this object (file, dir or
+repo) within this repository.  It specifies the sources of the merges,
+(and thus two or more pathnames may be required to represent one
+source object at different revisions due to renaming).</p>
+
 <p>This list will <em>not</em> be stored in a canonicalized minimal
 form for a path (e.g. it may contain single revision numbers that
 could fall into ranges).  This is chiefly because the benefit of such
-a canonical format (slightly easier for <em>comparison</em>, but not
-indexing) is outweighed by the fact that generating a canonical form
-may require groveling through a lot of information to determine what
-that minimal canonical form is.  In particular, it may be that the
-revision list "5,7,9" is, in minimal canonical form, "5-9", because 6
-and 8 do not have any affect on the path name that 5 and 9 are from.
-Canonicalization could be done as a server side post pass because the
-information is stored in properties.</p>
+a canonical format -- which is slightly easier for visual
+<em>comparison</em>, but not indexing -- is outweighed by the fact
+that generating a canonical form may require groveling through a lot
+of information to determine what that minimal canonical form is.  In
+particular, it may be that the revision list "5,7,9" is, in minimal
+canonical form, "5-9", because 6 and 8 do not have any affect on the
+path name that 5 and 9 are from.  Canonicalization could be done as a
+server side post pass because the information is stored in
+properties.</p>
 
 <p>Note that this revision format will not scale on its own if you
 have a list of million revisions.  None will easily.  However, because
@@ -195,16 +234,17 @@ simply do something different with this single property if they wanted
 to.  Given the rates of change of various very active repositories,
 this will not be a problem we need to solve for many many years.</p>
 
-<p>The current thinking is that the payload of
-<code>SVN_MERGE_PROPERTY</code> will be stored in an index separate
-from the FS which is created during <code>svnadmin create</code>.
-This index will support fast querying, be populated during a merge or
-<code>svnadmin load</code>, and cough up its contents during a
-<code>svn propget SVN_MERGE_PROPERTY</code> or <code>svnadmin
-dump</code>.  The contents of <code>SVN_MERGE_PROPERTY</code> will not
-be stored redundantly in the FS (only in the index).  Dan Berlin is
-prototyping this index using sqlite3, and David James has a (generic)
-schema design underway.</p>
+<p>The payload of <code>SVN_PROP_MERGE_INFO</code> will be duplicated
+in an index separate from the FS which is created during
+<code>svnadmin create</code>, or on-demand for a pre-existing
+repository which has started using Subversion 1.5.  This index will
+support fast querying, be populated during a merge or <code>svnadmin
+load</code>, and cough up its contents as needed during API calls.
+The contents of <code>SVN_PROP_MERGE_INFO</code> is stored redundantly
+in index (to the FS).  Dan Berlin has prototyped a simple index using
+sqlite3.  David James later proposed a more normalized schema design,
+some of the features of which may become useful for implementing Merge
+Tracking functionality in a more performant manner.</p>
 
 </div>  <!-- storage -->
 
@@ -213,48 +253,52 @@ schema design underway.</p>
 <h3>Information Updating</h3>
 
 <p>Each operation you can perform may update or copy the merge info
-associated with a path, file, or revision.</p>
+associated with a path.</p>
 
-<p><code>svn add</code>:  No change to merge info</p>
+<p><code>svn add</code>:  No change to merge info.</p>
 
 <p><code>svn delete</code>: No direct change to merge info
 (indirectly, because the props go away, so does the merge info for the
-file)</p>
+file).</p>
 
-<p><code>svn rename</code>: No change to merge info</p>
+<p><code>svn copy</code>: Makes a full copy of any explicit merge info
+from the source path to the destination path.  Also adds "implied"
+merge info from the source path.</p>
 
-<p><code>svn copy</code>: Copies the merge info from the source path
-to the destination path, if any.</p>
-
-<p>This includes copying info from revprops, if necessary, by
-determining if the merge info exists in a revprop for the last changed
-commit for the source path, and copying it to the new revprop if it
-does (someone probably needs to check if this is the right semantic
-:P)</p>
-
-<p>All copies are full-copies of the merge information.</p>
+<p><code>svn rename</code>: Same as <code>svn copy</code>.</p>
 
 <p><code>svn merge</code>: Adds or subtracts to the merge info,
 according to the following:</p>
 
 <ul>
-  <li>Where to put the info:
+  <li>Where to store the info:
   <ol>
     <li>If the merge target is a single file, the merge info goes to
-    the property <code>SVN_MERGE_PROPERTY</code> set on that
-    file.</li>
+    the property <code>SVN_PROP_MERGE_INFO</code> set on that file.</li>
 
-    <li>If the merge target is a non-wc-root directory, the merge info
-    goes to the property <code>SVN_MERGE_PROPERTY</code> set on the
-    directory.</li>
-
-    <li>If the merge target is a wc-root directory, the merge info
-    goes to the property <code>SVN_MERGE_PROPERTY</code> set on the
-    revprop.</li>
+    <li>If the merge target is a directory, the merge info goes to the
+    property <code>SVN_PROP_MERGE_INFO</code> set on the shallowest
+    directory of the merge (e.g. the topmost directory affected by the
+    merge) that will require different info than the info already set
+    on other directories.</li>
   </ol>
+
+  The last clause of rule 2 is only meant to handle cherry picking and
+  multiple merges.  In the case that people repeatedly merge the same
+  tree into the same tree, the information will end up only on the
+  shallowest directory of the merge.  If changes are selectively
+  applied (e.g. all changes are applied to every directory but one),
+  the information will be on the shallowest common ancestor of all
+  those directories, <em>as well</em> as information being placed on
+  the directory where the changes are not applied, so that it will
+  override the information from that shallow directory. See cherry
+  picking example for more details.  Besides selective application,
+  apply changes that affect some directory, and then applying
+  different changes to subdirectories of that directory, will also
+  produce merge info on multiple directories in a given path.
   </li>
 
-  <li>What info is put:
+  <li>What info is stored:
   <ol>
     <li>If you are merging in reverse, revisions are subtracted from
     the revision lines, but we never write out anti-revisions.  Thus,
@@ -263,49 +307,162 @@ according to the following:</p>
     empty list.</li>
 
     <li>If you are merging forward, the revision(s) you are merging is
-    added to the revision line in sorted order (such that all
-    revisions and revision ranges in the list are monotonically
-    increasing from left to right).  The exact details of how the
-    range is represented in terms of a list of single revs, or a
-    revision range, is left as a quality of implementation detail.
-    The only requirement is that the range be correct.</li>
+    added to the range list in sorted order (such that all revisions
+    and revision ranges in the list are monotonically increasing from
+    left to right).</li>
 
     <li>The path (known as PATHNAME in the grammar) used as the key to
-    determine which revision line to change is the subdirectory path
-    being merged from, relative to the repo root, with the repo url
+    determine which revision line to change is the sub-directory path
+    being merged from, relative to the repo root, with the repo URL
     stripped from it.</li>
   </ol>
+
+  In the case that we are merging changes that themselves contain
+  merge info, the merge info properties must be merged.  The effect of
+  this is that indirect merge info becomes direct merge info as it is
+  integrated as part of the merge info now set on the property.  The
+  way this merge is performed is to merge the revision lists for each
+  identical pathname, and to copy the rest.  Blocking of merges and
+  how this affects this information is not covered in this design.
+  The indirect info merging is *in addition* to specifying the merge
+  that we are now doing.  See the repeated merge with indirect info
+  example for an example.
   </li>
 </ul>
 
 <p>Thus a merge of revisions 1-9 from
-http://foo.bar.com/reposroot/trunk would produce "/trunk:1-9"</p>
+http://example.com/repos-root/trunk would produce "/trunk:1-9"</p>
 
-<p>cross-repo merging is a bridge we can cross if we ever get there :).</p>
+<p>Cross-repo merging is a bridge we can cross if we ever get there :).</p>
 
 </div>  <!-- h3 -->
 
-<div class="h3" id="merge-history-prereqs">
-<h3>Prerequisites</h3>
 
-<ul>
-  <li>Need to be able to set a revprop to be stored on commit (see <a
-  href="http://subversion.tigris.org/issues/show_bug.cgi?id=1976">issue
-  1976</a>).</li>
+<div class="h3">
+<h3>Examples</h3>
 
-  <li>Need to be able to say to copy a revprop from a particular
-  revision and only contact the server at commit time.</li>
+<div class="h4">
+<h4>Repeated merge</h4>
 
-  <li>Need to be able to have auth treat
-  <code>SVN_MERGE_PROPERTY</code> revprop differently from other
-  revprops (either by special casing the cases users do care about
-  controlling, or special casing props users don't care about
-  controlling, etc.) so that people who don't have access to the
-  revprops can still do history sensitive merges of directories they
-  do have access to.</li>
-</ul>
+<p>(I have assumed no renames here, and that all directories were
+added in rev 1, for simplicity.  The pathname will never change, this
+should not cause any issues that need examples.)</p>
 
-</div>  <!-- merge-history-pre-reqs -->
+<p>Assume trunk has 9 revisions, 1-9.</p>
+
+<p>A merge of /trunk into /branches/release will produce the merge
+info "/trunk: 1-9".</p>
+
+<p>Assume trunk now has 6 additional revisions, 14-18.</p>
+
+<p>A merge of /trunk into /branches/release should only merge 14-18
+and produce the merge info "/trunk: 1-9,14-18".  This merge info will
+be placed on /branches/release.</p>
+
+<p>(Note the canonical minimal form of the above would be 1-18, as
+9-14 do not affect that path.  This is also an acceptable answer, as
+is any variant that represents the same information.)</p>
+
+</div>  <!-- h4 -->
+
+<div class="h4">
+<h4>Repeated merge with indirect info</h4>
+
+<p>Assume the repository is in the state it would be after the
+"Repeated merge" example.  Assume additionally, we now have a branch
+/branches/next-release, with revisions 20-24 on it.</p>
+
+<p>We wish to merge /branches/release into /branches/next-release.</p>
+
+<p>A merge of /branches/release into /branches/next-release will produce
+the merge info:</p>
+<pre>
+"/branches/release: 1-24
+ /trunk:1-9,14-18"
+</pre>
+
+<p>This merge info will be placed on /branches/next-release.</p>
+
+<p>Note that the merge information about merges *to* /branches/release
+has been added to our merge info.</p>
+
+<p>A future merge of /trunk into /branches/next-release, assuming no
+new revisions on /trunk, will merge nothing.</p>
+
+</div>  <!-- h4 -->
+
+<div class="h4">
+<h4>Cherry picking a change to a file</h4>
+
+<p>Assume the repository is in the state it would be after the
+"Repeated merge with indirect info" example.</p>
+
+<p>Assume we have revision 25 on /trunk, which affects /trunk/foo.c
+and /trunk/foo/bar/bar.c</p>
+
+<p>We wish to merge the portion of change affecting /trunk/foo.c</p>
+
+<p>A merge of revision 25 of /trunk/foo.c into /branches/release/foo.c
+will produce the merge info:</p>
+<pre>
+"/trunk/foo.c:1-9,14-18,25".  
+This merge information will be placed on /branches/release/foo.c
+</pre>
+
+<p>All other merge information will still be intact on
+/branches/release (ie there is information on /branches/release's
+directory).</p>
+
+<p>(The cherry picking one directory case is the same as file, with
+files replaced with directories, hence i have not gone through the
+example).</p>
+
+</div>  <!-- h4 -->
+
+<div class="h4">
+<h4>Merging changes into parents and then merging changes into
+children</h4>
+
+<p>Assume the repository is in the state it would be after the
+"Repeated merge with indirect info" example.  Assume we have revision
+25 on /trunk, which affects /trunk/foo Assume we have revision 26 on
+/trunk, which affects /trunk/foo/baz We wish to merge revision 25 into
+/branches/release/foo, and merge revision 26 into
+/branches/release/foo/baz.</p>
+
+<p>A merge of revision 25 of /trunk/foo into /branches/release/foo will
+produce the merge info:</p>
+<pre>"/trunk:1-9,14-18,25"
+</pre>
+
+<p>This merge information will be placed on /branches/release/foo</p>
+
+<p>A merge of revision 26 of /trunk/foo/baz into
+/branches/release/foo/baz will produce the merge info:</p>
+<pre>"/trunk:1-9,14-18,26".
+</pre>
+
+<p>This merge information will be placed on
+/branches/release/foo/baz.</p>
+
+<p>Note that if you instead merge revision 26 of /trunk/foo into
+/branches/release/foo, you will get the same effect, but the merge
+info will be:</p>
+<pre>"/trunk:1-9,14-18,25-26".
+</pre>
+
+<p>This merge information will be placed on /branches/releases/foo</p>
+
+<p>Both are different "spellings" of the same merge information, and
+future merges should produce the same result with either merge info
+(one is of course, more space efficient, and transformation of one to
+the other could be done on the fly or as a postpass, if desired).</p>
+
+<p>All other merge information will still be intact on
+/branches/release (e.g. there is information on /branches/release's
+directory).</p>
+
+</div>  <!-- h3 -->
 
 
 <div class="h3" id="merge-history-faq">
@@ -318,32 +475,34 @@ non-merge tracking client?</p>
 receive conflicts that you would have received if you were using a
 non-history-sensitive client.</p>
 
-<p class="question">Can we do without the revprop portion of this
-design?</p>
-
-<p class="answer">Technically yes, but it may require more crawling
-and querying at merge time.</p>
-
-<p class="question">Can we do history sensitive WC-to-WC merges
-without contacting the server?</p>
-
-<p class="answer">No. But you probably couldn't anyway, even if the
-"revprop not being stored locally" issue were not here.</p>
-
 <p class="question">What happens if the merge history is not there?</p>
 
 <p class="answer">The same thing that happens if the merge history is
 not there now.</p>
+
+<p class="question">Are there many different "spellings" of the same
+merge info?</p>
+
+<p class="answer">Yes.  Depending on the URLs and target you specify
+for merges, I believe it is possible to end up with merge info in
+different places, or with slightly different revision lines that have
+the same semantic effect (e.g. info like /trunk:1-9 vs
+/trunk:1-8\n/trunk/bar:9 when revision 9 on /trunk only
+affected /trunk/bar), so you can end up with merge info in different
+places, even though the semantic result will be the same in all
+cases.</p>
+
+<p class="question">Can we do history sensitive WC-to-WC merges
+without contacting the server?</p>
+
+<p class="answer">No. But you probably couldn't anyway without
+<em>all</em> repo merge data stored locally.</p>
 
 <p class="question">What happens if a user edits merge history
 incorrectly?</p>
 
 <p class="answer">They get the results specified by their merge
 history.</p>
-
-<p class="question">How does the revprop stay up to date?</p>
-
-<p class="answer">We copy it from revision to revision.</p>
 
 <p class="question">What happens if a user manually edits a file and
 unmerges a revision (e.g. not using a "reverse merge" command), but

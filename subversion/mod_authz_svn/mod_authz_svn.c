@@ -282,7 +282,7 @@ static int req_check_access(request_rec *r,
 
     /* Retrieve/cache authorization file */
     access_conf = get_access_conf(r,conf);
-    if(access_conf == NULL)
+    if (access_conf == NULL)
         {
             return DECLINED;
         }
@@ -453,7 +453,7 @@ static int subreq_bypass(request_rec *r,
 
     /* Retrieve authorization file */
     access_conf = get_access_conf(r,conf);
-    if(access_conf == NULL)
+    if (access_conf == NULL)
         return HTTP_FORBIDDEN;
 
     /* Perform authz access control.

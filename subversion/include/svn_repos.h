@@ -1257,8 +1257,8 @@ svn_repos_get_logs(svn_repos_t *repos,
  * info (as managed by svn_mergeinfo.h), or @c NULL if there is no
  * merge info visible or available.
  *
- * When @a include_parents is @c TRUE, include inherited merge info
- * from parent directories of @a paths.
+ * @a inherit indicates whether explicit, explicit or inherited, or
+ * only inherited merge info for @paths is fetched.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
@@ -1276,7 +1276,7 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
                            svn_repos_t *repos,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
-                           svn_boolean_t include_parents,
+                           svn_mergeinfo_inheritance_t inherit,
                            svn_repos_authz_func_t authz_read_func,
                            void *authz_read_baton,
                            apr_pool_t *pool);

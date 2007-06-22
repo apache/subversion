@@ -36,7 +36,7 @@
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_private_config.h"
 
-#include "ra_dav.h"
+#include "ra_neon.h"
 
 
 
@@ -86,7 +86,7 @@ reset_file_rev(struct report_baton *rb)
 
 
 /* Our beloved elements. */
-static const svn_ra_dav__xml_elm_t report_elements[] =
+static const svn_ra_neon__xml_elm_t report_elements[] =
   {
     { SVN_XML_NAMESPACE, "file-revs-report", ELEM_file_revs_report, 0 },
     { SVN_XML_NAMESPACE, "file-rev", ELEM_file_rev, 0 },
@@ -98,16 +98,16 @@ static const svn_ra_dav__xml_elm_t report_elements[] =
   };
 
 
-/* This implements the `svn_ra_dav__startelm_cb_t' prototype. */
+/* This implements the `svn_ra_neon__startelm_cb_t' prototype. */
 static svn_error_t *
 start_element(int *elem, void *userdata, int parent_state, const char *ns,
               const char *ln, const char **atts)
 {
   struct report_baton *rb = userdata;
-  const svn_ra_dav__xml_elm_t *elm;
+  const svn_ra_neon__xml_elm_t *elm;
   const char *att;
 
-  elm = svn_ra_dav__lookup_xml_elem(report_elements, ns, ln);
+  elm = svn_ra_neon__lookup_xml_elem(report_elements, ns, ln);
 
   /* Skip unknown elements. */
   if (!elm)
@@ -209,7 +209,7 @@ extract_propval(struct report_baton *rb)
     return v;
 }
 
-/* This implements the `svn_ra_dav__endelm_cb_t' prototype. */
+/* This implements the `svn_ra_neon__endelm_cb_t' prototype. */
 static svn_error_t *
 end_element(void *userdata, int state,
             const char *nspace, const char *elt_name)
@@ -252,7 +252,7 @@ end_element(void *userdata, int state,
   return SVN_NO_ERROR;
 }
 
-/* This implements the `svn_ra_dav__cdata_cb' prototype. */
+/* This implements the `svn_ra_neon__cdata_cb' prototype. */
 static svn_error_t *
 cdata_handler(void *userdata, int state,
               const char *cdata, size_t len)
@@ -282,15 +282,15 @@ cdata_handler(void *userdata, int state,
 }
 
 svn_error_t *
-svn_ra_dav__get_file_revs(svn_ra_session_t *session,
-                          const char *path,
-                          svn_revnum_t start,
-                          svn_revnum_t end,
-                          svn_ra_file_rev_handler_t handler,
-                          void *handler_baton,
-                          apr_pool_t *pool)
+svn_ra_neon__get_file_revs(svn_ra_session_t *session,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_ra_file_rev_handler_t handler,
+                           void *handler_baton,
+                           apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   svn_string_t bc_url, bc_relative;
   const char *final_bc_url;
@@ -333,18 +333,18 @@ svn_ra_dav__get_file_revs(svn_ra_session_t *session,
      it as the main argument to the REPORT request; it might cause
      dav_get_resource() to choke on the server.  So instead, we pass a
      baseline-collection URL, which we get from END. */
-  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                        ras, ras->url->data, end,
-                                        pool));
+  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                         ras, ras->url->data, end,
+                                         pool));
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             pool);
 
   /* Dispatch the request. */
-  err = svn_ra_dav__parsed_request(ras, "REPORT", final_bc_url,
-                                   request_body->data, NULL, NULL,
-                                   start_element, cdata_handler, end_element,
-                                   &rb, request_headers, &http_status, FALSE,
-                                   pool);
+  err = svn_ra_neon__parsed_request(ras, "REPORT", final_bc_url,
+                                    request_body->data, NULL, NULL,
+                                    start_element, cdata_handler, end_element,
+                                    &rb, request_headers, &http_status, FALSE,
+                                    pool);
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */

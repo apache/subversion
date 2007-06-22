@@ -1205,7 +1205,7 @@ def commit_rmd_and_deleted_file(sbox):
 
 #----------------------------------------------------------------------
 
-# Issue #644 which failed over ra_dav.
+# Issue #644 which failed over ra_neon.
 def commit_add_file_twice(sbox):
   "issue 644 attempt to add a file twice"
 
@@ -1657,7 +1657,7 @@ def commit_nonrecursive(sbox):
                                         os.path.join(wc_dir, fileC_path))
 
 #----------------------------------------------------------------------
-# Regression for #1017: ra_dav was allowing the deletion of out-of-date
+# Regression for #1017: ra_neon was allowing the deletion of out-of-date
 # files or dirs, which majorly violates Subversion's semantics.
 
 

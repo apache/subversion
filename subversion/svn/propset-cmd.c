@@ -209,6 +209,9 @@ svn_cl__propset(apr_getopt_t *os,
                               SVN_ERR_ENTRY_NOT_FOUND,
                               SVN_NO_ERROR));
 
+          if (! opt_state->quiet)
+            svn_cl__check_boolean_prop_val(pname_utf8, propval->data, subpool);
+
           if (success && (! opt_state->quiet))
             {
               SVN_ERR

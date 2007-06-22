@@ -33,32 +33,32 @@
 
 #include "svn_private_config.h"
 
-#include "ra_dav.h"
+#include "ra_neon.h"
 
 
-static const svn_ra_dav__xml_elm_t merge_elements[] =
+static const svn_ra_neon__xml_elm_t merge_elements[] =
 {
   { "DAV:", "updated-set", ELEM_updated_set, 0 },
   { "DAV:", "merged-set", ELEM_merged_set, 0 },
   { "DAV:", "ignored-set", ELEM_ignored_set, 0 },
-  { "DAV:", "href", ELEM_href, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "href", ELEM_href, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "merge-response", ELEM_merge_response, 0 },
   { "DAV:", "checked-in", ELEM_checked_in, 0 },
   { "DAV:", "response", ELEM_response, 0 },
   { "DAV:", "propstat", ELEM_propstat, 0 },
-  { "DAV:", "status", ELEM_status, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "status", ELEM_status, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "responsedescription", ELEM_responsedescription,
-    SVN_RA_DAV__XML_CDATA },
+    SVN_RA_NEON__XML_CDATA },
   { "DAV:", "prop", ELEM_prop, 0 },
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "collection", ELEM_collection, 0 },
   { "DAV:", "baseline", ELEM_baseline, 0 },
-  { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
   { SVN_XML_NAMESPACE, "post-commit-err",
-    ELEM_post_commit_err, SVN_RA_DAV__XML_CDATA },
-  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_DAV__XML_CDATA },
+    ELEM_post_commit_err, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "creator-displayname", ELEM_creator_displayname,
-    SVN_RA_DAV__XML_CDATA },
+    SVN_RA_NEON__XML_CDATA },
 
   { NULL }
 };
@@ -72,7 +72,7 @@ enum merge_rtype {
 
 typedef struct {
   /*WARNING: WANT_CDATA should stay the first element in the baton:
-    svn_ra_dav__xml_collect_cdata() assumes the baton starts with a stringbuf.
+    svn_ra_neon__xml_collect_cdata() assumes the baton starts with a stringbuf.
   */
   svn_stringbuf_t *want_cdata;
   svn_stringbuf_t *cdata;
@@ -161,7 +161,7 @@ static svn_boolean_t okay_to_bump_path(const char *path,
 
 
 /* If committed PATH appears in MC->valid_targets, and an MC->push_prop
- * function exists, then store VSN_URL as the SVN_RA_DAV__LP_VSN_URL
+ * function exists, then store VSN_URL as the SVN_RA_NEON__LP_VSN_URL
  * property on PATH.  Use POOL for all allocations. 
  *
  * Otherwise, just return SVN_NO_ERROR.
@@ -191,7 +191,7 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
     vsn_url_str.len = strlen(vsn_url);
 
     SVN_ERR((*mc->push_prop)(mc->cb_baton, path,
-                             SVN_RA_DAV__LP_VSN_URL, &vsn_url_str,
+                             SVN_RA_NEON__LP_VSN_URL, &vsn_url_str,
                              pool));
   }
 
@@ -276,16 +276,16 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
 
 /* Determine whether we're receiving the expected XML response.
    Return CHILD when interested in receiving the child's contents
-   or one of SVN_RA_DAV__XML_INVALID and SVN_RA_DAV__XML_DECLINE
+   or one of SVN_RA_NEON__XML_INVALID and SVN_RA_NEON__XML_DECLINE
    when respectively this is the incorrect response or
    the element (and its children) are uninteresting */
-static int validate_element(svn_ra_dav__xml_elmid parent,
-                            svn_ra_dav__xml_elmid child)
+static int validate_element(svn_ra_neon__xml_elmid parent,
+                            svn_ra_neon__xml_elmid child)
 {
   if ((child == ELEM_collection || child == ELEM_baseline)
       && parent != ELEM_resourcetype) {
     /* ### technically, they could occur elsewhere, but screw it */
-    return SVN_RA_DAV__XML_INVALID;
+    return SVN_RA_NEON__XML_INVALID;
   }
 
   switch (parent)
@@ -294,7 +294,7 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
       if (child == ELEM_merge_response)
         return child;
       else
-        return SVN_RA_DAV__XML_INVALID;
+        return SVN_RA_NEON__XML_INVALID;
 
     case ELEM_merge_response:
       if (child == ELEM_updated_set
@@ -302,21 +302,21 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
           || child == ELEM_ignored_set)
         return child;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* any child is allowed */
+        return SVN_RA_NEON__XML_DECLINE; /* any child is allowed */
 
     case ELEM_updated_set:
     case ELEM_merged_set:
       if (child == ELEM_response)
         return child;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+        return SVN_RA_NEON__XML_DECLINE; /* ignore if something else
                                            was in there */
 
     case ELEM_ignored_set:
       if (child == ELEM_href)
         return child;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+        return SVN_RA_NEON__XML_DECLINE; /* ignore if something else
                                            was in there */
 
     case ELEM_response:
@@ -326,9 +326,9 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
         return child;
       else if (child == ELEM_responsedescription)
         /* ### I think we want this... to save a message for the user */
-        return SVN_RA_DAV__XML_DECLINE; /* valid, but we don't need to see it */
+        return SVN_RA_NEON__XML_DECLINE; /* valid, but we don't need to see it */
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+        return SVN_RA_NEON__XML_DECLINE; /* ignore if something else
                                            was in there */
 
     case ELEM_propstat:
@@ -336,9 +336,9 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
         return child;
       else if (child == ELEM_responsedescription)
         /* ### I think we want this... to save a message for the user */
-        return SVN_RA_DAV__XML_DECLINE; /* valid, but we don't need to see it */
+        return SVN_RA_NEON__XML_DECLINE; /* valid, but we don't need to see it */
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+        return SVN_RA_NEON__XML_DECLINE; /* ignore if something else
                                            was in there */
 
     case ELEM_prop:
@@ -351,24 +351,24 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
           /* other props */)
         return child;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore other props */
+        return SVN_RA_NEON__XML_DECLINE; /* ignore other props */
 
     case ELEM_checked_in:
       if (child == ELEM_href)
         return child;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+        return SVN_RA_NEON__XML_DECLINE; /* ignore if something else
                                            was in there */
 
     case ELEM_resourcetype:
       if (child == ELEM_collection || child == ELEM_baseline)
         return child;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+        return SVN_RA_NEON__XML_DECLINE; /* ignore if something else
                                            was in there */
 
     default:
-      return SVN_RA_DAV__XML_DECLINE;
+      return SVN_RA_NEON__XML_DECLINE;
     }
 
   /* NOTREACHED */
@@ -378,11 +378,11 @@ static svn_error_t *
 start_element(int *elem, void *baton, int parent,
               const char *nspace, const char *name, const char **atts)
 {
-  const svn_ra_dav__xml_elm_t *elm
-    = svn_ra_dav__lookup_xml_elem(merge_elements, nspace, name);
+  const svn_ra_neon__xml_elm_t *elm
+    = svn_ra_neon__lookup_xml_elem(merge_elements, nspace, name);
   merge_ctx_t *mc = baton;
 
-  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_NEON__XML_DECLINE;
   if (*elem < 1) /* not a valid element */
     return SVN_NO_ERROR;
 
@@ -477,11 +477,11 @@ end_element(void *baton, int state,
 
         case ELEM_response:
           /* we're now working on this href... */
-          svn_ra_dav__copy_href(mc->href, mc->cdata->data);
+          svn_ra_neon__copy_href(mc->href, mc->cdata->data);
           break;
 
         case ELEM_checked_in:
-          svn_ra_dav__copy_href(mc->vsn_url, mc->cdata->data);
+          svn_ra_neon__copy_href(mc->vsn_url, mc->cdata->data);
           break;
         }
       break;
@@ -568,9 +568,9 @@ end_element(void *baton, int state,
 }
 
 
-svn_error_t * svn_ra_dav__assemble_locktoken_body(svn_stringbuf_t **body,
-                                                  apr_hash_t *lock_tokens,
-                                                  apr_pool_t *pool)
+svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
+                                                   apr_hash_t *lock_tokens,
+                                                   apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_size_t buf_size;
@@ -678,19 +678,18 @@ svn_error_t * svn_ra_dav__assemble_locktoken_body(svn_stringbuf_t **body,
 
 
 
-svn_error_t * svn_ra_dav__merge_activity(
-    svn_revnum_t *new_rev,
-    const char **committed_date,
-    const char **committed_author,
-    const char **post_commit_err,
-    svn_ra_dav__session_t *ras,
-    const char *repos_url,
-    const char *activity_url,
-    apr_hash_t *valid_targets,
-    apr_hash_t *lock_tokens,
-    svn_boolean_t keep_locks,
-    svn_boolean_t disable_merge_response,
-    apr_pool_t *pool)
+svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
+                                          const char **committed_date,
+                                          const char **committed_author,
+                                          const char **post_commit_err,
+                                          svn_ra_neon__session_t *ras,
+                                          const char *repos_url,
+                                          const char *activity_url,
+                                          apr_hash_t *valid_targets,
+                                          apr_hash_t *lock_tokens,
+                                          svn_boolean_t keep_locks,
+                                          svn_boolean_t disable_merge_response,
+                                          apr_pool_t *pool)
 {
   merge_ctx_t mc = { 0 };
   const char *body;
@@ -737,7 +736,7 @@ svn_error_t * svn_ra_dav__merge_activity(
      a string within the body of the MERGE request. */
   if ((lock_tokens != NULL)
       && (apr_hash_count(lock_tokens) > 0))
-    SVN_ERR(svn_ra_dav__assemble_locktoken_body(&lockbuf, lock_tokens, pool));
+    SVN_ERR(svn_ra_neon__assemble_locktoken_body(&lockbuf, lock_tokens, pool));
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -752,12 +751,12 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "</D:merge>",
                       activity_url, lockbuf->data);
 
-  SVN_ERR(svn_ra_dav__parsed_request(ras, "MERGE", repos_url,
-                                     body, 0, NULL,
-                                     start_element,
-                                     svn_ra_dav__xml_collect_cdata,
-                                     end_element, &mc, extra_headers,
-                                     NULL, FALSE, pool));
+  SVN_ERR(svn_ra_neon__parsed_request(ras, "MERGE", repos_url,
+                                      body, 0, NULL,
+                                      start_element,
+                                      svn_ra_neon__xml_collect_cdata,
+                                      end_element, &mc, extra_headers,
+                                      NULL, FALSE, pool));
 
   /* return some commit properties to the caller. */
   if (new_rev)

@@ -119,11 +119,39 @@ contents can note the details of the tree conflict.
 
 'svn update' pulls file replacement atop modified file
 
+  NOW:  Behaves as a two-step action: delete over modified file (see
+        above), then file add over existing file (which is obstructed
+        unless --force is provided.
+
+  NEW:  If the 'delete' step goes as recommended above, we'll wind up
+        in a state of conflict already with a schedule-added file.
+        Once the 'add' step hits, the operation will be obstructed
+        even if --force is provided.
+
+        QUESTION:  Is this desirable?  What's the final state of the
+        file after the failed update?  How do the recovery options
+        play out from here?  For example, we wouldn't want the file
+        scheduled for add-with-history because that commit can't
+        succeed (another file already exists in the repository at
+        that location).
+
 'svn update' pulls dir replacement atop deep-modified directory
 
 'svn update' pulls file-to-dir replacement atop modified file
 
+  NOW:  Behaves as a two-step action: delete over modified file (see
+        above), then directory add over existing file (which is 
+        disallowed, even if --force is supplied).
+
+  NEW:
+ 
 'svn update' pulls dir-to-file replacement atop deep-modified directory
+
+  NOW:  Behaves as a two-step action: delete over deep-modified
+        directory (see above), then file add over existing directory 
+        left over from delete step (which fails).
+
+  NEW:  
 
 'svn merge' pulls file deletion
 

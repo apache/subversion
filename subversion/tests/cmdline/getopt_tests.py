@@ -56,7 +56,7 @@ del_lines_res = [
                  re.compile(r'\s+compiled\s+'),
 
                  # Also for 'svn --version':
-                 re.compile(r"\* ra_(dav|local|svn|serf) :"),
+                 re.compile(r"\* ra_(neon|local|svn|serf) :"),
                  re.compile(r"  - handles '(https?|file|svn)' scheme"),
                  re.compile(r"\* fs_(base|fs) :"),
                 ]

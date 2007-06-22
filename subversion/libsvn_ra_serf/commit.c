@@ -169,6 +169,9 @@ typedef struct {
   /* The root commit we're in progress for. */
   commit_context_t *commit;
 
+  /* Is this file being added?  (Otherwise, just opened.) */
+  svn_boolean_t added;
+
   dir_context_t *parent_dir;
 
   const char *name;
@@ -754,6 +757,14 @@ create_put_body(void *baton,
   apr_file_seek(ctx->svndiff, APR_SET, &offset);
 
   return serf_bucket_file_create(ctx->svndiff, alloc);
+}
+
+static serf_bucket_t *
+create_empty_put_body(void *baton,
+                      serf_bucket_alloc_t *alloc,
+                      apr_pool_t *pool)
+{
+  return SERF_BUCKET_SIMPLE_STRING("", alloc);
 }
 
 static apr_status_t
@@ -1394,6 +1405,7 @@ add_file(const char *path,
   
   new_file->name = path;
 
+  new_file->added = TRUE;
   new_file->base_revision = SVN_INVALID_REVNUM;
   new_file->copy_path = copy_path;
   new_file->copy_revision = copy_revision;
@@ -1474,6 +1486,7 @@ open_file(const char *path,
   /* TODO: Remove directory names? */
   new_file->name = path;
 
+  new_file->added = FALSE;
   new_file->base_revision = base_revision;
 
   new_file->changed_props = apr_hash_make(new_file->pool);
@@ -1568,6 +1581,7 @@ close_file(void *file_baton,
            apr_pool_t *pool)
 {
   file_context_t *ctx = file_baton;
+  svn_boolean_t put_empty_file = FALSE;
 
   ctx->result_checksum = text_checksum;
 
@@ -1628,8 +1642,14 @@ close_file(void *file_baton,
         }
     }
 
+  /* If we got no stream of changes, but this is an added-without-history
+   * file, make a note that we'll be PUTting a zero-byte file to the server.
+   */
+  if ((!ctx->stream) && ctx->added && (!ctx->copy_path))
+    put_empty_file = TRUE;
+
   /* If we had a stream of changes, push them to the server... */
-  if (ctx->stream)
+  if (ctx->stream || put_empty_file)
     {
       svn_ra_serf__handler_t *handler;
       svn_ra_serf__simple_request_context_t *put_ctx;
@@ -1645,9 +1665,18 @@ close_file(void *file_baton,
       handler->response_handler = svn_ra_serf__handle_status_only;
       handler->response_baton = put_ctx;
 
-      handler->body_delegate = create_put_body;
-      handler->body_delegate_baton = ctx;
-      handler->body_type = "application/vnd.svn-svndiff";
+      if (put_empty_file)
+        {
+          handler->body_delegate = create_empty_put_body;
+          handler->body_delegate_baton = ctx;
+          handler->body_type = "text/plain";
+        }
+      else
+        {
+          handler->body_delegate = create_put_body;
+          handler->body_delegate_baton = ctx;
+          handler->body_type = "application/vnd.svn-svndiff";
+        }
 
       handler->header_delegate = setup_put_headers;
       handler->header_delegate_baton = ctx;

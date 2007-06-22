@@ -1417,7 +1417,7 @@ def nonexistent_repository(sbox):
 
 
 #----------------------------------------------------------------------
-# Issue 1064. This test is only useful if running over ra_dav
+# Issue 1064. This test is only useful if running over a non-local RA
 # with authentication enabled, otherwise it will pass trivially.
 def basic_auth_cache(sbox):
   "basic auth caching"

@@ -22,9 +22,6 @@ import re, os, stat
 # Our testing module
 import svntest
 
-# A helper function for examining svn:needs-lock
-from prop_tests import check_prop
-
 # (abbreviation)
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
@@ -371,13 +368,13 @@ def enforce_lock(sbox):
 
   # svn:needs-lock value should be forced to a '*'
   svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '', lambda_path)
+  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '*', lambda_path)
   svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '      ', mu_path)
 
   # Check svn:needs-lock
-  check_prop('svn:needs-lock', iota_path, ['*'])
-  check_prop('svn:needs-lock', lambda_path, ['*'])
-  check_prop('svn:needs-lock', mu_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', iota_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', lambda_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', mu_path, ['*'])
 
   svntest.main.run_svn(None, 'commit',
                        '--username', svntest.main.wc_author,

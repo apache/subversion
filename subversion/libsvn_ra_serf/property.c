@@ -751,6 +751,7 @@ set_bare_props(svn_ra_serf__prop_set_t setprop, void *baton,
 
   return setprop(baton, prop_name, val, pool);
 }
+
 svn_error_t *
 svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
                              const char *ns, apr_ssize_t ns_len,

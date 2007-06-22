@@ -209,7 +209,7 @@ This elision is done as part of the merge/switch/update:</p>
 <ul><li><b>Semantic Equivalency</b>: Excepting paths <i>unique</i> to the child
  or ancestor which map to empty revision ranges, the merge info between the
  child and ancestor is otherwise equivalent per the definition of simple
- equivalency (<i>unimplemented</i>), e.g.:<pre>
+ equivalency, e.g.:<pre>
   Properties on '/A_COPY_2':
     svn:mergeinfo : /A:4-9
   /A_COPY:
@@ -228,7 +228,7 @@ This elision is done as part of the merge/switch/update:</p>
 
 <ul><li><b>Empty Revision Range Equivalency</b>: If the merge info on a path is
  made up entirely of paths mapped to empty revision ranges and the path has no
- ancestor with merge info then the merge info fully elides (<i>unimplemented</i>).
+ ancestor with merge info then the merge info fully elides.
  </li>
 </ul>
 
@@ -240,8 +240,7 @@ This elision is done as part of the merge/switch/update:</p>
 <ul>
  <li><b>Partial Equivalency</b>: Only the merge source paths <i>unique</i> to
  the child which map to empty revision ranges will elide if the merge info
- between the  child and ancestor is otherwise non-equivalent
- (<i>unimplemented</i>), e.g.:<pre>
+ between the  child and ancestor is otherwise non-equivalent, e.g.:<pre>
   Properties on '/A_COPY_2':
     svn:mergeinfo : /A:4-6
   Properties on '/A_COPY_2/B/E':
