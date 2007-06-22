@@ -1726,30 +1726,31 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
   /* Set the merge info for the root of the target tree unless we skipped
      everything. */
   if (nbr_skips == 0 || notify_b->nbr_operative_notifications > 0)
-    apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
-
-  if (nbr_skips > 0)
     {
-      apr_hash_index_t *hi;
-      const void *skipped_path;
-
-      /* Override the merge info for child paths which weren't
-         actually merged. */
-      for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
-           hi = apr_hash_next(hi))
+      apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
+      if (nbr_skips > 0)
         {
-          apr_hash_this(hi, &skipped_path, NULL, NULL);
+          apr_hash_index_t *hi;
+          const void *skipped_path;
 
-          /* Add an empty range list for this path. */
-          apr_hash_set(*merges, (const char *) skipped_path,
-                       APR_HASH_KEY_STRING,
-                       apr_array_make(pool, 0, sizeof(*range)));
+          /* Override the merge info for child paths which weren't
+             actually merged. */
+          for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
+               hi = apr_hash_next(hi))
+            {
+              apr_hash_this(hi, &skipped_path, NULL, NULL);
 
-          if (nbr_skips < notify_b->nbr_notifications)
-            /* ### Use RANGELIST as the merge info for all children of
-               ### this path which were not also explicitly
-               ### skipped? */
-            ;
+              /* Add an empty range list for this path. */
+              apr_hash_set(*merges, (const char *) skipped_path,
+                           APR_HASH_KEY_STRING,
+                           apr_array_make(pool, 0, sizeof(*range)));
+
+              if (nbr_skips < notify_b->nbr_notifications)
+                /* ### Use RANGELIST as the merge info for all children of
+                   ### this path which were not also explicitly
+                   ### skipped? */
+                ;
+            }
         }
     }
 
