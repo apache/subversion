@@ -47,6 +47,7 @@ def _usage_exit():
   print "  --httpd-dir          : location where Apache HTTPD is installed"
   print "  --httpd-port         : port for Apache HTTPD; random port number"
   print "                         will be used, if not specified"
+  print "  --http-library       : dav library to use, neon (default) or serf"
   print "  --list               : print test doc strings only"
   print "  --enable-sasl        : enable Cyrus SASL authentication for"
   print "                         svnserve"
@@ -80,8 +81,8 @@ for section in gen_obj.sections.values():
 opts, args = my_getopt(sys.argv[1:], 'hrdvcpu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
-                        'httpd-dir=', 'httpd-port=', 'help', 'list',
-                        'enable-sasl', 'bin=', 'parallel'])
+                        'httpd-dir=', 'httpd-port=', 'http-library=', 'help',
+                        'list', 'enable-sasl', 'bin=', 'parallel'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -94,6 +95,7 @@ run_svnserve = None
 svnserve_args = None
 run_httpd = None
 httpd_port = None
+http_library = 'neon'
 list_tests = None
 enable_sasl = None
 svn_bin = None
@@ -124,6 +126,8 @@ for opt, val in opts:
     run_httpd = 1
   elif opt == '--httpd-port':
     httpd_port = int(val)
+  elif opt == '--http-library':
+    http_library = val
   elif opt == '--list':
     list_tests = 1
   elif opt == '--enable-sasl':
@@ -509,7 +513,7 @@ sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
-                           base_url, fs_type, 1, cleanup, 
+                           base_url, fs_type, http_library, 1, cleanup,
                            enable_sasl, parallel, list_tests, 
                            svn_bin)
 old_cwd = os.getcwd()
