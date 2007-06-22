@@ -765,15 +765,16 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_repos_get_file_revs(svn_repos_t *repos,
-                        const char *path,
-                        svn_revnum_t start,
-                        svn_revnum_t end,
-                        svn_repos_authz_func_t authz_read_func,
-                        void *authz_read_baton,
-                        svn_repos_file_rev_handler_t handler,
-                        void *handler_baton,
-                        apr_pool_t *pool)
+svn_repos_get_file_revs2(svn_repos_t *repos,
+                         const char *path,
+                         svn_revnum_t start,
+                         svn_revnum_t end,
+                         svn_boolean_t include_merged_revisions,
+                         svn_repos_authz_func_t authz_read_func,
+                         void *authz_read_baton,
+                         svn_repos_file_rev_handler2_t handler,
+                         void *handler_baton,
+                         apr_pool_t *pool)
 {
   apr_pool_t *iter_pool, *last_pool;
   svn_fs_history_t *history;
@@ -890,7 +891,7 @@ svn_repos_get_file_revs(svn_repos_t *repos,
         contents_changed = TRUE;
 
       /* We have all we need, give to the handler. */
-      SVN_ERR(handler(handler_baton, rev_path, rev, rev_props,
+      SVN_ERR(handler(handler_baton, rev_path, rev, rev_props, FALSE,
                       contents_changed ? &delta_handler : NULL,
                       contents_changed ? &delta_baton : NULL,
                       prop_diffs, iter_pool));
@@ -926,4 +927,75 @@ svn_repos_get_file_revs(svn_repos_t *repos,
   svn_pool_destroy(iter_pool);
 
   return SVN_NO_ERROR;
+}
+
+struct file_rev_handler_wrapper_baton {
+  void *baton;
+  svn_repos_file_rev_handler_t handler;
+};
+
+/* This implements svn_repos_file_rev_handler2_t. */
+static svn_error_t *
+file_rev_handler_wrapper(void *baton,
+                         const char *path,
+                         svn_revnum_t rev,
+                         apr_hash_t *rev_props,
+                         svn_boolean_t result_of_merge,
+                         svn_txdelta_window_handler_t *delta_handler,
+                         void **delta_baton,
+                         apr_array_header_t *prop_diffs,
+                         apr_pool_t *pool)
+{
+  struct file_rev_handler_wrapper_baton *fwb = baton;
+
+  if (fwb->handler)
+    return fwb->handler(fwb->baton,
+                        path,
+                        rev,
+                        rev_props,
+                        delta_handler,
+                        delta_baton,
+                        prop_diffs,
+                        pool);
+
+  return SVN_NO_ERROR;
+}
+
+static void
+compat_wrap_file_rev_handler(svn_repos_file_rev_handler2_t *handler2,
+                             void **handler2_baton,
+                             svn_repos_file_rev_handler_t handler,
+                             void *handler_baton,
+                             apr_pool_t *pool)
+{
+  struct file_rev_handler_wrapper_baton *fwb = apr_palloc(pool, sizeof(*fwb));
+
+  /* Set the user provided old format callback in the baton. */
+  fwb->baton = handler_baton;
+  fwb->handler = handler;
+
+  *handler2_baton = fwb;
+  *handler2 = file_rev_handler_wrapper;
+}
+
+svn_error_t *
+svn_repos_get_file_revs(svn_repos_t *repos,
+                        const char *path,
+                        svn_revnum_t start,
+                        svn_revnum_t end,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        svn_repos_file_rev_handler_t handler,
+                        void *handler_baton,
+                        apr_pool_t *pool)
+{
+  svn_repos_file_rev_handler2_t handler2;
+  void *handler2_baton;
+
+  compat_wrap_file_rev_handler(&handler2, &handler2_baton, handler, handler_baton,
+                               pool);
+
+  return svn_repos_get_file_revs2(repos, path, start, end, FALSE,
+                                  authz_read_func, authz_read_baton,
+                                  handler2, handler2_baton, pool);
 }

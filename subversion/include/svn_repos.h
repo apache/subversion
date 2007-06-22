@@ -144,12 +144,32 @@ typedef svn_error_t *(*svn_repos_authz_callback_t)
  * handler/baton which will be called with the delta between the previous
  * revision and this one after the return of this callback.  They may be
  * left as NULL/NULL.
+ * @a result_of_merge will be @c TRUE if the revision being returned was
+ * included as the result of a merge.
  * @a prop_diffs is an array of svn_prop_t elements indicating the property
  * delta for this and the previous revision.
  * @a pool may be used for temporary allocations, but you can't rely
  * on objects allocated to live outside of this particular call and the
  * immediately following calls to @a *delta_handler if any.
  *
+ * @since New in 1.2.
+ */
+typedef svn_error_t *(*svn_repos_file_rev_handler2_t)
+  (void *baton,
+   const char *path,
+   svn_revnum_t rev,
+   apr_hash_t *rev_props,
+   svn_boolean_t result_of_merge,
+   svn_txdelta_window_handler_t *delta_handler,
+   void **delta_baton,
+   apr_array_header_t *prop_diffs,
+   apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_repos_file_rev_handler2_t, but without the @a
+ * result_of_merge parameter.
+ *
+ * @deprecated Provided for backward compatibility with 1.4 API.
  * @since New in 1.1.
  */
 typedef svn_error_t *(*svn_repos_file_rev_handler_t)
@@ -1293,6 +1313,27 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
  * will be provided as a text delta against the empty file.  In the following
  * calls, the delta will be against the contents for the previous call.
  *
+ * If @a include_merged_revisions is TRUE, revisions which a included as a
+ * result of a merge between @a start and @a end will be included.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_get_file_revs2(svn_repos_t *repos,
+                                      const char *path,
+                                      svn_revnum_t start,
+                                      svn_revnum_t end,
+                                      svn_boolean_t include_merged_revisions,
+                                      svn_repos_authz_func_t authz_read_func,
+                                      void *authz_read_baton,
+                                      svn_repos_file_rev_handler2_t handler,
+                                      void *handler_baton,
+                                      apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_file_revs2(), with @a include_merged_revisions
+ * set to FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  * @since New in 1.1.
  */
 svn_error_t *svn_repos_get_file_revs(svn_repos_t *repos,
