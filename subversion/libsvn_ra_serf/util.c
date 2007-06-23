@@ -536,7 +536,7 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
   return status;
 }
 
-static apr_status_t
+static svn_error_t *
 handle_auth(svn_ra_serf__session_t *session,
             svn_ra_serf__connection_t *conn,
             serf_request_t *request,
@@ -547,7 +547,6 @@ handle_auth(svn_ra_serf__session_t *session,
   svn_auth_cred_simple_t *simple_creds;
   const char *tmp;
   apr_size_t tmp_len, encoded_len;
-  svn_error_t *error;
   int i;
 
   if (!session->realm)
@@ -594,8 +593,9 @@ handle_auth(svn_ra_serf__session_t *session,
             }
           else
             {
-              /* Support more authentication mechanisms. */
-              abort();
+              return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
+                                       "%s authentication not supported.\n"
+                                       "Authentication failed", cur);
             }
           cur = apr_strtok(NULL, " ", &last);
         }
@@ -620,32 +620,28 @@ handle_auth(svn_ra_serf__session_t *session,
                                     port,
                                     realm_name);
 
-      error = svn_auth_first_credentials(&creds,
+      SVN_ERR(svn_auth_first_credentials(&creds,
                                          &session->auth_state,
                                          SVN_AUTH_CRED_SIMPLE,
                                          session->realm,
                                          session->wc_callbacks->auth_baton,
-                                         session->pool);
+                                         session->pool));
     }
   else
     {
-      error = svn_auth_next_credentials(&creds,
+      SVN_ERR(svn_auth_next_credentials(&creds,
                                         session->auth_state,
-                                        session->pool);
+                                        session->pool));
     }
   
   session->auth_attempts++;
 
-  if (error)
-    {
-      abort();
-    }
-
   if (!creds || session->auth_attempts > 4)
     {
       /* No more credentials. */
-      printf("No more credentials or we tried too many times.  Sorry.\n");
-      return APR_EGENERAL;
+      return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                "No more credentials or we tried too many times.\n"
+                "Authentication failed");
     }
 
   simple_creds = creds;
@@ -671,7 +667,7 @@ handle_auth(svn_ra_serf__session_t *session,
       session->conns[i]->auth_value = session->auth_value;
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 static void
@@ -952,9 +948,20 @@ handle_response(serf_request_t *request,
 
   if (sl.code == 401)
     {
-      handle_auth(ctx->session, ctx->conn, request, response, pool);
-      svn_ra_serf__request_create(ctx);
-      status = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+      svn_error_t *err;
+
+      err = handle_auth(ctx->session, ctx->conn, request, response, pool);
+      if (err)
+        {
+          ctx->session->pending_error = err;
+          svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+          return ctx->session->pending_error->apr_err;
+        }
+      else 
+        {
+          svn_ra_serf__request_create(ctx);
+          status = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+        }
     }
   else if (sl.code >= 500)
     {
