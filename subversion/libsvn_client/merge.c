@@ -1782,14 +1782,13 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
       const char *path;
       apr_array_header_t *ranges, *rangelist;
       int len;
+      svn_error_t *err;
 
       svn_pool_clear(subpool);
 
       apr_hash_this(hi, &key, NULL, &value);
       path = key;
       ranges = value;
-      if (ranges->nelts == 0)
-        continue;
 
       /* As some of the merges may've changed the WC's merge info, get
          a fresh copy before using it to update the WC's merge info. */
@@ -1827,8 +1826,24 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
       if (is_revert && apr_hash_count(mergeinfo) == 0)
         mergeinfo = NULL;
 
-      SVN_ERR(svn_client__record_wc_mergeinfo(path, mergeinfo,
-                                              adm_access, subpool));
+      err = svn_client__record_wc_mergeinfo(path, mergeinfo,
+                                            adm_access, subpool);
+
+      if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+        {
+          /* PATH isn't just missing, it's not even versioned as far as this
+             working copy knows.  But it was included in MERGES, which means
+             that the server knows about it.  Likely we don't have access to
+             the source due to authz restrictions.  For now just clear the
+             error and continue...
+
+             ### TODO:  Set non-inheritable mergeinfo on PATH's immediate
+             ### parent and normal mergeinfo on PATH's siblings which we
+             ### do have access to. */
+          svn_error_clear(err);
+        }
+      else
+        SVN_ERR(err);
     }
 
   svn_pool_destroy(subpool);
