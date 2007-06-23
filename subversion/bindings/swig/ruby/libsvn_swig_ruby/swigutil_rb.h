@@ -71,6 +71,9 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_depth_t svn_swig_rb_to_depth(VALUE value);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_mergeinfo_inheritance_t svn_swig_rb_to_mergeinfo_inheritance(VALUE value);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_date_string_to_time(const char *date);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT

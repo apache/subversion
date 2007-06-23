@@ -852,6 +852,25 @@ svn_swig_rb_to_depth(VALUE value)
   }
 }
 
+svn_mergeinfo_inheritance_t
+svn_swig_rb_to_mergeinfo_inheritance(VALUE value)
+{
+  if (NIL_P(value)) {
+    return svn_mergeinfo_inherited;
+  } else if (RTEST(rb_obj_is_kind_of(value, rb_cString)) ||
+             RTEST(rb_obj_is_kind_of(value, rb_cSymbol))) {
+    value = rb_funcall(value, id_to_s, 0);
+    return svn_inheritance_from_word(StringValueCStr(value));
+  } else if (RTEST(rb_obj_is_kind_of(value, rb_cInteger))) {
+    return NUM2INT(value);
+  } else {
+    rb_raise(rb_eArgError,
+       "'%s' must be MERGEINFO_STRING (e.g. \"explicit\" or :explicit) "
+       "or Svn::Core::MERGEINFO_*",
+       r2c_inspect(value));
+  }
+}
+
 static VALUE
 c2r_string(void *value, void *ctx)
 {
