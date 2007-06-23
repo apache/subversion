@@ -819,6 +819,11 @@ SVN_ERROR_START
              SVN_ERR_AUTHN_CATEGORY_START + 3,
              "All authentication providers exhausted")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_AUTHN_FAILED,
+             SVN_ERR_AUTHN_CATEGORY_START + 4,
+             "Authentication failed")
+
   /* authorization errors */
 
   SVN_ERRDEF(SVN_ERR_AUTHZ_ROOT_UNREADABLE,
