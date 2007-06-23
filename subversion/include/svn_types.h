@@ -300,6 +300,20 @@ svn_depth_from_word(const char *word);
 #define SVN_DEPTH_FROM_RECURSE(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_files)
 
+
+/* Return an @c svn_depth_t depth based on boolean @a recurse.
+ * Use this only for the status command, as it has a unique interpretation
+ * of recursion.
+ *
+ * @note New code should never need to use this, it is called only
+ * from pre-depth APIs, for compatibility.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_DEPTH_FROM_RECURSE_STATUS(recurse) \
+  ((recurse) ? svn_depth_infinity : svn_depth_immediates)
+
+
 /* Return a recursion boolean based on @a depth.
  *
  * Although much code has been converted to use depth, some code still
