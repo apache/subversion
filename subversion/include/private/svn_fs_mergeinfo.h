@@ -24,23 +24,22 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* The name of the sqlite merge info database. */
+/* The name of the sqlite mergeinfo database. */
 #define SVN_FS_MERGEINFO__DB_NAME "mergeinfo.db"
 
-/* Create the merge info index under PATH.  Use POOL for any temporary
+/* Create the mergeinfo index under PATH.  Use POOL for any temporary
    allocations. */
 svn_error_t *
 svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool);
 
-/* Update the merge info index according to the changes made in
+/* Update the mergeinfo index according to the changes made in
    transaction TXN for revision NEW_REV.  MERGEINFO_FOR_PATHS is the
-   merge information for each path changed in the transaction (a
-   mapping of const char * -> apr_hash_t *), or NULL if there was no
-   merge info recorded for that transaction.  Use POOL for any
-   temporary allocations.
+   mergeinfo for each path changed in the transaction (a mapping of 
+   const char * -> apr_hash_t *), or NULL if there was no mergeinfo
+   recorded for that transaction.  Use POOL for any temporary allocations.
 
-   NOTE: Even if there is no merge info, this function should be
-   called to make sure there is no stray merge info for this revision
+   NOTE: Even if there is no mergeinfo, this function should be
+   called to make sure there is no stray mergeinfo for this revision
    left from a previous failed commit.  */
 svn_error_t *
 svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, 
@@ -48,11 +47,11 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn,
                                apr_hash_t *mergeinfo_for_paths,
                                apr_pool_t *pool);
 
-/* Get the merge info for the set of PATHS (an array of
+/* Get the mergeinfo for the set of PATHS (an array of
    absolute-in-the-fs paths) under ROOT and return it in *MERGEINFO,
    mapping char * paths to char * strings with mergeinfo, allocated in
    POOL.  INHERIT indicates whether to get explicit, explicit or inherited,
-   or only inherited merge info for PATHS.  If a path has no mergeinfo,
+   or only inherited mergeinfo for PATHS.  If a path has no mergeinfo,
    just return no info for that path.  Return an error if the mergeinfo
    store does not exist or doesn't use the 'mergeinfo' schema.  */
 svn_error_t *

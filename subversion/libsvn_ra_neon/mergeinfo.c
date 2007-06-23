@@ -38,7 +38,7 @@
 /* Baton for accumulating mergeinfo.  RESULT stores the final
    mergeinfo hash result we are going to hand back to the caller of
    get_mergeinfo.  curr_path and curr_info contain the value of the
-   CDATA from the merge info items as we get them from the server.  */
+   CDATA from the mergeinfo items as we get them from the server.  */
 
 struct mergeinfo_baton
 {

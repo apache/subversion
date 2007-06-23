@@ -2319,7 +2319,7 @@ svn_client_diff_summarize_peg(const char *path,
  * path.
  *
  * If @a record_only is true, the merge isn't actually performed, but
- * the merge info for the revisions which would've been merged is
+ * the mergeinfo for the revisions which would've been merged is
  * recorded in the working copy (and must be subsequently committed
  * back to the repository).
  *
@@ -2460,15 +2460,15 @@ svn_client_merge_peg(const char *source,
                      apr_pool_t *pool);
 
 /**
- * Retrieve the merge info for @a path_or_url in @a *mergeinfo,
+ * Retrieve the mergeinfo for @a path_or_url in @a *mergeinfo,
  * storing a mapping of repository-relative paths to @c
  * apr_array_header_t *'s of @c svn_merge_range_t *'s, or @c NULL if
- * there is no merge info.
+ * there is no mergeinfo.
  *
  * @a path_or_url is a WC path or repository URL.  If @a path_or_url
  * is a WC path, @a revision is ignored in preference to @a
  * path_or_url's @c WORKING revision.  If @a path_or_url is a URL, @a
- * revision is the revision at which to get its merge info.  @a
+ * revision is the revision at which to get its mergeinfo.  @a
  * mergeinfo is allocated in @a pool.
  *
  * @since New in 1.5.

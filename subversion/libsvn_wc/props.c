@@ -477,7 +477,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
 /*** Merging propchanges into the working copy ***/
 
 
-/* Parse FROM_PROP_VAL and TO_PROP_VAL into merge info hashes, and
+/* Parse FROM_PROP_VAL and TO_PROP_VAL into mergeinfo hashes, and
    calculate the deltas between them. */
 static svn_error_t *
 diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
@@ -486,7 +486,7 @@ diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
 {
   if (svn_string_compare(from_prop_val, to_prop_val))
     {
-      /* Don't bothering parsing identical merge info. */
+      /* Don't bothering parsing identical mergeinfo. */
       *deleted = apr_hash_make(pool);
       *added = apr_hash_make(pool);
     }
@@ -500,9 +500,9 @@ diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
   return SVN_NO_ERROR;
 }
 
-/* Parse the merge info from PROP_VAL1 and PROP_VAL2, combine it, then
-   reconstitute it into *OUTPUT.  Call when the WC's merge info has
-   been modified to combine it with incoming merge info from the
+/* Parse the mergeinfo from PROP_VAL1 and PROP_VAL2, combine it, then
+   reconstitute it into *OUTPUT.  Call when the WC's mergeinfo has
+   been modified to combine it with incoming mergeinfo from the
    repos. */
 static svn_error_t *
 combine_mergeinfo_props(const svn_string_t **output,
@@ -519,7 +519,7 @@ combine_mergeinfo_props(const svn_string_t **output,
   return SVN_NO_ERROR;
 }
 
-/* Perform a 3-way merge operation on merge info.  FROM_PROP_VAL is
+/* Perform a 3-way merge operation on mergeinfo.  FROM_PROP_VAL is
    the "base" property value, WORKING_PROP_VAL is the current value,
    and TO_PROP_VAL is the new value. */
 static svn_error_t *
@@ -746,7 +746,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                 {
                   if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
                     {
-                      /* Discover any merge info additions in the
+                      /* Discover any mergeinfo additions in the
                          incoming value relative to the base, and
                          "combine" those with the empty WC value. */
                       apr_hash_t *deleted_mergeinfo, *added_mergeinfo;
@@ -789,7 +789,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                 {
                   if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
                     {
-                        /* Discover any merge info additions in the WC
+                        /* Discover any mergeinfo additions in the WC
                            value relative to the base, and "combine"
                            those with the empty incoming value. */
                         apr_hash_t *deleted_mergeinfo, *added_mergeinfo;

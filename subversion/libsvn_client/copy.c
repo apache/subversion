@@ -340,7 +340,7 @@ typedef struct
   svn_boolean_t resurrection;
   svn_boolean_t dir_add;
 
-  /* The complete merge info for the source of the copy (both implied
+  /* The complete mergeinfo for the source of the copy (both implied
      and explicit). */
   svn_string_t *mergeinfo;
 } path_driver_info_t;
@@ -361,7 +361,7 @@ struct path_driver_cb_baton
   svn_boolean_t is_move;
 };
 
-/* Obtain the implied merge info of repository-relative path PATH in
+/* Obtain the implied mergeinfo of repository-relative path PATH in
    *IMPLIED_MERGEINFO (e.g. every revision of the node at PATH since
    it last appeared).  REL_PATH corresponds to PATH, but is relative
    to RA_SESSION. */
@@ -394,7 +394,7 @@ get_implied_mergeinfo(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-/* Obtain the implied merge info and the existing merge info of the
+/* Obtain the implied mergeinfo and the existing mergeinfo of the
    source path, combine them and return the result in
    *TARGET_MERGEINFO.  SRC_REL_PATH corresponds to SRC_PATH_OR_URL,
    but is relative to RA_SESSION. */
@@ -415,14 +415,14 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                                             NULL, ra_session, adm_access,
                                             pool));
 
-  /* Obtain any implied and/or existing (explicit) merge info. */
+  /* Obtain any implied and/or existing (explicit) mergeinfo. */
   SVN_ERR(get_implied_mergeinfo(ra_session, target_mergeinfo,
                                 src_rel_path, src_path, src_revnum, pool));
   SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                           src_path, src_revnum,
                                           svn_mergeinfo_inherited, pool));
 
-  /* Combine and return all merge info. */
+  /* Combine and return all mergeinfo. */
   if (src_mergeinfo)
     {
       return svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo, pool);
@@ -433,8 +433,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
     }
 }
 
-/* Extend the merge info for the single WC path TARGET_WCPATH, adding
-   MERGEINFO to any merge info pre-existing in the WC. */
+/* Extend the mergeinfo for the single WC path TARGET_WCPATH, adding
+   MERGEINFO to any mergeinfo pre-existing in the WC. */
 static svn_error_t *
 extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
                     apr_hash_t *mergeinfo, svn_wc_adm_access_t *adm_access,
@@ -442,12 +442,12 @@ extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
 {
   apr_hash_t *wc_mergeinfo;
 
-  /* Get a fresh copy of the pre-existing state of the WC's merge info
+  /* Get a fresh copy of the pre-existing state of the WC's mergeinfo
      updating it. */
   SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry, target_wcpath,
                                       adm_access, ctx, pool));
 
-  /* Combine the provided merge info with any merge info from the WC. */
+  /* Combine the provided mergeinfo with any mergeinfo from the WC. */
   if (wc_mergeinfo)
     SVN_ERR(svn_mergeinfo_merge(&wc_mergeinfo, mergeinfo,
                                 pool));
@@ -1230,7 +1230,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
 
-      /* Set the merge info for the destination to the combined merge
+      /* Set the mergeinfo for the destination to the combined merge
          info known to the WC and the repository. */
       item->outgoing_prop_changes = apr_array_make(pool, 1,
                                                    sizeof(svn_prop_t *));
@@ -1366,7 +1366,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                               ctx->cancel_func, ctx->cancel_baton, 
                               ctx->notify_func2, ctx->notify_baton2, pool));
 
-          /* ### Recording of implied merge info should really occur
+          /* ### Recording of implied mergeinfo should really occur
              ### *before* the notification callback is invoked by
              ### svn_wc_add2(), but can't occur before we add the new
              ### source path. */
