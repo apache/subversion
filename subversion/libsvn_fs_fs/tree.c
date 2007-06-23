@@ -985,10 +985,10 @@ fs_node_proplist(apr_hash_t **table_p,
                         
 /* Change the merge info for a given path.  */
 static svn_error_t *
-fs_change_merge_info(svn_fs_root_t *root,
-                     const char *path,
-                     apr_hash_t *mergeinfo,
-                     apr_pool_t *pool)
+fs_change_mergeinfo(svn_fs_root_t *root,
+                    const char *path,
+                    apr_hash_t *mergeinfo,
+                    apr_pool_t *pool)
 {
   const char *txn_id;
   svn_string_t *mergeinfo_str;
@@ -3126,7 +3126,7 @@ static root_vtable_t root_vtable = {
   fs_contents_changed,
   fs_get_file_delta_stream,
   fs_merge,
-  fs_change_merge_info, 
+  fs_change_mergeinfo, 
   svn_fs_mergeinfo__get_mergeinfo,
   svn_fs_mergeinfo__get_mergeinfo_for_tree
 };
