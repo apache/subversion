@@ -29,6 +29,9 @@ XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 
 from svntest.main import SVN_PROP_MERGE_INFO
+from svntest.main import skip_test_when_no_authz_available
+from svntest.main import write_restrictive_svnserve_conf
+from svntest.main import write_authz_file
 
 def shorten_path_kludge(path):
   '''Search for the comment entitled "The Merge Kluge" elsewhere in
@@ -6638,6 +6641,124 @@ def avoid_reflected_revs(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+def mergeinfo_and_skipped_paths(sbox):
+  "Skipped paths get overriding mergeinfo"
+
+  # Test that we override the merge info for child paths which weren't
+  # actually merged because they were skipped.
+  #
+  # Currently this test covers paths skipped because:
+  #
+  #   1) Path is versioned but is missing from disk.
+  #   2) The source of a merge is inaccessible due to authz restrictions.
+  #
+  # Eventually we should also test:
+  #
+  #   3) Destination of merge is inaccessible due to authz restrictions.
+
+  skip_test_when_no_authz_available()
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox)
+
+  # Create a restrictive authz where part of the merge source and part
+  # of the target are inaccesible.
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+  write_authz_file(sbox, {"/"               : svntest.main.wc_author +"=rw",
+                          # Make part of the merge source inaccessible.
+                          "/A/B/E"          : svntest.main.wc_author +"=",
+                          ### TODO: Make part of the merge destination
+                          ### inaccesible when we finally handle this.
+                          ### "/A_COPY/D/H/psi" : svntest.main.wc_author +"="
+                          })
+
+  # Checkout just the branch under the newly restricted authz.
+  wc_restricted = sbox.add_wc_path('restricted')
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     sbox.repo_url + "/A_COPY",
+                                     wc_restricted)
+
+  omega_path = os.path.join(wc_restricted, "D", "H", "omega")
+
+  # Restrict access to some more of the merge destination the
+  # old fashioned way, delete it via the OS.
+  os.remove(omega_path)
+
+  # Merge r2:6 into the restricted WC.
+  short_path = shorten_path_kludge(wc_restricted)
+  expected_output = wc.State(short_path, {
+    'D/G/rho'   : Item(status='U '),
+    'D/H/psi'   : Item(status='U '),
+    })
+  expected_status = wc.State(short_path, {
+    ''          : Item(status=' M', wc_rev=6),
+    'D/H/chi'   : Item(status='  ', wc_rev=6),
+    'D/H/psi'   : Item(status='M ', wc_rev=6),
+    'D/H/omega' : Item(status='!M', wc_rev=6),
+    'D/H'       : Item(status='  ', wc_rev=6),
+    'D/G/pi'    : Item(status='  ', wc_rev=6),
+    'D/G/rho'   : Item(status='M ', wc_rev=6),
+    'D/G/tau'   : Item(status='  ', wc_rev=6),
+    'D/G'       : Item(status='  ', wc_rev=6),
+    'D/gamma'   : Item(status='  ', wc_rev=6),
+    'D'         : Item(status='  ', wc_rev=6),
+    'B/lambda'  : Item(status='  ', wc_rev=6),
+    'B/E'       : Item(status=' M', wc_rev=6),
+    'B/E/alpha' : Item(status='  ', wc_rev=6),
+    'B/E/beta'  : Item(status='  ', wc_rev=6),
+    'B/F'       : Item(status='  ', wc_rev=6),
+    'B'         : Item(status='  ', wc_rev=6),
+    'mu'        : Item(status='  ', wc_rev=6),
+    'C'         : Item(status='  ', wc_rev=6),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,3-6'}),
+    'D/H/psi'   : Item("New content"),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/G'       : Item(),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D'         : Item(),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/E'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:'}),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/F'       : Item(),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'C'         : Item(),
+    })
+  # We expect B/E to be skipped because we can't access the source
+  # and D/H/omega because it is missing.
+  expected_skip = wc.State(short_path, {
+    'D/H/omega' : Item(),
+    'B/E'       : Item(),
+    })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_path, '2', '6',
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+  os.chdir(saved_cwd)
+
+  # run_and_verify_merge() doesn't support checking the props on a
+  # missing path, so we do that manually.
+  svntest.actions.run_and_verify_svn(None,
+                                     ["Properties on '" + omega_path + "':\n",
+                                      '  ' + SVN_PROP_MERGE_INFO + ' : ' +
+                                      '/A/D/H/omega:\n'],
+                                     [], 'pl', '-vR', omega_path)
+
 ########################################################################
 # Run the tests
 
@@ -6700,6 +6821,7 @@ test_list = [ None,
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
               avoid_reflected_revs,
+              XFail(mergeinfo_and_skipped_paths),
              ]
 
 if __name__ == '__main__':
