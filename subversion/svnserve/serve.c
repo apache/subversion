@@ -1463,7 +1463,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  &inherit_word));
   inherit = svn_inheritance_from_word(inherit_word);
 
-  /* Canonicalize the paths which merge info has been requested for. */
+  /* Canonicalize the paths which mergeinfo has been requested for. */
   canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
      {

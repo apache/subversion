@@ -983,7 +983,7 @@ fs_node_proplist(apr_hash_t **table_p,
 }
 
                         
-/* Change the merge info for a given path.  */
+/* Change the mergeinfo for a given path.  */
 static svn_error_t *
 fs_change_mergeinfo(svn_fs_root_t *root,
                     const char *path,

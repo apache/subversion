@@ -36,7 +36,7 @@ extern "C" {
 
 /** Parse the mergeinfo from @a input into @a mergehash, mapping from
  * paths to @c apr_array_header_t *'s of @c svn_merge_range_t *
- * elements.  If no merge info is available, return an empty hash
+ * elements.  If no mergeinfo is available, return an empty hash
  * (never @c NULL).  Perform temporary allocations in @a pool.
  *
  * Note: @a mergehash will contain rangelists that are guaranteed to be
@@ -47,7 +47,7 @@ svn_error_t *
 svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input, 
                     apr_pool_t *pool);
 
-/** Calculate the delta between two hashes of merge info, @a mergefrom
+/** Calculate the delta between two hashes of mergeinfo, @a mergefrom
  * and @a mergeto (which may be @c NULL), and place the result in @a
  * deleted and @a added (neither output argument will ever be @c
  * NULL), stored as the usual mapping of paths to lists of @c
@@ -60,7 +60,7 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
                    apr_hash_t *mergefrom, apr_hash_t *mergeto,
                    apr_pool_t *pool);
 
-/** Merge hash of merge info, @a changes, into existing hash @a
+/** Merge hash of mergeinfo, @a changes, into existing hash @a
  * *mergeinfo.
  *
  * Note: @a *mergeinfo and @a changes must have rangelists that are

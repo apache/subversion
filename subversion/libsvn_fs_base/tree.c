@@ -1208,7 +1208,7 @@ struct change_mergeinfo_args
   const svn_string_t *value;
 };
 
-/* Set the merge info on the transaction in BATON (expected to be of
+/* Set the mergeinfo on the transaction in BATON (expected to be of
    type "struct change_mergeinfo_args").  Conforms to the callback
    API used by svn_fs_base__retry_txn(). */
 static svn_error_t *
@@ -1222,7 +1222,7 @@ txn_body_change_mergeinfo(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Change the merge info for the specified PATH to MERGE_INFO.  */
+/* Change the mergeinfo for the specified PATH to MERGE_INFO.  */
 static svn_error_t *
 base_change_mergeinfo(svn_fs_root_t *root,
                       const char *path,

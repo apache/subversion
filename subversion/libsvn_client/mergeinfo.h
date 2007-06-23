@@ -1,5 +1,5 @@
 /*
- * mergeinfo.h : Client library-internal merge info APIs.
+ * mergeinfo.h : Client library-internal mergeinfo APIs.
  *
  * ====================================================================
  * Copyright (c) 2007 CollabNet.  All rights reserved.
@@ -19,13 +19,13 @@
 #ifndef SVN_LIBSVN_CLIENT_MERGEINFO_H
 #define SVN_LIBSVN_CLIENT_MERGEINFO_H
 
-/* Obtain any merge info for the session-relative path REL_PATH from
+/* Obtain any mergeinfo for the session-relative path REL_PATH from
    the repository, and set it in *TARGET_MERGEINFO.
 
    INHERIT indicates whether explicit, explicit or inherited, or only
-   inherited merge info for REL_PATH is obtained.
+   inherited mergeinfo for REL_PATH is obtained.
 
-   If there is no merge info available for REL_PATH, set
+   If there is no mergeinfo available for REL_PATH, set
    *TARGET_MERGEINFO to NULL. */
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
@@ -35,9 +35,9 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_mergeinfo_inheritance_t inherit,
                                 apr_pool_t *pool);
 
-/* Parse any merge info from the WCPATH's ENTRY and store it in
-   MERGEINFO.  If no record of any merge info exists, set MERGEINFO to
-   NULL.  Does not acount for inherited merge info. */
+/* Parse any mergeinfo from the WCPATH's ENTRY and store it in
+   MERGEINFO.  If no record of any mergeinfo exists, set MERGEINFO to
+   NULL.  Does not acount for inherited mergeinfo. */
 svn_error_t *
 svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
                             const svn_wc_entry_t *entry,
@@ -64,25 +64,25 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
    TARGET_PATH and WC_ELISION_LIMIT_PATH, if it exists, must both be absolute
    or relative to the working directory.
 
-   If TARGET_WCPATH's merge info and its nearest ancestor's merge info
-   differ by paths existing only in TARGET_PATH's merge info that map to
-   empty revision ranges, then the merge info between the two is considered
-   equivalent and elision occurs.  If the merge info between the two still
+   If TARGET_WCPATH's mergeinfo and its nearest ancestor's mergeinfo
+   differ by paths existing only in TARGET_PATH's mergeinfo that map to
+   empty revision ranges, then the mergeinfo between the two is considered
+   equivalent and elision occurs.  If the mergeinfo between the two still
    differs then partial elision occurs: only the paths mapped to empty
-   revision ranges in TARGET_WCPATH's merge info elide.
+   revision ranges in TARGET_WCPATH's mergeinfo elide.
 
-   If TARGET_WCPATH's merge info and its nearest ancestor's merge info
-   differ by paths existing only in the ancestor's merge info that map to
-   empty revision ranges, then the merge info between the two is considered
+   If TARGET_WCPATH's mergeinfo and its nearest ancestor's mergeinfo
+   differ by paths existing only in the ancestor's mergeinfo that map to
+   empty revision ranges, then the mergeinfo between the two is considered
    equivalent and elision occurs.
 
-   If TARGET_WCPATH's merge info consists only of paths mapped to empty
+   If TARGET_WCPATH's mergeinfo consists only of paths mapped to empty
    revision ranges and none of these paths exist in TARGET_WCPATH's nearest
    ancestor, then elision occurs.
 
-   If TARGET_WCPATH's merge info consists only of paths mapped to empty
+   If TARGET_WCPATH's mergeinfo consists only of paths mapped to empty
    revision ranges and TARGET_WCPATH has no working copy or repository
-   ancestor with merge info (WC_ELISION_LIMIT_PATH must be NULL to ensure the
+   ancestor with mergeinfo (WC_ELISION_LIMIT_PATH must be NULL to ensure the
    repository is checked), then elision occurs.
  */
 svn_error_t *

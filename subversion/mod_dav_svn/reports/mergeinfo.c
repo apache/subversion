@@ -100,7 +100,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
 
-  /* Build merge info brigade */
+  /* Build mergeinfo brigade */
   bb = apr_brigade_create(resource->pool,  output->c->bucket_alloc);
 
 

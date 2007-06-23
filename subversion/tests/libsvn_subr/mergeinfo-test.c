@@ -1,5 +1,5 @@
 /*
- * mergeinfo-test.c -- test the merge info functions
+ * mergeinfo-test.c -- test the mergeinfo functions
  *
  * ====================================================================
  * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
@@ -92,7 +92,7 @@ verify_mergeinfo_parse(const char *input,
 static apr_hash_t *info1, *info2;
 
 #define NBR_MERGEINFO_VALS 3
-/* Valid merge info values. */
+/* Valid mergeinfo values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
   {
     "/trunk:1",
@@ -156,20 +156,20 @@ test_mergeinfo_dup(const char **msg,
   orig_mergeinfo = apr_hash_make(subpool);
   copied_mergeinfo = svn_mergeinfo_dup(orig_mergeinfo, subpool);
   if (apr_hash_count(copied_mergeinfo) != 0)
-    return fail(pool, "Copied merge info should be empty");
+    return fail(pool, "Copied mergeinfo should be empty");
 
-  /* Create some merge info, copy it using another pool, then destroy
-     the pool with which the original merge info was created. */
+  /* Create some mergeinfo, copy it using another pool, then destroy
+     the pool with which the original mergeinfo was created. */
   SVN_ERR(svn_mergeinfo_parse(&orig_mergeinfo, single_mergeinfo, subpool));
   copied_mergeinfo = svn_mergeinfo_dup(orig_mergeinfo, pool);
   apr_pool_destroy(subpool);
   if (apr_hash_count(copied_mergeinfo) != 1)
-    return fail(pool, "Copied merge info should contain one merge source");
+    return fail(pool, "Copied mergeinfo should contain one merge source");
   rangelist = apr_hash_get(copied_mergeinfo, "/trunk", APR_HASH_KEY_STRING);
   if (! rangelist)
-    return fail(pool, "Expected copied merge info; got nothing");
+    return fail(pool, "Expected copied mergeinfo; got nothing");
   if (rangelist->nelts != 3)
-    return fail(pool, "Copied merge info should contain 3 revision ranges, "
+    return fail(pool, "Copied mergeinfo should contain 3 revision ranges, "
                 "rather than the %d it contains", rangelist->nelts);
 
   return SVN_NO_ERROR;
@@ -222,7 +222,7 @@ test_parse_combine_rangeinfo(const char **msg,
 
 
 #define NBR_BROKEN_MERGEINFO_VALS 4
-/* Invalid merge info values. */
+/* Invalid mergeinfo values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
     "/missing-revs",

@@ -589,7 +589,7 @@ svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
       txn->proplist = apr_hash_make(pool);
     }
 
-  /* De-serialize the current merge info. */
+  /* De-serialize the current mergeinfo. */
   target_mergeinfo = apr_hash_make(pool);
   serialized_str = apr_hash_get(txn->proplist, SVN_FS_PROP_TXN_MERGEINFO,
                                 APR_HASH_KEY_STRING);
@@ -605,7 +605,7 @@ svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
       stream = svn_stream_from_stringbuf(serialized_buf, pool);
     }
 
-  /* Set the merge info for the path, and re-serialize the hash for
+  /* Set the mergeinfo for the path, and re-serialize the hash for
      storage. */
   apr_hash_set(target_mergeinfo, path, APR_HASH_KEY_STRING, value);
   SVN_ERR(svn_hash_write2(target_mergeinfo, stream, NULL, pool));
@@ -647,7 +647,7 @@ svn_fs_base__change_txn_prop(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
-/* txn_vtable's get_mergeinfo hook.  Set TABLE_P to a merge info hash
+/* txn_vtable's get_mergeinfo hook.  Set TABLE_P to a mergeinfo hash
    (possibly empty), or NULL if there are no transaction properties. */
 static svn_error_t *
 svn_fs_base__txn_mergeinfo(apr_hash_t **table_p,
