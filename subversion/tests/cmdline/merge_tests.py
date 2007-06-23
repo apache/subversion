@@ -6821,7 +6821,7 @@ test_list = [ None,
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
               avoid_reflected_revs,
-              XFail(mergeinfo_and_skipped_paths),
+              mergeinfo_and_skipped_paths,
              ]
 
 if __name__ == '__main__':
