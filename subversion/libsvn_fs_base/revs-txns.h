@@ -151,12 +151,12 @@ svn_error_t *svn_fs_base__set_txn_base(svn_fs_t *fs,
    Return SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
    transaction that has already been committed.  */
 svn_error_t *
-svn_fs_base__set_txn_merge_info(svn_fs_t *fs,
-                                const char *txn_name,
-                                const char *path,
-                                const svn_string_t *value,
-                                trail_t *trail,
-                                apr_pool_t *pool);
+svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
+                               const char *txn_name,
+                               const char *path,
+                               const svn_string_t *value,
+                               trail_t *trail,
+                               apr_pool_t *pool);
 
 /* Set a property NAME to VALUE on transaction TXN_NAME in FS as part
    of TRAIL.  Use POOL for any necessary allocations.

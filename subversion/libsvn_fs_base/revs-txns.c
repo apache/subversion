@@ -562,12 +562,12 @@ svn_fs_base__set_txn_prop(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_base__set_txn_merge_info(svn_fs_t *fs,
-                                const char *txn_name,
-                                const char *path,
-                                const svn_string_t *value,
-                                trail_t *trail,
-                                apr_pool_t *pool)
+svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
+                               const char *txn_name,
+                               const char *path,
+                               const svn_string_t *value,
+                               trail_t *trail,
+                               apr_pool_t *pool)
 {
   transaction_t *txn;
   apr_hash_t *target_mergeinfo;
