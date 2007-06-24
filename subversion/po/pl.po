@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-05-25 20:39+0800\n"
-"PO-Revision-Date: 2007-04-12 14:28+0200\n"
+"PO-Revision-Date: 2007-06-24 20:21+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1181,9 +1181,9 @@ msgid "'%s' has local modifications"
 msgstr "'%s' zawiera lokalne modyfikacje"
 
 #: libsvn_client/diff.c:135
-#, fuzzy, c-format
+#, c-format
 msgid "   Reverted %s:r%s%s"
-msgstr "Wycofano zmiany w '%s'\n"
+msgstr "Wycofano zmiany %s:r%s%s"
 
 #: libsvn_client/diff.c:153
 #, c-format
@@ -1232,10 +1232,9 @@ msgid "'%s' was not found in the repository at revision %ld"
 msgstr "'%s' nie występuje w repozytorium w wersji %ld"
 
 #: libsvn_client/diff.c:1025
-#, fuzzy
 msgid "Sorry, svn_client_diff4 was called in a way that is not yet supported"
 msgstr ""
-"Niestety, ale svn_client_diff3 uruchomiono w sposób, który nie jest \n"
+"Niestety, ale svn_client_diff4 uruchomiono w sposób, który nie jest \n"
 "jeszcze obsługiwany"
 
 #: libsvn_client/diff.c:1067
@@ -1283,9 +1282,9 @@ msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Błąd sumy kontrolnej dla '%s'; oczekiwana: '%s', faktyczna: '%s'"
 
 #: libsvn_client/info.c:377 libsvn_client/info.c:402 libsvn_client/info.c:412
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' non-existent in revision %ld"
-msgstr "URL '%s' nie istnieje w wersji '%ld'"
+msgstr "URL '%s' nie istnieje w wersji %ld"
 
 #: libsvn_client/list.c:234
 #, c-format
@@ -1320,7 +1319,6 @@ msgstr "'%s' nie jest zablokowane"
 
 #: libsvn_client/locking_commands.c:406 libsvn_fs/fs-loader.c:993
 #: libsvn_ra/ra_loader.c:863
-#, fuzzy
 msgid "Lock comment contains illegal characters"
 msgstr "Opis zakładanej blokady zawiera nieprawidłowe znaki"
 
