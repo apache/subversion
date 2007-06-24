@@ -266,25 +266,36 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
   return run_command_stdin(command, error_expected, binary_mode,
                            None, *varargs)
 
+def _quote_arg(arg):
+  """Quote ARG for a command line.
+
+  Simply surround every argument in double-quotes.
+
+  WARNING: This function cannot handle arbitrary command-line
+  arguments.  It can easily be confused by shell metacharacters.  A
+  perfect job would be difficult and OS-dependent (see, for example,
+  http://msdn.microsoft.com/library/en-us/vccelng/htm/progs_12.asp).
+  In other words, this function is just good enough for what we need
+  here."""
+
+  if os.name != 'nt':
+    arg = arg.replace('$', '\$')
+  return '"%s"' % (arg,)
+
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
-  args = ''
-  for arg in varargs:                   # build the command string
-    arg = str(arg)
-    if os.name != 'nt':
-      arg = arg.replace('$', '\$')
-    args = args + ' "' + arg + '"'
+  args = ' '.join(map(_quote_arg, varargs))
 
   # Log the command line
   if verbose_mode:
-    print 'CMD:', os.path.basename(command) + args,
+    print 'CMD:', os.path.basename(command) + ' ' + args,
 
   if binary_mode:
     mode = 'b'
   else:
     mode = 't'
 
-  infile, outfile, errfile = os.popen3(command + args, mode)
+  infile, outfile, errfile = os.popen3(command + ' ' + args, mode)
 
   if stdin_lines:
     map(infile.write, stdin_lines)
