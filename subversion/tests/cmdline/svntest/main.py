@@ -266,10 +266,16 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
   return run_command_stdin(command, error_expected, binary_mode,
                            None, *varargs)
 
+# A regular expression that matches arguments that are trivially safe
+# to pass on a command line without quoting on any supported operating
+# system:
+_safe_arg_re = re.compile(r'^[A-Za-z\d\.\_\/\-\:\@]+$')
+
 def _quote_arg(arg):
   """Quote ARG for a command line.
 
-  Simply surround every argument in double-quotes.
+  Simply surround every argument in double-quotes unless it contains
+  only universally harmless characters.
 
   WARNING: This function cannot handle arbitrary command-line
   arguments.  It can easily be confused by shell metacharacters.  A
@@ -278,9 +284,12 @@ def _quote_arg(arg):
   In other words, this function is just good enough for what we need
   here."""
 
-  if os.name != 'nt':
-    arg = arg.replace('$', '\$')
-  return '"%s"' % (arg,)
+  if _safe_arg_re.match(arg):
+    return arg
+  else:
+    if os.name != 'nt':
+      arg = arg.replace('$', '\$')
+    return '"%s"' % (arg,)
 
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
