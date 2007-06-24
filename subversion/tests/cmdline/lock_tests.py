@@ -366,10 +366,17 @@ def enforce_lock(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
+  # Set some binary properties.
+  propval_path = os.path.join(wc_dir, 'propval.tmp')
+
   # svn:needs-lock value should be forced to a '*'
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '*', lambda_path)
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '      ', mu_path)
+  svntest.actions.set_prop(None, 'svn:needs-lock', 'foo', iota_path,
+                           propval_path)
+  svntest.actions.set_prop(None, 'svn:needs-lock', '*', lambda_path,
+                           propval_path)
+  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  svntest.actions.set_prop(expected_err, 'svn:needs-lock', '      ', 
+                           mu_path, propval_path)
 
   # Check svn:needs-lock
   svntest.actions.check_prop('svn:needs-lock', iota_path, ['*'])
@@ -1038,11 +1045,13 @@ def lock_and_exebit1(sbox):
   wc_dir = sbox.wc_dir
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  
-  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+
+  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
                                      'svn:needs-lock', ' ', gamma_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+  expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
                                      'svn:executable', ' ', gamma_path)
   
   # commit
@@ -1120,11 +1129,13 @@ def lock_and_exebit2(sbox):
   wc_dir = sbox.wc_dir
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  
-  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+
+  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
                                      'svn:needs-lock', ' ', gamma_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+  expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
                                      'svn:executable', ' ', gamma_path)
   
   # commit
