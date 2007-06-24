@@ -267,8 +267,15 @@ static apr_status_t
 temp_file_plain_cleanup_handler(void *baton)
 {
   struct  temp_file_cleanup_s *b = baton;
+  apr_status_t apr_err = APR_SUCCESS;
 
-  return (b->name) ? apr_file_remove(b->name, b->pool) : APR_SUCCESS;
+  if (b->name)
+    {
+      apr_err = apr_file_remove(b->name, b->pool);
+      WIN32_RETRY_LOOP(apr_err, apr_file_remove(b->name, b->pool));
+    }
+
+  return apr_err;
 }
 
 
@@ -731,7 +738,8 @@ svn_io_copy_file(const char *src,
     svn_error_clear(err2);
   if (err)
     {
-      apr_file_remove(dst_tmp_apr, pool);
+      apr_err = apr_file_remove(dst_tmp_apr, pool);
+      WIN32_RETRY_LOOP(apr_err, apr_file_remove(dst_tmp_apr, pool));
       return err;
     }
 
