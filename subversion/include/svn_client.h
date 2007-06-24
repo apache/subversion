@@ -3757,6 +3757,13 @@ svn_client_unlock(const apr_array_header_t *targets,
  * @{
  */
 
+/** The value of the size in the repository is unknown (because the info
+ * was fetched for a local path, not an URL).
+ *
+ * @since New in 1.5
+ */
+#define SVN_INFO_SIZE_UNKNOWN ((apr_size_t) -1)
+
 /**
  * A structure which describes various system-generated metadata about
  * a working-copy path or URL.
@@ -3821,7 +3828,24 @@ typedef struct svn_info_t
   /* @since New in 1.5. */
   const char *changelist;
   svn_depth_t depth;
+  
+  /** 
+   * The size of the file after being translated into its local
+   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKOWN if
+   * unknown.  Not applicable for directories.
+   * @since New in 1.5.
+   */
+  apr_size_t working_size;
   /** @} */
+
+  /**
+   * The size of the file in the repository (untranslated,
+   * e.g. without adjustment of line endings and keyword
+   * expansion). Only applicable for file -- not directory -- URLs.
+   * For working copy paths, size will be @c SVN_INFO_SIZE_UNKNOWN.
+   * @since New in 1.5.
+   */
+  apr_size_t size;
 
 } svn_info_t;
 
