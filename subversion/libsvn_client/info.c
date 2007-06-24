@@ -24,6 +24,7 @@
 #include "svn_client.h"
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_wc.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -54,6 +55,8 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->last_changed_author  = dirent->last_author;
   tmpinfo->lock                 = lock;
   tmpinfo->depth                = svn_depth_unknown;
+  tmpinfo->working_size         = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
+  tmpinfo->size                 = dirent->size;
 
   *info = tmpinfo;
   return SVN_NO_ERROR;
@@ -92,6 +95,8 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->conflict_wrk         = entry->conflict_wrk;
   tmpinfo->prejfile             = entry->prejfile;
   tmpinfo->changelist           = entry->changelist;
+  tmpinfo->working_size         = entry->working_size;
+  tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
 
   /* lock stuff */
   if (entry->lock_token)  /* the token is the critical bit. */
