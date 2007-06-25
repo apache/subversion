@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-06-24 20:38+0200\n"
-"PO-Revision-Date: 2007-06-24 20:36+0200\n"
+"PO-Revision-Date: 2007-06-25 21:13+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -66,7 +66,7 @@ msgstr "Niepoprawny typ MIME"
 
 #: include/svn_error_codes.h:180
 msgid "Wrong or unexpected property value"
-msgstr ""
+msgstr "Błędna lub nieoczekiwana wartość atrybutu"
 
 #: include/svn_error_codes.h:184
 msgid "Version file format not correct"
@@ -765,7 +765,7 @@ msgstr "Polecenie niedostępne dla katalogów"
 
 #: include/svn_error_codes.h:975
 msgid "No versioned parent directories"
-msgstr ""
+msgstr "Niewersjonowane narzędne katalogi"
 
 #: include/svn_error_codes.h:981
 msgid "A problem occurred; see later errors for details"
@@ -851,7 +851,7 @@ msgstr "Niekompatybilna wersja biblioteki"
 
 #: include/svn_error_codes.h:1063
 msgid "Merge info parse error"
-msgstr ""
+msgstr "Błąd parsowania informacji łączenia zmian"
 
 #: include/svn_error_codes.h:1069
 msgid "Error parsing arguments"
@@ -910,7 +910,7 @@ msgstr "Nie można określić odpowiedzialności za plik binarny '%s'"
 
 #: libsvn_client/blame.c:522
 msgid "blame of the WORKING revision is not supported"
-msgstr ""
+msgstr "odpowiedzialność wersji kopii roboczej nie jest wspierana"
 
 #: libsvn_client/blame.c:535
 msgid "Start revision must precede end revision"
@@ -1201,7 +1201,7 @@ msgstr "Wycofano zmiany %s:r%s%s"
 #: libsvn_client/diff.c:153
 #, c-format
 msgid "   Merged %s:r%s%s"
-msgstr ""
+msgstr "Połączono zmiany %s:r%s%s"
 
 #: libsvn_client/diff.c:175
 #, c-format
@@ -3062,7 +3062,7 @@ msgstr "Zapis zaktualizowanego pliku nie powiódł się"
 #: libsvn_ra_serf/commit.c:1260
 #, c-format
 msgid "Adding a directory failed: %s on %s (%d)"
-msgstr ""
+msgstr "Dodawanie katalogu nie powiodło się: %s na %s (%d)"
 
 #: libsvn_ra_serf/getlocations.c:289
 #, fuzzy
@@ -3095,7 +3095,7 @@ msgstr "Brak atrybutu wersji dla '%s'"
 
 #: libsvn_ra_serf/replay.c:198
 msgid "Missing name attr in delete-entry element"
-msgstr ""
+msgstr "Brakujący atrybut nazwa elementu delete-entry"
 
 #: libsvn_ra_serf/replay.c:204
 #, fuzzy
@@ -4354,7 +4354,7 @@ msgstr "W pliku wersji brak końcowego znaku końca wiersza"
 
 #: libsvn_subr/mergeinfo.c:190
 msgid "Pathname not terminated by ':'"
-msgstr ""
+msgstr "Ścieżka nie zakończona znakiem ':'"
 
 #: libsvn_subr/mergeinfo.c:198
 #, fuzzy, c-format
