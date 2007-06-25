@@ -600,7 +600,11 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
   svn_error_t *err;
 
   err = svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
-  SVN_ERR(prop_ctx->parser_ctx->error);
+  if (prop_ctx->parser_ctx->error)
+    {
+      svn_error_clear(err);
+      SVN_ERR(prop_ctx->parser_ctx->error);
+    }
   return err;
 }
 
