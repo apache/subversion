@@ -682,8 +682,6 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
 
       if (err->apr_err != SVN_ERR_RA_DAV_PATH_NOT_FOUND)
         return err;  /* found a _real_ error */
-      else
-        svn_error_clear(err);
 
       /* else... lop off the basename and try again. */
       svn_stringbuf_set(lopped_path,
@@ -697,6 +695,8 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
       if (path_s->len == len)
         return svn_error_quick_wrap
           (err, _("The path was not part of a repository"));
+
+      svn_error_clear(err);
     }
 
   /* error out if entire URL was bogus (not a single part of it exists
