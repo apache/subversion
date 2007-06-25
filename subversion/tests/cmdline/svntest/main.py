@@ -390,6 +390,11 @@ http-library=%s
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
 
+def _with_config_dir(args):
+  if '--config-dir' in args:
+    return args
+  else:
+    return args + ('--config-dir', default_config_dir)
 
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
@@ -397,12 +402,7 @@ def run_svn(error_expected, *varargs):
   If ERROR_EXPECTED is None, any stderr also will be printed.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  if '--config-dir' in varargs:
-    return run_command(svn_binary, error_expected, 0,
-                       *varargs)
-  else:
-    return run_command(svn_binary, error_expected, 0,
-                       *varargs + ('--config-dir', default_config_dir))
+  return run_command(svn_binary, error_expected, 0, *(_with_config_dir(varargs)))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -416,7 +416,7 @@ def run_svnlook(*varargs):
 
 def run_svnsync(*varargs):
   "Run svnsync with VARARGS, returns stdout, stderr as list of lines."
-  return run_command(svnsync_binary, 1, 0, *varargs)
+  return run_command(svnsync_binary, 1, 0, *(_with_config_dir(varargs)))
 
 def run_svnversion(*varargs):
   "Run svnversion with VARARGS, returns stdout, stderr as list of lines."
