@@ -623,12 +623,6 @@ def compare_unordered_output(expected, actual):
     except ValueError:
       raise Failure("Expected output does not match actual output")
 
-def skip_test_when_no_authz_available():
-  "skip this test when authz is not available"
-  _check_command_line_parsed()
-  if test_area_url.startswith('file://'):
-    raise Skip
-
 def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."
 
@@ -690,6 +684,10 @@ def is_ra_type_dav():
 def is_ra_type_svn():
   _check_command_line_parsed()
   return test_area_url.startswith('svn')
+
+def is_ra_type_file():
+  _check_command_line_parsed()
+  return test_area_url.startswith('file')
 
 def is_fs_type_fsfs():
   _check_command_line_parsed()

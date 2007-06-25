@@ -29,7 +29,6 @@ XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 
 from svntest.main import SVN_PROP_MERGE_INFO
-from svntest.main import skip_test_when_no_authz_available
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
 
@@ -6656,8 +6655,6 @@ def mergeinfo_and_skipped_paths(sbox):
   #
   #   3) Destination of merge is inaccessible due to authz restrictions.
 
-  skip_test_when_no_authz_available()
-
   sbox.build()
   wc_dir = sbox.wc_dir
   wc_disk, wc_status = setup_branch(sbox)
@@ -6821,7 +6818,7 @@ test_list = [ None,
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
               avoid_reflected_revs,
-              mergeinfo_and_skipped_paths,
+              Skip(mergeinfo_and_skipped_paths, svntest.main.is_ra_type_file),
              ]
 
 if __name__ == '__main__':
