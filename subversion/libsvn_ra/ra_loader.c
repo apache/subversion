@@ -26,6 +26,7 @@
 #include <apr_strings.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_uri.h>
 
 #include "svn_version.h"
 #include "svn_types.h"
@@ -46,11 +47,10 @@
    ### that this is the case; that their 'schemes' fields are both
    ### dav_schemes; and that "neon" is listed first.
 
-   ### Note: users can choose which dav library to use with the
-   ### http-library preference in .subversion/servers; currently it is
-   ### only supported in the [global] section, not the host-specific
-   ### sections.  Additionally, it is ignored by any code which uses
-   ### the pre-1.2 API svn_ra_get_ra_library instead of svn_ra_open. */
+   ### Users can choose which dav library to use with the http-library
+   ### preference in .subversion/servers; however, it is ignored by
+   ### any code which uses the pre-1.2 API svn_ra_get_ra_library
+   ### instead of svn_ra_open. */
 
 #if defined(SVN_LIBSVN_CLIENT_LINKS_RA_NEON) && defined (SVN_LIBSVN_CLIENT_LINKS_RA_SERF)
 #define MUST_CHOOSE_DAV
@@ -391,8 +391,24 @@ svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
                              APR_HASH_KEY_STRING);
       if (servers)
         {
-          svn_config_get(servers, &http_library, SVN_CONFIG_SECTION_GLOBAL,
-                         SVN_CONFIG_OPTION_HTTP_LIBRARY, "neon");
+          apr_uri_t repos_URI;
+          apr_status_t apr_err;
+          const char *server_group;
+
+          apr_err = apr_uri_parse(pool, repos_URL, &repos_URI);
+          if (apr_err != APR_SUCCESS)
+            return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                     _("Illegal repository URL '%s'"), 
+                                     repos_URL);
+          server_group = svn_config_find_group(servers, repos_URI.hostname,
+                                               SVN_CONFIG_SECTION_GROUPS, pool);
+          
+          http_library
+            = svn_config_get_server_setting(servers, 
+                                            server_group,
+                                            SVN_CONFIG_OPTION_HTTP_LIBRARY,
+                                            "neon");
+
           if (strcmp(http_library, "neon") != 0 &&
               strcmp(http_library, "serf") != 0)
             return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
