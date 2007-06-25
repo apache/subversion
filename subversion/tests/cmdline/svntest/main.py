@@ -284,6 +284,7 @@ def _quote_arg(arg):
   In other words, this function is just good enough for what we need
   here."""
 
+  arg = str(arg)
   if _safe_arg_re.match(arg):
     return arg
   else:
