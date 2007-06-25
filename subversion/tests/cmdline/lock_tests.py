@@ -1531,6 +1531,37 @@ def examine_lock_encoded_recurse(sbox):
                                         svntest.main.wc_author,
                                         svntest.main.wc_passwd)
 
+# Trying to unlock someone else's lock with --force should fail.
+def unlocked_lock_of_other_user(sbox):
+  "unlock file locked by other user"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # lock a file with user jrandom
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', pi_path)
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # now try to unlock with user jconstant, should fail.
+  if sbox.repo_url.startswith("http"):
+    expected_err = ".*403 Forbidden.*"
+  else:
+    expected_err = "svn: warning: User '%s' is trying to use a lock owned by "\
+                   "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
+  svntest.actions.run_and_verify_svn(None, [], expected_err, 'unlock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     pi_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -1570,6 +1601,7 @@ test_list = [ None,
               ls_url_encoded,
               unlock_wrong_token,
               examine_lock_encoded_recurse,
+              unlocked_lock_of_other_user,
             ]
 
 if __name__ == '__main__':
