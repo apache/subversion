@@ -1423,6 +1423,20 @@ structure."
   (list nil nil))
 
 (defun svn-status-make-dummy-dirs (dir-list old-ui-information)
+  "Calculate additionally necessary directories that were not shown in the output
+of 'svn status'"
+  ;; (message "svn-status-make-dummy-dirs %S" dir-list)
+  (let ((candidate)
+        (base-dir))
+    (dolist (dir dir-list)
+      (setq base-dir (file-name-directory dir))
+      (while base-dir
+        ;;(message "dir: %S dir-list: %S, base-dir: %S" dir dir-list base-dir)
+        (setq candidate (replace-regexp-in-string "/+$" "" base-dir))
+        (setq base-dir (file-name-directory candidate))
+        ;; (message "dir: %S, candidate: %S" dir candidate)
+        (add-to-list 'dir-list candidate))))
+  ;; (message "svn-status-make-dummy-dirs %S" dir-list)
   (append (mapcar (lambda (dir)
                     (svn-status-make-line-info
                      dir
@@ -4937,10 +4951,8 @@ entry for file with defun.
        svn-log-view-mode-menu))))
 
 (defvar svn-log-view-font-lock-keywords
-  '(("^r[0-9]+ .+" (0 `(face
-                        font-lock-keyword-face
-                        mouse-face
-                        highlight
+  '(("^r[0-9]+ .+" (0 `(face font-lock-keyword-face
+                        mouse-face highlight
                         keymap ,svn-log-view-popup-menu-map))))
   "Keywords in svn-log-view-mode.")
 (put 'svn-log-view-font-lock-keywords 'risky-local-variable t) ;for Emacs 20.7
