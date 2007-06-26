@@ -49,7 +49,7 @@ typedef enum {
 
 typedef struct {
   apr_pool_t *pool;
-  const char *curr_path;
+  svn_stringbuf_t *curr_path;
   svn_stringbuf_t *curr_info;
   apr_hash_t *result;
   svn_boolean_t done;
@@ -73,7 +73,7 @@ start_element(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_ITEM);
-      mergeinfo_ctx->curr_path = NULL;
+      svn_stringbuf_setempty(mergeinfo_ctx->curr_path);
       svn_stringbuf_setempty(mergeinfo_ctx->curr_info);
     }
   else if (state == MERGE_INFO_ITEM &&
@@ -106,13 +106,16 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
   else if (state == MERGE_INFO_ITEM 
            && strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
-      if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path)
+      if (mergeinfo_ctx->curr_info->len && mergeinfo_ctx->curr_path->len)
         {
           apr_hash_t *path_mergeinfo;
-          SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, 
-                                      mergeinfo_ctx->curr_info->data, 
+          SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo,
+                                      mergeinfo_ctx->curr_info->data,
                                       mergeinfo_ctx->pool));
-          apr_hash_set(mergeinfo_ctx->result, mergeinfo_ctx->curr_path,
+          apr_hash_set(mergeinfo_ctx->result,
+                       apr_pstrmemdup(mergeinfo_ctx->pool,
+                                      mergeinfo_ctx->curr_path->data,
+                                      mergeinfo_ctx->curr_path->len),
                        APR_HASH_KEY_STRING, path_mergeinfo);
         }
       svn_ra_serf__xml_pop_state(parser);
@@ -142,7 +145,8 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
   switch (state)
     {
     case MERGE_INFO_PATH:
-      mergeinfo_ctx->curr_path = apr_pstrndup(mergeinfo_ctx->pool, data, len);
+      if (mergeinfo_ctx->curr_path)
+        svn_stringbuf_appendbytes(mergeinfo_ctx->curr_path, data, len);
       break;
 
     case MERGE_INFO_INFO:
@@ -157,6 +161,9 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
   return SVN_NO_ERROR;
 }
 
+#define MINFO_REQ_HEAD "<S:" SVN_DAV__MERGEINFO_REPORT " xmlns:S=\"" SVN_XML_NAMESPACE "\">"
+#define MINFO_REQ_TAIL "</S:" SVN_DAV__MERGEINFO_REPORT ">"
+
 /* Request a mergeinfo-report from the URL attached to SESSION,
    and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
@@ -168,11 +175,6 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
-  static const char minfo_request_head[] =
-    "<S:" SVN_DAV__MERGEINFO_REPORT " xmlns:S=\"" SVN_XML_NAMESPACE "\">";
-
-  static const char minfo_request_tail[] =
-    "</S:" SVN_DAV__MERGEINFO_REPORT ">";
   int i;
 
   mergeinfo_context_t *mergeinfo_ctx;
@@ -183,14 +185,15 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
 
   mergeinfo_ctx = apr_pcalloc(pool, sizeof(*mergeinfo_ctx));
   mergeinfo_ctx->pool = pool;
+  mergeinfo_ctx->curr_path = svn_stringbuf_create("", pool);
   mergeinfo_ctx->curr_info = svn_stringbuf_create("", pool);
   mergeinfo_ctx->done = FALSE;
   mergeinfo_ctx->result = apr_hash_make(pool);
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(minfo_request_head,
-                                      sizeof(minfo_request_head)-1,
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(MINFO_REQ_HEAD,
+                                      sizeof(MINFO_REQ_HEAD) - 1,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
@@ -213,8 +216,8 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
         }
     }
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(minfo_request_tail,
-                                      sizeof(minfo_request_tail) - 1,
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(MINFO_REQ_TAIL,
+                                      sizeof(MINFO_REQ_TAIL) - 1,
                                       session->bkt_alloc);
 
   serf_bucket_aggregate_append(buckets, tmp);
