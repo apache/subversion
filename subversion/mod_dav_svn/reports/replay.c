@@ -489,11 +489,11 @@ dav_svn__replay_report(const dav_resource *resource,
 
     if (base_dir && base_dir[0] != '\0')
       action = apr_psprintf(resource->info->r->pool,
-                            "replay %ld '%s'", rev,
+                            "replay '%s' r%" SVN_REVNUM_T_FMT,
                             svn_path_uri_encode(base_dir,
-                                                resource->info->r->pool));
+                                                resource->info->r->pool), rev);
     else
-      action = apr_psprintf(resource->info->r->pool, "replay %ld", rev);
+      action = apr_psprintf(resource->info->r->pool, "replay r%" SVN_REVNUM_T_FMT, rev);
 
     apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
   }
