@@ -1418,10 +1418,9 @@ add_file(const char *path,
    * already, or if the parent directory was also added (without
    * history) in this commit.
    */
-  if ((!dir->added)
-      || (dir->copy_path)
-      || (!apr_hash_get(dir->commit->deleted_entries,
-                        new_file->name, APR_HASH_KEY_STRING)))
+  if (! ((dir->added && !dir->copy_path) ||
+         apr_hash_get(dir->commit->deleted_entries,
+                      new_file->name, APR_HASH_KEY_STRING)))
     {
       svn_ra_serf__simple_request_context_t *head_ctx;
       svn_ra_serf__handler_t *handler;
