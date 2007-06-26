@@ -5070,6 +5070,46 @@ When called with a prefix argument, ask the user for the revision."
     (goto-char (point-min))
     (setq svn-log-edit-update-log-entry rev)))
 
+
+;; allow additional hyperlinks in log view buffers
+(defvar svn-log-link-keymap ()
+  "Keymap used to resolve links `svn-log-view-mode' buffers.")
+(put 'svn-log-link-keymap 'risky-local-variable t) ;for Emacs 20.7
+(when (not svn-log-link-keymap)
+  (setq svn-log-link-keymap (make-sparse-keymap))
+  (suppress-keymap svn-log-link-keymap)
+  (define-key svn-log-link-keymap [mouse-2] 'svn-log-resolve-mouse-link)
+  (define-key svn-log-link-keymap (kbd "RET") 'svn-log-resolve-link))
+
+(defun svn-log-resolve-mouse-link (event)
+  (interactive "e")
+  (mouse-set-point event)
+  (svn-log-resolve-link))
+
+(defun svn-log-resolve-link ()
+  (interactive)
+  (let* ((point-adjustment (if (not (get-text-property (- (point) 1) 'link-handler)) 1
+                             (if (not (get-text-property (+ (point) 1) 'link-handler)) -1 0)))
+         (link-name (buffer-substring-no-properties (previous-single-property-change (+ (point) point-adjustment) 'link-handler)
+                                                   (next-single-property-change (+ (point) point-adjustment) 'link-handler))))
+    ;; (message "svn-log-resolve-link '%s'" link-name)
+    (funcall (get-text-property (point) 'link-handler) link-name)))
+
+(defun svn-log-add-link-handler (link-regexp handler-function)
+  (let ((font-lock-desc (list link-regexp '(0 `(face font-lock-function-name-face
+                                            mouse-face highlight
+                                            link-handler invalid-handler-function
+                                            keymap ,svn-log-link-keymap)))))
+    ;; no idea, how to use handler-function in invalid-handler-function above, so set it here
+    (setcar (nthcdr 5 (nth 1 (nth 1 (nth 1 font-lock-desc)))) handler-function)
+    (add-to-list 'svn-log-view-font-lock-keywords font-lock-desc)))
+
+;; example: add support for ditrack links and handle them via svn-ditrack-resolve-url
+;;(svn-log-add-link-handler "i#[0-9]+" 'svn-ditrack-resolve-url)
+;;(defun svn-ditrack-resolve-url (link-name)
+;;  (interactive)
+;;  (message "svn-ditrack-resolve-url %s" link-name))
+
 ;; --------------------------------------------------------------------------------
 ;; svn-info-mode
 ;; --------------------------------------------------------------------------------
