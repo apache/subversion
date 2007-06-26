@@ -4586,7 +4586,7 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
                                        None,
                                        None, 1)
 
-def setup_branch(sbox, branch_only = False):
+def setup_branch(sbox, branch_only = False, nbr_of_branches = 1):
   '''Starting with standard greek tree, copy A to A_COPY (r2) and make
   four modifications (setting file contents to "New content") under A:
   r3 - A/D/H/psi
@@ -4596,126 +4596,136 @@ def setup_branch(sbox, branch_only = False):
 
   wc_dir = sbox.wc_dir
 
-  expected = svntest.actions.UnorderedOutput(
-         ["A    " + os.path.join(wc_dir, "A_COPY", "B") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "B", "lambda") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "B", "E") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "B", "E", "alpha") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "B", "E", "beta") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "B", "F") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "mu") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "C") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "D") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "D", "gamma") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "D", "G") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "D", "G", "pi") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "D", "G", "rho") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "D", "G", "tau") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "D", "H") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "D", "H", "chi") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "D", "H", "omega") + "\n",
-          "A    " + os.path.join(wc_dir, "A_COPY", "D", "H", "psi") + "\n",
-          "Checked out revision 1.\n",
-          "A         " + os.path.join(wc_dir, "A_COPY") + "\n"])
-
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    "A_COPY/B"         : Item(status='  ', wc_rev=2),
-    "A_COPY/B/lambda"  : Item(status='  ', wc_rev=2),
-    "A_COPY/B/E"       : Item(status='  ', wc_rev=2),
-    "A_COPY/B/E/alpha" : Item(status='  ', wc_rev=2),
-    "A_COPY/B/E/beta"  : Item(status='  ', wc_rev=2),
-    "A_COPY/B/F"       : Item(status='  ', wc_rev=2),
-    "A_COPY/mu"        : Item(status='  ', wc_rev=2),
-    "A_COPY/C"         : Item(status='  ', wc_rev=2),
-    "A_COPY/D"         : Item(status='  ', wc_rev=2),
-    "A_COPY/D/gamma"   : Item(status='  ', wc_rev=2),
-    "A_COPY/D/G"       : Item(status='  ', wc_rev=2),
-    "A_COPY/D/G/pi"    : Item(status='  ', wc_rev=2),
-    "A_COPY/D/G/rho"   : Item(status='  ', wc_rev=2),
-    "A_COPY/D/G/tau"   : Item(status='  ', wc_rev=2),
-    "A_COPY/D/H"       : Item(status='  ', wc_rev=2),
-    "A_COPY/D/H/chi"   : Item(status='  ', wc_rev=2),
-    "A_COPY/D/H/omega" : Item(status='  ', wc_rev=2),
-    "A_COPY/D/H/psi"   : Item(status='  ', wc_rev=2),
-    "A_COPY"           : Item(status='  ', wc_rev=2)})
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({
-    'A_COPY'           : Item(props={SVN_PROP_MERGE_INFO : '/A:1'}),
-    'A_COPY/B'         : Item(),
-    'A_COPY/B/lambda'  : Item("This is the file 'lambda'.\n"),
-    'A_COPY/B/E'       : Item(),
-    'A_COPY/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-    'A_COPY/B/E/beta'  : Item("This is the file 'beta'.\n"),
-    'A_COPY/B/F'       : Item(),
-    'A_COPY/mu'        : Item("This is the file 'mu'.\n"),
-    'A_COPY/C'         : Item(),
-    'A_COPY/D'         : Item(),
-    'A_COPY/D/gamma'   : Item("This is the file 'gamma'.\n"),
-    'A_COPY/D/G'       : Item(),
-    'A_COPY/D/G/pi'    : Item("This is the file 'pi'.\n"),
-    'A_COPY/D/G/rho'   : Item("This is the file 'rho'.\n"),
-    'A_COPY/D/G/tau'   : Item("This is the file 'tau'.\n"),
-    'A_COPY/D/H'       : Item(),
-    'A_COPY/D/H/chi'   : Item("This is the file 'chi'.\n"),
-    'A_COPY/D/H/omega' : Item("This is the file 'omega'.\n"),
-    'A_COPY/D/H/psi'   : Item("This is the file 'psi'.\n"),
-    })
 
-  # Make a branch A_COPY to merge into.
-  svntest.actions.run_and_verify_svn(None, expected, [], 'copy',
-                                     sbox.repo_url + "/A",
-                                     os.path.join(wc_dir,
-                                                  "A_COPY"))
+  def copy_A(dest_name, rev):
+    expected = svntest.actions.UnorderedOutput(
+      ["A    " + os.path.join(wc_dir, dest_name, "B") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "B", "lambda") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "B", "E") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "B", "E", "alpha") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "B", "E", "beta") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "B", "F") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "mu") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "C") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "gamma") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "G") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "pi") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "rho") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "tau") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "H") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "chi") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "omega") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "psi") + "\n",
+       "Checked out revision " + str(rev - 1) + ".\n",
+       "A         " + os.path.join(wc_dir, dest_name) + "\n"])
+    expected_status.add({
+      dest_name + "/B"         : Item(status='  ', wc_rev=rev),
+      dest_name + "/B/lambda"  : Item(status='  ', wc_rev=rev),
+      dest_name + "/B/E"       : Item(status='  ', wc_rev=rev),
+      dest_name + "/B/E/alpha" : Item(status='  ', wc_rev=rev),
+      dest_name + "/B/E/beta"  : Item(status='  ', wc_rev=rev),
+      dest_name + "/B/F"       : Item(status='  ', wc_rev=rev),
+      dest_name + "/mu"        : Item(status='  ', wc_rev=rev),
+      dest_name + "/C"         : Item(status='  ', wc_rev=rev),
+      dest_name + "/D"         : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/gamma"   : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/G"       : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/G/pi"    : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/G/rho"   : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/G/tau"   : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/H"       : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/H/chi"   : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/H/omega" : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/H/psi"   : Item(status='  ', wc_rev=rev),
+      dest_name                : Item(status='  ', wc_rev=rev)})
+    if rev < 3:
+      copy_mergeinfo = '/A:1'
+    else:
+      copy_mergeinfo  = '/A:1-' + str(rev - 1)
+    expected_disk.add({
+      dest_name : Item(props={SVN_PROP_MERGE_INFO : copy_mergeinfo}),
+      dest_name + '/B'         : Item(),
+      dest_name + '/B/lambda'  : Item("This is the file 'lambda'.\n"),
+      dest_name + '/B/E'       : Item(),
+      dest_name + '/B/E/alpha' : Item("This is the file 'alpha'.\n"),
+      dest_name + '/B/E/beta'  : Item("This is the file 'beta'.\n"),
+      dest_name + '/B/F'       : Item(),
+      dest_name + '/mu'        : Item("This is the file 'mu'.\n"),
+      dest_name + '/C'         : Item(),
+      dest_name + '/D'         : Item(),
+      dest_name + '/D/gamma'   : Item("This is the file 'gamma'.\n"),
+      dest_name + '/D/G'       : Item(),
+      dest_name + '/D/G/pi'    : Item("This is the file 'pi'.\n"),
+      dest_name + '/D/G/rho'   : Item("This is the file 'rho'.\n"),
+      dest_name + '/D/G/tau'   : Item("This is the file 'tau'.\n"),
+      dest_name + '/D/H'       : Item(),
+      dest_name + '/D/H/chi'   : Item("This is the file 'chi'.\n"),
+      dest_name + '/D/H/omega' : Item("This is the file 'omega'.\n"),
+      dest_name + '/D/H/psi'   : Item("This is the file 'psi'.\n"),
+      })
 
-  expected_output = wc.State(wc_dir, {'A_COPY' : Item(verb='Adding')})
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None,
-                                        None, None, None, None,
-                                        wc_dir)
+    # Make a branch A_COPY to merge into.
+    svntest.actions.run_and_verify_svn(None, expected, [], 'copy',
+                                       sbox.repo_url + "/A",
+                                       os.path.join(wc_dir,
+                                                    dest_name))
+
+    expected_output = wc.State(wc_dir, {dest_name : Item(verb='Adding')})
+    svntest.actions.run_and_verify_commit(wc_dir,
+                                          expected_output,
+                                          expected_status,
+                                          None,
+                                          None, None, None, None,
+                                          wc_dir)
+  for i in range(nbr_of_branches):
+    if i == 0:
+      copy_A('A_COPY', i + 2)
+    else:
+      copy_A('A_COPY_' + str(i + 1), i + 2)
 
   if (branch_only):
     return expected_disk, expected_status
 
   # Make some changes under A which we'll later merge under A_COPY:
 
-  # r3 - modify and commit A/D/H/psi
+  # r(nbr_of_branches + 2) - modify and commit A/D/H/psi
   svntest.main.file_write(os.path.join(wc_dir, "A", "D", "H", "psi"),
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
-  expected_status.tweak('A/D/H/psi', wc_rev=3)  
+  expected_status.tweak('A/D/H/psi', wc_rev=nbr_of_branches + 2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
   expected_disk.tweak('A/D/H/psi', contents="New content")
 
-  # r4 - modify and commit A/D/G/rho
+  # r(nbr_of_branches + 3) - modify and commit A/D/G/rho
   svntest.main.file_write(os.path.join(wc_dir, "A", "D", "G", "rho"),
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/G/rho' : Item(verb='Sending')})
-  expected_status.tweak('A/D/G/rho', wc_rev=4)  
+  expected_status.tweak('A/D/G/rho', wc_rev=nbr_of_branches + 3)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
   expected_disk.tweak('A/D/G/rho', contents="New content")
 
-  # r5 - modify and commit A/B/E/beta
+  # r(nbr_of_branches + 4) - modify and commit A/B/E/beta
   svntest.main.file_write(os.path.join(wc_dir, "A", "B", "E", "beta"),
                           "New content")
   expected_output = wc.State(wc_dir, {'A/B/E/beta' : Item(verb='Sending')})
-  expected_status.tweak('A/B/E/beta', wc_rev=5)  
+  expected_status.tweak('A/B/E/beta', wc_rev=nbr_of_branches + 4)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
   expected_disk.tweak('A/B/E/beta', contents="New content")
 
-  # r6 - modify and commit A/D/H/omega
+  # r(nbr_of_branches + 5) - modify and commit A/D/H/omega
   svntest.main.file_write(os.path.join(wc_dir, "A", "D", "H", "omega"),
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/omega' : Item(verb='Sending')})
-  expected_status.tweak('A/D/H/omega', wc_rev=6)  
+  expected_status.tweak('A/D/H/omega', wc_rev=nbr_of_branches + 5)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
