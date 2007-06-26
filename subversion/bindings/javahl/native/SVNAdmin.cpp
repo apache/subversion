@@ -129,8 +129,8 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
     {
       SVN_JNI_ERR(svn_error_createf
                   (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                   _("Revisions must not be greater than the youngest revision (%"
-                     SVN_REVNUM_T_FMT ")"), youngest), );
+                   _("Revisions must not be greater than the youngest revision"
+                     " (%ld)"), youngest), );
     }
 
   /* Loop over the requested revision range, performing the
@@ -197,8 +197,8 @@ void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut,
     {
       SVN_JNI_ERR(svn_error_createf
                   (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                   _("Revisions must not be greater than the youngest revision (%"
-                     SVN_REVNUM_T_FMT ")"), youngest), );
+                   _("Revisions must not be greater than the youngest revision"
+                     " (%ld)"), youngest), );
     }
 
   SVN_JNI_ERR(svn_repos_dump_fs(repos, dataOut.getStream(requestPool),
