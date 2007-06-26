@@ -155,9 +155,15 @@ typedef long int svn_revnum_t;
 /** Convert null-terminated C string @a str to a revision number. */
 #define SVN_STR_TO_REV(str) ((svn_revnum_t) atol(str))
 
-/** In printf()-style functions, format revision numbers using this.
- * Do not use this macro within the Subversion project source code, because
- * the language translation tools have trouble parsing it. */
+/** Originally intended to be used in printf()-style functions to format
+ * revision numbers.  Deprecated due to incompatibilities with language
+ * translation tools (e.g. gettext).
+ *
+ * New code should use a bare "%ld" format specifier for formatting revision
+ * numbers.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ */
 #define SVN_REVNUM_T_FMT "ld"
 
 
