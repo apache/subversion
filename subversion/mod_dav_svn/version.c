@@ -1341,7 +1341,7 @@ merge(dav_resource *target,
   /* We've detected a 'high level' svn action to log. */
   apr_table_set(target->info->r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(target->info->r->pool,
-                             "commit '%s' r%" SVN_REVNUM_T_FMT, 
+                             "commit '%s' r%ld", 
                              target->info->repos_path,
                              new_rev));
 
