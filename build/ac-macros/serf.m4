@@ -27,7 +27,7 @@ AC_DEFUN(SVN_LIB_SERF,
       CPPFLAGS="$save_cppflags"
     fi
   ], [
-       if test -d "$srcdir/serf" -a "$svn_lib_neon" = "no"; then
+       if test -d "$srcdir/serf"; then
          serf_found=reconfig
        fi
      ])
