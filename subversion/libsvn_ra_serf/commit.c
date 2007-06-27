@@ -1806,7 +1806,9 @@ abort_edit(void *edit_baton,
   SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
                                         pool));
 
-  if (delete_ctx->status != 204)
+  /* 204 if deleted, 404 if the activity wasn't found. */
+  if (delete_ctx->status != 204 &&
+      delete_ctx->status != 404)
     {
       abort();
     }
