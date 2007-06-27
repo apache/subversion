@@ -287,7 +287,7 @@ svn_wc__path_switched(const char *wc_path,
     }
 
   parent_child_url = svn_path_join(parent_entry->url, wc_basename, pool);
-  *switched = strcmp(parent_child_url, entry->url) == 0 ? FALSE : TRUE;
+  *switched = strcmp(parent_child_url, entry->url) != 0;
 
   return SVN_NO_ERROR;
 }
