@@ -106,3 +106,121 @@ class WC(object):
             self._notify_func(notify[0])
     _notify_func_wrapper = staticmethod(_notify_func_wrapper)
 
+    def diff(self, path="", diff_options=[], recurse=True,
+                ignore_ancestry=True, no_diff_deleted=False,
+                ignore_content_type=False, header_encoding="",
+                outfile_name=None, errfile_name=None, append=False,
+                return_strings=False):
+        """Produce svn diff output that describes the difference between
+        PATH at base revision and working copy.
+        
+        DIFF_OPTIONS will be passed to the diff process.
+        
+        If RECURSE is True (True by deafult) then directories will be
+        recursed.
+        
+        If IGNORE_ANCESTRY is True (True by default) then items will not be
+        checked for relatedness before being diffed.
+        
+        If NO_DIFF_DELETED is True (False by default) then deleted items will
+        not be included in the diff.
+        
+        If IGNORE_CONTENT_TYPE is True (False by default) then diffs will be
+        generated for binary file types.
+        
+        Generated headers will be encoded using HEADER_ENCODING ("" by
+        deafult).
+        
+        If OUTFILE_NAME is provided, then the diff will be outputted to
+        OUTFILE_NAME. If OUTFILE_NAME does not exist, it will be created.
+        If OUTFILE_NAME does exist, it will be truncated unless APPEND is
+        True, in which case it will be appended. If OUTFILE_NAME
+        is not provided, results will be printed to stdout.
+        
+        If ERRFILE_NAME is provided, then errors will be outputted to
+        ERRFILE_NAME. If ERRFILE_NAME does not exist, it will be created.
+        If ERRFILE_NAME does exist, it will be truncated unless APPEND is
+        True, in which case it will be appended. If ERRFILE_NAME
+        is not provided, results will be printed to stderr.
+        
+        If RETURN_STRINGS is True (False by default), a list of strings
+        [out,err] will be returned. out holds the diff output, err holds
+        the error output. RETURN_STRINGS can only be True when OUTFILE_NAME
+        and ERRFILE_NAME are provided, otherwise it will be set to False,
+        regardless of input.
+        
+        In the case that both APPEND and RETURN_STRINGS are True, the entire
+        contents of OUTFILE_NAME will be returned in out and the entire
+        contents of ERRFILE_NAME will be returned in err."""
+                    
+        diff_options = self._build_path_list(diff_options)
+        
+        rev1 = svn_opt_revision_t()
+        rev1.kind = svn_opt_revision_base
+        
+        rev2 = svn_opt_revision_t()
+        rev2.kind = svn_opt_revision_working
+        
+        path = self._build_path(path)
+        
+        if (not outfile_name) | (not errfile_name):
+            #return_strings can only be True if output is not going to
+            #stdout and stderr.
+            return_strings = False
+        
+        outfile = pointer(apr_file_t())
+        
+        if outfile_name:
+            if append:
+                svn_io_file_open(byref(outfile), outfile_name,
+                            APR_WRITE | APR_READ | APR_CREATE | APR_APPEND,
+                            0644, self.iterpool)
+            else:
+                svn_io_file_open(byref(outfile), outfile_name,
+                            APR_WRITE | APR_READ | APR_CREATE | APR_TRUNCATE,
+                            0644, self.iterpool)
+        else:
+            #Default: Output to stdout
+            apr_file_open_stdout(byref(outfile),self.iterpool)
+            
+        errfile = pointer(apr_file_t())
+        
+        if errfile_name:
+            if append:
+                svn_io_file_open(byref(errfile), errfile_name,
+                    APR_WRITE | APR_READ | APR_CREATE | APR_APPEND, 0644,
+                    self.iterpool)
+            else:
+                svn_io_file_open(byref(errfile), errfile_name,
+                    APR_WRITE | APR_READ | APR_CREATE | APR_TRUNCATE, 0644,
+                    self.iterpool)
+        else:
+            #Default: output to stderr
+            apr_file_open_stderr(byref(errfile), self.iterpool)
+        
+        svn_client_diff3(diff_options, path, rev1, path,
+                        rev2, recurse, ignore_ancestry, no_diff_deleted,
+                        ignore_content_type, header_encoding, outfile,
+                        errfile, self.client, self.iterpool)
+        
+        if return_strings:
+            #Case to return strings with the diff contents
+            outbuf = svn_stringbuf_create("", self.iterpool)
+            errbuf = svn_stringbuf_create("", self.iterpool)
+            
+            #Make sure read starts at beginning
+            svn_io_file_seek(outfile, APR_SET, pointer(c_longlong(0)),
+                            self.iterpool)
+            svn_io_file_seek(errfile, APR_SET, pointer(c_longlong(0)),
+                            self.iterpool)
+            
+            svn_stringbuf_from_aprfile(byref(outbuf), outfile, self.iterpool)
+            svn_stringbuf_from_aprfile(byref(errbuf), errfile, self.iterpool)
+            
+            svn_io_file_close(outfile, self.iterpool)
+            svn_io_file_close(errfile, self.iterpool)
+            
+            return [outbuf.contents.data, errbuf.contents.data]
+        
+        svn_io_file_close(outfile, self.iterpool)
+        svn_io_file_close(errfile, self.iterpool)
