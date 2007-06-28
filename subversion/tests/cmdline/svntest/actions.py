@@ -1064,6 +1064,17 @@ script which always reports errors."""
     'sys.stderr.write("Post-commit hook failed"); '
     'sys.exit(1)')
 
+# set_prop can be used for binary properties are values like '*' which are not
+# handled correctly when specified on the command line.
+def set_prop(expected_err, name, value, path, valp):
+  """Set a property with value from a file"""
+  valf = open(valp, 'wb')
+  valf.seek(0)
+  valf.truncate(0)
+  valf.write(value)
+  valf.flush()
+  main.run_svn(expected_err, 'propset', '-F', valp, name, path)
+
 def check_prop(name, path, exp_out):
   """Verify that property NAME on PATH has a value of EXP_OUT"""
   # Not using run_svn because binary_mode must be set

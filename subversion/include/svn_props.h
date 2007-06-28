@@ -113,6 +113,13 @@ svn_boolean_t svn_prop_is_svn_prop(const char *prop_name);
 svn_boolean_t svn_prop_has_svn_prop(apr_hash_t *props,
                                      apr_pool_t *pool);
 
+/** Return @c TRUE iff @a prop_name is a Subversion property whose
+ * value is interpreted as a boolean.
+ *
+ * @since New in 1.5
+ */
+svn_boolean_t svn_prop_is_boolean(const char *prop_name);
+
 /** If @a prop_name requires that its value be stored as UTF8/LF in the
  * repository, then return @c TRUE.  Else return @c FALSE.  This is for
  * users of libsvn_client or libsvn_fs, since it their responsibility
@@ -201,6 +208,14 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  * @{
  */
 
+/* Properties whose values are interpreted as booleans (such as
+ * svn:executable, svn:needs_lock, and svn:special) always fold their
+ * value to this.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_PROP_BOOLEAN_TRUE "*"
+
 /** The mime-type of a given file. */
 #define SVN_PROP_MIME_TYPE  SVN_PROP_PREFIX "mime-type"
 
@@ -216,21 +231,33 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
 /** Set to either TRUE or FALSE if we want a file to be executable or not. */
 #define SVN_PROP_EXECUTABLE  SVN_PROP_PREFIX "executable"
 
-/** The value to force the executable property to when set */
-#define SVN_PROP_EXECUTABLE_VALUE "*"
+/** The value to force the executable property to when set.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ * Use @c SVN_PROP_BOOLEAN_TRUE instead.
+ */
+#define SVN_PROP_EXECUTABLE_VALUE SVN_PROP_BOOLEAN_TRUE
 
 /** Set to TRUE ('*') if we want a file to be set to read-only when
  * not locked.  FALSE is indicated by deleting the property. */
 #define SVN_PROP_NEEDS_LOCK  SVN_PROP_PREFIX "needs-lock"
 
-/** The value to force the needs-lock property to when set */
-#define SVN_PROP_NEEDS_LOCK_VALUE "*"
+/** The value to force the needs-lock property to when set.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ * Use @c SVN_PROP_BOOLEAN_TRUE instead.
+ */
+#define SVN_PROP_NEEDS_LOCK_VALUE SVN_PROP_BOOLEAN_TRUE
 
 /** Set if the file should be treated as a special file. */
 #define SVN_PROP_SPECIAL  SVN_PROP_PREFIX "special"
 
-/** The value to force the special property to when set. */
-#define SVN_PROP_SPECIAL_VALUE "*"
+/** The value to force the special property to when set.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ * Use @c SVN_PROP_BOOLEAN_TRUE instead.
+ */
+#define SVN_PROP_SPECIAL_VALUE SVN_PROP_BOOLEAN_TRUE
 
 /** Describes external items to check out into this directory. 
  *

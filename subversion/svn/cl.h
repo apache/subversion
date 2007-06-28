@@ -144,7 +144,7 @@ typedef struct svn_cl__opt_state_t
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* external editor command. */
-  svn_boolean_t record_only;     /* whether to record merge info */
+  svn_boolean_t record_only;     /* whether to record mergeinfo */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
@@ -458,6 +458,17 @@ svn_error_t *svn_cl__xml_print_footer(const char *tagname,
 /* Return a (non-localised) string representation of KIND, being "dir" or
    "file" or, in any other case, the empty string. */
 const char *svn_cl__node_kind_str(svn_node_kind_t kind);
+
+
+/* If PROPNAME is one of the svn: properties with a boolean value, and
+ * PROPVAL looks like an attempt to turn the property off (i.e., it's
+ * "off", "no", "false", or ""), then print a warning to the user that
+ * setting the property to this value might not do what they expect.
+ * Perform temporary allocations in POOL.
+ */
+void svn_cl__check_boolean_prop_val(const char *propname,
+                                    const char *propval,
+                                    apr_pool_t *pool);
 
 
 #ifdef __cplusplus

@@ -1304,15 +1304,13 @@ dav_svn__update_report(const dav_resource *resource,
         /* diff/merge don't ask for inline text-deltas. */
         if (!uc.send_all && strcmp(spath, dst_path) == 0)
           action = apr_psprintf(resource->pool,
-                                "diff-or-merge '%s' r%" SVN_REVNUM_T_FMT
-                                 ":%" SVN_REVNUM_T_FMT,
+                                "diff-or-merge '%s' r%ld:%ld",
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
                                 revnum);
         else
           action = apr_psprintf(resource->pool,
-                                "%s '%s@%" SVN_REVNUM_T_FMT "'"
-                                 " '%s@%" SVN_REVNUM_T_FMT "'",
+                                "%s '%s@%ld' '%s@%ld'",
                                 (uc.send_all ? "switch" : "diff-or-merge"),
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
@@ -1327,19 +1325,19 @@ dav_svn__update_report(const dav_resource *resource,
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
           action = apr_psprintf(resource->pool,
-                                "checkout-or-export '%s' r%" SVN_REVNUM_T_FMT,
+                                "checkout-or-export '%s' r%ld",
                                 svn_path_uri_encode(spath, resource->pool),
                                 revnum);
         else
           {
             if (text_deltas)
               action = apr_psprintf(resource->pool,
-                                    "update '%s' r%" SVN_REVNUM_T_FMT,
+                                    "update '%s' r%ld",
                                     svn_path_uri_encode(spath, resource->pool),
                                     revnum);
             else
               action = apr_psprintf(resource->pool,
-                                    "remote-status '%s' r%" SVN_REVNUM_T_FMT,
+                                    "remote-status '%s' r%ld",
                                     svn_path_uri_encode(spath, resource->pool),
                                     revnum);
           }

@@ -983,12 +983,12 @@ fs_node_proplist(apr_hash_t **table_p,
 }
 
                         
-/* Change the merge info for a given path.  */
+/* Change the mergeinfo for a given path.  */
 static svn_error_t *
-fs_change_merge_info(svn_fs_root_t *root,
-                     const char *path,
-                     apr_hash_t *mergeinfo,
-                     apr_pool_t *pool)
+fs_change_mergeinfo(svn_fs_root_t *root,
+                    const char *path,
+                    apr_hash_t *mergeinfo,
+                    apr_pool_t *pool)
 {
   const char *txn_id;
   svn_string_t *mergeinfo_str;
@@ -1081,7 +1081,7 @@ fs_change_node_prop(svn_fs_root_t *root,
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_fs__dag_get_id(parent_path->node),
-                     svn_fs_path_change_modify, 0, 1, SVN_INVALID_REVNUM,
+                     svn_fs_path_change_modify, FALSE, TRUE, SVN_INVALID_REVNUM,
                      NULL, pool));
 
   return SVN_NO_ERROR;
@@ -1821,8 +1821,8 @@ fs_make_dir(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(sub_dir),
-                     svn_fs_path_change_add, 0, 0, SVN_INVALID_REVNUM, NULL,
-                     pool));
+                     svn_fs_path_change_add, FALSE, FALSE, SVN_INVALID_REVNUM, 
+                     NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1866,8 +1866,8 @@ fs_delete_node(svn_fs_root_t *root,
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_fs__dag_get_id(parent_path->node),
-                     svn_fs_path_change_delete, 0, 0, SVN_INVALID_REVNUM,
-                     NULL, pool));
+                     svn_fs_path_change_delete, FALSE, FALSE, 
+                     SVN_INVALID_REVNUM, NULL, pool));
   
   return SVN_NO_ERROR;
 }
@@ -1985,7 +1985,7 @@ copy_helper(svn_fs_root_t *from_root,
       /* Make a record of this modification in the changes table. */
       SVN_ERR(get_dag(&new_node, to_root, to_path, pool));
       SVN_ERR(add_change(to_root->fs, txn_id, to_path,
-                         svn_fs_fs__dag_get_id(new_node), kind, 0, 0,
+                         svn_fs_fs__dag_get_id(new_node), kind, FALSE, FALSE,
                          from_root->rev, from_canonpath, pool));
     }
   else
@@ -2135,8 +2135,8 @@ fs_make_file(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(child),
-                     svn_fs_path_change_add, 0, 0, SVN_INVALID_REVNUM, NULL,
-                     pool));
+                     svn_fs_path_change_add, TRUE, FALSE, SVN_INVALID_REVNUM, 
+                     NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2382,7 +2382,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(tb->root->fs, txn_id, tb->path,
                      svn_fs_fs__dag_get_id(tb->node),
-                     svn_fs_path_change_modify, 1, 0, SVN_INVALID_REVNUM,
+                     svn_fs_path_change_modify, TRUE, FALSE, SVN_INVALID_REVNUM,
                      NULL, pool));
 
   return SVN_NO_ERROR;
@@ -2530,7 +2530,7 @@ apply_text(void *baton, apr_pool_t *pool)
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(tb->root->fs, txn_id, tb->path,
                      svn_fs_fs__dag_get_id(tb->node),
-                     svn_fs_path_change_modify, 1, 0, SVN_INVALID_REVNUM,
+                     svn_fs_path_change_modify, TRUE, FALSE, SVN_INVALID_REVNUM,
                      NULL, pool));
 
   return SVN_NO_ERROR;
@@ -3126,7 +3126,7 @@ static root_vtable_t root_vtable = {
   fs_contents_changed,
   fs_get_file_delta_stream,
   fs_merge,
-  fs_change_merge_info, 
+  fs_change_mergeinfo, 
   svn_fs_mergeinfo__get_mergeinfo,
   svn_fs_mergeinfo__get_mergeinfo_for_tree
 };

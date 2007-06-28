@@ -789,12 +789,13 @@ def prop_value_conversions(sbox):
   propval_path = os.path.join(wc_dir, 'propval.tmp')
   propval_file = open(propval_path, 'wb')
 
-  def set_prop(name, value, path, valf=propval_file, valp=propval_path):
+  def set_prop(name, value, path, valf=propval_file, valp=propval_path,
+               expected_error=None):
     valf.seek(0)
     valf.truncate(0)
     valf.write(value)
     valf.flush()
-    svntest.main.run_svn(None, 'propset', '-F', valp, name, path)
+    svntest.main.run_svn(expected_error, 'propset', '-F', valp, name, path)
 
   # Leading and trailing whitespace should be stripped
   set_prop('svn:mime-type', ' text/html\n\n', iota_path)
@@ -819,8 +820,13 @@ def prop_value_conversions(sbox):
 
   # svn:executable value should be forced to a '*'
   set_prop('svn:executable', 'foo', iota_path)
-  set_prop('svn:executable', '', lambda_path)
-  set_prop('svn:executable', '      ', mu_path)
+  set_prop('svn:executable', '*', lambda_path)
+  for pval in ('      ', '', 'no', 'off', 'false'):
+    set_prop('svn:executable', pval, mu_path, propval_file, propval_path,
+             ["svn: warning: To turn off the svn:executable property, "
+              "use 'svn propdel';\n",
+              "setting the property to '" + pval +
+              "' will not turn it off.\n"])
 
   # Anything else should be untouched
   set_prop('svn:some-prop', 'bar', lambda_path)

@@ -30,6 +30,7 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
+#include "private/svn_dav_protocol.h"
 
 #include "../dav_svn.h"
 
@@ -75,14 +76,14 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       if (child->ns != ns)
         continue;
 
-      if (strcmp(child->name, "revision") == 0)
+      if (strcmp(child->name, SVN_DAV__REVISION) == 0)
         rev = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
-      else if (strcmp(child->name, "inherit") == 0)
+      else if (strcmp(child->name, SVN_DAV__INHERIT) == 0)
         {
           inherit = svn_inheritance_from_word(
             dav_xml_get_cdata(child, resource->pool, 1));
         }
-      else if (strcmp(child->name, "path") == 0)
+      else if (strcmp(child->name, SVN_DAV__PATH) == 0)
         {
           const char *target;
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
@@ -99,7 +100,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
 
-  /* Build merge info brigade */
+  /* Build mergeinfo brigade */
   bb = apr_brigade_create(resource->pool,  output->c->bucket_alloc);
 
 
@@ -115,8 +116,9 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
 
   serr = dav_svn__send_xml(bb, output,
                            DAV_XML_HEADER DEBUG_CR
-                           "<S:merge-info-report xmlns:S=\"" SVN_XML_NAMESPACE
-                           "\" " "xmlns:D=\"DAV:\">" DEBUG_CR);
+                           "<S:" SVN_DAV__MERGEINFO_REPORT " "
+                           "xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+                           "xmlns:D=\"DAV:\">" DEBUG_CR);
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
@@ -134,10 +136,13 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
            hi = apr_hash_next(hi))
         {
           const char *path, *info;
-          const char itemformat[] = "<S:merge-info-item>" DEBUG_CR
-            "<S:merge-info-path>%s</S:merge-info-path>" DEBUG_CR
-            "<S:merge-info-info>%s</S:merge-info-info>" DEBUG_CR
-            "</S:merge-info-item>";
+          const char itemformat[] = "<S:" SVN_DAV__MERGEINFO_ITEM ">"
+            DEBUG_CR
+            "<S:" SVN_DAV__MERGEINFO_PATH ">%s</S:" SVN_DAV__MERGEINFO_PATH ">"
+            DEBUG_CR
+            "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
+            DEBUG_CR
+            "</S:" SVN_DAV__MERGEINFO_ITEM ">";
 
           apr_hash_this(hi, &key, NULL, &value);
           path = key;
@@ -157,7 +162,8 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
         }
     }
 
-  if ((serr = dav_svn__send_xml(bb, output, "</S:merge-info-report>"
+  if ((serr = dav_svn__send_xml(bb, output,
+                                "</S:" SVN_DAV__MERGEINFO_REPORT ">"
                                 DEBUG_CR)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -170,14 +176,14 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   if (paths->nelts == 0)
-    action = "get-merge-info";
+    action = "get-mergeinfo";
   else if (paths->nelts == 1)
-    action = apr_psprintf(resource->pool, "get-merge-info '%s'",
+    action = apr_psprintf(resource->pool, "get-mergeinfo '%s'",
                           svn_path_uri_encode(APR_ARRAY_IDX
                                               (paths, 0, const char *),
                                               resource->pool));
   else
-    action = apr_psprintf(resource->pool, "get-merge-info-partial '%s'",
+    action = apr_psprintf(resource->pool, "get-mergeinfo-partial '%s'",
                           svn_path_uri_encode(APR_ARRAY_IDX
                                               (paths, 0, const char *),
                                               resource->pool));

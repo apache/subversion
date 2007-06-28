@@ -2,7 +2,7 @@
  * mergeinfo.c : entry point for mergeinfo RA functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,6 +21,7 @@
 
 #include "svn_ra.h"
 #include "svn_xml.h"
+#include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_private_config.h"
 #include "svn_mergeinfo.h"
@@ -44,11 +45,11 @@ typedef enum {
 /* Baton for accumulating mergeinfo.  RESULT stores the final
    mergeinfo hash result we are going to hand back to the caller of
    get_mergeinfo.  curr_path and curr_info contain the value of the
-   CDATA from the merge info items as we get them from the server.  */
+   CDATA from the mergeinfo items as we get them from the server.  */
 
 typedef struct {
   apr_pool_t *pool;
-  const char *curr_path;
+  svn_stringbuf_t *curr_path;
   svn_stringbuf_t *curr_info;
   apr_hash_t *result;
   svn_boolean_t done;
@@ -64,24 +65,24 @@ start_element(svn_ra_serf__xml_parser_t *parser,
   mergeinfo_state_e state;
 
   state = parser->state->current_state;
-  if (state == NONE && strcmp(name.name, "merge-info-report") == 0)
+  if (state == NONE && strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_REPORT);
     }
   else if (state == MERGE_INFO_REPORT &&
-           strcmp(name.name, "merge-info-item") == 0)
+           strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_ITEM);
-      mergeinfo_ctx->curr_path = NULL;
+      svn_stringbuf_setempty(mergeinfo_ctx->curr_path);
       svn_stringbuf_setempty(mergeinfo_ctx->curr_info);
     }
   else if (state == MERGE_INFO_ITEM &&
-           strcmp(name.name, "merge-info-path") == 0)
+           strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_PATH);
     }
   else if (state == MERGE_INFO_ITEM &&
-           strcmp(name.name, "merge-info-info") == 0)
+           strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_INFO);
     }
@@ -98,31 +99,34 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
   state = parser->state->current_state;
 
   if (state == MERGE_INFO_REPORT &&
-      strcmp(name.name, "merge-info-report") == 0)
+      strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == MERGE_INFO_ITEM 
-           && strcmp(name.name, "merge-info-item") == 0)
+           && strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
-      if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path)
+      if (mergeinfo_ctx->curr_info->len && mergeinfo_ctx->curr_path->len)
         {
           apr_hash_t *path_mergeinfo;
-          SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, 
-                                      mergeinfo_ctx->curr_info->data, 
+          SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo,
+                                      mergeinfo_ctx->curr_info->data,
                                       mergeinfo_ctx->pool));
-          apr_hash_set(mergeinfo_ctx->result, mergeinfo_ctx->curr_path,
+          apr_hash_set(mergeinfo_ctx->result,
+                       apr_pstrmemdup(mergeinfo_ctx->pool,
+                                      mergeinfo_ctx->curr_path->data,
+                                      mergeinfo_ctx->curr_path->len),
                        APR_HASH_KEY_STRING, path_mergeinfo);
         }
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == MERGE_INFO_PATH 
-           && strcmp(name.name, "merge-info-path") == 0)
+           && strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == MERGE_INFO_INFO 
-           && strcmp(name.name, "merge-info-info") == 0)
+           && strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -141,7 +145,8 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
   switch (state)
     {
     case MERGE_INFO_PATH:
-      mergeinfo_ctx->curr_path = apr_pstrndup(mergeinfo_ctx->pool, data, len);
+      if (mergeinfo_ctx->curr_path)
+        svn_stringbuf_appendbytes(mergeinfo_ctx->curr_path, data, len);
       break;
 
     case MERGE_INFO_INFO:
@@ -156,7 +161,10 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
   return SVN_NO_ERROR;
 }
 
-/* Request a merge-info-report from the URL attached to SESSION,
+#define MINFO_REQ_HEAD "<S:" SVN_DAV__MERGEINFO_REPORT " xmlns:S=\"" SVN_XML_NAMESPACE "\">"
+#define MINFO_REQ_TAIL "</S:" SVN_DAV__MERGEINFO_REPORT ">"
+
+/* Request a mergeinfo-report from the URL attached to SESSION,
    and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
 svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
@@ -167,10 +175,6 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
-  static const char minfo_request_head[]
-    = "<S:merge-info-report xmlns:S=\"" SVN_XML_NAMESPACE "\">";
-
-  static const char minfo_request_tail[] = "</S:merge-info-report>";
   int i;
 
   mergeinfo_context_t *mergeinfo_ctx;
@@ -181,21 +185,23 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
 
   mergeinfo_ctx = apr_pcalloc(pool, sizeof(*mergeinfo_ctx));
   mergeinfo_ctx->pool = pool;
+  mergeinfo_ctx->curr_path = svn_stringbuf_create("", pool);
   mergeinfo_ctx->curr_info = svn_stringbuf_create("", pool);
   mergeinfo_ctx->done = FALSE;
   mergeinfo_ctx->result = apr_hash_make(pool);
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(minfo_request_head,
-                                      sizeof(minfo_request_head)-1,
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(MINFO_REQ_HEAD,
+                                      sizeof(MINFO_REQ_HEAD) - 1,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
   svn_ra_serf__add_tag_buckets(buckets,
-                               "S:revision", apr_ltoa(pool, revision),
+                               "S:" SVN_DAV__REVISION,
+                               apr_ltoa(pool, revision),
                                session->bkt_alloc);
-  svn_ra_serf__add_tag_buckets(buckets, "S:inherit",
+  svn_ra_serf__add_tag_buckets(buckets, "S:" SVN_DAV__INHERIT,
                                svn_inheritance_to_word(inherit),
                                session->bkt_alloc);
   if (paths)
@@ -205,13 +211,13 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
           const char *this_path =
             apr_xml_quote_string(pool, APR_ARRAY_IDX(paths, i, const char *),
                                  0);
-          svn_ra_serf__add_tag_buckets(buckets, "S:path", 
+          svn_ra_serf__add_tag_buckets(buckets, "S:" SVN_DAV__PATH, 
                                        this_path, session->bkt_alloc);
         }
     }
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(minfo_request_tail,
-                                      sizeof(minfo_request_tail) - 1,
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(MINFO_REQ_TAIL,
+                                      sizeof(MINFO_REQ_TAIL) - 1,
                                       session->bkt_alloc);
 
   serf_bucket_aggregate_append(buckets, tmp);
@@ -242,7 +248,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_wait(&mergeinfo_ctx->done, session, pool);
   /* If the server responds with HTTP_NOT_IMPLEMENTED (which ra_serf
      translates into a Subversion error), assume its mod_dav_svn is
-     too old to understand the get-merge-info REPORT.
+     too old to understand the mergeinfo-report REPORT.
 
      ### It would be less expensive if we knew the server's
      ### capabilities *before* sending our REPORT. */

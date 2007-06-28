@@ -1447,8 +1447,8 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
    ASSUMPTION: When performing a 'merge' with two URLs at different
    revisions, the client will call this command more than once. */
-static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                   apr_array_header_t *params, void *baton)
+static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                  apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1463,7 +1463,7 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  &inherit_word));
   inherit = svn_inheritance_from_word(inherit_word);
 
-  /* Canonicalize the paths which merge info has been requested for. */
+  /* Canonicalize the paths which mergeinfo has been requested for. */
   canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
      {
@@ -2190,7 +2190,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "switch",          switch_cmd },
   { "status",          status },
   { "diff",            diff },
-  { "get-merge-info",  get_merge_info },
+  { "get-merge-info",  get_mergeinfo },
   { "log",             log_cmd },
   { "check-path",      check_path },
   { "stat",            stat },

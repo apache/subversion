@@ -159,11 +159,21 @@ svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
   else
     {
       char *new_cur;
+      int add_eol = 0;
+
+      if ((*cur)[*cur_len - 1] != '\n')
+        add_eol = 1;
 
       /* append the data we received before. */
-      new_cur = apr_palloc(pool, *cur_len+new_len+1);
+      new_cur = apr_palloc(pool, *cur_len+new_len+add_eol+1);
 
       memcpy(new_cur, *cur, *cur_len);
+      /* add newline after previous line */
+      if (add_eol)
+        {
+          new_cur[*cur_len] = '\n';
+          *cur_len += 1;
+        }
       memcpy(new_cur + *cur_len, new, new_len);
 
       /* NULL-term our new string */

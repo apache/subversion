@@ -1200,44 +1200,44 @@ base_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
-/* The input for txn_body_change_merge_info(). */
-struct change_merge_info_args
+/* The input for txn_body_change_mergeinfo(). */
+struct change_mergeinfo_args
 {
   svn_fs_root_t *root;
   const char *path;
   const svn_string_t *value;
 };
 
-/* Set the merge info on the transaction in BATON (expected to be of
-   type "struct change_merge_info_args").  Conforms to the callback
+/* Set the mergeinfo on the transaction in BATON (expected to be of
+   type "struct change_mergeinfo_args").  Conforms to the callback
    API used by svn_fs_base__retry_txn(). */
 static svn_error_t *
-txn_body_change_merge_info(void *baton,
-                           trail_t *trail)
+txn_body_change_mergeinfo(void *baton,
+                          trail_t *trail)
 {
-  struct change_merge_info_args *args = baton;
-  SVN_ERR(svn_fs_base__set_txn_merge_info(args->root->fs, args->root->txn, 
-                                          args->path, args->value,
-                                          trail, trail->pool));
+  struct change_mergeinfo_args *args = baton;
+  SVN_ERR(svn_fs_base__set_txn_mergeinfo(args->root->fs, args->root->txn, 
+                                         args->path, args->value,
+                                         trail, trail->pool));
   return SVN_NO_ERROR;
 }
 
-/* Change the merge info for the specified PATH to MERGE_INFO.  */
+/* Change the mergeinfo for the specified PATH to MERGE_INFO.  */
 static svn_error_t *
-base_change_merge_info(svn_fs_root_t *root,
-                       const char *path,
-                       apr_hash_t *merge_info,
-                       apr_pool_t *pool)
+base_change_mergeinfo(svn_fs_root_t *root,
+                      const char *path,
+                      apr_hash_t *mergeinfo,
+                      apr_pool_t *pool)
 {
-  struct change_merge_info_args args;
+  struct change_mergeinfo_args args;
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
   args.root = root;
   args.path = path;
-  SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &args.value, merge_info,
+  SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &args.value, mergeinfo,
                                    pool));
-  return svn_fs_base__retry_txn(root->fs, txn_body_change_merge_info, &args,
+  return svn_fs_base__retry_txn(root->fs, txn_body_change_mergeinfo, &args,
                                 pool);
 }
 
@@ -1250,7 +1250,7 @@ struct change_node_prop_args {
 
 
 static svn_error_t *
-change_txn_merge_info(struct change_node_prop_args *args, trail_t *trail)
+change_txn_mergeinfo(struct change_node_prop_args *args, trail_t *trail)
 {
   const char *txn_id = args->root->txn;
 
@@ -1260,8 +1260,8 @@ change_txn_merge_info(struct change_node_prop_args *args, trail_t *trail)
      absolute. */
   const char *canon_path = svn_fs__canonicalize_abspath(args->path, 
                                                              trail->pool);
-  SVN_ERR(svn_fs_base__set_txn_merge_info(args->root->fs, txn_id, canon_path,
-                                          args->value, trail, trail->pool));
+  SVN_ERR(svn_fs_base__set_txn_mergeinfo(args->root->fs, txn_id, canon_path,
+                                         args->value, trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -1299,7 +1299,7 @@ txn_body_change_node_prop(void *baton,
     proplist = apr_hash_make(trail->pool);
 
   if (strcmp(args->name, SVN_PROP_MERGE_INFO) == 0)
-    SVN_ERR(change_txn_merge_info(args, trail));
+    SVN_ERR(change_txn_mergeinfo(args, trail));
 
   /* Set the property. */
   apr_hash_set(proplist, args->name, APR_HASH_KEY_STRING, args->value);
@@ -1311,7 +1311,8 @@ txn_body_change_node_prop(void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(args->root->fs, txn_id,
                      args->path, svn_fs_base__dag_get_id(parent_path->node),
-                     svn_fs_path_change_modify, 0, 1, trail, trail->pool));
+                     svn_fs_path_change_modify, FALSE, TRUE, trail, 
+                     trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -2682,7 +2683,7 @@ txn_body_make_dir(void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_base__dag_get_id(sub_dir),
-                     svn_fs_path_change_add, 0, 0, trail, trail->pool));
+                     svn_fs_path_change_add, FALSE, FALSE, trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -2753,7 +2754,8 @@ txn_body_delete(void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_base__dag_get_id(parent_path->node),
-                     svn_fs_path_change_delete, 0, 0, trail, trail->pool));
+                     svn_fs_path_change_delete, FALSE, FALSE, trail,
+                     trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -2850,7 +2852,7 @@ txn_body_copy(void *baton,
       SVN_ERR(get_dag(&new_node, to_root, to_path, trail, trail->pool));
       SVN_ERR(add_change(to_root->fs, txn_id, to_path,
                          svn_fs_base__dag_get_id(new_node),
-                         kind, 0, 0, trail, trail->pool));
+                         kind, FALSE, FALSE, trail, trail->pool));
     }
   else
     {
@@ -3088,7 +3090,7 @@ txn_body_make_file(void *baton,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_base__dag_get_id(child),
-                     svn_fs_path_change_add, 0, 0, trail, trail->pool));
+                     svn_fs_path_change_add, TRUE, FALSE, trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -3451,7 +3453,8 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(tb->root->fs, txn_id, tb->path,
                      svn_fs_base__dag_get_id(tb->node),
-                     svn_fs_path_change_modify, 1, 0, trail, trail->pool));
+                     svn_fs_path_change_modify, TRUE, FALSE, trail, 
+                     trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -3604,7 +3607,8 @@ txn_body_apply_text(void *baton, trail_t *trail)
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(tb->root->fs, txn_id, tb->path,
                      svn_fs_base__dag_get_id(tb->node),
-                     svn_fs_path_change_modify, 1, 0, trail, trail->pool));
+                     svn_fs_path_change_modify, TRUE, FALSE, trail, 
+                     trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -4359,7 +4363,7 @@ static root_vtable_t root_vtable = {
   base_contents_changed,
   base_get_file_delta_stream,
   base_merge,
-  base_change_merge_info,
+  base_change_mergeinfo,
   svn_fs_mergeinfo__get_mergeinfo,
   svn_fs_mergeinfo__get_mergeinfo_for_tree
 };

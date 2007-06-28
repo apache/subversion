@@ -30,6 +30,7 @@
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_mergeinfo.h"
+#include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
 
 #include "ra_neon.h"
@@ -37,7 +38,7 @@
 /* Baton for accumulating mergeinfo.  RESULT stores the final
    mergeinfo hash result we are going to hand back to the caller of
    get_mergeinfo.  curr_path and curr_info contain the value of the
-   CDATA from the merge info items as we get them from the server.  */
+   CDATA from the mergeinfo items as we get them from the server.  */
 
 struct mergeinfo_baton
 {
@@ -50,11 +51,11 @@ struct mergeinfo_baton
 
 static const svn_ra_neon__xml_elm_t mergeinfo_report_elements[] =
   {
-    { SVN_XML_NAMESPACE, "merge-info-report", ELEM_merge_info_report, 0 },
-    { SVN_XML_NAMESPACE, "merge-info-item", ELEM_merge_info_item, 0 },
-    { SVN_XML_NAMESPACE, "merge-info-path", ELEM_merge_info_path,
+    { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT, ELEM_mergeinfo_report, 0 },
+    { SVN_XML_NAMESPACE, "mergeinfo-item", ELEM_mergeinfo_item, 0 },
+    { SVN_XML_NAMESPACE, "mergeinfo-path", ELEM_mergeinfo_path,
       SVN_RA_NEON__XML_CDATA },
-    { SVN_XML_NAMESPACE, "merge-info-info", ELEM_merge_info_info,
+    { SVN_XML_NAMESPACE, "mergeinfo-info", ELEM_mergeinfo_info,
       SVN_RA_NEON__XML_CDATA },
     { NULL }
   };
@@ -78,11 +79,11 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
     {
       /* If we're at the root of the tree, the element has to be the editor
        * report itself. */
-      if (elm->id != ELEM_merge_info_report)
+      if (elm->id != ELEM_mergeinfo_report)
         return UNEXPECTED_ELEMENT(nspace, elt_name);
     }
 
-  if (elm->id == ELEM_merge_info_item)
+  if (elm->id == ELEM_mergeinfo_item)
     {
       svn_stringbuf_setempty(mb->curr_info);
       mb->curr_path = NULL;
@@ -105,7 +106,7 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
   if (! elm)
     return UNEXPECTED_ELEMENT(nspace, elt_name);
 
-  if (elm->id == ELEM_merge_info_item)
+  if (elm->id == ELEM_mergeinfo_item)
     {
       if (mb->curr_info && mb->curr_path)
         {
@@ -131,11 +132,11 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
 
   switch (state)
     {
-    case ELEM_merge_info_path:
+    case ELEM_mergeinfo_path:
       mb->curr_path = apr_pstrndup(mb->pool, cdata, nlen);
       break;
 
-    case ELEM_merge_info_info:
+    case ELEM_mergeinfo_info:
       if (mb->curr_info)
         svn_stringbuf_appendbytes(mb->curr_info, cdata, nlen);
       break;
@@ -148,7 +149,7 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
   return SVN_NO_ERROR;
 }
 
-/* Request a merge-info-report from the URL attached to SESSION,
+/* Request a mergeinfo-report from the URL attached to SESSION,
    and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
 svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
@@ -164,10 +165,12 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct mergeinfo_baton mb;
 
-  static const char minfo_report_head[]
-    = "<S:merge-info-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
+  static const char minfo_report_head[] =
+    "<S:" SVN_DAV__MERGEINFO_REPORT " xmlns:S=\"" SVN_XML_NAMESPACE "\">"
+    DEBUG_CR;
 
-  static const char minfo_report_tail[] = "</S:merge-info-report>" DEBUG_CR;
+  static const char minfo_report_tail[] =
+    "</S:" SVN_DAV__MERGEINFO_REPORT ">" DEBUG_CR;
 
   /* Construct the request body. */
   svn_stringbuf_appendcstr(request_body, minfo_report_head);
@@ -216,7 +219,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                     FALSE,
                                     pool);
   /* If the server responds with HTTP_NOT_IMPLEMENTED, assume its
-     mod_dav_svn is too old to understand the get-merge-info REPORT.
+     mod_dav_svn is too old to understand the "mergeinfo-report" REPORT.
 
      ### It would be less expensive if we knew the server's
      ### capabilities *before* sending our REPORT. */

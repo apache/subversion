@@ -1,5 +1,5 @@
 /*
- * ra_dav.h :  private declarations for the RA/DAV module
+ * ra_neon.h : Private declarations for the Neon-based DAV RA module.
  *
  * ====================================================================
  * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
@@ -766,10 +766,10 @@ enum {
   ELEM_close_file,
   ELEM_close_directory,
   ELEM_deadprop_count,
-  ELEM_merge_info_report,
-  ELEM_merge_info_item,
-  ELEM_merge_info_path,
-  ELEM_merge_info_info,
+  ELEM_mergeinfo_report,
+  ELEM_mergeinfo_item,
+  ELEM_mergeinfo_path,
+  ELEM_mergeinfo_info,
   ELEM_nbr_children
 };
 

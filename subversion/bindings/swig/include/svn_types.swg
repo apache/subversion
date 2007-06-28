@@ -1143,6 +1143,17 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 
 /* -----------------------------------------------------------------------
+   useful convertors for svn_mergeinfo_inheritance_t
+*/
+
+#ifdef SWIGRUBY
+%typemap(in) svn_mergeinfo_inheritance_t {
+  $1 = svn_swig_rb_to_mergeinfo_inheritance($input);
+}
+#endif
+
+
+/* -----------------------------------------------------------------------
    Special boolean mapping for ruby.
 */
 

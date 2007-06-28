@@ -32,6 +32,7 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+#include "private/svn_dav_protocol.h"
 
 #include "dav_svn.h"
 
@@ -978,7 +979,7 @@ deliver_report(request_rec *r,
         {
           return dav_svn__replay_report(resource, doc, output);
         }
-      else if (strcmp(doc->root->name, "merge-info-report") == 0)
+      else if (strcmp(doc->root->name, SVN_DAV__MERGEINFO_REPORT) == 0)
         {
           return dav_svn__get_mergeinfo_report(resource, doc, output);
         }
@@ -1340,7 +1341,7 @@ merge(dav_resource *target,
   /* We've detected a 'high level' svn action to log. */
   apr_table_set(target->info->r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(target->info->r->pool,
-                             "commit '%s' r%" SVN_REVNUM_T_FMT, 
+                             "commit '%s' r%ld", 
                              target->info->repos_path,
                              new_rev));
 

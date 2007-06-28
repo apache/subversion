@@ -950,7 +950,7 @@ do_merged_log(struct log_tree_node **tree,
   apr_array_header_t *histories;
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_array_header_t *paths = apr_array_make(subpool, 1, sizeof(const char *));
-  svn_boolean_t changed;
+  svn_boolean_t changed = FALSE;
   int i;
 
   /* We only really care about revisions in which those paths were changed.

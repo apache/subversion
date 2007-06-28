@@ -49,7 +49,7 @@ ra_serf_version(void)
 }
 
 #define RA_SERF_DESCRIPTION \
-    N_("Access repository via WebDAV protocol through serf.")
+    N_("Module for accessing a repository via WebDAV protocol using serf.")
 
 static const char *
 ra_serf_get_description(void)
@@ -671,14 +671,15 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
+  const char *root_url;
 
   props = apr_hash_make(pool);
 
+  SVN_ERR(svn_ra_serf__get_repos_root(ra_session, &root_url, pool));
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      session->repos_url.path,
-                                      SVN_INVALID_REVNUM, "0",
+                                      root_url, SVN_INVALID_REVNUM, "0",
                                       uuid_props, pool));
-  *uuid = svn_ra_serf__get_prop(props, session->repos_url.path,
+  *uuid = svn_ra_serf__get_prop(props, root_url,
                                 SVN_DAV_PROP_NS_DAV, "repository-uuid");
 
   if (!*uuid)
