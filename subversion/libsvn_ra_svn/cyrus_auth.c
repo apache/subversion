@@ -360,7 +360,6 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
                              svn_boolean_t *success,
                              const char **last_err,
                              const char *mechstring,
-                             svn_boolean_t compat,
                              apr_pool_t *pool)
 {
   sasl_interact_t *client_interact = NULL;
@@ -413,7 +412,7 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
 
   /* Send the initial client response */
   SVN_ERR(svn_ra_svn__auth_response(sess->conn, pool, mech, 
-                                    arg ? arg->data : NULL, compat));
+                                    arg ? arg->data : NULL));
 
   while (result == SASL_CONTINUE) 
     {
@@ -714,7 +713,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   sasl_conn_t *sasl_ctx;
   const char *mechstring = "", *last_err = "", *realmstring;
   const char *local_addrport = NULL, *remote_addrport = NULL;
-  svn_boolean_t success, compat = (realm == NULL);
+  svn_boolean_t success;
   /* Reserve space for 3 callbacks (for the username, password and the
      array terminator). */
   sasl_callback_t callbacks[3];
@@ -745,9 +744,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
                                elt->u.word, NULL);
     }
 
-  realmstring = realm ?
-                apr_psprintf(pool, "%s %s", sess->realm_prefix, realm)
-                : sess->realm_prefix;
+  realmstring = apr_psprintf(pool, "%s %s", sess->realm_prefix, realm);
 
   /* Initialize the credential baton. */
   memset(&cred_baton, 0, sizeof(cred_baton));
@@ -787,7 +784,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
                            sess->hostname, local_addrport, remote_addrport,
                            callbacks, sess->conn->pool));
       err = try_auth(sess, sasl_ctx, &success, &last_err, mechstring,
-                     compat, subpool);
+                     subpool);
 
       /* If we encountered an error while fetching credentials, that error
          has priority. */
