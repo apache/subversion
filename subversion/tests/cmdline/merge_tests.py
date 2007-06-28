@@ -5754,7 +5754,7 @@ def merge_to_path_with_switched_children(sbox):
                                        None, None, None, None, None, 1)
   os.chdir(saved_cwd)
 
-  # Finally, merge r3:6 into A_COPY.  The switched children of A_COPY,
+  # Finally, merge r3:7 into A_COPY.  The switched children of A_COPY,
   # A_COPY/D/G and A_COPY/D/H/psi should get the mergeinfo for -r3:7.
   # All mergeinfo on paths under A_COPY should elide *except* that on
   # the switched paths.
@@ -6799,7 +6799,7 @@ test_list = [ None,
               mergeinfo_inheritance_and_discontinuous_ranges,
               XFail(merge_to_target_with_copied_children),
               merge_to_switched_path,
-              XFail(merge_to_path_with_switched_children),
+              merge_to_path_with_switched_children,
               merge_with_implicit_target_file,
               empty_rev_range_mergeinfo,
               detect_copy_src_for_target_with_multiple_ancestors,
