@@ -207,18 +207,9 @@ static svn_error_t *interpret_kind(const char *str, apr_pool_t *pool,
 
 svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
-                                       const char *mech, const char *mech_arg,
-                                       svn_boolean_t compat)
+                                       const char *mech, const char *mech_arg)
 {
-  if (compat)
-    return svn_ra_svn_write_tuple(conn, pool, "nw(?c)(wwww)", (apr_uint64_t) 1,
-                                  mech, mech_arg,
-                                  SVN_RA_SVN_CAP_EDIT_PIPELINE,
-                                  SVN_RA_SVN_CAP_SVNDIFF1,
-                                  SVN_RA_SVN_CAP_ABSENT_ENTRIES,
-                                  SVN_RA_SVN_CAP_MERGE_INFO);
-  else
-    return svn_ra_svn_write_tuple(conn, pool, "w(?c)", mech, mech_arg);
+  return svn_ra_svn_write_tuple(conn, pool, "w(?c)", mech, mech_arg);
 }
 
 static svn_error_t *handle_auth_request(svn_ra_svn__session_baton_t *sess,
@@ -228,8 +219,6 @@ static svn_error_t *handle_auth_request(svn_ra_svn__session_baton_t *sess,
   apr_array_header_t *mechlist;
   const char *realm;
 
-  if (sess->protocol_version < 2)
-    return SVN_NO_ERROR;
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "lc", &mechlist, &realm));
   if (mechlist->nelts == 0)
     return SVN_NO_ERROR;
@@ -530,43 +519,27 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   /* Read server's greeting. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "nnll", &minver, &maxver,
                                        &mechlist, &caplist));
-  /* We support protocol versions 1 and 2. */
+  /* We support protocol version 2. */
   if (minver > 2)
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                              _("Server requires minimum version %d"),
                              (int) minver);
+  if (maxver < 2)
+    return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
+                             _("Server only supports versions up to %d"),
+                             (int) maxver);
   SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
-
-  sess->protocol_version = (maxver > 2) ? 2 : maxver;
 
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
-   * request.  In version 1, we send back the protocol version, auth
-   * mechanism, mechanism initial response, and capability list, and;
-   * then send the URL after authentication.  svn_ra_svn__do_cyrus_auth
-   * and svn_ra_svn__do_internal_auth temporarily have support for the
-   * mixed-style response. */
-  /* When we punt support for protocol version 1, we should:
-   * - Eliminate this conditional and the similar one below
-   * - Remove v1 support from svn_ra_svn__auth_response
-   * - Remove the (realm == NULL) support from svn_ra_svn__do_cyrus_auth
-   *   and svn_ra_svn__do_internal_auth
-   * - Remove the protocol version check from handle_auth_request */
-  if (sess->protocol_version == 1)
-    {
-      SVN_ERR(DO_AUTH(sess, mechlist, NULL, pool));
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "c", url));
-    }
-  else
-    {
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwww)c", (apr_uint64_t) 2,
-                                     SVN_RA_SVN_CAP_EDIT_PIPELINE,
-                                     SVN_RA_SVN_CAP_SVNDIFF1,
-                                     SVN_RA_SVN_CAP_ABSENT_ENTRIES,
-                                     SVN_RA_SVN_CAP_MERGE_INFO,
-                                     url));
-      SVN_ERR(handle_auth_request(sess, pool));
-    }
+   * request. */
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwww)c", (apr_uint64_t) 2,
+                                 SVN_RA_SVN_CAP_EDIT_PIPELINE,
+                                 SVN_RA_SVN_CAP_SVNDIFF1,
+                                 SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                 SVN_RA_SVN_CAP_MERGE_INFO,
+                                 url));
+  SVN_ERR(handle_auth_request(sess, pool));
 
   /* This is where the security layer would go into effect if we
    * supported security layers, which is a ways off. */

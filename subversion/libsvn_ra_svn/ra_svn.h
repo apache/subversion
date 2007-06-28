@@ -86,7 +86,6 @@ struct svn_ra_svn_conn_st {
 struct svn_ra_svn__session_baton_t {
   apr_pool_t *pool;
   svn_ra_svn_conn_t *conn;
-  int protocol_version;
   svn_boolean_t is_tunneled;
   const char *user;
   const char *hostname; /* The remote hostname. */
@@ -178,8 +177,7 @@ svn_boolean_t svn_ra_svn__stream_pending(svn_ra_svn__stream_t *stream);
 
 /* Respond to an auth request and perform authentication.  Use the Cyrus
  * SASL library for mechanism negotiation and for creating authentication
- * tokens.  REALM may be NULL for the initial authentication exchange of
- * protocol version 1. */
+ * tokens. */
 svn_error_t *
 svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
                           apr_array_header_t *mechlist,
@@ -195,13 +193,11 @@ svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
                              const char *realm, apr_pool_t *pool);
 
 /* Having picked a mechanism, start authentication by writing out an
- * auth response.  If COMPAT is true, also write out a version number
- * and capability list.  MECH_ARG may be NULL for mechanisms with no
+ * auth response.  MECH_ARG may be NULL for mechanisms with no
  * initial client response. */
 svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn, 
                                        apr_pool_t *pool,
-                                       const char *mech, const char *mech_arg,
-                                       svn_boolean_t compat);
+                                       const char *mech, const char *mech_arg);
 
 /* Initialize the SASL library. */
 svn_error_t *svn_ra_svn__sasl_init(void);
