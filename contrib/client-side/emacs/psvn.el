@@ -498,7 +498,7 @@ The function `svn-status-remove-control-M' can be useful for that hook")
 (when (eq system-type 'windows-nt)
   (add-hook 'svn-post-process-svn-output-hook 'svn-status-remove-control-M))
 
-(defvar svn-status-svn-process-coding-system locale-coding-system
+(defvar svn-status-svn-process-coding-system (when (boundp 'locale-coding-system) locale-coding-system)
   "The coding system that is used for the svn command line client.
 It is used in svn-run, if it is not nil.")
 
