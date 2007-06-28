@@ -709,8 +709,8 @@ remote_propget(apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
-/* Squelch ERR by returning SVN_NO_ERROR if ERR is casued by a missing
-   path (e.g. SVN_ERR_WC_PATH_NOT_FOUND). */
+/* Squelch ERR by returning SVN_NO_ERROR if ERR is caused by a missing
+   path (i.e. SVN_ERR_WC_PATH_NOT_FOUND). */
 static svn_error_t *
 wc_walker_error_handler(const char *path,
                         svn_error_t *err,
