@@ -393,8 +393,6 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 static svn_error_t *trivial_auth_request(svn_ra_svn_conn_t *conn,
                                          apr_pool_t *pool, server_baton_t *b)
 {
-  if (b->protocol_version < 2)
-    return SVN_NO_ERROR;
   return svn_ra_svn_write_cmd_response(conn, pool, "()c", "");
 }
 
@@ -488,7 +486,7 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
 #ifdef SVN_HAVE_SASL
           || b->use_sasl
 #endif
-      ) && b->protocol_version >= 2)
+      ))
     SVN_ERR(auth_request(conn, pool, b, req, TRUE));
 
   /* Now that an authentication has been done get the new take of
@@ -2362,11 +2360,9 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 {
   svn_error_t *err, *io_err;
   apr_uint64_t ver;
-  const char *mech, *mecharg, *uuid, *client_url;
+  const char *uuid, *client_url;
   apr_array_header_t *caplist;
   server_baton_t b;
-  svn_boolean_t success;
-  svn_ra_svn_item_t *item, *first;
 
   b.tunnel = params->tunnel;
   b.tunnel_user = get_tunnel_user(params, pool);
@@ -2378,79 +2374,41 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.realm = NULL;
   b.pool = pool;
 
-  /* Send greeting.   When we drop support for version 1, we can
-   * start sending an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
-                                 (apr_uint64_t) 1, (apr_uint64_t) 2));
-  SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(wwwww))",
-                                 SVN_RA_SVN_CAP_EDIT_PIPELINE, 
-                                 SVN_RA_SVN_CAP_SVNDIFF1,
-                                 SVN_RA_SVN_CAP_ABSENT_ENTRIES,
-                                 SVN_RA_SVN_CAP_COMMIT_REVPROPS,
-                                 SVN_RA_SVN_CAP_MERGE_INFO));
+  /* Send greeting.  We don't support version 1 any more, so we can
+   * send an empty mechlist. */
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwww)",
+                                        (apr_uint64_t) 2, (apr_uint64_t) 2,
+                                        SVN_RA_SVN_CAP_EDIT_PIPELINE, 
+                                        SVN_RA_SVN_CAP_SVNDIFF1,
+                                        SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                        SVN_RA_SVN_CAP_COMMIT_REVPROPS,
+                                        SVN_RA_SVN_CAP_MERGE_INFO));
 
-  /* Read client response.  Because the client response form changed
-   * between version 1 and version 2, we have to do some of this by
-   * hand until we punt support for version 1. */
-  SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
-  if (item->kind != SVN_RA_SVN_LIST || item->u.list->nelts < 2)
+  /* Read client response, which we assume to be in version 2 format:
+   * version, capability list, and client URL; then we do an auth
+   * request. */
+  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nlc",
+                                &ver, &caplist, &client_url));
+  if (ver != 2)
     return SVN_NO_ERROR;
-  first = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn_item_t);
-  if (first->kind != SVN_RA_SVN_NUMBER)
-    return SVN_NO_ERROR;
-  b.protocol_version = (int) first->u.number;
-  if (b.protocol_version == 1)
+
+  client_url = svn_path_canonicalize(client_url, pool);
+  SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
+  err = find_repos(client_url, params->root, &b, pool);
+  if (!err)
     {
-      /* Version 1: auth exchange is mixed with client version and
-       * capability list, and happens before the client URL is received. */
-      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nw(?c)l",
-                                     &ver, &mech, &mecharg, &caplist));
-      SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
-      SVN_ERR(auth(conn, pool, mech, mecharg, &b, READ_ACCESS, FALSE,
-                   &success));
-      if (!success)
-        return svn_ra_svn_flush(conn, pool);
-      SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "c", &client_url));
-      client_url = svn_path_canonicalize(client_url, pool);
-      err = find_repos(client_url, params->root, &b, pool);
-      if (!err && current_access(&b) == NO_ACCESS)
+      SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
+      if (current_access(&b) == NO_ACCESS)
         err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                "Not authorized for access");
-      if (err)
-        {
-          io_err = svn_ra_svn_write_cmd_failure(conn, pool, err);
-          svn_error_clear(err);
-          SVN_ERR(io_err);
-          return svn_ra_svn_flush(conn, pool);
-        }
     }
-  else if (b.protocol_version == 2)
+  if (err)
     {
-      /* Version 2: client sends version, capability list, and client
-       * URL, and then we do an auth request. */
-      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nlc", &ver,
-                                     &caplist, &client_url));
-      client_url = svn_path_canonicalize(client_url, pool);
-      SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
-      err = find_repos(client_url, params->root, &b, pool);
-      if (!err)
-        {
-          SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
-          if (current_access(&b) == NO_ACCESS)
-            err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                   "Not authorized for access");
-        }
-      if (err)
-        {
-          io_err = svn_ra_svn_write_cmd_failure(conn, pool, err);
-          svn_error_clear(err);
-          SVN_ERR(io_err);
-          return svn_ra_svn_flush(conn, pool);
-        }
+      io_err = svn_ra_svn_write_cmd_failure(conn, pool, err);
+      svn_error_clear(err);
+      SVN_ERR(io_err);
+      return svn_ra_svn_flush(conn, pool);
     }
-  else
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "cc", uuid, b.repos_url));
