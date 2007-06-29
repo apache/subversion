@@ -1441,7 +1441,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 /* Regardless of whether a client's capabilities indicate an
-   understanding of this command (by way of SVN_RA_SVN_CAP_MERGE_INFO),
+   understanding of this command (by way of SVN_RA_SVN_CAP_MERGEINFO),
    we provide a response.
 
    ASSUMPTION: When performing a 'merge' with two URLs at different
@@ -2382,7 +2382,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
-                                        SVN_RA_SVN_CAP_MERGE_INFO));
+                                        SVN_RA_SVN_CAP_MERGEINFO));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth
