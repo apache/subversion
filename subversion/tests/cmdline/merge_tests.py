@@ -6637,12 +6637,13 @@ def mergeinfo_and_skipped_paths(sbox):
   #
   # Currently this test covers paths skipped because:
   #
-  #   1) Path is versioned but is missing from disk.
+  #   1) File path is versioned but is missing from disk.
   #   2) The source of a merge is inaccessible due to authz restrictions.
   #
   # Eventually we should also test:
   #
-  #   3) Destination of merge is inaccessible due to authz restrictions.
+  #   2) Dir path is versioned but is missing from disk.
+  #   4) Destination of merge is inaccessible due to authz restrictions.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -6669,6 +6670,7 @@ def mergeinfo_and_skipped_paths(sbox):
 
   # Restrict access to some more of the merge destination the
   # old fashioned way, delete it via the OS.
+  ### TODO: Delete a versioned directory?
   os.remove(omega_path)
 
   # Merge r2:6 into the restricted WC.
