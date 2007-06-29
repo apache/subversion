@@ -67,7 +67,7 @@ static apr_status_t sasl_done_cb(void *data)
   return APR_SUCCESS;
 }
 
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
 /* Cyrus SASL is thread-safe only if we supply it with mutex functions
  * (with sasl_set_mutex()).  To make this work with APR, we need to use the
  * global sasl_pool for the mutex allocations.  Freeing a mutex actually
@@ -150,7 +150,7 @@ apr_status_t svn_ra_svn__sasl_common_init(apr_pool_t *pool)
   sasl_ctx_count = 1;
   apr_pool_cleanup_register(sasl_pool, NULL, sasl_done_cb, 
                             apr_pool_cleanup_null);
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
   sasl_set_mutex(sasl_mutex_alloc_cb,
                  sasl_mutex_lock_cb,
                  sasl_mutex_unlock_cb,
