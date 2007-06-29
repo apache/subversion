@@ -184,6 +184,8 @@ The following capabilities are currently defined:
   commit-revprops   If the server presents this capability, it supports the 
                     rev-props parameter of the commit command.
                     See section 3.1.1.
+  merge-info        If the server presents this capability, it supports the 
+                    get-merge-info command.  See section 3.1.1.
 
 3. Commands
 -----------
