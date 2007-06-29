@@ -89,6 +89,26 @@
 #endif
 
 
+static void
+map_apr_finfo_to_node_kind(svn_node_kind_t *kind,
+                           svn_boolean_t *is_special,
+                           apr_finfo_t *finfo)
+{
+  *is_special = FALSE;
+
+  if (finfo->filetype == APR_REG)
+    *kind = svn_node_file;
+  else if (finfo->filetype == APR_DIR)
+    *kind = svn_node_dir;
+  else if (finfo->filetype == APR_LNK)
+    {
+      *is_special = TRUE;
+      *kind = svn_node_file;
+    }
+  else
+    *kind = svn_node_unknown;
+}
+
 /* Helper for svn_io_check_path() and svn_io_check_resolved_path();
    essentially the same semantics as those two, with the obvious
    interpretation for RESOLVE_SYMLINKS. */
@@ -114,7 +134,7 @@ io_check_path(const char *path,
 
   flags = resolve_symlinks ? APR_FINFO_MIN : (APR_FINFO_MIN | APR_FINFO_LINK);
   apr_err = apr_stat(&finfo, path_apr, flags, pool);
-  
+
   if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
   else if (APR_STATUS_IS_ENOTDIR(apr_err))
@@ -122,22 +142,11 @@ io_check_path(const char *path,
   else if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't check path '%s'"),
                               svn_path_local_style(path, pool));
-  else if (finfo.filetype == APR_NOFILE)
-    *kind = svn_node_unknown;
-  else if (finfo.filetype == APR_REG)
-    *kind = svn_node_file;
-  else if (finfo.filetype == APR_DIR)
-    *kind = svn_node_dir;
-  else if (finfo.filetype == APR_LNK)
-    {
-      is_special = TRUE;
-      *kind = svn_node_file;
-    }
   else
-    *kind = svn_node_unknown;
+    map_apr_finfo_to_node_kind(kind, &is_special, &finfo);
 
   *is_special_p = is_special;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1922,24 +1931,13 @@ svn_io_get_dirents2(apr_hash_t **dirents,
       else
         {
           const char *name;
-          svn_io_dirent_t *dirent = apr_pcalloc(pool, sizeof(*dirent));
+          svn_io_dirent_t *dirent = apr_palloc(pool, sizeof(*dirent));
 
           SVN_ERR(svn_path_cstring_to_utf8(&name, this_entry.name, pool));
-          
-          if (this_entry.filetype == APR_REG)
-            dirent->kind = svn_node_file;
-          else if (this_entry.filetype == APR_DIR)
-            dirent->kind = svn_node_dir;
-          else if (this_entry.filetype == APR_LNK)
-            {
-              dirent->kind = svn_node_file;
-              dirent->special = TRUE;
-            }
-          else
-            /* ### Currently, Subversion supports just symlinks; other
-             * entry types are reported as regular files. This is inconsistent
-             * with svn_io_check_path(). */
-            dirent->kind = svn_node_file;
+
+          map_apr_finfo_to_node_kind(&(dirent->kind),
+                                     &(dirent->special),
+                                     &this_entry);
 
           apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
         }
