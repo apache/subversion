@@ -110,21 +110,6 @@ void svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
 svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool);
 
-/* Pipelined implementation of editor; the real functions defer to
- * these if the connection has the edit-pipeline capability. */
-void svn_ra_svn__get_editorp(const svn_delta_editor_t **editor,
-                             void **edit_baton, svn_ra_svn_conn_t *conn,
-                             apr_pool_t *pool,
-                             svn_ra_svn_edit_callback callback,
-                             void *callback_baton);
-
-svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
-                                       apr_pool_t *pool,
-                                       const svn_delta_editor_t *editor,
-                                       void *edit_baton,
-                                       svn_boolean_t *aborted,
-                                       svn_boolean_t for_replay);
-
 /* CRAM-MD5 client implementation. */
 svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const char *user, const char *password,
