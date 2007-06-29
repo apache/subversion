@@ -165,7 +165,7 @@ svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
         add_eol = 1;
 
       /* append the data we received before. */
-      new_cur = apr_palloc(pool, *cur_len+new_len+add_eol+1);
+      new_cur = apr_palloc(pool, *cur_len + new_len + add_eol + 1);
 
       memcpy(new_cur, *cur, *cur_len);
       /* add newline after previous line */
