@@ -539,11 +539,10 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
    * request. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwww)c", (apr_uint64_t) 2,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(www)c", (apr_uint64_t) 2,
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                  SVN_RA_SVN_CAP_SVNDIFF1,
                                  SVN_RA_SVN_CAP_ABSENT_ENTRIES,
-                                 SVN_RA_SVN_CAP_MERGE_INFO,
                                  url));
   SVN_ERR(handle_auth_request(sess, pool));
 
