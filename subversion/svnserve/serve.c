@@ -2394,6 +2394,12 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   client_url = svn_path_canonicalize(client_url, pool);
   SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
+
+  /* All released versions of Subversion support edit-pipeline,
+   * so we do not accept connections from clients that do not. */
+  if (! svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EDIT_PIPELINE))
+    return SVN_NO_ERROR;
+
   err = find_repos(client_url, params->root, &b, pool);
   if (!err)
     {

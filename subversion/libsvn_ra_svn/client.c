@@ -530,6 +530,12 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                              (int) maxver);
   SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
 
+  /* All released versions of Subversion support edit-pipeline,
+   * so we do not support servers that do not. */
+  if (! svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EDIT_PIPELINE))
+    return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
+                            _("Server does not support edit pipelining"));
+
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
    * request. */
