@@ -627,6 +627,8 @@ get_mergeinfo_for_children(sqlite3 *db,
                            const char *path,
                            svn_revnum_t rev,
                            apr_hash_t **path_mergeinfo,
+                           svn_fs_mergeinfo_filter_func_t filter_func,
+                           void *filter_func_baton,
                            apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
@@ -662,11 +664,17 @@ get_mergeinfo_for_children(sqlite3 *db,
       if (lastmerged_rev > 0)
         {
           apr_hash_t *db_mergeinfo;
+          svn_boolean_t omit = FALSE;
 
           SVN_ERR(parse_mergeinfo_from_db(db, merged_path, lastmerged_rev,
                                           &db_mergeinfo, pool));
 
-          SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
+          if (filter_func)
+            SVN_ERR(filter_func(filter_func_baton, &omit, merged_path,
+                                db_mergeinfo, pool));
+
+          if (!omit)
+            SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
         }
 
       sqlite_result = sqlite3_step(stmt);
@@ -748,6 +756,8 @@ svn_error_t *
 svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                                          svn_fs_root_t *root,
                                          const apr_array_header_t *paths,
+                                         svn_fs_mergeinfo_filter_func_t filter_func,
+                                         void *filter_func_baton,
                                          apr_pool_t *pool)
 {
   svn_revnum_t rev;
@@ -769,7 +779,21 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
       if (!path_mergeinfo)
         path_mergeinfo = apr_hash_make(pool);
 
+      if (filter_func)
+        {
+          svn_boolean_t omit;
+
+          SVN_ERR(filter_func(filter_func_baton, &omit, path, path_mergeinfo,
+                              pool));
+          if (omit)
+            {
+              apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, NULL);
+              continue;
+            }
+        }
+
       SVN_ERR(get_mergeinfo_for_children(db, path, rev, &path_mergeinfo,
+                                         filter_func, filter_func_baton,
                                          pool));
 
       apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, path_mergeinfo);
