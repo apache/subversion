@@ -533,6 +533,13 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
   apr_hash_index_t *hi;
   apr_hash_t *tree_mergeinfo;
   apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* Revision 0 doesn't have any mergeinfo. */
+  if (rev == 0)
+    {
+      *mergeinfo = apr_hash_make(pool);
+      return SVN_NO_ERROR;
+    }
   
   /* Get the mergeinfo for each tree roots in PATHS. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
