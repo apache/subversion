@@ -4781,14 +4781,22 @@ commit_body(void *baton, apr_pool_t *pool)
     {
       if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
                        APR_HASH_KEY_STRING))
-        SVN_ERR(svn_fs_fs__change_txn_prop 
-                (cb->txn, SVN_FS_PROP_TXN_CHECK_OOD,
-                 NULL, pool));
+        {
+          SVN_ERR(svn_fs_fs__change_txn_prop 
+                  (cb->txn, SVN_FS_PROP_TXN_CHECK_OOD,
+                   NULL, pool));
+          apr_hash_set(txnprops, SVN_FS_PROP_TXN_CHECK_OOD, 
+                       APR_HASH_KEY_STRING, NULL);
+        }
       if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
                        APR_HASH_KEY_STRING))
-        SVN_ERR(svn_fs_fs__change_txn_prop 
-                (cb->txn, SVN_FS_PROP_TXN_CHECK_LOCKS,
-                 NULL, pool));
+        {
+          SVN_ERR(svn_fs_fs__change_txn_prop 
+                  (cb->txn, SVN_FS_PROP_TXN_CHECK_LOCKS,
+                   NULL, pool));
+          apr_hash_set(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
+                       APR_HASH_KEY_STRING, NULL);
+        }
       if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
                        APR_HASH_KEY_STRING))
         {
@@ -4796,6 +4804,8 @@ commit_body(void *baton, apr_pool_t *pool)
           SVN_ERR(svn_fs_fs__change_txn_prop
                   (cb->txn, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
                    NULL, pool));
+          apr_hash_set(txnprops, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO, 
+                       APR_HASH_KEY_STRING, NULL);
         }
     }
 
@@ -4838,7 +4848,6 @@ commit_body(void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_fs_fs__change_txn_prop(cb->txn, SVN_PROP_REVISION_DATE,
                                      &date, pool));
-  SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
 
   /* Move the revprops file into place. */
   revprop_filename = path_txn_props(cb->fs, cb->txn->id, pool);
