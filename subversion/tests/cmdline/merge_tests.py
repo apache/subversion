@@ -4587,12 +4587,13 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
                                        None, 1)
 
 def setup_branch(sbox, branch_only = False, nbr_of_branches = 1):
-  '''Starting with standard greek tree, copy A to A_COPY (r2) and make
-  four modifications (setting file contents to "New content") under A:
-  r3 - A/D/H/psi
-  r4 - A/D/G/rho
-  r5 - A/B/E/beta
-  r6 - A/D/H/omega'''
+  '''Starting with standard greek tree, copy 'A' NBR_OF_BRANCHES times
+  to A_COPY, A_COPY_2, A_COPY_3, and so on.  Then make four modifications
+  (setting file contents to "New content") under A:
+  r(2 + NBR_OF_BRANCHES) - A/D/H/psi
+  r(3 + NBR_OF_BRANCHES) - A/D/G/rho
+  r(4 + NBR_OF_BRANCHES) - A/B/E/beta
+  r(5 + NBR_OF_BRANCHES) - A/D/H/omega'''
 
   wc_dir = sbox.wc_dir
 
