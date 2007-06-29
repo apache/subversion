@@ -170,22 +170,23 @@ client can now begin sending commands from the main command set.
 
 2.1 Capabilities
 
-The following capabilities are currently defined:
+The following capabilities are currently defined (S indicates a server
+capability and C indicates a client capability):
 
-  edit-pipeline     If both the client and server present this
-                    capability, edit operations will use pipelining.
-                    See section 3.1.2.
-  svndiff1          If both the client and server support svndiff version
-                    1, this will be used as the on-the-wire format for svndiff
-                    instead of svndiff version 0.
-  absent-entries    If the remote end announces support for this capability,
-                    it will accept the absent-dir and absent-file editor
-                    commands.
-  commit-revprops   If the server presents this capability, it supports the 
-                    rev-props parameter of the commit command.
-                    See section 3.1.1.
-  mergeinfo         If the server presents this capability, it supports the 
-                    get-mergeinfo command.  See section 3.1.1.
+[CS] edit-pipeline     If both the client and server present this
+                       capability, edit operations will use pipelining.
+                       See section 3.1.2.
+[CS] svndiff1          If both the client and server support svndiff version
+                       1, this will be used as the on-the-wire format for 
+                       svndiff instead of svndiff version 0.
+[CS] absent-entries    If the remote end announces support for this capability,
+                       it will accept the absent-dir and absent-file editor
+                       commands.
+[S]  commit-revprops   If the server presents this capability, it supports the 
+                       rev-props parameter of the commit command.
+                       See section 3.1.1.
+[S]  mergeinfo         If the server presents this capability, it supports the 
+                       get-mergeinfo command.  See section 3.1.1.
 
 3. Commands
 -----------
