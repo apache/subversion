@@ -2189,7 +2189,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "switch",          switch_cmd },
   { "status",          status },
   { "diff",            diff },
-  { "get-merge-info",  get_mergeinfo },
+  { "get-mergeinfo",   get_mergeinfo },
   { "log",             log_cmd },
   { "check-path",      check_path },
   { "stat",            stat },

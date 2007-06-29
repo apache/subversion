@@ -1011,7 +1011,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-merge-info"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
     {
       path = APR_ARRAY_IDX(paths, i, const char *);
