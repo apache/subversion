@@ -4160,7 +4160,9 @@ names are relative to the directory where `svn-status' was run."
     (nreverse svn-status-get-specific-revision-file-info)))
 
 (defun svn-status-ediff-with-revision (arg)
-  "Run ediff on the current file with a previous revision.
+  "Run ediff on the current file with a different revision.
+If there is a newer revision in the repository, the diff is done against HEAD,
+otherwise compare the working copy with BASE.
 If ARG then prompt for revision to diff against."
   (interactive "P")
   (let* ((svn-status-get-specific-revision-file-info
@@ -4168,7 +4170,9 @@ If ARG then prompt for revision to diff against."
            (list (svn-status-make-line-info
                   (file-relative-name
                    (svn-status-line-info->full-path (svn-status-get-line-information))
-                   (svn-status-base-dir))))
+                   (svn-status-base-dir))
+                  nil nil nil nil nil nil
+                  (svn-status-line-info->update-available (svn-status-get-line-information))))
            (if arg :ask :auto)))
          (ediff-after-quit-destination-buffer (current-buffer))
          (default-directory (svn-status-base-dir))
