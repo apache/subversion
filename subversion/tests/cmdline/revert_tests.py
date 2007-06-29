@@ -700,6 +700,34 @@ def revert_replaced_with_history_file(sbox):
   # Verify the content of 'mu'
   svntest.actions.run_and_verify_svn(None, text_r1, [], 'cat', mu_path)
 
+#----------------------------------------------------------------------
+# Test for issue #2804.
+def status_of_missing_dir_after_revert(sbox):
+  "status after schedule-delete, revert, and local rm"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_D_G_path = os.path.join(wc_dir, "A", "D", "G")
+
+  svntest.actions.run_and_verify_svn(None, None, [], "rm", A_D_G_path)
+  expected_output = re.escape("Reverted '" + A_D_G_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     A_D_G_path)
+
+  expected_output = svntest.actions.UnorderedOutput(
+    ["D      " + os.path.join(A_D_G_path, "pi") + "\n",
+     "D      " + os.path.join(A_D_G_path, "rho") + "\n",
+     "D      " + os.path.join(A_D_G_path, "tau") + "\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     "status", wc_dir)
+
+  svntest.main.safe_rmtree(A_D_G_path)
+
+  expected_output = svntest.actions.UnorderedOutput(
+    ["!      " + A_D_G_path + "\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
+                                     wc_dir)
+
 
 ########################################################################
 # Run the tests
@@ -722,6 +750,7 @@ test_list = [ None,
               revert_propdel__dir,
               revert_propdel__file,
               revert_replaced_with_history_file,
+              XFail(status_of_missing_dir_after_revert),
              ]
 
 if __name__ == '__main__':
