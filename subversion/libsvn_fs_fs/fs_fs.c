@@ -4848,6 +4848,7 @@ commit_body(void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_fs_fs__change_txn_prop(cb->txn, SVN_PROP_REVISION_DATE,
                                      &date, pool));
+  apr_hash_set(txnprops, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING, &date);
 
   /* Move the revprops file into place. */
   revprop_filename = path_txn_props(cb->fs, cb->txn->id, pool);
