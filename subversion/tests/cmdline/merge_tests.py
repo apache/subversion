@@ -6629,7 +6629,7 @@ def avoid_reflected_revs(sbox):
                                        None, 1)
 
 def mergeinfo_and_skipped_paths(sbox):
-  "Skipped paths get overriding mergeinfo"
+  "skipped paths get overriding mergeinfo"
 
   # Test that we override the merge info for child paths which weren't
   # actually merged because they were skipped.
