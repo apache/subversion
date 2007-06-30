@@ -76,6 +76,13 @@ Candidate changes:
     Votes:
       +1: vgeorgescu
 
+  * r25593
+    Add RHEL5 RPM directory so we can build on that platform.
+    Justification:
+      New platform requiring changed SPEC file.
+    Votes:
+      +1: dws
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
