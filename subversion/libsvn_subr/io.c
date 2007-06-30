@@ -64,6 +64,12 @@
   knows how long the other app is going to hold onto it for), but
   goes a long way towards minimizing it.  It is not an infinite
   loop because there might really be an error.
+
+  Another reason for retrying delete operations on Windows
+  is that they are asynchronous -- the file or directory is not
+  actually deleted until the last handle to it is closed.  The
+  retry loop cannot completely solve this problem either, but can
+  help mitigate it.
 */
 #ifdef WIN32
 #define WIN32_RETRY_LOOP(err, expr)                                        \
@@ -74,7 +80,8 @@
       int retries;                                                         \
       for (retries = 0;                                                    \
            retries < 100 && (os_err == ERROR_ACCESS_DENIED                 \
-                             || os_err == ERROR_SHARING_VIOLATION);        \
+                             || os_err == ERROR_SHARING_VIOLATION          \
+                             || os_err == ERROR_DIR_NOT_EMPTY);            \
            ++retries, os_err = APR_TO_OS_ERROR(err))                    \
         {                                                                  \
           apr_sleep(sleep_count);                                       \
@@ -947,6 +954,8 @@ svn_io_make_dir_recursively(const char *path, apr_pool_t *pool)
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
 
   apr_err = apr_dir_make_recursive(path_apr, APR_OS_DEFAULT, pool);
+  WIN32_RETRY_LOOP(apr_err, apr_dir_make_recursive(path_apr,
+                                                   APR_OS_DEFAULT, pool));
 
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't make directory '%s'"), 
@@ -1743,6 +1752,11 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
  To work around the problem, we do a rewinddir after we delete all files
  and see if there's anything left. We repeat the steps untill there's
  nothing left to delete.
+
+ This workaround causes issues on Windows where delete's are asynchronous,
+ however, so we never rewind if we're on Windows (the delete says it is
+ complete, we rewind, we see the same file and try to delete it again,
+ we fail.
 */
 
 /* Neither windows nor unix allows us to delete a non-empty
@@ -1806,7 +1820,9 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
             {
               const char *fullpath, *entry_utf8;
 
+#ifndef WIN32
               need_rewind = TRUE;
+#endif
 
               SVN_ERR(svn_path_cstring_to_utf8(&entry_utf8, this_entry.name,
                                                subpool));
@@ -2894,6 +2910,7 @@ dir_make(const char *path, apr_fileperms_t perm,
 #endif
 
   status = apr_dir_make(path_apr, perm, pool);
+  WIN32_RETRY_LOOP(status, apr_dir_make(path_apr, perm, pool));
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't create directory '%s'"),
@@ -2916,15 +2933,12 @@ dir_make(const char *path, apr_fileperms_t perm,
     {
       apr_finfo_t finfo;
 
-      status = apr_stat(&finfo, path_apr, APR_FINFO_PROT, pool);
-
-      if (status)
-        return svn_error_wrap_apr(status, _("Can't stat directory '%s'"),
-                                  svn_path_local_style(path, pool));
-
       /* Per our contract, don't do error-checking.  Some filesystems
        * don't support the sgid bit, and that's okay. */
-      apr_file_perms_set(path_apr, finfo.protection | APR_GSETID);
+      status = apr_stat(&finfo, path_apr, APR_FINFO_PROT, pool);
+
+      if (!status)
+        apr_file_perms_set(path_apr, finfo.protection | APR_GSETID);
     }
 
   return SVN_NO_ERROR;
