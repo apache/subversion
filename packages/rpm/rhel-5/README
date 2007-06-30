@@ -1,0 +1,45 @@
+                              RPM GENERATION
+
+
+This directory contains the scripts necessary and sufficient
+to build the subversion*.i386.rpm and subversion*.src.rpm files as a
+non-root user in the user's home (rpms) directory.
+
+This build requires certain other packages to be installed.
+
+1.  Requirements
+
+    *** Note: apache now also contains apr and apr-util packages.
+
+    A. To run:
+
+       See the "Requires:" lines in the subversion.spec file.
+
+    B. To compile:
+
+       See the "PreReq:" lines in the subversion.spec file.
+
+    The non-standard packages apache, db, and neon, can be found at:
+
+    http://summersoft.fay.ar.us/pub/subversion/latest
+
+2.  Building a source and binary RPM
+
+    To build the latest release directly from the subversion repository:
+
+    $ cd ../..; svn update; cd packages/rpm/<distribution>; make
+
+    To make a particular Subversion revision:
+
+    $ cd ../..; svn update -r <RevisionNumber>
+    $ cd packages/rpm/<distribution>; make
+        or
+    $ cd packages/rpm/<distribution>; make RELEASE=1
+
+If you have any questions or problems, please direct them to the
+dev@subversion.tigris.org mailing list.  I'm on that list and will help out
+if I can.
+
+You can find the current required packages in a Subversion source repository
+at the http://summersoft.fay.ar.us/repos URL.
+
