@@ -266,25 +266,46 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
   return run_command_stdin(command, error_expected, binary_mode,
                            None, *varargs)
 
-# Run any binary, supplying input text, logging the command line
-def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
-  args = ''
-  for arg in varargs:                   # build the command string
-    arg = str(arg)
+# A regular expression that matches arguments that are trivially safe
+# to pass on a command line without quoting on any supported operating
+# system:
+_safe_arg_re = re.compile(r'^[A-Za-z\d\.\_\/\-\:\@]+$')
+
+def _quote_arg(arg):
+  """Quote ARG for a command line.
+
+  Simply surround every argument in double-quotes unless it contains
+  only universally harmless characters.
+
+  WARNING: This function cannot handle arbitrary command-line
+  arguments.  It can easily be confused by shell metacharacters.  A
+  perfect job would be difficult and OS-dependent (see, for example,
+  http://msdn.microsoft.com/library/en-us/vccelng/htm/progs_12.asp).
+  In other words, this function is just good enough for what we need
+  here."""
+
+  arg = str(arg)
+  if _safe_arg_re.match(arg):
+    return arg
+  else:
     if os.name != 'nt':
       arg = arg.replace('$', '\$')
-    args = args + ' "' + arg + '"'
+    return '"%s"' % (arg,)
+
+# Run any binary, supplying input text, logging the command line
+def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
+  args = ' '.join(map(_quote_arg, varargs))
 
   # Log the command line
   if verbose_mode:
-    print 'CMD:', os.path.basename(command) + args,
+    print 'CMD:', os.path.basename(command) + ' ' + args,
 
   if binary_mode:
     mode = 'b'
   else:
     mode = 't'
 
-  infile, outfile, errfile = os.popen3(command + args, mode)
+  infile, outfile, errfile = os.popen3(command + ' ' + args, mode)
 
   if stdin_lines:
     map(infile.write, stdin_lines)
@@ -369,6 +390,11 @@ http-library=%s
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
 
+def _with_config_dir(args):
+  if '--config-dir' in args:
+    return args
+  else:
+    return args + ('--config-dir', default_config_dir)
 
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
@@ -376,12 +402,7 @@ def run_svn(error_expected, *varargs):
   If ERROR_EXPECTED is None, any stderr also will be printed.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  if '--config-dir' in varargs:
-    return run_command(svn_binary, error_expected, 0,
-                       *varargs)
-  else:
-    return run_command(svn_binary, error_expected, 0,
-                       *varargs + ('--config-dir', default_config_dir))
+  return run_command(svn_binary, error_expected, 0, *(_with_config_dir(varargs)))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -395,7 +416,7 @@ def run_svnlook(*varargs):
 
 def run_svnsync(*varargs):
   "Run svnsync with VARARGS, returns stdout, stderr as list of lines."
-  return run_command(svnsync_binary, 1, 0, *varargs)
+  return run_command(svnsync_binary, 1, 0, *(_with_config_dir(varargs)))
 
 def run_svnversion(*varargs):
   "Run svnversion with VARARGS, returns stdout, stderr as list of lines."
@@ -602,12 +623,6 @@ def compare_unordered_output(expected, actual):
     except ValueError:
       raise Failure("Expected output does not match actual output")
 
-def skip_test_when_no_authz_available():
-  "skip this test when authz is not available"
-  _check_command_line_parsed()
-  if test_area_url.startswith('file://'):
-    raise Skip
-
 def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."
 
@@ -669,6 +684,10 @@ def is_ra_type_dav():
 def is_ra_type_svn():
   _check_command_line_parsed()
   return test_area_url.startswith('svn')
+
+def is_ra_type_file():
+  _check_command_line_parsed()
+  return test_area_url.startswith('file')
 
 def is_fs_type_fsfs():
   _check_command_line_parsed()

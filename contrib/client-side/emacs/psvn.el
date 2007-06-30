@@ -181,6 +181,10 @@
 ;; svn client. If there are user requests for any missing commands I will
 ;; probably implement them.
 
+;; There is also limited support for the web-based software project management and bug/issue tracking system trac
+;; Trac ticket links can be enabled in the *svn-log* buffers when using the following:
+;; (setq svn-log-link-handlers '(trac-ticket-short))
+
 ;; Comments / suggestions and bug reports are welcome!
 
 ;; Development notes
@@ -477,6 +481,9 @@ A useful setting might be: '\(\"\#trunk\" \"\#1\#tags\" \"\#1\#branches\")")
 (defvar svn-status-load-state-before-svn-status t
   "*Whether to automatically restore state from ++psvn.state file before running svn-status.")
 
+(defvar svn-log-link-handlers nil "A list of link handlers in *svn-log* buffers.
+These link handlers must be registered via `svn-log-register-link-handler'")
+
 ;;; hooks
 (defvar svn-status-mode-hook nil "Hook run when entering `svn-status-mode'.")
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
@@ -491,7 +498,7 @@ The function `svn-status-remove-control-M' can be useful for that hook")
 (when (eq system-type 'windows-nt)
   (add-hook 'svn-post-process-svn-output-hook 'svn-status-remove-control-M))
 
-(defvar svn-status-svn-process-coding-system locale-coding-system
+(defvar svn-status-svn-process-coding-system (when (boundp 'locale-coding-system) locale-coding-system)
   "The coding system that is used for the svn command line client.
 It is used in svn-run, if it is not nil.")
 
@@ -642,6 +649,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-client-version nil "The version number of the used svn client")
 (defvar svn-status-get-line-information-for-file nil)
 (defvar svn-status-base-dir-cache (make-hash-table :test 'equal :weakness nil))
+(defvar svn-log-registered-link-handlers (make-hash-table :test 'eql :weakness nil))
 
 (defvar svn-status-partner-buffer nil "The partner buffer for this svn related buffer")
 (make-variable-buffer-local 'svn-status-partner-buffer)
@@ -1423,6 +1431,20 @@ structure."
   (list nil nil))
 
 (defun svn-status-make-dummy-dirs (dir-list old-ui-information)
+  "Calculate additionally necessary directories that were not shown in the output
+of 'svn status'"
+  ;; (message "svn-status-make-dummy-dirs %S" dir-list)
+  (let ((candidate)
+        (base-dir))
+    (dolist (dir dir-list)
+      (setq base-dir (file-name-directory dir))
+      (while base-dir
+        ;;(message "dir: %S dir-list: %S, base-dir: %S" dir dir-list base-dir)
+        (setq candidate (replace-regexp-in-string "/+$" "" base-dir))
+        (setq base-dir (file-name-directory candidate))
+        ;; (message "dir: %S, candidate: %S" dir candidate)
+        (add-to-list 'dir-list candidate))))
+  ;; (message "svn-status-make-dummy-dirs %S" dir-list)
   (append (mapcar (lambda (dir)
                     (svn-status-make-line-info
                      dir
@@ -4138,7 +4160,9 @@ names are relative to the directory where `svn-status' was run."
     (nreverse svn-status-get-specific-revision-file-info)))
 
 (defun svn-status-ediff-with-revision (arg)
-  "Run ediff on the current file with a previous revision.
+  "Run ediff on the current file with a different revision.
+If there is a newer revision in the repository, the diff is done against HEAD,
+otherwise compare the working copy with BASE.
 If ARG then prompt for revision to diff against."
   (interactive "P")
   (let* ((svn-status-get-specific-revision-file-info
@@ -4146,7 +4170,9 @@ If ARG then prompt for revision to diff against."
            (list (svn-status-make-line-info
                   (file-relative-name
                    (svn-status-line-info->full-path (svn-status-get-line-information))
-                   (svn-status-base-dir))))
+                   (svn-status-base-dir))
+                  nil nil nil nil nil nil
+                  (svn-status-line-info->update-available (svn-status-get-line-information))))
            (if arg :ask :auto)))
          (ediff-after-quit-destination-buffer (current-buffer))
          (default-directory (svn-status-base-dir))
@@ -4907,6 +4933,8 @@ entry for file with defun.
   (define-key svn-log-view-mode-map (kbd "~") 'svn-log-get-specific-revision)
   (define-key svn-log-view-mode-map (kbd "E") 'svn-log-ediff-specific-revision)
   (define-key svn-log-view-mode-map (kbd "=") 'svn-log-view-diff)
+  (define-key svn-log-view-mode-map (kbd "TAB") 'svn-log-next-link)
+  (define-key svn-log-view-mode-map [backtab] 'svn-log-prev-link)
   (define-key svn-log-view-mode-map (kbd "RET") 'svn-log-find-file-at-point)
   (define-key svn-log-view-mode-map (kbd "e") 'svn-log-edit-log-entry)
   (define-key svn-log-view-mode-map (kbd "q") 'bury-buffer))
@@ -4936,14 +4964,12 @@ entry for file with defun.
        'svn-status-marked-popup-face (svn-point-at-bol) (svn-point-at-eol)
        svn-log-view-mode-menu))))
 
-(defvar svn-log-view-font-lock-keywords
-  '(("^r[0-9]+ .+" (0 `(face
-                        font-lock-keyword-face
-                        mouse-face
-                        highlight
+(defvar svn-log-view-font-lock-basic-keywords
+  '(("^r[0-9]+ .+" (0 `(face font-lock-keyword-face
+                        mouse-face highlight
                         keymap ,svn-log-view-popup-menu-map))))
-  "Keywords in svn-log-view-mode.")
-(put 'svn-log-view-font-lock-keywords 'risky-local-variable t) ;for Emacs 20.7
+  "Basic keywords in `svn-log-view-mode'.")
+(put 'svn-log-view-font-basic-lock-keywords 'risky-local-variable t) ;for Emacs 20.7
 
 (define-derived-mode svn-log-view-mode fundamental-mode "svn-log-view"
   "Major Mode to show the output from svn log.
@@ -4952,6 +4978,9 @@ Commands:
 "
   (use-local-map svn-log-view-mode-map)
   (easy-menu-add svn-log-view-mode-menu)
+  (set (make-local-variable 'svn-log-view-font-lock-keywords) svn-log-view-font-lock-basic-keywords)
+  (dolist (lh svn-log-link-handlers)
+    (add-to-list 'svn-log-view-font-lock-keywords (gethash lh svn-log-registered-link-handlers)))
   (set (make-local-variable 'font-lock-defaults) '(svn-log-view-font-lock-keywords t)))
 
 (defun svn-log-view-next ()
@@ -4998,6 +5027,22 @@ Commands:
       (let ((default-directory (svn-status-base-dir)))
         ;;(message "svn-log-file-name-at-point: %s, default-directory: %s" file-name default-directory)
         (find-file file-name)))))
+
+(defun svn-log-next-link ()
+  "Jump to the next external link in this buffer"
+  (interactive)
+  (let ((start-pos (if (get-text-property (point) 'link-handler)
+                       (next-single-property-change (point) 'link-handler)
+                     (point))))
+    (goto-char (or (next-single-property-change start-pos 'link-handler) (point)))))
+
+(defun svn-log-prev-link ()
+  "Jump to the previous external link in this buffer"
+  (interactive)
+  (let ((start-pos (if (get-text-property (point) 'link-handler)
+                       (previous-single-property-change (point) 'link-handler)
+                     (point))))
+    (goto-char (or (previous-single-property-change (or start-pos (point)) 'link-handler) (point)))))
 
 (defun svn-log-view-diff (arg)
   "Show the changeset for a given log entry.
@@ -5057,6 +5102,63 @@ When called with a prefix argument, ask the user for the revision."
     (insert log-message)
     (goto-char (point-min))
     (setq svn-log-edit-update-log-entry rev)))
+
+
+;; allow additional hyperlinks in log view buffers
+(defvar svn-log-link-keymap ()
+  "Keymap used to resolve links `svn-log-view-mode' buffers.")
+(put 'svn-log-link-keymap 'risky-local-variable t) ;for Emacs 20.7
+(when (not svn-log-link-keymap)
+  (setq svn-log-link-keymap (make-sparse-keymap))
+  (suppress-keymap svn-log-link-keymap)
+  (define-key svn-log-link-keymap [mouse-2] 'svn-log-resolve-mouse-link)
+  (define-key svn-log-link-keymap (kbd "RET") 'svn-log-resolve-link))
+
+(defun svn-log-resolve-mouse-link (event)
+  (interactive "e")
+  (mouse-set-point event)
+  (svn-log-resolve-link))
+
+(defun svn-log-resolve-link ()
+  (interactive)
+  (let* ((point-adjustment (if (not (get-text-property (- (point) 1) 'link-handler)) 1
+                             (if (not (get-text-property (+ (point) 1) 'link-handler)) -1 0)))
+         (link-name (buffer-substring-no-properties (previous-single-property-change (+ (point) point-adjustment) 'link-handler)
+                                                   (next-single-property-change (+ (point) point-adjustment) 'link-handler))))
+    ;; (message "svn-log-resolve-link '%s'" link-name)
+    (funcall (get-text-property (point) 'link-handler) link-name)))
+
+(defun svn-log-register-link-handler (handler-id link-regexp handler-function)
+  "Register a link handler for external links in *svn-log* buffers
+HANDLER-ID is a symbolic name for this handler. The link handler is active when HANDLER-ID
+is registered in `svn-log-link-handlers'.
+LINK-REGEXP specifies a regular expression that matches the external link.
+HANDLER-FUNCTION is called with the match of LINK-REGEXP when the user clicks at the external link."
+  (let ((font-lock-desc (list link-regexp '(0 `(face font-lock-function-name-face
+                                            mouse-face highlight
+                                            link-handler invalid-handler-function
+                                            keymap ,svn-log-link-keymap)))))
+    ;; no idea, how to use handler-function in invalid-handler-function above, so set it here
+    (setcar (nthcdr 5 (nth 1 (nth 1 (nth 1 font-lock-desc)))) handler-function)
+    (svn-puthash handler-id font-lock-desc svn-log-registered-link-handlers)))
+
+;; example: add support for ditrack links and handle them via svn-log-resolve-ditrack
+;;(svn-log-register-link-handler 'ditrack-issue "i#[0-9]+" 'svn-log-resolve-ditrack)
+;;(defun svn-log-resolve-ditrack (link-name)
+;;  (interactive)
+;;  (message "svn-log-resolve-ditrack %s" link-name))
+
+
+(defun svn-log-resolve-trac-ticket-short (link-name)
+  "Show the trac ticket specified by LINK-NAME via `svn-trac-browse-ticket'."
+  (interactive)
+  (let ((ticket-nr (string-to-number (substring-no-properties link-name 1))))
+    (svn-trac-browse-ticket ticket-nr)))
+
+;; register the out of the box provided link handlers
+(svn-log-register-link-handler 'trac-ticket-short "#[0-9]+" 'svn-log-resolve-trac-ticket-short)
+
+;; the actually used link handlers are specified in svn-log-link-handlers
 
 ;; --------------------------------------------------------------------------------
 ;; svn-info-mode

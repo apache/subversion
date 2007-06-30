@@ -64,6 +64,12 @@
   knows how long the other app is going to hold onto it for), but
   goes a long way towards minimizing it.  It is not an infinite
   loop because there might really be an error.
+
+  Another reason for retrying delete operations on Windows
+  is that they are asynchronous -- the file or directory is not
+  actually deleted until the last handle to it is closed.  The
+  retry loop cannot completely solve this problem either, but can
+  help mitigate it.
 */
 #ifdef WIN32
 #define WIN32_RETRY_LOOP(err, expr)                                        \
@@ -74,7 +80,8 @@
       int retries;                                                         \
       for (retries = 0;                                                    \
            retries < 100 && (os_err == ERROR_ACCESS_DENIED                 \
-                             || os_err == ERROR_SHARING_VIOLATION);        \
+                             || os_err == ERROR_SHARING_VIOLATION          \
+                             || os_err == ERROR_DIR_NOT_EMPTY);            \
            ++retries, os_err = APR_TO_OS_ERROR(err))                    \
         {                                                                  \
           apr_sleep(sleep_count);                                       \
@@ -88,6 +95,26 @@
 #define WIN32_RETRY_LOOP(err, expr) ((void)0)
 #endif
 
+
+static void
+map_apr_finfo_to_node_kind(svn_node_kind_t *kind,
+                           svn_boolean_t *is_special,
+                           apr_finfo_t *finfo)
+{
+  *is_special = FALSE;
+
+  if (finfo->filetype == APR_REG)
+    *kind = svn_node_file;
+  else if (finfo->filetype == APR_DIR)
+    *kind = svn_node_dir;
+  else if (finfo->filetype == APR_LNK)
+    {
+      *is_special = TRUE;
+      *kind = svn_node_file;
+    }
+  else
+    *kind = svn_node_unknown;
+}
 
 /* Helper for svn_io_check_path() and svn_io_check_resolved_path();
    essentially the same semantics as those two, with the obvious
@@ -114,7 +141,7 @@ io_check_path(const char *path,
 
   flags = resolve_symlinks ? APR_FINFO_MIN : (APR_FINFO_MIN | APR_FINFO_LINK);
   apr_err = apr_stat(&finfo, path_apr, flags, pool);
-  
+
   if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
   else if (APR_STATUS_IS_ENOTDIR(apr_err))
@@ -122,22 +149,11 @@ io_check_path(const char *path,
   else if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't check path '%s'"),
                               svn_path_local_style(path, pool));
-  else if (finfo.filetype == APR_NOFILE)
-    *kind = svn_node_unknown;
-  else if (finfo.filetype == APR_REG)
-    *kind = svn_node_file;
-  else if (finfo.filetype == APR_DIR)
-    *kind = svn_node_dir;
-  else if (finfo.filetype == APR_LNK)
-    {
-      is_special = TRUE;
-      *kind = svn_node_file;
-    }
   else
-    *kind = svn_node_unknown;
+    map_apr_finfo_to_node_kind(kind, &is_special, &finfo);
 
   *is_special_p = is_special;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -267,8 +283,15 @@ static apr_status_t
 temp_file_plain_cleanup_handler(void *baton)
 {
   struct  temp_file_cleanup_s *b = baton;
+  apr_status_t apr_err = APR_SUCCESS;
 
-  return (b->name) ? apr_file_remove(b->name, b->pool) : APR_SUCCESS;
+  if (b->name)
+    {
+      apr_err = apr_file_remove(b->name, b->pool);
+      WIN32_RETRY_LOOP(apr_err, apr_file_remove(b->name, b->pool));
+    }
+
+  return apr_err;
 }
 
 
@@ -731,7 +754,8 @@ svn_io_copy_file(const char *src,
     svn_error_clear(err2);
   if (err)
     {
-      apr_file_remove(dst_tmp_apr, pool);
+      apr_err = apr_file_remove(dst_tmp_apr, pool);
+      WIN32_RETRY_LOOP(apr_err, apr_file_remove(dst_tmp_apr, pool));
       return err;
     }
 
@@ -930,6 +954,8 @@ svn_io_make_dir_recursively(const char *path, apr_pool_t *pool)
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
 
   apr_err = apr_dir_make_recursive(path_apr, APR_OS_DEFAULT, pool);
+  WIN32_RETRY_LOOP(apr_err, apr_dir_make_recursive(path_apr,
+                                                   APR_OS_DEFAULT, pool));
 
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't make directory '%s'"), 
@@ -1726,6 +1752,11 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
  To work around the problem, we do a rewinddir after we delete all files
  and see if there's anything left. We repeat the steps untill there's
  nothing left to delete.
+
+ This workaround causes issues on Windows where delete's are asynchronous,
+ however, so we never rewind if we're on Windows (the delete says it is
+ complete, we rewind, we see the same file and try to delete it again,
+ we fail.
 */
 
 /* Neither windows nor unix allows us to delete a non-empty
@@ -1789,7 +1820,9 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
             {
               const char *fullpath, *entry_utf8;
 
+#ifndef WIN32
               need_rewind = TRUE;
+#endif
 
               SVN_ERR(svn_path_cstring_to_utf8(&entry_utf8, this_entry.name,
                                                subpool));
@@ -1914,24 +1947,13 @@ svn_io_get_dirents2(apr_hash_t **dirents,
       else
         {
           const char *name;
-          svn_io_dirent_t *dirent = apr_pcalloc(pool, sizeof(*dirent));
+          svn_io_dirent_t *dirent = apr_palloc(pool, sizeof(*dirent));
 
           SVN_ERR(svn_path_cstring_to_utf8(&name, this_entry.name, pool));
-          
-          if (this_entry.filetype == APR_REG)
-            dirent->kind = svn_node_file;
-          else if (this_entry.filetype == APR_DIR)
-            dirent->kind = svn_node_dir;
-          else if (this_entry.filetype == APR_LNK)
-            {
-              dirent->kind = svn_node_file;
-              dirent->special = TRUE;
-            }
-          else
-            /* ### Currently, Subversion supports just symlinks; other
-             * entry types are reported as regular files. This is inconsistent
-             * with svn_io_check_path(). */
-            dirent->kind = svn_node_file;
+
+          map_apr_finfo_to_node_kind(&(dirent->kind),
+                                     &(dirent->special),
+                                     &this_entry);
 
           apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
         }
@@ -2888,6 +2910,7 @@ dir_make(const char *path, apr_fileperms_t perm,
 #endif
 
   status = apr_dir_make(path_apr, perm, pool);
+  WIN32_RETRY_LOOP(status, apr_dir_make(path_apr, perm, pool));
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't create directory '%s'"),
@@ -2910,15 +2933,12 @@ dir_make(const char *path, apr_fileperms_t perm,
     {
       apr_finfo_t finfo;
 
-      status = apr_stat(&finfo, path_apr, APR_FINFO_PROT, pool);
-
-      if (status)
-        return svn_error_wrap_apr(status, _("Can't stat directory '%s'"),
-                                  svn_path_local_style(path, pool));
-
       /* Per our contract, don't do error-checking.  Some filesystems
        * don't support the sgid bit, and that's okay. */
-      apr_file_perms_set(path_apr, finfo.protection | APR_GSETID);
+      status = apr_stat(&finfo, path_apr, APR_FINFO_PROT, pool);
+
+      if (!status)
+        apr_file_perms_set(path_apr, finfo.protection | APR_GSETID);
     }
 
   return SVN_NO_ERROR;

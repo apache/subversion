@@ -724,22 +724,108 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
    apr_pool_t *pool);
 
 
-/** A callback used in svn_client_merge3() for resolving merge
- * conflicts to content or properties during the application of a tree
- * delta.
+
+/** @} */
+
+/**
+ * Client conflicts
  *
- * All allocations should be performed in @a pool.
+ * @defgroup clnt_diff Client conflict callback functionality
  *
- * @a baton is a closure object; it should be provided by the implementation,
- * and passed by the caller.
+ * @{
+ */
+
+/** The type of action being attempted on an object.
+ *
+ * @since New in 1.5.
+ */
+typedef enum svn_client_conflict_action_t
+{
+  svn_client_conflict_action_edit,    /* attempting to change text or props */
+  svn_client_conflict_action_add,     /* attempting to add object */
+  svn_client_conflict_action_delete  /* attempting to delete object */
+
+} svn_client_conflict_action_t;
+
+
+/** The pre-existing condition which is causing a state of conflict.
+ *
+ * @since New in 1.5.
+ */
+typedef enum svn_client_conflict_reason_t
+{
+  svn_client_conflict_reason_edited,     /* local edits are already present */
+  svn_client_conflict_reason_added,      /* schedule-add object is in the way */
+  svn_client_conflict_reason_deleted,    /* object is already schedule-delete */
+  svn_client_conflict_reason_missing,    /* object is unknown or missing */
+  svn_client_conflict_reason_unversioned /* object is unversioned */
+
+} svn_client_conflict_reason_t;
+
+
+/** A struct that describes a conflict that has occurred in the
+ * working copy.  Passed to @c svn_client_conflict_resolver_func_t.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.5.
+ */
+typedef struct svn_client_conflict_description_t
+{
+  /* The path that is being operated on, its node type, and
+  its svn:mime-type (if applicable and available, else NULL.) */
+  const char *path;
+  svn_node_kind_t node_kind;
+  const char *mime_type;
+
+  /* The action being attempted on the path. */
+  svn_client_conflict_action_t action;
+
+  /* The reason for the conflict. */
+  svn_client_conflict_reason_t reason;
+
+  /* If the conflict involves the merging of two files descended from
+     a common ancestor, here are the paths of up to four fulltext
+     files that can be used to interactively resolve the conflict.
+     (If any of these are not available, they default to NULL.) */
+
+  const char *base_file;     /* common ancestor of the two files being merged */
+  const char *repos_file;    /* repository's version of the file */
+  const char *edited_file;   /* user's locally-edited version of the file */
+  const char *conflict_file; /* merged version of file; has conflict markers */
+
+} svn_client_conflict_description_t;
+
+
+/** A callback used in svn_client_merge3(), svn_client_update3(), and
+ * svn_client_switch2() for resolving conflicts during the application
+ * of a tree delta to a working copy.
+ *
+ * @a description describes the exact nature of the conflict, and
+ * provides information to help resolve it.  @a baton is a closure
+ * object; it should be provided by the implementation, and passed by
+ * the caller.  All allocations should be performed in @a pool.
+ *
+ * If the callback wholly resolves the conflict, return SVN_NO_ERROR.
+ * If the conflict still persists, it return an svn_error_t.
+ *
+ * Implementations of this callback are free to present the conflict
+ * using any user interface.  This may include simple contextual
+ * conflicts in a file's text or properties, or more complex
+ * 'tree'-based conflcts related to obstructed additions, deletions,
+ * and edits.  The callback implementation is free to decide which
+ * sorts of conflicts to handle; it's also free to decide which types
+ * of conflicts are automatically resolvable and which require user
+ * interaction.
  *
  * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_client_conflict_resolver_func_t)
-  (const char *path,
+  (const svn_client_conflict_description_t *description,
    void *baton,
    apr_pool_t *pool);
- 
 
 /** @} */
 
@@ -839,8 +925,10 @@ typedef struct svn_client_ctx_t
    * @since New in 1.5. */
   apr_hash_t *revprop_table;
 
-  /* @since New in 1.5. */
+  /** Conflict resolution callback and baton, if available.
+   * @since New in 1.5. */
   svn_client_conflict_resolver_func_t conflict_resolver_func;
+  void *conflict_resolver_baton;
 
 } svn_client_ctx_t;
 
@@ -2319,7 +2407,7 @@ svn_client_diff_summarize_peg(const char *path,
  * path.
  *
  * If @a record_only is true, the merge isn't actually performed, but
- * the merge info for the revisions which would've been merged is
+ * the mergeinfo for the revisions which would've been merged is
  * recorded in the working copy (and must be subsequently committed
  * back to the repository).
  *
@@ -2460,15 +2548,15 @@ svn_client_merge_peg(const char *source,
                      apr_pool_t *pool);
 
 /**
- * Retrieve the merge info for @a path_or_url in @a *mergeinfo,
+ * Retrieve the mergeinfo for @a path_or_url in @a *mergeinfo,
  * storing a mapping of repository-relative paths to @c
  * apr_array_header_t *'s of @c svn_merge_range_t *'s, or @c NULL if
- * there is no merge info.
+ * there is no mergeinfo.
  *
  * @a path_or_url is a WC path or repository URL.  If @a path_or_url
  * is a WC path, @a revision is ignored in preference to @a
  * path_or_url's @c WORKING revision.  If @a path_or_url is a URL, @a
- * revision is the revision at which to get its merge info.  @a
+ * revision is the revision at which to get its mergeinfo.  @a
  * mergeinfo is allocated in @a pool.
  *
  * @since New in 1.5.
@@ -3757,6 +3845,13 @@ svn_client_unlock(const apr_array_header_t *targets,
  * @{
  */
 
+/** The value of the size in the repository is unknown (because the info
+ * was fetched for a local path, not an URL).
+ *
+ * @since New in 1.5
+ */
+#define SVN_INFO_SIZE_UNKNOWN ((apr_size_t) -1)
+
 /**
  * A structure which describes various system-generated metadata about
  * a working-copy path or URL.
@@ -3821,7 +3916,24 @@ typedef struct svn_info_t
   /* @since New in 1.5. */
   const char *changelist;
   svn_depth_t depth;
+  
+  /** 
+   * The size of the file after being translated into its local
+   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKOWN if
+   * unknown.  Not applicable for directories.
+   * @since New in 1.5.
+   */
+  apr_size_t working_size;
   /** @} */
+
+  /**
+   * The size of the file in the repository (untranslated,
+   * e.g. without adjustment of line endings and keyword
+   * expansion). Only applicable for file -- not directory -- URLs.
+   * For working copy paths, size will be @c SVN_INFO_SIZE_UNKNOWN.
+   * @since New in 1.5.
+   */
+  apr_size_t size;
 
 } svn_info_t;
 

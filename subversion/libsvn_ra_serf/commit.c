@@ -1418,10 +1418,9 @@ add_file(const char *path,
    * already, or if the parent directory was also added (without
    * history) in this commit.
    */
-  if ((!dir->added)
-      || (dir->copy_path)
-      || (!apr_hash_get(dir->commit->deleted_entries,
-                        new_file->name, APR_HASH_KEY_STRING)))
+  if (! ((dir->added && !dir->copy_path) ||
+         apr_hash_get(dir->commit->deleted_entries,
+                      new_file->name, APR_HASH_KEY_STRING)))
     {
       svn_ra_serf__simple_request_context_t *head_ctx;
       svn_ra_serf__handler_t *handler;
@@ -1807,7 +1806,9 @@ abort_edit(void *edit_baton,
   SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
                                         pool));
 
-  if (delete_ctx->status != 204)
+  /* 204 if deleted, 404 if the activity wasn't found. */
+  if (delete_ctx->status != 204 &&
+      delete_ctx->status != 404)
     {
       abort();
     }

@@ -359,7 +359,7 @@ module Svn
         editor.baton.node
       end
 
-      def merge_info(paths, revision=nil, include_parents=true, &authz_read_func)
+      def merge_info(paths, revision=nil, inherit=nil, &authz_read_func)
         path = nil
         unless paths.is_a?(Array)
           path = paths
@@ -367,7 +367,7 @@ module Svn
         end
         revision ||= Svn::Core::INVALID_REVNUM
         results = Repos.fs_get_mergeinfo(self, paths, revision,
-                                          include_parents, authz_read_func)
+                                          inherit, authz_read_func)
         results = results[path] if path
         results
       end

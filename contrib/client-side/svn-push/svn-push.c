@@ -28,7 +28,7 @@
 static svn_error_t *
 my_commit_callback (const svn_commit_info_t *ci, void *baton, apr_pool_t *pool)
 {
-  printf ("Commiting Rev. %" SVN_REVNUM_T_FMT " at date \"%s\", by "
+  printf ("Commiting Rev. %ld at date \"%s\", by "
           "author \"%s\"\n", ci->revision, ci->date, ci->author);
   if (ci->post_commit_err)
     printf ("Post-commit Error: %s\n", ci->post_commit_err);

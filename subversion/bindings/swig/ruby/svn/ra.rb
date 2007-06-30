@@ -244,10 +244,10 @@ module Svn
         Ra.reparent(self, url)
       end
 
-      def merge_info(paths, revision=nil, include_parents=true)
+      def merge_info(paths, revision=nil, inherit=nil)
         paths = [paths] unless paths.is_a?(Array)
         revision ||= Svn::Core::INVALID_REVNUM
-        info = Ra.get_mergeinfo(self, paths, revision, include_parents)
+        info = Ra.get_mergeinfo(self, paths, revision, inherit)
         unless info.nil?
           info.each_key do |key|
             info[key] = Core::MergeInfo.new(info[key])

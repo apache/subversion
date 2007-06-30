@@ -339,7 +339,7 @@ dav_svn__log_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   action = apr_psprintf(resource->pool,
-                        "log '%s' r%" SVN_REVNUM_T_FMT ":%" SVN_REVNUM_T_FMT,
+                        "log '%s' r%ld:%ld",
                         comma_separated_paths->data, start, end);
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
 

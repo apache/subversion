@@ -2205,8 +2205,17 @@ finish_report(void *report_baton,
 
           if (done_fetch->err)
             {
-              /* Uh-oh! */
-              return done_fetch->err;
+              svn_error_t *err = done_fetch->err;
+              /* Error found. There might be more, clear those first. */
+              done_list = done_list->next;
+              while (done_list)
+                {
+                  done_fetch = done_list->data;
+                  if (done_fetch->err)
+                    svn_error_clear(done_fetch->err);
+                  done_list = done_list->next;
+                }
+              return err;
             }
 
           /* decrease our parent's directory refcount. */

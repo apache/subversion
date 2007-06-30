@@ -40,7 +40,7 @@ svn_atomic__init_once(volatile svn_atomic_t *global_status,
       svn_error_t *err = init_func(pool);
       if (err)
         {
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
           /* Tell other threads that the initialization failed. */
           svn_atomic_cas(global_status,
                          SVN_ATOMIC_INIT_FAILED,
@@ -52,7 +52,7 @@ svn_atomic__init_once(volatile svn_atomic_t *global_status,
                      SVN_ATOMIC_INITIALIZED,
                      SVN_ATOMIC_START_INIT);
     }
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
   /* Wait for whichever thread is performing initialization to finish. */
   /* XXX FIXME: Should we have a maximum wait here, like we have in
                 the Windows file IO spinner? */

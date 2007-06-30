@@ -1248,24 +1248,24 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /* ---------------------------------------------------------------*/
 
-/* Retrieving merge info. */
+/* Retrieving mergeinfo. */
 
 /**
  * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
  * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
  * (from @a paths) to textual (@c char *) representations of merge
  * info (as managed by svn_mergeinfo.h), or @c NULL if there is no
- * merge info visible or available.
+ * mergeinfo visible or available.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited merge info for @paths is fetched.
+ * only inherited mergeinfo for @paths is fetched.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
  * of each path which mergeinfo was requested for (from @a paths).
- * Silently omit unreadable paths from the request for merge info.
+ * Silently omit unreadable paths from the request for mergeinfo.
  *
  * Use @a pool for temporary allocations.
  *

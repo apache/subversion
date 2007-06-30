@@ -84,7 +84,7 @@ util_sqlite_exec(sqlite3 *db, const char *sql,
 /* Time (in milliseconds) to wait for sqlite locks before giving up. */
 #define BUSY_TIMEOUT 10000
 
-/* The version number of the schema used to store the merge info index. */
+/* The version number of the schema used to store the mergeinfo index. */
 #define MERGE_INFO_INDEX_SCHEMA_FORMAT 1
 
 /* Return SVN_ERR_FS_GENERAL if the schema doesn't exist,
@@ -156,7 +156,7 @@ const char SVN_MTD_CREATE_SQL[] = "PRAGMA auto_vacuum = 1;"
   "PRAGMA user_version = " APR_STRINGIFY(MERGE_INFO_INDEX_SCHEMA_FORMAT) ";"
   APR_EOL_STR;
 
-/* Open a connection in *DB to the merge info database under
+/* Open a connection in *DB to the mergeinfo database under
    REPOS_PATH.  Validate the merge tracking schema, creating it if it
    doesn't yet exist.  This provides a migration path for pre-1.5
    repositories. */
@@ -177,7 +177,7 @@ open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
   err = check_format(*db);
   if (err && err->apr_err == SVN_ERR_FS_GENERAL)
     {
-      /* Assume that we've just created an empty merge info index by
+      /* Assume that we've just created an empty mergeinfo index by
          way of sqlite3_open() (likely from accessing a pre-1.5
          repository), and need to create the merge tracking schema. */
       svn_error_clear(err);
@@ -186,7 +186,7 @@ open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
   return err;
 }
 
-/* Create an sqlite DB for our merge info index under PATH.  Use POOL
+/* Create an sqlite DB for our mergeinfo index under PATH.  Use POOL
    for temporary allocations. */
 svn_error_t *
 svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool)
@@ -206,7 +206,7 @@ get_mergeinfo_for_path(sqlite3 *db,
                        svn_mergeinfo_inheritance_t inherit,
                        apr_pool_t *pool);
 
-/* Represents "no merge info". */
+/* Represents "no mergeinfo". */
 static svn_merge_range_t no_mergeinfo = { SVN_INVALID_REVNUM,
                                           SVN_INVALID_REVNUM };
 
@@ -229,10 +229,10 @@ index_path_mergeinfo(svn_revnum_t new_rev,
 
   if (apr_hash_count(mergeinfo) == 0)
     {
-      /* All merge info has been removed from PATH (or explicitly set
-         to "none", if there previously was no merge info).  Find all
-         previous merge info, and (further below) insert dummy records
-         representing "no merge info" for all its previous merge
+      /* All mergeinfo has been removed from PATH (or explicitly set
+         to "none", if there previously was no mergeinfo).  Find all
+         previous mergeinfo, and (further below) insert dummy records
+         representing "no mergeinfo" for all its previous merge
          sources of PATH. */
       apr_hash_t *cache = apr_hash_make(pool);
       remove_mergeinfo = TRUE;
@@ -240,7 +240,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
                                      svn_mergeinfo_inherited, pool));
       mergeinfo = apr_hash_get(mergeinfo, path, APR_HASH_KEY_STRING);
       if (mergeinfo == NULL)
-        /* There was previously no merge info, inherited or explicit,
+        /* There was previously no mergeinfo, inherited or explicit,
            for PATH. */
         return SVN_NO_ERROR;
     }
@@ -275,8 +275,8 @@ index_path_mergeinfo(svn_revnum_t new_rev,
 
           if (remove_mergeinfo)
             {
-              /* Explicitly set "no merge info" for PATH, which may've
-                 previously had only inherited merge info. */
+              /* Explicitly set "no mergeinfo" for PATH, which may've
+                 previously had only inherited mergeinfo. */
 #if APR_VERSION_AT_LEAST(1, 3, 0)
               apr_array_clear(rangelist);
 #else
@@ -321,7 +321,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
 }
 
 
-/* Index the merge info for each path in MERGEINFO_FOR_PATHS (a
+/* Index the mergeinfo for each path in MERGEINFO_FOR_PATHS (a
    mapping of const char * -> to apr_hash_t *). */
 static svn_error_t *
 index_txn_mergeinfo(sqlite3 *db,
@@ -345,9 +345,9 @@ index_txn_mergeinfo(sqlite3 *db,
   return SVN_NO_ERROR;
 }
 
-/* Clean the merge info index for any previous failed commit with the
+/* Clean the mergeinfo index for any previous failed commit with the
    revision number as NEW_REV, and if the current transaction contains
-   merge info, record it. */
+   mergeinfo, record it. */
 svn_error_t *
 svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
                                apr_hash_t *mergeinfo_for_paths,
@@ -371,7 +371,7 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
                               new_rev);
   SVN_ERR(util_sqlite_exec(db, deletestring, NULL, NULL));
 
-  /* Record any merge info from the current transaction. */
+  /* Record any mergeinfo from the current transaction. */
   if (mergeinfo_for_paths)
     SVN_ERR(index_txn_mergeinfo(db, new_rev, mergeinfo_for_paths, pool));
 
@@ -386,7 +386,7 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   return SVN_NO_ERROR;
 }
 
-/* Helper for get_mergeinfo_for_path() that retrieves merge info for
+/* Helper for get_mergeinfo_for_path() that retrieves mergeinfo for
    PATH at the revision LASTMERGED_REV, returning it in the merge
    info hash *RESULT. */
 static svn_error_t *
@@ -438,7 +438,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
           if (lastmergedfrom && strcmp(mergedfrom, lastmergedfrom) != 0)
             {
               /* This iteration over the result set starts a group of
-                 merge info with a different merge source. */
+                 mergeinfo with a different merge source. */
               apr_hash_set(*result, lastmergedfrom, APR_HASH_KEY_STRING,
                            pathranges);
               pathranges = apr_array_make(pool, 1,
@@ -447,7 +447,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
 
           /* Filter out invalid revision numbers, which are assumed to
              represent dummy records indicating that a merge source
-             has no merge info for PATH. */
+             has no mergeinfo for PATH. */
           if (SVN_IS_VALID_REVNUM(startrev) && SVN_IS_VALID_REVNUM(endrev))
             {
               svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
@@ -479,8 +479,8 @@ parse_mergeinfo_from_db(sqlite3 *db,
 
 
 /* Helper for get_mergeinfo_for_path() that will append
-   PATH_TO_APPEND to each path that exists in the merge info hash
-   INPUT, and return a new merge info hash in *OUTPUT.  */
+   PATH_TO_APPEND to each path that exists in the mergeinfo hash
+   INPUT, and return a new mergeinfo hash in *OUTPUT.  */
 static svn_error_t *
 append_component_to_paths(apr_hash_t **output,
                           apr_hash_t *input,
@@ -505,10 +505,10 @@ append_component_to_paths(apr_hash_t **output,
 }
 
 /* A helper for svn_fs_mergeinfo__get_mergeinfo() that retrieves
-   merge info recursively (when INCLUDE_PARENTS is TRUE) for a single
+   mergeinfo recursively (when INCLUDE_PARENTS is TRUE) for a single
    path.  Pass NULL for RESULT if you only want CACHE to be updated.
    Otherwise, both RESULT and CACHE are updated with the appropriate
-   merge info for PATH. */
+   mergeinfo for PATH. */
 static svn_error_t *
 get_mergeinfo_for_path(sqlite3 *db,
                        const char *path,
@@ -588,7 +588,7 @@ get_mergeinfo_for_path(sqlite3 *db,
       parentpath = svn_stringbuf_create(path, pool);
       svn_path_remove_component(parentpath);
 
-      /* The repository and the merge info index internally refer to
+      /* The repository and the mergeinfo index internally refer to
          the root path as "" rather than "/". */
       if (strcmp(parentpath->data, "/") == 0)
         parentpath->data = (char *) "";
@@ -627,6 +627,8 @@ get_mergeinfo_for_children(sqlite3 *db,
                            const char *path,
                            svn_revnum_t rev,
                            apr_hash_t **path_mergeinfo,
+                           svn_fs_mergeinfo_filter_func_t filter_func,
+                           void *filter_func_baton,
                            apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
@@ -658,15 +660,21 @@ get_mergeinfo_for_children(sqlite3 *db,
       lastmerged_rev = sqlite3_column_int64(stmt, 0);
       merged_path = (const char *) sqlite3_column_text(stmt, 1);
 
-      /* If we've got a merged revision, go get the merge info from the db */
+      /* If we've got a merged revision, go get the mergeinfo from the db */
       if (lastmerged_rev > 0)
         {
           apr_hash_t *db_mergeinfo;
+          svn_boolean_t omit = FALSE;
 
           SVN_ERR(parse_mergeinfo_from_db(db, merged_path, lastmerged_rev,
                                           &db_mergeinfo, pool));
 
-          SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
+          if (filter_func)
+            SVN_ERR(filter_func(filter_func_baton, &omit, merged_path,
+                                db_mergeinfo, pool));
+
+          if (!omit)
+            SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
         }
 
       sqlite_result = sqlite3_step(stmt);
@@ -708,7 +716,7 @@ get_mergeinfo(sqlite3 *db,
   return SVN_NO_ERROR;
 }
 
-/* Get the merge info for a set of paths.  */
+/* Get the mergeinfo for a set of paths.  */
 svn_error_t *
 svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
                                 svn_fs_root_t *root,
@@ -748,6 +756,8 @@ svn_error_t *
 svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                                          svn_fs_root_t *root,
                                          const apr_array_header_t *paths,
+                                         svn_fs_mergeinfo_filter_func_t filter_func,
+                                         void *filter_func_baton,
                                          apr_pool_t *pool)
 {
   svn_revnum_t rev;
@@ -769,7 +779,21 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
       if (!path_mergeinfo)
         path_mergeinfo = apr_hash_make(pool);
 
+      if (filter_func)
+        {
+          svn_boolean_t omit;
+
+          SVN_ERR(filter_func(filter_func_baton, &omit, path, path_mergeinfo,
+                              pool));
+          if (omit)
+            {
+              apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, NULL);
+              continue;
+            }
+        }
+
       SVN_ERR(get_mergeinfo_for_children(db, path, rev, &path_mergeinfo,
+                                         filter_func, filter_func_baton,
                                          pool));
 
       apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, path_mergeinfo);

@@ -49,7 +49,7 @@ ra_serf_version(void)
 }
 
 #define RA_SERF_DESCRIPTION \
-    N_("Access repository via WebDAV protocol through serf.")
+    N_("Module for accessing a repository via WebDAV protocol using serf.")
 
 static const char *
 ra_serf_get_description(void)
