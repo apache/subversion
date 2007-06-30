@@ -524,6 +524,10 @@ struct filter_baton {
   svn_fs_t *fs;
   svn_revnum_t rev;
   svn_fs_root_t *root;
+
+  /* Boolean which shortcircuits the filter process.  See note in
+     branching_copy_filter() for details. */
+  svn_boolean_t finding_current_revision;
 };
 
 /* Use an algorithm similar to the one on in
@@ -582,6 +586,23 @@ branching_copy_filter(void *baton,
   apr_hash_t *implied_mergeinfo;
   apr_hash_t *deleted, *added;
 
+  /* If we rev isn't the rev of interest for which we are currently looking
+     for new mergeinfo, don't omit this path's mergeinfo.
+     
+     Consider the following scenario:  We are finding the mergeinfo difference
+     between r10, which is a branching copy, and r9 which is the it's previous
+     revision.  If the current revision is r10, *and*, we are looking for 
+     mergeinfo in r10, we may want to omit, so this test should fail.
+     
+     However, if the current revision is r11, and we're looking for mergeinfo
+     in r10, we want to keep it in, even if r10 is a branching revision.  If
+     we didn't those extra revisions would show up as a diff with r11, and they
+     would get pulled in as children of r11.
+     
+     Whew!  That's a long explantion for a single line of code. :) */
+  if (!fb->finding_current_revision)
+    goto omit_false;
+
   /* Find out if the path even exists in fb->root. */
   SVN_ERR(svn_fs_check_path(&kind, fb->root, path, pool));
   if (kind == svn_node_none)
@@ -624,6 +645,7 @@ static svn_error_t *
 get_combined_mergeinfo(apr_hash_t **mergeinfo,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
+                       svn_revnum_t current_rev,
                        const apr_array_header_t *paths,
                        apr_pool_t *pool)
 {
@@ -646,6 +668,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
   fb.fs = fs;
   fb.rev = rev;
   fb.root = root;
+  fb.finding_current_revision = (rev == current_rev);
   SVN_ERR(svn_fs_get_mergeinfo_for_tree(&tree_mergeinfo, root, paths,
                                         branching_copy_filter, &fb, pool));
 
@@ -710,8 +733,10 @@ get_merged_rev_mergeinfo(apr_hash_t **mergeinfo,
 
   subpool = svn_pool_create(pool);
 
-  SVN_ERR(get_combined_mergeinfo(&curr_mergeinfo, fs, rev, paths, subpool));
-  SVN_ERR(get_combined_mergeinfo(&prev_mergeinfo, fs, rev - 1, paths, subpool));
+  SVN_ERR(get_combined_mergeinfo(&curr_mergeinfo, fs, rev, rev, paths,
+                                 subpool));
+  SVN_ERR(get_combined_mergeinfo(&prev_mergeinfo, fs, rev - 1, rev, paths,
+                                 subpool));
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
                              subpool));
