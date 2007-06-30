@@ -1318,7 +1318,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+    depth = SVN_DEPTH_FROM_RECURSE(recurse);
 
   full_path = svn_path_join(b->fs_path->data, target, pool);
   /* Check authorization and authenticate the user if necessary. */
@@ -1351,7 +1351,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+    depth = SVN_DEPTH_FROM_RECURSE(recurse);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
@@ -1426,7 +1426,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+    depth = SVN_DEPTH_FROM_RECURSE(recurse);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
