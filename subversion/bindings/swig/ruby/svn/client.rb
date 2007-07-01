@@ -622,6 +622,7 @@ module Svn
 
       def merge_info(path_or_url, revision=nil)
         info = Client.get_mergeinfo(path_or_url, revision, self)
+        return nil if info.nil?
         Core::MergeInfo.new(info)
       end
       alias_method :mergeinfo, :merge_info
