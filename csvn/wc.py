@@ -129,15 +129,15 @@ class WC(object):
         generated for binary file types.
         
         Generated headers will be encoded using HEADER_ENCODING ("" by
-        deafult).
+        default).
         
-        If OUTFILE_NAME is provided, then the diff will be outputted to
+        If OUTFILE_NAME is provided, then the diff will be written to
         OUTFILE_NAME. If OUTFILE_NAME does not exist, it will be created.
         If OUTFILE_NAME does exist, it will be truncated unless APPEND is
         True, in which case it will be appended. If OUTFILE_NAME
         is not provided, results will be printed to stdout.
         
-        If ERRFILE_NAME is provided, then errors will be outputted to
+        If ERRFILE_NAME is provided, then errors will be written to
         ERRFILE_NAME. If ERRFILE_NAME does not exist, it will be created.
         If ERRFILE_NAME does exist, it will be truncated unless APPEND is
         True, in which case it will be appended. If ERRFILE_NAME
@@ -163,9 +163,9 @@ class WC(object):
         
         path = self._build_path(path)
         
-        if (not outfile_name) | (not errfile_name):
-            #return_strings can only be True if output is not going to
-            #stdout and stderr.
+        if (not outfile_name) or (not errfile_name):
+            # return_strings can only be True if output is not going to
+            # stdout and stderr.
             return_strings = False
         
         outfile = pointer(apr_file_t())
@@ -180,8 +180,8 @@ class WC(object):
                             APR_WRITE | APR_READ | APR_CREATE | APR_TRUNCATE,
                             0644, self.iterpool)
         else:
-            #Default: Output to stdout
-            apr_file_open_stdout(byref(outfile),self.iterpool)
+            # Default: Output to stdout
+            apr_file_open_stdout(byref(outfile), self.iterpool)
             
         errfile = pointer(apr_file_t())
         
@@ -195,7 +195,7 @@ class WC(object):
                     APR_WRITE | APR_READ | APR_CREATE | APR_TRUNCATE, 0644,
                     self.iterpool)
         else:
-            #Default: output to stderr
+            # Default: output to stderr
             apr_file_open_stderr(byref(errfile), self.iterpool)
         
         svn_client_diff3(diff_options, path, rev1, path,
@@ -204,11 +204,11 @@ class WC(object):
                         errfile, self.client, self.iterpool)
         
         if return_strings:
-            #Case to return strings with the diff contents
+            # Case to return strings with the diff contents
             outbuf = svn_stringbuf_create("", self.iterpool)
             errbuf = svn_stringbuf_create("", self.iterpool)
             
-            #Make sure read starts at beginning
+            # Make sure read starts at beginning
             svn_io_file_seek(outfile, APR_SET, pointer(c_longlong(0)),
                             self.iterpool)
             svn_io_file_seek(errfile, APR_SET, pointer(c_longlong(0)),
