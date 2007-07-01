@@ -62,7 +62,7 @@ handle_auth(svn_ra_serf__session_t *session,
             apr_pool_t *pool)
 {
   serf_bucket_t *hdrs;
-  serf_auth_protocol_t *prot;
+  const serf_auth_protocol_t *prot;
   char *auth_name, *auth_attr, *auth_hdr;
 
   hdrs = serf_bucket_response_get_headers(response);

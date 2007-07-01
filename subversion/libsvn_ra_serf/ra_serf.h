@@ -133,7 +133,7 @@ struct svn_ra_serf__session_t {
   svn_error_t *pending_error;
 
   /* vtable and info object handling the authentication */
-  serf_auth_protocol_t *auth_protocol;
+  const serf_auth_protocol_t *auth_protocol;
 };
 
 /*
@@ -1091,7 +1091,7 @@ typedef svn_error_t *
  * serf_auth_protocol_t: vtable for an authentication protocol provider.
  * 
  */
-typedef struct serf_auth_protocol_t {
+struct serf_auth_protocol_t {
   /* The name of this authentication protocol. This should be a case 
      sensitive match of the string sent in the HTTP authentication header. */
   const char *auth_name;
@@ -1101,7 +1101,7 @@ typedef struct serf_auth_protocol_t {
 
   /* The authentication handler function */
   svn_serf__auth_handler_func_t handle_func;
-} serf_auth_protocol_t;
+};
 
 /**
  * handle_auth: This function will be called when an authentication challenge
