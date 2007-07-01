@@ -837,7 +837,8 @@ class SpawnTest(threading.Thread):
     self.result, self.stdout_lines, self.stderr_lines =\
                                          spawn_process(command, 1, None, *args)
     # don't trust the exitcode, will not be correct on Windows
-    if filter(lambda x: x[:6] == 'FAIL: ', self.stdout_lines):
+    if filter(lambda x: x.startswith('FAIL: ') or x.startswith('XPASS: '), 
+              self.stdout_lines):
       self.result = 1
     self.tests.append(self)
     sys.stdout.write('.')
