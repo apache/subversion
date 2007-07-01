@@ -1055,5 +1055,10 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          svn_mergeinfo_inheritance_t inherit,
                                          apr_pool_t *pool);
 
-
-
+/* general serf authentication handler */
+svn_error_t *
+handle_auth(svn_ra_serf__session_t *session,
+            svn_ra_serf__connection_t *conn,
+            serf_request_t *request,
+            serf_bucket_t *response,
+            apr_pool_t *pool);
