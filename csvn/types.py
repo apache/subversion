@@ -1,6 +1,8 @@
 from csvn.core import *
 from csvn.ext.listmixin import ListMixin
 from UserDict import DictMixin
+from shutil import copyfileobj
+from tempfile import TemporaryFile
 
 # This class contains Pythonic wrappers for generic Subversion and
 # APR datatypes (e.g. dates, streams, hashes, arrays, etc).
@@ -163,6 +165,55 @@ class Array(ListMixin):
             # Shrink the array
             for i in xrange(-diff):
                 apr_array_pop(self)
+
+try:
+    # On Windows we need to do some magic to get the os-level file handle
+    from msvcrt import get_osfhandle
+except ImportError:
+    get_osfhandle = lambda fileno: fileno
+
+class APRFile(object):
+    """Wrap a Python file-like object as an APR File"""
+
+    def __init__(self, pyfile):
+        self.pyfile = pyfile
+        self.pool = Pool()
+        self._as_parameter_ = POINTER(apr_file_t)()
+        self.tempfile = None
+        if hasattr(pyfile, "fileno"):
+            # Looks like this is a real file. We can just write
+            # directly to said file
+            osfile = apr_os_file_t(get_osfhandle(pyfile.fileno()))
+        else:
+            # Looks like this is a StringIO buffer or a fake file.
+            # Write to a temporary file and copy the output to the
+            # buffer when we are closed or flushed
+            self.tempfile = TemporaryFile()
+            osfile = apr_os_file_t(get_osfhandle(self.tempfile.fileno()))
+        apr_os_file_put(byref(self._as_parameter_), byref(osfile),
+                        APR_CREATE | APR_WRITE | APR_BINARY, self.pool)
+
+    def flush(self):
+        """Flush output to the underlying Python object"""
+        if self.tempfile:
+            self.tempfile.seek(0)
+            copyfileobj(self.tempfile, self.pyfile)
+            self.tempfile.truncate(0)
+
+    def close(self):
+        """Close the APR file wrapper, leaving the underlying Python object
+           untouched"""
+        self.flush()
+        if self.tempfile:
+            self.tempfile.close()
+            self.tempfile = None
+        self.pool.destroy()
+        self.pool = None
+
+    def __del__(self):
+        if self.pool:
+            self.close()
+        
 
 class Stream(object):
 
