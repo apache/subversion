@@ -15,10 +15,25 @@
  * ====================================================================
  */
 
+/*** Includes. ***/
+
 #include <serf.h>
 #include <apr_base64.h>
 
 #include "ra_serf.h"
+
+/*** Forward declarations. ***/
+
+static svn_error_t *
+handle_basic_auth(svn_ra_serf__session_t *session,
+                  svn_ra_serf__connection_t *conn,
+                  serf_request_t *request,
+                  serf_bucket_t *response,
+                  char *auth_hdr,
+                  char *auth_attr,
+                  apr_pool_t *pool);
+
+/*** Code. ***/
 
 svn_error_t *
 handle_auth(svn_ra_serf__session_t *session,
@@ -27,63 +42,76 @@ handle_auth(svn_ra_serf__session_t *session,
             serf_bucket_t *response,
             apr_pool_t *pool)
 {
+  serf_bucket_t *hdrs;
+  char *cur, *auth_attr, *auth_hdr;
+
+  hdrs = serf_bucket_response_get_headers(response);
+  auth_hdr = (char*)serf_bucket_headers_get(hdrs, "WWW-Authenticate");
+
+  if (!auth_hdr)
+    {
+      abort();
+    }
+
+  cur = apr_strtok(auth_hdr, " ", &auth_attr);
+
+  if (strcmp(cur, "Basic") == 0)
+    {
+      SVN_ERR(handle_basic_auth(session, conn, request, 
+                                response, auth_hdr, auth_attr,
+                                pool));
+    }
+  else
+    {
+      return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
+                               "%s authentication not supported.\n"
+                               "Authentication failed", cur);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+handle_basic_auth(svn_ra_serf__session_t *session,
+                  svn_ra_serf__connection_t *conn,
+                  serf_request_t *request,
+                  serf_bucket_t *response,
+                  char *auth_hdr,
+                  char *auth_attr,
+                  apr_pool_t *pool)
+{
   void *creds;
+  char *last, *realm_name;
   svn_auth_cred_simple_t *simple_creds;
   const char *tmp;
   apr_size_t tmp_len, encoded_len;
+  apr_port_t port;
   int i;
 
   if (!session->realm)
     {
-      serf_bucket_t *hdrs;
-      char *cur, *last, *auth_hdr, *realm_name;
-      apr_port_t port;
+      char *attr;
 
-      hdrs = serf_bucket_response_get_headers(response);
-      auth_hdr = (char*)serf_bucket_headers_get(hdrs, "WWW-Authenticate");
+      attr = apr_strtok(auth_attr, "=", &last);
+      if (strcmp(attr, "realm") == 0)
+        {
+          realm_name = apr_strtok(NULL, "=", &last);
+          if (realm_name[0] == '\"') 
+            {
+              apr_size_t realm_len;
 
-      if (!auth_hdr)
+              realm_len = strlen(realm_name);
+              if (realm_name[realm_len - 1] == '\"')
+                {
+                  realm_name[realm_len - 1] = '\0';
+                  realm_name++;
+                }
+            }
+        }
+      else
         {
           abort();
         }
-
-      cur = apr_strtok(auth_hdr, " ", &last);
-      while (cur)
-        {
-          if (strcmp(cur, "Basic") == 0)
-            {
-              char *attr;
-
-              attr = apr_strtok(NULL, "=", &last);
-              if (strcmp(attr, "realm") == 0)
-                {
-                  realm_name = apr_strtok(NULL, "=", &last);
-                  if (realm_name[0] == '\"') 
-                    {
-                      apr_size_t realm_len;
-
-                      realm_len = strlen(realm_name);
-                      if (realm_name[realm_len - 1] == '\"')
-                        {
-                          realm_name[realm_len - 1] = '\0';
-                          realm_name++;
-                        }
-                    }
-                }
-              else
-                {
-                  abort();
-                }
-            }
-          else
-            {
-              return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
-                                       "%s authentication not supported.\n"
-                                       "Authentication failed", cur);
-            }
-          cur = apr_strtok(NULL, " ", &last);
-        }
-
       if (!realm_name)
         {
           abort();
@@ -153,4 +181,3 @@ handle_auth(svn_ra_serf__session_t *session,
 
   return SVN_NO_ERROR;
 }
-
