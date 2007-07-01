@@ -33,6 +33,25 @@ handle_basic_auth(svn_ra_serf__session_t *session,
                   char *auth_attr,
                   apr_pool_t *pool);
 
+static svn_error_t *
+init_basic_connection(svn_ra_serf__session_t *session,
+                      svn_ra_serf__connection_t *conn,
+                      apr_pool_t *pool);
+
+/*** Global variables. ***/
+static const serf_auth_protocol_t serf_auth_protocols[] = {
+  {
+    "Basic",
+    init_basic_connection,
+    handle_basic_auth,
+  },
+
+  /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */
+
+  /* sentinel */
+  { NULL }
+};
+
 /*** Code. ***/
 
 svn_error_t *
@@ -43,7 +62,8 @@ handle_auth(svn_ra_serf__session_t *session,
             apr_pool_t *pool)
 {
   serf_bucket_t *hdrs;
-  char *cur, *auth_attr, *auth_hdr;
+  serf_auth_protocol_t *prot;
+  char *auth_name, *auth_attr, *auth_hdr;
 
   hdrs = serf_bucket_response_get_headers(response);
   auth_hdr = (char*)serf_bucket_headers_get(hdrs, "WWW-Authenticate");
@@ -53,19 +73,28 @@ handle_auth(svn_ra_serf__session_t *session,
       abort();
     }
 
-  cur = apr_strtok(auth_hdr, " ", &auth_attr);
+  auth_name = apr_strtok(auth_hdr, " ", &auth_attr);
 
-  if (strcmp(cur, "Basic") == 0)
+  /* Find the matching authentication handler.
+     Note that we don't reuse the auth protocol stored in the session, 
+     as that may have changed. (ex. fallback from ntlm to basic.) */
+  for (prot = serf_auth_protocols; prot->auth_name != NULL; ++prot)
     {
-      SVN_ERR(handle_basic_auth(session, conn, request, 
-                                response, auth_hdr, auth_attr,
-                                pool));
+      if (strcmp(auth_name, prot->auth_name) == 0)
+        {
+          svn_serf__auth_handler_func_t handler = prot->handle_func;
+          session->auth_protocol = prot;
+          SVN_ERR(handler(session, conn, request, response, 
+                          auth_hdr, auth_attr, pool));
+          break;
+        }
     }
-  else
+  if (prot->auth_name == NULL)
     {
+      /* Support more authentication mechanisms. */
       return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
                                "%s authentication not supported.\n"
-                               "Authentication failed", cur);
+                               "Authentication failed", auth_name);
     }
 
   return SVN_NO_ERROR;
@@ -178,6 +207,17 @@ handle_basic_auth(svn_ra_serf__session_t *session,
       session->conns[i]->auth_header = session->auth_header;
       session->conns[i]->auth_value = session->auth_value;
     }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+init_basic_connection(svn_ra_serf__session_t *session,
+                      svn_ra_serf__connection_t *conn,
+                      apr_pool_t *pool)
+{
+  conn->auth_header = session->auth_header;
+  conn->auth_value = session->auth_value;
 
   return SVN_NO_ERROR;
 }

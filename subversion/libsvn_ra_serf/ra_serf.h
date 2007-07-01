@@ -37,7 +37,9 @@
 
 
 
+/* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
+typedef struct serf_auth_protocol_t serf_auth_protocol_t;
 
 /* A serf connection and optionally associated SSL context.  */
 typedef struct {
@@ -129,6 +131,9 @@ struct svn_ra_serf__session_t {
 
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
+
+  /* vtable and info object handling the authentication */
+  serf_auth_protocol_t *auth_protocol;
 };
 
 /*
@@ -1055,7 +1060,54 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          svn_mergeinfo_inheritance_t inherit,
                                          apr_pool_t *pool);
 
-/* general serf authentication handler */
+
+/*** Authentication handler declarations ***/
+
+/**
+ * For each authentication protocol we need a handler function of type
+ * svn_serf__auth_handler_func_t. This function will be called when an
+ * authentication challenge is received in a session.
+ */
+typedef svn_error_t *
+(*svn_serf__auth_handler_func_t)(svn_ra_serf__session_t *session,
+                                 svn_ra_serf__connection_t *conn,
+                                 serf_request_t *request,
+                                 serf_bucket_t *response,
+                                 char *auth_hdr,
+                                 char *auth_attr,
+                                 apr_pool_t *pool);
+
+/**
+ * For each authentication protocol we need an initialization function of type
+ * svn_serf__init_conn_func_t. This function will be called when a new 
+ * connection is opened.
+ */
+typedef svn_error_t *
+(*svn_serf__init_conn_func_t)(svn_ra_serf__session_t *session,
+                              svn_ra_serf__connection_t *conn,
+                              apr_pool_t *pool);
+
+/**
+ * serf_auth_protocol_t: vtable for an authentication protocol provider.
+ * 
+ */
+typedef struct serf_auth_protocol_t {
+  /* The name of this authentication protocol. This should be a case 
+     sensitive match of the string sent in the HTTP authentication header. */
+  const char *auth_name;
+
+  /* The initialization function if any; otherwise, NULL */
+  svn_serf__init_conn_func_t init_conn_func;
+
+  /* The authentication handler function */
+  svn_serf__auth_handler_func_t handle_func;
+} serf_auth_protocol_t;
+
+/**
+ * handle_auth: This function will be called when an authentication challenge
+ * is received. Based on the challenge, handle_auth will pick the needed authn
+ * implementation and forward the call to its authn handler.
+ */
 svn_error_t *
 handle_auth(svn_ra_serf__session_t *session,
             svn_ra_serf__connection_t *conn,
