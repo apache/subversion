@@ -83,6 +83,17 @@ Candidate changes:
     Votes:
       +1: dws
 
+  * r25607
+    Tweak the expected output of one test so that it passes against both 1.4.x
+    and trunk (1.5) servers.
+    Justification:
+      With this backport, the entire 1.4.x test suite passes against trunk
+      servers (tested on svnserve); this is a good standard to try to keep
+      (especially so that we can make sure that things like the -N/--depth
+      backwards-compatibility code works).
+    Votes:
+      +1: glasser
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
