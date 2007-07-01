@@ -1936,16 +1936,8 @@ def post_commit_hook_test(sbox):
   # Now, commit and examine the output (we happen to know that the
   # filesystem will report an absolute path because that's the way the
   # filesystem is created by this test suite.
-  expected_output = [ "Sending        "+ iota_path + "\n",
-                      "Transmitting file data .\n",
-                      "Committed revision 2.\n",
-                      "\n",
-                      "Warning: 'post-commit' hook failed (exited with a "
-                      "non-zero exitcode of 1).  The following error output "
-                      "was produced by the hook:\n",
-                      "Post-commit hook failed\n",
-                    ]
-
+  expected_output = "Post-commit hook failed"
+  
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'ci', '-m', 'log msg', iota_path)
 
