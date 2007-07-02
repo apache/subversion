@@ -76,13 +76,6 @@ Candidate changes:
     Votes:
       +1: vgeorgescu
 
-  * r25593
-    Add RHEL5 RPM directory so we can build on that platform.
-    Justification:
-      New platform requiring changed SPEC file.
-    Votes:
-      +1: dws
-
   * r25607
     Tweak the expected output of one test so that it passes against both 1.4.x
     and trunk (1.5) servers.
@@ -144,3 +137,10 @@ Veto-blocked changes:
 
 Approved changes:
 
+  * r25593
+    Add RHEL5 RPM directory so we can build on that platform.
+    Justification:
+      New platform requiring changed SPEC file.
+    Votes:
+      +1: dws
+      +0: dlr
