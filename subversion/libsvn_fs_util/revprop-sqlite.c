@@ -24,11 +24,6 @@
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
 
-/* This is a macro implementation of svn_fs_revision_root_revision(), which
-   we cannot call from here, because it would create a circular dependency. */
-#define REV_ROOT_REV(root)       \
-  ((root)->is_txn_root? SVN_INVALID_REVNUM : (root)->rev)
-
 /* SQLITE->SVN quick error wrap, much like SVN_ERR. */
 #define SQLITE_ERR(x, db) do                                    \
 {                                                               \
