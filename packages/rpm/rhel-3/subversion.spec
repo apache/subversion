@@ -95,6 +95,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jun 30 2007 David Summers <david@summersoft.fay.ar.us> r25592
+- [RHEL5] Added RHEL5 SPEC file.
+
 * Fri Jul 07 2006 David Summers <david@summersoft.fay.ar.us> r20468
 - [RH8,RH9,RHEL3,RHEL4] Updated to APR/APR-UTIL 0.9.12.
   RHEL3 requires httpd-2.0.46-56.ent.centos.2.1 or higher which includes

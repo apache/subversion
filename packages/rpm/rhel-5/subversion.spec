@@ -1,9 +1,9 @@
-%define apache_version 2.0.48-0.1
-%define apr_version 0.9.7
-%define neon_version 0.24.7
-%define swig_version 1.3.25
+%define apache_version 2.2.3
+%define apr_version 1.2.7
+%define neon_version 0.25.5
+%define swig_version 1.3.29
 %define apache_dir /usr
-%define pyver 2.2
+%define pyver 2.4
 # If you don't want to take time for the tests then set make_*_check to 0.
 %define make_ra_local_bdb_check 1
 %define make_ra_svn_bdb_check 1
@@ -15,7 +15,7 @@ Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
 Release: @RELEASE@
-Copyright: BSD
+License: BSD
 Group: Utilities/System
 URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
@@ -25,10 +25,10 @@ Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apr >= %{apr_version}
 Requires: apr-util >= %{apr_version}
-Requires: db4 >= 4.0.14
+Requires: db4 >= 4.2.52
 Requires: neon >= %{neon_version}
 BuildPreReq: autoconf >= 2.53
-BuildPreReq: db4-devel >= 4.0.14
+BuildPreReq: db4-devel >= 4.2.52
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
 BuildPreReq: expat-devel
@@ -40,11 +40,12 @@ BuildPreReq: libtool >= 1.4.2
 BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
-BuildPreReq: perl >= 5.8.0-88
+BuildPreReq: perl
 BuildPreReq: python
 BuildPreReq: python-devel
 BuildPreReq: swig >= %{swig_version}
 BuildPreReq: zlib-devel
+Obsoletes: subversion-server
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
 %description
@@ -71,7 +72,7 @@ Requires: subversion = %{version}-%{release}
 The subversion-devel package includes the static libraries and include files
 for developers interacting with the subversion package.
 
-%package server
+%package -n mod_dav_svn
 Group: Utilities/System
 Summary: Apache server module for Subversion server.
 Requires: apr >= %{apr_version}
@@ -79,8 +80,8 @@ Requires: apr-util >= %{apr_version}
 Requires: subversion = %{version}-%{release}
 Requires: httpd >= %{apache_version}
 BuildPreReq: httpd-devel >= %{apache_version}
-%description server
-The subversion-server package adds the Subversion server Apache module to
+%description -n mod_dav_svn
+The mod_dav_svn package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %package perl
@@ -495,13 +496,15 @@ sh autogen.sh
 # be installed.
 rm -rf apr apr-util neon
 
+
 %configure \
 	--disable-mod-activation \
-	--with-swig=%{_bindir}/swig \
+	--with-swig \
+	--with-berkeley-db \
 	--with-python=%{_bindir}/python%{pyver} \
 	--with-apxs=%{apache_dir}/sbin/apxs \
-	--with-apr=%{apache_dir}/bin/apr-config \
-	--with-apr-util=%{apache_dir}/bin/apu-config
+	--with-apr=%{apache_dir}/bin/apr-1-config \
+	--with-apr-util=%{apache_dir}/bin/apu-1-config
 
 %build
 make clean
@@ -511,7 +514,7 @@ make
 make swig-py
 
 # Build PERL bindings
-make swig-pl
+make swig-pl DESTDIR=$RPM_BUILD_ROOT
 make check-swig-pl
 
 %if %{make_ra_local_bdb_check}
@@ -531,6 +534,7 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
 %if %{make_ra_dav_bdb_check}
+echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 make davautocheck CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
@@ -553,6 +557,8 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 
 %if %{make_ra_dav_fsfs_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
+killall httpd || true
+sleep 1
 make davautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
@@ -564,7 +570,7 @@ make install DESTDIR="$RPM_BUILD_ROOT"
 
 # Add subversion.conf configuration file into httpd/conf.d directory.
 mkdir -p $RPM_BUILD_ROOT/etc/httpd/conf.d
-cp packages/rpm/redhat-8+/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
+cp packages/rpm/rhel-4/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install Python SWIG bindings.
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
@@ -573,16 +579,10 @@ mv $RPM_BUILD_ROOT/%{_libdir}/svn-python/* $RPM_BUILD_ROOT/%{_libdir}/python%{py
 rmdir $RPM_BUILD_ROOT/%{_libdir}/svn-python
 
 # Install PERL SWIG bindings.
-(cd subversion/bindings/swig/perl/native
-perl Makefile.PL PREFIX=$RPM_BUILD_ROOT
-)
 make install-swig-pl DESTDIR=$RPM_BUILD_ROOT
 
-# Clean up.
-mkdir -p $RPM_BUILD_ROOT/%{_libdir}/perl5
-mv $RPM_BUILD_ROOT/lib/perl5/site_perl $RPM_BUILD_ROOT/%{_libdir}/perl5
-mv $RPM_BUILD_ROOT/share/man/man3 $RPM_BUILD_ROOT/usr/share/man
-rm -rf $RPM_BUILD_ROOT/lib $RPM_BUILD_ROOT/share $RPM_BUILD_ROOT/%{_libdir}/perl5/site_perl/5.8.0/i386-linux-thread-multi/perllocal.pod
+# Clean up unneeded files for package installation
+rm -rf $RPM_BUILD_ROOT/%{_libdir}/perl5/%{perl_version}
 
 # Set up tools package files.
 mkdir -p $RPM_BUILD_ROOT/%{_libdir}/subversion
@@ -591,14 +591,14 @@ cp -r tools $RPM_BUILD_ROOT/%{_libdir}/subversion
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
 
-%post server
+%post -n mod_dav_svn
 # Restart apache server if needed.
 source /etc/init.d/functions
 if [ "`pidof httpd`"x != "x" ]; then
    /etc/init.d/httpd restart || true
 fi
 
-%postun server
+%postun -n mod_dav_svn
 # Restart apache server if needed.
 source /etc/init.d/functions
 if [ "`pidof httpd`"x != "x" ]; then
@@ -639,11 +639,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libsvn*.la
 /usr/include/subversion-1
 
-%files server
+%files -n mod_dav_svn
 %defattr(-,root,root)
 %config(noreplace) /etc/httpd/conf.d/subversion.conf
-%{apache_dir}/lib/httpd/modules/mod_dav_svn.so
-%{apache_dir}/lib/httpd/modules/mod_authz_svn.so
+%{_libdir}/httpd/modules/mod_dav_svn.so
+%{_libdir}/httpd/modules/mod_authz_svn.so
 
 %files perl
 %defattr(-,root,root)

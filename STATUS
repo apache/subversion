@@ -137,10 +137,3 @@ Veto-blocked changes:
 
 Approved changes:
 
-  * r25593
-    Add RHEL5 RPM directory so we can build on that platform.
-    Justification:
-      New platform requiring changed SPEC file.
-    Votes:
-      +1: dws
-      +0: dlr
