@@ -567,10 +567,13 @@ calculate_branching_copy_mergeinfo(apr_hash_t **implied_mergeinfo,
   return SVN_NO_ERROR;
 }
 
-/* Filter function to be used with svn_fs_get_mergeinfo_for_tree().  This
-   should return FALSE if path is a branching copy.
+/* Filter function to be used with svn_fs_get_mergeinfo_for_tree().
+   This should return FALSE if PATH is a copy which is considered a
+   "branch"; that is, a copied path which has merge info identical to
+   what would be expected for a copy from source to destination
+   without any modification.
 
-   This implements svn_fs_mergeinfo_filter_func_t */
+   This function implements the svn_fs_mergeinfo_filter_func_t API. */
 static svn_error_t *
 branching_copy_filter(void *baton,
                       svn_boolean_t *omit,
@@ -622,7 +625,7 @@ branching_copy_filter(void *baton,
   /* At this point, we know that PATH was created as a copy in REV.  Using an
      algorithm similar to libsvn_client/copy.c:get_implied_mergeinfo(), check
      to see if the mergeinfo generated on a branching copy, and the mergeinfo
-     that we are presented matches.  If so, omit the path. */
+     that we are presented with matches.  If so, omit the path. */
   SVN_ERR(calculate_branching_copy_mergeinfo(&implied_mergeinfo, copy_root,
                                              copy_path, path, fb->rev, pool));
 
