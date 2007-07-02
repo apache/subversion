@@ -32,6 +32,7 @@
 
 #include "private/svn_compat.h"
 #include "private/svn_fs_mergeinfo.h"
+#include "private/svn_fs_sqlite.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
 
@@ -43,14 +44,6 @@
 /* We want to cache that we saw no mergeinfo for a path as well,
    so we use a -1 converted to a pointer to represent this. */
 #define NEGATIVE_CACHE_RESULT ((void *)(-1))
-
-/* SQLITE->SVN quick error wrap, much like SVN_ERR. */
-#define SQLITE_ERR(x, db) do                                    \
-{                                                               \
-  if ((x) != SQLITE_OK)                                         \
-    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,      \
-                            sqlite3_errmsg((db)));              \
-} while (0)
 
 #ifdef SQLITE3_DEBUG
 /* An sqlite query execution callback. */
