@@ -90,8 +90,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      ### access contention) not a correctness problem. */
 
   if (depth == svn_depth_empty
-      || depth == svn_depth_files
-      || depth == svn_depth_immediates)
+      || depth == svn_depth_files)
     adm_open_depth = 0;
   else
     adm_open_depth = -1;
