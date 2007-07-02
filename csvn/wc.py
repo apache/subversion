@@ -158,3 +158,10 @@ class WC(object):
         apr_errfile.close()
 
         self.iterpool.clear()
+        
+    def cleanup(self, path=""):
+        """Recursivley cleanup the working copy. Finish any incomplete
+        operations and release all locks.
+        
+        If PATH is not provided, it defaults to ""."""
+        svn_client_cleanup(path, self.client, self.iterpool)
