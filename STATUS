@@ -85,7 +85,7 @@ Candidate changes:
       (especially so that we can make sure that things like the -N/--depth
       backwards-compatibility code works).
     Votes:
-      +1: glasser
+      +1: glasser, dlr
 
 Veto-blocked changes:
 
