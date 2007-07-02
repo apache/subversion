@@ -701,7 +701,7 @@ test_list = [ None,
               XFail(depth_immediates_receive_delete),
               depth_update_to_more_depth,
               depth_immediates_subdir_propset_1,
-              XFail(depth_immediates_subdir_propset_2),
+              depth_immediates_subdir_propset_2,
             ]
 
 if __name__ == "__main__":
