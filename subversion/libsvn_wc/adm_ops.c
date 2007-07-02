@@ -2144,7 +2144,7 @@ svn_wc_revert2(const char *path,
               SVN_ERR(revert_admin_things(parent_access, bname,
                                           entry_in_parent, &dummy_reverted,
                                           use_commit_times, pool));
-            }          
+            }
 
           /* Force recursion on replaced directories. */
           if (entry->schedule == svn_wc_schedule_replace)
