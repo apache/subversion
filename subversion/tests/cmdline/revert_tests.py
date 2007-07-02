@@ -750,7 +750,7 @@ test_list = [ None,
               revert_propdel__dir,
               revert_propdel__file,
               revert_replaced_with_history_file,
-              XFail(status_of_missing_dir_after_revert),
+              status_of_missing_dir_after_revert,
              ]
 
 if __name__ == '__main__':
