@@ -159,9 +159,9 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                  APR_UNSPEC, url.port, 0, serf_sess->pool);
   if (status)
     {
-      return svn_error_createf(status, NULL,
-                               _("Could not lookup hostname: %s://%s"),
-                               url.scheme, url.hostname);
+      return svn_error_wrap_apr(status,
+                                _("Could not lookup hostname `%s'"),
+                                url.hostname);
     }
 
   serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
