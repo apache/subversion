@@ -520,7 +520,8 @@ next_history_rev(apr_array_header_t *histories)
   return next_rev;
 }
 
-struct filter_baton {
+struct filter_baton
+{
   svn_fs_t *fs;
   svn_revnum_t rev;
   svn_fs_root_t *root;
