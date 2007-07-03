@@ -768,7 +768,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
-  # now revert back to r1, thereby reinstating the old 'G'
+  # now rollback to r1, thereby reinstating the old 'G'
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G': Item(status='D '),
     'A/D/G/alpha': Item(status='D '),
