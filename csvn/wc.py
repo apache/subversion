@@ -165,3 +165,26 @@ class WC(object):
         
         If PATH is not provided, it defaults to ""."""
         svn_client_cleanup(path, self.client, self.iterpool)
+        
+    def export(self, from_path, to_path, overwrite=False,
+                ignore_externals=True, recurse=True, eol=NULL):
+        """Export FROM_PATH to TO_PATH.
+        
+        If OVERWRITE is True (False by default), TO_PATH will be overwritten.
+        
+        If IGNORE_EXTERNALS is True (True by default), externals will be
+        excluded during export.
+        
+        If RECURSE is True (True by default) directories will be recursed.
+        Otherwise only the top level, non-directory contents of FROM_PATH
+        will be exported.
+        
+        If EOL is provided, it will be used instead of the standard end of
+        line marker for your platform."""
+        
+        svn_client_export3(pointer(svn_revnum_t()),
+                            self._build_path(from_path),
+                            self._build_path(to_path), NULL,
+                            svn_opt_revision_t(), overwrite,
+                            ignore_externals, recurse, eol, self.client,
+                            self.iterpool)
