@@ -974,6 +974,10 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 15,
              "No versioned parent directories")
 
+  SVN_ERRDEF(SVN_ERR_CLIENT_CONFLICT_REMAINS,
+             SVN_ERR_CLIENT_CATEGORY_START + 16,
+             "Conflict was not resolved")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,
