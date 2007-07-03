@@ -2747,7 +2747,7 @@ get_sw_mergeinfo_error_handler(const char *path,
    Perform a depth first walk of the working copy tree rooted at TARGET (with
    the corresponding ENTRY).  Place any path which has working svn:mergeinfo,
    or is switched, in CHILDREN_SW_OR_WITH_MERGEINFO. */
-svn_error_t *
+static svn_error_t *
 get_sw_mergeinfo_paths(apr_array_header_t *children_sw_or_with_mergeinfo,
                        const char *target,
                        const svn_wc_entry_t *entry,
