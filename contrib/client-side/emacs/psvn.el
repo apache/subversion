@@ -3417,6 +3417,12 @@ Consider svn-status-window-alist to choose the buffer name."
             (other-window 1))
         (svn-status-show-process-buffer-internal scroll-to-top)))))
 
+(defun svn-status-svn-log-switches (arg)
+  (cond ((eq arg 0)  '())
+        ((or (eq arg -1) (eq arg '-)) '("-q"))
+        (arg         '("-v"))
+        (t           svn-status-default-log-arguments)))
+
 (defun svn-status-show-svn-log (arg)
   "Run `svn log' on selected files.
 The output is put into the *svn-log* buffer
@@ -3428,17 +3434,11 @@ The optional prefix argument ARG determines which switches are passed to `svn lo
 
 See `svn-status-marked-files' for what counts as selected."
   (interactive "P")
-  (let ((switches (cond ((eq arg 0)  '())
-                        ((or (eq arg -1) (eq arg '-)) '("-q"))
-                        (arg         '("-v"))
-                        (t           svn-status-default-log-arguments)))
+  (let ((switches (svn-status-svn-log-switches arg))
         (svn-status-get-line-information-for-file t))
     ;; (message "svn-status-show-svn-log %S" arg)
     (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-    (svn-run t t 'log "log" "--targets" svn-status-temp-arg-file switches)
-    (save-excursion
-      (set-buffer svn-process-buffer-name)
-      (svn-log-view-mode))))
+    (svn-run t t 'log "log" "--targets" svn-status-temp-arg-file switches)))
 
 (defun svn-status-version ()
   "Show the version numbers for psvn.el and the svn command line client.
@@ -5227,6 +5227,7 @@ Currently is the output from the svn update command known."
   (define-key svn-blame-mode-map (kbd "a") 'svn-blame-highlight-author)
   (define-key svn-blame-mode-map (kbd "r") 'svn-blame-highlight-revision)
   (define-key svn-blame-mode-map (kbd "=") 'svn-blame-show-changeset)
+  (define-key svn-blame-mode-map (kbd "l") 'svn-blame-show-log)
   (define-key svn-blame-mode-map [?q] 'bury-buffer))
 
 (easy-menu-define svn-blame-mode-menu svn-blame-mode-map
@@ -5234,6 +5235,7 @@ Currently is the output from the svn update command known."
                   '("SvnBlame"
                     ["Jump to source location" svn-blame-open-source-file t]
                     ["Show changeset" svn-blame-show-changeset t]
+                    ["Show log" svn-blame-show-log t]
                     ["Highlight by author" svn-blame-highlight-author t]
                     ["Highlight by revision" svn-blame-highlight-revision t]))
 
@@ -5308,15 +5310,31 @@ The current buffer must contain a valid output from svn blame"
     (goto-line src-line-number)
     (forward-char src-line-col)))
 
-(defun svn-blame-show-changeset (arg)
-  "Show a diff for the revision at point.
-When called with a prefix argument, allow the user to edit the revision."
-  (interactive "P")
+(defun svn-blame-rev-at-point ()
   (let ((rev))
     (dolist (ov (overlays-in (svn-point-at-bol) (line-end-position)))
       (when (overlay-get ov 'svn-blame-line-info)
         (setq rev (car (overlay-get ov 'rev-info)))))
-    (svn-status-diff-show-changeset rev arg)))
+    rev))
+
+(defun svn-blame-show-changeset (arg)
+  "Show a diff for the revision at point.
+When called with a prefix argument, allow the user to edit the revision."
+  (interactive "P")
+  (svn-status-diff-show-changeset (svn-blame-rev-at-point) arg))
+
+(defun svn-blame-show-log (arg)
+  "Show the log for the revision at point.
+The output is put into the *svn-log* buffer
+The optional prefix argument ARG determines which switches are passed to `svn log':
+ no prefix               --- use whatever is in the list `svn-status-default-log-arguments'
+ prefix argument of -1:  --- use the -q switch (quiet)
+ prefix argument of 0    --- use no arguments
+ other prefix arguments: --- use the -v switch (verbose)"
+  (interactive "P")
+  (let ((switches (svn-status-svn-log-switches arg))
+        (rev (svn-blame-rev-at-point)))
+    (svn-run t t 'log "log" "--revision" rev switches)))
 
 (defun svn-blame-highlight-line-maybe (compare-func)
   (let ((reference-value)
