@@ -139,7 +139,7 @@ struct merge_cmd_baton {
   const char *path;                   /* The wc path of the second target, this
                                          can be NULL if we don't have one. */
   const svn_opt_revision_t *revision; /* Revision of second URL in the merge */
-  svn_client_ctx_t *ctx;
+  svn_client_ctx_t *ctx;              /* Client context for callbacks, etc. */
 
   /* Whether invocation of the merge_file_added() callback required
      delegation to the merge_file_changed() function for the file
@@ -356,8 +356,10 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
                                 older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
                                 merge_b->dry_run, merge_b->diff3_cmd,
-                                merge_b->merge_options, 
-                                prop_changes, subpool));
+                                merge_b->merge_options, prop_changes,
+                                merge_b->ctx->conflict_func,
+                                merge_b->ctx->conflict_baton,
+                                subpool));
         }
 
       if (content_state)
@@ -1693,7 +1695,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 }
 
 #if 0
-/* An implementation of the svn_client_conflict_resolver_func_t
+/* An implementation of the svn_wc_conflict_resolver_func_t
    interface.  Our default conflict resolution approach is to
    complain, and error out. */
 static svn_error_t *

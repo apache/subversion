@@ -1711,6 +1711,10 @@ main(int argc, const char *argv[])
 
   ctx->auth_baton = ab;
 
+  /* Set up conflict resolution callback. */
+  ctx->conflict_func = svn_cl__ignore_conflicts;
+  ctx->conflict_baton = NULL;
+
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func)(os, &command_baton, pool);
   if (err)

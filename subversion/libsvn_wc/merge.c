@@ -281,6 +281,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
                        const apr_array_header_t *prop_diff,
+                       svn_wc_conflict_resolver_func_t conflict_func,
+                       void *conflict_baton,
                        apr_pool_t *pool)
 {
   const char *tmp_target, *result_target;
@@ -292,7 +294,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   svn_boolean_t is_binary;
   const svn_wc_entry_t *entry;
   svn_boolean_t contains_conflicts;
-  const svn_prop_t *prop;
+  const svn_prop_t *mimeprop;
 
   svn_path_split(merge_target, &mt_pt, &mt_bn, pool);
 
@@ -305,9 +307,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
     }
 
   /* Decide if the merge target is a text or binary file. */
-  if ((prop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
-      && prop->value)
-    is_binary = svn_mime_type_is_binary(prop->value->data);
+  if ((mimeprop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
+      && mimeprop->value)
+    is_binary = svn_mime_type_is_binary(mimeprop->value->data);
   else
     SVN_ERR(svn_wc_has_binary_prop(&is_binary, merge_target, adm_access, pool));
 
@@ -395,13 +397,45 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 
       if (contains_conflicts && ! dry_run)  /* got a conflict */
         {
-          /* Preserve the three pre-merge files, and modify the
-             entry (mark as conflicted, track the preserved files). */ 
           const char *left_copy, *right_copy, *target_copy;
           const char *tmp_left, *tmp_right, *tmp_target_copy;
           const char *parentt, *left_base, *right_base, *target_base;
           svn_wc_adm_access_t *parent_access;
           svn_wc_entry_t tmp_entry;
+
+          /* Give the conflict resolution callback a chance to clean
+             up the conflict before we mark the file 'conflicted' */
+          if (conflict_func)
+            {
+              svn_error_t *conflict_err;
+              svn_wc_conflict_description_t cdesc;
+
+              cdesc.path = merge_target;
+              cdesc.node_kind = svn_node_file;
+              cdesc.is_binary = FALSE;
+              cdesc.mime_type = (mimeprop && mimeprop->value)
+                                  ? mimeprop->value->data : NULL;
+              cdesc.access = adm_access;
+              cdesc.action = svn_wc_conflict_action_edit;
+              cdesc.reason = svn_wc_conflict_reason_edited;
+              cdesc.base_file = left;
+              cdesc.repos_file = right;
+              cdesc.edited_file = merge_target;
+              cdesc.conflict_file = result_target;
+
+              conflict_err = conflict_func(&cdesc, conflict_baton, pool);
+              if (conflict_err == SVN_NO_ERROR)
+                {
+                  *merge_outcome = svn_wc_merge_merged;
+                  contains_conflicts = FALSE;
+                  goto merge_complete;
+                }
+              else
+                svn_error_clear(conflict_err);
+            }
+
+          /* Preserve the three pre-merge files, and modify the
+             entry (mark as conflicted, track the preserved files). */
 
           /* I miss Lisp. */
 
@@ -521,7 +555,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                    pool));
 
           *merge_outcome = svn_wc_merge_conflict;
-
         }
       else if (contains_conflicts && dry_run)
         {
@@ -561,6 +594,37 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
       const char *left_copy, *right_copy;
       const char *parentt, *left_base, *right_base;
       svn_wc_entry_t tmp_entry;
+
+      /* Give the conflict resolution callback a chance to clean
+         up the conflict before we mark the file 'conflicted' */
+      if (conflict_func)
+        {
+          svn_error_t *conflict_err;
+          svn_wc_conflict_description_t cdesc;
+
+          cdesc.path = merge_target;
+          cdesc.node_kind = svn_node_file;
+          cdesc.is_binary = TRUE;
+          cdesc.mime_type = (mimeprop && mimeprop->value)
+                                ? mimeprop->value->data : NULL;
+          cdesc.access = adm_access;
+          cdesc.action = svn_wc_conflict_action_edit;
+          cdesc.reason = svn_wc_conflict_reason_edited;
+          cdesc.base_file = left;
+          cdesc.repos_file = right;
+          cdesc.edited_file = merge_target;
+          cdesc.conflict_file = tmp_target;
+
+          conflict_err = conflict_func(&cdesc, conflict_baton, pool);
+          if (conflict_err == SVN_NO_ERROR)
+            {
+              *merge_outcome = svn_wc_merge_merged;
+              contains_conflicts = FALSE;
+              goto merge_complete;
+            }
+          else
+            svn_error_clear(conflict_err);
+        }
 
       /* reserve names for backups of left and right fulltexts */
       SVN_ERR(svn_io_open_unique_file2(NULL,
@@ -630,6 +694,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   else
     *merge_outcome = svn_wc_merge_conflict; /* dry_run for binary files. */
 
+  merge_complete:
   /* Merging is complete.  Regardless of text or binariness, we might
      need to tweak the executable bit on the new working file.  */
   if (! dry_run)
@@ -662,6 +727,8 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
               const char *diff3_cmd,
               const apr_array_header_t *merge_options,
               const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func_t conflict_func,
+              void *conflict_baton,
               apr_pool_t *pool)
 {
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
@@ -674,6 +741,7 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
                                  diff3_cmd,
                                  merge_options,
                                  prop_diff,
+                                 conflict_func, conflict_baton,
                                  pool));
 
   /* Write our accumulation of log entries into a log file */
@@ -683,6 +751,7 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
@@ -701,7 +770,8 @@ svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
   return svn_wc_merge3(merge_outcome,
                        left, right, merge_target, adm_access,
                        left_label, right_label, target_label,
-                       dry_run, diff3_cmd, merge_options, NULL, pool);
+                       dry_run, diff3_cmd, merge_options, NULL,
+                       NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -720,5 +790,6 @@ svn_wc_merge(const char *left,
   return svn_wc_merge3(merge_outcome,
                        left, right, merge_target, adm_access,
                        left_label, right_label, target_label,
-                       dry_run, diff3_cmd, NULL, NULL, pool);
+                       dry_run, diff3_cmd, NULL, NULL, NULL,
+                       NULL, pool);
 }

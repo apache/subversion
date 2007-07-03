@@ -244,6 +244,17 @@ svn_error_t *svn_cl__check_cancel(void *baton);
 
 
 
+/* Various conflict-resolution callbacks. */
+
+/* A mindless implementation of svn_wc_conflict_resolver_func_t that
+ * does absolutely nothing to resolve conflicts. */
+svn_error_t *svn_cl__ignore_conflicts(
+    const svn_wc_conflict_description_t *description,
+    void *baton,
+    apr_pool_t *pool);
+
+
+
 /*** Command-line output functions -- printing to the user. ***/
 
 /* Print out commit information found in COMMIT_INFO to the console.
