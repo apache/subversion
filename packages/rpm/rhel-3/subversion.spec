@@ -519,11 +519,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 
 %if %{make_ra_svn_bdb_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
-killall lt-svnserve || true
-sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-make svncheck CLEANUP=true FS_TYPE=bdb
-killall lt-svnserve
+make svnserveautocheck CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
@@ -541,11 +537,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 
 %if %{make_ra_svn_fsfs_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
-killall lt-svnserve || true
-sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-make svncheck CLEANUP=true FS_TYPE=fsfs
-killall lt-svnserve
+make svnserveautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
