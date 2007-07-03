@@ -445,7 +445,7 @@ extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
   /* Get a fresh copy of the pre-existing state of the WC's mergeinfo
      updating it. */
   SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry, target_wcpath,
-                                      adm_access, ctx, pool));
+                                      FALSE, adm_access, ctx, pool));
 
   /* Combine the provided mergeinfo with any mergeinfo from the WC. */
   if (wc_mergeinfo)
@@ -1243,7 +1243,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                          pool));
       SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
       SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry,
-                                          pair->src, adm_access, ctx,
+                                          pair->src, FALSE, adm_access, ctx,
                                           pool));
       if (wc_mergeinfo)
         SVN_ERR(svn_mergeinfo_merge(&mergeinfo, wc_mergeinfo, pool));
