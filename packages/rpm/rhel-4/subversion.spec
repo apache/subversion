@@ -574,9 +574,10 @@ make install-swig-pl DESTDIR=$RPM_BUILD_ROOT
 # Clean up unneeded files for package installation
 rm -rf $RPM_BUILD_ROOT/%{_libdir}/perl5/%{perl_version}
 
-# Set up tools package files.
+# Set up contrib and tools package files.
 mkdir -p $RPM_BUILD_ROOT/%{_libdir}/subversion
 cp -r tools $RPM_BUILD_ROOT/%{_libdir}/subversion
+cp -r contrib $RPM_BUILD_ROOT/%{_libdir}/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
@@ -651,3 +652,4 @@ rm -rf $RPM_BUILD_ROOT
 %files tools
 %defattr(-,root,root)
 %{_libdir}/subversion/tools
+%{_libdir}/subversion/contrib
