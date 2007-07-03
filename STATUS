@@ -87,6 +87,19 @@ Candidate changes:
     Votes:
       +1: glasser, dlr
 
+  * r25520, r25595
+    Fix sporadic file and directory removal failing on Windows.
+    Justification:
+      On some systems, the problem is severe enough that 'svnadmin load'
+      cannot complete on even relatively small repositories.
+    Notes:
+      There's a small merge conflict when merging because the directory rewind
+      code is different on trunk, but the branch's rewind code is already
+      limited to OSX, so the trunk code to prevent it on Windows is not
+      needed.
+    Votes:
+      +1: djh
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
