@@ -101,7 +101,7 @@ Candidate changes:
       r25616 contains a formatting tweak (afollow-up to r25613).
     Branch: 1.4.x-issue-2804
     Votes:
-      +1: dlr
+      +1: dlr, vgeorgescu
 
   * r25607
     Tweak the expected output of one test so that it passes against both 1.4.x
