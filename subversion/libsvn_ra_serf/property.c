@@ -2,7 +2,7 @@
  * property.c : property routines for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,6 +22,8 @@
 
 #include "svn_path.h"
 #include "svn_base64.h"
+
+#include "svn_private_config.h"
 
 #include "ra_serf.h"
 
@@ -345,7 +347,10 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
             }
           else
             {
-              abort();
+              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
+                                       NULL,
+                                       _("Got unrecognized encoding '%s'"),
+                                       info->encoding);
             }
         }
 
