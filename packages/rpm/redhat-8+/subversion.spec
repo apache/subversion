@@ -577,9 +577,10 @@ mv $RPM_BUILD_ROOT/lib/perl5/site_perl $RPM_BUILD_ROOT/%{_libdir}/perl5
 mv $RPM_BUILD_ROOT/share/man/man3 $RPM_BUILD_ROOT/usr/share/man
 rm -rf $RPM_BUILD_ROOT/lib $RPM_BUILD_ROOT/share $RPM_BUILD_ROOT/%{_libdir}/perl5/site_perl/5.8.0/i386-linux-thread-multi/perllocal.pod
 
-# Set up tools package files.
+# Set up contrib and tools package files.
 mkdir -p $RPM_BUILD_ROOT/%{_libdir}/subversion
 cp -r tools $RPM_BUILD_ROOT/%{_libdir}/subversion
+cp -r contrib $RPM_BUILD_ROOT/%{_libdir}/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
@@ -654,3 +655,4 @@ rm -rf $RPM_BUILD_ROOT
 %files tools
 %defattr(-,root,root)
 %{_libdir}/subversion/tools
+%{_libdir}/subversion/contrib
