@@ -1792,19 +1792,42 @@ svn_wc_revert2(const char *path,
            || entry->schedule == svn_wc_schedule_replace)
     {
       /* Revert the prop and text mods (if any). */
-      if (entry->kind == svn_node_file)
-        SVN_ERR(revert_admin_things(parent_access, bname,
-                                    entry, &reverted,
-                                    use_commit_times, pool));
+      switch (entry->kind)
+        {
+        case svn_node_file:
+          SVN_ERR(revert_admin_things(parent_access, bname, entry,
+                                      &reverted, use_commit_times, pool));
+          break;
 
-      if (entry->kind == svn_node_dir)
-        SVN_ERR(revert_admin_things(dir_access, SVN_WC_ENTRY_THIS_DIR, entry,
-                                    &reverted, use_commit_times, pool));
+        case svn_node_dir:
+          SVN_ERR(revert_admin_things(dir_access, SVN_WC_ENTRY_THIS_DIR, entry,
+                                      &reverted, use_commit_times, pool));
 
-      /* Force recursion on replaced directories. */
-      if ((entry->kind == svn_node_dir)
-          && (entry->schedule == svn_wc_schedule_replace))
-        recursive = TRUE;
+          /* Also revert the entry in the parent (issue #2804). */
+          if (reverted && bname)
+            {
+              svn_boolean_t dummy_reverted;
+              svn_wc_entry_t *entry_in_parent;
+              apr_hash_t *entries;
+
+              SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
+                                          pool));
+              entry_in_parent = apr_hash_get(entries, bname,
+                                             APR_HASH_KEY_STRING);
+              SVN_ERR(revert_admin_things(parent_access, bname,
+                                          entry_in_parent, &dummy_reverted,
+                                          use_commit_times, pool));
+            }
+
+          /* Force recursion on replaced directories. */
+          if (entry->schedule == svn_wc_schedule_replace)
+            recursive = TRUE;
+          break;
+
+        default:
+          /* No op? */
+          break;
+        }
     }
 
   /* If PATH was reverted, tell our client that. */

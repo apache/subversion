@@ -632,6 +632,33 @@ def revert_propdel__file(sbox):
                                      iota_path)
 
 
+#----------------------------------------------------------------------
+# Test for issue #2804.
+def status_of_missing_dir_after_revert(sbox):
+  "status after schedule-delete, revert, and local rm"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_D_G_path = os.path.join(wc_dir, "A", "D", "G")
+
+  svntest.actions.run_and_verify_svn(None, None, [], "rm", A_D_G_path)
+  expected_output = re.escape("Reverted '" + A_D_G_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     A_D_G_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "status", wc_dir)
+
+  svntest.main.safe_rmtree(A_D_G_path)
+
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
+                                                      "status", wc_dir)
+  expected_output = "!      " + A_D_G_path + "\n"
+  if expected_output not in output:
+    raise svntest.Failure("Expected output '%s'" % expected_output)
+    
+
+
 ########################################################################
 # Run the tests
 
@@ -652,6 +679,7 @@ test_list = [ None,
               revert_propset__file,
               revert_propdel__dir,
               revert_propdel__file,
+              status_of_missing_dir_after_revert,
              ]
 
 if __name__ == '__main__':
