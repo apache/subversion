@@ -728,30 +728,38 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                        dry_run = 0)
 
   # now test if the revert works ok
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output =\
    ["Reverted '" + G_path + "'\n",
     "Reverted '" + os.path.join(G_path, 'pi') + "'\n",
     "Reverted '" + os.path.join(G_path, 'rho') + "'\n",
     "Reverted '" + os.path.join(G_path, 'tau') + "'\n",
     "Reverted '" + os.path.join(G_path, 'alpha') + "'\n",
-    "Reverted '" + os.path.join(G_path, 'beta') + "'\n"])
+    "Reverted '" + os.path.join(G_path, 'beta') + "'\n"]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
-                                     G_path)
+  out, err = svntest.actions.run_and_verify_svn(None, None, [], "revert", "-R",
+                                                G_path)
+  for line in out:
+    if not line in expected_output:
+      raise svntest.Failure("Expected output '%s'" % expected_output)
 
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output =\
     ["?      " + os.path.join(G_path, "pi") + "\n",
      "?      " + os.path.join(G_path, "rho") + "\n",
-     "?      " + os.path.join(G_path, "tau") + "\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     "status", wc_dir)
+     "?      " + os.path.join(G_path, "tau") + "\n"]
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                "status", wc_dir)
+  for line in out:
+    if not line in expected_output:
+      raise svntest.Failure("Expected output '%s'" % expected_output)
 
   svntest.main.safe_rmtree(G_path)
 
-  expected_output = svntest.actions.UnorderedOutput(
-    ["!      " + G_path + "\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
-                                     wc_dir)
+  expected_output = ["!      " + G_path + "\n"]
+  out, err = svntest.actions.run_and_verify_svn(None, None, [], "status",
+                                                wc_dir)
+  for line in out:
+    if not line in expected_output:
+      raise svntest.Failure("Expected output '%s'" % expected_output)
 
 ########################################################################
 # Run the tests
