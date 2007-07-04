@@ -188,3 +188,12 @@ class WC(object):
                             svn_opt_revision_t(), overwrite,
                             ignore_externals, recurse, eol, self.client,
                             self.iterpool)
+        
+    def resolved(self, path="", recursive=True):
+        """Resolve a conflict on PATH. Marks the conflict as resolved, does
+        not change the text of PATH.
+        
+        If RECURSIVE is True (True by default) then directories will be
+        recursed."""
+        svn_client_resolved(path, recursive, self.client, self.iterpool)
+        self.iterpool.clear()
