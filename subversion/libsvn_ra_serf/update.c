@@ -1185,7 +1185,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!rev)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing revision attr in target-revision element"));
         }
 
       ctx->update_editor->set_target_revision(ctx->update_baton,
@@ -1201,7 +1203,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!rev)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing revision attr in open-directory element"));
         }
 
       info = push_state(parser, ctx, OPEN_DIR);
@@ -1234,14 +1238,18 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!rev)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing revision attr in open-directory element"));
         }
 
       dirname = svn_ra_serf__find_attr(attrs, "name");
 
       if (!dirname)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing name attr in open-directory element"));
         }
 
       info = push_state(parser, ctx, OPEN_DIR);
@@ -1272,6 +1280,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       report_info_t *info;
 
       dir_name = svn_ra_serf__find_attr(attrs, "name");
+      if (!dir_name)
+        {
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing name attr in add-directory element"));
+        }
 
       info = push_state(parser, ctx, ADD_DIR);
 
@@ -1303,14 +1317,18 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!file_name)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing name attr in open-file element"));
         }
 
       rev = svn_ra_serf__find_attr(attrs, "rev");
 
       if (!rev)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing revision attr in open-file element"));
         }
 
       info = push_state(parser, ctx, OPEN_FILE);
@@ -1332,7 +1350,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!file_name)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing name attr in add-file element"));
         }
 
       info = push_state(parser, ctx, ADD_FILE);
@@ -1357,7 +1377,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!file_name)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing name attr in delete-entry element"));
         }
 
       info = parser->state->private;
@@ -1386,7 +1408,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       if (!file_name)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing name attr in absent-directory element"));
         }
 
       info = parser->state->private;
@@ -1419,6 +1443,13 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info = push_state(parser, ctx, PROP);
 
           full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          if (!full_prop_name)
+            {
+              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                       _("Missing name attr in %s element"),
+                                       name.name);
+            }
+
           colon = strchr(full_prop_name, ':');
 
           if (colon)
@@ -1489,6 +1520,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info = push_state(parser, ctx, PROP);
 
           full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          if (!full_prop_name)
+            {
+              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                       _("Missing name attr in %s element"),
+                                       name.name);
+            }
           colon = strchr(full_prop_name, ':');
 
           if (colon)
@@ -1777,7 +1814,10 @@ end_report(svn_ra_serf__xml_parser_t *parser,
             }
           else
             {
-              abort();
+              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
+                                       NULL,
+                                       _("Got unrecognized encoding '%s'"),
+                                       info->prop_encoding);
             }
 
         }
