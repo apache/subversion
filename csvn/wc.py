@@ -199,3 +199,16 @@ class WC(object):
         svn_client_resolved(self._build_path(path), recursive, self.client,
                             self.iterpool)
         self.iterpool.clear()
+
+    def mkdir(self, paths):
+        """Create a directory or directories in the working copy. PATHS can
+        be either a single path of a list of paths to be created."""
+        paths = self._build_path_list(paths)
+        
+        # The commit info shouldn't matter, this is a method of the WC
+        # class, so it isn't intended for remote operations.
+        info = pointer(svn_commit_info_t())
+        
+        svn_client_mkdir2(byref(info), paths, self.client, self.iterpool)
+        
+        self.iterpool.clear()
