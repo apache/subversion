@@ -951,8 +951,8 @@ typedef enum svn_wc_conflict_reason_t
  * working copy.  Passed to @c svn_wc_conflict_resolver_func_t.
  *
  * @note Fields may be added to the end of this structure in future
- * versions.  Therefore, users shouldn't allocate structures of this
- * type, to preserve binary compatibility.
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
  *
  * @since New in 1.5.
  */
@@ -1934,8 +1934,8 @@ enum svn_wc_status_kind
  * version control.
  *
  * @note Fields may be added to the end of this structure in future
- * versions.  Therefore, users shouldn't allocate structures of this
- * type, to preserve binary compatibility.
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
  *
  * @since New in 1.2.
  */
@@ -4178,8 +4178,8 @@ svn_error_t *svn_wc_remove_lock(const char *path,
  * and whether any parts are switched or locally modified.
  *
  * @note Fields may be added to the end of this structure in future
- * versions.  Therefore, users shouldn't allocate structures of this
- * type, to preserve binary compatibility.
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
  *
  * @since New in 1.4
  */
