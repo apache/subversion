@@ -6921,7 +6921,7 @@ test_list = [ None,
               diff_repos_does_not_update_mergeinfo,
               avoid_reflected_revs,
               Skip(mergeinfo_and_skipped_paths, svntest.main.is_ra_type_file),
-              XFail(update_loses_mergeinfo),
+              update_loses_mergeinfo,
              ]
 
 if __name__ == '__main__':
