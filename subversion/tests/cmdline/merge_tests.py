@@ -6747,6 +6747,117 @@ def mergeinfo_and_skipped_paths(sbox):
                                       '/A/D/H/omega:1\n'],
                                      [], 'pl', '-vR', omega_path)
 
+def update_loses_mergeinfo(sbox):
+  "update does not merge mergeinfo"
+
+  """
+  When a working copy receives a fresh svn:mergeinfo property due to update,
+  and working copy has some local mergeinfo(yet to be added), local mergeinfo
+  is left unchanged.
+  """
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_C_wc_dir = wc_dir + '/A/C'
+  A_B_url = sbox.repo_url + '/A/B'
+  A_B_J_url = sbox.repo_url + '/A/B/J'
+  A_B_K_url = sbox.repo_url + '/A/B/K'
+  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
+                                     [], 'mkdir', '-m', 'rev 2', A_B_J_url)
+  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
+                                     [], 'mkdir', '-m', 'rev 3', A_B_K_url)
+  
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  short_A_C_wc_dir = shorten_path_kludge(A_C_wc_dir)
+  expected_output = wc.State(short_A_C_wc_dir, {'J' : Item(status='A ')})
+  expected_disk = wc.State('', {
+    'J'       : Item(),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:2'}),
+    })
+  expected_status = wc.State(short_A_C_wc_dir,
+                             { ''    : Item(wc_rev=1, status=' M'),
+                               'J'   : Item(status='A ', 
+                                            wc_rev='-', copied='+')
+                             }
+                            )
+  expected_skip = wc.State('', { })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_C_wc_dir, '1', '2',
+                                       A_B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       check_props=1)
+  os.chdir(saved_cwd)
+  expected_output = wc.State(A_C_wc_dir, {
+    ''  : Item(verb='Sending'),
+    'J' : Item(verb='Adding')
+    })
+  expected_status = wc.State(A_C_wc_dir,
+                             { ''    : Item(status='  ', wc_rev=4),
+                               'J'   : Item(status='  ', wc_rev=4)
+                             }
+                            )
+  svntest.actions.run_and_verify_commit(A_C_wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        A_C_wc_dir)
+
+  other_A_C_wc_dir = other_wc + '/A/C'
+  short_other_A_C_wc_dir = shorten_path_kludge(other_A_C_wc_dir)
+  expected_output = wc.State(short_other_A_C_wc_dir, {'K' : Item(status='A ')})
+  expected_disk = wc.State('', {
+    'K'       : Item(),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3'}),
+    })
+  expected_status = wc.State(short_other_A_C_wc_dir,
+                             { ''    : Item(wc_rev=1, status=' M'),
+                               'K'   : Item(status='A ', 
+                                            wc_rev='-', copied='+')
+                             }
+                            )
+  expected_skip = wc.State('', { })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_other_A_C_wc_dir, '2', '3',
+                                       A_B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       check_props=1)
+  os.chdir(saved_cwd)
+  expected_output = wc.State(other_A_C_wc_dir, 
+                             {'J' : Item(status='A '),
+                              ''  : Item(status=' G')
+                             }
+                            )
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:2-3'}),
+    'J'       : Item(),
+    'K'       : Item(),
+    })
+  expected_status = wc.State(other_A_C_wc_dir,
+                             { ''    : Item(wc_rev=4, status=' M'),
+                               'J'   : Item(status='  ', wc_rev='4'),
+                               'K'   : Item(status='A ', 
+                                            wc_rev='-', copied='+')
+                             }
+                            )
+  svntest.actions.run_and_verify_update(other_A_C_wc_dir, 
+                                        expected_output,
+                                        expected_disk, 
+                                        expected_status,
+                                        check_props=1)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -6810,6 +6921,7 @@ test_list = [ None,
               diff_repos_does_not_update_mergeinfo,
               avoid_reflected_revs,
               Skip(mergeinfo_and_skipped_paths, svntest.main.is_ra_type_file),
+              XFail(update_loses_mergeinfo),
              ]
 
 if __name__ == '__main__':
