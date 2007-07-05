@@ -1527,9 +1527,9 @@ typedef struct svn_wc_entry_t
    */
   const char *changelist;
 
-  /** Size of the file after being translated into local representation,
-   * or:
-   *  @c SVN_WC_ENTRY_WORKING_SIZE_UNKOWN     if unknown.
+  /** Size of the file after being translated into local
+   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN if
+   * unknown.
    *
    * @since New in 1.5.
    */

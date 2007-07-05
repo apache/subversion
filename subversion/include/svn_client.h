@@ -3819,7 +3819,7 @@ typedef struct svn_info_t
   
   /** 
    * The size of the file after being translated into its local
-   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKOWN if
+   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN if
    * unknown.  Not applicable for directories.
    * @since New in 1.5.
    */
