@@ -2019,6 +2019,22 @@ public class BasicTests extends SVNTests
         assertEquals(failureMsg, 1, infos.length);
         infos = client.info2(thisTest.getWCPath(), null, null, true);
         assertEquals(failureMsg, 21, infos.length);
+        for (int i = 0; i < infos.length; i++)
+        {
+            Info2 info = infos[i];
+            assertNull("Unexpected changelist present",
+                       info.getChangelistName());
+
+            boolean isFile = info.getKind() == NodeKind.file;
+            assertTrue("Unexpected working file size " + info.getWorkingSize()
+                       + " for '" + info + '\'',
+                       (isFile ? info.getWorkingSize() > -1 :
+                        info.getWorkingSize() == -1));
+            // We shouldn't know the repository file size when only
+            // examining the WC.
+            assertEquals("Unexpected repos file size for '" + info + '\'',
+                         -1, info.getReposSize());
+        }
         Revision rev = new Revision.Number(1);
         infos = client.info2(thisTest.getWCPath(), rev, rev, true);
         assertEquals(failureMsg, 21, infos.length);
