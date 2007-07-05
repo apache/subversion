@@ -32,6 +32,7 @@
 #include "svn_utf.h"
 #include "utf_impl.h"
 #include "svn_private_config.h"
+#include "win32_xlate.h"
 
 
 
@@ -252,10 +253,12 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
     pool = apr_hash_pool_get(xlate_handle_hash);
 
   /* Try to create a handle. */
-#ifndef AS400
-  apr_err = apr_xlate_open(&handle, topage, frompage, pool);
-#else
+#if defined( WIN32)
+  apr_err = svn_subr__win32_xlate_open(&handle, topage, frompage, pool);
+#elif defined(AS400)
   apr_err = apr_xlate_open(&handle, (int)topage, (int)frompage, pool);
+#else
+  apr_err = apr_xlate_open(&handle, topage, frompage, pool);
 #endif
 
   if (APR_STATUS_IS_EINVAL(apr_err) || APR_STATUS_IS_ENOTIMPL(apr_err))
@@ -454,6 +457,12 @@ convert_to_stringbuf(xlate_handle_node_t *node,
                      svn_stringbuf_t **dest,
                      apr_pool_t *pool)
 {
+#ifdef WIN32
+  apr_status_t apr_err;
+
+  apr_err = svn_subr__win32_xlate_to_stringbuf(node->handle, src_data,
+                                               src_length, dest, pool);
+#else
   apr_size_t buflen = src_length * 2;
   apr_status_t apr_err;
   apr_size_t srclen = src_length;
@@ -507,6 +516,7 @@ convert_to_stringbuf(xlate_handle_node_t *node,
       (*dest)->len += ((buflen - (*dest)->len) - destlen);
 
     } while (! apr_err && srclen);
+#endif
 
   /* If we exited the loop with an error, return the error. */
   if (apr_err)
