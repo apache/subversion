@@ -146,6 +146,10 @@ enable_sasl = False
 # ('neon', 'serf')
 http_library = None
 
+# Global variable indicating what the minor version of the server
+# tested against is (4 for 1.4.x, for example).
+server_minor_version = 5
+
 # Global variable indicating if this is a child process and no cleanup
 # of global directories is needed.
 is_child_process = False
@@ -491,6 +495,8 @@ def create_repos(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   opts = ("--bdb-txn-nosync",)
+  if server_minor_version < 5:
+    opts += ("--pre-1.5-compatible",)
   if fs_type is not None:
     opts += ("--fs-type=" + fs_type,)
   stdout, stderr = run_command(svnadmin_binary, 1, 0, "create", path, *opts)
@@ -699,6 +705,15 @@ def is_os_windows():
 
 def is_posix_os():
   return (os.name == 'posix')
+
+def server_has_mergeinfo():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
+def server_has_revprop_commit():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
 
 ######################################################################
 # Sandbox handling
@@ -1055,6 +1070,7 @@ def run_tests(test_list, serial_only = False):
   global svnversion_binary
   global command_line_parsed
   global http_library
+  global server_minor_version
   
   testnums = []
   # Should the tests be listed (as opposed to executed)?
@@ -1065,7 +1081,7 @@ def run_tests(test_list, serial_only = False):
   opts, args = my_getopt(sys.argv[1:], 'vhpc',
                          ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
                           'enable-sasl', 'help', 'parallel', 'bin=',
-                          'http-library='])
+                          'http-library=', 'server-minor-version='])
 
   for arg in args:
     if arg == "list":
@@ -1115,6 +1131,12 @@ def run_tests(test_list, serial_only = False):
 
     elif opt == '--http-library':
       http_library = val
+
+    elif opt == '--server-minor-version':
+      server_minor_version = int(val)
+      if server_minor_version < 4 or server_minor_version > 6:
+        print "ERROR: test harness only supports server minor version 4 or 5"
+        sys.exit(1)
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
