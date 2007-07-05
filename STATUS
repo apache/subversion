@@ -100,6 +100,8 @@ Candidate changes:
       r25587 contains an unrelated refactoring which simplifies merging.
       r25616 contains a formatting tweak (afollow-up to r25613).
       r25640 adds an extra regression test for this issue
+             This test was adapted slightly on the backport branch to make it
+             work on 1.4.x.
       r25641 contains a small comment update to r25640
     Branch: 1.4.x-issue-2804
     Votes:
