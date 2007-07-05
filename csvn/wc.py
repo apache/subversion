@@ -160,11 +160,12 @@ class WC(object):
         self.iterpool.clear()
         
     def cleanup(self, path=""):
-        """Recursivley cleanup the working copy. Finish any incomplete
+        """Recursively cleanup the working copy. Finish any incomplete
         operations and release all locks.
         
-        If PATH is not provided, it defaults to ""."""
-        svn_client_cleanup(path, self.client, self.iterpool)
+        If PATH is not provided, it defaults to the WC root."""
+        svn_client_cleanup(self._build_path(path), self.client,
+                            self.iterpool)
         
     def export(self, from_path, to_path, overwrite=False,
                 ignore_externals=True, recurse=True, eol=NULL):
@@ -195,5 +196,6 @@ class WC(object):
         
         If RECURSIVE is True (True by default) then directories will be
         recursed."""
-        svn_client_resolved(path, recursive, self.client, self.iterpool)
+        svn_client_resolved(self._build_path(path), recursive, self.client,
+                            self.iterpool)
         self.iterpool.clear()
