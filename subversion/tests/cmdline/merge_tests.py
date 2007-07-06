@@ -300,9 +300,9 @@ def textual_merges_galore(sbox):
   expected_output = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
                              {'rho' : Item(status='G ')})
   expected_disk = wc.State("", {
-    'pi'    : wc.StateItem("This is the file 'pi'.\n"),
-    'rho'   : wc.StateItem("This is the file 'rho'.\n"),
-    'tau'   : wc.StateItem("This is the file 'tau'.\n"),
+    'pi'    : Item("This is the file 'pi'.\n"),
+    'rho'   : Item("This is the file 'rho'.\n"),
+    'tau'   : Item("This is the file 'tau'.\n"),
     })
   expected_disk.tweak('rho',
                       contents=other_rho_text
