@@ -98,15 +98,15 @@ Candidate changes:
     Notes:
       r25586 had to be retrofitted for svntest API differences.
       r25587 contains an unrelated refactoring which simplifies merging.
-      r25616 contains a formatting tweak (afollow-up to r25613).
+      r25616 contains a formatting tweak (a follow-up to r25613).
       r25640 adds an extra regression test for this issue
              This test was adapted slightly on the backport branch to make it
              work on 1.4.x.
       r25641 contains a small comment update to r25640
     Branch: 1.4.x-issue-2804
     Votes:
-      +1: lgo
-      +1: dlr, vgeorgescu (without r25640, -41)
+      +1: dlr, lgo
+      +1: vgeorgescu (without r25640, -41)
 
   * r25607
     Tweak the expected output of one test so that it passes against both 1.4.x
