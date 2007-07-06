@@ -986,10 +986,40 @@ typedef struct svn_wc_conflict_description_t
 
   const char *base_file;     /* common ancestor of the two files being merged */
   const char *repos_file;    /* repository's version of the file */
-  const char *edited_file;   /* user's locally-edited version of the file */
-  const char *conflict_file; /* merged version of file; has conflict markers */
+  const char *user_file;     /* user's locally-edited version of the file */
+  const char *merged_file;   /* merged version of file; has conflict markers */
 
 } svn_wc_conflict_description_t;
+
+
+/** The final result returned by the conflict callback.  If the
+ * callback wholly resolves the conflict by itself, it would return @c
+ * svn_wc_conflict_result_resolved.  If the conflict still persists,
+ * then return @c svn_wc_conflict_result_conflicted.  In the case of
+ * file conflicts, the callback may instead signal that the user
+ * wishes to resolve the conflict by "choosing" one of the four
+ * fulltext files.
+ *
+ * @since New in 1.5.
+ */
+typedef enum svn_wc_conflict_result_t
+{
+  svn_wc_conflict_result_conflicted,    /* user did nothing; conflict remains */
+  svn_wc_conflict_result_resolved,      /* user has resolved the conflict */
+
+  /* The following results only apply to file-conflicts.  Note that
+     they're all specific ways of saying that the conflict is
+     resolved, in the sense that the user has chosen one of the four
+     files. The caller of the conflict-callback is responsible for
+     "installing" the chosen file as the final version of the file.*/
+
+  svn_wc_conflict_result_choose_base,   /* user chooses the base file */
+  svn_wc_conflict_result_choose_repos,  /* user chooses the repository file */
+  svn_wc_conflict_result_choose_user,   /* user chooses own version of file */
+  svn_wc_conflict_result_choose_merged  /* user chooses the merged-file
+                                           (which she may have
+                                           manually edited) */
+} svn_wc_conflict_result_t;
 
 
 /** A callback used in svn_client_merge3(), svn_client_update3(), and
@@ -999,10 +1029,9 @@ typedef struct svn_wc_conflict_description_t
  * @a description describes the exact nature of the conflict, and
  * provides information to help resolve it.  @a baton is a closure
  * object; it should be provided by the implementation, and passed by
- * the caller.  All allocations should be performed in @a pool.
- *
- * If the callback wholly resolves the conflict, return SVN_NO_ERROR.
- * If the conflict still persists, it return an svn_error_t.
+ * the caller.  All allocations should be performed in @a pool.  When
+ * finished, the callback signals its resolution by setting @a *result
+ * to a proper enumerated state.  (See @c svn_wc_conflict_result_t.)
  *
  * Implementations of this callback are free to present the conflict
  * using any user interface.  This may include simple contextual
@@ -1016,9 +1045,10 @@ typedef struct svn_wc_conflict_description_t
  * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
-  (const svn_wc_conflict_description_t *description,
-   void *baton,
-   apr_pool_t *pool);
+    (svn_wc_conflict_result_t *result,
+     const svn_wc_conflict_description_t *description,
+     void *baton,
+     apr_pool_t *pool);
 
 /** @} */
 

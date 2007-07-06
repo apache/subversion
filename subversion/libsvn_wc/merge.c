@@ -256,6 +256,7 @@ maybe_update_target_eols(const char **new_target,
   return SVN_NO_ERROR;
 }
 
+
 /* Internal version of svn_wc_merge, also used to (loggily) merge updates
    from the repository.
 
@@ -286,7 +287,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        apr_pool_t *pool)
 {
   const char *tmp_target, *result_target;
-  const char *mt_pt, *mt_bn;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
   const char *log_merge_target =
     svn_path_is_child(adm_path, merge_target, pool);
@@ -295,8 +295,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   const svn_wc_entry_t *entry;
   svn_boolean_t contains_conflicts;
   const svn_prop_t *mimeprop;
-
-  svn_path_split(merge_target, &mt_pt, &mt_bn, pool);
 
   /* Sanity check:  the merge target must be under revision control. */
   SVN_ERR(svn_wc_entry(&entry, merge_target, adm_access, FALSE, pool));
@@ -409,6 +407,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
             {
               svn_error_t *conflict_err;
               svn_wc_conflict_description_t cdesc;
+              svn_wc_conflict_result_t result;
 
               cdesc.path = merge_target;
               cdesc.node_kind = svn_node_file;
@@ -420,18 +419,70 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
               cdesc.reason = svn_wc_conflict_reason_edited;
               cdesc.base_file = left;
               cdesc.repos_file = right;
-              cdesc.edited_file = merge_target;
-              cdesc.conflict_file = result_target;
+              cdesc.user_file = merge_target;
+              cdesc.merged_file = result_target;
 
-              conflict_err = conflict_func(&cdesc, conflict_baton, pool);
-              if (conflict_err == SVN_NO_ERROR)
+              SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
+              switch (result)
                 {
-                  *merge_outcome = svn_wc_merge_merged;
-                  contains_conflicts = FALSE;
-                  goto merge_complete;
+                  /* If the callback wants to use one of the fulltexts
+                     to resolve the conflict, so be it.*/
+                  case svn_wc_conflict_result_choose_base:
+                    {
+                      SVN_ERR(svn_wc__loggy_copy
+                              (log_accum, NULL, adm_access,
+                               svn_wc__copy_translate,
+                               svn_path_is_child(adm_path, left, pool),
+                               svn_path_is_child(adm_path, merge_target, pool),
+                               FALSE, pool));
+                      *merge_outcome = svn_wc_merge_merged;
+                      contains_conflicts = FALSE;
+                      goto merge_complete;
+                    }
+                  case svn_wc_conflict_result_choose_repos:
+                    {
+                      SVN_ERR(svn_wc__loggy_copy
+                              (log_accum, NULL, adm_access,
+                               svn_wc__copy_translate,
+                               svn_path_is_child(adm_path, right, pool),
+                               svn_path_is_child(adm_path, merge_target, pool),
+                               FALSE, pool));
+                      *merge_outcome = svn_wc_merge_merged;
+                      contains_conflicts = FALSE;
+                      goto merge_complete;
+                    }
+                  case svn_wc_conflict_result_choose_user:
+                    {
+                      /* Do nothing to merge_target, let it live untouched! */
+                      *merge_outcome = svn_wc_merge_merged;
+                      contains_conflicts = FALSE;
+                      goto merge_complete;
+                    }
+
+                    /* For the case of 3-way file merging, we don't
+                       really distinguish between these return values;
+                       if the callback claims to have "generally
+                       resolved" the situation, we still interpret
+                       that as "OK, we'll assume the merged version is
+                       good to use". */
+                  case svn_wc_conflict_result_resolved:
+                  case svn_wc_conflict_result_choose_merged:
+                    {
+                      SVN_ERR(svn_wc__loggy_copy
+                              (log_accum, NULL, adm_access,
+                               svn_wc__copy_translate,
+                               svn_path_is_child(adm_path, result_target, pool),
+                               svn_path_is_child(adm_path, merge_target, pool),
+                               FALSE, pool));
+                      *merge_outcome = svn_wc_merge_merged;
+                      contains_conflicts = FALSE;
+                      goto merge_complete;
+                    }
+                  default:
+                    {
+                      /* Assume conflict remains, fall through to code below. */
+                    }
                 }
-              else
-                svn_error_clear(conflict_err);
             }
 
           /* Preserve the three pre-merge files, and modify the
@@ -601,6 +652,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
         {
           svn_error_t *conflict_err;
           svn_wc_conflict_description_t cdesc;
+          svn_wc_conflict_result_t result;
 
           cdesc.path = merge_target;
           cdesc.node_kind = svn_node_file;
@@ -612,18 +664,55 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           cdesc.reason = svn_wc_conflict_reason_edited;
           cdesc.base_file = left;
           cdesc.repos_file = right;
-          cdesc.edited_file = merge_target;
-          cdesc.conflict_file = tmp_target;
+          cdesc.user_file = merge_target;
+          cdesc.merged_file = NULL;     /* notice there is NO merged file! */
 
-          conflict_err = conflict_func(&cdesc, conflict_baton, pool);
-          if (conflict_err == SVN_NO_ERROR)
+          SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
+          switch (result)
             {
-              *merge_outcome = svn_wc_merge_merged;
-              contains_conflicts = FALSE;
-              goto merge_complete;
+              /* For a binary file, there's no merged file to look at.
+                 Two reasonable responses are to choose the base or
+                 repos versions of the file. */
+              case svn_wc_conflict_result_choose_base:
+                {
+                  SVN_ERR(svn_wc__loggy_copy
+                          (log_accum, NULL, adm_access,
+                           svn_wc__copy_translate,
+                           svn_path_is_child(adm_path, left, pool),
+                           svn_path_is_child(adm_path, merge_target, pool),
+                           FALSE, pool));
+                  *merge_outcome = svn_wc_merge_merged;
+                  contains_conflicts = FALSE;
+                  goto merge_complete;
+                }
+              case svn_wc_conflict_result_choose_repos:
+                {
+                  SVN_ERR(svn_wc__loggy_copy
+                          (log_accum, NULL, adm_access,
+                           svn_wc__copy_translate,
+                           svn_path_is_child(adm_path, right, pool),
+                           svn_path_is_child(adm_path, merge_target, pool),
+                           FALSE, pool));
+                  *merge_outcome = svn_wc_merge_merged;
+                  contains_conflicts = FALSE;
+                  goto merge_complete;
+                }
+                /* For a binary file, if the response is to use the
+                   user's file, we do nothing.  We also do nothing if
+                   the response claims to have already resolved the
+                   problem.*/
+              case svn_wc_conflict_result_resolved:
+              case svn_wc_conflict_result_choose_user:
+                {
+                  *merge_outcome = svn_wc_merge_merged;
+                  contains_conflicts = FALSE;
+                  goto merge_complete;
+                }
+              default:
+                {
+                  /* Assume conflict remains, fall through to code below. */
+                }
             }
-          else
-            svn_error_clear(conflict_err);
         }
 
       /* reserve names for backups of left and right fulltexts */
