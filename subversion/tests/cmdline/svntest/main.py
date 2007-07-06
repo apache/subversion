@@ -378,7 +378,11 @@ def create_config_dir(cfgdir, config_contents=None, server_contents=None):
 
   # define default config file contents if none provided
   if config_contents is None:
-    config_contents = "#\n"
+    config_contents = """
+#
+[miscellany]
+interactive-conflicts = false
+"""
 
   # define default server file contents if none provided
   if server_contents is None:

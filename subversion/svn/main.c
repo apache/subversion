@@ -973,6 +973,7 @@ main(int argc, const char *argv[])
   svn_config_t *cfg;
   svn_boolean_t used_change_arg = FALSE;
   svn_boolean_t descend = TRUE;
+  svn_boolean_t interactive_conflicts = FALSE;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -1712,8 +1713,24 @@ main(int argc, const char *argv[])
   ctx->auth_baton = ab;
 
   /* Set up conflict resolution callback. */
-  ctx->conflict_func = svn_cl__ignore_conflicts;
-  ctx->conflict_baton = NULL;
+  if ((err = svn_config_get_bool(cfg, &interactive_conflicts,
+                                 SVN_CONFIG_SECTION_MISCELLANY,
+                                 SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
+                                 TRUE)))  /* ### interactivity on by default.
+                                                 we can change this. */
+    svn_handle_error2(err, stderr, TRUE, "svn: ");
+
+  if (interactive_conflicts
+      && (! opt_state.non_interactive ))
+    {
+      ctx->conflict_func = svn_cl__interactive_conflict_handler;
+      ctx->conflict_baton = NULL;
+    }
+  else
+    {
+      ctx->conflict_func = NULL;
+      ctx->conflict_baton = NULL;
+    }
 
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func)(os, &command_baton, pool);
