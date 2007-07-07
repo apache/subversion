@@ -41,7 +41,7 @@ static PSecurityFunctionTable sspi = NULL;
 /* Loads security.dll in memory on the first call. Afterwards the 
    function table SSPI is loaded which we can use it to call SSPI's 
    public functions. */
-svn_error_t *
+static svn_error_t *
 load_security_dll()
 {
   if (security_dll != INVALID_HANDLE_VALUE)
