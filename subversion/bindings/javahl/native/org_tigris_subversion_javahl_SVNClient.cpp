@@ -29,6 +29,7 @@
 #include "Revision.h"
 #include "Notify.h"
 #include "Notify2.h"
+#include "ConflictResolverCallback.h"
 #include "ProgressListener.h"
 #include "CommitMessage.h"
 #include "Prompter.h"
@@ -349,6 +350,25 @@ Java_org_tigris_subversion_javahl_SVNClient_notification2
     return;
 
   cl->notification2(notify2);
+}
+
+JNIEXPORT void JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_setConflictResolver
+(JNIEnv *env, jobject jthis, jobject jconflictResolver)
+{
+  JNIEntry(SVNClient, setConflictResolver);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+  ConflictResolverCallback *listener =
+    ConflictResolverCallback::makeCConflictResolverCallback(jconflictResolver);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->setConflictResolver(listener);
 }
 
 JNIEXPORT void JNICALL

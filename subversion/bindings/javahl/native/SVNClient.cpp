@@ -270,6 +270,12 @@ void SVNClient::notification2(Notify2 *notify2)
     m_notify2 = notify2;
 }
 
+void SVNClient::setConflictResolver(ConflictResolverCallback *conflictResolver)
+{
+    delete m_conflictResolver;
+    m_conflictResolver = conflictResolver;
+}
+
 void SVNClient::setProgressListener(ProgressListener *listener)
 {
     delete m_progressListener;
