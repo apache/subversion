@@ -22,6 +22,10 @@
 
 #include "ra_serf.h"
 
+#ifdef WIN32
+#include "win32_auth_sspi.h"
+#endif /* WIN32 */
+
 /*** Forward declarations. ***/
 
 static svn_error_t *
@@ -45,6 +49,13 @@ static const serf_auth_protocol_t serf_auth_protocols[] = {
     init_basic_connection,
     handle_basic_auth,
   },
+#ifdef WIN32
+  {
+    "NTLM",
+    init_sspi_connection,
+    handle_sspi_auth,
+  },
+#endif /* WIN32 */
 
   /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */
 
@@ -70,7 +81,12 @@ handle_auth(svn_ra_serf__session_t *session,
 
   if (!auth_hdr)
     {
-      abort();
+      if (session->auth_protocol)
+        return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
+                                 "%s Authentication failed",
+                                 session->auth_protocol->auth_name);
+      else
+        return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL, NULL);
     }
 
   auth_name = apr_strtok(auth_hdr, " ", &auth_attr);
@@ -83,9 +99,14 @@ handle_auth(svn_ra_serf__session_t *session,
       if (strcmp(auth_name, prot->auth_name) == 0)
         {
           svn_serf__auth_handler_func_t handler = prot->handle_func;
+          /* If this is the first time we use this protocol in this session,
+             make sure to initialize the authentication part of the session 
+             first. */
+          if (session->auth_protocol != prot)
+            SVN_ERR(prot->init_conn_func(session, conn, session->pool));
           session->auth_protocol = prot;
           SVN_ERR(handler(session, conn, request, response, 
-                          auth_hdr, auth_attr, pool));
+                          auth_hdr, auth_attr, session->pool));
           break;
         }
     }
