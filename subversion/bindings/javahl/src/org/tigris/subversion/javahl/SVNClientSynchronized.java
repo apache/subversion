@@ -521,6 +521,18 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface#setConflictResolver(ConflictResolverCallback)
+     * @since 1.5
+     */
+    public void setConflictResolver(ConflictResolverCallback listener)
+    {
+        synchronized (clazz)
+        {
+            worker.setConflictResolver(listener);
+        }
+    }
+
+    /**
      * Set the progress callback.
      *
      * @param listener The progress callback.
