@@ -1,13 +1,13 @@
-#
+# 
 # Simplified Chinese translation for subversion package
 # This file is distributed under the same license as the subversion package.
-#
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-07-07 11:48+0800\n"
-"PO-Revision-Date: 2007-06-12 15:19+0800\n"
+"POT-Creation-Date: 2007-07-07 13:39+0800\n"
+"PO-Revision-Date: 2007-07-07 12:56+0800\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -36,7 +36,7 @@ msgstr "非法 mime-type"
 
 #: include/svn_error_codes.h:180
 msgid "Wrong or unexpected property value"
-msgstr ""
+msgstr "错误或不期望的属性值"
 
 #: include/svn_error_codes.h:184
 msgid "Version file format not correct"
@@ -425,17 +425,16 @@ msgid "Representation is being written"
 msgstr "正在写修订版"
 
 #: include/svn_error_codes.h:616
-#, fuzzy
 msgid "The generated transaction name is too long"
-msgstr "指定的事务不可改变"
+msgstr "产生的事务名称太长"
 
 #: include/svn_error_codes.h:622
 msgid "The repository is locked, perhaps for db recovery"
-msgstr "仓库被锁，可能正在恢复"
+msgstr "版本库被锁，可能正在恢复"
 
 #: include/svn_error_codes.h:626
 msgid "A repository hook failed"
-msgstr "仓库钩子错误"
+msgstr "版本库钩子错误"
 
 #: include/svn_error_codes.h:630
 msgid "Incorrect arguments supplied"
@@ -451,11 +450,11 @@ msgstr "版本报告非法"
 
 #: include/svn_error_codes.h:647
 msgid "Unsupported repository version"
-msgstr "不支持此仓库版本"
+msgstr "不支持此版本库版本"
 
 #: include/svn_error_codes.h:651
 msgid "Disabled repository feature"
-msgstr "关闭仓库特性"
+msgstr "关闭版本库特性"
 
 #: include/svn_error_codes.h:655
 msgid "Error running post-commit hook"
@@ -483,7 +482,7 @@ msgstr "未知认证"
 
 #: include/svn_error_codes.h:684
 msgid "Repository access method not implemented"
-msgstr "仓库未实现存取方法"
+msgstr "版本库未实现存取方法"
 
 #: include/svn_error_codes.h:688
 msgid "Item is out-of-date"
@@ -491,7 +490,7 @@ msgstr "条目过时"
 
 #: include/svn_error_codes.h:692
 msgid "Repository has no UUID"
-msgstr "仓库没有UUID"
+msgstr "版本库没有UUID"
 
 #: include/svn_error_codes.h:696
 msgid "Unsupported RA plugin ABI version"
@@ -545,15 +544,15 @@ msgstr "不能从响应的头信息中获取数据"
 
 #: include/svn_error_codes.h:755
 msgid "Repository has been moved"
-msgstr "仓库已经移动"
+msgstr "版本库已经移动"
 
 #: include/svn_error_codes.h:761 include/svn_error_codes.h:790
 msgid "Couldn't find a repository"
-msgstr "无法找到仓库"
+msgstr "无法找到版本库"
 
 #: include/svn_error_codes.h:765
 msgid "Couldn't open a repository"
-msgstr "无法打开仓库"
+msgstr "无法打开版本库"
 
 #: include/svn_error_codes.h:770
 msgid "Special code for wrapping server errors to report to client"
@@ -592,7 +591,6 @@ msgid "All authentication providers exhausted"
 msgstr "所有的认证提供者都不可用"
 
 #: include/svn_error_codes.h:825
-#, fuzzy
 msgid "Authentication failed"
 msgstr "认证失败"
 
@@ -670,7 +668,7 @@ msgstr "只能对纳入版本控制的路径执行此操作"
 
 #: include/svn_error_codes.h:914
 msgid "Repository access is needed for this operation"
-msgstr "此操作需要存取仓库"
+msgstr "此操作需要存取版本库"
 
 #: include/svn_error_codes.h:918
 msgid "Bogus revision information given"
@@ -702,7 +700,7 @@ msgstr "不允许的版本范围"
 
 #: include/svn_error_codes.h:948
 msgid "Inter-repository relocation not allowed"
-msgstr "不支持仓库之间的重新定位"
+msgstr "不支持版本库之间的重新定位"
 
 #: include/svn_error_codes.h:952
 msgid "Author name cannot contain a newline"
@@ -729,9 +727,8 @@ msgid "No versioned parent directories"
 msgstr "没有受版本控制的父目录"
 
 #: include/svn_error_codes.h:979
-#, fuzzy
 msgid "Conflict was not resolved"
-msgstr "在“%s”冲突"
+msgstr "冲突尚未解决"
 
 #: include/svn_error_codes.h:985
 msgid "A problem occurred; see later errors for details"
@@ -1066,7 +1063,7 @@ msgstr "路径“%s”不是目录"
 msgid ""
 "Source and dest appear not to be in the same repository (src: '%s'; dst: '%"
 "s')"
-msgstr "来源与目标似乎不在同一仓库 (来源: “%s”；目的: “%s”)"
+msgstr "来源与目标似乎不在同一版本库 (来源: “%s”；目的: “%s”)"
 
 #: libsvn_client/copy.c:771
 #, c-format
@@ -1081,7 +1078,7 @@ msgstr "版本 %2$ld 中不存在路径“%1$s”"
 #: libsvn_client/copy.c:1392
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
-msgstr "源URL“%s”来自其它仓库；把它当作脱离的工作副本"
+msgstr "源URL“%s”来自其它版本库；把它当作脱离的工作副本"
 
 #: libsvn_client/copy.c:1538
 #, c-format
@@ -1104,7 +1101,7 @@ msgstr "版本类型需要工作目录，不是URL"
 
 #: libsvn_client/copy.c:1723
 msgid "Cannot mix repository and working copy sources"
-msgstr "不能在源中混合仓库和工作副本"
+msgstr "不能在源中混合版本库和工作副本"
 
 #: libsvn_client/copy.c:1765
 #, c-format
@@ -1118,7 +1115,7 @@ msgstr "无法移动路径“%s”到本身"
 
 #: libsvn_client/copy.c:1794
 msgid "Moves between the working copy and the repository are not supported"
-msgstr "不支持在工作副本和仓库之间移动"
+msgstr "不支持在工作副本和版本库之间移动"
 
 #: libsvn_client/copy.c:1852
 #, c-format
@@ -1195,7 +1192,7 @@ msgstr "对于peg差异，必须至少有一个非本地版本"
 #: libsvn_client/diff.c:954 libsvn_client/diff.c:966
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
-msgstr "在仓库的版本 %2$ld 中找不到“%1$s”"
+msgstr "在版本库的版本 %2$ld 中找不到“%1$s”"
 
 #: libsvn_client/diff.c:1025
 msgid "Sorry, svn_client_diff4 was called in a way that is not yet supported"
@@ -1214,7 +1211,7 @@ msgstr "目录“%s”没有URL"
 
 #: libsvn_client/diff.c:1420
 msgid "Summarizing diff can only compare repository to repository"
-msgstr "只有仓库和仓库才能比较差异概要"
+msgstr "只有版本库和版本库才能比较差异概要"
 
 #: libsvn_client/export.c:87
 #, c-format
@@ -1264,7 +1261,7 @@ msgstr "“%s”没有URL"
 
 #: libsvn_client/locking_commands.c:284
 msgid "Unable to lock/unlock across multiple repositories"
-msgstr "不能跨越多个仓库进行锁定/解锁"
+msgstr "不能跨越多个版本库进行锁定/解锁"
 
 #: libsvn_client/locking_commands.c:325
 #, c-format
@@ -1293,7 +1290,7 @@ msgstr "条目“%s”没有URL"
 
 #: libsvn_client/log.c:633
 msgid "No commits in repository"
-msgstr "仓库中没有提交"
+msgstr "版本库中没有提交"
 
 #: libsvn_client/merge.c:92
 #, c-format
@@ -1335,9 +1332,8 @@ msgid ""
 msgstr "路径 “%s” 冲突，必须在应用剩余的合并请求之前解决"
 
 #: libsvn_client/merge.c:2098 libsvn_client/merge.c:2477
-#, fuzzy
 msgid "Use of two URLs is not compatible with mergeinfo modification"
-msgstr "使用两个 URL 不与合并信息修改兼容"
+msgstr "使用两个 URL 与合并信息修改不兼容"
 
 #: libsvn_client/merge.c:3183
 #, c-format
@@ -1407,7 +1403,7 @@ msgstr "版本 %2$ld 中不存在路径“%1$s”"
 #: libsvn_client/ra.c:663 libsvn_client/ra.c:826
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
-msgstr "版本 %2$ld 中无法找到“%1$s”的仓库位置"
+msgstr "版本 %2$ld 中无法找到“%1$s”的版本库位置"
 
 #: libsvn_client/ra.c:674
 #, c-format
@@ -1419,17 +1415,17 @@ msgstr "版本 %2$ld 中的“%1$s”是一个无关的对象"
 msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
 "refers to an unrelated object"
-msgstr "仓库内版本 %2$ld 中“%1$s”的位置不存在，或是指向一个无关的对象"
+msgstr "版本库内版本 %2$ld 中“%1$s”的位置不存在，或是指向一个无关的对象"
 
 #: libsvn_client/relocate.c:101
 #, c-format
 msgid "'%s' is not the root of the repository"
-msgstr "“%s”不是仓库的根"
+msgstr "“%s”不是版本库的根"
 
 #: libsvn_client/relocate.c:108
 #, c-format
 msgid "The repository at '%s' has uuid '%s', but the WC has '%s'"
-msgstr "仓库“%s”的uuid是“%s”，但是工作副本的是“%s”"
+msgstr "版本库“%s”的uuid是“%s”，但是工作副本的是“%s”"
 
 #: libsvn_client/revisions.c:93
 #, c-format
@@ -1452,7 +1448,7 @@ msgstr ""
 "“%s”\n"
 "与\n"
 "“%s”\n"
-"并不在同一个仓库中"
+"并不在同一个版本库中"
 
 #: libsvn_client/switch.c:160
 #, c-format
@@ -1727,11 +1723,11 @@ msgstr "正在存储事务记录"
 
 #: libsvn_fs_base/bdb/uuids-table.c:114
 msgid "get repository uuid"
-msgstr "获取仓库 UUID"
+msgstr "获取版本库 UUID"
 
 #: libsvn_fs_base/bdb/uuids-table.c:142
 msgid "set repository uuid"
-msgstr "设置仓库 UUID"
+msgstr "设置版本库 UUID"
 
 #: libsvn_fs_base/dag.c:221
 #, c-format
@@ -1842,7 +1838,7 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"校验和不匹配，仓库“%s”: \n"
+"校验和不匹配，版本库“%s”: \n"
 "  期望: %s\n"
 "  实际: %s\n"
 
@@ -2194,7 +2190,7 @@ msgstr "不能存储文件系统共享数据"
 
 #: libsvn_fs_fs/fs.c:290
 msgid "Module for working with a plain file (FSFS) repository."
-msgstr "模块与文本文件(FSFS)仓库一起工作。"
+msgstr "模块与文本文件(FSFS)版本库一起工作。"
 
 #: libsvn_fs_fs/fs.c:324
 #, c-format
@@ -2401,7 +2397,7 @@ msgstr "无法获取本地主机名"
 msgid ""
 "The auto-generated transaction name '%s-XXXXX' is longer than the maximum "
 "transaction name length %d"
-msgstr ""
+msgstr "自动产生的事务名称 '%s-XXXXX' 超过最大事务名称长度 %d"
 
 #: libsvn_fs_fs/fs_fs.c:3239
 #, c-format
@@ -2505,14 +2501,13 @@ msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr "“%s”的 RA 版本不匹配: 找到 %d.%d.%d%s，期望 %d.%d.%d%s"
 
 #: libsvn_ra/ra_loader.c:401
-#, fuzzy, c-format
+#, c-format
 msgid "Illegal repository URL '%s'"
-msgstr "非法的svn仓库URL“%s”"
+msgstr "非法版本库 URL “%s”"
 
 #: libsvn_ra/ra_loader.c:415
-#, fuzzy
 msgid "Invalid config: unknown HTTP library"
-msgstr "无效配置: 未知的 http 认证类型“%s”"
+msgstr "无效配置: 未知的 http 库"
 
 #: libsvn_ra/ra_loader.c:452
 #, c-format
@@ -2522,7 +2517,7 @@ msgstr "无法识别的URL方案(一般需要svn://，http://，file://等开头
 #: libsvn_ra/ra_loader.c:503
 #, c-format
 msgid "'%s' isn't in the same repository as '%s'"
-msgstr "“%s”与“%s”并不在同一个仓库中"
+msgstr "“%s”与“%s”并不在同一个版本库中"
 
 #: libsvn_ra/ra_loader.c:1026
 #, c-format
@@ -2538,7 +2533,7 @@ msgstr "无法识别的URL方案(一般需要svn://，http://，file://等开头
 #. * The RA vtable routines *
 #: libsvn_ra_local/ra_plugin.c:250
 msgid "Module for accessing a repository on local disk."
-msgstr "访问本地磁盘的仓库模块。"
+msgstr "访问本地磁盘的版本库模块。"
 
 #: libsvn_ra_local/ra_plugin.c:290
 msgid "Unable to open an ra_local session to URL"
@@ -2567,7 +2562,7 @@ msgstr "本地URL“%s”包含不支持的主机名称"
 #: libsvn_ra_local/split_url.c:127 libsvn_ra_local/split_url.c:134
 #, c-format
 msgid "Unable to open repository '%s'"
-msgstr "无法打开仓库“%s”"
+msgstr "无法打开版本库“%s”"
 
 #: libsvn_ra_neon/commit.c:223
 msgid ""
@@ -2657,7 +2652,7 @@ msgstr "服务器不支持加锁"
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
-msgstr "DAV 请求失败；可能是仓库的 pre-revprop-change 钩子执行失败或者不存在"
+msgstr "DAV 请求失败；可能是版本库的 pre-revprop-change 钩子执行失败或者不存在"
 
 #: libsvn_ra_neon/fetch.c:2520
 #, c-format
@@ -2701,7 +2696,7 @@ msgstr "解析地址(URI)失败"
 #: libsvn_ra_neon/lock.c:392 libsvn_ra_serf/locks.c:689
 #, c-format
 msgid "'%s' is not locked in the repository"
-msgstr "仓库中的“%s”没有被锁定"
+msgstr "版本库中的“%s”没有被锁定"
 
 #: libsvn_ra_neon/lock.c:519
 msgid "Failed to fetch lock information"
@@ -2763,12 +2758,12 @@ msgstr "Neon 不能解析URL“%s”"
 
 #: libsvn_ra_neon/props.c:697
 msgid "The path was not part of a repository"
-msgstr "路径不是仓库的一部份"
+msgstr "路径不是版本库的一部份"
 
 #: libsvn_ra_neon/props.c:706
 #, c-format
 msgid "No part of path '%s' was found in repository HEAD"
-msgstr "路径“%s”的任何部分都不在仓库的 HEAD 中"
+msgstr "路径“%s”的任何部分都不在版本库的 HEAD 中"
 
 #: libsvn_ra_neon/props.c:758 libsvn_ra_neon/props.c:813
 msgid "The VCC property was not found on the resource"
@@ -2788,7 +2783,7 @@ msgstr "基线资源没有“DAV:version-name”"
 
 #: libsvn_ra_neon/props.c:1117 libsvn_ra_serf/commit.c:729
 msgid "At least one property change failed; repository is unchanged"
-msgstr "至少有一个属性变更失败；仓库未改变"
+msgstr "至少有一个属性变更失败；版本库未改变"
 
 #: libsvn_ra_neon/replay.c:272
 msgid "Got apply-textdelta element without preceding add-file or open-file"
@@ -2843,13 +2838,12 @@ msgid "Invalid config: unknown http authtype '%s'"
 msgstr "无效配置: 未知的 http 认证类型“%s”"
 
 #: libsvn_ra_neon/session.c:578
-#, fuzzy
 msgid "Module for accessing a repository via WebDAV protocol using Neon."
-msgstr "通过WebDAV(DeltaV)协议访问仓库的模块。"
+msgstr "通过 WebDAV 协议使用 neon 访问版本库的模块。"
 
 #: libsvn_ra_neon/session.c:629
 msgid "Malformed URL for repository"
-msgstr "仓库的URL非法"
+msgstr "版本库的URL非法"
 
 #: libsvn_ra_neon/session.c:668
 msgid "Network socket initialization failed"
@@ -2873,9 +2867,9 @@ msgid "Please upgrade the server to 0.19 or later"
 msgstr "请将服务器升级至0.19或更新的版本"
 
 #: libsvn_ra_neon/session.c:1009
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_neon"
-msgstr "不支持ra_svn RA加载器版本 %d"
+msgstr "不支持的 ra_neon RA 加载器版本(%d)"
 
 #: libsvn_ra_neon/util.c:166
 msgid "The request response contained at least one error"
@@ -2898,12 +2892,12 @@ msgstr "找不到路径“%s”"
 #: libsvn_ra_neon/util.c:472
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
-msgstr "仓库永久移到‘%s’；请重新定位。"
+msgstr "版本库永久移到‘%s’；请重新定位。"
 
 #: libsvn_ra_neon/util.c:474
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
-msgstr "仓库临时移到‘%s’；请重新定位。"
+msgstr "版本库临时移到‘%s’；请重新定位。"
 
 #: libsvn_ra_neon/util.c:482
 #, c-format
@@ -3026,14 +3020,13 @@ msgid "Missing name attr in %s element"
 msgstr "元素“%s”没有name属性"
 
 #: libsvn_ra_serf/serf.c:52
-#, fuzzy
 msgid "Module for accessing a repository via WebDAV protocol using serf."
-msgstr "通过WebDAV(DeltaV)协议访问仓库的模块。"
+msgstr "通过 WebDAV 协议使用 serf 访问版本库的模块。"
 
 #: libsvn_ra_serf/serf.c:163
-#, fuzzy, c-format
+#, c-format
 msgid "Could not lookup hostname `%s'"
-msgstr "找不到主机: %s://%s"
+msgstr "无法解析主机 “%s” 的地址"
 
 #: libsvn_ra_serf/serf.c:748
 #, c-format
@@ -3041,9 +3034,8 @@ msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "不支持ra_serf RA加载器版本 %d"
 
 #: libsvn_ra_serf/update.c:1413
-#, fuzzy
 msgid "Missing name attr in absent-directory element"
-msgstr "元素open-directory没有name属性"
+msgstr "元素 absent-directory 没有 name 属性"
 
 #: libsvn_ra_serf/update.c:2179
 #, c-format
@@ -3110,7 +3102,7 @@ msgstr "无法创建隧道"
 #: libsvn_ra_svn/client.c:467
 #, c-format
 msgid "Illegal svn repository URL '%s'"
-msgstr "非法的svn仓库URL“%s”"
+msgstr "非法的svn版本库URL“%s”"
 
 #: libsvn_ra_svn/client.c:525
 #, c-format
@@ -3118,26 +3110,25 @@ msgid "Server requires minimum version %d"
 msgstr "服务器要求的最低版本是 %d"
 
 #: libsvn_ra_svn/client.c:529
-#, fuzzy, c-format
+#, c-format
 msgid "Server only supports versions up to %d"
-msgstr "服务器不支持解锁"
+msgstr "服务器支持的版本不大于 %d"
 
 #: libsvn_ra_svn/client.c:537
-#, fuzzy
 msgid "Server does not support edit pipelining"
-msgstr "服务器不支持基于日期的操作"
+msgstr "服务器不支持流水线编辑"
 
 #: libsvn_ra_svn/client.c:563
 msgid "Impossibly long repository root from server"
-msgstr "服务器返回的仓库根路径太长"
+msgstr "服务器返回的版本库根路径太长"
 
 #: libsvn_ra_svn/client.c:574
 msgid "Module for accessing a repository using the svn network protocol."
-msgstr "使用svn网络协议访问仓库的模块。"
+msgstr "使用svn网络协议访问版本库的模块。"
 
 #: libsvn_ra_svn/client.c:722
 msgid "Server did not send repository root"
-msgstr "服务器没有返回仓库根路径"
+msgstr "服务器没有返回版本库根路径"
 
 #: libsvn_ra_svn/client.c:795
 msgid ""
@@ -3360,7 +3351,7 @@ msgstr "获得源路径，但“%s”没有源版本"
 #: libsvn_repos/commit.c:323 libsvn_repos/commit.c:467
 #, c-format
 msgid "Source url '%s' is from different repository"
-msgstr "源URL“%s”来自其它仓库"
+msgstr "源URL“%s”来自其它版本库"
 
 #: libsvn_repos/commit.c:592
 #, c-format
@@ -3396,7 +3387,7 @@ msgid ""
 "WARNING: will fail.\n"
 msgstr ""
 "警告: 版本 %ld 的参考数据比最旧的转存数据版本 (%ld)还旧。\n"
-"警告:  装载这个转存到空的仓库会失败。\n"
+"警告:  装载这个转存到空的版本库会失败。\n"
 "\n"
 
 #: libsvn_repos/dump.c:932
@@ -3428,7 +3419,7 @@ msgstr "提交成功，但是后置提交钩子(post-commit)失败"
 msgid ""
 "Storage of non-regular property '%s' is disallowed through the repository "
 "interface, and could indicate a bug in your client"
-msgstr "不允许通过仓库接口存储非正规属性“%s”，它说明您的客户端有漏洞"
+msgstr "不允许通过版本库接口存储非正规属性“%s”，它说明您的客户端有漏洞"
 
 #: libsvn_repos/fs-wrap.c:260
 #, c-format
@@ -3526,7 +3517,7 @@ msgstr "运行钩子“%s”失败；符号连接损坏"
 msgid ""
 "Repository has not been enabled to accept revision propchanges;\n"
 "ask the administrator to create a pre-revprop-change hook"
-msgstr "此仓库不允许修改版本属性；请管理员创建 pre-revprop-change 钩子"
+msgstr "此版本库不允许修改版本属性；请管理员创建 pre-revprop-change 钩子"
 
 #: libsvn_repos/load.c:117
 msgid "Premature end of content data in dumpstream"
@@ -3579,7 +3570,7 @@ msgstr "<<< 开始新的事务，基于原始版本 %ld\n"
 #: libsvn_repos/load.c:929
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
-msgstr "当前仓库不存在相对源版本 %ld"
+msgstr "当前版本库不存在相对源版本 %ld"
 
 #: libsvn_repos/load.c:978
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
@@ -3654,7 +3645,7 @@ msgstr "路径 “%2$s” 的深度 (%1$s) 非法"
 #: libsvn_repos/reporter.c:680
 #, c-format
 msgid "Working copy path '%s' does not exist in repository"
-msgstr "工作副本路径“%s”不在仓库中"
+msgstr "工作副本路径“%s”不在版本库中"
 
 #: libsvn_repos/reporter.c:1016
 msgid "Not authorized to open root of edit operation"
@@ -3752,12 +3743,12 @@ msgstr "打开数据库锁文件出错"
 
 #: libsvn_repos/repos.c:1187
 msgid "Repository creation failed"
-msgstr "创建仓库失败"
+msgstr "创建版本库失败"
 
 #: libsvn_repos/repos.c:1268
 #, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
-msgstr "期望仓库格式是“%d”或“%d”；发现格式是“%d”"
+msgstr "期望版本库格式是“%d”或“%d”；发现格式是“%d”"
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
@@ -4631,7 +4622,7 @@ msgstr "增加“%s”到调度删除的目录中"
 #: libsvn_wc/adm_ops.c:1486
 #, c-format
 msgid "The URL '%s' has a different repository root than its parent"
-msgstr "URL“%s”与其父目录的仓库根目录不相同"
+msgstr "URL“%s”与其父目录的版本库根目录不相同"
 
 #: libsvn_wc/adm_ops.c:1835
 #, c-format
@@ -4665,9 +4656,8 @@ msgid "File '%s' has local modifications"
 msgstr "文件“%s”有本地修改"
 
 #: libsvn_wc/adm_ops.c:2570
-#, fuzzy
 msgid "Invalid 'accept' argument"
-msgstr "无效的format属性"
+msgstr "无效的 “accept” 参数"
 
 #: libsvn_wc/adm_ops.c:2906
 #, c-format
@@ -4694,19 +4684,19 @@ msgstr "已有纳入版本控制项“%s”"
 msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
 "first"
-msgstr "无法复制或移动“%s”: 它不在仓库中；请先提交"
+msgstr "无法复制或移动“%s”: 它不在版本库中；请先提交"
 
 #: libsvn_wc/copy.c:658
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
 "first"
-msgstr "无法复制或移动“%s”: 它不在仓库中；请先提交"
+msgstr "无法复制或移动“%s”: 它不在版本库中；请先提交"
 
 #: libsvn_wc/copy.c:776
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
-msgstr "无法复制到“%s”，因为它不在仓库“%s”中；它来自“%s”"
+msgstr "无法复制到“%s”，因为它不在版本库“%s”中；它来自“%s”"
 
 #: libsvn_wc/copy.c:783
 #, c-format
@@ -4745,7 +4735,7 @@ msgstr "入口“%s”有无效的节点种类"
 #: libsvn_wc/entries.c:331 libsvn_wc/entries.c:540
 #, c-format
 msgid "Entry for '%s' has invalid repository root"
-msgstr "“%s”条目的仓库根目录无效"
+msgstr "“%s”条目的版本库根目录无效"
 
 #: libsvn_wc/entries.c:995
 #, c-format
@@ -5205,7 +5195,7 @@ msgstr ""
 
 #: libsvn_wc/relocate.c:78
 msgid "Relocate can only change the repository part of an URL"
-msgstr "重新定位只能改变URL中的仓库部分"
+msgstr "重新定位只能改变URL中的版本库部分"
 
 #: libsvn_wc/update_editor.c:450
 #, c-format
@@ -5234,14 +5224,14 @@ msgstr "无法新增目录“%s”: 同名非目录对象已存在"
 msgid ""
 "Failed to add directory '%s': an unversioned directory of the same name "
 "already exists"
-msgstr "无法新增目录“%s”: 同名非版本化目录对象已存在"
+msgstr "无法新增目录“%s”: 同名未版本控制目录对象已存在"
 
 #: libsvn_wc/update_editor.c:1209
 #, c-format
 msgid ""
 "Failed to add directory '%s': a versioned directory of the same name already "
 "exists"
-msgstr "无法新增目录“%s”: 同名版本化目录已存在"
+msgstr "无法新增目录“%s”: 同名受版本控制目录已存在"
 
 #: libsvn_wc/update_editor.c:1220
 #, c-format
@@ -5302,7 +5292,7 @@ msgstr "“%s”没有演进历程信息"
 #: libsvn_wc/update_editor.c:3210
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
-msgstr "Copyfrom-url“%s”与“%s”的仓库根目录不相同"
+msgstr "Copyfrom-url“%s”与“%s”的版本库根目录不相同"
 
 #: libsvn_wc/util.c:85
 msgid "Unable to make any directories"
@@ -5347,104 +5337,104 @@ msgid "Path: %s\n"
 msgstr "路径: %s\n"
 
 #: svn/conflict-callbacks.c:49
-#, fuzzy, c-format
+#, c-format
 msgid "Node kind: file\n"
 msgstr "节点种类: 文件\n"
 
 #: svn/conflict-callbacks.c:50
-#, fuzzy, c-format
+#, c-format
 msgid "Binary file?: %s\n"
-msgstr "略过二进制文件: “%s”\n"
+msgstr "二进制文件？: %s\n"
 
 #: svn/conflict-callbacks.c:53
 #, c-format
 msgid "Mime-type: %s"
-msgstr ""
+msgstr "媒体类型: %s"
 
 #: svn/conflict-callbacks.c:57
-#, fuzzy, c-format
+#, c-format
 msgid "Node kind: directory\n"
 msgstr "节点种类: 目录\n"
 
 #: svn/conflict-callbacks.c:60
-#, fuzzy, c-format
+#, c-format
 msgid "Node kind: unknown\n"
 msgstr "节点种类: 未知\n"
 
 #: svn/conflict-callbacks.c:66
 #, c-format
 msgid "Attempting to edit object.\n"
-msgstr ""
+msgstr "尝试编辑对象。\n"
 
 #: svn/conflict-callbacks.c:69
 #, c-format
 msgid "Attempting to add object.\n"
-msgstr ""
+msgstr "尝试增加对象。\n"
 
 #: svn/conflict-callbacks.c:72
 #, c-format
 msgid "Attempting to delete object.\n"
-msgstr ""
+msgstr "尝试删除对象。\n"
 
 #: svn/conflict-callbacks.c:75
 #, c-format
 msgid "No action specified!\n"
-msgstr ""
+msgstr "没有指定动作！\n"
 
 #: svn/conflict-callbacks.c:79
 #, c-format
 msgid "But:  "
-msgstr ""
+msgstr "但是:  "
 
 #: svn/conflict-callbacks.c:84
 #, c-format
 msgid "existing object has conflicting edits.\n"
-msgstr ""
+msgstr "现有对象正在编辑冲突。\n"
 
 #: svn/conflict-callbacks.c:87
 #, c-format
 msgid "existing object is in the way.\n"
-msgstr ""
+msgstr "现有对象冲突。\n"
 
 #: svn/conflict-callbacks.c:90
 #, c-format
 msgid "existing object is deleted.\n"
-msgstr ""
+msgstr "现有对象已删除。\n"
 
 #: svn/conflict-callbacks.c:93
 #, c-format
 msgid "existing object is missing.\n"
-msgstr ""
+msgstr "现有对象丢失。\n"
 
 #: svn/conflict-callbacks.c:96
 #, c-format
 msgid "existing object is unversioned.\n"
-msgstr ""
+msgstr "现有对象未版本控制。\n"
 
 #: svn/conflict-callbacks.c:99
-#, fuzzy, c-format
+#, c-format
 msgid "No reason specified!\n"
-msgstr "无效的版本说明"
+msgstr "没有说明理由！\n"
 
 #: svn/conflict-callbacks.c:104
 #, c-format
 msgid "  Ancestor file: %s\n"
-msgstr ""
+msgstr "  祖先文件: %s\n"
 
 #: svn/conflict-callbacks.c:107
-#, fuzzy, c-format
+#, c-format
 msgid "  Repository's file: %s\n"
-msgstr "仓库根: %s\n"
+msgstr "  版本库的文件: %s\n"
 
 #: svn/conflict-callbacks.c:110
 #, c-format
 msgid "  User's file: %s\n"
-msgstr ""
+msgstr "  用户的文件: %s\n"
 
 #: svn/conflict-callbacks.c:113
 #, c-format
 msgid "  File with conflict markers: %s\n"
-msgstr ""
+msgstr "  文件包含冲突标记: %s\n"
 
 #: svn/conflict-callbacks.c:128
 #, c-format
@@ -5452,34 +5442,38 @@ msgid ""
 "Discovered a conflict.\n"
 "\n"
 msgstr ""
+"发现一个冲突。\n"
+"\n"
 
 #: svn/conflict-callbacks.c:130
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "\n"
-msgstr "\n"
+msgstr ""
+"\n"
+"\n"
 
 #: svn/conflict-callbacks.c:157
-#, fuzzy, c-format
+#, c-format
 msgid "Conflict discovered in '%s'.\n"
-msgstr "属性冲突的文件: %s\n"
+msgstr "在 “%s” 中发现冲突。\n"
 
 #: svn/conflict-callbacks.c:165
 msgid "Select: (p)ostpone"
-msgstr ""
+msgstr "选择: (p)推迟"
 
 #: svn/conflict-callbacks.c:167
 msgid ", (d)iff, (e)dit"
-msgstr ""
+msgstr "，(d)差异，(e)编辑"
 
 #: svn/conflict-callbacks.c:170
 msgid ", (a)ccept"
-msgstr ""
+msgstr "，(a)接受"
 
 #: svn/conflict-callbacks.c:171
 msgid ", (h)elp : "
-msgstr ""
+msgstr "，(h)帮助 : "
 
 #: svn/conflict-callbacks.c:178
 #, c-format
@@ -5494,21 +5488,34 @@ msgid ""
 "  (h)elp     - show this list\n"
 "\n"
 msgstr ""
+"  (p)推迟 - 标记以后解决冲突\n"
+"  (d)差异 - 显示合并文件的所有修改\n"
+"  (e)编辑 - 使用编辑器解决冲突\n"
+"  (a)接受 - 使用文件的合并版本\n"
+"  (m)我的 - 使用我的文件\n"
+"  (t)他人 - 使用版本库的文件\n"
+"  (l)执行 - 使用第三方工具解决冲突\n"
+"  (h)帮助 - 显示这个列表\n"
+"\n"
 
 #: svn/conflict-callbacks.c:225 svn/conflict-callbacks.c:237
 #: svn/conflict-callbacks.c:249 svn/conflict-callbacks.c:262
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Invalid option.\n"
 "\n"
-msgstr "无效重定位"
+msgstr ""
+"无效选项。\n"
+"\n"
 
 #: svn/conflict-callbacks.c:233 svn/conflict-callbacks.c:245
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Feature not yet implemented.\n"
 "\n"
-msgstr "未实现“stat”"
+msgstr ""
+"特性尚未实现。\n"
+"\n"
 
 #: svn/copy-cmd.c:124 svn/delete-cmd.c:64 svn/mkdir-cmd.c:65 svn/move-cmd.c:76
 #: svn/propedit-cmd.c:201
@@ -5559,7 +5566,7 @@ msgstr ""
 "用法: svn <subcommand> [options] [args]\n"
 "Subversion 命令行客户端，版本 %s。\n"
 "使用“svn help <subcommand>” 显示子命令的帮助信息。\n"
-"使用“svn --version”查看程序的版本号和仓库访问模块，或者\n"
+"使用“svn --version”查看程序的版本号和版本库访问模块，或者\n"
 "使用“svn --version --quiet”只查看程序的版本号。\n"
 "\n"
 "大多数的子命令可接受文件或目录参数，对目录进行递归处理。\n"
@@ -5580,12 +5587,12 @@ msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
 msgstr ""
-"可使用以下的仓库访问模块: \n"
+"可使用以下的版本库访问模块: \n"
 "\n"
 
 #: svn/import-cmd.c:82
 msgid "Repository URL required when importing"
-msgstr "导入时必须提供仓库的URL"
+msgstr "导入时必须提供版本库的URL"
 
 #: svn/import-cmd.c:86
 msgid "Too many arguments to import command"
@@ -5614,12 +5621,12 @@ msgstr "URL: %s\n"
 #: svn/info-cmd.c:263
 #, c-format
 msgid "Repository Root: %s\n"
-msgstr "仓库根: %s\n"
+msgstr "版本库根: %s\n"
 
 #: svn/info-cmd.c:267
 #, c-format
 msgid "Repository UUID: %s\n"
-msgstr "仓库 UUID: %s\n"
+msgstr "版本库 UUID: %s\n"
 
 #: svn/info-cmd.c:271
 #, c-format
@@ -5893,7 +5900,7 @@ msgstr ""
 "                             版本参数可以是如下之一: \n"
 "                                NUMBER       版本号\n"
 "                                '{' DATE '}' 在指定时间以后的版本\n"
-"                                'HEAD'       仓库中的最新版本\n"
+"                                'HEAD'       版本库中的最新版本\n"
 "                                'BASE'       工作副本的基线版本\n"
 "                                'COMMITTED'  最后提交或基线之前\n"
 "                                'PREV'       COMMITTED的前一版本"
@@ -6073,8 +6080,8 @@ msgid ""
 "                             ARG may be one of 'LF', 'CR', 'CRLF'"
 msgstr ""
 "使用非标准的 EOL 标记\n"
-"                     系统中立的文件标记 svn:eol-style 属性取值为 “native”。\n"
-"                     ARG 可以是以下之一“LF”，“CR”，“CRLF”"
+"                系统中立的文件标记 svn:eol-style 属性取值为 “native”。\n"
+"                ARG 可以是以下之一“LF”，“CR”，“CRLF”"
 
 #: svn/main.c:188
 msgid "maximum number of log entries"
@@ -6117,7 +6124,6 @@ msgid "make intermediate directories"
 msgstr "创建中间目录"
 
 #: svn/main.c:208
-#, fuzzy
 msgid ""
 "use/display additional information from merge\n"
 "                             history"
@@ -6128,6 +6134,8 @@ msgid ""
 "specify automatic conflict resolution source\n"
 "                            ('left', 'right', or 'working')"
 msgstr ""
+"指定自动冲突解决源\n"
+"        (“左”，“右”， 或 “工作”)"
 
 #: svn/main.c:254
 msgid ""
@@ -6135,7 +6143,7 @@ msgid ""
 "them for addition to repository.  They will be added in next commit.\n"
 "usage: add PATH...\n"
 msgstr ""
-"把文件和目录纳入版本控制，通过调度加到仓库。它们会在下一次提交时加入。\n"
+"把文件和目录纳入版本控制，通过调度加到版本库。它们会在下一次提交时加入。\n"
 "用法: add 路径...\n"
 
 #: svn/main.c:260
@@ -6180,7 +6188,7 @@ msgid ""
 msgstr ""
 "耦合 (或者解耦)本地路径与修改列表 CLNAME。\n"
 "使用: 1. changelist CLNAME TARGET...\n"
-"       2. changelist --remove TARGET...\n"
+"      2. changelist --remove TARGET...\n"
 
 #: svn/main.c:288
 msgid ""
@@ -6206,7 +6214,7 @@ msgid ""
 "  to the working copy.  All properties from the repository are applied\n"
 "  to the obstructing path.\n"
 msgstr ""
-"从仓库签出工作副本。\n"
+"从版本库签出工作副本。\n"
 "使用: checkout URL[@REV]... [PATH]\n"
 "\n"
 "  如果指定 REV，那么它确定了从 URL 首先查找的版本。\n"
@@ -6214,11 +6222,13 @@ msgstr ""
 "  如果省略路径参数，则URL最末尾的目录名作为目标目录名。如果指定多个URL，\n"
 "  则依次将其签出到 PATH 的子目录中，子目录名就是URL最末尾的目录名。\n"
 "\n"
-"  如果使用了“--force”选项，在工作副本中未版本化的障碍路径，不会自动导\n"
-"  致签出失败。 如果障碍路径与仓库中的对应路径类型相同(文件或目录),它将成\n"
-"  为版本化的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍路\n"
-"  径，那么也会版本化。对于障碍路径中的文件，如果与仓库内的不同，将视为工\n"
-"  作副本发生本地修改。仓库中的所有属性都应用于障碍路径。\n"
+"  如果使用了“--force”选项，在工作副本中未版本控制的障碍路径，不会自动导\n"
+"  致签出失败。 如果障碍路径与版本库中的对应路径类型相同(文件或目录),它将成\n"
+"  为受版本控制的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍"
+"路\n"
+"  径，那么也会受版本控制。对于障碍路径中的文件，如果与版本库内的不同，将视为"
+"工\n"
+"  作副本发生本地修改。版本库中的所有属性都应用于障碍路径。\n"
 
 #: svn/main.c:313
 msgid ""
@@ -6240,7 +6250,7 @@ msgid ""
 "  If any targets are (or contain) locked items, those will be\n"
 "  unlocked after a successful commit.\n"
 msgstr ""
-"把工作副本的修改提交到仓库。\n"
+"把工作副本的修改提交到版本库。\n"
 "用法: commit [路径...]\n"
 "\n"
 "     必须提供日志消息，但它可以是空的。如果没有指定 --message 或 --file\n"
@@ -6258,7 +6268,7 @@ msgid ""
 "  (or contain) locked items, those will be unlocked after a\n"
 "  successful commit.\n"
 msgstr ""
-"把工作副本的修改提交到仓库。\n"
+"把工作副本的修改提交到版本库。\n"
 "用法: commit [路径...]\n"
 "\n"
 "     必须提供日志消息，但它可以是空的。OS400不支持启动编辑器，\n"
@@ -6294,7 +6304,6 @@ msgstr ""
 "  所有 SRC 必须是同一类型。\n"
 
 #: svn/main.c:360
-#, fuzzy
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -6310,17 +6319,16 @@ msgid ""
 "  2. Each item specified by a URL is deleted from the repository\n"
 "    via an immediate commit.\n"
 msgstr ""
-"从仓库中删除文件和目录。\n"
+"从版本库中删除文件和目录。\n"
 "用法: 1、delete PATH...\n"
 "      2、delete URL...\n"
 "\n"
-"  1、每个PATH指定的项目会被调度删除，直到下次提交时从仓库删除。除非给出\n"
+"  1、每个 PATH 指定的项目会被调度到下次提交时从版本库删除。除非给出\n"
 "    --keep-local 参数，工作副本中没有提交的文件和目录会被立即删除。\n"
-"    如果PATH是未版本控制或者已修改的项目，或者包含这些项目，那么仅当给出\n"
-"    --force 参数时才会被删除。\n"
+"    如果 PATH 是未版本控制或者已修改的项目，或者包含这些项目，那么仅当\n"
+"    给出 --force 参数时这些项目才会被删除。\n"
 "\n"
-"  2、每个URL指定的项目会通过立即提交从仓库中删除。\n"
-"    \n"
+"  2、每个 UR L指定的项目会通过立即提交从版本库中删除。\n"
 
 #: svn/main.c:378
 msgid ""
@@ -6395,7 +6403,7 @@ msgstr ""
 "用法: 1、export [-r REV] URL[@PEGREV] [PATH]\n"
 "      2、export [-r REV] PATH1[@PEGREV] [PATH2]\n"
 "\n"
-"  1、从 URL 指定的仓库，导出一个干净的目录树到 PATH。如果有指定\n"
+"  1、从 URL 指定的版本库，导出一个干净的目录树到 PATH。如果有指定\n"
 "     REV 的话，内容即为该版本的，否则就是 HEAD 版本。如果 PATH\n"
 "     被省略的话，URL的最后部份会被用来当成本地的目录名称。\n"
 "\n"
@@ -6427,10 +6435,10 @@ msgid ""
 "  If PATH is a directory, the contents of the directory are added\n"
 "  directly under URL.\n"
 msgstr ""
-"将未纳入版本控制的文件或目录树提交到仓库。\n"
+"将未纳入版本控制的文件或目录树提交到版本库。\n"
 "用法: import [PATH] URL\n"
 "\n"
-"  递归地提交 PATH 的副本至URL，PATH默认为“.”。父目录会依需要于仓库内\n"
+"  递归地提交 PATH 的副本至URL，PATH默认为“.”。父目录会依需要于版本库内\n"
 "  创建。如果 PATH是一个目录，则其下的内容直接加入到URL指定的位置内。\n"
 
 #: svn/main.c:450
@@ -6446,7 +6454,7 @@ msgstr ""
 "用法: info [TARGET[@REV]...]\n"
 "\n"
 "  显示每个 TARGET 的信息 (默认: “.”)。\n"
-"  TARGET 可以是工作副本中的路径或仓库中的URL。REV指定从哪个\n"
+"  TARGET 可以是工作副本中的路径或版本库中的URL。REV指定从哪个\n"
 "  版本开始查找目标。\n"
 
 #: svn/main.c:461
@@ -6470,13 +6478,13 @@ msgid ""
 "    Size (in bytes)\n"
 "    Date and time of the last commit\n"
 msgstr ""
-"列出仓库中的目录内容。\n"
+"列出版本库中的目录内容。\n"
 "用法: list [TARGET[@REV]...]\n"
 "\n"
-"  显示仓库中文件和子目录列表。如果 TARGET 是工作副本路径，那么操作对应的\n"
-"  仓库URL指定的TARGET。REV指定从在哪个版本查找TARGET。\n"
+"  显示版本库中文件和子目录列表。如果 TARGET 是工作副本路径，那么操作对应的\n"
+"  版本库URL指定的TARGET。REV指定从在哪个版本查找TARGET。\n"
 "\n"
-"  TARGET默认是“.”，表示当前工作目录对应的仓库URL。\n"
+"  TARGET默认是“.”，表示当前工作目录对应的版本库URL。\n"
 "\n"
 "  使用 --verbose 时，每个条目会显示以下额外信息: \n"
 "\n"
@@ -6494,7 +6502,7 @@ msgid ""
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
-"锁定仓库中的路径，使得其他用户不能向其提交修改。\n"
+"锁定版本库中的路径，使得其他用户不能向其提交修改。\n"
 "用法: lock TARGET...\n"
 "\n"
 "     使用 --force 选项可以从其他用户或工作副本窃取到锁。\n"
@@ -6548,9 +6556,10 @@ msgstr ""
 "  使用 -v 时，在日志信息中显示受影响的路径名。\n"
 "  使用 -q 时，不显示日志信息主体 (请注意，这可和 -v 并存)。\n"
 "\n"
-"  每一条日志信息只会显示一次，即使指定某一个修改中涉及到的多个文件。默认log信"
-"息会\n"
-"  追溯复制历史；使用 --stop-on-copy 可以关闭这种行为，这便于找出分支点。\n"
+"  每一条日志信息只会显示一次，即使指定某一个修改中涉及到的多个文件。默认日"
+"志\n"
+"  信息会追溯复制历史；使用 --stop-on-copy 可以关闭这种行为，这便于找出分支"
+"点。\n"
 "\n"
 "  范例: \n"
 "    svn log\n"
@@ -6595,23 +6604,24 @@ msgstr ""
 "      3、merge [-c M | -r N:M] [SOURCE[@REV] [WCPATH]]\n"
 "\n"
 "  1、第一种形式中，源 URL 的版本 N 与 M作为比较的来源。如果没有指定版本，默认"
-"为 HEAD。\n"
+"为\n"
+"    HEAD。\n"
 "\n"
-"  2、在第二种形式中，两个源工作副本路径对应的仓库中的URL作为比较的来源。这里"
-"必须指定版本。\n"
+"  2、在第二种形式中，两个源工作副本路径对应的版本库中的URL作为比较的来源。这"
+"里\n"
+"    必须指定版本。\n"
 "\n"
-"  3、第三种形式中，SOURCE 可为 URL 或工作副本中的路径，后者会使用仓库中对应"
-"的 URL。\n"
-"    如果没有指定 WCPATH，就使用源 URL 的路径。如果不能自动检测 WCPATH，就显示"
-"错误\n"
-"    信息，询问 SOURCE。比较版本为 REV 的 URL，就像它在版本 N 到 M 存在一样。"
-"如果没有\n"
-"    给出 REV，默认为HEAD。选项“-c M”等价于“-r N:M”，其中 N = M-1。如果没有给"
-"出\n"
-"    版本范围，默认为 “-r OLDEST_REV_OF_SOURCE_AT_URL:HEAD”。\n"
-"  WCPATH 是接收修改的工作副本路径。WCPATH 默认值为“.”，除非来源中有与当前目录"
-"中同名的文件，\n"
-"  这时修改会直接应用至该文件。\n"
+"  3、第三种形式中，SOURCE 可为 URL 或工作副本中的路径，后者会使用版本库中对应"
+"的\n"
+"    URL。如果没有指定 WCPATH，就使用源 URL 的路径。如果不能自动检测 WCPATH，"
+"就\n"
+"    显示错误信息，询问 SOURCE。比较版本为 REV 的 URL，就像它在版本 N 到 M 存"
+"在\n"
+"    一样。如果没有给出 REV，默认为 HEAD。选项 “-c M” 等价于 “-r N:M”，其中\n"
+"    N = M-1。如果没有给出版本范围，默认为\n"
+"    “-r OLDEST_REV_OF_SOURCE_AT_URL:HEAD”。\n"
+"  WCPATH 是接收修改的工作副本路径。WCPATH 默认值为 “.”，除非来源中有与当前\n"
+"  目录中同名的文件，这时修改会直接应用至该文件。\n"
 
 #: svn/main.c:559
 msgid ""
@@ -6639,7 +6649,7 @@ msgstr ""
 "  1、每个以工作副本 PATH 指定的目录，都会在本地创建，并且加入增加\n"
 "     调度，直到下次提交。\n"
 "\n"
-"  2、每个以 URL 指定的目录，都会通过立即提交在仓库中创建。\n"
+"  2、每个以 URL 指定的目录，都会通过立即提交在版本库中创建。\n"
 "\n"
 "  在这两个情况下，所有的中间目录都必须事先存在，\n"
 "  除非使用选项 --parents。\n"
@@ -6688,10 +6698,9 @@ msgstr ""
 "      2、propdel PROPNAME --revprop -r REV [URL]\n"
 "\n"
 "  1、删除工作副本中纳入版本管理的文件或目录的属性。\n"
-"  2、删除仓库中版本的属性。TARGET只用来判断访问哪个仓库。\n"
+"  2、删除版本库中版本的属性。TARGET只用来判断访问哪个版本库。\n"
 
 #: svn/main.c:606
-#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME TARGET...\n"
@@ -6703,13 +6712,15 @@ msgid ""
 "\n"
 "See 'svn help propset' for more on property setting.\n"
 msgstr ""
-"启动外部编辑器编辑属性。\n"
+"使用外部编辑器编辑属性。\n"
 "用法: 1、propedit PROPNAME TARGET...\n"
 "      2、propedit PROPNAME --revprop -r REV [TARGET]\n"
 "\n"
-"  1、编辑工作副本或者仓库中版本化的属性。\n"
-"  2、编辑仓库中非版本化的远程属性。\n"
-"     TARGET只用来判断访问哪一个仓库。\n"
+"  1、编辑工作副本或者版本库中受版本控制的属性。\n"
+"  2、编辑版本库中修订版的未版本控制远程属性。\n"
+"     TARGET 只用来判断访问哪一个版本库。\n"
+"\n"
+"参见 “svn help propset” 获得更多设置属性的信息。\n"
 
 #: svn/main.c:621
 msgid ""
@@ -6734,12 +6745,12 @@ msgstr ""
 "      2、propget PROPNAME --revprop -r REV [URL]\n"
 "\n"
 "      1、显示目标的属性。REV指定从哪个版本开始查找目标。\n"
-"      2、显示仓库中版本的属性。TARGET只用来判断访问哪个仓库。\n"
+"      2、显示版本库中版本的属性。TARGET只用来判断访问哪个版本库。\n"
 "\n"
-"  本子命令默认会在属性内容加上额外的换行符，得到美观的输出。另外，当同时\n"
-"  处理多个路径时，每一个属性内容会在开头增加上它所对应的路径。使用 --strict "
-"选项\n"
-"  可以关闭这些美化行为 (它很有用，例如将二进制属性内容重定向到一个文件)。\n"
+"  本子命令默认会在属性内容加上额外的换行符，得到美观的输出。另外，\n"
+"  当同时处理多个路径时，每一个属性内容会在开头增加上它所对应的路径。\n"
+"  使用 --strict 选项可以关闭这些美化行为 (它很有用，例如将二进制属\n"
+"  性内容重定向到一个文件)。\n"
 
 #: svn/main.c:641
 msgid ""
@@ -6757,10 +6768,9 @@ msgstr ""
 "      2、proplist --revprop -r REV [TARGET]\n"
 "\n"
 "      1、显示目标的属性。REV指定从哪个版本开始查找目标。\n"
-"      2、列出仓库中版本的属性。TARGET只用来判断访问哪个仓库。\n"
+"      2、列出版本库中版本的属性。TARGET只用来判断访问哪个版本库。\n"
 
 #: svn/main.c:654
-#, fuzzy
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -6807,43 +6817,42 @@ msgid ""
 "  attempt will fail, and a recursive attempt will set the property\n"
 "  only on the file children of the directory.\n"
 msgstr ""
-"设定目录、文件或版本的属性。\n"
+"设定目录、文件或修订版的属性。\n"
 "用法: 1、propset PROPNAME PROPVAL PATH...\n"
 "      2、propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n"
 "\n"
-"  1、在工作副本中创建或者修改一个属性。\n"
-"  2、在仓库中REV版本上创建或者修改一个属性。\n"
-"     TARGET只用来判断访问哪一个仓库。\n"
+"  1、在工作副本中创建或者本地修改一个受版本控制的属性。\n"
+"  2、在版本库的 REV 版本创建或者远程修改一个未版本控制的属性。\n"
+"     TARGET 只用来判断访问哪一个版本库。\n"
 "\n"
-"  如果没有PROPVAL参数，则必须提供--file选项。\n"
+"  如果没有 PROPVAL 参数，则必须使用 --file 选项。\n"
 "\n"
-"  注意: svn 除了能存储任意属性外，还识别以下特殊版本控制属性: \n"
-"      svn:ignore     - 以换行符隔开的忽略文件模式列表。\n"
-"      svn:keywords   - 将被展开的关键字。有效的关键字为。\n"
-"        URL, HeadURL             - 此对象HEAD版本的URL。\n"
-"        Author, LastChangedBy    - 最后一次修改文件的人。\n"
-"        Date, LastChangedDate    - 此对象最近一次修改的日期。\n"
-"        Rev, Revision,           - 此对象最后一次修改的版本。\n"
+"  注意: svn 除了能存储任意属性外，还识别以下专用的版本控制属性: \n"
+"    svn:ignore     - 以换行符隔开的文件忽略模式列表。\n"
+"    svn:keywords   - 将被展开的关键字。有效的关键字为。\n"
+"        URL, HeadURL             - 此对象 HEAD 版本的 URL。\n"
+"        Author, LastChangedBy    - 最后修改文件的人。\n"
+"        Date, LastChangedDate    - 此对象最近修改的日期。\n"
+"        Rev, Revision,           - 此对象最后修改的版本号。\n"
 "        LastChangedRevision\n"
-"        Id                       - 前四个关键字的紧凑摘要。\n"
+"        Id                       - 前四个关键字的压缩摘要。\n"
 "    svn:executable   - 如果存在此属性则设置文件为可执行的。\n"
-"    svn:eol-style    - “native”，“LF”，“CR”，“CRLF”之一。\n"
-"    svn:mime-type    - 文件的 mime 类型。用以决定是否该合并该文件，\n"
-"      以及Apache如何处理它。mime类型以“text/”(或是没有指定 mime 类型)\n"
-"      开头的文件会被视为纯文本文件，否则就是二进制数据。\n"
-"    svn:externals    - 以换行符隔开的模块说明列表，每一条说明都由一个相对路"
-"径、\n"
-"      可选的版本标志、一个URL组成。例如: \n"
+"        使用 “svn propdel svn:executable PATH...” 清除。\n"
+"    svn:eol-style    - “native”，“LF”，“CR”，“CRLF” 之一。\n"
+"    svn:mime-type    - 文件的媒体类型。用以决定是否该合并该文件，\n"
+"        以及 Apache 如何处理它。媒体类型以“text/”开头(或是没有指\n"
+"        定媒体类型)的文件会被视为纯文本文件，否则就是二进制数据。\n"
+"    svn:externals    - 以换行符隔开的模块说明列表，每项都由一个\n"
+"        相对路径、可选的版本标志、一个URL组成。例如: \n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
-"    svn:needs-lock - 如果存在此属性则表明此文件在修改前应被加锁，如果没有被加"
-"锁\n"
-"        则此文件在工作副本中应被设为只读。\n"
+"    svn:needs-lock - 如果存在此属性则表明此文件在修改前应被加锁，\n"
+"        如果没有被加锁，则此文件在工作副本中应被设为只读。使用\n"
+"        “svn propdel svn:needs-lock PATH...” 清除。\n"
 "\n"
 "    svn:keywords, svn:executable, svn:eol-style, svn:mime-type 以及\n"
-"    svn:needs-lock 属性不能设置在一个目录上。不能在设置这些属性时使用非递归选"
-"项\n"
-"    （-N），递归操作时只会作用于指定目录下的文件上。\n"
+"    svn:needs-lock 属性不能设置在目录上。不能在设置这些属性时使用非\n"
+"    递归选项(-N)，递归操作时只会作用于指定目录下的文件上。\n"
 
 #: svn/main.c:699
 msgid "read property value from file ARG"
@@ -6986,16 +6995,16 @@ msgstr ""
 "    第五栏: 该条目相对其父目录是否已切换\n"
 "      “ ” 正常\n"
 "      “S” 已切换\n"
-"    第六栏: 仓库锁定标记\n"
+"    第六栏: 版本库锁定标记\n"
 "      （没有 -u）\n"
 "      “ ” 没有锁定标记\n"
 "      “K” 存在锁定标记\n"
 "      （使用 -u）\n"
-"      “ ” 没有在仓库中锁定，没有锁定标记\n"
-"      “K” 在仓库中被锁定，存在锁定标记\n"
-"      “O” 在仓库中被锁定，锁定标记在一些其他工作副本中\n"
-"      “T” 在仓库中被锁定，存在锁定标记但已被窃取\n"
-"      “B” 没有在仓库中被锁定，存在锁定标记但已被终止\n"
+"      “ ” 没有在版本库中锁定，没有锁定标记\n"
+"      “K” 在版本库中被锁定，存在锁定标记\n"
+"      “O” 在版本库中被锁定，锁定标记在一些其他工作副本中\n"
+"      “T” 在版本库中被锁定，存在锁定标记但已被窃取\n"
+"      “B” 没有在版本库中被锁定，存在锁定标记但已被终止\n"
 "\n"
 "  是否过期的信息出现的位置是第八栏 (与 -u 并用时): \n"
 "      “*” 服务器上有更新版本\n"
@@ -7057,15 +7066,15 @@ msgstr ""
 "  1、更新工作副本，切换到一个新的 URL，其行为跟“svn update”很像，\n"
 "     也是将工作拷贝迁移到同一档案库中某个分支或者标记的方法。\n"
 "\n"
-"  2、重写工作副本的URL元数据，以反映单纯的URL改变。当仓库的根URL改变 \n"
+"  2、重写工作副本的URL元数据，以反映单纯的URL改变。当版本库的根URL改变\n"
 "    (比如方案或者主机名称变动)，但是工作副本仍旧对应映同档案库的同目录\n"
 "    时，使用这个命令更新工作副本与档案库的对应关系。\n"
 "\n"
-"  如果使用了“--force”选项，在工作副本中未版本化的障碍路径，不会自动导\n"
-"  致签出失败。 如果障碍路径与仓库中的对应路径类型相同(文件或目录),它将成\n"
-"  为版本化的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍路\n"
-"  径，那么也会版本化。对于障碍路径中的文件，如果与仓库内的不同，将视为工\n"
-"  作副本发生本地修改。仓库中的所有属性都应用于障碍路径。\n"
+"  如果使用了 “--force” 选项，在工作副本中未版本控制的障碍路径，不会自动\n"
+"  导致签出失败。如果障碍路径与版本库中的对应路径类型相同(文件或目录),它\n"
+"  将成为受版本控制的路径，但是内容不改变。它意味着障碍路径的孩子，如果也\n"
+"  是障碍路径，那么也会受版本控制。对于障碍路径中的文件，如果与版本库内的\n"
+"  不同，将视为工作副本发生本地修改。版本库中的所有属性都应用于障碍路径。\n"
 
 #: svn/main.c:826
 msgid ""
@@ -7114,7 +7123,7 @@ msgid ""
 "  are applied to the obstructing path.  Obstructing paths are reported\n"
 "  in the first column with code 'E'.\n"
 msgstr ""
-"将仓库的更改合并到工作副本中。\n"
+"将版本库的更改合并到工作副本中。\n"
 "用法: update [PATH...]\n"
 "\n"
 "  如果没有指定版本，则将工作副本更新到 HEAD 版本。否则同步到 -r 选项所\n"
@@ -7132,12 +7141,12 @@ msgstr ""
 "  第一列字符表示文件内容更新，第二列表示文件属性更新。第三列表示此文件上\n"
 "  的锁被中止或窃取\n"
 "\n"
-"  如果使用了“--force”选项，在工作副本中未版本化的障碍路径，不会自动导\n"
-"  致签出失败。 如果障碍路径与仓库中的对应路径类型相同(文件或目录),它将成\n"
-"  为版本化的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍路\n"
-"  径，那么也将版本化。对于障碍路径中的文件，如果与仓库内的不同，将视为工\n"
-"  作副本发生本地修改。仓库中的所有属性都应用于障碍路径。用第一列字符“E”\n"
-"  来报告障碍路径。\n"
+"  如果使用了 “--force” 选项，在工作副本中未版本控制的障碍路径，不会自动\n"
+"  导致签出失败。 如果障碍路径与版本库中的对应路径类型相同(文件或目录),它\n"
+"  将成为受版本控制的路径，但是内容不改变。它意味着障碍路径的孩子，如果也\n"
+"  是障碍路径，那么也将受版本控制。对于障碍路径中的文件，如果与版本库内的\n"
+"  不同，将视为工作副本发生本地修改。版本库中的所有属性都应用于障碍路径。\n"
+"  用第一列字符 “E” 来报告障碍路径。\n"
 
 #: svn/main.c:910 svnadmin/main.c:78 svnlook/main.c:289 svnsync/main.c:180
 msgid "Caught signal"
@@ -7163,11 +7172,11 @@ msgstr "遇到了多个版本参数；不能指定 -c 两次或者同时使用 -
 
 #: svn/main.c:1096 svn/main.c:1320
 msgid "Can't specify -c with --old"
-msgstr "不能同时指定-c和--old"
+msgstr "不能同时指定 -c 和 --old"
 
 #: svn/main.c:1103
 msgid "Non-numeric change argument given to -c"
-msgstr "-c选项的取值不是数字"
+msgstr "-c 选项的取值不是数字"
 
 #: svn/main.c:1109
 msgid "There is no change 0"
@@ -7207,10 +7216,9 @@ msgid "Syntax error in native-eol argument '%s'"
 msgstr "原生换行符号参数“%s”中有语法错误"
 
 #: svn/main.c:1407
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid accept value; try 'left', 'right', or 'working'"
-msgstr ""
-"“%s” 不是有效的深度；尝试 “empty”，“files”，“immediates”，或 “infinity”"
+msgstr "“%s” 不是有效取值；尝试 “left”，“right”，或 “working”"
 
 #: svn/main.c:1461 svndumpfilter/main.c:1207 svnlook/main.c:2066
 #, c-format
@@ -7469,7 +7477,7 @@ msgstr "--- 正在合并 r%ld，经由 r%ld:\n"
 #: svn/propdel-cmd.c:101
 #, c-format
 msgid "property '%s' deleted from repository revision %ld\n"
-msgstr "从仓库版本 %2$ld 删除属性“%1$s”\n"
+msgstr "从版本库版本 %2$ld 删除属性“%1$s”\n"
 
 #: svn/propdel-cmd.c:110
 #, c-format
@@ -7559,11 +7567,13 @@ msgid ""
 "To turn off the %s property, use 'svn propdel';\n"
 "setting the property to '%s' will not turn it off."
 msgstr ""
+"使用 “svn propdel” 关闭属性 %s；\n"
+"设置属性为 “%s” 不会关闭它。"
 
 #: svn/propset-cmd.c:137
 #, c-format
 msgid "property '%s' set on repository revision %ld\n"
-msgstr "在仓库版本 %2$ld 设定属性“%1$s”\n"
+msgstr "在版本库版本 %2$ld 设定属性“%1$s”\n"
 
 #: svn/propset-cmd.c:145
 #, c-format
@@ -7731,7 +7741,7 @@ msgstr "无法打开标准输出/入文件"
 
 #: svnadmin/main.c:124
 msgid "Repository argument required"
-msgstr "需要仓库参数"
+msgstr "需要版本库参数"
 
 #: svnadmin/main.c:129
 #, c-format
@@ -7752,7 +7762,7 @@ msgstr "在转存输出中使用差异"
 
 #: svnadmin/main.c:249
 msgid "bypass the repository hook system"
-msgstr "跳过仓库钩子系统"
+msgstr "跳过版本库钩子系统"
 
 #: svnadmin/main.c:252
 msgid "no progress (only errors) to stderr"
@@ -7760,19 +7770,19 @@ msgstr "在标准错误输出不显示进度 (仅错误)"
 
 #: svnadmin/main.c:255
 msgid "ignore any repos UUID found in the stream"
-msgstr "忽略所有流中的仓库 UUID"
+msgstr "忽略所有流中的版本库 UUID"
 
 #: svnadmin/main.c:258
 msgid "set repos UUID to that found in stream, if any"
-msgstr "如果流中存在UUID,则设定为仓库的 UUID"
+msgstr "如果流中存在UUID,则设定为版本库的 UUID"
 
 #: svnadmin/main.c:261
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
-msgstr "仓库类型: “fsfs”(默认)或“bdb”"
+msgstr "版本库类型: “fsfs”(默认)或“bdb”"
 
 #: svnadmin/main.c:264
 msgid "load at specified directory in repository"
-msgstr "载入到仓库指定的目录中"
+msgstr "载入到版本库指定的目录中"
 
 #: svnadmin/main.c:267
 msgid "disable fsync at transaction commit [Berkeley DB]"
@@ -7786,7 +7796,7 @@ msgstr "禁用自动删除日志文件 [BDB]"
 msgid ""
 "remove redundant Berkeley DB log files\n"
 "                             from source repository [Berkeley DB]"
-msgstr "删除源仓库中多余的BDB日志文件 [BDB]"
+msgstr "删除源版本库中多余的BDB日志文件 [BDB]"
 
 #: svnadmin/main.c:280
 msgid "call pre-commit hook before committing revisions"
@@ -7808,7 +7818,7 @@ msgstr "修改属性后调用钩子"
 msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
-msgstr "如果仓库被其他进程占用，等待而不直接退出"
+msgstr "如果版本库被其他进程占用，等待而不直接退出"
 
 #: svnadmin/main.c:296
 msgid ""
@@ -7831,7 +7841,8 @@ msgid ""
 msgstr ""
 "用法: svnadmin crashtest REPOS_PATH\n"
 "\n"
-"打开位于 REPOS_PATH 的仓库, 然后终止, 从而模拟一个持有仓库句柄进程的崩溃。\n"
+"打开位于 REPOS_PATH 的版本库, 然后终止, 从而模拟一个持有版本库句柄进程的崩"
+"溃。\n"
 
 #: svnadmin/main.c:319
 msgid ""
@@ -7841,7 +7852,7 @@ msgid ""
 msgstr ""
 "用法: svnadmin create REPOS_PATH\n"
 "\n"
-"在 REPOS_PATH 创建一个新的空仓库。\n"
+"在 REPOS_PATH 创建一个新的空版本库。\n"
 
 #: svnadmin/main.c:326
 msgid ""
@@ -7856,7 +7867,7 @@ msgstr ""
 "用法: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
 "\n"
 "在指定的版本范围中，对其中变动的路径增量计算。借助只储存与以前版本的差异，\n"
-"它本质上可压缩仓库。如果没有指定版本则直接对 HEAD 版本进行。\n"
+"它本质上可压缩版本库。如果没有指定版本则直接对 HEAD 版本进行。\n"
 
 #: svnadmin/main.c:335
 msgid ""
@@ -7895,7 +7906,7 @@ msgid ""
 msgstr ""
 "用法: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
 "\n"
-"产生仓库的即时副本。\n"
+"产生版本库的即时副本。\n"
 
 #: svnadmin/main.c:355
 msgid ""
@@ -7910,7 +7921,7 @@ msgstr ""
 "\n"
 "列出所有的BDB日志文件。\n"
 "\n"
-"警告: 修改或删除仍在使用中的记录文件将导致仓库损坏。\n"
+"警告: 修改或删除仍在使用中的记录文件将导致版本库损坏。\n"
 
 #: svnadmin/main.c:362
 msgid ""
@@ -7935,8 +7946,8 @@ msgid ""
 msgstr ""
 "用法: svnadmin load REPOS_PATH\n"
 "\n"
-"从标准输入读取“转存”格式的流，将新的版本提交至仓库的文件\n"
-"系统中。如果仓库原先是空的，默认会将其 UUID 以流中的数值代替。\n"
+"从标准输入读取“转存”格式的流，将新的版本提交至版本库的文件\n"
+"系统中。如果版本库原先是空的，默认会将其 UUID 以流中的数值代替。\n"
 "进度报告会送至标准输出。\n"
 
 #: svnadmin/main.c:377
@@ -7970,8 +7981,8 @@ msgid ""
 msgstr ""
 "用法: svnadmin recover REPOS_PATH\n"
 "\n"
-"对仓库运行修复程序。当你遇到应当执行修复的错误指示时，请执行此命令。\n"
-"修复 Berkeley DB 需要独占访问，如果仓库被其它进程使用，它会立即退出。\n"
+"对版本库运行修复程序。当你遇到应当执行修复的错误指示时，请执行此命令。\n"
+"修复 Berkeley DB 需要独占访问，如果版本库被其它进程使用，它会立即退出。\n"
 
 #: svnadmin/main.c:395
 msgid ""
@@ -7991,7 +8002,7 @@ msgid ""
 msgstr ""
 "用法: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
 "\n"
-"从仓库删除命名事务。\n"
+"从版本库删除命名事务。\n"
 
 #: svnadmin/main.c:405
 msgid ""
@@ -8044,7 +8055,7 @@ msgid ""
 msgstr ""
 "用法: svnadmin verify REPOS_PATH\n"
 "\n"
-"校验仓库中的数据。\n"
+"校验版本库中的数据。\n"
 
 #: svnadmin/main.c:485
 msgid "Invalid revision specifier"
@@ -8088,7 +8099,7 @@ msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
 msgstr ""
-"下列仓库后端(FS) 模块可用: \n"
+"下列版本库后端(FS) 模块可用: \n"
 "\n"
 
 #: svnadmin/main.c:789
@@ -8097,21 +8108,21 @@ msgid ""
 "Repository lock acquired.\n"
 "Please wait; recovering the repository may take some time...\n"
 msgstr ""
-"已取得仓库锁定。\n"
-"请稍候；修复仓库可能需要一段时间...\n"
+"已取得版本库锁定。\n"
+"请稍候；修复版本库可能需要一段时间...\n"
 
 #: svnadmin/main.c:825
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
 msgstr ""
-"无法独占访问仓库；可能是其它如 httpd，svnserve 或 svn 等进程已经打开它，\n"
+"无法独占访问版本库；可能是其它如 httpd，svnserve 或 svn 等进程已经打开它，\n"
 "尚未关闭？"
 
 #: svnadmin/main.c:830
 #, c-format
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
-msgstr "等待仓库锁定中；也许其它的进程把它打开了？\n"
+msgstr "等待版本库锁定中；也许其它的进程把它打开了？\n"
 
 #: svnadmin/main.c:838
 #, c-format
@@ -8125,7 +8136,7 @@ msgstr ""
 #: svnadmin/main.c:845
 #, c-format
 msgid "The latest repos revision is %ld.\n"
-msgstr "最新的仓库版本是 %ld。\n"
+msgstr "最新的版本库版本是 %ld。\n"
 
 #: svnadmin/main.c:955
 #, c-format
@@ -8462,7 +8473,7 @@ msgid ""
 msgstr ""
 "用法: svnlook diff REPOS_PATH\n"
 "\n"
-"以 GNU 样式，显示仓库中改变的文件与属性差异。\n"
+"以 GNU 样式，显示版本库中改变的文件与属性差异。\n"
 
 #: svnlook/main.c:167
 msgid ""
@@ -8494,7 +8505,7 @@ msgid ""
 msgstr ""
 "用法: svnlook history REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
-"显示仓库中，某个路径的历史记录信息 (如果没有指定路径，则为根目录)。\n"
+"显示版本库中，某个路径的历史记录信息 (如果没有指定路径，则为根目录)。\n"
 
 #: svnlook/main.c:184
 msgid ""
@@ -8514,7 +8525,7 @@ msgid ""
 msgstr ""
 "用法: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
 "\n"
-"如果仓库中的路径存在锁，显示其详细信息。\n"
+"如果版本库中的路径存在锁，显示其详细信息。\n"
 
 #: svnlook/main.c:194
 msgid ""
@@ -8535,7 +8546,7 @@ msgid ""
 msgstr ""
 "用法: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n"
 "\n"
-"显示仓库中某个路径上属性的原始值。\n"
+"显示版本库中某个路径上属性的原始值。\n"
 "用 --revprop 选项显示版本属性的原始值。\n"
 
 #: svnlook/main.c:205
@@ -8548,7 +8559,7 @@ msgid ""
 msgstr ""
 "用法: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
-"列出仓库中某个路径的属性。\n"
+"列出版本库中某个路径的属性。\n"
 "使用 --revprop 选项列出版本属性。\n"
 "使用 -v 选项显示属性的内容。\n"
 
@@ -8561,7 +8572,7 @@ msgid ""
 msgstr ""
 "用法: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
-"显示目录树，从 PATH_IN_REPOS 开始 (如果省略此参数就从仓库的根目录开始)，\n"
+"显示目录树，从 PATH_IN_REPOS 开始 (如果省略此参数就从版本库的根目录开始)，\n"
 "可选的显示节点版本 id。\n"
 
 #: svnlook/main.c:218
@@ -8572,7 +8583,7 @@ msgid ""
 msgstr ""
 "用法: svnlook uuid REPOS_PATH\n"
 "\n"
-"显示仓库的 UUID。\n"
+"显示版本库的 UUID。\n"
 
 #: svnlook/main.c:223
 msgid ""
@@ -8665,7 +8676,7 @@ msgstr "事务‘%3$s’中的路径‘%2$s’没有属性‘%1$s’"
 #: svnlook/main.c:1616 svnlook/main.c:1831
 #, c-format
 msgid "Missing repository path argument"
-msgstr "未提供仓库路径参数"
+msgstr "未提供版本库路径参数"
 
 #: svnlook/main.c:1677
 msgid ""
@@ -8680,7 +8691,7 @@ msgid ""
 msgstr ""
 "一般用法: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "注意: 任何接受 “--revision”与 “--transaction”选项的子命令，在没有\n"
-"      指定两者其一的情况下会直接作用在仓库最新的版本上。\n"
+"      指定两者其一的情况下会直接作用在版本库最新的版本上。\n"
 "使用“svnlook help <subcommand>”得到子命令的帮助信息。\n"
 "使用“svnlook --version”查看程序的版本号和文件系统模块。\n"
 "\n"
@@ -8716,11 +8727,11 @@ msgstr "丢失属性名参数"
 #: svnlook/main.c:1806
 #, c-format
 msgid "Missing propname and repository path arguments"
-msgstr "未提供属性名称与仓库路径参数"
+msgstr "未提供属性名称与版本库路径参数"
 
 #: svnlook/main.c:1812
 msgid "Missing propname or repository path argument"
-msgstr "未提供属性名称或仓库路径参数"
+msgstr "未提供属性名称或版本库路径参数"
 
 #: svnlook/main.c:1971
 msgid "Invalid revision number supplied"
@@ -8734,7 +8745,7 @@ msgstr "“--transaction” (-t) 与 “--revision” (-r) 参数不能同时存
 #: svnlook/main.c:2118
 #, c-format
 msgid "Repository argument required\n"
-msgstr "需要仓库参数\n"
+msgstr "需要版本库参数\n"
 
 #: svnlook/main.c:2127
 #, c-format
@@ -8797,7 +8808,7 @@ msgstr "服务的根目录"
 
 #: svnserve/main.c:155
 msgid "force read only, overriding repository config file"
-msgstr "强制只读；覆盖仓库配置文件"
+msgstr "强制只读；覆盖版本库配置文件"
 
 #: svnserve/main.c:156
 msgid "tunnel mode"
@@ -8942,13 +8953,13 @@ msgid ""
 msgstr ""
 "用法: svnsync initialize DEST_URL SOURCE_URL\n"
 "\n"
-"初始化一个目标仓库以从另一个仓库同步。\n"
+"初始化一个目标版本库以从另一个版本库同步。\n"
 "\n"
-"DEST_URL 必须指向仓库的根目录，这个仓库必须没有提交版本并且允许\n"
+"DEST_URL 必须指向版本库的根目录，这个版本库必须没有提交版本并且允许\n"
 "修改版本属性。\n"
 "\n"
-"除了 svnsync 外，你不应该在目标仓库中提交或者修改版本属性。也就是说，\n"
-"目标仓库应该是源仓库的只读镜像。\n"
+"除了 svnsync 外，你不应该在目标版本库中提交或者修改版本属性。也就是说，\n"
+"目标版本库应该是源版本库的只读镜像。\n"
 
 #: svnsync/main.c:79
 msgid ""
@@ -8959,7 +8970,7 @@ msgid ""
 msgstr ""
 "用法: svnsync synchronize DEST_URL\n"
 "\n"
-"从已经初始化的源仓库传输所有未决的版本到目标仓库。\n"
+"从已经初始化的源版本库传输所有未决的版本到目标版本库。\n"
 
 #: svnsync/main.c:85
 msgid ""
@@ -8980,13 +8991,13 @@ msgid ""
 msgstr ""
 "用法: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
 "\n"
-"从已经初始化的源仓库复制指定版本范围的版本属性到目的仓库。\n"
+"从已经初始化的源版本库复制指定版本范围的版本属性到目的版本库。\n"
 "\n"
-"如果给出了 REV 和 REV2，那么复制给定的版本范围，包含边界。\n"
-"如果只给出了 REV，那么单独复制此版本属性。如果没有给出 \n"
-"REV，那么就复制已经传输的所有版本的属性。\n"
+"如果给出了 REV 和 REV2，那么复制给定的版本范围，包含边界。如果\n"
+"只给出了 REV，那么单独复制此版本属性。如果没有给出 REV，那么就\n"
+"复制已经传输的所有版本的属性。\n"
 "\n"
-"REV 和 REV2 必须是已经传输到目的仓库的版本。你可以使用 \"HEAD\" \n"
+"REV 和 REV2 必须是已经传输到目的版本库的版本。你可以使用 \"HEAD\" \n"
 "来指代最后一个传输的版本。\n"
 
 #: svnsync/main.c:101
@@ -9017,29 +9028,29 @@ msgstr ""
 
 #: svnsync/main.c:123
 msgid "connect to source repository with username ARG"
-msgstr "使用用户名称 ARG 连接源仓库"
+msgstr "使用用户名称 ARG 连接源版本库"
 
 #: svnsync/main.c:125
 msgid "connect to source repository with password ARG"
-msgstr "使用密码 ARG 连接源仓库"
+msgstr "使用密码 ARG 连接源版本库"
 
 #: svnsync/main.c:127
 msgid "connect to sync repository with username ARG"
-msgstr "使用用户名称 ARG 连接目的仓库"
+msgstr "使用用户名称 ARG 连接目的版本库"
 
 #: svnsync/main.c:129
 msgid "connect to sync repository with password ARG"
-msgstr "使用密码 ARG 连接目的仓库"
+msgstr "使用密码 ARG 连接目的版本库"
 
 #: svnsync/main.c:241
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
-msgstr "从目标仓库获得锁失败，当前被“%s”持有\n"
+msgstr "从目标版本库获得锁失败，当前被“%s”持有\n"
 
 #: svnsync/main.c:336
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
-msgstr "会话根是“%s”，但是仓库根是“%s”"
+msgstr "会话根是“%s”，但是版本库根是“%s”"
 
 #: svnsync/main.c:403
 #, c-format
@@ -9053,12 +9064,12 @@ msgstr "复制版本 %ld 的属性。\n"
 
 #: svnsync/main.c:450
 msgid "Cannot initialize a repository with content in it"
-msgstr "当仓库有内容时不能初始化"
+msgstr "当版本库有内容时不能初始化"
 
 #: svnsync/main.c:461
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
-msgstr "目标仓库已经与“%s”同步"
+msgstr "目标版本库已经与“%s”同步"
 
 #: svnsync/main.c:525 svnsync/main.c:528 svnsync/main.c:1212
 #: svnsync/main.c:1391
@@ -9083,12 +9094,12 @@ msgstr "已提交版本 %ld。\n"
 
 #: svnsync/main.c:963
 msgid "Destination repository has not been initialized"
-msgstr "目标仓库没有初始化"
+msgstr "目标版本库没有初始化"
 
 #: svnsync/main.c:978
 #, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
-msgstr "源仓库的UUID(%s)与期望的UUID(%s)不匹配"
+msgstr "源版本库的UUID(%s)与期望的UUID(%s)不匹配"
 
 #: svnsync/main.c:1041
 #, c-format
@@ -9098,7 +9109,7 @@ msgid ""
 "destination without using svnsync?"
 msgstr ""
 "当前复制版本(%ld), 最后合并版本(%ld), 和目标 HEAD (%ld) 不一致；你是否使用非"
-"svnsync方法提交到目标仓库？"
+"svnsync方法提交到目标版本库？"
 
 #: svnsync/main.c:1079
 #, c-format
@@ -9106,7 +9117,8 @@ msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
 "committed to the destination without using svnsync?"
 msgstr ""
-"目标 HEAD (%ld)不是最后合并版本(%ld)；你是否使用非svnsync方法提交到目标仓库？"
+"目标 HEAD (%ld)不是最后合并版本(%ld)；你是否使用非svnsync方法提交到目标版本"
+"库？"
 
 #: svnsync/main.c:1157
 #, c-format
@@ -9138,8 +9150,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "一般用法: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
-"使用“svnsync help <subcommand>” 得到子命令的帮助信息。\n"
-"使用“svnsync --version”察看程序的版本号和仓库访问模块。\n"
+"使用 “svnsync help <subcommand>” 得到子命令的帮助信息。\n"
+"使用 “svnsync --version” 察看程序的版本号和版本库访问模块。\n"
 "\n"
 "可用的子命令: \n"
 
@@ -9162,12 +9174,12 @@ msgstr ""
 
 #: svnsync/main.c:1742
 msgid "Try 'svnsync help' for more info"
-msgstr "请使用“svnsync help”以得到更多信息"
+msgstr "请使用 “svnsync help” 以得到更多信息"
 
 #: svnversion/main.c:40
 #, c-format
 msgid "Type 'svnversion --help' for usage.\n"
-msgstr "使用“svnversion --help”得到用法。\n"
+msgstr "使用 “svnversion --help” 得到用法。\n"
 
 #: svnversion/main.c:51
 #, c-format
