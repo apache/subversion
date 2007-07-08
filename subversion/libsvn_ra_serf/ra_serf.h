@@ -1126,4 +1126,13 @@ handle_auth(svn_ra_serf__session_t *session,
             serf_bucket_t *response,
             apr_pool_t *pool);
 
+/**
+ * encode_auth_header: base64 encodes the authentication data and builds an 
+ * authentication header in this format:
+ * [PROTOCOL] [BASE64 AUTH DATA]
+ */
+void
+encode_auth_header(const char * protocol, char **header, const char * data, 
+                   apr_size_t data_len, apr_pool_t *pool);
+
 #endif /* SVN_LIBSVN_RA_SERF_RA_SERF_H */

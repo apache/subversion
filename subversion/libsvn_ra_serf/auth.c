@@ -134,7 +134,7 @@ handle_basic_auth(svn_ra_serf__session_t *session,
   char *last, *realm_name;
   svn_auth_cred_simple_t *simple_creds;
   const char *tmp;
-  apr_size_t tmp_len, encoded_len;
+  apr_size_t tmp_len;
   apr_port_t port;
   int i;
 
@@ -212,14 +212,8 @@ handle_basic_auth(svn_ra_serf__session_t *session,
                     simple_creds->username, ":", simple_creds->password, NULL);
   tmp_len = strlen(tmp);
 
-  encoded_len = apr_base64_encode_len(tmp_len);
-
-  session->auth_value = apr_palloc(session->pool, encoded_len + 6);
-
-  apr_cpystrn(session->auth_value, "Basic ", 7);
-
-  apr_base64_encode(&session->auth_value[6], tmp, tmp_len);
-
+  encode_auth_header(session->auth_protocol->auth_name, &session->auth_value, 
+                     tmp, tmp_len, pool);
   session->auth_header = "Authorization";
 
   /* FIXME Come up with a cleaner way of changing the connection auth. */
@@ -241,4 +235,25 @@ init_basic_connection(svn_ra_serf__session_t *session,
   conn->auth_value = session->auth_value;
 
   return SVN_NO_ERROR;
+}
+
+void
+encode_auth_header(const char * protocol, char **header, 
+                   const char * data, apr_size_t data_len, 
+                   apr_pool_t *pool)
+{
+  apr_size_t encoded_len, proto_len;
+  char * ptr;
+
+  encoded_len = apr_base64_encode_len(data_len);
+  proto_len = strlen(protocol);
+
+  *header = apr_palloc(pool, encoded_len + proto_len + 1);
+  ptr = *header;
+
+  apr_cpystrn(ptr, protocol, proto_len + 1);
+  ptr += proto_len;
+  *ptr++ = ' ';
+
+  apr_base64_encode(ptr, data, data_len);
 }

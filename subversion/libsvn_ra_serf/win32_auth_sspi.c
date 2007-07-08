@@ -119,7 +119,7 @@ handle_sspi_auth(svn_ra_serf__session_t *session,
 {
   const char *tmp;
   char *base64_token, *token = NULL, *last;
-  apr_size_t tmp_len, encoded_len, token_len = 0;
+  apr_size_t tmp_len, token_len = 0;
 
   base64_token = apr_strtok(auth_attr, " ", &last);
   if (base64_token)
@@ -132,14 +132,8 @@ handle_sspi_auth(svn_ra_serf__session_t *session,
   SVN_ERR(sspi_get_credentials(token, token_len, &tmp, &tmp_len,
                                conn->sspi_context));
 
-  encoded_len = apr_base64_encode_len(tmp_len);
-
-  session->auth_value = apr_palloc(session->pool, encoded_len + 5);
-
-  apr_cpystrn(session->auth_value, "NTLM ", 6);
-
-  apr_base64_encode(&session->auth_value[5], tmp, tmp_len);
-
+  encode_auth_header(session->auth_protocol->auth_name, &session->auth_value, 
+                     tmp, tmp_len, pool);
   session->auth_header = "Authorization";
 
   conn->auth_header = session->auth_header;
