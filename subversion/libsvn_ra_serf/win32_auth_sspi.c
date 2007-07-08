@@ -35,6 +35,7 @@
 HANDLE security_dll = INVALID_HANDLE_VALUE;
 INIT_SECURITY_INTERFACE InitSecurityInterface_;
 static PSecurityFunctionTable sspi = NULL;
+static unsigned int ntlm_maxtokensize = 0;
 
 #define SECURITY_DLL "security.dll"
 
@@ -67,6 +68,27 @@ load_security_dll()
   return svn_error_createf
           (SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED, NULL,
            "SSPI Initialization failed.");
+}
+
+/* Calculates the maximum token size based on the authentication protocol. */
+static svn_error_t *
+sspi_maxtokensize(char *auth_pkg, unsigned int *maxtokensize)
+{
+    SECURITY_STATUS status;
+    SecPkgInfo *sec_pkg_info = NULL;
+
+    status = sspi->QuerySecurityPackageInfo(auth_pkg, 
+                                            &sec_pkg_info);
+    if (status == SEC_E_OK) 
+      {
+        *maxtokensize = sec_pkg_info->cbMaxToken;
+        sspi->FreeContextBuffer(sec_pkg_info);
+      }
+    else
+      return svn_error_createf
+        (SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED, NULL,
+         "SSPI Initialization failed.");
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -139,6 +161,8 @@ sspi_get_credentials(char *token, apr_size_t token_len, const char **buf,
   char *target = NULL;
   CtxtHandle *ctx = &(sspi_ctx->ctx);
 
+  if (ntlm_maxtokensize == 0)
+    sspi_maxtokensize("NTLM", &ntlm_maxtokensize);
   /* Prepare inbound buffer. */
   in_buf.BufferType = SECBUFFER_TOKEN;
   in_buf.cbBuffer   = token_len;
@@ -149,8 +173,8 @@ sspi_get_credentials(char *token, apr_size_t token_len, const char **buf,
 
   /* Prepare outbound buffer. */
   out_buf.BufferType = SECBUFFER_TOKEN;
-  out_buf.cbBuffer   = 1000;
-  out_buf.pvBuffer   = (char*)malloc(1000);
+  out_buf.cbBuffer   = ntlm_maxtokensize;
+  out_buf.pvBuffer   = (char*)malloc(ntlm_maxtokensize);
   out_buf_desc.cBuffers  = 1;
   out_buf_desc.ulVersion = SECBUFFER_VERSION;
   out_buf_desc.pBuffers  = &out_buf;
