@@ -23,6 +23,7 @@
 <ul>
   <li>Merge Tracking</li>
   <li>Sparse checkouts</li>
+  <li>Interactive conflict resolution</li>
   <li>WebDAV transparent write-through proxy</li>
   <li>Cyrus SASL support for ra_svn and <tt>svnserve</tt></li>
   <li>Copy/move improvements: peg revisions, 'svn mv file1 file2; svn
@@ -138,6 +139,38 @@ href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
 >here</a>.</p>
 
 </div> <!-- sparse-checkouts -->
+
+<div class="h3" id="conflict-resolution" title="conflict-resolution">
+<h3>Interactive Conflict Resolution (<em>client</em>)</h3>
+
+<p>Added support for interactive conflict resolution in the command
+line client, and a corresponding callback function in the client library.
+GUI clients can use the callback function to hook in a graphical conflict
+resolution program to the update/switch/merge commands.  Example command
+line output:</p>
+<pre>
+    svn up
+    U    contrib/client-side/svnmerge/svnmerge_test.py
+    Conflict discovered in 'contrib/client-side/svnmerge/svnmerge.py'.
+    Select: (p)ostpone, (d)iff, (e)dit, (h)elp : h
+      (p)ostpone - mark the conflict to be resolved later
+      (d)iff     - show all changes made to merged file
+      (e)dit     - use an editor to resolve conflict
+      (a)ccept   - use merged version of file
+      (m)ine     - use my version of file
+      (t)heirs   - use repository's version of file
+      (l)aunch   - use third-party tool to resolve conflict
+      (h)elp     - show this list
+
+    Select: (p)ostpone, (d)iff, (e)dit, (h)elp : t
+    G    contrib/client-side/svnmerge/svnmerge.py
+    Updated to revision 25685.
+</pre>
+<p>This feature can be selectively disabled by using the --non-interactive
+option, or disabled permanently by setting '[miscellany] interactive-conflicts
+ = no' in your run-time config file.</p>
+
+</div>  <!-- conflict-resolution -->
 
 <div class="h3" id="webdav-proxy" title="webdav-proxy">
 <h3>WebDAV transparent write-through proxy (<em>server</em>)</h3>
