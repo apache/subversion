@@ -267,10 +267,8 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
     }
-  if (conn->auth_header && conn->auth_value)
-    {
-      serf_bucket_headers_setn(hdrs_bkt, conn->auth_header, conn->auth_value);
-    }
+  if (conn->session->auth_protocol)
+    conn->session->auth_protocol->setup_request_func(conn, hdrs_bkt);
 
   /* Set up SSL if we need to */
   if (conn->using_ssl)

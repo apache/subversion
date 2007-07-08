@@ -42,18 +42,24 @@ init_basic_connection(svn_ra_serf__session_t *session,
                       svn_ra_serf__connection_t *conn,
                       apr_pool_t *pool);
 
+static svn_error_t *
+setup_request_basic_auth(svn_ra_serf__connection_t *conn,
+                         serf_bucket_t *hdrs_bkt);
+
 /*** Global variables. ***/
 static const serf_auth_protocol_t serf_auth_protocols[] = {
   {
     "Basic",
     init_basic_connection,
     handle_basic_auth,
+    setup_request_basic_auth,
   },
 #ifdef WIN32
   {
     "NTLM",
     init_sspi_connection,
     handle_sspi_auth,
+    setup_request_sspi_auth,
   },
 #endif /* WIN32 */
 
@@ -233,6 +239,19 @@ init_basic_connection(svn_ra_serf__session_t *session,
 {
   conn->auth_header = session->auth_header;
   conn->auth_value = session->auth_value;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+setup_request_basic_auth(svn_ra_serf__connection_t *conn,
+                         serf_bucket_t *hdrs_bkt)
+{
+  /* Take the default authentication header for this connection, if any. */
+  if (conn->auth_header && conn->auth_value)
+    {
+      serf_bucket_headers_setn(hdrs_bkt, conn->auth_header, conn->auth_value);
+    }
 
   return SVN_NO_ERROR;
 }

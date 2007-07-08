@@ -28,12 +28,22 @@
 #include "svn_error.h"
 #include "ra_serf.h"
 
+typedef enum
+{
+  sspi_auth_not_started,
+  sspi_auth_in_progress,
+  sspi_auth_completed,
+} sspi_auth_state;
+
 /* Stores the context information related to SSPI. The context is per
    connection, it enables SSPI to go through the challenge/response cycle
    of the authentication protocols. */
 struct serf_sspi_context_t
 {
   CtxtHandle ctx;
+
+  /* Current state of the authentication cycle. */
+  sspi_auth_state state;
 };
 
 /* SSPI implementation of an ra_serf authentication protocol providor. 
@@ -56,6 +66,10 @@ svn_error_t *
 init_sspi_connection(svn_ra_serf__session_t *session,
                      svn_ra_serf__connection_t *conn,
                      apr_pool_t *pool);
+
+svn_error_t *
+setup_request_sspi_auth(svn_ra_serf__connection_t *conn,
+                        serf_bucket_t *hdrs_bkt);
 
 /* Provides the necessary information for the http authentication headers 
    for both the initial request to open an authentication connection, as 

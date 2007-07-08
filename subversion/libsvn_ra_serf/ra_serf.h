@@ -1099,6 +1099,16 @@ typedef svn_error_t *
                               apr_pool_t *pool);
 
 /**
+ * For each authentication protocol we need a setup_request function of type
+ * svn_serf__setup_request_func_t. This function will be called when a 
+ * new serf_request_t object is created and should fill in the correct
+ * authentication headers (if needed).
+ */
+typedef svn_error_t *
+(*svn_serf__setup_request_func_t)(svn_ra_serf__connection_t *conn,
+                                  serf_bucket_t *hdrs_bkt);
+
+/**
  * serf_auth_protocol_t: vtable for an authentication protocol provider.
  * 
  */
@@ -1112,6 +1122,9 @@ struct serf_auth_protocol_t {
 
   /* The authentication handler function */
   svn_serf__auth_handler_func_t handle_func;
+
+  /* Function to set up the authentication header of a request */
+  svn_serf__setup_request_func_t setup_request_func;
 };
 
 /**

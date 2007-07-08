@@ -102,6 +102,7 @@ init_sspi_connection(svn_ra_serf__session_t *session,
     apr_palloc(pool, sizeof(serf_sspi_context_t));
   conn->sspi_context->ctx.dwLower = 0;
   conn->sspi_context->ctx.dwUpper = 0;
+  conn->sspi_context->state = sspi_auth_not_started;
   conn->auth_header = NULL;
   conn->auth_value = NULL;
 
@@ -129,15 +130,30 @@ handle_sspi_auth(svn_ra_serf__session_t *session,
       apr_base64_decode(token, base64_token);
     }
 
+  if (!token && conn->sspi_context->state != sspi_auth_not_started)
+    return SVN_NO_ERROR;
+
   SVN_ERR(sspi_get_credentials(token, token_len, &tmp, &tmp_len,
                                conn->sspi_context));
 
-  encode_auth_header(session->auth_protocol->auth_name, &session->auth_value, 
+  encode_auth_header(session->auth_protocol->auth_name, &conn->auth_value, 
                      tmp, tmp_len, pool);
-  session->auth_header = "Authorization";
+  conn->auth_header = "Authorization";
 
-  conn->auth_header = session->auth_header;
-  conn->auth_value = session->auth_value;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+setup_request_sspi_auth(svn_ra_serf__connection_t *conn,
+                        serf_bucket_t *hdrs_bkt)
+{
+  /* Take the default authentication header for this connection, if any. */
+  if (conn->auth_header && conn->auth_value)
+    {
+      serf_bucket_headers_setn(hdrs_bkt, conn->auth_header, conn->auth_value);
+      conn->auth_header = NULL;
+      conn->auth_value = NULL;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -220,10 +236,12 @@ sspi_get_credentials(char *token, apr_size_t token_len, const char **buf,
     {
       case SEC_E_OK:
       case SEC_I_COMPLETE_NEEDED:
+          sspi_ctx->state = sspi_auth_completed;
           break;
 
       case SEC_I_CONTINUE_NEEDED:
       case SEC_I_COMPLETE_AND_CONTINUE:
+          sspi_ctx->state = sspi_auth_in_progress;
           break;
 
       default:
