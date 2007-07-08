@@ -1178,6 +1178,13 @@ def action_merge(branch_dir, branch_props):
                         (start - 1, end, opts["source-url"], branch_dir))
             # TODO: to support graph merging, add logic to merge the property meta-data manually
 
+    # Update the set of merged revisions.
+    merged_revs = merged_revs | revs | reflected_revs | phantom_revs
+    branch_props[opts["source-path"]] = str(merged_revs)
+    set_merge_props(branch_dir, branch_props)
+    # Reset the blocked revs
+    set_block_props(branch_dir, old_block_props)
+
     # Write out commit message if desired
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
@@ -1194,13 +1201,6 @@ def action_merge(branch_dir, branch_props):
 
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
-
-    # Update the set of merged revisions.
-    merged_revs = merged_revs | revs | reflected_revs | phantom_revs
-    branch_props[opts["source-path"]] = str(merged_revs)
-    set_merge_props(branch_dir, branch_props)
-    # Reset the blocked revs
-    set_block_props(branch_dir, old_block_props)
 
 def action_block(branch_dir, branch_props):
     """Block revisions."""
