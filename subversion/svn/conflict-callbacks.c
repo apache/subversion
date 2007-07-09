@@ -167,7 +167,7 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
             prompt = apr_pstrcat(subpool, prompt, _(", (d)iff, (e)dit"),
                                  NULL);
           if (performed_edit)
-            prompt = apr_pstrcat(subpool, prompt, _(", (r)esolve"), NULL);
+            prompt = apr_pstrcat(subpool, prompt, _(", (r)esolved"), NULL);
           prompt = apr_pstrcat(subpool, prompt, _(", (h)elp : "), NULL);
 
           SVN_ERR(svn_cmdline_prompt_user(&answer, prompt, subpool));
@@ -178,7 +178,7 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
               _("  (p)ostpone - mark the conflict to be resolved later\n"
                 "  (d)iff     - show all changes made to merged file\n"
                 "  (e)dit     - change merged file in an editor\n"
-                "  (r)esolve  - accept merged version of file\n"
+                "  (r)esolved - accept merged version of file\n"
                 "  (m)ine     - accept my version of file\n"
                 "  (t)heirs   - accept repository's version of file\n"
                 "  (l)aunch   - use third-party tool to resolve conflict\n"
