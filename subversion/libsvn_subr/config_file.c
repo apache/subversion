@@ -988,7 +988,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# enable-auto-props = yes"                                          NL
         "### Set interactive-conflicts to 'no' to disable interactive"       NL
         "### confict resolution prompting.  It defaults to 'yes'."           NL
-        "# interative-conflicts = no"                                        NL
+        "# interactive-conflicts = no"                                       NL
         ""                                                                   NL
         "### Section for configuring automatic properties."                  NL
         "[auto-props]"                                                       NL
