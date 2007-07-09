@@ -57,7 +57,8 @@ history index).
     * If a conflict is encountered, invoke a conflict resolution
       callback to give a Subversion client a chance to intervene.  If
       resolution is successful, convert the notification from a 'C' to
-      something else (e.g. 'M').  (Phase 2?)
+      something else (e.g. 'M').
+      http://subversion.tigris.org/merge-tracking/func-spec.html#conflict-resolution
 
     * Otherwise, stop applying merge ranges as soon as a second
       conflict is encountered in a WC item (as it might generate
