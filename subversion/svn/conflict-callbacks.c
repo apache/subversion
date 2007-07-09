@@ -167,20 +167,20 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
             prompt = apr_pstrcat(subpool, prompt, _(", (d)iff, (e)dit"),
                                  NULL);
           if (performed_edit)
-            prompt = apr_pstrcat(subpool, prompt, _(", (a)ccept"), NULL);
+            prompt = apr_pstrcat(subpool, prompt, _(", (r)esolve"), NULL);
           prompt = apr_pstrcat(subpool, prompt, _(", (h)elp : "), NULL);
 
           SVN_ERR(svn_cmdline_prompt_user(&answer, prompt, subpool));
 
-          if (strcmp(answer, "h") == 0)
+          if ((strcmp(answer, "h") == 0) || (strcmp(answer, "?") == 0))
             {
               SVN_ERR(svn_cmdline_printf(subpool,
               _("  (p)ostpone - mark the conflict to be resolved later\n"
                 "  (d)iff     - show all changes made to merged file\n"
-                "  (e)dit     - use an editor to resolve conflict\n"
-                "  (a)ccept   - use merged verison of file\n"
-                "  (m)ine     - use my version of file\n"
-                "  (t)heirs   - use repository's version of file\n"
+                "  (e)dit     - change merged file in an editor\n"
+                "  (r)esolve  - accept merged version of file\n"
+                "  (m)ine     - accept my version of file\n"
+                "  (t)heirs   - accept repository's version of file\n"
                 "  (l)aunch   - use third-party tool to resolve conflict\n"
                 "  (h)elp     - show this list\n\n")));
             }
@@ -248,7 +248,7 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
               else
                 SVN_ERR(svn_cmdline_printf(subpool, _("Invalid option.\n\n")));
             }
-          if (strcmp(answer, "a") == 0)
+          if (strcmp(answer, "r") == 0)
             {
               /* We only allow the user accept the merged version of
                  the file if they've edited it, or at least looked at
