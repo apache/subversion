@@ -613,8 +613,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "See 'svn help propset' for more on property setting.\n"),
     {'r', svn_cl__revprop_opt, SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
-     svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
-     svn_cl__config_dir_opt} },
+     svn_cl__force_opt, svn_cl__config_dir_opt} },
 #endif
 
   { "propget", svn_cl__propget, {"pget", "pg"}, N_
