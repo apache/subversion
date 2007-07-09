@@ -158,8 +158,6 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
                                  desc->path));
       while (1)
         {
-          char *colonprompt;
-
           svn_pool_clear(subpool);
 
           prompt = apr_pstrdup(subpool, _("Select: (p)ostpone"));
