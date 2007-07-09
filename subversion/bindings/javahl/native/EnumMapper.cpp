@@ -19,6 +19,9 @@
  * @brief Implementation of the class EnumMapper
  */
 
+#include "svn_types.h"
+#include "svn_wc.h"
+#include "svn_client.h"
 #include "EnumMapper.h"
 #include "../include/org_tigris_subversion_javahl_CommitItemStateFlags.h"
 #include "../include/org_tigris_subversion_javahl_NotifyAction.h"
