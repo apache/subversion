@@ -39,11 +39,13 @@ history index).
       include enough context to indicate which revision range is
       currently being merged.  Introduce a new type of "skipped"
       notification for WC items which are already in conflict.
+      *** DONE, needs to be recorded in design.html and RN's.
 
     * Document potential wrapper for the above API, something which we
       won't be implementing: Collate changes as merge ranges are
       applied.  Detect and handle collisions (multiple notifications
       to the same WC item), giving preference to later notifications.
+      *** Needs to be recorded in design.html and RN's.
 
   * Handle skips.
 
@@ -77,6 +79,8 @@ history index).
       the merge.  Something which identifies which revisions have been
       merged and that the user needs to resolve the conflicts and then
       restart the merge process to allow it to pick up where it left off.
+
+    * Implement JavaHL bindings.  (dlr)
 
 * Handle merge info inheritance (and eliding, if any additional work
   is necessary).  (pburba/dlr)
