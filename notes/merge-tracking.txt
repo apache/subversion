@@ -170,9 +170,10 @@ Implement auditing/reporting and other high-level features.
     already reflected by (e.g. present in) the target, and additional
     changes which were not part of a merge.
 
-  Typically, VC systems handle this by having two parents for a change
-  set, and applying graph algorithms to handle the mechanics of
-  determining what to merge. See the following thread for more details:
+  Typically, VC systems handle this by recording two or more parents
+  for a change set, and applying graph algorithms to handle the
+  mechanics of determining what to merge. See the following thread for
+  more details:
   http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=127570
 
 * Add commutative author and revision reporting to 'svn blame'. (hwright)
