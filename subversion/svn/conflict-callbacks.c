@@ -226,9 +226,8 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
             {
               if (desc->merged_file)
                 {
-                  /* ### TODO: launch $EDITOR or $SVN_EDITOR here. */
-                  SVN_ERR(svn_cmdline_printf(
-                              subpool, _("Feature not yet implemented.\n\n")));
+                  SVN_ERR(svn_cl__edit_file_externally(desc->merged_file,
+                                                       NULL, NULL, subpool));
                   performed_edit = TRUE;
                 }
               else

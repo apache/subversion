@@ -370,16 +370,33 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
 
    If return error, *EDITED_CONTENTS is not touched. */
 svn_error_t *
-svn_cl__edit_externally(svn_string_t **edited_contents,
-                        const char **tmpfile_left,
-                        const char *editor_cmd,
-                        const char *base_dir,
-                        const svn_string_t *contents,
-                        const char *prefix,
-                        apr_hash_t *config,
-                        svn_boolean_t as_text,
-                        const char *encoding,
-                        apr_pool_t *pool);
+svn_cl__edit_string_externally(svn_string_t **edited_contents,
+                               const char **tmpfile_left,
+                               const char *editor_cmd,
+                               const char *base_dir,
+                               const svn_string_t *contents,
+                               const char *prefix,
+                               apr_hash_t *config,
+                               svn_boolean_t as_text,
+                               const char *encoding,
+                               apr_pool_t *pool);
+
+
+/* Search for a text editor command in standard environment variables,
+   and invoke it to edit PATH.  Use POOL for all allocations.
+
+   If EDITOR_CMD is not NULL, it is the name of the external editor
+   command to use, overriding anything else that might determine the
+   editor.
+
+   CONFIG is a hash of svn_config_t * items keyed on a configuration
+   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.  */
+svn_error_t *
+svn_cl__edit_file_externally(const char *path,
+                             const char *editor_cmd,
+                             apr_hash_t *config,
+                             apr_pool_t *pool);
+
 
 
 
