@@ -76,6 +76,18 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
       return APR_SUCCESS;
     }
 
+  /* Use codepage identifier nnn if the codepage name is in the form
+     of "CPnnn".
+     We need this code since apr_os_locale_encoding() and svn_cmdline_init()
+     generates such codepage names even if they are not valid IANA charset
+     name. */
+  if ((page_name[0] == 'c' || page_name[0] == 'C')
+      && (page_name[1] == 'p' || page_name[1] == 'P'))
+    {
+      *page_id_p = atoi(page_name + 2);
+      return APR_SUCCESS;
+    }
+
   hr = CoCreateInstance(&CLSID_CMultiLanguage, NULL, CLSCTX_INPROC_SERVER,
                         &IID_IMultiLanguage, (void **) &mlang);
 
