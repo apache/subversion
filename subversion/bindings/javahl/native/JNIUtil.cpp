@@ -494,24 +494,22 @@ jstring JNIUtil::makeJString(const char *txt)
   return env->NewStringUTF(txt);
 }
 
-/**
- * Set the flag that an exception has been thrown
- */
-void JNIUtil::setExceptionThrown()
+void
+JNIUtil::setExceptionThrown(bool flag)
 {
   if (g_inInit)
     {
       // During global initialization, store any errors that occur
       // in a global variable (since thread-local storage may not
       // yet be available).
-      g_initException = true;
+      g_initException = flag;
     }
   else
     {
       // When global initialization is complete, thread-local
       // storage should be available, so store the error there.
       JNIThreadData *data = JNIThreadData::getThreadData();
-      data->m_exceptionThrown = true;
+      data->m_exceptionThrown = flag;
     }
 }
 

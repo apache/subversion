@@ -133,7 +133,11 @@ class JNIUtil
   static void assembleErrorMessage(svn_error_t *err, int depth,
                                    apr_status_t parent_apr_err,
                                    std::string &buffer);
-  static void setExceptionThrown();
+  /**
+   * Set the appropriate global or thread-local flag that an exception
+   * has been thrown to @a flag.
+   */
+  static void setExceptionThrown(bool flag = true);
 
   /**
    * The log level of this module.
