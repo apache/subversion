@@ -34,6 +34,7 @@
   <li>Command-line client improvements</li>
   <li>JavaHL bindings improvements</li>
   <li>Many improved APIs</li>
+  <li>Easier to try out experimental <tt>ra_serf</tt> DAV access module</li>
   <li>More than XXX new bug fixes</li>
 </ul>
 
@@ -294,6 +295,29 @@ href="http://svn.collab.net/repos/svn/trunk/tools/server-side/fsfs-reshard.py"
 </ul>
 
 </div>  <!-- apis -->
+
+<div class="h3" id="dav-modules" title="dav-modules">
+<h3>Easier to try out experimental <tt>ra_serf</tt> DAV access module
+(<em>client</em>)</h3>
+
+<p>Subversion 1.4 introduced the experimental <tt>ra_serf</tt>
+repository access module for accessing HTTP[S] DAV Subversion servers.
+This uses the <a href="http://code.google.com/p/serf/">serf</a>
+library instead of the Neon library which the original DAV support
+uses.  serf supports pipelined requests which may lead to better
+performance.  However, Subversion 1.4 required you to choose which
+module to use for accessing DAV servers at build time, which made it
+difficult to find out which module performs better for your usage
+patterns.</p>
+
+<p>Subversion 1.5 allows you to build both modules at the same time;
+you can choose which library to use on a global or host-by-host basis
+by setting the <tt>http-library</tt> variable in your run-time server
+configuration file (<tt>~/.subversion/servers</tt>).  In recognition
+of the fact that both libraries are DAV clients, we have
+renamed <tt>ra_dav</tt> to <tt>ra_neon</tt>.</p>
+
+</div>  <!-- dav-modules -->
 
 <div class="h3" id="bug-fixes" title="bug-fixes">
 <h3>Other bug fixes (<em>client and server</em>)</h3>
