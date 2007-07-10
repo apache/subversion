@@ -115,9 +115,9 @@ history index).
   info to depth and set appropriate merge info at depth.
 
 * Handle sparsely-populated directories, or portions of a tree not
-  checked out due to lack of authorization.
+  checked out due to lack of authorization. (pburba)
 
-  * Inheritance of merge info throug sparsely-populated directories
+  * Inheritance of merge info through sparsely-populated directories
     could potentially be handled via explicit merge info (e.g. to
     avoid recording merge info for paths not checked out).
 
