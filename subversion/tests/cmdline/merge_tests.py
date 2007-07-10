@@ -7021,7 +7021,7 @@ test_list = [ None,
               avoid_reflected_revs,
               Skip(mergeinfo_and_skipped_paths, svntest.main.is_ra_type_file),
               update_loses_mergeinfo,
-              XFail(merge_loses_mergeinfo),
+              merge_loses_mergeinfo,
              ]
 
 if __name__ == '__main__':

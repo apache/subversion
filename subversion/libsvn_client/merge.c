@@ -1133,20 +1133,35 @@ get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
       /* No need to check the repos is this is a local addition. */
       if ((*entry)->schedule != svn_wc_schedule_add)
         {
-          if (ra_session == NULL)
-            SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
-                                                         NULL, NULL, NULL,
-                                                         FALSE, TRUE, ctx,
-                                                         pool));
-          SVN_ERR(svn_client__get_repos_mergeinfo(ra_session,
-                                                  &repos_mergeinfo,
-                                                  repos_rel_path, target_rev,
-                                                  inherit,
-                                                  pool));
-          if (repos_mergeinfo)
+          apr_hash_t *props = apr_hash_make(pool);
+
+          /* Get the pristine SVN_PROP_MERGE_INFO. 
+             If it exists, then it should have been deleted by the local 
+             merges. So don't get the mergeinfo from the repository. Just 
+             assume the mergeinfo to be NULL.
+          */
+          SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGE_INFO,
+                                               target_wcpath, TRUE, *entry, 
+                                               adm_access, FALSE, ctx, pool));
+          if (apr_hash_get(props, target_wcpath, APR_HASH_KEY_STRING) == NULL)
             {
-              *target_mergeinfo = repos_mergeinfo;
-              *indirect = TRUE;
+              if (ra_session == NULL)
+                SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
+                                                             NULL, NULL, NULL,
+                                                             FALSE, TRUE, ctx,
+                                                             pool));
+
+              SVN_ERR(svn_client__get_repos_mergeinfo(ra_session,
+                                                      &repos_mergeinfo,
+                                                      repos_rel_path, 
+                                                      target_rev,
+                                                      inherit,
+                                                      pool));
+              if (repos_mergeinfo)
+                {
+                  *target_mergeinfo = repos_mergeinfo;
+                  *indirect = TRUE;
+                }
             }
         }
     }
