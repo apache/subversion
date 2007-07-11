@@ -212,3 +212,17 @@ class WC(object):
         svn_client_mkdir2(byref(info), paths, self.client, self.iterpool)
         
         self.iterpool.clear()
+        
+    def propset(self, propname, propval, target="", recurse=True,
+                skip_checks=False):
+        """Set PROPNAME to PROPVAL for TARGET.
+        
+        If RECURSE is True (True by default) and TARGET is a directory, the
+        operation will recurse.
+        
+        If SKIP_CHECKS is True (False by default) no sanity checks will be
+        performed on PROPNAME."""
+        
+        svn_client_propset2(propname, svn_string_create(propval, self.pool),
+                            self._build_path(target), recurse, skip_checks,
+                            self.client, self.iterpool)
