@@ -47,6 +47,7 @@ extern "C" {
 #include "JNICriticalSection.h"
 #include "JNIThreadData.h"
 #include "JNIStringHolder.h"
+#include "Pool.h"
 
 // Static members of JNIUtil are allocated here.
 apr_pool_t *JNIUtil::g_pool = NULL;
@@ -476,6 +477,36 @@ bool JNIUtil::isJavaExceptionThrown()
       return true;
     }
   return false;
+}
+
+const char *
+JNIUtil::thrownExceptionToCString()
+{
+  const char *msg;
+  JNIEnv *env = getEnv();
+  if (env->ExceptionCheck())
+    {
+      jthrowable t = env->ExceptionOccurred();
+      static jmethodID getMessage = 0;
+      if (getMessage == 0)
+        {
+          jclass clazz = env->FindClass("java/lang/Throwable");
+          getMessage = env->GetMethodID(clazz, "getMessage",
+                                        "(V)Ljava/lang/String;");
+          env->DeleteLocalRef(clazz);
+        }
+      jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
+      const char *tmp = env->GetStringUTFChars(jmsg, NULL);
+      // ### Is it wise to use a request pool in this utility function?
+      msg = (const char *) apr_pstrdup(getRequestPool()->pool(), tmp);
+      env->ReleaseStringUTFChars(jmsg, tmp);
+      // ### Conditionally add t.printStackTrace() to msg?
+    }
+  else
+    {
+      msg = NULL;
+    }
+  return msg;
 }
 
 /**

@@ -96,6 +96,14 @@ class JNIUtil
   static void putFinalizedClient(SVNBase *cl);
 
   /**
+   * Convert any exception that may have been thrown into a textual
+   * representation.  Return @c NULL if no exception has
+   * occurred. Useful for converting Java @c Exceptions into @c
+   * svn_error_t's.
+   */
+  static const char *thrownExceptionToCString();
+
+  /**
    * Throw a Java exception corresponding to err, and run
    * svn_error_clear() on err.
    */
