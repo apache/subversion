@@ -2229,7 +2229,6 @@ public class BasicTests extends SVNTests
             {
                 public int resolve(ConflictDescriptor descrip)
                 {
-                    System.out.println("\n\ninvoking conflict rez callback\n");
                     return ConflictResolverCallback.Result.choose_repos;
                 }
             });
