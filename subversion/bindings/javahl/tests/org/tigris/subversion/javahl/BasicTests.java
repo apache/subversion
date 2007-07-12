@@ -2217,6 +2217,68 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test automatic merge conflict resolution.
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testMergeConflictResolution() throws Throwable
+    {
+        // Add a conflict resolution callback which always chooses the
+        // user's version of a conflicted file.
+        client.setConflictResolver(new ConflictResolverCallback()
+            {
+                public int resolve(ConflictDescriptor descrip)
+                {
+                    System.out.println("\n\ninvoking conflict rez callback\n");
+                    return ConflictResolverCallback.Result.choose_repos;
+                }
+            });
+
+        //OneTest thisTest = setupAndPerformMerge();
+        OneTest thisTest = new OneTest();
+
+        // modify file A/mu
+        File mu = new File(thisTest.getWorkingCopy(), "A/mu");
+        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print("appended mu text");
+        muWriter.close();
+        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
+        String originalContents = thisTest.getWc().getItemContent("A/mu");
+        String expectedContents = originalContents + "appended mu text";
+        thisTest.getWc().setItemContent("A/mu", expectedContents);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+
+        // Commit the changes (r2).
+        assertEquals("wrong revision number from commit", 2,
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true));
+
+        // Backdate the WC to the previous revision (r1).
+        client.update(thisTest.getWCPath(), Revision.getInstance(1), true);
+
+        // Prep for a merge conflict by changing A/mu in a different way.
+        muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print(" other stuff");
+        muWriter.close();
+        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 1);
+        thisTest.getWc().setItemContent("A/mu",
+                                        originalContents + " other stuff");
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+
+        // Merge in the previous changes to A/mu (from r2).
+        client.merge(thisTest.getUrl(), Revision.HEAD, new Revision.Number(1),
+                     new Revision.Number(2), thisTest.getWCPath(),
+                     false, Depth.infinity, false, false);
+
+        assertFileContentsEquals("Unexpected conflict resolution",
+                                 expectedContents, mu);
+    }
+
+    /**
      * Setup a test with a WC.  In the repository, create a
      * "/branches" directory, with a branch of "/A" underneath it.
      * Update the WC to reflect these modifications.
