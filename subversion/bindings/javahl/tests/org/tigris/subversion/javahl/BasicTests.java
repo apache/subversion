@@ -2233,7 +2233,6 @@ public class BasicTests extends SVNTests
                 }
             });
 
-        //OneTest thisTest = setupAndPerformMerge();
         OneTest thisTest = new OneTest();
 
         // modify file A/mu
