@@ -21,6 +21,11 @@ class WC(object):
             svn_wc_notify_func2_t(self._notify_func_wrapper)
         self.client[0].notify_baton2 = cast(id(self), c_void_p)
         self._notify_func = None
+        
+        self.client[0].cancel_func = \
+            svn_cancel_func_t(self._cancel_func_wrapper)
+        self.client[0].cancel_baton = cast(id(self), c_void_p)
+        self._cancel_func = None
 
     def copy(self, src, dest, rev = ""):
         """Copy SRC to DEST"""
@@ -105,6 +110,20 @@ class WC(object):
         if self._notify_func:
             self._notify_func(notify[0])
     _notify_func_wrapper = staticmethod(_notify_func_wrapper)
+    
+    def set_cancel_func(self, cancel_func):
+        """Setup a callback so that you can cancel operations. At
+        various times the cancel function will be called, giving
+        the option of cancelling the operation."""
+        
+        self._cancel_func = cancel_func
+        
+    #Just like _notify_func_wrapper, above.
+    def _cancel_func_wrapper(baton):
+        self = cast(baton, py_object).value
+        if self._cancel_func:
+            self._cancel_func()
+    _cancel_func_wrapper = staticmethod(_cancel_func_wrapper)
 
     def diff(self, path="", diff_options=[], recurse=True,
              ignore_ancestry=True, no_diff_deleted=False,
