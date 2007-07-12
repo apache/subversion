@@ -54,6 +54,12 @@ history index).
       with no modifications, if there is pre-existing merge info) for
       the skipped items.
 
+    * If merge does not do anything (there are no changes in merge
+      source), the svn:mergeinfo property should not be modified.
+      This case comes up from nightly build scripts that are merging
+      everything from a branch but nothing has happened since the last
+      time it ran.
+
   * Handle conflicts.
 
     * If a conflict is encountered, invoke a conflict resolution
