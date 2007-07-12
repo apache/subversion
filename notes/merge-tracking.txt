@@ -126,6 +126,13 @@ history index).
     know these paths exist, we can't avoid potentially inherited merge
     info!
 
+* BUG: Investigate possible bug when merge results in a property conflict
+  on a folder AND the same folder also has it's svn:mergeinfo property
+  updated.  The notification is being sent as an 'U'pdate instead of a
+  'C'onflict.  The dir_conflicts.prej file is still being created, the
+  notification is just wrong.  In the observed case, the svn:mergeinfo
+  property did not exist prior to running the merge command.
+
 
 
 Phase 2: Post 1.5.0
