@@ -242,6 +242,7 @@ class WC(object):
         If SKIP_CHECKS is True (False by default) no sanity checks will be
         performed on PROPNAME."""
         
-        svn_client_propset2(propname, svn_string_create(propval, self.pool),
+        svn_client_propset2(propname,
+                            svn_string_create(propval, self.iterpool),
                             self._build_path(target), recurse, skip_checks,
                             self.client, self.iterpool)
