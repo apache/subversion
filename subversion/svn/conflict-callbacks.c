@@ -226,9 +226,21 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
             {
               if (desc->merged_file)
                 {
-                  SVN_ERR(svn_cl__edit_file_externally(desc->merged_file,
-                                                       NULL, NULL, subpool));
-                  performed_edit = TRUE;
+                  svn_error_t *eerr;
+                  eerr = svn_cl__edit_file_externally(desc->merged_file,
+                                                      NULL, NULL, subpool);
+                  if (eerr && (eerr->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
+                    {
+                      SVN_ERR(svn_cmdline_printf(subpool,
+                                                 eerr->message ? eerr->message :
+                                                 _("No editor found.")));
+                      SVN_ERR(svn_cmdline_printf(subpool, "\n"));
+                      svn_error_clear(eerr);
+                    }
+                  else if (eerr)
+                    return eerr;
+                  else
+                    performed_edit = TRUE;
                 }
               else
                 SVN_ERR(svn_cmdline_printf(subpool, _("Invalid option.\n\n")));
