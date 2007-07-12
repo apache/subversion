@@ -716,6 +716,50 @@ def export_with_externals(sbox):
 
 #----------------------------------------------------------------------
 
+# Test for issue #2429
+def export_wc_with_externals(sbox):
+  "test exports from working copies with externals"
+
+  externals_test_setup(sbox)
+
+  wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+  export_target = sbox.add_wc_path('export')
+
+  # Create a working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     repo_url, wc_dir)
+  # Export the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'export', wc_dir, export_target)
+
+  paths = [
+    os.path.join(export_target, "A", "C", "exdir_G"),
+    os.path.join(export_target, "A", "C", "exdir_G", "pi"),
+    os.path.join(export_target, "A", "C", "exdir_H"),
+    os.path.join(export_target, "A", "C", "exdir_H", "omega"),
+    os.path.join(export_target, "A", "D", "x"),
+    os.path.join(export_target, "A", "D", "x", "y"),
+    os.path.join(export_target, "A", "D", "x", "y", "z"),
+    os.path.join(export_target, "A", "D", "x", "y", "z", "blah"),
+    os.path.join(export_target, "A", "D", "x", "y", "z", "blah", "E", "alpha"),
+    os.path.join(export_target, "A", "D", "x", "y", "z", "blah", "E", "beta"),
+    ]
+  probe_paths_exist(paths)
+
+  svntest.main.safe_rmtree(export_target)
+
+  # Export it again, without externals.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'export', '--ignore-externals',
+                                     wc_dir, export_target)
+  probe_paths_missing(paths)
+
+#----------------------------------------------------------------------
+
 def external_with_peg_and_op_revision(sbox):
   "use a peg revision to specify an external module"
 
@@ -774,6 +818,7 @@ test_list = [ None,
               modify_and_update_receive_new_external,
               disallow_dot_or_dotdot_directory_reference,
               export_with_externals,
+              export_wc_with_externals,
               external_with_peg_and_op_revision,
              ]
 

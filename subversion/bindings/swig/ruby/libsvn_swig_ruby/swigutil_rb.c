@@ -661,7 +661,7 @@ static int
 rb_set_pool_for_hash_callback(VALUE key, VALUE value,
                               struct rb_set_pool_for_hash_arg *arg)
 {
-  if (rb_set_pool_if_swig_type_object(value, arg->pool))
+  if (svn_swig_rb_set_pool(value, arg->pool))
     arg->set = TRUE;
   return ST_CONTINUE;
 }
@@ -678,7 +678,7 @@ svn_swig_rb_set_pool(VALUE target, VALUE pool)
     svn_boolean_t set = FALSE;
 
     for (i = 0; i < RARRAY(target)->len; i++) {
-      if (rb_set_pool_if_swig_type_object(RARRAY(target)->ptr[i], pool))
+      if (svn_swig_rb_set_pool(RARRAY(target)->ptr[i], pool))
         set = TRUE;
     }
     return set;

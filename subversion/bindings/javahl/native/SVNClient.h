@@ -32,6 +32,7 @@
 class Revision;
 class Notify;
 class Notify2;
+class ConflictResolverCallback;
 class ProgressListener;
 class Targets;
 class JNIByteArray;
@@ -120,6 +121,7 @@ class SVNClient :public SVNBase
               bool keep_local);
   void notification(Notify *notify);
   void notification2(Notify2 *notify2);
+  void setConflictResolver(ConflictResolverCallback *conflictResolver);
   void setProgressListener(ProgressListener *progressListener);
   jlong checkout(const char *moduleName, const char *destPath,
                  Revision &revision, Revision &pegRevsion, svn_depth_t depth,
@@ -202,6 +204,7 @@ class SVNClient :public SVNBase
     
   Notify *m_notify;
   Notify2 *m_notify2;
+  ConflictResolverCallback *m_conflictResolver;
   ProgressListener *m_progressListener;
   Prompter *m_prompter;
   Path m_lastPath;

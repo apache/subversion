@@ -337,6 +337,14 @@ public interface SVNClientInterface
     void notification2(Notify2 notify);
 
     /**
+     * Set the conflict resolution callback.
+     *
+     * @param listener The conflict resolution callback.
+     * @since 1.5
+     */
+    void setConflictResolver(ConflictResolverCallback listener);
+
+    /**
      * Set the progress callback.
      *
      * @param listener The progress callback.

@@ -679,33 +679,38 @@ href="requirements.html#repeated-merge">repeating merges</a> which
 have already been applied to a merge target or its children.</p>
 
 <p>To help alleviate the pain of conflict resolution, a merge conflict
-resolution callback can be employed by Subversion clients
-(<i>unimplemented</i>).  This callback is invoked whenever merge
-conflicts are encountered, and can takes steps like launching a
-graphical merge tool (for interactive conflict resolution), or
-following a pre-specified directive like "always use the version from
-my merge source".  This last implementation can be used to support the
-<a href="requirements.html#automated-merge">SCM automated merge</a>
-use case.</p>
+resolution callback can be employed by Subversion clients.  This
+callback is invoked whenever merge conflicts are encountered, and can
+takes steps like launching a graphical merge tool (for interactive
+conflict resolution), or following a pre-specified directive like
+"always use the version from my merge source".  This last
+implementation can be used to support the <a
+href="requirements.html#automated-merge">SCM automated merge</a> use
+case.</p>
 
-<p>In a future release, the command-line client may supply a
-merge conflict resolution callback which will behave much like
-<em>svk</em>, when in interactive mode displaying some context for
-each conflict and prompting for how to resolve it, or when in
-non-interactive mode, taking directives beforehand
-(<i>unimplemented</i>).</p>
+<p>The command-line client includes a merge conflict resolution
+callback which behaves much like <em>svk</em>, when in interactive
+mode displaying some context for each conflict and prompting for how
+to resolve it, or when in non-interactive mode, taking directives
+beforehand.  See the <a href="../svn_1.5_releasenotes.html">1.5
+release notes</a> for an example.</p>
 
 <p>Related discussion from the dev@ mailing list can be found
 here:</p>
 
 <ul>
   <li><a
-  href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=121756">
-  Feedback solicited from IDE developers</a></li>
+  href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=128091"
+  >First draft of interactive conflict resolution callback API and
+  command-line client implementation</a></li>
+
+  <li><a
+  href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=121756"
+  >Feedback solicited from IDE developers</a></li>
 
   <li><a
   href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=121263"
-  >Original API proposal</a> (likely requires changes)</li>
+  >Original API proposal</a></li>
 </ul>
 
 <p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2022"

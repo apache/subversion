@@ -461,6 +461,12 @@ public class SVNClient implements SVNClientInterface
     public native void notification2(Notify2 notify);
 
     /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface#setConflictResolver(ConflictResolverCallback)
+     * @since 1.5
+     */
+    public native void setConflictResolver(ConflictResolverCallback listener);
+
+    /**
      * Set the progress callback.
      *
      * @param listener The progress callback.

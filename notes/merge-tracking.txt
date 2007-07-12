@@ -39,11 +39,13 @@ history index).
       include enough context to indicate which revision range is
       currently being merged.  Introduce a new type of "skipped"
       notification for WC items which are already in conflict.
+      *** DONE, needs to be recorded in design.html and RN's.
 
     * Document potential wrapper for the above API, something which we
       won't be implementing: Collate changes as merge ranges are
       applied.  Detect and handle collisions (multiple notifications
       to the same WC item), giving preference to later notifications.
+      *** Needs to be recorded in design.html and RN's.
 
   * Handle skips.
 
@@ -57,7 +59,8 @@ history index).
     * If a conflict is encountered, invoke a conflict resolution
       callback to give a Subversion client a chance to intervene.  If
       resolution is successful, convert the notification from a 'C' to
-      something else (e.g. 'M').  (Phase 2?)
+      something else (e.g. 'M').
+      http://subversion.tigris.org/merge-tracking/func-spec.html#conflict-resolution
 
     * Otherwise, stop applying merge ranges as soon as a second
       conflict is encountered in a WC item (as it might generate
@@ -76,6 +79,8 @@ history index).
       the merge.  Something which identifies which revisions have been
       merged and that the user needs to resolve the conflicts and then
       restart the merge process to allow it to pick up where it left off.
+
+    * Implement JavaHL bindings.  (dlr)
 
 * Handle merge info inheritance (and eliding, if any additional work
   is necessary).  (pburba/dlr)
@@ -110,9 +115,9 @@ history index).
   info to depth and set appropriate merge info at depth.
 
 * Handle sparsely-populated directories, or portions of a tree not
-  checked out due to lack of authorization.
+  checked out due to lack of authorization. (pburba)
 
-  * Inheritance of merge info throug sparsely-populated directories
+  * Inheritance of merge info through sparsely-populated directories
     could potentially be handled via explicit merge info (e.g. to
     avoid recording merge info for paths not checked out).
 
@@ -170,9 +175,10 @@ Implement auditing/reporting and other high-level features.
     already reflected by (e.g. present in) the target, and additional
     changes which were not part of a merge.
 
-  Typically, VC systems handle this by having two parents for a change
-  set, and applying graph algorithms to handle the mechanics of
-  determining what to merge. See the following thread for more details:
+  Typically, VC systems handle this by recording two or more parents
+  for a change set, and applying graph algorithms to handle the
+  mechanics of determining what to merge. See the following thread for
+  more details:
   http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=127570
 
 * Add commutative author and revision reporting to 'svn blame'. (hwright)

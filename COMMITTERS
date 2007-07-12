@@ -63,6 +63,7 @@ Commit access for specific areas:
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
     joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
+        holden   Holden Karau <holden@pigscanfly.ca>         (Swig-Scheme bindings)
 
   Packages:
 
@@ -139,6 +140,8 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               improvements br.)
           sage   Sage LaTorra <sagelt@gmail.com>             (ctypes-python-
                                                               bindings br.)
+       cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff
+                                                                br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

@@ -519,11 +519,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 
 %if %{make_ra_svn_bdb_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
-killall lt-svnserve || true
-sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-make svncheck CLEANUP=true FS_TYPE=bdb
-killall lt-svnserve
+make svnserveautocheck CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
@@ -541,11 +537,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 
 %if %{make_ra_svn_fsfs_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
-killall lt-svnserve || true
-sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-make svncheck CLEANUP=true FS_TYPE=fsfs
-killall lt-svnserve
+make svnserveautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
@@ -582,9 +574,10 @@ mv $RPM_BUILD_ROOT/share/man/man3 $RPM_BUILD_ROOT/usr/share/man/man3
 rm -rf $RPM_BUILD_ROOT/lib $RPM_BUILD_ROOT/share
 rm -rf $RPM_BUILD_ROOT/%{_libdir}/perl5/site_perl/5.8.0/i386-linux-thread-multi/perllocal.pod
 
-# Set up tools package files.
+# Set up contrib and tools package files.
 mkdir -p $RPM_BUILD_ROOT/%{_libdir}/subversion
 cp -r tools $RPM_BUILD_ROOT/%{_libdir}/subversion
+cp -r contrib $RPM_BUILD_ROOT/%{_libdir}/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
@@ -659,3 +652,4 @@ rm -rf $RPM_BUILD_ROOT
 %files tools
 %defattr(-,root,root)
 %{_libdir}/subversion/tools
+%{_libdir}/subversion/contrib

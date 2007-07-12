@@ -152,7 +152,9 @@ conflicts simple system of inheritance <a
 href="#merge-history-footnotes">[1]</a> where the "most specific"
 place wins.  This means that if the property is set on a file, that
 completely overrides the directory level properties for the directory
-containing the file.</p>
+containing the file.  Non-inheritable merge info can be set on
+directories, signifying that the merge info applies only to the
+directory but not its children.</p>
 
 <p>The way we choose which to store to depends on how much and where
 you merge, and will be covered in the semantics.</p>
@@ -191,7 +193,7 @@ range end and beginning points are separated by "-".</p>
 </tr>
 <tr>
   <td>revisioneelement</td>
-  <td>revisionrange | REVISION</td>
+  <td>(revisionrange | REVISION)"*"?</td>
 </tr>
 <tr>
   <td>rangelist</td>
@@ -213,6 +215,9 @@ changes that have ever been merged into this object (file, dir or
 repo) within this repository.  It specifies the sources of the merges,
 (and thus two or more pathnames may be required to represent one
 source object at different revisions due to renaming).</p>
+
+<p>The optional "*" following a revisionelement token signifies a
+non-inheritable revision/revision range.</p>
 
 <p>This list will <em>not</em> be stored in a canonicalized minimal
 form for a path (e.g. it may contain single revision numbers that

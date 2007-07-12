@@ -837,7 +837,7 @@ class SvnClientTest < Test::Unit::TestCase
     File.open(branch_path, "w") {|f| f.print(src)}
     rev2 = ctx.commit(@wc_path).revision
 
-    assert_equal({}, ctx.merge_info(trunk))
+    assert_nil(ctx.merge_info(trunk))
     ctx.merge(branch, rev1, branch, rev2, trunk)
     merge_info = ctx.merge_info(trunk)
     assert_equal(["/branch"], merge_info.keys)
@@ -897,7 +897,7 @@ class SvnClientTest < Test::Unit::TestCase
     File.open(branch_path, "w") {|f| f.print(src)}
     rev2 = ctx.commit(@wc_path).revision
 
-    assert_equal({}, ctx.merge_info(trunk))
+    assert_nil(ctx.merge_info(trunk))
     ctx.merge_peg(branch, rev1, rev2, trunk)
     merge_info = ctx.merge_info(trunk)
     assert_equal(["/branch"], merge_info.keys)

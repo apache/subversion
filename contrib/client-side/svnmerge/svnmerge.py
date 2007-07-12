@@ -25,7 +25,7 @@
 #   John Belmonte <john at neggie dot net> - metadata and usability
 #     improvements
 #   Blair Zajac <blair at orcaware dot com> - random improvements
-#   Raman Gupta <rocketraman at fastmail dot fm> - bidirectional merging
+#   Raman Gupta <rocketraman at fastmail dot fm> - bidirectional and transitive merging
 #     support
 #
 # $HeadURL$
@@ -1166,20 +1166,24 @@ def action_merge(branch_dir, branch_props):
     # We try to keep the number of merge operations as low as possible,
     # because it is faster and reduces the number of conflicts.
     old_merge_props = branch_props
+    old_block_props = get_block_props(branch_dir)
     merge_metadata = logs[opts["source-url"]].merge_metadata()
     for start,end in minimal_merge_intervals(revs, phantom_revs):
-
-        # Set merge props appropriately if bidirectional support is enabled
-        if opts["bidirectional"]:
-            new_merge_props = merge_metadata.get(start-1)
-            if new_merge_props != old_merge_props:
-                set_merge_props(branch_dir, new_merge_props)
-                old_merge_props = new_merge_props
-
         if not record_only:
+            # Clear merge/blocked properties to avoid spurious property conflicts
+            set_merge_props(branch_dir, {})
+            set_block_props(branch_dir, {})
             # Do the merge
             svn_command("merge --force -r %d:%d %s %s" % \
                         (start - 1, end, opts["source-url"], branch_dir))
+            # TODO: to support graph merging, add logic to merge the property meta-data manually
+
+    # Update the set of merged revisions.
+    merged_revs = merged_revs | revs | reflected_revs | phantom_revs
+    branch_props[opts["source-path"]] = str(merged_revs)
+    set_merge_props(branch_dir, branch_props)
+    # Reset the blocked revs
+    set_block_props(branch_dir, old_block_props)
 
     # Write out commit message if desired
     if opts["commit-file"]:
@@ -1197,11 +1201,6 @@ def action_merge(branch_dir, branch_props):
 
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
-
-    # Update the set of merged revisions.
-    merged_revs = merged_revs | revs | reflected_revs | phantom_revs
-    branch_props[opts["source-path"]] = str(merged_revs)
-    set_merge_props(branch_dir, branch_props)
 
 def action_block(branch_dir, branch_props):
     """Block revisions."""
