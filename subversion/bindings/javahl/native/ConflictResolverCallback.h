@@ -74,13 +74,20 @@ class ConflictResolverCallback
 
  protected:
   /**
-   * Delegates to m_conflictResolver.resolve(), which provides the
+   * Delegate to m_conflictResolver.resolve(), which provides the
    * logic for the implementation of the svn_wc_conflict_resolver_func_t
    * API.
    */
   svn_error_t * resolve(svn_wc_conflict_result_t *result,
                         const svn_wc_conflict_description_t *desc,
                         apr_pool_t *pool);
+
+ private:
+  /**
+   * Convert the Java conflict resolution @a result into the
+   * appropriate C enum value.
+   */
+  static svn_wc_conflict_result_t javaResultToC(jint result);
 };
 
 #endif  // CONFLICT_RESOLVER_CALLBACK_H

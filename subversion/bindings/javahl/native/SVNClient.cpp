@@ -25,6 +25,7 @@
 #include "Notify2.h"
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
+#include "ConflictResolverCallback.h"
 #include "ProgressListener.h"
 #include "Prompter.h"
 #include "Pool.h"
@@ -72,6 +73,7 @@ SVNClient::SVNClient()
     m_progressListener = NULL;
     m_prompter = NULL;
     m_commitMessage = NULL;
+    m_conflictResolver = NULL;
 }
 
 SVNClient::~SVNClient()
@@ -80,6 +82,7 @@ SVNClient::~SVNClient()
     delete m_notify2;
     delete m_progressListener;
     delete m_prompter;
+    delete m_conflictResolver;
 }
 
 SVNClient *SVNClient::getCppObject(jobject jthis)
@@ -1063,6 +1066,9 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
 
     ctx->progress_func = ProgressListener::progress;
     ctx->progress_baton = m_progressListener;
+
+    ctx->conflict_func = ConflictResolverCallback::resolveConflict;
+    ctx->conflict_baton = m_conflictResolver;
 
     return ctx;
 }
