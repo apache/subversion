@@ -106,6 +106,7 @@ Commit access for specific areas:
         aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
         dustin   Dustin J. Mitchell <dustin@zmanda.com>      (svnmerge)
+   rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
 
   Translation of message files:
 
