@@ -185,6 +185,8 @@ class WC(object):
         If PATH is not provided, it defaults to the WC root."""
         svn_client_cleanup(self._build_path(path), self.client,
                             self.iterpool)
+                            
+        self.iterpool.clear()
         
     def export(self, from_path, to_path, overwrite=False,
                 ignore_externals=True, recurse=True, eol=NULL):
@@ -208,6 +210,8 @@ class WC(object):
                             svn_opt_revision_t(), overwrite,
                             ignore_externals, recurse, eol, self.client,
                             self.iterpool)
+                            
+        self.iterpool.clear()
         
     def resolved(self, path="", recursive=True):
         """Resolve a conflict on PATH. Marks the conflict as resolved, does
@@ -246,3 +250,5 @@ class WC(object):
                             svn_string_create(propval, self.iterpool),
                             self._build_path(target), recurse, skip_checks,
                             self.client, self.iterpool)
+                            
+        self.iterpool.clear()
