@@ -241,6 +241,8 @@ a <tt>file:</tt> URL?</a></li>
     record mac</tt>.</a></li>
 <li><a href="#broken-subclipse">I get an error that says "This client is too
     old".</li>
+<li><a href="#switch-problems">Why doesn't <tt>svn switch</tt> work
+    in some cases?</li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -3407,6 +3409,149 @@ your older command-line client.)
 The fix is simply to upgrade your command-line client to 1.4 or newer.
 
 </div>
+
+
+<div class="h3" id="switch-problems" title="switch-problems">
+<h3>Why doesn't <tt>svn switch</tt> work in some cases?</h3>
+
+<p>In some cases where there are unversioned (and maybe ignored) items
+in the working copy, <tt>svn switch</tt> can get an error.  The switch
+stops, leaving the working copy half-switched.</p>
+
+<p>Unfortunately, if you take the wrong corrective action you can end
+up with an unusable working copy.  Sometimes with these situations
+user is directed to do <tt>svn cleanup</tt>.  But the <tt>svn
+cleanup</tt> may also encounter an error.  See <a
+href=http://subversion.tigris.org/issues/show_bug.cgi?id=2505>issue
+#2505</a>.</p>
+
+<p>The user can manually remove the directories or files causing
+problem, and then run <tt>svn cleanup</tt> and continue the switch to
+recover from this situation.</p>
+
+<p>Note that a switch from a <i>pristine</i> clean checkout always
+works without error.  There are three ways of working if you are using
+<tt>svn switch</tt> as part of your development process:
+
+<ol>
+
+<li>Fully clean your working copy of unversioned (including ignored)
+files before switch. <br><b>WARNING! This deletes all unversioned
+dirs/files. Be VERY sure that you do not need anything that will be
+removed.</b>
+
+<blockquote>
+<div><code><pre>
+# Check and delete svn unversioned files: 
+svn status --no-ignore | grep "^[I?]" | sed 's/^[I?]//'
+svn status --no-ignore | grep "^[I?]" | sed 's/^[I?]//' |xargs rm -rf
+</pre></code></div>
+</blockquote>
+
+</li>
+
+<li>Keep a <i>pristine</i> clean checkout. Update that then copy it
+and switch in the copy when a switch to another branch is desired.</li>
+
+<li>Live dangerously :).
+ Switch between branches without cleaning up BUT if you encounter a switch error
+ know that you have to recover from this properly.
+ Delete the unversioned files and the directory that the error was reported on.
+ Then "svn cleanup" if needed and then resume the switch.
+ Unless you do delete all unversioned files you may have to repeat this
+ process multiple times.</li>
+
+</ol>
+
+</p>
+
+<p>Some examples are detailed here in 
+<a href=http://subversion.tigris.org/issues/show_bug.cgi?id=2505>issue 2505</a>.
+The problem is that the svn client plays it 
+safe and doesn't want to delete anything unversioned. 
+</p>
+
+<p>Two specific examples are detailed here to illustrate a problem like this.
+There are also other svn switch errors nt covered here which the policy of 
+switching only from a <i>pristine</i> clean checkout solves.
+
+<ol>
+
+<li>If any directory has been moved or renamed between the branches then
+anything unversioned will cause a problem.
+In this case this error will be seen:
+<br>
+<blockquote>
+<div><code><pre>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Won't delete locally modified directory '&lt;dir&gt;'
+svn: Left locally modified or unversioned files
+</pre></code></div>
+</blockquote>
+<p>Removing all unversioned files and continuing the switch will recover from this.</p>
+</li>
+
+<li>If a temporary build file has ever been added and removed then a switch
+in a repository with that unversioned file (likely after a build) fails. 
+Same error will be seen:
+<br>
+<blockquote>
+<div><code><pre>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Won't delete locally modified directory '&lt;dir&gt;'
+svn: Left locally modified or unversioned files
+</pre></code></div>
+</blockquote>
+<p>In this case just removing the unversioned items will not recover.
+A cleanup fails but svnswitch directs user to do svn cleanup.
+<br>
+<blockquote>
+<div><code><pre>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Directory '&lt;dir&gt;/.svn' containing working copy admin area is missing
+wc/$ svn cleanup
+svn: '&lt;dir&gt;' is not a working copy directory
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Working copy '.' locked
+svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)
+</pre></code></div>
+</blockquote>
+</p>
+<p>Removing the directory (and all other unversioned files to prevent
+ switch breaking on a similar error repeatedly) and continuing the switch
+ will recover from this.</p>
+</li>
+
+</ol>
+
+<p>The TortoiseSVN cleanup error is a bit different, you might encounter this:
+<blockquote>
+<div><code><pre>
+Subversion reported an error while doing a cleanup!
+&lt;dir&gt;/&lt;anotherdir&gt; is not a working copy directory
+</pre></code></div>
+</blockquote>
+</p>
+
+<p>In each case here the svn switch breaks leaving user with a half-switched 
+working copy. Items are marked in status with S for switched items (dirrerent
+ from top directory), ! for dirs with problem and ~ for the files that are
+ the problem (and with maybe L for locked). Like this:
+<blockquote>
+<div><code><pre>
+wc/$ svn status 
+!      .
+!      &lt;dir&gt;
+    S  &lt;switched_things&gt;
+~      &lt;dir&gt;/&lt;thing_that_is_now_unversioned&gt;
+</pre></code></div>
+</blockquote>
+</p>
+
+</div>
+
+</div>
+
 
 <div class="h2" id="developer-questions" title="developer-questions">
 <h2>Developer questions:</h2>
