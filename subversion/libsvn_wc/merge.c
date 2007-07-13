@@ -405,7 +405,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
              up the conflict before we mark the file 'conflicted' */
           if (conflict_func)
             {
-              svn_error_t *conflict_err;
               svn_wc_conflict_description_t cdesc;
               svn_wc_conflict_result_t result;
 
@@ -650,7 +649,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
          up the conflict before we mark the file 'conflicted' */
       if (conflict_func)
         {
-          svn_error_t *conflict_err;
           svn_wc_conflict_description_t cdesc;
           svn_wc_conflict_result_t result;
 
