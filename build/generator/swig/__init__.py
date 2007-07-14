@@ -21,8 +21,6 @@ class Generator:
     # Read configuration options
     self.proxy_dir = parser.get('options', 'swig-proxy-dir')
     self.includes = _collect_paths(parser.get('options', 'includes'))
-    self.swig_checkout_files = \
-      _collect_paths(parser.get('options', 'swig-checkout-files'))
 
     # Calculate build options
     self.opts = {}
