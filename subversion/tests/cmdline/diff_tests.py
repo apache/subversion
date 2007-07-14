@@ -2597,6 +2597,88 @@ def diff_in_renamed_folder(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-r3:4', kappa_path)
 
+def diff_svnpatch(sbox):
+  "test svnpatch format in various ways"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  os.chdir(wc_dir)
+
+  # turn iota into a modified binary file
+  svntest.main.file_append('iota', "\nSome more bytes.\n")
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+                       'application/octet-stream', 'iota')  
+
+  # add dir
+  os.mkdir(os.path.join('A', 'T'))
+  svntest.main.run_svn(None, 'add', os.path.join('A', 'T'))
+
+  # copy file and modify
+  mu_path = os.path.join('A', 'mu')
+  mumu_path = os.path.join('A', 'mumu')
+  svntest.main.run_svn(None, 'cp', mu_path, mumu_path)  
+  svntest.main.file_append(mumu_path, "\nSome more bytes.\n")
+
+  expected_output = [
+    "Index: A/mumu\n",
+    "===================================================================\n",
+    "--- A/mumu\t(revision 1)\n",
+    "+++ A/mumu\t(working copy)\n",
+    "@@ -1 +1,3 @@\n",
+    " This is the file 'mu'.\n",
+    "+\n",
+    "+Some more bytes.\n",
+    "Index: iota\n",
+    "===================================================================\n",
+    "Cannot display: file marked as a binary type.\n",
+    "svn:mime-type = application/octet-stream\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Name: svn:mime-type\n",
+    "   + application/octet-stream\n",
+    "\n",
+    "H4sICL/sikYAA291dACFkcFSgzAQhq3HvoG33NrOFGtIAiS3voCXdrynySIZgTCQOvadfEgDBcVW\n",
+    "6sCEkP12998/S2QrKIPaWoeW/lmhUOgn/1n5ny6kTe23WGzPEb/gjjsjUuueIGK72Z/DfglHjMpt\n",
+    "Az3VhX5SU5OD30Y+tzgWxyFdkbZg3J1OlcFjkX0dKox1chCq6FhEJstX6MCgqm3VFfEEJqJ5L0Vh\n",
+    "CgjcqWqrhFTIqsqNks7YcmOVAxc0rgZZTIkZHGvzToGDD6ch90qWwzBD3ncoUNmxfBsAKnYvz7Mr\n",
+    "Bko9EOO2/bQXpf/s3VpAQhFqnCgGLIaEKnZIJAMuI8AklYRTrW7ro1P6fjFM3D2s74PbUChmn/+0\n",
+    "YmK9z0yD/OsyQN2wi/ZeF4/z+c4WgApbAzqcHDT+ZNo0OmFa70mcJpRxnsaERqnGSmGuacpJRCX3\n",
+    "xrCLuwZtXO/2/AuhTZnRNgMAAA==\n",
+  ]
+
+  # 'clean' cleartext chunk translation (directory addition + property change +
+  # binary change):
+  #
+  # ( open-root ( ( ) 2:d0 ) )
+  # ( open-dir ( 1:A 2:d0 2:d1 ( ) ) )
+  # ( add-dir ( 3:A/T 2:d1 2:d2 ( ) ) )
+  # ( close-dir ( 2:d2 ) )
+  # ( add-file ( 6:A/mumu 2:d1 2:c3 ( 37:A/mu ) ) )
+  # ( close-dir ( 2:d1 ) )
+  # ( open-file ( 4:iota 2:d0 2:c4 ( ) ) )
+  # ( change-file-prop ( 2:c4 13:svn:mime-type ( 24:application/octet-stream ) ) )
+  # ( close-dir ( 2:d0 ) )
+  # ( apply-textdelta ( 2:c3 ( ) ) )
+  # ( textdelta-chunk ( 2:c3 4:SVN^A ) )
+  # ( textdelta-end ( 2:c3 ) )
+  # ( close-file ( 2:c3 ( ) ) )
+  # ( apply-textdelta ( 2:c4 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) )
+  # ( textdelta-chunk ( 2:c4 4:SVN^A ) )
+  # ( textdelta-chunk ( 2:c4 5:^@^Y,^B- ) )
+  # ( textdelta-chunk ( 2:c4 2:^A¬ ) )
+  # ( textdelta-chunk ( 2:c4 45:,This is the file 'iota'.
+  #
+  # Some more bytes.
+  #
+  #  ) )
+  # ( textdelta-end ( 2:c4 ) )
+  # ( close-file ( 2:c4 ( 32:7f84599f7346fd1cc19d4f9364a913f5 ) ) )
+  # ( close-edit ( ) )
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--svnpatch')
+
 ########################################################################
 #Run the tests
 
@@ -2644,6 +2726,7 @@ test_list = [ None,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
               diff_in_renamed_folder,
+              diff_svnpatch,
               ]
 
 if __name__ == '__main__':

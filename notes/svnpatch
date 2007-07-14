@@ -1,0 +1,154 @@
+This file documents the 'svnpatch' format that's used with both diff and patch
+subcommands.
+
+I HISTORY
+  -------
+
+[remind the reasons behind the design of such a new format]
+
+(We want something that supports any change and suitable enough for code
+review.)
+
+
+II SVNPATCH FORMAT IN A NUTSHELL
+   -----------------------------
+
+First off, let's define it.  svnpatch format is made of two ordered parts:
+  * (a) human-readable: made of unidiff bytes
+  * (b) computer-readable: made of svn protocol bytes (ra_svn), gzip'ed,
+        base64-encoded
+
+But, as we're not in a client/server configuration:
+  - (b) only uses the svn protocol's Editor Command Set, there's no need for
+    the Main Command Set nor the Report Command Set
+  - a client reads Editor Commands from the patch, i.e. the patch silently
+    drives the client's editor
+  - the only direction the information takes is from the patch to the client
+  - svndiff1 is solely used instead of being able to choose between svndiff1
+    and svndiff0 (e.g. binary-change needs svndiff)
+
+Such a format can be seen as a subset of the svn protocol which:
+  - Capabilities and Edit Pipelining have nothing to do with as we can't adjust
+    once the patch is rock-hard written in the file nor negotiate anything
+  - commands are restricted to the Editor Command Set
+  - lacks revision numbers and checksums except for binary files (see VI
+    FUZZING)
+
+For more about Command Sets, consult libsvn_ra_svn/protocol.
+
+
+III BOUNDARIES BETWEEN THE TWO PARTS
+    --------------------------------
+
+Now since the svn protocol would be happy to handle just any change that a
+working copy comes with, rules have to be set up so that we meet our goals (see
+I HISTORY).
+
+Concretely, what's in each part?
+
+In (a):
+ - contextual differences
+ - property-changes (in a similar way to 'svn diff')
+ - new non-binary-file content
+
+In (b):
+ - tree-changes ({add,del,move,copy}-directory, {add,del,move,copy}-file)
+ - property-changes
+ - binary-changes
+
+Consequences are we face cases where one change's representation lives in the
+two parts of the patch. e.g. a modified-file move: the move is represented
+within (b) while contextual differences within (a);  a file add: an add-file
+Editor Command in (b) plus its content in (a).
+
+Furthermore, we never end up with redundant information but with
+property-changes.  A file copy with modifications generates (a) contextual
+diff, (b) add-file w/ copy-path.
+
+The only thing that's left unreadable is tree-changes as defined above.
+However, a higher level layer (e.g. GUIs) would perfectly be able to
+base64-decode, uncompress and read operations to visually-render the changes.
+
+The (b) block starts with a header and its version.
+
+Here's what a directory add, a file add and a propset would look like:
+
+[[[
+Index: bar
+===================================================================
+--- bar
++++ bar
+@@ -0,0 +1,2 @@
++This is bar content.
++
+
+Property changes on: bar
+___________________________________________________________________
+Name: newprop
+   + propval
+
+======================== SVNPATCH BLOCK 1 =========================
+H4sICOz0mEYAA291dABtjsEKwyAMhu97Co/tQejcoZC3cU26CWLElu31l0ZXulE8GL//8yed4UzJ
+FubVdHJ64wAHuXp5eEQ7h0gy3uDuS80cTFc1qzQ9fXqQejYXzoLUGCHRu4ERtuHl4/5rq8ZQtHlm
+/jajOzZHXqhZGp3i4Qe3df931IwwrBVePlyTX//3AAAA
+]]]
+
+Let's uncompress and decode the above block:
+
+( open-root ( ( ) 2:d0 ) ) ( add-file ( 3:bar 2:d0 2:c1 ( ) ) ) (
+change-file-prop ( 2:c1 7:newprop ( 7:propval ) ) ) ( add-dir ( 3:foo 2:d0 2:d2
+( ) ) ) ( close-dir ( 2:d2 ) ) ( close-dir ( 2:d0 ) ) ( close-file ( 2:c1 ( ) )
+) ( close-edit ( ) )
+
+
+Further examples can be found in subversion/tests/cmdline/diff_tests.py
+test-suite.
+
+
+IV SVNPATCH EDIT-ABILITY
+   ---------------------
+
+Because encoded and compressed, the computer-readable chunk (b) is not directly
+editable.  Should it be in cleartext, the user would still have to go through
+svn protocol writing manually -- calculate checksums and strings length, and
+place tokens, assumed to be not so friendly for the end-user.  However, there's
+a much easier workaround: apply the patch, and then start editing the working
+copy with regular svn subcommands.
+
+
+V PATCHING
+  --------
+
+When it comes to applying an svnpatch patch (RAS syndrom), the 'svn patch'
+subcommand is a good friend.  Here's what it does with the patch: (a) literally
+gets processed by /usr/bin/patch while (b) is handled with internal routines
+that read and drive editor functions out from it much like what's being
+performed by libsvn_ra_svn with a network stream.
+
+Now some words about the order to process (a) and (b).  There might be cases
+when operations to a single file live in the two parts of the patch (see
+above).  Because that's the way the svn protocol and 'svn diff' do, we stick
+with processing first (b) and then (a).  This implies (a) provides diff against
+the most up-to-date indexes.
+
+When the Editor Command Set comes to be extended, 'svn patch' will face
+unexpected commands and/or syntax.  As in libsvn_ra_svn, we warn the user with
+'unsupported command' messages and ignore its application.
+
+
+VI FUZZING a.k.a. DYSTOPIA
+   -----------------------
+
+As long as we'll be using /usr/bin/patch to apply (a), we'll have to go with
+/usr/bin/patch fuzzing.  So we're left with (b) (which we'll parse first).
+Well, the svn protocol is not very sensitive to fuzzing since most operations
+include a revision number.  However, to stick with this policy would widely
+lower the patch-application scope we're expecting.  For instance, 'svn patch'
+would fail at deleting dir@REV when REV is different from the one that comes
+with the delete-entry Editor Command.  Obviously we need loose here, and the
+solution is to free the svn protocol from revision numbers and checksums in our
+implementation for every change but binary-changes (for the checksums).  (It
+would be insane to associate binary stuff with fuzzing in this world.)  Now
+dealing with (b) patching is similar in many ways to (a)'s: we end up trying by
+all methods to drive the editor in the dark jungle, possibly failing in few
+cases shooting 'hunk failed' warnings.

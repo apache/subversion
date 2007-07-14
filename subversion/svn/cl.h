@@ -66,7 +66,7 @@ typedef enum {
   svn_cl__new_cmd_opt,
   svn_cl__no_auth_cache_opt,
   svn_cl__no_autoprops_opt,
-  svn_cl__no_diff_deleted,
+  svn_cl__no_diff_deleted_opt,
   svn_cl__no_ignore_opt,
   svn_cl__no_unlock_opt,
   svn_cl__non_interactive_opt,
@@ -86,7 +86,8 @@ typedef enum {
   svn_cl__keep_local_opt,
   svn_cl__with_revprop_opt,
   svn_cl__parents_opt,
-  svn_cl__accept_opt
+  svn_cl__accept_opt,
+  svn_cl__svnpatch_format_opt
 } svn_cl__longopt_t;
 
 
@@ -132,6 +133,7 @@ typedef struct svn_cl__opt_state_t
   const char *extensions;        /* subprocess extension args */ /* UTF-8! */
   apr_array_header_t *targets;   /* target list from file */ /* UTF-8! */
   svn_boolean_t xml;             /* output in xml, e.g., "svn log --xml" */
+  svn_boolean_t svnpatch;        /* output in svnpatch format, e.g., "svn diff --svnpatch" */
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */

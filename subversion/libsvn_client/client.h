@@ -34,6 +34,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+#define SVN_CLIENT_SVNPATCH_VERSION   1
+
+
 /* Set *REVNUM to the revision number identified by REVISION.
  *
  * If REVISION->kind is svn_opt_revision_number, just use

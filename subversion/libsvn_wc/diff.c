@@ -621,6 +621,43 @@ file_diff(struct dir_baton *dir_baton,
   return SVN_NO_ERROR;
 }
 
+/* Called from directory_elements_diff to trigger callbacks when
+ * svnpatch format is enabled. */
+static svn_error_t *
+dir_diff(struct dir_baton *dir_baton,
+         const char *path,
+         const svn_wc_entry_t *entry,
+         apr_pool_t *pool)
+{
+  switch(entry->schedule)
+    {
+      case svn_wc_schedule_replace:
+      case svn_wc_schedule_delete:
+        SVN_ERR(dir_baton->edit_baton->callbacks->dir_deleted
+                (NULL,
+                 NULL,
+                 path,
+                 dir_baton->edit_baton->callback_baton));
+
+        /* So that 'replace' falls through */
+        if (entry->schedule == svn_wc_schedule_delete)
+          break;
+
+      case svn_wc_schedule_add:
+        SVN_ERR(dir_baton->edit_baton->callbacks->dir_added
+                (NULL,
+                 NULL,
+                 path,
+                 entry->revision,
+                 dir_baton->edit_baton->callback_baton));
+        break;
+      
+      default:
+        break;
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Called when the directory is closed to compare any elements that have
  * not yet been compared.  This identifies local, working copy only
  * changes.  At this stage we are dealing with files/directories that do
@@ -738,6 +775,9 @@ directory_elements_diff(struct dir_baton *dir_baton)
                  files. If it was a file we need to show a deletion diff
                  for that file. */
             }
+
+          /* Before we recurse, let's trigger directory's callbacks */
+          SVN_ERR(dir_diff(dir_baton, path, entry, subpool));
 
           /* Check the subdir if in the anchor (the subdir is the target), or
              if recursive */

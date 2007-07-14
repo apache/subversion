@@ -305,7 +305,33 @@ struct diff_cmd_baton {
      unconditionally, even if the diffs are empty. */
   svn_boolean_t force_empty;
 
+  /* Should we enable svnpatch format */
+  svn_boolean_t svnpatch_format;
+
+  /* Buffer to store svnpatch-format bytes we're filling along calls to
+     client's callbacks, before we output it. */
+  svn_stringbuf_t *svnpatch_buff;
 };
+
+/* Somehow wraps svn_stringbuf_appendbytes in a printf-style fashion thanks to
+   apr_pvsprintf().  This could be moved into svn_string.h after some
+   generic-tweaking.  (This needs diff_cmd_baton struct symbols, defined right
+   above) */
+svn_error_t *
+svnpatch_append(struct diff_cmd_baton *diff_cmd_baton, const char *fmt, ...)
+{
+  va_list ap;
+  char *buff;
+  apr_pool_t *subpool = svn_pool_create(diff_cmd_baton->pool);
+
+  va_start(ap, fmt);
+  buff = apr_pvsprintf(subpool, fmt, ap);
+  va_end(ap);
+  svn_stringbuf_appendbytes(diff_cmd_baton->svnpatch_buff, buff, strlen(buff));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
 
 
 /* Generate a label for the diff output for file PATH at revision REVNUM.
@@ -349,6 +375,11 @@ diff_props_changed(svn_wc_adm_access_t *adm_access,
 
   if (state)
     *state = svn_wc_notify_state_unknown;
+
+  if (diff_cmd_baton->svnpatch_format)
+    SVN_ERR(svnpatch_append(diff_cmd_baton,
+                            APR_EOL_STR "diff_props_changed; path:%s",
+                            path));
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
@@ -466,7 +497,7 @@ diff_content_changed(const char *path,
               (os, diff_cmd_baton->header_encoding, subpool,
                _("Cannot display: file marked as a binary type.%s"),
                APR_EOL_STR));
-      
+
       if (mt1_binary && !mt2_binary)
         SVN_ERR(svn_stream_printf_from_utf8
                 (os, diff_cmd_baton->header_encoding, subpool,
@@ -488,6 +519,11 @@ diff_content_changed(const char *path,
                      "svn:mime-type = (%s, %s)" APR_EOL_STR,
                      mimetype1, mimetype2));
         }
+
+      if (diff_cmd_baton->svnpatch_format)
+        svnpatch_append(diff_cmd_baton,
+                        APR_EOL_STR "diff_content_changed(binary); path:%s",
+                        path);
 
       /* Exit early. */
       svn_pool_destroy(subpool);
@@ -620,6 +656,11 @@ diff_file_added(svn_wc_adm_access_t *adm_access,
                             rev1, rev2,
                             mimetype1, mimetype2,
                             prop_changes, original_props, diff_baton));
+
+  if (diff_cmd_baton->svnpatch_format)
+    svnpatch_append(diff_cmd_baton,
+                    APR_EOL_STR "diff_file_added; path:%s",
+                    path);
   
   diff_cmd_baton->force_empty = FALSE;
 
@@ -639,6 +680,11 @@ diff_file_deleted_with_diff(svn_wc_adm_access_t *adm_access,
                             void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
+  if (diff_cmd_baton->svnpatch_format)
+    svnpatch_append(diff_cmd_baton,
+                    APR_EOL_STR "diff_file_deleted_with_diff; path:%s",
+                    path);
 
   /* We don't list all the deleted properties. */
   return diff_file_changed(adm_access, state, NULL, path,
@@ -667,6 +713,11 @@ diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
   if (state)
     *state = svn_wc_notify_state_unknown;
 
+  if (diff_cmd_baton->svnpatch_format)
+    svnpatch_append(diff_cmd_baton,
+                    APR_EOL_STR "diff_file_deleted_no_diff; path:%s",
+                    path);
+
   SVN_ERR(file_printf_from_utf8
           (diff_cmd_baton->outfile,
            diff_cmd_baton->header_encoding,
@@ -687,9 +738,16 @@ diff_dir_added(svn_wc_adm_access_t *adm_access,
                svn_revnum_t rev,
                void *diff_baton)
 {
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
   if (state)
     *state = svn_wc_notify_state_unknown;
 
+  if (diff_cmd_baton->svnpatch_format)
+    svnpatch_append(diff_cmd_baton,
+                    APR_EOL_STR "diff_dir_added; path:%s",
+                    path);
+  
   /* ### todo:  send feedback to app */
   return SVN_NO_ERROR;
 }
@@ -701,8 +759,15 @@ diff_dir_deleted(svn_wc_adm_access_t *adm_access,
                  const char *path,
                  void *diff_baton)
 {
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
   if (state)
     *state = svn_wc_notify_state_unknown;
+
+  if (diff_cmd_baton->svnpatch_format)
+    svnpatch_append(diff_cmd_baton,
+                    APR_EOL_STR "diff_dir_deleted; path:%s",
+                    path);
 
   return SVN_NO_ERROR;
 }
@@ -1290,7 +1355,7 @@ diff_repos_wc(const apr_array_header_t *options,
 }
 
 
-/* This is basically just the guts of svn_client_diff[_peg]3(). */
+/* This is basically just the guts of svn_client_diff[_peg]4(). */
 static svn_error_t *
 do_diff(const struct diff_parameters *diff_param,
         const svn_wc_diff_callbacks2_t *callbacks,
@@ -1302,6 +1367,9 @@ do_diff(const struct diff_parameters *diff_param,
 
   /* Check if paths/revisions are urls/local. */
   SVN_ERR(check_paths(diff_param, &diff_paths));
+
+  if (callback_baton->svnpatch_format)
+    callback_baton->svnpatch_buff = svn_stringbuf_create("", pool);
 
   if (diff_paths.is_repos1)
     {
@@ -1343,6 +1411,16 @@ do_diff(const struct diff_parameters *diff_param,
                              callbacks, callback_baton, ctx, pool));
         }
     }
+
+  if (callback_baton->svnpatch_format)
+    SVN_ERR(file_printf_from_utf8
+            (callback_baton->outfile,
+             callback_baton->header_encoding,
+             APR_EOL_STR "%s SVNPATCH BLOCK %d %s %s" APR_EOL_STR,
+             equal_string + 43,
+             SVN_CLIENT_SVNPATCH_VERSION,
+             equal_string + 42,
+             callback_baton->svnpatch_buff->data));
 
   return SVN_NO_ERROR;
 }
@@ -1470,6 +1548,7 @@ svn_client_diff4(const apr_array_header_t *options,
                  svn_boolean_t ignore_ancestry,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t ignore_content_type,
+                 svn_boolean_t svnpatch_format,
                  const char *header_encoding,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
@@ -1519,6 +1598,7 @@ svn_client_diff4(const apr_array_header_t *options,
   diff_cmd_baton.config = ctx->config;
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
+  diff_cmd_baton.svnpatch_format = svnpatch_format;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
@@ -1542,7 +1622,7 @@ svn_client_diff3(const apr_array_header_t *options,
   return svn_client_diff4(options, path1, revision1, path2,
                           revision2, SVN_DEPTH_FROM_RECURSE(recurse),
                           ignore_ancestry, no_diff_deleted,
-                          ignore_content_type, header_encoding,
+                          ignore_content_type, FALSE, header_encoding,
                           outfile, errfile, ctx, pool);
 }
 
@@ -1596,6 +1676,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t svnpatch_format,
                      const char *header_encoding,
                      apr_file_t *outfile,
                      apr_file_t *errfile,
@@ -1641,6 +1722,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   diff_cmd_baton.config = ctx->config;
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
+  diff_cmd_baton.svnpatch_format = svnpatch_format;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
@@ -1670,6 +1752,7 @@ svn_client_diff_peg3(const apr_array_header_t *options,
                               ignore_ancestry,
                               no_diff_deleted,
                               ignore_content_type,
+                              FALSE,
                               header_encoding,
                               outfile,
                               errfile,
