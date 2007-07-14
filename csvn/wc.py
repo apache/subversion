@@ -26,6 +26,11 @@ class WC(object):
             svn_cancel_func_t(self._cancel_func_wrapper)
         self.client[0].cancel_baton = cast(id(self), c_void_p)
         self._cancel_func = None
+        
+        self.client[0].progress_func = \
+            svn_ra_progress_notify_func_t(self._progress_func_wrapper)
+        self.client[0].progress_baton =  cast(id(self), c_void_p)
+        self._progress_func = None
 
     def copy(self, src, dest, rev = ""):
         """Copy SRC to DEST"""
@@ -124,6 +129,21 @@ class WC(object):
         if self._cancel_func:
             self._cancel_func()
     _cancel_func_wrapper = staticmethod(_cancel_func_wrapper)
+    
+    def set_progress_func(self, progress_func):
+        """Setup a callback for network progress information. This callback
+        should accept two apr_off_t objects, being the number of bytes sent
+        and the number of bytes to send.
+        
+        For details of apr_off_t objects, see the apr_off_t documentation."""
+        
+        self._progress_func = progress_func
+        
+    def _progress_func_wrapper(progress, total, baton, pool):
+        self = cast(baton, py_object).value
+        if self._progress_func:
+            self._progress_func(progress, total)
+    _progress_func_wrapper = staticmethod(_progress_func_wrapper)
 
     def diff(self, path="", diff_options=[], recurse=True,
              ignore_ancestry=True, no_diff_deleted=False,
