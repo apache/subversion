@@ -144,8 +144,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("do no interactive prompting")},
   {"dry-run",       svn_cl__dry_run_opt, 0,
                     N_("try operation but make no changes")},
-  {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
+  {"no-diff-deleted", svn_cl__no_diff_deleted_opt, 0,
                     N_("do not print differences for deleted files")},
+  {"svnpatch", svn_cl__svnpatch_format_opt, 0,
+                    N_("output in svnpatch format")},
   {"notice-ancestry", svn_cl__notice_ancestry_opt, 0,
                     N_("notice ancestry when calculating differences")},
   {"ignore-ancestry", svn_cl__ignore_ancestry_opt, 0,
@@ -399,10 +401,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
-     svn_cl__depth_opt, svn_cl__diff_cmd_opt, 'x', svn_cl__no_diff_deleted,
-     svn_cl__notice_ancestry_opt, svn_cl__summarize, svn_cl__changelist_opt,
-     svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt} },
+     svn_cl__depth_opt, svn_cl__diff_cmd_opt, 'x', svn_cl__no_diff_deleted_opt,
+     svn_cl__notice_ancestry_opt, svn_cl__summarize,
+     svn_cl__svnpatch_format_opt, svn_cl__changelist_opt, svn_cl__force_opt,
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
@@ -1279,7 +1281,7 @@ main(int argc, const char *argv[])
       case svn_cl__non_interactive_opt:
         opt_state.non_interactive = TRUE;
         break;
-      case svn_cl__no_diff_deleted:
+      case svn_cl__no_diff_deleted_opt:
         opt_state.no_diff_deleted = TRUE;
         break;
       case svn_cl__notice_ancestry_opt:
@@ -1368,6 +1370,9 @@ main(int argc, const char *argv[])
         break;
       case svn_cl__summarize:
         opt_state.summarize = TRUE;
+        break;
+      case svn_cl__svnpatch_format_opt:
+        opt_state.svnpatch = TRUE;
         break;
       case svn_cl__remove_opt:
         opt_state.remove = TRUE;
