@@ -477,11 +477,13 @@ end_element(void *baton, int state,
 
         case ELEM_response:
           /* we're now working on this href... */
-          svn_ra_neon__copy_href(mc->href, mc->cdata->data);
+          SVN_ERR(svn_ra_neon__copy_href(mc->href, mc->cdata->data,
+                                         mc->scratchpool));
           break;
 
         case ELEM_checked_in:
-          svn_ra_neon__copy_href(mc->vsn_url, mc->cdata->data);
+          SVN_ERR(svn_ra_neon__copy_href(mc->vsn_url, mc->cdata->data,
+                                         mc->scratchpool));
           break;
         }
       break;
