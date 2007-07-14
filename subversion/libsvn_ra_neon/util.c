@@ -21,8 +21,9 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include <apr_uri.h>
+
 #include <ne_alloc.h>
-#include <ne_uri.h>
 #include <ne_compress.h>
 #include <ne_basic.h>
 
@@ -427,10 +428,10 @@ svn_ra_neon__xml_collect_cdata(void *baton, int state,
 
 
 
-void svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src)
+svn_error_t *
+svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src,
+                       apr_pool_t *pool)
 {
-  ne_uri parsed_url;
-
   /* parse the PATH element out of the URL and store it.
 
      ### do we want to verify the rest matches the current session?
@@ -438,9 +439,20 @@ void svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src)
      Note: mod_dav does not (currently) use an absolute URL, but simply a
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
-  (void) ne_uri_parse(src, &parsed_url);
-  svn_stringbuf_set(dst, parsed_url.path);
-  ne_uri_free(&parsed_url);
+
+  apr_uri_t uri;
+  apr_status_t apr_status
+    = apr_uri_parse(pool, src, &uri);
+
+  if (apr_status != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_status,
+                              _("Unable to parse URL '%s'"),
+                              src);
+
+  svn_stringbuf_setempty(dst);
+  svn_stringbuf_appendcstr(dst, uri.path);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
