@@ -245,8 +245,13 @@ do_lock(svn_lock_t **lock,
   SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
                                          url, SVN_INVALID_REVNUM, pool));
 
+  if (ne_uri_parse(url, &uri) != 0)
+    {
+      ne_uri_free(&uri);
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
+                               _("Failed to parse URI '%s'"), url);
+    }
 
-  ne_uri_parse(url, &uri);
   req = svn_ra_neon__request_create(ras, "LOCK", uri.path, pool);
   ne_uri_free(&uri);
 
@@ -370,11 +375,11 @@ do_unlock(svn_ra_session_t *session,
 
   /* Make a neon lock structure containing token and full URL to unlock. */
   url = svn_path_url_add_component(ras->url->data, path, pool);
-  if (ne_uri_parse(url, &uri))
+  if (ne_uri_parse(url, &uri) != 0)
     {
       ne_uri_free(&uri);
-      return svn_error_create(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                              _("Failed to parse URI"));
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
+                               _("Failed to parse URI '%s'"), url);
     }
 
   url_path = apr_pstrdup(pool, uri.path);
