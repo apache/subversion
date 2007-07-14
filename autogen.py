@@ -120,7 +120,7 @@ def run_cmd(cmd):
 tempdir = mkdtemp()
 
 includes = ('%s/include/subversion-1/svn_*.h '
-            '%s/include/apr-1/ap[ru]_*.h' % (apr_prefix, svn_prefix))
+            '%s/ap[ru]_*.h' % (svn_prefix, apr_include_dir))
 
 os.environ["LIBRARY_PATH"] = library_path
 
