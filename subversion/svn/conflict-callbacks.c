@@ -127,7 +127,7 @@ svn_cl__ignore_conflicts(svn_wc_conflict_result_t *result,
 {
   SVN_ERR(svn_cmdline_printf(pool, _("Discovered a conflict.\n\n")));
   SVN_ERR(print_conflict_description(description, pool));
-  SVN_ERR(svn_cmdline_printf(pool, _("\n\n")));
+  SVN_ERR(svn_cmdline_printf(pool, "\n\n"));
 
   *result = svn_wc_conflict_result_conflicted; /* conflict remains. */
   return SVN_NO_ERROR;
