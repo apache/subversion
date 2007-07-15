@@ -48,6 +48,14 @@
 %enddef
 #endif
 
+#ifdef SWIGMZSCHEME
+%define %hash_argout_typemap(ParamName, ValueType)
+%typemap(argout) apr_hash_t **ParamName {
+ SWIG_fail
+}
+%enddef
+#endif
+
 %hash_argout_typemap(dirents, svn_dirent_t *)
 %hash_argout_typemap(locks, svn_lock_t *)
 #ifdef SWIGPYTHON
@@ -91,6 +99,14 @@
   %append_output(!*$1 ? Qnil : svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
 }
 #endif
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_hash_t **HASH_SVN_STRING {
+  SWIG_fail
+}
+%typemap(argout) apr_hash_t **HASH_SVN_STRING_MAYBENULL {
+  SWIG_fail
+}
+#endif
 %apply apr_hash_t **HASH_SVN_STRING {
   apr_hash_t **props,
   apr_hash_t **original_props,
@@ -112,6 +128,11 @@
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_hash_t **HASH_CSTRING {
+  SWIG_fail
+}
+#endif
 
 /* -----------------------------------------------------------------------
    apr_hash_t **locations
@@ -131,6 +152,13 @@
 }
 #endif
 
+
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_hash_t **locations
+{
+  SWIG_fail
+}
+#endif
 /* -----------------------------------------------------------------------
    apr_hash_t **externals_old
    apr_hash_t **externals_new
@@ -143,6 +171,12 @@
 }
 #endif
 
+
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_hash_t **externals_old, apr_hash_t **externals_new {
+  SWIG_fail;
+}
+#endif
 
 /* =======================================================================
    %typemap(in) apr_hash_t *
@@ -192,7 +226,14 @@
 }
 #endif
 
-#if defined(SWIGPYTHON) || defined(SWIGRUBY)
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_hash_t *PROPHASH
+{
+ SWIG_fail
+}
+#endif
+
+#if defined(SWIGPYTHON) || defined(SWIGRUBY) || defined(SWIGMZSCHEME)
 %apply apr_hash_t *PROPHASH {
   apr_hash_t *target_props,
   apr_hash_t *source_props,
@@ -252,6 +293,20 @@
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_hash_t *HASH_CSTRING {
+ SWIG_fail
+}
+%typemap(in) apr_hash_t *HASH_CSTRING_MAYBENULL {
+ SWIG_fail
+}
+
+%typemap(out) apr_hash_t *HASH_CSTRING_MAYBENULL {
+ SWIG_fail
+}
+#endif
+
+
 %apply apr_hash_t *HASH_CSTRING {
   apr_hash_t *path_tokens
 };
@@ -288,6 +343,22 @@
 }
 #endif
 
+
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_hash_t *config
+{
+ SWIG_fail
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_hash_t *path_revs
+{
+ SWIG_fail
+}
+#endif
+
+
 /* =======================================================================
    %typemap(argout) apr_array_header_t **
 */
@@ -298,6 +369,19 @@
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
   %append_output(svn_swig_rb_prop_apr_array_to_hash_prop(*$1));
+}
+
+%apply apr_array_header_t **OUTPUT_OF_PROP {
+  apr_array_header_t **entry_props,
+  apr_array_header_t **wc_props,
+  apr_array_header_t **regular_props,
+  apr_array_header_t **propdiffs
+};
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
+ SWIG_fail
 }
 
 %apply apr_array_header_t **OUTPUT_OF_PROP {
@@ -328,6 +412,12 @@
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  SWIG_fail
+}
+#endif
+
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
   apr_array_header_t **patterns,
   apr_array_header_t **logfiles,
@@ -349,6 +439,19 @@
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **result_revs {
   %append_output(svn_swig_rb_apr_array_to_array_svn_rev(*$1));
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_array_header_t **externals_p {
+  SWIG_fail
+}
+#endif
+
+/* svn_client_update2 */
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_array_header_t **result_revs {
+  SWIG_fail
 }
 #endif
 
@@ -376,6 +479,12 @@
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_array_header_t *location_revisions {
+  SWIG_fail
+}
+#endif
+
 /* -----------------------------------------------------------------------
    define a general INPUT param of an array of const char * items.
  */
@@ -397,6 +506,12 @@
 #ifdef SWIGRUBY
 %typemap(in) const apr_array_header_t *STRINGLIST {
   $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(in) const apr_array_header_t *STRINGLIST {
+ SWIG_fail
 }
 #endif
 
@@ -455,6 +570,13 @@
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_array_header_t *providers
+{
+ SWIG_fail;
+}
+#endif
+
 /* -----------------------------------------------------------------------
    An array of svn_prop_t.
 */
@@ -470,9 +592,56 @@
 };
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_array_header_t *ROW_PROP_LIST
+{
+  SWIG_fail
+}
+
+%apply apr_array_header_t *ROW_PROP_LIST {
+  apr_array_header_t *proplist
+};
+#endif
+
+
+
 /* -----------------------------------------------------------------------
    An array of svn_prop_t *.
 */
+
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_array_header_t *PROP_LIST
+{
+ SWIG_fail
+}
+
+%typemap(out) apr_array_header_t *PROP_LIST
+{
+  SWIG_fail
+}
+
+%typemap(in) apr_array_header_t *PROP_LIST_MAY_BE_NULL
+{
+ SWIG_fail
+}
+
+%typemap(out) apr_array_header_t *PROP_LIST_MAY_BE_NULL
+{
+ SWIG_fail
+}
+
+%apply apr_array_header_t *PROP_LIST {
+  apr_array_header_t *wcprop_changes,
+  apr_array_header_t *propchanges
+};
+
+%apply apr_array_header_t *PROP_LIST_MAY_BE_NULL {
+  apr_array_header_t *incoming_prop_changes,
+  apr_array_header_t *outgoing_prop_changes,
+  apr_array_header_t *merge_options
+};
+
+#endif
 
 #ifdef SWIGRUBY
 %typemap(in) apr_array_header_t *PROP_LIST
@@ -539,12 +708,24 @@
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_array_header_t *RANGELIST {
+  SWIG_fail
+}
+#endif
+
 /* -----------------------------------------------------------------------
    Input of apr_array_header_t * <svn_client_copy_source_t *>
 */
 #ifdef SWIGRUBY
 %typemap(in) apr_array_header_t *SOURCES {
   $1 = svn_swig_rb_array_to_apr_array_copy_source($input, _global_pool);
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_array_header_t *SOURCES {
+  SWIG_fail
 }
 #endif
 
@@ -566,6 +747,14 @@
   $1 = svn_swig_rb_hash_to_apr_hash_merge_range($input, _global_pool);
 }
 #endif
+
+
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_hash_t *MERGEINFO {
+  SWIG_fail;
+}
+#endif
+
 
 /* -----------------------------------------------------------------------
    Output of
@@ -599,6 +788,19 @@
 %typemap(argout) apr_hash_t **MERGEHASH_INOUT = apr_hash_t **MERGEHASH;
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_hash_t **MERGEHASH
+{
+ SWIG_fail;
+}
+
+%typemap(in) apr_hash_t **MERGEHASH_INOUT ($*1_ltype temp)
+{
+ SWIG_fail;
+}
+
+%typemap(argout) apr_hash_t **MERGEHASH_INOUT = apr_hash_t **MERGEHASH;
+#endif
 /* -----------------------------------------------------------------------
    Output of
    apr_hash_t * <const char *,
@@ -609,6 +811,13 @@
 %typemap(argout) apr_hash_t **HASH_OF_MERGE_INFO_HASH
 {
   %append_output(svn_swig_rb_apr_hash_to_hash_merge_range_hash(*$1));
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_hash_t **HASH_OF_MERGE_INFO_HASH
+{
+ SWIG_fail
 }
 #endif
 
@@ -641,3 +850,16 @@
    apr_array_header_t **RANGELIST;
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(argout) apr_array_header_t **RANGELIST {
+  SWIG_fail;
+}
+
+%typemap(in) apr_array_header_t **RANGELIST_INOUT ($*1_ltype temp)
+{
+ SWIG_fail;
+}
+
+%typemap(argout) apr_array_header_t **RANGELIST_INOUT =
+   apr_array_header_t **RANGELIST;
+#endif

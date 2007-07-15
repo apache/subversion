@@ -57,6 +57,23 @@
 #endif
 
 /* -----------------------------------------------------------------------
+ * MZScheme long long stuff
+ */
+#ifdef SWIGMZSCHEME
+%typemap(in,numinputs=0) unsigned long long *OUTPUT (apr_int64_t temp) {
+ "$1 = &temp;";
+%typemap(argout) unsigned long long *OUTPUT {
+	%append_output(SWIG_convert_unsigned_long(temp));
+}
+}
+%typemap(in,numinputs=0)  long long *OUTPUT (apr_int64_t temp)
+ "$1 = &temp;";
+%typemap(argout) unsigned long long *OUTPUT {
+	%append_output(SWIG_convert_long(temp));
+}
+#endif
+
+/* -----------------------------------------------------------------------
  * APR datatypes (from apr.h)
  */
 
@@ -106,6 +123,13 @@ typedef apr_int32_t time_t;
   $1 = svn_swig_rb_make_file($input, _global_pool);
 }
 #endif
+
+#ifdef SWIGMZSCHEME
+%typemap(in) apr_file_t * {
+  SWIG_fail
+}
+#endif
+
 
 /* -----------------------------------------------------------------------
    Output of apr_file_t *

@@ -22,6 +22,8 @@
 %module "SVN::_Client"
 #elif defined(SWIGRUBY)
 %module "svn::ext::client"
+#elif defined(SWIGMZSCHEME)
+%module svnclient
 #endif
 
 %include svn_global.swg
@@ -149,32 +151,33 @@
                   void *log_msg_baton,
                   svn_swig_py_get_commit_log_func,
                   ,
-                  svn_swig_rb_get_commit_log_func)
+                  svn_swig_rb_get_commit_log_func,,,)
 #endif
 
 #ifdef SWIGRUBY
 %callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
                   ,
                   ,
-                  svn_swig_rb_cancel_func)
+                  svn_swig_rb_cancel_func,,,)
 #endif
 
+#ifndef SWIGMZSCHEME
 %callback_typemap(svn_client_blame_receiver_t receiver, void *receiver_baton,
                   svn_swig_py_client_blame_receiver_func,
                   svn_swig_pl_blame_func,
-                  svn_swig_rb_client_blame_receiver_func)
-
+                  svn_swig_rb_client_blame_receiver_func,,,)
+#endif
 #ifdef SWIGRUBY
 %callback_typemap(svn_wc_notify_func2_t notify_func2, void *notify_baton2,
                   ,
                   ,
-                  svn_swig_rb_notify_func2)
+                  svn_swig_rb_notify_func2,,,)
 #endif
 
 #ifdef SWIGPYTHON
 %callback_typemap(svn_info_receiver_t receiver, void *receiver_baton,
                   svn_swig_py_info_receiver_func,
-                  ,
+                  ,,,,
                   )
 #endif
 
@@ -183,22 +186,22 @@
                   void *summarize_baton,
                   ,
                   ,
-                  svn_swig_rb_client_diff_summarize_func)
+                  svn_swig_rb_client_diff_summarize_func,,,)
 
 %callback_typemap(svn_client_list_func_t list_func, void *baton,
                   ,
                   ,
-                  svn_swig_rb_client_list_func)
+                  svn_swig_rb_client_list_func,,,)
 
 %callback_typemap(svn_proplist_receiver_t receiver, void *receiver_baton,
                   ,
                   ,
-                  svn_swig_rb_proplist_receiver)
+                  svn_swig_rb_proplist_receiver,,,)
 
 %callback_typemap(svn_changelist_receiver_t callback_func, void *callback_baton,
                   ,
                   ,
-                  svn_swig_rb_changelist_receiver)
+                  svn_swig_rb_changelist_receiver,,,)
 #endif
 
 /* -----------------------------------------------------------------------
@@ -207,6 +210,7 @@
    adding a simple declaration here, SWIG will insert a name for it.
    FIXME: This may be untrue. See svn_wc_status, etc.
 */
+
 %types(svn_wc_status_t *);
 
 /* We also need SWIG to wrap svn_dirent_t and svn_lock_t for us.  They

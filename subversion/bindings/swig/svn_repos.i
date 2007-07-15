@@ -22,7 +22,10 @@
 %module "SVN::_Repos"
 #elif defined(SWIGRUBY)
 %module "svn::ext::repos"
+#elif defined(SWIGMZSCHEME)
+%module svnrepos
 #endif
+
 
 %include svn_global.swg
 %import core.i
@@ -59,17 +62,27 @@
 };
 #endif
 
+#ifdef SWIGMZSCHEME
+%apply const char *NOT_NULL{
+  const char *path
+};
+
+%apply svn_stream_t *MAY_BE_NULL {
+    svn_stream_t *dumpstream_may_be_null,
+    svn_stream_t *feedback_stream
+};
+#endif
+
 %callback_typemap(svn_repos_history_func_t history_func, void *history_baton,
                   svn_swig_py_repos_history_func,
                   svn_swig_pl_thunk_history_func,
-                  svn_swig_rb_repos_history_func)
+                  svn_swig_rb_repos_history_func,svn_swig_mzscm_repos_history_func,,)
 
 %callback_typemap_maybenull(svn_repos_authz_func_t authz_read_func,
                             void *authz_read_baton,
                             svn_swig_py_repos_authz_func,
                             svn_swig_pl_thunk_authz_func,
-                            svn_swig_rb_repos_authz_func)
-
+                            svn_swig_rb_repos_authz_func,svn_swig_mzscm_repos_authz_func,,)
 #ifdef SWIGRUBY
 %typemap(in) (svn_error_t *(*start_callback)(void *), void *start_callback_baton)
 {
@@ -82,18 +95,18 @@
 %callback_typemap(svn_repos_file_rev_handler_t handler, void *handler_baton,
                   ,
                   ,
-                  svn_swig_rb_repos_file_rev_handler)
+                  svn_swig_rb_repos_file_rev_handler,,,)
 
 %callback_typemap(svn_repos_authz_func_t authz_read_func,
                   void *authz_read_baton,
                   ,
                   ,
-                  svn_swig_rb_repos_authz_func)
+                  svn_swig_rb_repos_authz_func,,,)
 
 %callback_typemap(svn_repos_authz_callback_t authz_callback, void *authz_baton,
                   ,
                   ,
-                  svn_swig_rb_repos_authz_callback)
+                  svn_swig_rb_repos_authz_callback,,,)
 #endif
 
 /* -----------------------------------------------------------------------
@@ -137,7 +150,6 @@ svn_error_t *svn_repos_dump_fs2(svn_repos_t *repos,
                                 apr_pool_t *pool);
 %ignore svn_repos_dump_fs2;
 #endif
-
 %include svn_repos_h.swg
 
 #ifdef SWIGRUBY

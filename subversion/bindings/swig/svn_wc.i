@@ -114,15 +114,18 @@
 #ifdef SWIGPYTHON
 %callback_typemap(svn_wc_notify_func_t notify_func, void *notify_baton,
                   svn_swig_py_notify_func,
-                  ,
+                  ,,,,
                   )
 #endif
 
 #ifndef SWIGPERL
+/* Questionable */
+#ifndef SWIGMZSCHEME
 %callback_typemap(svn_wc_notify_func2_t notify_func, void *notify_baton,
                   svn_swig_py_notify_func2,
                   ,
-                  svn_swig_rb_notify_func2)
+                  svn_swig_rb_notify_func2,,,)
+#endif
 #endif
 
 #ifdef SWIGRUBY
@@ -130,21 +133,27 @@
                   void *walk_baton,
                   ,
                   ,
-                  svn_swig_rb_wc_entry_callbacks2())
+                  svn_swig_rb_wc_entry_callbacks2(),,,)
 #endif
 
 #ifndef SWIGRUBY
+/* Questionable */
+#ifndef SWIGMZSCHEME
 %callback_typemap(svn_wc_status_func_t status_func, void *status_baton,
                   svn_swig_py_status_func,
-                  svn_swig_pl_status_func,
+                  svn_swig_pl_status_func,,,,
                   )
+#endif
 #endif
 
 #ifndef SWIGPERL
+/* Bad idea */
+#ifndef SWIGMZSCHEME
 %callback_typemap(svn_wc_status_func2_t status_func, void *status_baton,
                   svn_swig_py_status_func2,
                   ,
-                  svn_swig_rb_wc_status_func)
+                  svn_swig_rb_wc_status_func,,,)
+#endif
 #endif
 
 #ifdef SWIGRUBY
@@ -152,13 +161,13 @@
                   void *callback_baton,
                   ,
                   ,
-                  svn_swig_rb_wc_diff_callbacks2())
+                  svn_swig_rb_wc_diff_callbacks2(),,,)
 
 %callback_typemap(svn_wc_relocation_validator3_t validator,
                   void *validator_baton,
                   ,
                   ,
-                  svn_swig_rb_wc_relocation_validator3)
+                  svn_swig_rb_wc_relocation_validator3,,,)
 #endif
 
 

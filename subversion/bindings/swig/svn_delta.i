@@ -22,6 +22,8 @@
 %module "SVN::_Delta"
 #elif defined(SWIGRUBY)
 %module "svn::ext::delta"
+#elif defined(SWIGMZSCHEME)
+%module svndelta
 #endif
 
 %include svn_global.swg
@@ -99,6 +101,13 @@ void svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(in) (const svn_delta_editor_t *EDITOR, void *BATON)
+{
+SWIG_fail;
+}
+#endif
+
 #ifndef SWIGPYTHON
 /* Python users have to use svn_swig_py_make_editor manually, which sucks.
    Maybe we could allow people to pass a python object in the editor parameter,
@@ -146,11 +155,14 @@ void svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
 */
 
 #ifndef SWIGPERL
+/* This is questionable! */
+#ifndef SWIGMZSCHEME
 %callback_typemap(svn_delta_path_driver_cb_func_t callback_func,
                   void *callback_baton,
                   svn_swig_py_delta_path_driver_cb_func,
                   ,
-                  svn_swig_rb_delta_path_driver_cb_func)
+                  svn_swig_rb_delta_path_driver_cb_func,,,)
+#endif
 #endif
 
 /* ----------------------------------------------------------------------- */

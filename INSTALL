@@ -31,7 +31,7 @@ Contents:
        A. Windows XP
        B. Mac OS X
 
-     V. PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
+     V. PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, SCHEME, JAVA)
 
 
 
@@ -139,7 +139,7 @@ I.    INTRODUCTION
          SASL to do various forms of authentication when speaking the
          svnserve protocol.
 
-      *  Python, Perl, Java, Ruby  (OPTIONAL)
+      *  Python, Perl, Java, Ruby, Scheme  (OPTIONAL)
 
          Subversion is mostly a collection of C libraries with
          well-defined APIs, with a small collection of programs that

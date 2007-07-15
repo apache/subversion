@@ -21,6 +21,7 @@
 %include typemaps.i
 %include constraints.i
 %include exception.i
+%include scheme_extras.swg
 
 /* Include this early, so it can redefine typemaps included from the
    SWIG standard library before they get %apply-ed anywhere. */
@@ -53,7 +54,11 @@
 #include "swigutil_rb.h"
 %}
 #endif
-
+#ifdef SWIGMZSCHEME
+%{
+#include "mzscheme.h"
+%}
+#endif
 
 #ifdef SWIGPYTHON
 %feature("autodoc",1);

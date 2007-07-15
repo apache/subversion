@@ -22,6 +22,7 @@
 %include apr.swg
 %include svn_string.swg
 %include svn_containers.swg
+%include scheme_extras.swg
 
 /* -----------------------------------------------------------------------
    Generic handling for "type **" parameters.  Almost all such parameters
@@ -175,6 +176,20 @@
 };
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(argout) SWIGTYPE **OUTPARAM_WITH_BLOCK {
+ swig_type_info * tmp;
+ tmp = SWIG_NewPointerObj(*$1 , $*1_descriptor , 0);
+ %append_output(tmp);
+}
+
+%apply SWIGTYPE **OUTPARAM_WITH_BLOCK {
+  /* svn_fs */
+  svn_fs_t **,
+  /* svn_repos */
+  svn_repos_t **
+};
+#endif
 
 /* -----------------------------------------------------------------------
    Check whether fs/repos was closed or not.
@@ -248,14 +263,14 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 #ifdef SWIGPYTHON
 %define %callback_typemap(CallbackFunction, CallbackBaton,
-                          PythonThunk, PerlThunk, RubyThunk)
+                          PythonThunk, PerlThunk, RubyThunk, MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   $1 = PythonThunk;
   $2 = $input;
 }
 %enddef
 %define %callback_typemap_maybenull(CallbackFunction, CallbackBaton,
-                                    PythonThunk, PerlThunk, RubyThunk)
+                                    PythonThunk, PerlThunk, RubyThunk,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   /* FIXME: Handle the NULL case. */
   $1 = PythonThunk;
@@ -266,14 +281,14 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 #ifdef SWIGPERL
 %define %callback_typemap(CallbackFunction, CallbackBaton,
-                          PythonThunk, PerlThunk, RubyThunk)
+                          PythonThunk, PerlThunk, RubyThunk ,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   $1 = PerlThunk;
   $2 = $input;
 }
 %enddef
 %define %callback_typemap_maybenull(CallbackFunction, CallbackBaton,
-                                    PythonThunk, PerlThunk, RubyThunk)
+                                    PythonThunk, PerlThunk, RubyThunk ,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   if (SvOK($input)) {
     $1 = PerlThunk;
@@ -288,14 +303,14 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 #ifdef SWIGRUBY
 %define %callback_typemap(CallbackFunction, CallbackBaton,
-                          PythonThunk, PerlThunk, RubyThunk)
+                          PythonThunk, PerlThunk, RubyThunk,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   $1 = RubyThunk;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 %enddef
 %define %callback_typemap_maybenull(CallbackFunction, CallbackBaton,
-                                    PythonThunk, PerlThunk, RubyThunk)
+                                    PythonThunk, PerlThunk, RubyThunk,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   if (NIL_P($input)) {
     $1 = NULL;
@@ -304,6 +319,60 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     $1 = RubyThunk;
     $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
   }
+}
+%enddef
+#endif
+
+#ifdef SWIGMZSCHEME
+%define %callback_typemap(CallbackFunction, CallbackBaton,
+                          PythonThunk, PerlThunk, RubyThunk, MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  $1 = MzSchemeThunk;
+  $2 = $input;
+}
+%enddef
+%define %callback_typemap_maybenull(CallbackFunction, CallbackBaton,
+                                    PythonThunk, PerlThunk, RubyThunk,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  /* FIXME: Handle the NULL case. */
+  $1 = MzSchemeThunk;
+  $2 = $input;
+}
+%enddef
+#endif
+
+#ifdef SWIGGUILESCHEME
+%define %callback_typemap(CallbackFunction, CallbackBaton,
+                          PythonThunk, PerlThunk, RubyThunk, MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  $1 = GuileSchemeThunk;
+  $2 = $input;
+}
+%enddef
+%define %callback_typemap_maybenull(CallbackFunction, CallbackBaton,
+                                    PythonThunk, PerlThunk, RubyThunk,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  /* FIXME: Handle the NULL case. */
+  $1 = GuileSchemeThunk;
+  $2 = $input;
+}
+%enddef
+#endif
+
+#ifdef SWIGCHICKENSCHEME
+%define %callback_typemap(CallbackFunction, CallbackBaton,
+                          PythonThunk, PerlThunk, RubyThunk, MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  $1 = ChickenSchemeThunk;
+  $2 = $input;
+}
+%enddef
+%define %callback_typemap_maybenull(CallbackFunction, CallbackBaton,
+                                    PythonThunk, PerlThunk, RubyThunk,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  /* FIXME: Handle the NULL case. */
+  $1 = ChickenSchemeThunk;
+  $2 = $input;
 }
 %enddef
 #endif
@@ -317,6 +386,34 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 #ifdef SWIGPERL
 %apply const char * { const char *MAY_BE_NULL };
+#endif
+
+#ifdef SWIGMZSCHEME
+%apply const char * { const char *MAY_BE_NULL };
+#endif
+
+#ifdef SWIGGUILESCHEME
+%apply const char * { const char *MAY_BE_NULL };
+#endif
+
+#ifdef SWIGCHICKENSCHEME
+%apply const char * { const char *MAY_BE_NULL };
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(in) const char *MAY_BE_NULL
+{
+ if (SCHEME_NULLP($input)) { 
+  /* If it s a null ptr */
+  $1 = NULL;
+ } else {
+  $1 = SCHEME_STR_VAL($input);
+ }
+}
+%typemap(in) const char *NOT_NULL
+{
+  $1 = SCHEME_STR_VAL($input);
+}
 #endif
 
 #ifdef SWIGRUBY
@@ -458,6 +555,14 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
         $2 = 0;
         SWIG_croak("Expecting a string");
     }
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(in) (const char *PTR, apr_size_t LEN) {
+	//Assume it is a string, if not badness will happen :) 
+	//FIXME: Check if this is passed a string later
+	$1 = scheme_make_sized_string($input , $2);
 }
 #endif
 

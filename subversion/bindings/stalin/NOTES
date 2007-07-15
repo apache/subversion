@@ -1,0 +1,4 @@
+The present bindings generator was written after spending too much time makeing them by hand. 
+It relies on ctags to correctly parse the subversion code (which it probbly does not). 
+If it proves to not be workable a possible replacement is writing an emacs lisp script that 
+uses cedet or similar to parse the source files.

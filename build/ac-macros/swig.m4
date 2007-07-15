@@ -163,6 +163,13 @@ AC_DEFUN(SVN_FIND_SWIG,
     fi
   fi
 
+  #I think this works. Well I hope this work
+  SWIG_MZSCM_COMPILE="gcc"
+  SWIG_MZSCM_LINK="gcc"
+  if test "$MZSCM" != "none"; then
+  AC_MSG_NOTICE([Configuring MZ Scheme SWIG binding])
+  fi
+
   SWIG_RB_COMPILE="none"
   SWIG_RB_LINK="none"
   if test "$RUBY" != "none"; then
@@ -252,4 +259,6 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_RB_SITE_LIB_DIR)
   AC_SUBST(SWIG_RB_SITE_ARCH_DIR)
   AC_SUBST(SWIG_RB_TEST_VERBOSE)
+  AC_SUBST(SWIG_MZSCM_COMPILE)
+  AC_SUBST(SWIG_MZSCM_INCLUDES)
 ])

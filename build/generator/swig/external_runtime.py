@@ -40,7 +40,7 @@ class Generator(generator.swig.Generator):
 
     # Runtime library names
     runtime_library = {
-      "python": "pyrun.swg", "perl":"perlrun.swg", "ruby":"rubydef.swg"
+      "python": "pyrun.swg", "perl":"perlrun.swg", "ruby":"rubydef.swg" , "mzscheme":"mzrun.swg" , "guilescheme" :"guile_scm.swg"
     }
 
     # Build runtime files

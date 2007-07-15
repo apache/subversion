@@ -9,6 +9,11 @@ STATUS OF THE SWIG BINDINGS
 
   (N.B. As discussed below, they will not compile in Debug mode on Windows.)
 
+* MzScheme
+
+  The MzScheme bindings are far from usuable. If you need something quickly
+  take a look at the stalin scheme bindings.
+
 * Perl
 
   The Perl bindings are complete, with the exception of SVN::Wc, on which

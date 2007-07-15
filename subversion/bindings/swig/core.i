@@ -24,6 +24,8 @@
 %module "SVN::_Core"
 #elif defined(SWIGRUBY)
 %module "svn::ext::core"
+#elif defined(SWIGMZSCHEME)
+%module svncore
 #endif
 
 %include svn_global.swg
@@ -305,6 +307,13 @@
     $2 = ($2_ltype)&temp;
 }
 #endif
+#ifdef SWIGMZSCHEME
+%typemap(in) (char *buffer, apr_size_t *len) ($*2_type temp) {
+  temp = SWIG_convert_long($input);
+  $1 = SWIG_malloc(temp);
+  $2 = ($2_ltype)&temp;
+}
+#endif
 #ifdef SWIGPERL
 %typemap(in) (char *buffer, apr_size_t *len) ($*2_type temp) {
     temp = SvIV($input);
@@ -326,6 +335,12 @@
 #ifdef SWIGPYTHON
 %typemap(argout) (char *buffer, apr_size_t *len) {
   %append_output(PyString_FromStringAndSize($1, *$2));
+  free($1);
+}
+#endif
+#ifdef SWIGMZSCHEME
+%typemap(argout) (char *buffer, apr_size_t *len) {
+  %append_output(scheme_make_string($1));
   free($1);
 }
 #endif
@@ -363,6 +378,13 @@
     $2 = ($2_ltype)&temp;
 }
 #endif
+#ifdef SWIGMZSCHEME
+%typemap(in) (const char *data, apr_size_t *len) ($*2_type temp) {
+    $1 = SCHEME_STR_VAL($input);
+    temp = SCHEME_STRLEN_VAL($input);
+    $2 = ($2_ltype)&temp;
+}
+#endif
 #ifdef SWIGRUBY
 %typemap(in) (const char *data, apr_size_t *len) ($*2_type temp)
 {
@@ -381,6 +403,14 @@
 #ifdef SWIGPERL
 %typemap(argout) (const char *data, apr_size_t *len) {
   %append_output(sv_2mortal(newSViv(*$2)));
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(argout) (const char *data, apr_size_t *len) {
+/*  %append_output(); */
+/* %append_output(); */
+//SWIG_fail;
 }
 #endif
 
@@ -433,6 +463,33 @@
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(in) const void *value
+{
+  if (NIL_P($input)) {
+    $1 = (void *)NULL;
+  } else {
+/* fill in */
+   SWIG_fail
+  }
+}
+#endif
+/*
+  assume the value is char *
+*/
+#ifdef SWIGMZSCHEME
+%typemap(out) const void *value
+{
+// SWIG_fail;
+ char * value = $1;
+ if (value) {
+    $result = SCHEME_MAKE_STRING(value);
+ } else {
+    $result = Qnil;
+ }
+}
+#endif
+
 /* get */
 /* assume the value is char* */
 #ifdef SWIGRUBY
@@ -472,6 +529,13 @@
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%apply apr_hash_t **MERGEHASH_INOUT {
+   apr_has_t **mergeinfo_inout
+}
+#endif
+
+
 /* -----------------------------------------------------------------------
    svn_io_parse_mimetypes_file()
 */
@@ -479,6 +543,12 @@
 #ifdef SWIGRUBY
 %apply apr_hash_t **HASH_CSTRING {
     apr_hash_t **type_map
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%apply apr_hash_t **HASH_CSTRING {
+    apr_has_t **type_map
 }
 #endif
 
@@ -505,6 +575,12 @@
 #ifdef SWIGPERL
 %typemap(in) FILE * {
     $1 = PerlIO_exportFILE (IoIFP (sv_2io ($input)), NULL);
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(in) FILE * {
+
 }
 #endif
 
@@ -588,7 +664,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #ifdef SWIGPERL
 %callback_typemap(svn_config_enumerator_t callback, void *baton,
                   ,
-                  svn_swig_pl_thunk_config_enumerator,
+                  svn_swig_pl_thunk_config_enumerator,,,,
                   )
 #endif
 
@@ -596,12 +672,12 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %callback_typemap(svn_config_enumerator2_t callback, void *baton,
                   ,
                   ,
-                  svn_swig_rb_config_enumerator)
+                  svn_swig_rb_config_enumerator,,,)
 
 %callback_typemap(svn_config_section_enumerator2_t callback, void *baton,
                   ,
                   ,
-                  svn_swig_rb_config_section_enumerator)
+                  svn_swig_rb_config_section_enumerator,,,)
 #endif
 
 /* Allow None to be passed as config_dir argument */
@@ -618,6 +694,16 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 }
 #endif
 
+#ifdef SWIGSCMSCHEME
+%typemap(in) const char *config_dir {
+ if (NIL_P($input)) {
+   $1 = "";
+ } else {
+   $1 = StringValuePtr($input);
+ }
+}
+#endif
+
 #ifdef SWIGPYTHON
 PyObject *svn_swig_py_exception_type(void);
 #endif
@@ -627,7 +713,7 @@ PyObject *svn_swig_py_exception_type(void);
   PERL NOTE: store the inputed SV in _global_callback for use in the
              later argout typemap
 */
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %define %authprompt_callback_typemap(AuthType)
 %typemap(in) (svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
               void *prompt_baton) {
@@ -636,12 +722,19 @@ PyObject *svn_swig_py_exception_type(void);
   _global_callback = $input;
 }
 %enddef
+#elif defined(SWIGMZSCHEME)
+%define %authprompt_callback_typemap(AuthType)
+%typemap(in) (svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
+              void *prompt_baton) {
+# SWIG_fail;
+}
+%enddef
 #else
 %define %authprompt_callback_typemap(AuthType)
 %callback_typemap(svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
                   void *prompt_baton,
                   svn_swig_py_auth_ ## AuthType ## _prompt_func,,
-                  svn_swig_rb_auth_ ## AuthType ## _prompt_func)
+                  svn_swig_rb_auth_ ## AuthType ## _prompt_func,,,)
 %enddef
 #endif
 
@@ -678,6 +771,20 @@ PyObject *svn_swig_py_exception_type(void);
 
 
 /* ----------------------------------------------------------------------- */
+#ifdef SWIGMZSCHEME
+%ignore svn_auth_open;
+%ignore svn_diff_file_options_create;
+%ignore svn_create_commit_info;
+%ignore svn_commit_info_dup;
+%ignore svn_mergeinfo_merge;
+%ignore svn_mergeinfo_sort;
+%ignore svn_rangelist_merge;
+%ignore svn_rangelist_reverse;
+
+%ignore svn_opt_args_to_target_array2;
+%ignore svn_opt_parse_num_args;
+%ignore svn_opt_parse_all_args;
+#endif
 #ifdef SWIGRUBY
 %ignore svn_auth_open;
 %ignore svn_diff_file_options_create;

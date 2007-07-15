@@ -8,8 +8,8 @@ from generator.gen_base import _collect_paths
 
 class Generator:
   """Base class for SWIG-related generators"""
-  langs = ["python", "perl", "ruby"]
-  short = { "perl": "pl", "python": "py", "ruby": "rb" }
+  langs = ["python", "perl", "ruby" , "mzscheme" , "guilescheme" , "chickenscheme" ]
+  short = { "perl": "pl", "python": "py", "ruby": "rb" , "mzscheme" : "mzscm" , "guilescheme" : "gscm" , "chickenscheme" : "cscm" }
 
   def __init__(self, conf, swig_path):
     """Read build.conf"""

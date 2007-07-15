@@ -290,18 +290,27 @@ lang_abbrev = {
   'python' : 'py',
   'perl' : 'pl',
   'ruby' : 'rb',
+  'mzscheme' : 'mzscm',
+  'guilescheme' : 'gscm',
+  'chickenscheme' : 'cscm',
   }
 
 lang_full_name = {
   'python' : 'Python',
   'perl' : 'Perl',
   'ruby' : 'Ruby',
+  'mzscheme' : 'mzscheme',
+  'guilescheme' : 'guilescheme',
+  'chickenscheme' : 'chickenscheme'
   }
 
 lang_utillib_suffix = {
   'python' : 'py',
   'perl' : 'perl',
   'ruby' : 'ruby',
+  'mzscheme' : 'mzscheme',
+  'guilescheme' : 'guilescheme',
+  'chickenscheme' : 'chickenscheme'
   }
   
 class Target(DependencyNode):
@@ -918,6 +927,7 @@ class IncludeDependencyInfo:
       if _is_public_include(fname):
         hdrs = { self._domain["proxy.swg"][0]: '%',
                  self._domain["apr.swg"][0]: '%',
+                 self._domain["scheme_extras.swg"][0]: '%',
                  fname: '%' }
         for h in self._deps[fname].keys():
           if _is_public_include(h):

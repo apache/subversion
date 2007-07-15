@@ -22,8 +22,10 @@
 %module "SVN::_Fs"
 #elif defined(SWIGRUBY)
 %module "svn::ext::fs"
+#elif defined(SWIGMZSCHEME)
+%module svnfs
 #endif
-
+#ifndef SWIGMZSCHEME
 %include svn_global.swg
 %import core.i
 %import svn_delta.i
@@ -58,11 +60,13 @@
 %hash_argout_typemap(changed_paths_p, svn_fs_path_change_t *)
 
 #ifndef SWIGPERL
+#ifndef SWIGMZSCHEME
 %callback_typemap(svn_fs_get_locks_callback_t get_locks_func,
                   void *get_locks_baton,
                   svn_swig_py_fs_get_locks_func,
                   ,
-                  svn_swig_rb_fs_get_locks_callback)
+                  svn_swig_rb_fs_get_locks_callback,,,)
+#endif
 #endif
 /* -----------------------------------------------------------------------
    svn_fs_get_merge_info
@@ -136,4 +140,5 @@ svn_fs_root_fs_wrapper(svn_fs_root_t *root, apr_pool_t *pool)
 
 #ifdef SWIGRUBY
 %define_close_related_methods(fs);
+#endif
 #endif

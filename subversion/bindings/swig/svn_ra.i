@@ -22,6 +22,8 @@
 %module "SVN::_Ra"
 #elif defined(SWIGRUBY)
 %module "svn::ext::ra"
+#elif defined(SWIGMZSCHEME)
+%module svnra
 #endif
 
 %include svn_global.swg
@@ -73,7 +75,7 @@
 #ifdef SWIGPYTHON
 %callback_typemap(const svn_ra_reporter2_t *reporter, void *report_baton,
                   (svn_ra_reporter2_t *)&swig_py_ra_reporter2,
-                  ,
+                  ,,,,
                   )
 #endif
 
@@ -81,21 +83,24 @@
 %callback_typemap(const svn_ra_reporter3_t *reporter, void *report_baton,
                   ,
                   ,
-                  svn_swig_rb_ra_reporter3)
+                  svn_swig_rb_ra_reporter3,,,)
 #endif
 
 #ifndef SWIGPERL
+/* Questionable */
+#ifndef SWIGMZSCHEME
 %callback_typemap(svn_ra_file_rev_handler_t handler, void *handler_baton,
                   svn_swig_py_ra_file_rev_handler_func,
                   ,
-                  svn_swig_rb_ra_file_rev_handler)
+                  svn_swig_rb_ra_file_rev_handler,,,)
+#endif
 #endif
 
 #ifdef SWIGRUBY
 %callback_typemap(svn_ra_lock_callback_t lock_func, void *lock_baton,
                   ,
                   ,
-                  svn_swig_rb_ra_lock_callback)
+                  svn_swig_rb_ra_lock_callback,,,)
 #endif
 
 #ifdef SWIGRUBY

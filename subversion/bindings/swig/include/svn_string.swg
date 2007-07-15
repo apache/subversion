@@ -59,6 +59,12 @@ typedef struct svn_string_t svn_string_t;
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(argout) RET_STRING {
+SWIG_fail
+}
+#endif
+
 %apply RET_STRING {
   svn_string_t **,
   svn_stringbuf_t **
@@ -129,6 +135,17 @@ typedef struct svn_string_t svn_string_t;
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(in) svn_stringbuf_t *
+{
+ SWIG_fail
+}
+
+%typemap(in) svn_stringbuf_t *node_name
+{
+ SWIG_fail
+}
+#endif
 
 #ifdef SWIGPYTHON
 %typemap(out) svn_stringbuf_t * {
@@ -154,6 +171,18 @@ typedef struct svn_string_t svn_string_t;
 %typemap(argout) svn_stringbuf_t *output
 {
   %append_output(rb_str_new($1->data, $1->len));
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(out) svn_stringbuf_t *
+{
+  SWIG_fail
+}
+
+%typemap(argout) svn_stringbuf_t *output
+{
+  SWIG_fail
 }
 #endif
 
@@ -201,6 +230,13 @@ typedef struct svn_string_t svn_string_t;
 }
 #endif
 
+#ifdef SWIGMZSCHEME
+%typemap(in) const svn_string_t * (svn_string_t value)
+{
+ SWIG_fail
+}
+#endif
+
 /* when storing an svn_string_t* into a structure, we must allocate the
    svn_string_t structure on the heap. */
 #ifdef SWIGPYTHON
@@ -216,6 +252,12 @@ typedef struct svn_string_t svn_string_t;
 #ifdef SWIGRUBY
 %typemap(memberin) const svn_string_t * {
     $1 = svn_string_dup($input, _global_pool);
+}
+#endif
+
+#ifdef SWIGMZSCHEME
+%typemap(memberin) const svn_string_t * {
+    SWIG_fail
 }
 #endif
 
