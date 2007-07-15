@@ -1988,6 +1988,7 @@ link_path(void *report_baton,
   serf_bucket_t *tmp;
   const char *link, *vcc_url;
   apr_uri_t uri;
+  apr_status_t status;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
                                       sizeof("<S:entry rev=\"")-1,
@@ -2054,7 +2055,13 @@ link_path(void *report_baton,
    *
    * TODO Confirm that it's on the same server?
    */
-  apr_uri_parse(pool, url, &uri);
+  status = apr_uri_parse(pool, url, &uri);
+  if (status)
+    {
+      return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                               _("Unable to parse URL '%s'"), url);
+    }
+
   SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link, report->sess, 
                                      report->sess->conns[0], uri.path, pool));
 
