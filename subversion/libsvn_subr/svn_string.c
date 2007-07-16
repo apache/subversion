@@ -391,6 +391,20 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
 
 
 void
+svn_stringbuf_appendformat(svn_stringbuf_t *targetstr,
+                           const char *fmt, 
+                           ...)
+{
+  va_list ap;
+  char *buff;
+  
+  va_start(ap, fmt);
+  buff = apr_pvsprintf(targetstr->pool, fmt, ap);
+  va_end(ap);
+  svn_stringbuf_appendbytes(targetstr, buff, strlen(buff));
+}
+
+void
 svn_stringbuf_appendstr(svn_stringbuf_t *targetstr, 
                         const svn_stringbuf_t *appendstr)
 {
