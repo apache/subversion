@@ -2111,7 +2111,8 @@ finish_report(void *report_baton,
       sess->conns[i]->ssl_context = NULL;
       sess->conns[i]->session = sess;
       /* Authentication protocol specific initalization. */
-      sess->auth_protocol->init_conn_func(sess, sess->conns[i], pool);
+      if (sess->auth_protocol)
+        sess->auth_protocol->init_conn_func(sess, sess->conns[i], pool);
 
       sess->conns[i]->conn = serf_connection_create(sess->context,
                                                     sess->conns[i]->address,
