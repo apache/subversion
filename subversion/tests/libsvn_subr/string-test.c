@@ -674,6 +674,37 @@ test23(const char **msg,
   return test_stringbuf_unequal("abc", "abb", msg_only, pool);
 }
 
+static svn_error_t *
+test24(const char **msg, 
+       svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
+       apr_pool_t *pool)
+{
+  int answer = 42;
+  const char life[] = "Life",
+             universe[] = "The Universe",
+             everything[] = "Everything";
+
+  *msg = "append format-bytes, then compare two strings";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_appendf(a, "should The Answer to %s, %s, and %s be %d?",
+                        life, universe, everything, answer);
+
+  /* Test that length, data, and null-termination are correct. */
+  if (svn_stringbuf_compare 
+      (a, svn_stringbuf_createf(pool,
+                                "hello, should The Answer to %s, %s, " \
+                                "and %s be %d?",
+                                life, universe, everything, answer)))
+    return SVN_NO_ERROR;
+  else
+    return fail(pool, "test failed");
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -708,5 +739,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test21),
     SVN_TEST_PASS(test22),
     SVN_TEST_PASS(test23),
+    SVN_TEST_PASS(test24),
     SVN_TEST_NULL
   };
