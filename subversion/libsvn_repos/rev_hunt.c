@@ -772,7 +772,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
                          svn_boolean_t include_merged_revisions,
                          svn_repos_authz_func_t authz_read_func,
                          void *authz_read_baton,
-                         svn_repos_file_rev_handler2_t handler,
+                         svn_file_rev_handler_t handler,
                          void *handler_baton,
                          apr_pool_t *pool)
 {
@@ -962,7 +962,7 @@ file_rev_handler_wrapper(void *baton,
 }
 
 static void
-compat_wrap_file_rev_handler(svn_repos_file_rev_handler2_t *handler2,
+compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
                              void **handler2_baton,
                              svn_repos_file_rev_handler_t handler,
                              void *handler_baton,
@@ -989,7 +989,7 @@ svn_repos_get_file_revs(svn_repos_t *repos,
                         void *handler_baton,
                         apr_pool_t *pool)
 {
-  svn_repos_file_rev_handler2_t handler2;
+  svn_file_rev_handler_t handler2;
   void *handler2_baton;
 
   compat_wrap_file_rev_handler(&handler2, &handler2_baton, handler, handler_baton,

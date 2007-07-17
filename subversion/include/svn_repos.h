@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_version.h"
+#include "svn_file_rev.h"
 
 
 #ifdef __cplusplus
@@ -137,36 +138,7 @@ typedef svn_error_t *(*svn_repos_authz_callback_t)
    apr_pool_t *pool);
 
 /**
- * A callback function type for use in svn_repos_get_file_revs().
- * @a baton is provided by the caller, @a path is the pathname of the file
- * in revision @a rev and @a rev_props are the revision properties.
- * If @a delta_handler and @a delta_baton are non-NULL, they may be set to a
- * handler/baton which will be called with the delta between the previous
- * revision and this one after the return of this callback.  They may be
- * left as NULL/NULL.
- * @a result_of_merge will be @c TRUE if the revision being returned was
- * included as the result of a merge.
- * @a prop_diffs is an array of svn_prop_t elements indicating the property
- * delta for this and the previous revision.
- * @a pool may be used for temporary allocations, but you can't rely
- * on objects allocated to live outside of this particular call and the
- * immediately following calls to @a *delta_handler if any.
- *
- * @since New in 1.2.
- */
-typedef svn_error_t *(*svn_repos_file_rev_handler2_t)
-  (void *baton,
-   const char *path,
-   svn_revnum_t rev,
-   apr_hash_t *rev_props,
-   svn_boolean_t result_of_merge,
-   svn_txdelta_window_handler_t *delta_handler,
-   void **delta_baton,
-   apr_array_header_t *prop_diffs,
-   apr_pool_t *pool);
-
-/**
- * Similar to @c svn_repos_file_rev_handler2_t, but without the @a
+ * Similar to @c svn_file_rev_handler_t, but without the @a
  * result_of_merge parameter.
  *
  * @deprecated Provided for backward compatibility with 1.4 API.
@@ -1325,7 +1297,7 @@ svn_error_t *svn_repos_get_file_revs2(svn_repos_t *repos,
                                       svn_boolean_t include_merged_revisions,
                                       svn_repos_authz_func_t authz_read_func,
                                       void *authz_read_baton,
-                                      svn_repos_file_rev_handler2_t handler,
+                                      svn_file_rev_handler_t handler,
                                       void *handler_baton,
                                       apr_pool_t *pool);
 
