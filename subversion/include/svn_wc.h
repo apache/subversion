@@ -1806,7 +1806,7 @@ svn_error_t *svn_wc_mark_missing_deleted(const char *path,
  * depth @a depth, and with repository UUID @a uuid and repository
  * root URL @a repos.  
  *
- * @a depth must be a definite depth, it cannot be @c svn_depth_unknown
+ * @a depth must be a definite depth, it cannot be @c svn_depth_unknown.
  * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must
  * be a prefix of @a url.
  *
