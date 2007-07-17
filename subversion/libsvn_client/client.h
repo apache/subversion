@@ -46,18 +46,18 @@ extern "C" {
  * PATH, so RA_SESSION is ignored.  If PATH is not under revision
  * control, return SVN_ERR_UNVERSIONED_RESOURCE, or if PATH is null,
  * return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
- * 
+ *
  * Else if REVISION->kind is svn_opt_revision_date or
  * svn_opt_revision_head, then RA_SESSION is used to retrieve the
  * revision from the repository (using REVISION->value.date in the
  * former case), and PATH is ignored.  If RA_SESSION is null,
- * return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED. 
+ * return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED.
  *
  * Else if REVISION->kind is svn_opt_revision_unspecified, set
- * *REVNUM to SVN_INVALID_REVNUM.  
+ * *REVNUM to SVN_INVALID_REVNUM.
  *
  * Else return SVN_ERR_CLIENT_BAD_REVISION.
- * 
+ *
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
@@ -79,11 +79,11 @@ svn_client__compare_revisions(svn_opt_revision_t *revision1,
 /* Return true if the revision number for REVISION can be determined
    from just the working copy, or false if it can be determined from
    just the repository.
- 
+
    NOTE: No other kinds of revisions should be possible; but if one
    day there are, this will return true for those kinds.
- */ 
-svn_boolean_t 
+ */
+svn_boolean_t
 svn_client__revision_is_local(const svn_opt_revision_t *revision);
 
 
@@ -182,7 +182,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
-    
+
 /* Return the path of PATH_OR_URL relative to the repository root
    (REPOS_ROOT) in REL_PATH (URI-decoded).
 
@@ -342,7 +342,7 @@ svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
                                         const char *path,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *pool);
-                            
+
 
 /* The main logic for client deletion from a working copy. Deletes PATH
    from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
@@ -392,7 +392,7 @@ svn_client__make_local_parents(const char *path,
 
    Else if DEPTH is svn_depth_infinity, then update fully recursively
    (resetting the existing depth of the working copy if necessary).
-   Else if DEPTH is svn_depth_files, update all files under PATH (if 
+   Else if DEPTH is svn_depth_files, update all files under PATH (if
    any), but exclude any subdirectories.  Else if DEPTH is
    svn_depth_immediates, update all files and include immediate
    subdirectories (at svn_depth_empty).  Else if DEPTH is
@@ -410,7 +410,6 @@ svn_client__make_local_parents(const char *path,
    If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
    that obstruct items added from the repos are tolerated; if FALSE,
    these obstructions cause the update to fail. */
-
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -423,10 +422,10 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             apr_pool_t *pool);
 
 /* Checkout into PATH a working copy of URL at REVISION, and (if not
-   NULL) set RESULT_REV to the checked out revision.  
+   NULL) set RESULT_REV to the checked out revision.
 
    If DEPTH is svn_depth_infinity, then check out fully recursively.
-   Else if DEPTH is svn_depth_files, checkout all files under PATH (if 
+   Else if DEPTH is svn_depth_files, checkout all files under PATH (if
    any), but not subdirectories.  Else if DEPTH is
    svn_depth_immediates, check out all files and include immediate
    subdirectories (at svn_depth_empty).  Else if DEPTH is
@@ -483,7 +482,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 /*** Editor for repository diff ***/
 
 /* Create an editor for a pure repository comparison, i.e. comparing one
- * repository version against the other. 
+ * repository version against the other.
  *
  * TARGET is a working-copy path, the base of the hierarchy to be
  * compared.  It corresponds to the URL opened in RA_SESSION below.
@@ -517,7 +516,7 @@ svn_client__get_diff_editor(const char *target,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
                             svn_boolean_t dry_run,
-                            svn_ra_session_t *ra_session, 
+                            svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
                             svn_wc_notify_func2_t notify_func,
                             void *notify_baton,
@@ -549,7 +548,7 @@ svn_client__get_diff_summarize_editor(const char *target,
                                       svn_client_diff_summarize_func_t
                                       summarize_func,
                                       void *summarize_baton,
-                                      svn_ra_session_t *ra_session, 
+                                      svn_ra_session_t *ra_session,
                                       svn_revnum_t revision,
                                       svn_cancel_func_t cancel_func,
                                       void *cancel_baton,
@@ -679,7 +678,7 @@ typedef struct
      - add (or update) a reference to this array to the COMMITTABLES
        hash, keyed on the canonical repository name.  ### todo, until
        multi-repository support actually exists, the single key here
-       will actually be some arbitrary thing to be ignored.  
+       will actually be some arbitrary thing to be ignored.
 
      - if the candidate has a lock token, add it to the LOCK_TOKENS hash.
 
@@ -707,8 +706,8 @@ typedef struct
    when harvesting committables; that is, don't add a path to
    COMMITTABLES unless it's a member of the changelist.
 
-   If CTX->CANCEL_FUNC is non-null, it will be called with 
-   CTX->CANCEL_BATON while harvesting to determine if the client has 
+   If CTX->CANCEL_FUNC is non-null, it will be called with
+   CTX->CANCEL_BATON while harvesting to determine if the client has
    cancelled the operation.  */
 svn_error_t *
 svn_client__harvest_committables(apr_hash_t **committables,
@@ -729,8 +728,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
    the SRC was to be committed as a set of adds (mostly with history)
    to a new repository URL (DST in COPY_PAIRS).
 
-   If CTX->CANCEL_FUNC is non-null, it will be called with 
-   CTX->CANCEL_BATON while harvesting to determine if the client has 
+   If CTX->CANCEL_FUNC is non-null, it will be called with
+   CTX->CANCEL_BATON while harvesting to determine if the client has
    cancelled the operation.  */
 svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
@@ -738,7 +737,7 @@ svn_client__get_copy_committables(apr_hash_t **committables,
                                   svn_wc_adm_access_t *adm_access,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
-               
+
 
 /* A qsort()-compatible sort routine for sorting an array of
    svn_client_commit_item_t's by their URL member. */
@@ -747,7 +746,7 @@ int svn_client__sort_commit_item_urls(const void *a, const void *b);
 
 /* Rewrite the COMMIT_ITEMS array to be sorted by URL.  Also, discover
    a common *BASE_URL for the items in the array, and rewrite those
-   items' URLs to be relative to that *BASE_URL.  
+   items' URLs to be relative to that *BASE_URL.
 
    Afterwards, some of the items in COMMIT_ITEMS may contain data
    allocated in POOL. */
@@ -762,7 +761,7 @@ svn_client__condense_commit_items(const char **base_url,
    COMMIT_ITEMS should have been run through (and BASE_URL generated
    by) svn_client__condense_commit_items.
 
-   CTX->NOTIFY_FUNC/CTX->BATON will be called as the commit progresses, as 
+   CTX->NOTIFY_FUNC/CTX->BATON will be called as the commit progresses, as
    a way of describing actions to the application layer (if non NULL).
 
    NOTIFY_PATH_PREFIX is used to send shorter, relative paths to the
