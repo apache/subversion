@@ -168,7 +168,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    const char *encoding,
                    apr_file_t *file,
                    svn_boolean_t svnpatch_format,
-                   svn_stringbuf_t *svnpatch_buff,
+                   svn_stringbuf_t *svnpatch_buf,
                    apr_pool_t *pool)
 {
   int i;
@@ -255,13 +255,13 @@ display_prop_diffs(const apr_array_header_t *propchanges,
           }
 
           if (svnpatch_format)
-            svn_stringbuf_appendformat(svnpatch_buff,
-                                       APR_EOL_STR "diff_props_changed;" \
-                                       "path: %s, name: %s, val: %s",
-                                       path,
-                                       propchange->name,
-                                       original_value ? original_value->data :
-                                        propchange->value->data);
+            svn_stringbuf_appendf(svnpatch_buf,
+                                  APR_EOL_STR "diff_props_changed;" \
+                                  "path: %s, name: %s, val: %s",
+                                  path,
+                                  propchange->name,
+                                  original_value ? original_value->data :
+                                   propchange->value->data);
       }
     }
 
@@ -321,7 +321,7 @@ struct diff_cmd_baton {
 
   /* Buffer to store svnpatch-format bytes we're filling along calls to
      client's callbacks, before we output it. */
-  svn_stringbuf_t *svnpatch_buff;
+  svn_stringbuf_t *svnpatch_buf;
 };
 
 
@@ -364,7 +364,7 @@ diff_props_changed(svn_wc_adm_access_t *adm_access,
                                diff_cmd_baton->header_encoding,
                                diff_cmd_baton->outfile,
                                diff_cmd_baton->svnpatch_format,
-                               diff_cmd_baton->svnpatch_buff,
+                               diff_cmd_baton->svnpatch_buf,
                                subpool));
 
   if (state)
@@ -510,10 +510,10 @@ diff_content_changed(const char *path,
         }
 
       if (diff_cmd_baton->svnpatch_format)
-        svn_stringbuf_appendformat(diff_cmd_baton->svnpatch_buff,
-                                   APR_EOL_STR \
-                                   "diff_content_changed(binary); path: %s",
-                                   path);
+        svn_stringbuf_appendf(diff_cmd_baton->svnpatch_buf,
+                              APR_EOL_STR \
+                              "diff_content_changed(binary); path: %s",
+                              path);
 
       /* Exit early. */
       svn_pool_destroy(subpool);
@@ -648,9 +648,9 @@ diff_file_added(svn_wc_adm_access_t *adm_access,
                             prop_changes, original_props, diff_baton));
 
   if (diff_cmd_baton->svnpatch_format)
-    svn_stringbuf_appendformat(diff_cmd_baton->svnpatch_buff,
-                               APR_EOL_STR "diff_file_added; path: %s",
-                               path);
+    svn_stringbuf_appendf(diff_cmd_baton->svnpatch_buf,
+                          APR_EOL_STR "diff_file_added; path: %s",
+                          path);
   
   diff_cmd_baton->force_empty = FALSE;
 
@@ -672,10 +672,10 @@ diff_file_deleted_with_diff(svn_wc_adm_access_t *adm_access,
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
   if (diff_cmd_baton->svnpatch_format)
-    svn_stringbuf_appendformat(diff_cmd_baton->svnpatch_buff,
-                               APR_EOL_STR \
-                               "diff_file_deleted_with_diff; path: %s",
-                               path);
+    svn_stringbuf_appendf(diff_cmd_baton->svnpatch_buf,
+                          APR_EOL_STR \
+                          "diff_file_deleted_with_diff; path: %s",
+                          path);
 
   /* We don't list all the deleted properties. */
   return diff_file_changed(adm_access, state, NULL, path,
@@ -705,10 +705,10 @@ diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
     *state = svn_wc_notify_state_unknown;
 
   if (diff_cmd_baton->svnpatch_format)
-    svn_stringbuf_appendformat(diff_cmd_baton->svnpatch_buff,
-                               APR_EOL_STR \
-                               "diff_file_deleted_no_diff; path: %s",
-                               path);
+    svn_stringbuf_appendf(diff_cmd_baton->svnpatch_buf,
+                          APR_EOL_STR \
+                          "diff_file_deleted_no_diff; path: %s",
+                          path);
 
   SVN_ERR(file_printf_from_utf8
           (diff_cmd_baton->outfile,
@@ -736,9 +736,9 @@ diff_dir_added(svn_wc_adm_access_t *adm_access,
     *state = svn_wc_notify_state_unknown;
 
   if (diff_cmd_baton->svnpatch_format)
-    svn_stringbuf_appendformat(diff_cmd_baton->svnpatch_buff, 
-                               APR_EOL_STR "diff_dir_added; path: %s",
-                               path);
+    svn_stringbuf_appendf(diff_cmd_baton->svnpatch_buf, 
+                          APR_EOL_STR "diff_dir_added; path: %s",
+                          path);
   
   /* ### todo:  send feedback to app */
   return SVN_NO_ERROR;
@@ -757,9 +757,9 @@ diff_dir_deleted(svn_wc_adm_access_t *adm_access,
     *state = svn_wc_notify_state_unknown;
 
   if (diff_cmd_baton->svnpatch_format)
-    svn_stringbuf_appendformat(diff_cmd_baton->svnpatch_buff,
-                               APR_EOL_STR "diff_dir_deleted; path: %s",
-                               path);
+    svn_stringbuf_appendf(diff_cmd_baton->svnpatch_buf,
+                          APR_EOL_STR "diff_dir_deleted; path: %s",
+                          path);
 
   return SVN_NO_ERROR;
 }
@@ -1361,7 +1361,7 @@ do_diff(const struct diff_parameters *diff_param,
   SVN_ERR(check_paths(diff_param, &diff_paths));
 
   if (callback_baton->svnpatch_format)
-    callback_baton->svnpatch_buff = svn_stringbuf_create("", pool);
+    callback_baton->svnpatch_buf = svn_stringbuf_create("", pool);
 
   if (diff_paths.is_repos1)
     {
@@ -1405,7 +1405,7 @@ do_diff(const struct diff_parameters *diff_param,
     }
 
   if (callback_baton->svnpatch_format
-      && callback_baton->svnpatch_buff->len > 0 )
+      && callback_baton->svnpatch_buf->len > 0 )
     SVN_ERR(file_printf_from_utf8
             (callback_baton->outfile,
              callback_baton->header_encoding,
@@ -1413,7 +1413,7 @@ do_diff(const struct diff_parameters *diff_param,
              equal_string + 43,
              SVN_CLIENT_SVNPATCH_VERSION,
              equal_string + 42,
-             callback_baton->svnpatch_buff->data));
+             callback_baton->svnpatch_buf->data));
 
   return SVN_NO_ERROR;
 }

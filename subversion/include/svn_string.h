@@ -238,9 +238,9 @@ void svn_stringbuf_appendbytes(svn_stringbuf_t *targetstr,
  *
  * reallocs if necessary. @a targetstr is affected, nothing else is.
  */
-void svn_stringbuf_appendformat(svn_stringbuf_t *targetstr,
-                                const char *fmt, 
-                                ...);
+void svn_stringbuf_appendf(svn_stringbuf_t *targetstr,
+                           const char *fmt, 
+                           ...);
 
 /** Append an @c svn_stringbuf_t onto @a targetstr.
  *

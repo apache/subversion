@@ -391,9 +391,9 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
 
 
 void
-svn_stringbuf_appendformat(svn_stringbuf_t *targetstr,
-                           const char *fmt, 
-                           ...)
+svn_stringbuf_appendf(svn_stringbuf_t *targetstr,
+                      const char *fmt, 
+                      ...)
 {
   va_list ap;
   char *buff;
