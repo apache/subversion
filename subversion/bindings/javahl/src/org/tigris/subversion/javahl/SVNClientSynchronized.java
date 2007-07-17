@@ -1021,22 +1021,17 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Update local copy to mirror a new url.
-     * @param path      the working copy path
-     * @param url       the new url for the working copy
-     * @param revision  the new base revision of working copy
-     * @param recurse   traverse into subdirectories
-     * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.doSwitch(String, String, Revision, int, boolean, boolean)
      * @since 1.5
      */
     public long doSwitch(String path, String url, Revision revision,
-                         int depth, boolean allowUnverObstructions)
+                         int depth, boolean ignoreExternals,
+                         boolean allowUnverObstructions)
             throws ClientException
     {
         synchronized(clazz)
         {
-            return worker.doSwitch(path, url, revision, depth,
+            return worker.doSwitch(path, url, revision, depth, ignoreExternals,
                                    allowUnverObstructions);
         }
     }

@@ -521,7 +521,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
 
 jlong SVNClient::doSwitch(const char *path, const char *url,
                           Revision &revision, svn_depth_t depth,
-                          bool allowUnverObstructions)
+                          bool ignoreExternals, bool allowUnverObstructions)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", -1);
@@ -540,6 +540,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
                                    intUrl.c_str(),
                                    revision.revision(),
                                    depth,
+                                   ignoreExternals,
                                    allowUnverObstructions,
                                    ctx,
                                    requestPool.pool()),
