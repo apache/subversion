@@ -52,8 +52,9 @@ extern "C" {
  * delta for this and the previous revision.
  *
  * @a pool may be used for temporary allocations, but you can't rely
- * on objects allocated to live outside of this particular call and the
- * immediately following calls to @a *delta_handler if any.
+ * on objects allocated to live outside of this particular call and
+ * the immediately following calls to @a *delta_handler if any.  (Pass
+ * in a pool via @a baton if need be.)
  *
  * @since New in 1.5.
  */
