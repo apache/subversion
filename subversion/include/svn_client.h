@@ -3997,6 +3997,64 @@ svn_client_open_ra_session(svn_ra_session_t **session,
 
 /** @} end group: Client session related functions */
 
+
+/**
+ *
+ * @defgroup clnt_svnpatch Client svnpatch related functions
+ *
+ * @{
+ *
+ */
+
+/** Append @a number into @a targetstr buffer. */
+void
+svn_client_write_number(svn_stringbuf_t *targetstr,
+                        const apr_uint64_t number);
+
+/** Append @a str into @a targetstr buffer.  Is binary-able. */
+void
+svn_client_write_string(svn_stringbuf_t *targetstr,
+                        const svn_string_t *str);
+
+/** Append @a s cstring into @a targetstr buffer. */
+void
+svn_client_write_cstring(svn_stringbuf_t *targetstr,
+                         const char *s);
+
+/** Append @a word into @a targetstr buffer. */
+void
+svn_client_write_word(svn_stringbuf_t *targetstr,
+                      const char *word);
+
+/** Append a list of properties @a props into @a targetstr. */
+void
+svn_client_write_proplist(svn_stringbuf_t *targetstr,
+                          apr_hash_t *props,
+                          apr_pool_t *pool);
+
+/** Begin a list, appended into @targetstr */
+void
+svn_client_start_list(svn_stringbuf_t *targetstr);
+
+/** End a list, appended into @targetstr */
+void
+svn_client_end_list(svn_stringbuf_t *targetstr);
+
+/** Append a tuple into @targetstr in a printf-like fashion.
+ * @see svn_ra_svn_write_tuple() for further details with the format. */
+void
+svn_client_write_tuple(svn_stringbuf_t *targetstr,
+                       const char *fmt, ...);
+
+/** Append a command into @targetstr, using the same format notation as
+ * svn_client_write_tuple(). */
+void
+svn_client_write_cmd(svn_stringbuf_t *targetstr,
+                     const char *cmdname,
+                     const char *fmt, ...);
+
+/** @} end group: Client svnpatch related functions */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

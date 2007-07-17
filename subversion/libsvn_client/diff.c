@@ -1404,11 +1404,12 @@ do_diff(const struct diff_parameters *diff_param,
         }
     }
 
-  if (callback_baton->svnpatch_format)
+  if (callback_baton->svnpatch_format
+      && callback_baton->svnpatch_buff->len > 0 )
     SVN_ERR(file_printf_from_utf8
             (callback_baton->outfile,
              callback_baton->header_encoding,
-             APR_EOL_STR "%s SVNPATCH BLOCK %d %s %s" APR_EOL_STR,
+             "%s SVNPATCH BLOCK %d %s" APR_EOL_STR" %s" APR_EOL_STR,
              equal_string + 43,
              SVN_CLIENT_SVNPATCH_VERSION,
              equal_string + 42,
