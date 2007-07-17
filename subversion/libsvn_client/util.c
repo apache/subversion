@@ -206,16 +206,16 @@ void
 svn_client_write_number(svn_stringbuf_t *targetstr,
                         apr_uint64_t number)
 {
-  svn_stringbuf_appendformat(targetstr, "%" APR_UINT64_T_FMT " ", number);
+  svn_stringbuf_appendf(targetstr, "%" APR_UINT64_T_FMT " ", number);
 }
 
 void
 svn_client_write_string(svn_stringbuf_t *targetstr,
                         const svn_string_t *str)
 {
-  /* svn_stringbuf_appendformat doesn't support binary bytes.  Since str->data
+  /* svn_stringbuf_appendf doesn't support binary bytes.  Since str->data
      might contain binary stuff, let's make use of appendbytes instead. */
-  svn_stringbuf_appendformat(targetstr, "%" APR_SIZE_T_FMT ":", str->len);
+  svn_stringbuf_appendf(targetstr, "%" APR_SIZE_T_FMT ":", str->len);
   svn_stringbuf_appendbytes(targetstr, str->data, str->len);
   svn_stringbuf_appendbytes(targetstr, " ", 1);
 }
@@ -224,15 +224,15 @@ void
 svn_client_write_cstring(svn_stringbuf_t *targetstr,
                          const char *s)
 {
-  svn_stringbuf_appendformat(targetstr, "%" APR_SIZE_T_FMT ":%s ",
-                             strlen(s), s);
+  svn_stringbuf_appendf(targetstr, "%" APR_SIZE_T_FMT ":%s ",
+                        strlen(s), s);
 }
 
 void
 svn_client_write_word(svn_stringbuf_t *targetstr,
                       const char *word)
 {
-  svn_stringbuf_appendformat(targetstr, "%s ", word);
+  svn_stringbuf_appendf(targetstr, "%s ", word);
 }
 
 void
