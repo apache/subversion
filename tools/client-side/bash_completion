@@ -17,7 +17,7 @@ shopt -s extglob
 function _svn_grcut()
 {
     local re=$1 line=
-    while IFS="\n" read -r line ; do
+    while read -r line ; do
 	[[ ! $re || $line == $re ]] && echo ${line/???????/}
     done
 }
@@ -75,6 +75,7 @@ function _svn_lls()
 #     may be unadvisable if used on large working copies.
 #     Note of these costly completions are activated by default.
 #     Argument completion outside a working copy results in an error message.
+#     Filenames with spaces are not completed properly.
 #     
 # - to do: other options? SVN_BASH_USERNAME?
 _svn()
