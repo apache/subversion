@@ -822,8 +822,15 @@ handle_response(serf_request_t *request,
         }
       else 
         {
-          svn_ra_serf__request_create(ctx);
-          status = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+          status = svn_ra_serf__handle_discard_body(request, response, NULL, 
+                                                    pool);
+          /* At this time we might not have received the whole response from 
+             the server. If that's the case, don't setup a new request now
+             but wait till we retry the request later. */
+          if (! APR_STATUS_IS_EAGAIN(status))
+            {
+              svn_ra_serf__request_create(ctx);
+            }
         }
     }
   else if (sl.code >= 500)
