@@ -1,4 +1,5 @@
 from csvn.core import *
+from csvn.auth import *
 from ctypes import *
 import csvn.types as _types
 import os, sys
@@ -6,7 +7,7 @@ import os, sys
 class WC(object):
     """A SVN working copy."""
 
-    def __init__(self, path="", user=None):
+    def __init__(self, path="", user=User()):
         """Open a working copy directory relative to PATH"""
 
         self.pool = Pool()

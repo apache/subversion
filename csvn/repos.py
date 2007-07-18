@@ -49,7 +49,7 @@ class RepositoryURI(object):
 
 class RemoteRepository(object):
 
-    def __init__(self, url, user=None):
+    def __init__(self, url, user=User()):
         """Open a new session to URL with the specified USER.
            USER must be an object that implements the
            'csvn.auth.User' interface."""
@@ -244,7 +244,7 @@ class LocalRepository(object):
        and implement the allow_access function.
     """
 
-    def __init__(self, path, create=False, user=None):
+    def __init__(self, path, create=False, user=User()):
         """Open the repository at PATH. If create is True,
            create a new repository.
 
