@@ -30,7 +30,10 @@ public interface ConflictResolverCallback extends EventListener
 {
     /**
      * The callback method invoked for each conflict during a
-     * merge/update/switch operation.
+     * merge/update/switch operation.  NOTE: The files that are
+     * potentially passed in the ConflictDescriptor are in
+     * repository-normal format (LF line endings and contracted
+     * keywords).
      *
      * @param descrip A description of the conflict.
      * @return The result of any conflict resolution, from the {@link
