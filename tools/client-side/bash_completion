@@ -10,7 +10,7 @@
 
 shopt -s extglob
 
-# Some helper functions, to ease readability
+# Two helper functions which only use bash, to ease readability.
 
 # _svn_grcut shell-regular-expression
 # extract filenames from 'svn status' output
@@ -64,10 +64,18 @@ function _svn_lls()
 #   SVN_BASH_ENCODINGS: encodings to be suggested
 #   SVN_BASH_MIME_TYPE: mime types to be suggested
 #   SVN_BASH_KEYWORDS: "svn:keywords" substitutions to be suggested
-#   SVN_BASH_COMPL_EXT: completion extensions (may cost a lot!)
-#     svnstatus: use 'svn status' for completion
-#     recurse: allow recursion
-#     externals: recurse into externals
+#   SVN_BASH_COMPL_EXT: completion extensions for file arguments, based on the
+#      current subcommand, so that for instance only modified files are 
+#      suggested for 'revert', only not svn-managed files for 'add', and so on.
+#      Possible values are:
+#      - svnstatus: use 'svn status' for completion
+#      - recurse: allow recursion
+#      - externals: recurse into externals
+#     The former option is reasonable, but beware that both later options 
+#     may be unadvisable if used on large working copies.
+#     Note of these costly completions are activated by default.
+#     Argument completion outside a working copy results in an error message.
+#     
 # - to do: other options? SVN_BASH_USERNAME?
 _svn()
 {
@@ -467,8 +475,9 @@ _svn()
 	    # do we allow possible expensive completion here?
 	    if [[ $SVN_BASH_COMPL_EXT == *svnstatus* ]] ; then
 
+		# build status command and options
 		# "--quiet" removes 'unknown' files
-		local status='svn status --non-interactive' files=
+		local status='svn status --non-interactive'
 
 		[[ $SVN_BASH_COMPL_EXT == *recurse* ]] || \
 		    status="$status --non-recursive"
@@ -478,8 +487,11 @@ _svn()
 		[[ $SVN_BASH_COMPL_EXT == *externals* ]] || \
 		    status="$status --ignore-externals"
 
-		local cs= 
+		local cs= files=
+		# subtlety: must not set $cur* if $cur is empty in some cases
 		[[ $cur ]] && cs=$cur*
+
+		# 'files' is set according to the current subcommand
 		case $cmd in
 		    st*) # status completion must include all files
 			files=$cur*
@@ -528,11 +540,14 @@ _svn()
 			;;
 		esac
 
-	        # also suggest subdirectories: svn-managed subdirs??
+		# when not recursive, some relevant files may exist
+		# within subdirectories, so they are added here.
+	        # should it be restricted to svn-managed subdirs? no??
 		if [[ $SVN_BASH_COMPL_EXT != *recurse* ]] ; then 
 		    files="$files $( _svn_lls dir $cur* )"
 		fi
 
+		# set completion depending on computed 'files'
 		if [[ $files ]] ; then
 		    COMPREPLY=( $( compgen -W "$files" -- $cur ) )
 		    # if empty, set to nope?
