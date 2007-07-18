@@ -30,7 +30,6 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_version.h"
-#include "svn_file_rev.h"
 
 
 #ifdef __cplusplus
