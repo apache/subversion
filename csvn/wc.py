@@ -12,10 +12,13 @@ class WC(object):
         self.pool = Pool()
         self.iterpool = Pool()
         self.path = path
+        self.user = user
 
         self.client = POINTER(svn_client_ctx_t)()
         svn_client_create_context(byref(self.client), self.pool)
         self._as_parameter_ = POINTER(svn_ra_session_t)()
+        
+        self.user.setup_auth_baton(pointer(self.client.contents.auth_baton))
 
         self.client[0].notify_func2 = \
             svn_wc_notify_func2_t(self._notify_func_wrapper)
@@ -31,6 +34,10 @@ class WC(object):
             svn_ra_progress_notify_func_t(self._progress_func_wrapper)
         self.client[0].progress_baton =  cast(id(self), c_void_p)
         self._progress_func = None
+        
+        self._status_func = \
+            svn_wc_status_func2_t(self._status_wrapper)
+        self._status = None
 
     def copy(self, src, dest, rev = ""):
         """Copy SRC to DEST"""
@@ -272,3 +279,59 @@ class WC(object):
                             self.client, self.iterpool)
                             
         self.iterpool.clear()
+    
+    # Internal method to wrap status callback.
+    def _status_wrapper(baton, path, status):
+        self = cast(baton, py_object).value
+        
+        if self._status:
+            self._status(path, status.contents)
+    _status_wrapper = staticmethod(_status_wrapper)
+    
+    def set_status_func(self, status):
+        """Set a callback function to be used the next time the status method
+        is called."""
+        self._status = status
+    
+    def status(self, path="", status=None, recurse=True,
+                get_all=False, update=False, no_ignore=False,
+                ignore_externals=False):
+        """Get the status on PATH using callback to STATUS.
+        
+        PATH defaults to the working copy root.
+        
+        If STATUS is not provided, a callback previously registered using
+        set_status_func will be used. If a callback has not been set, nothing
+        will happen.
+        
+        If RECURSE is True (True by default) directories will be recursed.
+        
+        If GET_ALL is True (False by default), all entires will be retrieved,
+        otherwise only interesting entries (local modifications and/or
+        out-of-date) will be retrieved.
+        
+        If UPDATE is True (False by default) the repository will be contacted
+        to get information about out-of-dateness. A svn_revnum_t will be
+        returned to indicate which revision the working copy was compared
+        against.
+        
+        If NO_IGNORE is True (False by default) nothing will be ignored.
+        
+        If IGNORE_EXTERNALS is True (False by default), externals will be
+        ignored."""
+        rev = svn_opt_revision_t()
+        rev.kind = svn_opt_revision_working
+        
+        if status:
+            self.set_status_func(status)
+        
+        result_rev = svn_revnum_t()
+        svn_client_status2(byref(result_rev), self._build_path(path),
+                            byref(rev), self._status_func,
+                            cast(id(self), c_void_p), recurse, get_all,
+                            update, no_ignore, ignore_externals, self.client,
+                            self.iterpool)
+                            
+        self.iterpool.clear()
+                            
+        return result_rev
