@@ -56,7 +56,9 @@ public class ConflictDescriptor
     // File paths, present only when the conflict involves the merging
     // of two files descended from a common ancestor, here are the
     // paths of up to four fulltext files that can be used to
-    // interactively resolve the conflict.
+    // interactively resolve the conflict.  NOTE: The content of these
+    // files will be in repository-normal form (LF line endings and
+    // contracted keywords).
     private String basePath;
     private String reposPath;
     private String userPath;

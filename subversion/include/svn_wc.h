@@ -982,7 +982,9 @@ typedef struct svn_wc_conflict_description_t
   /** If the conflict involves the merging of two files descended from
    * a common ancestor, here are the paths of up to four fulltext
    * files that can be used to interactively resolve the conflict.
-   * (If any of these are not available, they default to NULL.) */
+   * All four files will be in repository-normal form -- LF line endings
+   * and contracted keywords.  (If any of these files are not available,
+   * they default to NULL.) */
 
   const char *base_file;     /* common ancestor of the two files being merged */
   const char *repos_file;    /* repository's version of the file */
