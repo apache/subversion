@@ -20,7 +20,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
-#include "svn_file_rev.h"
+#include "svn_delta.h"
 
 
 struct file_rev_handler_wrapper_baton {
