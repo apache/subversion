@@ -132,7 +132,7 @@ V 7
 sussman
 K 3
 log
-V 17
+V 33
 Added two files, changed a third.
 PROPS-END
 
