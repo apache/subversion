@@ -375,6 +375,7 @@ check_mimetype(apr_array_header_t *prop_diffs, const char *target,
 static svn_error_t *
 file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                  apr_hash_t *rev_props,
+                 svn_boolean_t merged_revision,
                  svn_txdelta_window_handler_t *content_delta_handler,
                  void **content_delta_baton,
                  apr_array_header_t *prop_diffs,
@@ -490,13 +491,14 @@ old_blame(const char *target, const char *url,
           struct file_rev_baton *frb);
 
 svn_error_t *
-svn_client_blame3(const char *target,
+svn_client_blame4(const char *target,
                   const svn_opt_revision_t *peg_revision,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
                   const svn_diff_file_options_t *diff_options,
                   svn_boolean_t ignore_mime_type,
-                  svn_client_blame_receiver_t receiver,
+                  svn_boolean_t include_merged_revisions,
+                  svn_client_blame_receiver2_t receiver,
                   void *receiver_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
@@ -558,10 +560,10 @@ svn_client_blame3(const char *target,
      We need to ensure that we get one revision before the start_rev,
      if available so that we can know what was actually changed in the start
      revision. */
-  err = svn_ra_get_file_revs(ra_session, "",
-                             start_revnum - (start_revnum > 0 ? 1 : 0),
-                             end_revnum,
-                             file_rev_handler, &frb, pool);
+  err = svn_ra_get_file_revs2(ra_session, "",
+                              start_revnum - (start_revnum > 0 ? 1 : 0),
+                              end_revnum, include_merged_revisions,
+                              file_rev_handler, &frb, pool);
   
   /* Fall back if it wasn't supported by the server.  Servers earlier
      than 1.1 need this. */
@@ -604,6 +606,7 @@ svn_client_blame3(const char *target,
           if (!eof || sb->len)
             SVN_ERR(receiver(receiver_baton, line_no, walk->rev->revision,
                              walk->rev->author, walk->rev->date,
+                             SVN_INVALID_REVNUM, NULL, NULL,
                              sb->data, iterpool));
           if (eof) break;
         }
@@ -621,6 +624,73 @@ svn_client_blame3(const char *target,
   return SVN_NO_ERROR;
 }
 
+/* Baton for use with wrap_blame_receiver */
+struct blame_receiver_wrapper_baton {
+  void *baton;
+  svn_client_blame_receiver_t receiver;
+};
+
+/* This implements svn_client_blame_receiver2_t */
+static svn_error_t *
+blame_wrapper_receiver(void *baton,
+                       apr_int64_t line_no,
+                       svn_revnum_t revision,
+                       const char *author,
+                       const char *date,
+                       svn_revnum_t merged_revision,
+                       const char *merged_author,
+                       const char *merged_date,
+                       const char *line,
+                       apr_pool_t *pool)
+{
+  struct blame_receiver_wrapper_baton *brwb = baton;
+
+  if (brwb->receiver)
+    return brwb->receiver(brwb->baton,
+                          line_no, revision, author, date, line, pool);
+
+  return SVN_NO_ERROR;
+}
+
+static void
+wrap_blame_receiver(svn_client_blame_receiver2_t *receiver2,
+                    void **receiver2_baton,
+                    svn_client_blame_receiver_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool)
+{
+  struct blame_receiver_wrapper_baton *brwb = apr_palloc(pool, sizeof(*brwb));
+
+  /* Set the user provided old format callback in the baton. */
+  brwb->baton = receiver_baton;
+  brwb->receiver = receiver;
+
+  *receiver2_baton = brwb;
+  *receiver2 = blame_wrapper_receiver;
+}
+
+svn_error_t *
+svn_client_blame3(const char *target,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_client_blame_receiver_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  svn_client_blame_receiver2_t receiver2;
+  void *receiver2_baton;
+
+  wrap_blame_receiver(&receiver2, &receiver2_baton, receiver, receiver_baton,
+                      pool);
+
+  return svn_client_blame4(target, peg_revision, start, end, diff_options,
+                           ignore_mime_type, FALSE, receiver2, receiver2_baton,
+                           ctx, pool);
+}
 
 /* svn_client_blame3 guarantees 'no EOL chars' as part of the receiver
    LINE argument.  Older versions depend on the fact that if a CR is

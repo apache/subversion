@@ -629,10 +629,33 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)
  * @note If there is no blame information for this line, @a revision will be
  * invalid and @a author and @a date will be NULL.
  *
+ * @note If merge information is not requested, @a merged_revision will be
+ * invalid and  @a merged_author and @a merged_date will be NULL.
+ *
+ * @since New in 1.5.
+ */
+typedef svn_error_t *(*svn_client_blame_receiver2_t)
+  (void *baton,
+   apr_int64_t line_no,
+   svn_revnum_t revision,
+   const char *author,
+   const char *date,
+   svn_revnum_t merged_revision,
+   const char *merged_author,
+   const char *merged_date,
+   const char *line,
+   apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_cliemt_blame_receiver2_t, but without @a merged_revision,
+ * @a merged_author, or @a merged_date members.
+ *
  * @note New in 1.4 is that the line is defined to contain only the line
  * content (and no [partial] EOLs; which was undefined in older versions).
  * Using this callback with svn_client_blame() or svn_client_blame2()
  * will still give you the old behaviour.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 typedef svn_error_t *(*svn_client_blame_receiver_t)
   (void *baton,
@@ -1859,7 +1882,31 @@ svn_client_log(const apr_array_header_t *targets,
  * Use @a diff_options to determine how to compare different revisions of the
  * target.
  *
+ * If @a include_merged_revisions is TRUE, also return data based upon
+ * revisions which have been merged to @a path_or_url.
+ *
  * Use @a pool for any temporary allocation.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_client_blame4(const char *path_or_url,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_boolean_t include_merged_revisions,
+                  svn_client_blame_receiver2_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_blame4(), but with @a include_merged_revisions set
+ * to FALSE, and using a @c svn_client_blame_receiver2_t as the receiver.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  *
  * @since New in 1.4.
  */
