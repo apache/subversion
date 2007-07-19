@@ -37,6 +37,8 @@ function _svn_lls()
 	    # split f in directory/file names
 	    local dn= fn="$f"
 	    [[ "$f" == */* ]] && dn=${f%\/*}/ fn=${f##*\/}
+	    # ??? this does not work for just added files, because they
+	    # do not have a content reference yet...
 	    [ -f "${dn}.svn/text-base/${fn}.svn-base" ] && echo "$f"
 	fi
     done
@@ -509,7 +511,7 @@ _svn()
 		    resolved) # files in conflict
 			files=$($status $cs| _svn_grcut '@(?C*|C*)')
 			;;
-		    praise|blame|ann*) # any file
+		    praise|blame|ann*) # any svn file but added
 			files=$( _svn_lls all $cur* )
 			;;
 		    p*) # prop commands
@@ -518,17 +520,23 @@ _svn()
 			    # directory specific props
 			    files=$( _svn_lls dir . $cur* )
 			else
-			    files=$( _svn_lls all $cur* )
+			    # ??? added directories appear twice: foo foo/
+			    files="$( _svn_lls all $cur* ) 
+                                   $($status $cs | _svn_grcut 'A*' )"
 			fi
 			;;
-		    remove|rm|del*|move|mv|rename) # changing files
-			files=$( _svn_lls all $cur* )
+		    info) # information on any file
+			files="$( _svn_lls all $cur* ) 
+                               $($status $cs | _svn_grcut 'A*' )"
 			;;
-		    log|info|lock|up*|cl*|switch) # misc
+		    remove|rm|del*|move|mv|rename) # changing existing files
 			files=$( _svn_lls all $cur* )
 			;;
 		    mkdir) # completion in mkdir can only be for subdirs?
 			files=$( _svn_lls dir $cur* )
+			;;
+		    log|lock|up*|cl*|switch) # misc, all but added files
+			files=$( _svn_lls all $cur* )
 			;;
 		    merge) # may do a better job? URL/WCPATH
 			files=$( _svn_lls all $cur* )
