@@ -418,7 +418,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
               cdesc.reason = svn_wc_conflict_reason_edited;
               cdesc.base_file = left;
               cdesc.repos_file = right;
-              cdesc.user_file = merge_target;
+              cdesc.user_file = tmp_target;
               cdesc.merged_file = result_target;
 
               SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
@@ -662,7 +662,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           cdesc.reason = svn_wc_conflict_reason_edited;
           cdesc.base_file = left;
           cdesc.repos_file = right;
-          cdesc.user_file = merge_target;
+          cdesc.user_file = tmp_target;
           cdesc.merged_file = NULL;     /* notice there is NO merged file! */
 
           SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
