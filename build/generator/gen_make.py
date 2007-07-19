@@ -8,7 +8,6 @@ import string
 
 import gen_base
 import generator.swig.header_wrappers
-import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
 import generator.util.executable
 _exec = generator.util.executable
@@ -134,7 +133,6 @@ class Generator(gen_base.GeneratorBase):
 
     if not self.release_mode:
       for swig in (generator.swig.header_wrappers,
-                   generator.swig.checkout_swig_header,
                    generator.swig.external_runtime):
         gen = swig.Generator(self.conf, "swig")
         gen.write_makefile_rules(self.ofile)

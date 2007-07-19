@@ -128,7 +128,14 @@ svn_ra_serf__open(svn_ra_session_t *session,
   /* todo: reuse serf context across sessions */
   serf_sess->context = serf_context_create(serf_sess->pool);
 
-  apr_uri_parse(serf_sess->pool, repos_URL, &url);
+  status = apr_uri_parse(serf_sess->pool, repos_URL, &url);
+  if (status)
+    {
+      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                               _("Illegal repository URL '%s'"), 
+                               repos_URL);
+    }
+
   serf_sess->repos_url = url;
   serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
 
@@ -189,6 +196,7 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_uri_t new_url;
+  apr_status_t status;
 
   /* If it's the URL we already have, wave our hands and do nothing. */
   if (strcmp(session->repos_url_str, url) == 0)
@@ -197,7 +205,12 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
     }
 
   /* Do we need to check that it's the same host and port? */
-  apr_uri_parse(session->pool, url, &new_url);
+  status = apr_uri_parse(session->pool, url, &new_url);
+  if (status)
+    {
+      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                               _("Illegal repository URL '%s'"), url);
+    }
 
   session->repos_url.path = new_url.path;
   session->repos_url_str = apr_pstrdup(pool, url);

@@ -699,12 +699,13 @@ public interface SVNClientInterface
      * @param url       the new url for the working copy
      * @param revision  the new base revision of working copy
      * @param depth     how deep to traverse into subdirectories
+     * @param ignoreExternals whether to process externals definitions
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
      * @since 1.5
      */
     long doSwitch(String path, String url, Revision revision, int depth,
-                  boolean allowUnverObstructions)
+                  boolean ignoreExternals, boolean allowUnverObstructions)
             throws ClientException;
 
     /**

@@ -795,7 +795,9 @@ svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
    ### initializing it with a fake string (and copying it) */
 #define MAKE_BUFFER(p) svn_stringbuf_ncreate("", 0, (p))
 
-void svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src);
+svn_error_t *
+svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src,
+                       apr_pool_t *pool);
 
 
 

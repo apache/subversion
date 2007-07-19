@@ -2493,7 +2493,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
           (when svn-status-operated-on-dot
             ;; when the commit used . as argument, delete the trailing directory
             ;; from the svn output
-            (search-forward "/" (+ (point) 2) t))
+            (search-forward "/" nil t))
           (setq file-name (buffer-substring-no-properties (point) (svn-point-at-eol)))
           (unless svn-status-last-commit-author
             (setq svn-status-last-commit-author (car (svn-status-info-for-path (expand-file-name (concat default-directory file-name))))))

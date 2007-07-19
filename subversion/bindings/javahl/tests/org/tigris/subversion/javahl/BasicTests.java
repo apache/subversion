@@ -2229,12 +2229,10 @@ public class BasicTests extends SVNTests
             {
                 public int resolve(ConflictDescriptor descrip)
                 {
-                    System.out.println("\n\ninvoking conflict rez callback\n");
                     return ConflictResolverCallback.Result.choose_repos;
                 }
             });
 
-        //OneTest thisTest = setupAndPerformMerge();
         OneTest thisTest = new OneTest();
 
         // modify file A/mu
@@ -2642,7 +2640,7 @@ public class BasicTests extends SVNTests
         // Complete the switch using "--force" and check the status
         client.doSwitch(backupTest.getWCPath() + "/A/B/E",
                         backupTest.getUrl() + "/A/D/H",
-                        null, Depth.infinity, true);
+                        null, Depth.infinity, false, true);
 
         backupTest.getWc().setItemIsSwitched("A/B/E",true);
         backupTest.getWc().removeItem("A/B/E/alpha");
