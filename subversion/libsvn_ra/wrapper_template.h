@@ -407,8 +407,16 @@ static svn_error_t *compat_get_file_revs(void *session_baton,
                                          void *handler_baton,
                                          apr_pool_t *pool)
 {
-  return VTBL.get_file_revs(session_baton, path, start, end, handler,
-                            handler_baton, pool);
+  svn_file_rev_handler_t handler2;
+  void *handler2_baton;
+
+  svn_compat_wrap_file_rev_handler(&handler2, &handler2_baton,
+                                   handler, handler_baton,
+                                   pool);
+
+  return VTBL.get_file_revs(session_baton, path, start, end,
+                            FALSE, /* include merged revisions */
+                            handler2, handler2_baton, pool);
 }
 
 static const svn_version_t *compat_get_version(void)

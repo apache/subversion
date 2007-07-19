@@ -100,7 +100,7 @@ typedef struct {
   svn_boolean_t done;
 
   /* blame handler and baton */
-  svn_ra_file_rev_handler_t file_rev;
+  svn_file_rev_handler_t file_rev;
   void *file_rev_baton;
 } blame_context_t;
 
@@ -207,7 +207,7 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
         {
           SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
                                       info->path, info->rev,
-                                      info->rev_props,
+                                      info->rev_props, FALSE,
                                       &info->txdelta, &info->txdelta_baton,
                                       info->prop_diffs, info->pool));
 
@@ -278,7 +278,7 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
         {
           SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
                                       info->path, info->rev,
-                                      info->rev_props,
+                                      info->rev_props, FALSE,
                                       NULL, NULL,
                                       info->prop_diffs, info->pool));
         }
@@ -364,7 +364,8 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                            const char *path,
                            svn_revnum_t start,
                            svn_revnum_t end,
-                           svn_ra_file_rev_handler_t rev_handler,
+                           svn_boolean_t include_merged_revisions,
+                           svn_file_rev_handler_t rev_handler,
                            void *rev_handler_baton,
                            apr_pool_t *pool)
 {

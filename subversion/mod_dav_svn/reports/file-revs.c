@@ -130,6 +130,7 @@ file_rev_handler(void *baton,
                  const char *path,
                  svn_revnum_t revnum,
                  apr_hash_t *rev_props,
+                 svn_boolean_t merged_revision,
                  svn_txdelta_window_handler_t *window_handler,
                  void **window_baton,
                  apr_array_header_t *props,
@@ -273,10 +274,10 @@ dav_svn__file_revs_report(const dav_resource *resource,
   /* file_rev_handler will send header first time it is called. */
 
   /* Get the revisions and send them. */
-  serr = svn_repos_get_file_revs(resource->info->repos->repos,
-                                 path, start, end,
-                                 dav_svn__authz_read_func(&arb), &arb,
-                                 file_rev_handler, &frb, resource->pool);
+  serr = svn_repos_get_file_revs2(resource->info->repos->repos,
+                                  path, start, end, FALSE,
+                                  dav_svn__authz_read_func(&arb), &arb,
+                                  file_rev_handler, &frb, resource->pool);
 
   if (serr)
     {

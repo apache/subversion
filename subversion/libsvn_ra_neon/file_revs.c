@@ -2,7 +2,7 @@
  * file_revs.c :  routines for requesting and parsing file-revs reports
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -44,7 +44,7 @@
 
 struct report_baton {
   /* From the caller. */
-  svn_ra_file_rev_handler_t handler;
+  svn_file_rev_handler_t handler;
   void *handler_baton;
 
   /* Arguments for the callback. */
@@ -174,7 +174,7 @@ start_element(int *elem, void *userdata, int parent_state, const char *ns,
             void *wbaton;
             /* It's time to call our hanlder. */
             SVN_ERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
-                                rb->rev_props, &whandler, &wbaton,
+                                rb->rev_props, FALSE, &whandler, &wbaton,
                                 rb->prop_diffs, rb->subpool));
             if (whandler)
               rb->stream = svn_base64_decode
@@ -223,7 +223,7 @@ end_element(void *userdata, int state,
          there were no content changes. */
       if (!rb->had_txdelta)
         SVN_ERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
-                            rb->rev_props, NULL, NULL, rb->prop_diffs,
+                            rb->rev_props, FALSE, NULL, NULL, rb->prop_diffs,
                             rb->subpool));
       break;
 
@@ -286,7 +286,8 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
                            const char *path,
                            svn_revnum_t start,
                            svn_revnum_t end,
-                           svn_ra_file_rev_handler_t handler,
+                           svn_boolean_t include_merged_revisions,
+                           svn_file_rev_handler_t handler,
                            void *handler_baton,
                            apr_pool_t *pool)
 {

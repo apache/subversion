@@ -1786,6 +1786,7 @@ static svn_error_t *svndiff_close_handler(void *baton)
 /* This implements the svn_repos_file_rev_handler_t interface. */
 static svn_error_t *file_rev_handler(void *baton, const char *path,
                                      svn_revnum_t rev, apr_hash_t *rev_props,
+                                     svn_boolean_t merged_revision,
                                      svn_txdelta_window_handler_t *d_handler,
                                      void **d_baton,
                                      apr_array_header_t *prop_diffs,
@@ -1839,9 +1840,10 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   frb.conn = conn;
   frb.pool = NULL;
 
-  err = svn_repos_get_file_revs(b->repos, full_path, start_rev, end_rev,
-                                authz_check_access_cb_func(b), b,
-                                file_rev_handler, &frb, pool);
+  err = svn_repos_get_file_revs2(b->repos, full_path, start_rev, end_rev,
+                                 FALSE,
+                                 authz_check_access_cb_func(b), b,
+                                 file_rev_handler, &frb, pool);
   write_err = svn_ra_svn_write_word(conn, pool, "done");
   if (write_err)
     {

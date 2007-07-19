@@ -1390,7 +1390,8 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
 static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
                                          const char *path,
                                          svn_revnum_t start, svn_revnum_t end,
-                                         svn_ra_file_rev_handler_t handler,
+                                         svn_boolean_t include_merged_revisions,
+                                         svn_file_rev_handler_t handler,
                                          void *handler_baton, apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
@@ -1447,7 +1448,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
                                 _("Text delta chunk not a string"));
       has_txdelta = item->u.string->len > 0;
 
-      SVN_ERR(handler(handler_baton, p, rev, rev_props,
+      SVN_ERR(handler(handler_baton, p, rev, rev_props, FALSE,
                       has_txdelta ? &d_handler : NULL, &d_baton,
                       props, rev_pool));
 
