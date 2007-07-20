@@ -143,8 +143,7 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
 {
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  /* For now, we only handle conflicting file contents.  We can deal
-     with other sorts of conflicts someday. */
+  /* Handle conflicting file contents, which is the most common case. */
   if ((desc->node_kind == svn_node_file)
       && (desc->action == svn_wc_conflict_action_edit)
       && (desc->reason == svn_wc_conflict_reason_edited))
@@ -272,9 +271,71 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
             }
         }
     }
-  else /* other types of conflicts */
+  /*
+    Dealing with obstruction of additions can be tricky.  The
+    obstructing item could be unversioned, versioned, or even
+    schedule-add.  Here's a matrix of how the caller should behave,
+    based on results we return.
+
+                         Unversioned       Versioned       Schedule-Add
+
+      choose_user       skip addition,    skip addition     skip addition
+                        add existing item
+
+      choose_repos      destroy file,    schedule-delete,   revert add,
+                        add new item.    add new item.      rm file,
+                                                            add new item
+
+      postpone               [              bail out                 ]
+
+   */
+  else if ((desc->action == svn_wc_conflict_action_add)
+           && (desc->reason == svn_wc_conflict_reason_obstructed))
     {
-      *result = svn_wc_conflict_result_conflicted; /* conflict remains. */
+      const char *answer;
+      const char *prompt;
+
+      SVN_ERR(svn_cmdline_printf(subpool,
+                                 _("Conflict discovered when trying to add '%s'.\n"
+                                   "An object of the same name already exists.\n"),
+                                 desc->path));
+      prompt = _("Select: (p)ostpone, (m)ine, (t)heirs, (h)elp :");
+
+      while (1)
+        {
+          svn_pool_clear(subpool);
+
+          SVN_ERR(svn_cmdline_prompt_user(&answer, prompt, subpool));
+
+          if ((strcmp(answer, "h") == 0) || (strcmp(answer, "?") == 0))
+            {
+              SVN_ERR(svn_cmdline_printf(subpool,
+              _("  (p)ostpone - resolve the conflict later\n"
+                "  (m)ine     - accept pre-existing item \n"
+                "  (t)heirs   - accept incoming item\n"
+                "  (h)elp     - show this list\n\n")));
+            }
+          if (strcmp(answer, "p") == 0)
+            {
+              *result = svn_wc_conflict_result_conflicted;
+              break;
+            }
+          if (strcmp(answer, "m") == 0)
+            {
+              *result = svn_wc_conflict_result_choose_user;
+              break;
+            }
+          if (strcmp(answer, "t") == 0)
+            {
+              *result = svn_wc_conflict_result_choose_repos;
+              break;
+            }
+        }
+    }
+
+  else /* other types of conflicts -- do nothing about them. */
+    {
+      *result = svn_wc_conflict_result_conflicted;
     }
 
   svn_pool_destroy(subpool);
