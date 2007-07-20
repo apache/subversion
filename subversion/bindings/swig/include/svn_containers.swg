@@ -169,6 +169,7 @@
     SWIG_fail;
   }
 }
+
 #endif
 
 #ifdef SWIGRUBY
@@ -306,6 +307,12 @@
   apr_array_header_t **regular_props,
   apr_array_header_t **propdiffs
 };
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
+  %append_output(svn_swig_py_proparray_to_dict(*$1));
+}
 #endif
 
 /* -----------------------------------------------------------------------

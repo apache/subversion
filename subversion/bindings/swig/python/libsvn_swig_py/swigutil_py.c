@@ -643,7 +643,7 @@ PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash,
   return convert_hash(hash, convert_mergeinfo_hash, type, py_pool);
 }
 
-static PyObject *proparray_to_dict(const apr_array_header_t *array)
+PyObject *svn_swig_py_proparray_to_dict(const apr_array_header_t *array)
 {
     PyObject *dict = PyDict_New();
     int i;
@@ -2933,7 +2933,7 @@ svn_error_t *svn_swig_py_ra_file_rev_handler_func(
       goto error;
     }
 
-  py_prop_diffs = proparray_to_dict(prop_diffs);
+  py_prop_diffs = svn_swig_py_proparray_to_dict(prop_diffs);
 
   if (py_prop_diffs == NULL)
     {
