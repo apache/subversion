@@ -48,6 +48,9 @@ blame_receiver_xml(void *baton,
                    svn_revnum_t revision,
                    const char *author,
                    const char *date,
+                   svn_revnum_t merged_revision,
+                   const char *merged_author,
+                   const char *merged_date,
                    const char *line,
                    apr_pool_t *pool)
 {
@@ -89,27 +92,22 @@ blame_receiver_xml(void *baton,
 }
 
 
-/* This implements the svn_client_blame_receiver_t interface. */
 static svn_error_t *
-blame_receiver(void *baton,
-               apr_int64_t line_no,
-               svn_revnum_t revision,
-               const char *author,
-               const char *date,
-               const char *line,
-               apr_pool_t *pool)
+print_line_info(svn_stream_t *out,
+                svn_revnum_t revision,
+                const char *author,
+                const char *date,
+                svn_boolean_t verbose,
+                apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state =
-    ((blame_baton_t *) baton)->opt_state;
-  svn_stream_t *out = ((blame_baton_t *)baton)->out;
   apr_time_t atime;
   const char *time_utf8;
   const char *time_stdout;
   const char *rev_str = SVN_IS_VALID_REVNUM(revision) 
     ? apr_psprintf(pool, "%6ld", revision)
                         : "     -";
-  
-  if (opt_state->verbose)
+
+  if (verbose)
     {
       if (date)
         {
@@ -123,16 +121,46 @@ blame_receiver(void *baton,
              abbreviations for the month and weekday names.  Else, the
              line contents will be misaligned. */
           time_stdout = "                                           -";
-      return svn_stream_printf(out, pool, "%s %10s %s %s%s", rev_str, 
-                               author ? author : "         -", 
-                               time_stdout , line, APR_EOL_STR);
+      return svn_stream_printf(out, pool, "%s %10s %s ", rev_str, 
+                               author ? author : "         -",
+                               time_stdout);
     }
   else
     {
-      return svn_stream_printf(out, pool, "%s %10s %s%s", rev_str, 
-                               author ? author : "         -",
-                               line, APR_EOL_STR);
+      return svn_stream_printf(out, pool, "%s %10s ", rev_str, 
+                               author ? author : "         -");
     }
+
+}
+
+/* This implements the svn_client_blame_receiver_t interface. */
+static svn_error_t *
+blame_receiver(void *baton,
+               apr_int64_t line_no,
+               svn_revnum_t revision,
+               const char *author,
+               const char *date,
+               svn_revnum_t merged_revision,
+               const char *merged_author,
+               const char *merged_date,
+               const char *line,
+               apr_pool_t *pool)
+{
+  svn_cl__opt_state_t *opt_state =
+    ((blame_baton_t *) baton)->opt_state;
+  svn_stream_t *out = ((blame_baton_t *)baton)->out;
+ 
+  SVN_ERR(print_line_info(out, revision, author, date, opt_state->verbose,
+                          pool));
+
+  if (opt_state->use_merge_history)
+    {
+      SVN_ERR(svn_stream_printf(out, pool, " "));
+      SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
+                              opt_state->verbose, pool));
+    }
+
+  return svn_stream_printf(out, pool, "%s%s", line, APR_EOL_STR);
 }
  
 
@@ -225,7 +253,7 @@ svn_cl__blame(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
-      svn_client_blame_receiver_t receiver;
+      svn_client_blame_receiver2_t receiver;
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -260,12 +288,13 @@ svn_cl__blame(apr_getopt_t *os,
       else
         receiver = blame_receiver;
 
-      err = svn_client_blame3(truepath,
+      err = svn_client_blame4(truepath,
                               &peg_revision,
                               &opt_state->start_revision,
                               &opt_state->end_revision,
                               diff_options,
                               opt_state->force,
+                              opt_state->use_merge_history,
                               receiver,
                               &bl,
                               ctx,
