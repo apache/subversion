@@ -29,6 +29,7 @@
 
 #include "svn_cmdline.h"
 #include "svn_client.h"
+#include "svn_types.h"
 #include "svn_pools.h"
 #include "cl.h"
 
@@ -155,7 +156,7 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
       SVN_ERR(svn_cmdline_printf(subpool,
                                  _("Conflict discovered in '%s'.\n"),
                                  desc->path));
-      while (1)
+      while (TRUE)
         {
           svn_pool_clear(subpool);
 
