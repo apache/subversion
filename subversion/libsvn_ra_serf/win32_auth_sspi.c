@@ -74,20 +74,21 @@ load_security_dll()
 static svn_error_t *
 sspi_maxtokensize(char *auth_pkg, unsigned int *maxtokensize)
 {
-    SECURITY_STATUS status;
-    SecPkgInfo *sec_pkg_info = NULL;
+  SECURITY_STATUS status;
+  SecPkgInfo *sec_pkg_info = NULL;
 
-    status = sspi->QuerySecurityPackageInfo(auth_pkg, 
-                                            &sec_pkg_info);
-    if (status == SEC_E_OK) 
-      {
-        *maxtokensize = sec_pkg_info->cbMaxToken;
-        sspi->FreeContextBuffer(sec_pkg_info);
-      }
-    else
-      return svn_error_createf
-        (SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED, NULL,
-         "SSPI Initialization failed.");
+  status = sspi->QuerySecurityPackageInfo(auth_pkg, 
+                                          &sec_pkg_info);
+  if (status == SEC_E_OK) 
+    {
+      *maxtokensize = sec_pkg_info->cbMaxToken;
+      sspi->FreeContextBuffer(sec_pkg_info);
+    }
+  else
+    return svn_error_createf
+      (SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED, NULL,
+       "SSPI Initialization failed.");
+
   return SVN_NO_ERROR;
 }
 
