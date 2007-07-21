@@ -96,6 +96,9 @@ init_sspi_connection(svn_ra_serf__session_t *session,
                      svn_ra_serf__connection_t *conn,
                      apr_pool_t *pool)
 {
+  const char *tmp;
+  apr_size_t tmp_len;
+
   load_security_dll();
 
   conn->sspi_context = (serf_sspi_context_t*)
@@ -103,8 +106,12 @@ init_sspi_connection(svn_ra_serf__session_t *session,
   conn->sspi_context->ctx.dwLower = 0;
   conn->sspi_context->ctx.dwUpper = 0;
   conn->sspi_context->state = sspi_auth_not_started;
-  conn->auth_header = NULL;
-  conn->auth_value = NULL;
+
+  /* Setup the initial request to the server with an SSPI header */
+  SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len,
+                               conn->sspi_context));
+  encode_auth_header("NTLM", &conn->auth_value, tmp, tmp_len, pool);
+  conn->auth_header = "Authorization";
 
   return SVN_NO_ERROR;
 }
