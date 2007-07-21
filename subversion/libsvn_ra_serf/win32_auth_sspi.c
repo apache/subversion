@@ -137,6 +137,9 @@ handle_sspi_auth(svn_ra_serf__session_t *session,
       apr_base64_decode(token, base64_token);
     }
 
+  /* We can get a whole batch of 401 responses from the server, but we should
+     only start the authentication phase once, so if we started authentication
+     ignore all responses with initial NTLM authentication header. */
   if (!token && conn->sspi_context->state != sspi_auth_not_started)
     return SVN_NO_ERROR;
 
