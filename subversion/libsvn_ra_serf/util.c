@@ -118,6 +118,13 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
     {
       our_conn->ssl_context = NULL;
     }
+  /* Restart the authentication phase on this new connection. */
+  if (our_conn->session->auth_protocol)
+    {
+      our_conn->session->auth_protocol->init_conn_func(our_conn->session,
+                                                       our_conn, 
+                                                       our_conn->session->pool);
+    }
 }
 
 apr_status_t
