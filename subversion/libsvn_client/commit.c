@@ -191,14 +191,6 @@ import_file(const svn_delta_editor_t *editor,
 
   SVN_ERR(svn_io_check_special_path(path, &kind, &is_special, pool));
 
-  if (kind == svn_node_unknown)
-    {
-      return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         _("Unknown or unversionable type for '%s'"),
-         svn_path_local_style(path, pool));
-    }
-
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR(editor->add_file(edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
                            pool, &file_baton));
@@ -214,7 +206,7 @@ import_file(const svn_delta_editor_t *editor,
     }
   else
     properties = apr_hash_make(pool);
-      
+
   if (properties)
     {
       for (hi = apr_hash_first(pool, properties); hi; hi = apr_hash_next(hi))
