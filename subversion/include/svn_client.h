@@ -1424,28 +1424,28 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  */
 
 /** Import file or directory @a path into repository directory @a url at
- * head, authenticating with the authentication baton cached in @a ctx, 
- * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message 
- * for the (implied) commit.  Set @a *commit_info_p to the results of the 
+ * head, authenticating with the authentication baton cached in @a ctx,
+ * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message
+ * for the (implied) commit.  Set @a *commit_info_p to the results of the
  * commit, allocated in @a pool.  If some components of @a url do not exist
  * then create parent directories as necessary.
  *
  * If @a path is a directory, the contents of that directory are
  * imported directly into the directory identified by @a url.  Note that the
- * directory @a path itself is not imported -- that is, the basename of 
+ * directory @a path itself is not imported -- that is, the basename of
  * @a path is not part of the import.
  *
  * If @a path is a file, then the dirname of @a url is the directory
  * receiving the import.  The basename of @a url is the filename in the
  * repository.  In this case if @a url already exists, return error.
  *
- * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with 
- * @a ctx->notify_baton2 as the import progresses, with any of the following 
+ * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with
+ * @a ctx->notify_baton2 as the import progresses, with any of the following
  * actions: @c svn_wc_notify_commit_added,
  * @c svn_wc_notify_commit_postfix_txdelta.
  *
- * Use @a pool for any temporary allocation.  
- * 
+ * Use @a pool for any temporary allocation.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1458,8 +1458,11 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * Use @a nonrecursive to indicate that imported directories should not
  * recurse into any subdirectories they may have.
  *
- * If @a no_ignore is false, don't add files or directories that match
+ * If @a no_ignore is @c FALSE, don't add files or directories that match
  * ignore patterns.
+ *
+ * If @a ignore_unkown_node_kind is @c FALSE, ignore files of which the
+ * node type is unknown, such as device files and pipes.
  *
  * ### kff todo: This import is similar to cvs import, in that it does
  * not change the source tree into a working copy.  However, this
@@ -1468,7 +1471,24 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * option. However, doing so is a bit involved, and we don't need it
  * right now.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_client_import3(svn_commit_info_t **commit_info_p,
+                                const char *path,
+                                const char *url,
+                                svn_boolean_t nonrecursive,
+                                svn_boolean_t no_ignore,
+                                svn_boolean_t ignore_unkonwn_node_kind,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_import3(), but with @a ignore_unknown_node_kind
+ * always set to @c FALSE.
+ *
  * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API
  */
 svn_error_t *svn_client_import2(svn_commit_info_t **commit_info_p,
                                 const char *path,
