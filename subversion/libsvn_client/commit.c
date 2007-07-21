@@ -290,6 +290,7 @@ import_dir(const svn_delta_editor_t *editor,
            svn_boolean_t nonrecursive,
            apr_hash_t *excludes,
            svn_boolean_t no_ignore,
+           svn_boolean_t ignore_unknown_node_types,
            import_ctx_t *import_ctx,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
@@ -394,9 +395,10 @@ import_dir(const svn_delta_editor_t *editor,
             }
 
           /* Recurse. */
-          SVN_ERR(import_dir(editor, this_dir_baton, this_path, 
-                             this_edit_path, FALSE, excludes, 
-                             no_ignore, import_ctx, ctx, 
+          SVN_ERR(import_dir(editor, this_dir_baton, this_path,
+                             this_edit_path, FALSE, excludes,
+                             no_ignore, ignore_unknown_node_types,
+                             import_ctx, ctx,
                              subpool));
 
           /* Finally, close the sub-directory. */
@@ -408,9 +410,29 @@ import_dir(const svn_delta_editor_t *editor,
           SVN_ERR(import_file(editor, dir_baton, this_path, 
                               this_edit_path, import_ctx, ctx, subpool));
         }
-      /* We're silently ignoring things that aren't files or
-         directories.  If we stop doing that, here is the place to
-         change your world.  */
+      else
+        {
+          if (ignore_unknown_node_types)
+            {
+              /*## warn about it*/
+              if (ctx->notify_func2)
+                {
+                  svn_wc_notify_t *notify
+                    = svn_wc_create_notify(this_path,
+                                           svn_wc_notify_skip, subpool);
+                  notify->kind = svn_node_dir;
+                  notify->content_state = notify->prop_state
+                    = svn_wc_notify_state_inapplicable;
+                  notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+                  (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
+                }
+            }
+          else
+            return svn_error_createf
+              (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+               _("Unknown or unversionable type for '%s'"),
+               svn_path_local_style(this_path, subpool));
+        }
     }
 
   svn_pool_destroy(subpool);
@@ -458,6 +480,7 @@ import(const char *path,
        svn_boolean_t nonrecursive,
        apr_hash_t *excludes,
        svn_boolean_t no_ignore,
+       svn_boolean_t ignore_unknown_node_types,
        svn_client_ctx_t *ctx,
        apr_pool_t *pool)
 {
@@ -536,11 +559,12 @@ import(const char *path,
   else if (kind == svn_node_dir)
     {
       SVN_ERR(import_dir(editor, root_baton, path, edit_path,
-                         nonrecursive, excludes, no_ignore, import_ctx, 
-                         ctx, pool));
+                         nonrecursive, excludes, no_ignore,
+                         ignore_unknown_node_types, import_ctx, ctx, pool));
 
     }
-  else if (kind == svn_node_none)
+  else if (kind == svn_node_none
+           || kind == svn_node_unknown)
     {
       return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL, 
                                _("'%s' does not exist"),
@@ -627,11 +651,12 @@ get_ra_editor(svn_ra_session_t **ra_session,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_import2(svn_commit_info_t **commit_info_p,
+svn_client_import3(svn_commit_info_t **commit_info_p,
                    const char *path,
                    const char *url,
                    svn_boolean_t nonrecursive,
                    svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_unknown_node_types,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -760,8 +785,9 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
 
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
-  if ((err = import(path, new_entries, editor, edit_baton, 
-                    nonrecursive, excludes, no_ignore, ctx, subpool)))
+  if ((err = import(path, new_entries, editor, edit_baton,
+                    nonrecursive, excludes, no_ignore,
+                    ignore_unknown_node_types, ctx, subpool)))
     {
       svn_error_clear(editor->abort_edit(edit_baton, subpool));
       return err;
@@ -787,6 +813,21 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_import2(svn_commit_info_t **commit_info_p,
+                   const char *path,
+                   const char *url,
+                   svn_boolean_t nonrecursive,
+                   svn_boolean_t no_ignore,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_import3(commit_info_p,
+                            path, url, nonrecursive,
+                            no_ignore, FALSE, ctx, pool);
 }
 
 svn_error_t *

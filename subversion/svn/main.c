@@ -441,8 +441,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  If PATH is omitted '.' is assumed.\n"
      "  Parent directories are created as necessary in the repository.\n"
      "  If PATH is a directory, the contents of the directory are added\n"
-     "  directly under URL.\n"),
-    {'q', 'N', svn_cl__depth_opt, svn_cl__autoprops_opt,
+     "  directly under URL.\n"
+     "  Unversionable items such as device files and pipes are ignored\n"
+     "  if --force is specified.\n"),
+    {'q', 'N', svn_cl__depth_opt, svn_cl__autoprops_opt, svn_cl__force_opt,
      svn_cl__no_autoprops_opt, SVN_CL__LOG_MSG_OPTIONS,
      svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
