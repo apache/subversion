@@ -1461,7 +1461,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * If @a no_ignore is @c FALSE, don't add files or directories that match
  * ignore patterns.
  *
- * If @a ignore_unkown_node_kind is @c FALSE, ignore files of which the
+ * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
  * ### kff todo: This import is similar to cvs import, in that it does
@@ -1478,12 +1478,12 @@ svn_error_t *svn_client_import3(svn_commit_info_t **commit_info_p,
                                 const char *url,
                                 svn_boolean_t nonrecursive,
                                 svn_boolean_t no_ignore,
-                                svn_boolean_t ignore_unkonwn_node_kind,
+                                svn_boolean_t ignore_unknown_node_types,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
 /**
- * Similar to svn_client_import3(), but with @a ignore_unknown_node_kind
+ * Similar to svn_client_import3(), but with @a ignore_unknown_node_types
  * always set to @c FALSE.
  *
  * @since New in 1.3.
