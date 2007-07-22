@@ -384,6 +384,7 @@ class RevisionLog:
             self.end = int(end)
 
         self._merges = None
+        self._blocks = None
 
     def merge_metadata(self):
         """
@@ -397,6 +398,13 @@ class RevisionLog:
             self._merges.load(self)
 
         return self._merges
+
+    def block_metadata(self):
+        if not self._blocks:
+            self._blocks = VersionedProperty(self.url, opts["block-prop"])
+            self._blocks.load(self)
+
+        return self._blocks
 
 
 class VersionedProperty:
@@ -1013,6 +1021,7 @@ def analyze_revs(target_dir, url, begin=1, end=None,
 
     if find_reflected:
         reflected_revs = logs[url].merge_metadata().changed_revs(target_dir)
+        reflected_revs += logs[url].block_metadata().changed_revs(target_dir)
     else:
         reflected_revs = []
 
