@@ -27,6 +27,21 @@ import stat
 import atexit
 import getopt
 
+####
+# IMPORTANT NOTE TO TEST AUTHORS
+# 
+# Any quoted strings inside the arguments of the parameter "cmd" must
+# be enclosed in double-, not single-quotes, so that the command parser
+# knows to keep them together. For example, do not write this:
+#     launch("svn ci -m 'log comment'") # BAD
+# ...but one of these:
+#     launch('svn ci -m "log comment"') # GOOD
+#     launch("svn ci -m \"log comment\"") # GOOD, but why?
+# Otherwise, you get an error saying
+#     '<path>/comment' is not under version control
+# ...when running the tests on Windows.
+####
+
 # True/False constants are Python 2.2+
 try:
     True, False

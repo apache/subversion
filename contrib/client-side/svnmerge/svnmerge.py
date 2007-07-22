@@ -207,18 +207,8 @@ try:
     optionally split by lines (if split_lines is True). Raise a LaunchError
     exception if the exit code of the process is non-zero (failure).
 
-    When called from Windows on python 2.4 or higher, any quoted strings inside
-    the arguments of the parameter "cmd" must be enclosed in double-, not
-    single-quotes, so that the command parser knows to keep them together. For
-    example, not this:
-        launch("svn ci -m 'log comment'")
-    ...but one of these:
-        launch('svn ci -m "log comment"')
-        launch("svn ci -m \"log comment\"")
-    Otherwise, you get an error saying
-        '<path>/comment' is not under version control
-    ...because it doesn't realize "log comment" goes together.
-    Maybe there's a better way to do it, to remove that requirement.
+    This function has two implementations, one based on subprocess (preferred),
+    and one based on popen (for compatibility).
     """
     import subprocess
     def launch(cmd, split_lines=True):
@@ -233,11 +223,7 @@ try:
                                      close_fds=False, stderr=subprocess.PIPE)
             else:
                 # Use shlex to break up the parameters intelligently,
-                # respecting quotes, or you get errors like those described
-                # in the above comment under "try:". Apparently this is
-                # handled on Windows by the logic in the list2cmdline
-                # function called by Popen, but the logic sounds different on
-                # linux, in the subprocess module documentation.
+                # respecting quotes
                 import shlex
                 args = shlex.split(cmd)
                 p = subprocess.Popen(args, stdout=subprocess.PIPE, \
