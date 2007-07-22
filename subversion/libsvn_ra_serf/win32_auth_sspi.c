@@ -21,6 +21,39 @@
 /* TODO: 
    - remove NTLM dependency so we can reuse SSPI for Kerberos later. */
 
+/*
+ * NTLM authentication for HTTP
+ *
+ * 1. C  --> S:    GET
+ *
+ *    C <--  S:    401 Authentication Required
+ *                 WWW-Authenticate: NTLM
+ *
+ * -> Initialize the NTLM authentication handler.
+ *
+ * 2. C  --> S:    GET
+ *                 Authorization: NTLM <Base64 encoded Type 1 message>
+ *                 sspi_ctx->state = sspi_auth_in_progress;
+ *
+ *    C <--  S:    401 Authentication Required
+ *                 WWW-Authenticate: NTLM <Base64 encoded Type 2 message>
+ *
+ * 3. C  --> S:    GET
+ *                 Authorization: NTLM <Base64 encoded Type 3 message>
+ *                 sspi_ctx->state = sspi_auth_completed;
+ *
+ *    C <--  S:    200 Ok
+ *
+ * This handshake is required for every new connection. If the handshake is
+ * completed successfully, all other requested on the same connection will
+ * be authenticated without needing to pass the WWW-Authenticate header.
+ *
+ * Note: Step 1 of the handshake will only happen on the first connection, once
+ * we know the server requires NTLM authentication, the initial requests on the
+ * other connections will include the NTLM Type 1 message, so we start at 
+ * step 2 in the handshake.
+ */
+
 /*** Includes ***/
 #include <windows.h>
 #include <string.h>
