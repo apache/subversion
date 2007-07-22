@@ -639,7 +639,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir("trunk")
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 13")
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch", "-r1-13"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 14")
 
@@ -775,7 +775,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 14")
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch", "-r1-14"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 15")
         os.remove("svnmerge-commit-message.txt")
@@ -793,8 +793,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 16")
 
-        self.svnmerge("avail -vv --bidirectional", match=r"16$")
-        self.svnmerge("merge -vv --bidirectional", match=r"merge -r 15:16")
+        self.svnmerge("avail -vv --bidirectional", match=r"\n16$")
+        self.svnmerge("merge -vv --bidirectional", match=r"svn merge --force -r 15:16")
         p = self.getproperty()
         self.assertEqual("/trunk:1-16", p)
         self.svnmerge("integrated", match=r"^3-16$")
@@ -815,12 +815,12 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 18")
 
         # Ensure default is not to check for reflected revisions.
-        self.svnmerge("avail -vv", match=r"17-18$")
+        self.svnmerge("avail -vv", match=r"\n17-18$")
 
         # Now check reflected revision is excluded with --bidirectional flag.
-        self.svnmerge("avail -vv --bidirectional", match=r"18$")
+        self.svnmerge("avail -vv --bidirectional", match=r"\n18$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"merge -r 17:18")
+        self.svnmerge("merge -vv --bidirectional", match=r"svn merge --force -r 17:18")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-18", p)
 
@@ -838,7 +838,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         os.chdir("test-branch")
 
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.svnmerge2(["init", self.test_repo_url + "/trunk", "-r1-13"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 15")
         os.remove("svnmerge-commit-message.txt")
@@ -846,7 +846,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir("..")
         os.chdir("test-branch2")
 
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.svnmerge2(["init", self.test_repo_url + "/trunk", "-r1-14"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 16")
         os.remove("svnmerge-commit-message.txt")
@@ -857,11 +857,11 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 16")
 
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch", "-r1-16"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 17")
         os.remove("svnmerge-commit-message.txt")
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch2"])
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch2", "-r1-17"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 18")
         os.remove("svnmerge-commit-message.txt")
@@ -882,7 +882,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         # Merge into trunk
         self.svnmerge("merge -vv -S branch2",
-                      match=r"merge -r 18:19")
+                      match=r"merge --force -r 18:19")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-16 /branches/test-branch2:1-19", p)
 
@@ -903,7 +903,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # should be available for test-branch with --bidirectional flag.
         self.svnmerge("avail -vv --bidirectional", match=r"20$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"merge -r 17:20")
+        self.svnmerge("merge -vv --bidirectional", match=r"merge --force -r 17:20")
         p = self.getproperty()
         self.assertEqual("/trunk:1-20", p)
 
