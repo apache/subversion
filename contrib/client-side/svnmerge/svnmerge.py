@@ -59,6 +59,7 @@
 
 import sys, os, getopt, re, types, tempfile, time, popen2
 from bisect import bisect
+from xml.dom import pulldom
 
 NAME = "svnmerge"
 if not hasattr(sys, "version_info") or sys.version_info < (2, 0):
@@ -814,22 +815,53 @@ def target_to_repos_relative_path(target):
     assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
     return url[len(root):]
 
+class SvnLogParser:
+    def __init__(self, xml):
+        self._events = pulldom.parseString(xml)
+    def __getitem__(self, idx):
+        for event, node in self._events:
+            if event == pulldom.START_ELEMENT and node.tagName == "logentry":
+                self._events.expandNode(node)
+                return self.SvnLogRevision(node)
+        raise IndexError
+
+    class SvnLogRevision:
+        def __init__(self, xmlnode):
+            self._node = xmlnode
+        def revision(self):
+            return self._node.getAttribute("revision")
+        def author(self):
+            return self._node.getElementsByTagName("author")[0].firstChild.data
+        def paths(self):
+            paths = []
+            for n in self._node.getElementsByTagName("path"):
+                paths.append(self.SvnLogPath(n))
+            return paths
+
+        class SvnLogPath:
+            def __init__(self, xmlnode):
+                self._node = xmlnode
+            def action(self):
+                return self._node.getAttribute("action")
+            def pathid(self):
+                return self._node.firstChild.data
+            def copyfrom_rev(self):
+                return self._node.getAttribute("copyfrom-rev")
+            def copyfrom_pathid(self):
+                return self._node.getAttribute("copyfrom-path")
+
 def get_copyfrom(dir):
     """Get copyfrom info for a given target (it represents the directory from
     where it was branched). NOTE: repos root has no copyfrom info. In this case
     None is returned."""
     repos_path = target_to_repos_relative_path(dir)
-    out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir,
-                    split_lines=False)
-    out = out.replace("\n", " ")
-    try:
-        m = re.search(r'(<path\s[^>]*action="A"[^>]*>%s</path>)'
-                      % re.escape(repos_path), out)
-        source = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
-        rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
-        return source, rev
-    except AttributeError:
-        return None,None
+    for chg in SvnLogParser(launchsvn('log -v --xml --stop-on-copy "%s"' % dir,
+                                      split_lines=False)):
+        for p in chg.paths():
+            if p.action() == 'A' and p.pathid() == repos_path:
+                return p.copyfrom_pathid(), p.copyfrom_rev()
+
+    return None,None
 
 def get_latest_rev(url):
     """Get the latest revision of the repository of which URL is part."""
