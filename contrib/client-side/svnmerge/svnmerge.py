@@ -57,7 +57,7 @@
 # TODO:
 #  - Add "svnmerge avail -R": show logs in reverse order
 
-import sys, os, getopt, re, types, popen2, tempfile
+import sys, os, getopt, re, types, tempfile, time, popen2
 from bisect import bisect
 
 NAME = "svnmerge"
@@ -201,34 +201,91 @@ class LaunchError(Exception):
     exit code of the process, the original command line, and the output of the
     command."""
 
-def launch(cmd, split_lines=True):
+try:
     """Launch a sub-process. Return its output (both stdout and stderr),
     optionally split by lines (if split_lines is True). Raise a LaunchError
-    exception if the exit code of the process is non-zero (failure)."""
-    if os.name not in ['nt', 'os2']:
-        p = popen2.Popen4(cmd)
-        p.tochild.close()
-        if split_lines:
-            out = p.fromchild.readlines()
-        else:
-            out = p.fromchild.read()
-        ret = p.wait()
-        if ret == 0:
-            ret = None
-        else:
-            ret >>= 8
-    else:
-        i,k = os.popen4(cmd)
-        i.close()
-        if split_lines:
-            out = k.readlines()
-        else:
-            out = k.read()
-        ret = k.close()
+    exception if the exit code of the process is non-zero (failure).
 
-    if ret is None:
-        return out
-    raise LaunchError(ret, cmd, out)
+    When called from Windows on python 2.4 or higher, any quoted strings inside
+    the arguments of the parameter "cmd" must be enclosed in double-, not
+    single-quotes, so that the command parser knows to keep them together. For
+    example, not this:
+        launch("svn ci -m 'log comment'")
+    ...but one of these:
+        launch('svn ci -m "log comment"')
+        launch("svn ci -m \"log comment\"")
+    Otherwise, you get an error saying
+        '<path>/comment' is not under version control
+    ...because it doesn't realize "log comment" goes together.
+    Maybe there's a better way to do it, to remove that requirement.
+    """
+    import subprocess
+    def launch(cmd, split_lines=True):
+        # Requiring python 2.4 or higher, on some platforms we get
+        # much faster performance from the subprocess module (where python
+        # doesn't try to close an exhorbitant number of file descriptors)
+        stdout = ""
+        stderr = ""
+        try:
+            if os.name == 'nt':
+                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
+                                     close_fds=False, stderr=subprocess.PIPE)
+            else:
+                # Use shlex to break up the parameters intelligently,
+                # respecting quotes, or you get errors like those described
+                # in the above comment under "try:". Apparently this is
+                # handled on Windows by the logic in the list2cmdline
+                # function called by Popen, but the logic sounds different on
+                # linux, in the subprocess module documentation.
+                import shlex
+                args = shlex.split(cmd)
+                p = subprocess.Popen(args, stdout=subprocess.PIPE, \
+                                     close_fds=False, stderr=subprocess.PIPE)
+            stdoutAndErr = p.communicate()
+            stdout = stdoutAndErr[0]
+            stderr = stdoutAndErr[1]
+        except OSError, inst:
+            # Using 1 as failure code; should get actual number somehow? For
+            # examples see svnmerge_test.py's TestCase_launch.test_failure and
+            # TestCase_launch.test_failurecode.
+            raise LaunchError(1, cmd, stdout + " " + stderr + ": " + str(inst))
+
+        if p.returncode == 0:
+            if split_lines:
+                # Setting keepends=True for compatibility with previous logic
+                # (where file.readlines() preserves newlines)
+                return stdout.splitlines(True)
+            else:
+                return stdout
+        else:
+            raise LaunchError(p.returncode, cmd, stdout + stderr)
+except ImportError:
+    # support versions of python before 2.4 (slower on some systems)
+    def launch(cmd, split_lines=True):
+        if os.name not in ['nt', 'os2']:
+            p = popen2.Popen4(cmd)
+            p.tochild.close()
+            if split_lines:
+                out = p.fromchild.readlines()
+            else:
+                out = p.fromchild.read()
+            ret = p.wait()
+            if ret == 0:
+                ret = None
+            else:
+                ret >>= 8
+        else:
+            i,k = os.popen4(cmd)
+            i.close()
+            if split_lines:
+                out = k.readlines()
+            else:
+                out = k.read()
+            ret = k.close()
+
+        if ret is None:
+            return out
+        raise LaunchError(ret, cmd, out)
 
 def launchsvn(s, show=False, pretend=False, **kwargs):
     """Launch SVN and grab its output."""

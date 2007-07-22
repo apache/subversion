@@ -456,7 +456,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
     def multilaunch(self, cmds):
         for cmd in cmds.split("\n"):
             cmd = cmd.strip()
-            svnmerge.launch(cmd % self.command_dict())
+            if len(cmd) > 0:
+                svnmerge.launch(cmd % self.command_dict())
 
     def revert(self):
         self.multilaunch("svn revert -R .")
@@ -992,10 +993,10 @@ D    test3"""
         os.chdir("../trunk")
         open("newfile", "w").close()
         self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
+        self.launch('svn commit -m "Adding newfile"', match=r"Committed revision 15")
         open("anothernewfile", "w").close()
         self.launch("svn add anothernewfile")
-        self.launch("svn commit -m 'Adding anothernewfile'", match=r"Committed revision 16")
+        self.launch('svn commit -m "Adding anothernewfile"', match=r"Committed revision 16")
 
         # Svnmerge block r15,16
         os.chdir("../test-branch")
@@ -1025,7 +1026,7 @@ D    test3"""
         os.chdir("../trunk")
         open("newfile", "w").close()
         self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
+        self.launch('svn commit -m "Adding newfile"', match=r"Committed revision 15")
 
         # Svnmerge merge r15
         os.chdir("../test-branch")
@@ -1050,10 +1051,10 @@ D    test3"""
         os.chdir("../trunk")
         open("newfile", "w").close()
         self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
+        self.launch('svn commit -m "Adding newfile"', match=r"Committed revision 15")
         open("anothernewfile", "w").close()
         self.launch("svn add anothernewfile")
-        self.launch("svn commit -m 'Adding anothernewfile'", match=r"Committed revision 16")
+        self.launch('svn commit -m "Adding anothernewfile"', match=r"Committed revision 16")
 
         # Svnmerge block r16, merge r15
         os.chdir("../test-branch")
@@ -1087,7 +1088,7 @@ D    test3"""
         os.chdir("../trunk")
         open("newfile", "w").close()
         self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'",
+        self.launch('svn commit -m "Adding newfile"',
                     match=r"Committed revision 15")
 
         # Merge a change from trunk to test-branch.
