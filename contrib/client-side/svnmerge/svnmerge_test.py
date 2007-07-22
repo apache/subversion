@@ -930,7 +930,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         self.svnmerge("rollback -vv -S ../trunk",
                       error = True,
-                      match = r"no integration info available for repository path")
+                      match = r"no integration info available for path")
 
     def testRollbackOutsidePossibleRange(self):
         """`svnmerge rollback' should error out if range contains revisions prior to
