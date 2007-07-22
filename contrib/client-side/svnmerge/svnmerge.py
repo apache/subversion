@@ -56,6 +56,17 @@
 #
 # TODO:
 #  - Add "svnmerge avail -R": show logs in reverse order
+#
+# Information for Hackers:
+#
+# Identifiers for branches:
+#  A branch is identified in three ways within this source:
+#  - as a working copy (variable name usually includes 'dir')
+#  - as a fully qualified URL
+#  - as a path identifier (an opaque string indicating a particular path
+#    in a particular repository; variable name includes 'pathid')
+#  A "target" is generally user-specified, and may be a working copy or
+#  a URL.
 
 import sys, os, getopt, re, types, tempfile, time, popen2
 from bisect import bisect
@@ -339,8 +350,8 @@ class RevisionLog:
         revision_re = re.compile(r"^r(\d+)")
 
         # Look for changes which contain merge tracking information
-        repos_path = target_to_repos_relative_path(url)
-        srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(repos_path))
+        repos_pathid = target_to_pathid(url)
+        srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(repos_pathid))
 
         # Setup the log options (--quiet, so we don't show log messages)
         log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
@@ -627,25 +638,24 @@ class RevisionSet:
         revs.update(rs._revs)
         return RevisionSet(revs)
 
-def merge_props_to_revision_set(merge_props, path):
+def merge_props_to_revision_set(merge_props, pathid):
     """A converter which returns a RevisionSet instance containing the
     revisions from PATH as known to BRANCH_PROPS.  BRANCH_PROPS is a
-    dictionary of path -> revision set branch integration information
+    dictionary of pathid -> revision set branch integration information
     (as returned by get_merge_props())."""
-    if not merge_props.has_key(path):
-        error('no integration info available for repository path "%s"' % path)
-    return RevisionSet(merge_props[path])
+    if not merge_props.has_key(pathid):
+        error('no integration info available for path "%s"' % pathid)
+    return RevisionSet(merge_props[pathid])
 
 def dict_from_revlist_prop(propvalue):
     """Given a property value as a string containing per-source revision
-    lists, return a dictionary whose key is a relative path to a source
-    (in the repository), and whose value is the revisions for that
-    source."""
+    lists, return a dictionary whose key is a source path identifier
+    and whose value is the revisions for that source."""
     prop = {}
 
     # Multiple sources are separated by any whitespace.
     for L in propvalue.split():
-        # We use rsplit to play safe and allow colons in paths.
+        # We use rsplit to play safe and allow colons in pathids.
         source, revs = rsplit(L.strip(), ":", 1)
         prop[source] = revs
     return prop
@@ -653,9 +663,8 @@ def dict_from_revlist_prop(propvalue):
 def get_revlist_prop(url_or_dir, propname, rev=None):
     """Given a repository URL or working copy path and a property
     name, extract the values of the property which store per-source
-    revision lists and return a dictionary whose key is a relative
-    path to a source (in the repository), and whose value is the
-    revisions for that source."""
+    revision lists and return a dictionary whose key is a source path
+    identifier, and whose value is the revisions for that source."""
 
     # Note that propget does not return an error if the property does
     # not exist, it simply does not output anything. So we do not need
@@ -675,10 +684,10 @@ def get_block_props(dir):
     """Extract the blocked revisions."""
     return get_revlist_prop(dir, opts["block-prop"])
 
-def get_blocked_revs(dir, source_path):
+def get_blocked_revs(dir, source_pathid):
     p = get_block_props(dir)
-    if p.has_key(source_path):
-        return RevisionSet(p[source_path])
+    if p.has_key(source_pathid):
+        return RevisionSet(p[source_pathid])
     return RevisionSet("")
 
 def format_merge_props(props, sep=" "):
@@ -725,12 +734,12 @@ def set_merge_props(dir, props):
 def set_block_props(dir, props):
     set_props(dir, opts["block-prop"], props)
 
-def set_blocked_revs(dir, source_path, revs):
+def set_blocked_revs(dir, source_pathid, revs):
     props = get_block_props(dir)
     if revs:
-        props[source_path] = str(revs)
-    elif props.has_key(source_path):
-        del props[source_path]
+        props[source_pathid] = str(revs)
+    elif props.has_key(source_pathid):
+        del props[source_pathid]
     set_block_props(dir, props)
 
 def is_url(url):
@@ -743,43 +752,43 @@ def is_wc(dir):
            os.path.isdir(os.path.join(dir, "_svn"))
 
 _cache_svninfo = {}
-def get_svninfo(path):
-    """Extract the subversion information for a path (through 'svn info').
+def get_svninfo(target):
+    """Extract the subversion information for a target (through 'svn info').
     This function uses an internal cache to let clients query information
     many times."""
     global _cache_svninfo
-    if _cache_svninfo.has_key(path):
-        return _cache_svninfo[path]
+    if _cache_svninfo.has_key(target):
+        return _cache_svninfo[target]
     info = {}
-    for L in launchsvn('info "%s"' % path):
+    for L in launchsvn('info "%s"' % target):
         L = L.strip()
         if not L:
             continue
         key, value = L.split(": ", 1)
         info[key] = value.strip()
-    _cache_svninfo[path] = info
+    _cache_svninfo[target] = info
     return info
 
-def target_to_url(dir):
+def target_to_url(target):
     """Convert working copy path or repos URL to a repos URL."""
-    if is_wc(dir):
-        info = get_svninfo(dir)
+    if is_wc(target):
+        info = get_svninfo(target)
         return info["URL"]
-    return dir
+    return target
 
-def get_repo_root(dir):
+def get_repo_root(target):
     """Compute the root repos URL given a working-copy path, or a URL."""
     # Try using "svn info WCDIR". This works only on SVN clients >= 1.3
-    if not is_url(dir):
+    if not is_url(target):
         try:
-            info = get_svninfo(dir)
+            info = get_svninfo(target)
             return info["Repository Root"]
         except KeyError:
             pass
-        url = target_to_url(dir)
+        url = target_to_url(target)
         assert url[-1] != '/'
     else:
-        url = dir
+        url = target
 
     # Try using "svn info URL". This works only on SVN clients >= 1.2
     try:
@@ -801,9 +810,9 @@ def get_repo_root(dir):
 
     assert False, "svn repos root not found"
 
-def target_to_repos_relative_path(target):
+def target_to_pathid(target):
     """Convert a target (either a working copy path or an URL) into a
-    repository-relative path."""
+    path identifier."""
     root = get_repo_root(target)
     url = target_to_url(target)
     assert root[-1] != "/"
@@ -845,12 +854,12 @@ class SvnLogParser:
             def copyfrom_pathid(self):
                 return self._node.getAttribute("copyfrom-path")
 
-def get_copyfrom(dir):
+def get_copyfrom(target):
     """Get copyfrom info for a given target (it represents the directory from
     where it was branched). NOTE: repos root has no copyfrom info. In this case
     None is returned."""
-    repos_path = target_to_repos_relative_path(dir)
-    for chg in SvnLogParser(launchsvn('log -v --xml --stop-on-copy "%s"' % dir,
+    repos_path = target_to_pathid(target)
+    for chg in SvnLogParser(launchsvn('log -v --xml --stop-on-copy "%s"' % target,
                                       split_lines=False)):
         for p in chg.paths():
             if p.action() == 'A' and p.pathid() == repos_path:
@@ -922,20 +931,20 @@ def construct_merged_log_message(url, revnums):
     messages.append('')
     return longest_sep.join(messages)
 
-def get_default_source(branch_dir, branch_props):
-    """Return the default source for branch_dir (given its branch_props).
+def get_default_source(branch_target, branch_props):
+    """Return the default source for branch_target (given its branch_props).
     Error out if there is ambiguity."""
     if not branch_props:
         error("no integration info available")
 
     props = branch_props.copy()
-    directory = target_to_repos_relative_path(branch_dir)
+    pathid = target_to_pathid(branch_target)
 
     # To make bidirectional merges easier, find the target's
     # repository local path so it can be removed from the list of
     # possible integration sources.
-    if props.has_key(directory):
-        del props[directory]
+    if props.has_key(pathid):
+        del props[pathid]
 
     if len(props) > 1:
         err_msg = "multiple sources found. "
@@ -947,9 +956,9 @@ def get_default_source(branch_dir, branch_props):
 
     return props.keys()[0]
 
-def check_old_prop_version(branch_dir, props):
-    """Check if props (of branch_dir) are svnmerge properties in old format,
-    and emit an error if so."""
+def check_old_prop_version(branch_target, branch_props):
+    """Check if branch_props (of branch_target) are svnmerge properties in
+    old format, and emit an error if so."""
 
     # Previous svnmerge versions allowed trailing /'s in the repository
     # local path.  Newer versions of svnmerge will trim trailing /'s
@@ -958,7 +967,7 @@ def check_old_prop_version(branch_dir, props):
     # the user to change them now.
     fixed = {}
     changed = False
-    for source, revs in props.items():
+    for source, revs in branch_props.items():
         src = rstrip(source, "/")
         fixed[src] = revs
         if src != source:
@@ -968,13 +977,13 @@ def check_old_prop_version(branch_dir, props):
         err_msg = "old property values detected; an upgrade is required.\n\n"
         err_msg += "Please execute and commit these changes to upgrade:\n\n"
         err_msg += 'svn propset "%s" "%s" "%s"' % \
-                   (opts["prop"], format_merge_props(fixed), branch_dir)
+                   (opts["prop"], format_merge_props(fixed), branch_target)
         error(err_msg)
 
-def analyze_revs(target_dir, url, begin=1, end=None,
+def analyze_revs(target_pathid, url, begin=1, end=None,
                  find_reflected=False):
     """For the source of the merges in the source URL being merged into
-    target_dir, analyze the revisions in the interval begin-end (which
+    target_pathid, analyze the revisions in the interval begin-end (which
     defaults to 1-HEAD), to find out which revisions are changes in
     the url, which are changes elsewhere (so-called 'phantom'
     revisions), and optionally which are reflected changes (to avoid
@@ -1007,8 +1016,8 @@ def analyze_revs(target_dir, url, begin=1, end=None,
     phantom_revs = RevisionSet("%s-%s" % (begin, end)) - revs
 
     if find_reflected:
-        reflected_revs = logs[url].merge_metadata().changed_revs(target_dir)
-        reflected_revs += logs[url].block_metadata().changed_revs(target_dir)
+        reflected_revs = logs[url].merge_metadata().changed_revs(target_pathid)
+        reflected_revs += logs[url].block_metadata().changed_revs(target_pathid)
     else:
         reflected_revs = []
 
@@ -1016,11 +1025,11 @@ def analyze_revs(target_dir, url, begin=1, end=None,
 
     return revs, phantom_revs, reflected_revs
 
-def analyze_source_revs(branch_dir, source_url, **kwargs):
+def analyze_source_revs(branch_target, source_url, **kwargs):
     """For the given branch and source, extract the real and phantom
     source revisions."""
-    branch_url = target_to_url(branch_dir)
-    target_dir = target_to_repos_relative_path(branch_dir)
+    branch_url = target_to_url(branch_target)
+    branch_pathid = target_to_pathid(branch_target)
 
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
@@ -1042,7 +1051,7 @@ def analyze_source_revs(branch_dir, source_url, **kwargs):
         if end_rev > revs[-1]:
             end_rev = revs[-1]
 
-    return analyze_revs(target_dir, source_url, base, end_rev, **kwargs)
+    return analyze_revs(branch_pathid, source_url, base, end_rev, **kwargs)
 
 def minimal_merge_intervals(revs, phantom_revs):
     """Produce the smallest number of intervals suitable for merging. revs
@@ -1108,12 +1117,13 @@ def action_init(branch_dir, branch_props):
     # the version data obtained from it.
     if not opts["revision"]:
         cf_source, cf_rev = get_copyfrom(opts["source-url"])
-        branch_path = target_to_repos_relative_path(branch_dir)
+        branch_pathid = target_to_pathid(branch_dir)
 
-        # If the branch_path is the source path of "source",
+        # If the branch_pathid is the source path of "source",
         # then "source" was branched from the current working tree
         # and we can use the revisions determined by get_copyfrom
-        if branch_path == cf_source:
+        # (assumes pathid is a repository-relative-path)
+        if branch_pathid == cf_source:
             report('the source "%s" is a branch of "%s"' %
                    (opts["source-url"], branch_dir))
             opts["revision"] = "1-" + cf_rev
@@ -1126,12 +1136,12 @@ def action_init(branch_dir, branch_props):
            (branch_dir, revs, opts["source-url"]))
 
     revs = str(revs)
-    # If the source-path already has an entry in the svnmerge-integrated
+    # If the source-pathid already has an entry in the svnmerge-integrated
     # property, simply error out.
-    if not opts["force"] and branch_props.has_key(opts["source-path"]):
-        error('%s has already been initialized at %s\n'
-              'Use --force to re-initialize' % (opts["source-path"], branch_dir))
-    branch_props[opts["source-path"]] = revs
+    if not opts["force"] and branch_props.has_key(opts["source-pathid"]):
+        error('Repository-relative path %s has already been initialized at %s\n'
+              'Use --force to re-initialize' % (opts["source-pathid"], branch_dir))
+    branch_props[opts["source-pathid"]] = revs
 
     # Set property
     set_merge_props(branch_dir, branch_props)
@@ -1154,7 +1164,7 @@ def action_avail(branch_dir, branch_props):
     if reflected_revs:
         report('skipping reflected revisions: %s' % reflected_revs)
 
-    blocked_revs = get_blocked_revs(branch_dir, opts["source-path"])
+    blocked_revs = get_blocked_revs(branch_dir, opts["source-pathid"])
     avail_revs = source_revs - opts["merged-revs"] - blocked_revs - reflected_revs
 
     # Compose the set of revisions to show
@@ -1182,7 +1192,7 @@ def action_integrated(branch_dir, branch_props):
     # Extract the integration info for the branch_dir
     branch_props = get_merge_props(branch_dir)
     check_old_prop_version(branch_dir, branch_props)
-    revs = merge_props_to_revision_set(branch_props, opts["source-path"])
+    revs = merge_props_to_revision_set(branch_props, opts["source-pathid"])
 
     # Lookup the oldest revision on the branch path.
     oldest_src_rev = get_created_rev(opts["source-url"])
@@ -1214,7 +1224,7 @@ def action_merge(branch_dir, branch_props):
     else:
         revs = source_revs
 
-    blocked_revs = get_blocked_revs(branch_dir, opts["source-path"])
+    blocked_revs = get_blocked_revs(branch_dir, opts["source-pathid"])
     merged_revs = opts["merged-revs"]
 
     # Show what we're doing
@@ -1265,7 +1275,7 @@ def action_merge(branch_dir, branch_props):
 
     # Update the set of merged revisions.
     merged_revs = merged_revs | revs | reflected_revs | phantom_revs
-    branch_props[opts["source-path"]] = str(merged_revs)
+    branch_props[opts["source-pathid"]] = str(merged_revs)
     set_merge_props(branch_dir, branch_props)
     # Reset the blocked revs
     set_block_props(branch_dir, old_block_props)
@@ -1304,9 +1314,9 @@ def action_block(branch_dir, branch_props):
         error('no available revisions to block')
 
     # Change blocked information
-    blocked_revs = get_blocked_revs(branch_dir, opts["source-path"])
+    blocked_revs = get_blocked_revs(branch_dir, opts["source-pathid"])
     blocked_revs = blocked_revs | revs_to_block
-    set_blocked_revs(branch_dir, opts["source-path"], blocked_revs)
+    set_blocked_revs(branch_dir, opts["source-pathid"], blocked_revs)
 
     # Write out commit message if desired
     if opts["commit-file"]:
@@ -1325,7 +1335,7 @@ def action_unblock(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    blocked_revs = get_blocked_revs(branch_dir, opts["source-path"])
+    blocked_revs = get_blocked_revs(branch_dir, opts["source-pathid"])
     revs_to_unblock = blocked_revs
 
     # Limit to revisions specified by -r (if any)
@@ -1337,7 +1347,7 @@ def action_unblock(branch_dir, branch_props):
 
     # Change blocked information
     blocked_revs = blocked_revs - revs_to_unblock
-    set_blocked_revs(branch_dir, opts["source-path"], blocked_revs)
+    set_blocked_revs(branch_dir, opts["source-pathid"], blocked_revs)
 
     # Write out commit message if desired
     if opts["commit-file"]:
@@ -1363,9 +1373,9 @@ def action_rollback(branch_dir, branch_props):
     # Extract the integration info for the branch_dir
     branch_props = get_merge_props(branch_dir)
     check_old_prop_version(branch_dir, branch_props)
-    # Get the list of all revisions already merged into this source-path.
+    # Get the list of all revisions already merged into this source-pathid.
     merged_revs = merge_props_to_revision_set(branch_props,
-                                              opts["source-path"])
+                                              opts["source-pathid"])
 
     # At which revision was the src created?
     oldest_src_rev = get_created_rev(opts["source-url"])
@@ -1383,7 +1393,7 @@ def action_rollback(branch_dir, branch_props):
     # merge source, error out.
     if revs & src_pre_exist_range:
         err_str  = "Specified revision range falls out of the rollback range.\n"
-        err_str += "%s was created at r%d" % (opts["source-path"],
+        err_str += "%s was created at r%d" % (opts["source-pathid"],
                                               oldest_src_rev)
         error(err_str)
 
@@ -1426,7 +1436,7 @@ def action_rollback(branch_dir, branch_props):
 
     # Update the set of merged revisions.
     merged_revs = merged_revs - revs 
-    branch_props[opts["source-path"]] = str(merged_revs)
+    branch_props[opts["source-pathid"]] = str(merged_revs)
     set_merge_props(branch_dir, branch_props)
 
 def action_uninit(branch_dir, branch_props):
@@ -1434,19 +1444,19 @@ def action_uninit(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    # If the source-path does not have an entry in the svnmerge-integrated
+    # If the source-pathid does not have an entry in the svnmerge-integrated
     # property, simply error out.
-    if not branch_props.has_key(opts["source-path"]):
-        error('"%s" does not contain merge tracking information for "%s"' \
-                % (opts["source-path"], branch_dir))
+    if not branch_props.has_key(opts["source-pathid"]):
+        error('Repository-relative path "%s" does not contain merge tracking information for "%s"' \
+                % (opts["source-pathid"], branch_dir))
 
-    del branch_props[opts["source-path"]]
+    del branch_props[opts["source-pathid"]]
 
     # Set merge property with the selected source deleted
     set_merge_props(branch_dir, branch_props)
 
     # Set blocked revisions for the selected source to None
-    set_blocked_revs(branch_dir, opts["source-path"], None)
+    set_blocked_revs(branch_dir, opts["source-pathid"], None)
 
     # Write out commit message if desired
     if opts["commit-file"]:
@@ -1987,14 +1997,15 @@ def main(args):
             if not cf_source:
                 error('no copyfrom info available. '
                       'Explicit source argument (-S/--source) required.')
-            opts["source-path"] = cf_source
+            opts["source-pathid"] = cf_source
             if not opts["revision"]:
                 opts["revision"] = "1-" + cf_rev
         else:
-            opts["source-path"] = get_default_source(branch_dir, branch_props)
+            opts["source-pathid"] = get_default_source(branch_dir, branch_props)
 
-        assert opts["source-path"][0] == '/'
-        opts["source-url"] = get_repo_root(branch_dir) + opts["source-path"]
+        # (assumes pathid is a repository-relative-path)
+        assert opts["source-pathid"][0] == '/'
+        opts["source-url"] = get_repo_root(branch_dir) + opts["source-pathid"]
     else:
         # The source was given as a command line argument and is stored in
         # SOURCE.  Ensure that the specified source does not end in a /,
@@ -2003,25 +2014,25 @@ def main(args):
         # trailing /'s.
         source = rstrip(source, "/")
         if not is_wc(source) and not is_url(source):
-            # Check if it is a substring of a repo-relative URL recorded
+            # Check if it is a substring of a pathid recorded
             # within the branch properties.
             found = []
-            for repos_path in branch_props.keys():
-                if repos_path.find(source) > 0:
-                    found.append(repos_path)
+            for pathid in branch_props.keys():
+                if pathid.find(source) > 0:
+                    found.append(pathid)
             if len(found) == 1:
+                # (assumes pathid is a repository-relative-path)
                 source = get_repo_root(branch_dir) + found[0]
             else:
-                error('"%s" is neither a valid URL (or an unambiguous '
-                      'substring), nor a working directory' % source)
+                error('"%s" is neither a valid URL, nor an unambiguous '
+                      'substring of a repository path, nor a working directory' % source)
 
-        source_path = target_to_repos_relative_path(source)
+        source_pathid = target_to_pathid(source)
         if str(cmd) == "init" and \
-               source_path == target_to_repos_relative_path("."):
-            error("cannot init integration source '%s'\nIt must "
-                  "differ from the repository-relative path of the current "
-                  "directory." % source_path)
-        opts["source-path"] = source_path
+               source_pathid == target_to_pathid("."):
+            error("cannot init integration source path '%s'\nIts repository-relative path must "
+                  "differ from the repository-relative path of the current directory." % source_pathid)
+        opts["source-pathid"] = source_pathid
         opts["source-url"] = target_to_url(source)
 
     # Sanity check source_url
@@ -2035,7 +2046,7 @@ def main(args):
     # Get previously merged revisions (except when command is init)
     if str(cmd) != "init":
         opts["merged-revs"] = merge_props_to_revision_set(branch_props,
-                                                          opts["source-path"])
+                                                          opts["source-pathid"])
 
     # Perform the action
     cmd(branch_dir, branch_props)
