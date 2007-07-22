@@ -211,6 +211,8 @@ try:
     and one based on popen (for compatibility).
     """
     import subprocess
+    import shlex
+
     def launch(cmd, split_lines=True):
         # Requiring python 2.4 or higher, on some platforms we get
         # much faster performance from the subprocess module (where python
@@ -224,8 +226,7 @@ try:
             else:
                 # Use shlex to break up the parameters intelligently,
                 # respecting quotes
-                import shlex
-                args = shlex.split(cmd)
+                args = shlex.split(cmd.encode('ascii')) # shlex can't handle unicode
                 p = subprocess.Popen(args, stdout=subprocess.PIPE, \
                                      close_fds=False, stderr=subprocess.PIPE)
             stdoutAndErr = p.communicate()
