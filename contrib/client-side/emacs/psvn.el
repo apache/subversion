@@ -1349,13 +1349,28 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
            (while (accept-process-output process 0 100))
            ;; find last error message and show it.
            (goto-char (point-max))
-           (message "svn failed: %s"
-                    (if (re-search-backward "^svn: \\(.*\\)" nil t)
-                        (match-string 1)
-                      event)))
+           (if (re-search-backward "^svn: \\(.*\\)" nil t)
+               (svn-process-handle-error (match-string 1))
+             (message "svn failed: %s" event)))
           (t
            (message "svn process had unknown event: %s" event))
           (svn-status-show-process-output nil t))))
+
+(defun svn-process-handle-error (error-msg)
+  (let ((svn-process-handle-error-msg error-msg))
+    (electric-helpify 'svn-process-help-with-error-msg)))
+
+(defun svn-process-help-with-error-msg ()
+  (interactive)
+  (let ((help-msg (cadr (assoc svn-process-handle-error-msg
+                               '(("Cannot non-recursively commit a directory deletion"
+                                  "Please unmark all files and position point at the directory you would like to remove.\nThen run commit again."))))))
+    (if help-msg
+        (save-excursion
+          (with-output-to-temp-buffer (help-buffer)
+            (princ (format "svn failed: %s\n\n%s" svn-process-handle-error-msg help-msg))))
+      (message "svn failed: %s" svn-process-handle-error-msg))))
+
 
 (defun svn-process-filter (process str)
   "Track the svn process output and ask user questions in the minibuffer when appropriate."
