@@ -3264,8 +3264,8 @@ svn_wc_add_repos_file2(const char *dst_path,
           apr_hash_t *empty_hash = apr_hash_make(pool);
           const char *propfile_path;
 
-          SVN_ERR(svn_wc__prop_path(&propfile_path, base_name,
-                                           svn_node_file, TRUE, pool));
+          SVN_ERR(svn_wc__prop_base_path(&propfile_path, base_name,
+		                                 svn_node_file, TRUE, pool));
 
           SVN_ERR(svn_wc__save_prop_file(svn_path_join(full_path,
                                                        propfile_path,
