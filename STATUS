@@ -101,8 +101,11 @@ Candidate changes:
       +1: glasser, dlr
 
   * r25822
-    Fix administrative property file handling for operations like
-    'svn mv a b; svn ps name val b; svn mv b a'.
+    Fix administrative property file handling for prop changes to a
+    file which is subsequently copied/moved over another
+    schedule-delete file, where the original doesn't have any props
+    (e.g. 'svn mv a b; svn ps name val b; svn mv b a' is a
+    1.5-specific way to trigger this problem).
     Justification:
       WC library bug fix.
     Votes:
