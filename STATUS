@@ -100,6 +100,14 @@ Candidate changes:
     Votes:
       +1: glasser, dlr
 
+  * r25822
+    Fix administrative property file handling for operations like
+    'svn mv a b; svn ps name val b; svn mv b a'.
+    Justification:
+      WC library bug fix.
+    Votes:
+      +1: dionisos, dlr
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
