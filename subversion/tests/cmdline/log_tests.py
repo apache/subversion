@@ -772,8 +772,9 @@ def log_limit(sbox):
   log_chain = parse_log_output(out)
   check_log_chain(log_chain, [3, 6])
 
+  # Use -l instead of --limit to test both option forms.
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'log', '--limit', '2',
+                                                'log', '-l', '2',
                                                 '--revision', '1',
                                                 sbox.repo_url,
                                                 'A/B')
