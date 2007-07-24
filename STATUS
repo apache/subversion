@@ -100,7 +100,7 @@ Candidate changes:
     Votes:
       +1: glasser, dlr
 
-  * r25822
+  * r25833
     Fix administrative property file handling for prop changes to a
     file which is subsequently copied/moved over another
     schedule-delete file, where the original doesn't have any props
@@ -108,10 +108,8 @@ Candidate changes:
     1.5-specific way to trigger this problem).
     Justification:
       WC library bug fix.
-    Note:
-      Reverted in r25826.  Need a fix which doesn't break 'special_tests.py 7'.
     Votes:
-      +0: dionisos, dlr
+      +1: dionisos, dlr
 
 Veto-blocked changes:
 
