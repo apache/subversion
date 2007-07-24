@@ -3363,8 +3363,16 @@ Unlike `svn-status-marked-files', this does not select the file under point
 if no files have been marked."
   ;; `some' would be shorter but requires cl-seq at runtime.
   ;; (Because it accepts both lists and vectors, it is difficult to inline.)
-  (loop for file in svn-status-info
-        thereis (svn-status-line-info->has-usermark file)))
+  (loop for line-info in svn-status-info
+        thereis (svn-status-line-info->has-usermark line-info)))
+
+(defun svn-status-only-dirs-or-nothing-marked-p ()
+  "Return non-nil iff only dirs has been marked by `svn-status-set-user-mark'."
+  ;; `some' would be shorter but requires cl-seq at runtime.
+  ;; (Because it accepts both lists and vectors, it is difficult to inline.)
+  (loop for line-info in svn-status-info
+        thereis (and (not (svn-status-line-info->directory-p line-info))
+                     (svn-status-line-info->has-usermark line-info))))
 
 (defun svn-status-ui-information-hash-table ()
   (let ((st-info svn-status-info)
@@ -3923,10 +3931,9 @@ normally marks all of its files as well.
 If no files have been marked, commit recursively the file at point."
   (interactive)
   (svn-status-save-some-buffers)
-  (let* ((selected-files (svn-status-marked-files))
-         (marked-files-p (svn-status-some-files-marked-p)))
+  (let* ((selected-files (svn-status-marked-files)))
     (setq svn-status-files-to-commit selected-files
-          svn-status-recursive-commit (not marked-files-p))
+          svn-status-recursive-commit (not (svn-status-only-dirs-or-nothing-marked-p)))
     (svn-log-edit-show-files-to-commit)
     (svn-status-pop-to-commit-buffer)
     (when svn-log-edit-insert-files-to-commit
