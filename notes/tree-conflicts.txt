@@ -9,28 +9,9 @@ please try to express move-ish use-cases in terms of deletes and
 adds-with-history (copies).
 
 
-=========
-SCENARIOS
-=========
-
-Update:
-
-  * update pulls file deletion atop file with local text mods
-  * update pulls file deletion atop file with local prop mods
-  * update pulls dir deletion atop dir with local prop mods
-  * update pulls text mods onto schedule-delete file
-  * update pulls dir deletion atop dir containing deep prop mods
-  * update pulls dir deletion atop dir containing deep text mods
-
-Merge:
-
-  * merge pulls file deletion
-
-
-
-========================
-CMPILATO'S BRAINSTORMING
-========================
+===================
+BACKGROUND THOUGHTS
+===================
 
 This whole thing is, I think, basically about ensuring that the
 history of a file isn't allowed to fork and then suffer the
@@ -71,16 +52,24 @@ Anyway, there appear to me to be some pretty clear goals:
 
         - determine what local mods they've made
         - apply those mods elsewhere if necessary
+        - determine what mods conflict with the ones with they
         - overrule the conflict and make their changes anyway
 
    * Tree conflicts appear to be something special, and should be 
      annotated as such.
 
-With those things in mind, here are some not-fully-baked ideas:
+So a tree conflict is really just a conflict on the content of a
+directory, much like a regular conflict is on the content of a file,
+and a prop conflict is on the properties of a file or directory.  To
+annotate a tree conflict, we recycle the 'conflict-new' conflict file
+slot pointing to a dropped file named dir_contents.trej.  It's
+contents can note the details of the tree conflict.  [### TODO: Do we
+need to be able to mark files as tree-conflicted, too?]
 
-To annotate a tree conflict, we recycle the 'conflict-new' conflict
-file slot pointing to a dropped file named <versionedfile>.trej.  It's
-contents can note the details of the tree conflict.
+
+===================
+SCENARIO PLAYGROUND
+===================
 
 'svn update' pulls file deletion atop file with local text mods
 
