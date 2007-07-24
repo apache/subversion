@@ -289,6 +289,13 @@
 }
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in) apr_hash_t *path_revs
+{
+  $1 = svn_swig_py_path_revs_hash_from_dict($input, _global_pool);
+}
+#endif
+
 /* =======================================================================
    %typemap(argout) apr_array_header_t **
 */
