@@ -1914,17 +1914,13 @@ grok_range_info_from_opt_revisions(svn_merge_range_t *range,
      would be required). */
   if (same_urls)
     {
-      /* Handle the fact that a svn_merge_range_t's "start" and "end"
-         are inclusive. */
       if (range->start < range->end)
         {
           *merge_type = merge_type_merge;
-          range->start += 1;
         }
       else if (range->start > range->end)
         {
           *merge_type = merge_type_rollback;
-          range->end += 1;
         }
       else  /* No revisions to merge. */
         {
@@ -1935,7 +1931,6 @@ grok_range_info_from_opt_revisions(svn_merge_range_t *range,
   else 
     {
       *merge_type = merge_type_merge;
-      range->start += 1;
     }
 
   return SVN_NO_ERROR;
@@ -2231,7 +2226,7 @@ do_merge(const char *initial_URL1,
                                           depth,
                                           merge_b->dry_run,
                                           ra_session2,
-                                          is_rollback ? r->start : r->start-1,
+                                          r->start,
                                           notification_receiver,
                                           &notify_b,
                                           ctx->cancel_func,
@@ -2242,7 +2237,7 @@ do_merge(const char *initial_URL1,
 
       SVN_ERR(svn_ra_do_diff3(ra_session,
                               &reporter, &report_baton,
-                              is_rollback ? r->end - 1 : r->end,
+                              r->end,
                               "",
                               depth,
                               ignore_ancestry,
@@ -2251,7 +2246,7 @@ do_merge(const char *initial_URL1,
                               diff_editor, diff_edit_baton, subpool));
 
       SVN_ERR(reporter->set_path(report_baton, "",
-                                 is_rollback ? r->start : r->start - 1,
+                                 r->start,
                                  depth, FALSE, NULL, subpool));
       if (notify_b.same_urls &&
           children_sw_or_with_mergeinfo &&
@@ -2277,7 +2272,7 @@ do_merge(const char *initial_URL1,
                   child_repos_path = child_wcpath +
                     (target_wcpath_len ? target_wcpath_len + 1 : 0);
                   SVN_ERR(reporter->set_path(report_baton, child_repos_path,
-                                             is_rollback ? r->end - 1 : r->end,
+                                             r->end,
                                              depth, FALSE, NULL, subpool));
                 }
             }
@@ -2581,11 +2576,11 @@ do_single_file_merge(const char *initial_URL1,
       /* While we currently don't allow it, in theory we could be
          fetching two fulltexts from two different repositories here. */
       SVN_ERR(single_file_merge_get_file(&tmpfile1, ra_session1, &props1, 
-                                         is_rollback ? r->start : r->start - 1,
+                                         r->start,
                                          URL1, target_wcpath, subpool));
 
       SVN_ERR(single_file_merge_get_file(&tmpfile2, ra_session2, &props2, 
-                                         is_rollback ? r->end - 1 : r->end, 
+                                         r->end,
                                          URL2, target_wcpath, subpool));
 
       /* Discover any svn:mime-type values in the proplists */
@@ -2605,8 +2600,8 @@ do_single_file_merge(const char *initial_URL1,
                                  target_wcpath,
                                  tmpfile1,
                                  tmpfile2,
-                                 is_rollback ? r->start : r->start - 1,
-                                 is_rollback ? r->end - 1 : r->end,
+                                 r->start,
+                                 r->end,
                                  mimetype1, mimetype2,
                                  propchanges, props1,
                                  merge_b));
