@@ -879,7 +879,7 @@ find_merge_source(const char **merge_source,
           svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                    svn_merge_range_t *);
 
-          if (revision >= range->start && revision <= range->end)
+          if (revision > range->start && revision <= range->end)
             {
               *merge_source = key;
               return SVN_NO_ERROR;
