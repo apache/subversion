@@ -2682,9 +2682,12 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                 title = apr_psprintf(resource->pool,
                                      "Revision %ld: %s",
                                      resource->info->root.rev, title);
-
-              if (resource->info->repos->repo_name)
+              if (resource->info->repos->repo_basename)
                 title = apr_psprintf(resource->pool, "%s - %s",
+                                     resource->info->repos->repo_basename,
+                                     title);
+              if (resource->info->repos->repo_name)
+                title = apr_psprintf(resource->pool, "%s: %s",
                                      resource->info->repos->repo_name,
                                      title);
             }
