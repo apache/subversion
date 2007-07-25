@@ -689,7 +689,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       if (base_merge)
         apr_hash_set(base_props, propname, APR_HASH_KEY_STRING, to_val);
       
-      /* We already know that state is at least `modified', so mark
+      /* We already know that state is at least `changed', so mark
          that, but remember that we may later upgrade to `merged' or
          even `conflicted'. */
       if (state && is_normal)
