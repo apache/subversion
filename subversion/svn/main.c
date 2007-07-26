@@ -1608,7 +1608,7 @@ main(int argc, const char *argv[])
   if (descend == FALSE)
     {
       if (subcommand->cmd_func == svn_cl__status)
-        opt_state.depth = svn_depth_immediates;
+        opt_state.depth = SVN_DEPTH_FROM_RECURSE_STATUS(FALSE);
       else
         opt_state.depth = SVN_DEPTH_FROM_RECURSE(FALSE);
     }
