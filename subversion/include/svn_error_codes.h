@@ -1070,7 +1070,7 @@ SVN_ERROR_START
 
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_CEASE_INVOCATION,
-             SVN_ERR_MISC_CATEGORY_START + 15,
+             SVN_ERR_MISC_CATEGORY_START + 21,
              "Cease invocation of this API")
 
   /* command-line client errors */
