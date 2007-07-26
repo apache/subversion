@@ -3,6 +3,7 @@ from csvn.core import *
 import csvn.types as _types
 from csvn.ext.callback_receiver import CallbackReceiver
 from txn import Txn
+from auth import User
 import os
 
 class RepositoryURI(object):
