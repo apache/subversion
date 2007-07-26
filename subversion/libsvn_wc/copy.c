@@ -727,8 +727,11 @@ copy_dir_administratively(const char *src_path,
     /* Are we copying a dir that is already copied but not committed? */
     if (src_entry->copied)
       {
+        const svn_wc_entry_t *dst_entry;
+        SVN_ERR(svn_wc_entry(&dst_entry, dst_path, dst_parent, FALSE, pool));
         SVN_ERR(determine_copyfrom_info(&copyfrom_url, &copyfrom_rev, src_path,
-                                        src_access, src_entry, NULL, pool));
+                                        src_access, src_entry, dst_entry,
+                                        pool));
 
         /* The URL for a copied dir won't exist in the repository, which
            will cause  svn_wc_add2() below to fail.  Set the URL to the
