@@ -303,112 +303,6 @@ verify_txn_list(const char **msg,
 }
 
 
-/* Generate N consecutive transactions, then abort them all.  Return
-   the list of transaction names. */
-static svn_error_t *
-txn_names_are_not_reused_helper1(apr_hash_t **txn_names,
-                                 svn_fs_t *fs,
-                                 apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  const int N = 10;
-  int i;
-
-  *txn_names = apr_hash_make(pool);
-
-  /* Create the transactions and store in a hash table the transaction
-     name as the key and the svn_fs_txn_t * as the value. */
-  for (i = 0; i < N; ++i)
-    {
-      svn_fs_txn_t *txn;
-      const char *name;
-      SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
-      SVN_ERR(svn_fs_txn_name(&name, txn, pool));
-      if (apr_hash_get(*txn_names, name, APR_HASH_KEY_STRING) != NULL)
-        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                 "beginning a new transaction used an "
-                                 "existing transaction name '%s'",
-                                 name);
-      apr_hash_set(*txn_names, name, APR_HASH_KEY_STRING, txn);
-    }
-
-  i = 0;
-  for (hi = apr_hash_first(pool, *txn_names); hi; hi = apr_hash_next(hi))
-    {
-      void *val;
-      apr_hash_this(hi, NULL, NULL, &val);
-      SVN_ERR(svn_fs_abort_txn((svn_fs_txn_t *)val, pool));
-      ++i;
-    }
-
-  if (i != N)
-    return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                             "created %d transactions, but only aborted %d",
-                             N, i);
-
-  return SVN_NO_ERROR;
-}
-
-/* Compare two hash tables and ensure that no keys in the first hash
-   table appear in the second hash table. */
-static svn_error_t *
-txn_names_are_not_reused_helper2(apr_hash_t *ht1,
-                                 apr_hash_t *ht2,
-                                 apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, ht1); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      const char *key_string;
-      apr_hash_this(hi, &key, NULL, NULL);
-      key_string = key;
-      if (apr_hash_get(ht2, key, APR_HASH_KEY_STRING) != NULL)
-        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                 "the transaction name '%s' was reused",
-                                 key_string);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Make sure that transaction names are not reused. */
-static svn_error_t *
-txn_names_are_not_reused(const char **msg,
-                         svn_boolean_t msg_only,
-                         svn_test_opts_t *opts,
-                         apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  apr_pool_t *subpool;
-  apr_hash_t *txn_names1, *txn_names2;
-
-  *msg = "check that transaction names are not reused";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-txn-names-are-not-reused",
-                              opts->fs_type, pool));
-
-  subpool = svn_pool_create(pool);
-
-  /* Create N transactions, abort them all, and collect the generated
-     transaction names.  Do this twice. */
-  SVN_ERR(txn_names_are_not_reused_helper1(&txn_names1, fs, subpool));
-  SVN_ERR(txn_names_are_not_reused_helper1(&txn_names2, fs, subpool));
-
-  /* Check that no transaction names appear in both hash tables. */
-  SVN_ERR(txn_names_are_not_reused_helper2(txn_names1, txn_names2, subpool));
-  SVN_ERR(txn_names_are_not_reused_helper2(txn_names2, txn_names1, subpool));
-
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /* Test writing & reading a file's contents. */
 static svn_error_t *
@@ -4790,13 +4684,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(reopen_trivial_transaction),
     SVN_TEST_PASS(create_file_transaction),
     SVN_TEST_PASS(verify_txn_list),
-    /* Currently this test may fail on faster systems where the clock
-       granularity is too large to generate a fresh transaction name.
-       Since it's not a definite failure, SVN_TEST_XFAIL cannot be
-       used.  */
-#if 0
-    SVN_TEST_PASS(txn_names_are_not_reused),
-#endif
     SVN_TEST_PASS(write_and_read_file),
     SVN_TEST_PASS(create_mini_tree_transaction),
     SVN_TEST_PASS(create_greek_tree_transaction),

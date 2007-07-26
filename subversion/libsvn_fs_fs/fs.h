@@ -22,10 +22,8 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 #include <apr_thread_mutex.h>
-#include <apr_network_io.h>
 
 #include "svn_fs.h"
-#include "private/svn_fs_private.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,10 +62,10 @@ typedef struct fs_fs_shared_txn_data_t
      transaction. */
   struct fs_fs_shared_txn_data_t *next;
 
-  /* This transaction's ID.  This is in the form
-     <hostname>_<pid>_<time>_<uniquifier>, where <uniquifier> runs
-     from 0-99999 (see create_txn_dir() in fs_fs.c). */
-  char txn_id[SVN_FS__TXN_MAX_LEN+1];
+  /* This transaction's ID.  This is in the form <rev>-<uniqueifier>,
+     where <uniqueifier> runs from 0-99999 (see create_txn_dir() in
+     fs_fs.c). */
+  char txn_id[18];
 
   /* Whether the transaction's prototype revision file is locked for
      writing by any thread in this process (including the current

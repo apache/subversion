@@ -29,7 +29,6 @@
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
-#include "private/svn_fs_private.h"
 
 #include "dav_svn.h"
 
@@ -54,6 +53,18 @@ activity_pathname(const dav_svn_repos *repos, const char *activity_id)
                        repos->pool);
 }
 
+
+/* FSFS transaction ids:
+   19 bytes for svn_revnum_t (room for 32 or 64 bit values)
+   + 1 byte for '-'
+   + 5 bytes (up to 99999)
+   + 1 terminating null / newline
+   = 26 bytes
+   BDB transaction ids are base-36, bounded by bdb MAX_KEY_SIZE, but
+   realistically, 26 bytes ought to be enough.
+  */
+#define TXN_LEN 26
+
 /* Return the transaction name of the activity stored in file
    PATHNAME, or NULL if PATHNAME cannot be read for any reason. */
 static const char *
@@ -63,7 +74,7 @@ read_txn(const char *pathname, apr_pool_t *pool)
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_size_t len;
   svn_error_t *err = SVN_NO_ERROR;
-  char *txn_name = apr_palloc(pool, SVN_FS__TXN_MAX_LEN+1);
+  char *txn_name = apr_palloc(pool, TXN_LEN);
   int i;
 
   /* Try up to 10 times to read the txn name, retrying on ESTALE
@@ -89,7 +100,7 @@ read_txn(const char *pathname, apr_pool_t *pool)
           break;
         }
 
-      len = SVN_FS__TXN_MAX_LEN;
+      len = TXN_LEN;
       err = svn_io_read_length_line(activity_file, txn_name, &len, iterpool);
       if (err)
         {
