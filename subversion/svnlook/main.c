@@ -32,6 +32,7 @@
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
