@@ -657,14 +657,11 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
   if (state)
     {
-      /* Start out assuming no conflicts.  Don't bother to examine
-         propchanges->nelts yet; even if we knew there were
+      /* Start out assuming no changes or conflicts.  Don't bother to
+         examine propchanges->nelts yet; even if we knew there were
          propchanges, we wouldn't yet know if they are "normal" props,
          as opposed wc or entry props.  */ 
-      if (propchanges->nelts > 0)
-        *state = svn_wc_notify_state_changed;
-      else
-        *state = svn_wc_notify_state_unchanged;
+      *state = svn_wc_notify_state_unchanged;
     }
 
   /* Looping over the array of incoming propchanges we want to apply: */
