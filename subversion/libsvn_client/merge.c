@@ -2299,7 +2299,7 @@ do_merge(const char *initial_URL1,
 
               /* If merge target has indirect mergeinfo set it before
                  recording the first merge range. */
-              if (!i && indirect)
+              if (i == 0 && indirect)
                 SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
                                                         target_mergeinfo,
                                                         adm_access, subpool));
@@ -2364,6 +2364,8 @@ single_file_merge_get_file(const char **filename,
   apr_file_t *fp;
   svn_stream_t *stream;
 
+  /* ### Create this temporary file under .svn/tmp/ instead of next to
+     ### the working file.*/
   SVN_ERR(svn_io_open_unique_file2(&fp, filename,
                                    wc_target, ".tmp",
                                    svn_io_file_del_none, pool));
@@ -2646,7 +2648,7 @@ do_single_file_merge(const char *initial_URL1,
 
               /* If merge target has indirect mergeinfo set it before
                  recording the first merge range. */
-              if (!i && indirect)
+              if (i == 0 && indirect)
                 SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
                                                         target_mergeinfo,
                                                         adm_access, subpool));
