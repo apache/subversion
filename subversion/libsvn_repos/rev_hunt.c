@@ -286,7 +286,7 @@ svn_repos_history2(svn_fs_t *fs,
       err = history_func(history_baton, history_path, history_rev, newpool);
       if (err)
         {
-          if (err->apr_err == SVN_ERR_CANCELLED)
+          if (err->apr_err == SVN_ERR_CEASE_INVOCATION)
             {
               svn_error_clear(err);
               goto cleanup;
