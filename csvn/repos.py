@@ -85,7 +85,7 @@ class RemoteRepository(object):
            look at the latest revision in the repository.
 
         If the path is ...
-          ... absent, then we return svn_node_node.
+          ... absent, then we return svn_node_none.
           ... a regular file, then we return svn_node_file.
           ... a directory, then we return svn_node_dir
           ... unknown, then we return svn_node_unknown
@@ -271,7 +271,7 @@ class LocalRepository(object):
            is not specified, look at the latest revision.
 
         If the path is ...
-          ... absent, then we return svn_node_node.
+          ... absent, then we return svn_node_none.
           ... a regular file, then we return svn_node_file.
           ... a directory, then we return svn_node_dir
           ... unknown, then we return svn_node_unknowna
