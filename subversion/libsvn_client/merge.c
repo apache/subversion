@@ -2567,9 +2567,9 @@ do_single_file_merge(const char *initial_URL1,
 
       svn_pool_clear(subpool);
 
-      n= svn_wc_create_notify(target_wcpath,
-                              svn_wc_notify_merge_begin,
-                              subpool);
+      n = svn_wc_create_notify(target_wcpath,
+                               svn_wc_notify_merge_begin,
+                               subpool);
       n->merge_range = r;
       notification_receiver(&notify_b, n, subpool);
 
