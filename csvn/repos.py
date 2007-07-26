@@ -284,7 +284,7 @@ class LocalRepository(object):
         """Return a universally-unique ID for this repository"""
         return self.fs.uuid()
 
-    def set_rev_prop(self, rev, name, value):
+    def set_rev_prop(self, rev, name, value, author=NULL):
         """Set the NAME property to VALUE in the specified
            REV."""
         rev = svn_revnum_t(rev)
