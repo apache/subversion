@@ -336,6 +336,52 @@ class LocalRepository(object):
     # copyfrom URI
     def _abs_copyfrom_path(self, path):
         return path
+        
+    def load(self, dumpfile, feedbackfile=None,
+            uuid_action=svn_repos_load_uuid_default, parent_dir="",
+            use_pre_commit_hook=False, use_post_commit_hook=False,
+            cancel_func=None):
+        """Read and parse dumpfile-formatted DUMPFILE, reconstructing
+        filesystem revisions. Dumpfile should be an open python file object
+        or file like object. UUID will be handled according to UUID_ACTION
+        which defaults to svn_repos_load_uuid_default.
+        
+        If FEEDBACKFILE is provided (in the form of a python file object or
+        file like object), feedback will be sent to it.
+        
+        If PARENT_DIR is provided, everything loaded from the dump will be
+        reparented to PARENT_DIR.
+        
+        USE_PRE_COMMIT_HOOK and USE_POST_COMMIT_HOOK are False by default,
+        if either is set to True that hook will be used.
+        
+        If CANCEL_FUNC is provided, it will be called at various points to
+        allow the operation to be cancelled. The cancel baton will be the
+        LocalRepository object."""
+        
+        if not cancel_func:
+            cancel_func = svn_cancel_func_t()
+            
+        apr_dump = _types.APRFile(dumpfile)
+        stream_dump = svn_stream_from_aprfile2(apr_dump._as_parameter_,
+                                        False, self.pool)
+                                        
+        if feedbackfile:
+            apr_feedback = _types.APRFile(feedbackfile)
+            stream_feedback = svn_stream_from_aprfile2(
+                                apr_feedback._as_parameter_, False,
+                                self.pool)
+        else:
+            stream_feedback = NULL
+        
+        svn_repos_load_fs2(self._as_parameter_, stream_dump, stream_feedback,
+                                uuid_action, parent_dir, use_pre_commit_hook,
+                                use_post_commit_hook, cancel_func,
+                                cast(id(self), c_void_p), self.pool)
+                                
+        apr_dump.close()
+        if feedbackfile:
+            apr_feedback.close()
 
 class _fs(object):
     """NOTE: This is a private class. Don't use it outside of
