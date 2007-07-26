@@ -319,7 +319,8 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
 } 
 
 /* A helper for copy_file_administratively() which sets *COPYFROM_URL
-   and *COPYFROM_REV appropriately (possibly to NULL/SVN_INVALID_REVNUM). */
+   and *COPYFROM_REV appropriately (possibly to NULL/SVN_INVALID_REVNUM).
+   DST_ENTRY may be NULL. */
 static APR_INLINE svn_error_t *
 determine_copyfrom_info(const char **copyfrom_url, svn_revnum_t *copyfrom_rev,
                         const char *src_path, svn_wc_adm_access_t *src_access,
