@@ -1068,6 +1068,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 20,
              "Merge info parse error")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_CEASE_INVOCATION,
+             SVN_ERR_MISC_CATEGORY_START + 15,
+             "Cease invocation of this API")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
