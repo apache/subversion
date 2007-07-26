@@ -292,6 +292,21 @@ class LocalRepository(object):
                                       svn_repos_authz_func_t(),
                                       None, self.iterpool)
         self.iterpool.clear()
+        
+    def get_rev_prop(self, rev, name):
+        """Returns the value of NAME in REV. If NAME does not exist in REV,
+        returns None."""
+        rev = svn_revnum_t(rev)
+        value = pointer(svn_string_t())
+        
+        svn_repos_fs_revision_prop(byref(value), self, rev, name,
+                                    svn_repos_authz_func_t(), None,
+                                    self.iterpool)
+        
+        if value:
+            return _types.SvnStringPtr.from_param(value)
+        else:
+            return None
 
     def txn(self):
         """Open up a new transaction, so that you can commit a change
