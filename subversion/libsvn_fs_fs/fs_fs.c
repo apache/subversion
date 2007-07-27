@@ -4934,7 +4934,8 @@ svn_fs_fs__create(svn_fs_t *fs,
       SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVS_DIR,
                                                         pool),
                                           pool));
-      SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVPROPS_DIR,
+      SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path,
+                                                        PATH_REVPROPS_DIR,
                                                         pool),
                                           pool));
     }
