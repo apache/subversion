@@ -34,6 +34,31 @@ extern "C" {
 
 /*** The filesystem structure.  ***/
 
+/* Following are defines that specify the textual elements of the
+   native filesystem directories and revision files. */
+
+/* Names of special files in the fs_fs filesystem. */
+#define PATH_FORMAT        "format"        /* Contains format number */
+#define PATH_UUID          "uuid"          /* Contains UUID */
+#define PATH_CURRENT       "current"       /* Youngest revision */
+#define PATH_LOCK_FILE     "write-lock"    /* Revision lock file */
+#define PATH_REVS_DIR      "revs"          /* Directory of revisions */
+#define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
+#define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
+#define PATH_LOCKS_DIR     "locks"         /* Directory of locks */
+
+/* Names of special files and file extensions for transactions */
+#define PATH_CHANGES       "changes"       /* Records changes made so far */
+#define PATH_TXN_PROPS     "props"         /* Transaction properties */
+#define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
+#define PATH_REV           "rev"           /* Proto rev file */
+#define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
+#define PATH_TXN_MERGEINFO "mergeinfo"     /* Transaction mergeinfo props */
+#define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
+#define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
+#define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
+#define PATH_EXT_PROPS     ".props"        /* Extension for node props */
+
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
