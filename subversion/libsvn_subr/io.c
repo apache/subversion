@@ -343,7 +343,7 @@ svn_io_open_unique_file2(apr_file_t **f,
     {
       apr_status_t apr_err;
       apr_int32_t flag = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL
-                          | APR_BUFFERED);
+                          | APR_BUFFERED | APR_BINARY);
 
       if (delete_when == svn_io_file_del_on_close)
         flag |= APR_DELONCLOSE;
@@ -371,7 +371,7 @@ svn_io_open_unique_file2(apr_file_t **f,
       SVN_ERR(svn_path_cstring_from_utf8(&unique_name_apr, unique_name,
                                          pool));
 
-      apr_err = file_open(&file, unique_name_apr, flag | APR_BINARY,
+      apr_err = file_open(&file, unique_name_apr, flag,
                           APR_OS_DEFAULT, pool);
 
       if (APR_STATUS_IS_EEXIST(apr_err))
