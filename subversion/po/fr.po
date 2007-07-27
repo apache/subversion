@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-07-15 11:51+0200\n"
+"POT-Creation-Date: 2007-07-20 09:03+0200\n"
 "PO-Revision-Date: 2007-07-15 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
@@ -1062,12 +1062,12 @@ msgstr "Nouveau nom d'entrée requis lors de l'importation d'un fichier"
 msgid "'%s' does not exist"
 msgstr "'%s' n'existe pas"
 
-#: libsvn_client/commit.c:607 libsvn_client/copy.c:289 svnlook/main.c:1216
+#: libsvn_client/commit.c:607 libsvn_client/copy.c:386 svnlook/main.c:1216
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "Le chemin '%s' n'existe pas"
 
-#: libsvn_client/commit.c:741 libsvn_client/copy.c:298
+#: libsvn_client/commit.c:741 libsvn_client/copy.c:395
 #: libsvn_client/copy.c:790 libsvn_client/copy.c:1119
 #: libsvn_client/copy.c:1551
 #, c-format
@@ -1189,7 +1189,7 @@ msgstr ""
 "Les propriétés standards ne peuvent être définies explicitement comme des "
 "propriétés de révision"
 
-#: libsvn_client/copy.c:314 libsvn_client/copy.c:1567
+#: libsvn_client/copy.c:411 libsvn_client/copy.c:1567
 #: libsvn_client/update.c:103
 #, c-format
 msgid "Path '%s' is not a directory"
@@ -1351,7 +1351,7 @@ msgstr ""
 "Seules les différences entre des copies de référence et leurs fichiers de "
 "travail sont supportées pour l'instant"
 
-#: libsvn_client/diff.c:1212 libsvn_client/switch.c:121
+#: libsvn_client/diff.c:1212 libsvn_client/switch.c:122
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "Le répertoire '%s' n'a pas d'URL associée"
@@ -1603,7 +1603,7 @@ msgstr "Chemin '%s' sans révision propagée"
 msgid "Unrecognized revision type requested for '%s'"
 msgstr "Type de révision demandé inconnu pour '%s'"
 
-#: libsvn_client/switch.c:145 libsvn_ra_local/ra_plugin.c:108
+#: libsvn_client/switch.c:146 libsvn_ra_local/ra_plugin.c:108
 #: libsvn_ra_local/ra_plugin.c:597 libsvn_wc/update_editor.c:2648
 #, c-format
 msgid ""
@@ -1615,7 +1615,7 @@ msgstr ""
 "n'est pas dans le même dépôt que\n"
 "'%s'"
 
-#: libsvn_client/switch.c:160
+#: libsvn_client/switch.c:161
 #, c-format
 msgid "Destination does not exist: '%s'"
 msgstr "La destination n'existe pas : '%s'"
@@ -4493,7 +4493,7 @@ msgstr "Impossible de déplacer '%s' vers '%s'"
 msgid "Can't create directory '%s'"
 msgstr "Impossible de créer le répertoire '%s'"
 
-#: libsvn_subr/io.c:2927 libsvn_wc/copy.c:509
+#: libsvn_subr/io.c:2927 libsvn_wc/copy.c:542
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "Impossible de cacher le répertoire '%s'"
@@ -5010,17 +5010,17 @@ msgstr "Le chemin '%s' ne fait pas partie de la liste de changement '%s'."
 msgid "Error during recursive copy of '%s'"
 msgstr "Erreur lors de la copie récursive de '%s'"
 
-#: libsvn_wc/copy.c:356
+#: libsvn_wc/copy.c:402
 #, c-format
 msgid "'%s' already exists and is in the way"
 msgstr "'%s' existe déjà et est dans le chemin"
 
-#: libsvn_wc/copy.c:368
+#: libsvn_wc/copy.c:414
 #, c-format
 msgid "There is already a versioned item '%s'"
 msgstr "Il y a déjà un objet versionné '%s'"
 
-#: libsvn_wc/copy.c:383
+#: libsvn_wc/copy.c:429
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
@@ -5029,7 +5029,7 @@ msgstr ""
 "Copie ou déplacement de '%s' impossible : il n'est pas encore dans le dépôt ;"
 "essayer de propager d'abord"
 
-#: libsvn_wc/copy.c:658
+#: libsvn_wc/copy.c:691
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
@@ -5038,14 +5038,14 @@ msgstr ""
 "Copie ou déplacement de '%s' impossible : il n'est pas encore dans le dépôt ;"
 "essayer de propager d'abord"
 
-#: libsvn_wc/copy.c:776
+#: libsvn_wc/copy.c:795
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
 msgstr ""
 "Copie vers '%s' impossible : il n'est pas dans le dépôt '%s' ; il est dans "
 "le dépôt '%s'"
 
-#: libsvn_wc/copy.c:783
+#: libsvn_wc/copy.c:802
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "Copie de '%s' impossible car il doit être supprimé"
@@ -5828,15 +5828,6 @@ msgid ""
 "\n"
 msgstr ""
 "Conflit découvert.\n"
-"\n"
-
-#: svn/conflict-callbacks.c:130
-#, c-format
-msgid ""
-"\n"
-"\n"
-msgstr ""
-"\n"
 "\n"
 
 #: svn/conflict-callbacks.c:157
@@ -9796,3 +9787,4 @@ msgstr "exporté%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' non versionné et non exporté\n"
+

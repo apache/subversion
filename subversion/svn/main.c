@@ -184,7 +184,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "property set to 'native'.\n"
                        "                             "
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
-  {"limit",         svn_cl__limit_opt, 1,
+  {"limit",         'l', 1,
                     N_("maximum number of log entries")},
   {"no-unlock",     svn_cl__no_unlock_opt, 0,
                     N_("don't unlock the targets")},
@@ -441,8 +441,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  If PATH is omitted '.' is assumed.\n"
      "  Parent directories are created as necessary in the repository.\n"
      "  If PATH is a directory, the contents of the directory are added\n"
-     "  directly under URL.\n"),
-    {'q', 'N', svn_cl__depth_opt, svn_cl__autoprops_opt,
+     "  directly under URL.\n"
+     "  Unversionable items such as device files and pipes are ignored\n"
+     "  if --force is specified.\n"),
+    {'q', 'N', svn_cl__depth_opt, svn_cl__autoprops_opt, svn_cl__force_opt,
      svn_cl__no_autoprops_opt, SVN_CL__LOG_MSG_OPTIONS,
      svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
@@ -519,7 +521,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', svn_cl__targets_opt, svn_cl__stop_on_copy_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__limit_opt, svn_cl__changelist_opt} },
+     svn_cl__config_dir_opt, 'l', svn_cl__changelist_opt} },
 
   { "merge", svn_cl__merge, {0}, N_
     ("Apply the differences between two sources to a working copy path.\n"
@@ -1051,7 +1053,7 @@ main(int argc, const char *argv[])
       APR_ARRAY_PUSH(received_opts, int) = opt_id;
 
       switch (opt_id) {
-      case svn_cl__limit_opt:
+      case 'l':
         {
           char *end;
           opt_state.limit = strtol(opt_arg, &end, 10);
@@ -1606,7 +1608,7 @@ main(int argc, const char *argv[])
   if (descend == FALSE)
     {
       if (subcommand->cmd_func == svn_cl__status)
-        opt_state.depth = svn_depth_immediates;
+        opt_state.depth = SVN_DEPTH_FROM_RECURSE_STATUS(FALSE);
       else
         opt_state.depth = SVN_DEPTH_FROM_RECURSE(FALSE);
     }

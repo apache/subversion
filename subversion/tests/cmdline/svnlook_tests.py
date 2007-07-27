@@ -401,6 +401,20 @@ def tree_non_recursive(sbox):
           % (len(expected_results_deep), len(treelist))
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+def limit_history(sbox):
+  "history --limit"
+  sbox.build(create_wc=False)
+  repo_url = sbox.repo_url
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-m', 'log msg',
+                                     repo_url + "/iota", repo_url + "/iota2")
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-m', 'log msg',
+                                     repo_url + "/A/mu", repo_url + "/iota")
+  history = run_svnlook("history", "--limit=1", sbox.repo_dir)
+  # Ignore the two lines of header, and verify expected number of items.
+  if len(history[2:]) != 1:
+    raise svntest.Failure("Output not limited to expected number of items")
+
 
 ########################################################################
 # Run the tests
@@ -414,6 +428,7 @@ test_list = [ None,
               info_bad_newlines,
               changed_copy_info,
               tree_non_recursive,
+              limit_history,
              ]
 
 if __name__ == '__main__':

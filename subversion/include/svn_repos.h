@@ -996,6 +996,9 @@ svn_repos_deleted_rev(svn_fs_t *fs,
  * baton given to svn_repos_history().  @a pool is provided for the
  * convenience of the implementor, who should not expect it to live
  * longer than a single callback call.
+ *
+ * Signal to callback driver to stop processing/invoking this callback
+ * by returning the @c SVN_ERR_CEASE_INVOCATION error code.
  */
 typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
                                                  const char *path,
@@ -1005,7 +1008,8 @@ typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
 /**
  * Call @a history_func (with @a history_baton) for each interesting
  * history location in the lifetime of @a path in @a fs, from the
- * youngest of @a end and @a start to the oldest.  Only cross
+ * youngest of @a end and @a start to the oldest.  Stop processing if
+ * @a history_func returns @c SVN_ERR_CEASE_INVOCATION.  Only cross
  * filesystem copy history if @a cross_copies is @c TRUE.  And do all
  * of this in @a pool.
  *

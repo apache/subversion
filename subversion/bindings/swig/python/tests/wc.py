@@ -167,6 +167,11 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.failIf(wc.is_entry_prop('svn:foo:bar'))
       self.failIf(wc.is_entry_prop('foreign:foo:bar'))
 
+  def test_get_prop_diffs(self):
+      wc.prop_set("foreign:foo", "bla", self.path, self.wc)
+      self.assertEquals([{"foreign:foo": "bla"}, {}], 
+              wc.get_prop_diffs(self.path, self.wc))
+
   def test_get_pristine_copy_path(self):
       path_to_file = '%s/%s' % (self.path, 'foo')
       path_to_text_base = '%s/%s/text-base/foo.svn-base' % (self.path,

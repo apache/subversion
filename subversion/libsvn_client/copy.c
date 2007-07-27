@@ -83,7 +83,7 @@ get_implied_mergeinfo(svn_ra_session_t *ra_session,
     return SVN_NO_ERROR;
 
   range = apr_palloc(pool, sizeof(*range));
-  range->start = oldest_rev;
+  range->start = oldest_rev - 1;
   range->end = rev;
   rangelist = apr_array_make(pool, 1, sizeof(range));
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;

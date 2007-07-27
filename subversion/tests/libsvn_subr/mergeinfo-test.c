@@ -109,9 +109,9 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
 /* First ranges from the paths identified by mergeinfo_paths. */
 static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS] =
   {
-    { 1, 1 },
-    { 1, 6 },
-    { 5, 5 }
+    { 0, 1 },
+    { 0, 6 },
+    { 4, 5 }
   };
 
 static svn_error_t *
@@ -204,17 +204,17 @@ test_parse_combine_rangeinfo(const char **msg,
 
   resultrange = APR_ARRAY_IDX(result, 0, svn_merge_range_t *);
   
-  if (resultrange->start != 5 || resultrange->end != 5)
+  if (resultrange->start != 4 || resultrange->end != 5)
     return fail(pool, "Range combining produced wrong result");
 
   resultrange = APR_ARRAY_IDX(result, 1, svn_merge_range_t *);
   
-  if (resultrange->start != 7 || resultrange->end != 11)
+  if (resultrange->start != 6 || resultrange->end != 11)
     return fail(pool, "Range combining produced wrong result");
   
   resultrange = APR_ARRAY_IDX(result, 2, svn_merge_range_t *);
   
-  if (resultrange->start != 13 || resultrange->end != 14)
+  if (resultrange->start != 12 || resultrange->end != 14)
     return fail(pool, "Range combining produced wrong result");
 
   return SVN_NO_ERROR;
@@ -353,9 +353,9 @@ test_diff_mergeinfo(const char **msg,
 {
   apr_hash_t *deleted, *added, *from, *to;
   svn_merge_range_t expected_rangelist_deletions[NBR_RANGELIST_DELTAS] =
-    { {7, 7}, {9, 9}, {11, 11}, {33, 34} };
+    { {6, 7}, {8, 9}, {10, 11}, {32, 34} };
   svn_merge_range_t expected_rangelist_additions[NBR_RANGELIST_DELTAS] =
-    { {2, 2}, {5, 6}, {13, 16}, {30, 30} };
+    { {1, 2}, {4, 6}, {12, 16}, {29, 30} };
 
   *msg = "diff of mergeinfo";
   if (msg_only)
@@ -382,7 +382,7 @@ test_rangelist_reverse(const char **msg,
                        apr_pool_t *pool)
 {
   apr_array_header_t *rangelist;
-  svn_merge_range_t expected_rangelist[3] = { {10, 10}, {7, 5}, {3, 3} };
+  svn_merge_range_t expected_rangelist[3] = { {10, 9}, {7, 4}, {3, 2} };
 
   *msg = "reversal of rangelist";
   if (msg_only)
@@ -460,7 +460,7 @@ test_rangelist_intersect(const char **msg,
 {
   apr_array_header_t *rangelist1, *rangelist2, *intersection;
   svn_merge_range_t expected_intersection[4] =
-    { {1, 1}, {3, 4}, {12, 12}, {31, 32} };
+    { {0, 1}, {2, 4}, {11, 12}, {30, 32} };
 
   *msg = "intersection of rangelists";
   if (msg_only)
@@ -509,7 +509,7 @@ test_merge_mergeinfo(const char **msg,
 
   resultrange = APR_ARRAY_IDX(result, 0, svn_merge_range_t *);
   
-  if (resultrange->start != 8 || resultrange->end != 12)
+  if (resultrange->start != 7 || resultrange->end != 12)
     return fail(pool, "Range combining produced wrong result");
 
   result = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
@@ -523,12 +523,12 @@ test_merge_mergeinfo(const char **msg,
 
   resultrange = APR_ARRAY_IDX(result, 0, svn_merge_range_t *);
   
-  if (resultrange->start != 1 || resultrange->end != 11)
+  if (resultrange->start != 0 || resultrange->end != 11)
     return fail(pool, "Range combining produced wrong result");
   
   resultrange = APR_ARRAY_IDX(result, 1, svn_merge_range_t *);
   
-  if (resultrange->start != 13 || resultrange->end != 14)
+  if (resultrange->start != 12 || resultrange->end != 14)
     return fail(pool, "Range combining produced wrong result");
 
   return SVN_NO_ERROR;
@@ -611,7 +611,7 @@ test_remove_mergeinfo(const char **msg,
 {
   apr_hash_t *output, *whiteboard, *eraser;
   svn_merge_range_t expected_rangelist_remainder[NBR_RANGELIST_DELTAS] =
-    { {7, 7}, {9, 9}, {11, 11}, {33, 34} };
+    { {6, 7}, {8, 9}, {10, 11}, {32, 34} };
 
   *msg = "remove of mergeinfo";
   if (msg_only)

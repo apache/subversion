@@ -2515,7 +2515,7 @@ svn_error_t *svn_wc_add(const char *path,
                         void *notify_baton,
                         apr_pool_t *pool);
 
-/** Add a file to a working copy at @a dst_path, obtaining the base-text's
+/** Add a file to a working copy at @a dst_path, obtaining the text-base's
  * contents from @a new_text_base_path, the wc file's content from
  * @a new_text_path, its base properties from @a new_base_props and
  * wc properties from @a new_props.
@@ -2553,7 +2553,6 @@ svn_error_t *svn_wc_add(const char *path,
  *
  * @since New in 1.4
  */
-
 svn_error_t *svn_wc_add_repos_file2(const char *dst_path,
                                     svn_wc_adm_access_t *adm_access,
                                     const char *new_text_base_path,

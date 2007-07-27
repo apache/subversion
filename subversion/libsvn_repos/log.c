@@ -879,7 +879,7 @@ find_merge_source(const char **merge_source,
           svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                    svn_merge_range_t *);
 
-          if (revision >= range->start && revision <= range->end)
+          if (revision > range->start && revision <= range->end)
             {
               *merge_source = key;
               return SVN_NO_ERROR;
@@ -1309,9 +1309,12 @@ svn_repos_get_logs4(svn_repos_t *repos,
      only about answering that question, and we already know the
      answer ... well, you get the picture.
   */
-  if (! paths ||
-      (paths->nelts == 1 &&
-       svn_path_is_empty(APR_ARRAY_IDX(paths, 0, const char *))))
+  if (! paths)
+    paths = apr_array_make(pool, 0, sizeof(const char *));
+
+  if ((! paths->nelts) 
+      || (paths->nelts == 1 &&
+          svn_path_is_empty(APR_ARRAY_IDX(paths, 0, const char *))))
     {
       int send_count = 0;
       int i;

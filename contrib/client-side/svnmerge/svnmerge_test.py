@@ -27,6 +27,21 @@ import stat
 import atexit
 import getopt
 
+####
+# IMPORTANT NOTE TO TEST AUTHORS
+# 
+# Any quoted strings inside the arguments of the parameter "cmd" must
+# be enclosed in double-, not single-quotes, so that the command parser
+# knows to keep them together. For example, do not write this:
+#     launch("svn ci -m 'log comment'") # BAD
+# ...but one of these:
+#     launch('svn ci -m "log comment"') # GOOD
+#     launch("svn ci -m \"log comment\"") # GOOD, but why?
+# Otherwise, you get an error saying
+#     '<path>/comment' is not under version control
+# ...when running the tests on Windows.
+####
+
 # True/False constants are Python 2.2+
 try:
     True, False
@@ -456,7 +471,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
     def multilaunch(self, cmds):
         for cmd in cmds.split("\n"):
             cmd = cmd.strip()
-            svnmerge.launch(cmd % self.command_dict())
+            if len(cmd) > 0:
+                svnmerge.launch(cmd % self.command_dict())
 
     def revert(self):
         self.multilaunch("svn revert -R .")
@@ -639,7 +655,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir("trunk")
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 13")
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch", "-r1-13"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 14")
 
@@ -775,7 +791,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 14")
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch", "-r1-14"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 15")
         os.remove("svnmerge-commit-message.txt")
@@ -793,8 +809,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 16")
 
-        self.svnmerge("avail -vv --bidirectional", match=r"16$")
-        self.svnmerge("merge -vv --bidirectional", match=r"merge -r 15:16")
+        self.svnmerge("avail -vv --bidirectional", match=r"\n16$")
+        self.svnmerge("merge -vv --bidirectional", match=r"svn merge --force -r 15:16")
         p = self.getproperty()
         self.assertEqual("/trunk:1-16", p)
         self.svnmerge("integrated", match=r"^3-16$")
@@ -815,12 +831,12 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 18")
 
         # Ensure default is not to check for reflected revisions.
-        self.svnmerge("avail -vv", match=r"17-18$")
+        self.svnmerge("avail -vv", match=r"\n17-18$")
 
         # Now check reflected revision is excluded with --bidirectional flag.
-        self.svnmerge("avail -vv --bidirectional", match=r"18$")
+        self.svnmerge("avail -vv --bidirectional", match=r"\n18$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"merge -r 17:18")
+        self.svnmerge("merge -vv --bidirectional", match=r"svn merge --force -r 17:18")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-18", p)
 
@@ -838,7 +854,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         os.chdir("test-branch")
 
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.svnmerge2(["init", self.test_repo_url + "/trunk", "-r1-13"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 15")
         os.remove("svnmerge-commit-message.txt")
@@ -846,7 +862,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir("..")
         os.chdir("test-branch2")
 
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.svnmerge2(["init", self.test_repo_url + "/trunk", "-r1-14"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 16")
         os.remove("svnmerge-commit-message.txt")
@@ -857,11 +873,11 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 16")
 
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch", "-r1-16"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 17")
         os.remove("svnmerge-commit-message.txt")
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch2"])
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch2", "-r1-17"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 18")
         os.remove("svnmerge-commit-message.txt")
@@ -882,7 +898,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         # Merge into trunk
         self.svnmerge("merge -vv -S branch2",
-                      match=r"merge -r 18:19")
+                      match=r"merge --force -r 18:19")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-16 /branches/test-branch2:1-19", p)
 
@@ -903,7 +919,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # should be available for test-branch with --bidirectional flag.
         self.svnmerge("avail -vv --bidirectional", match=r"20$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"merge -r 17:20")
+        self.svnmerge("merge -vv --bidirectional", match=r"merge --force -r 17:20")
         p = self.getproperty()
         self.assertEqual("/trunk:1-20", p)
 
@@ -914,7 +930,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         self.svnmerge("rollback -vv -S ../trunk",
                       error = True,
-                      match = r"no integration info available for repository path")
+                      match = r"no integration info available for path")
 
     def testRollbackOutsidePossibleRange(self):
         """`svnmerge rollback' should error out if range contains revisions prior to
@@ -992,10 +1008,10 @@ D    test3"""
         os.chdir("../trunk")
         open("newfile", "w").close()
         self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
+        self.launch('svn commit -m "Adding newfile"', match=r"Committed revision 15")
         open("anothernewfile", "w").close()
         self.launch("svn add anothernewfile")
-        self.launch("svn commit -m 'Adding anothernewfile'", match=r"Committed revision 16")
+        self.launch('svn commit -m "Adding anothernewfile"', match=r"Committed revision 16")
 
         # Svnmerge block r15,16
         os.chdir("../test-branch")
@@ -1025,7 +1041,7 @@ D    test3"""
         os.chdir("../trunk")
         open("newfile", "w").close()
         self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
+        self.launch('svn commit -m "Adding newfile"', match=r"Committed revision 15")
 
         # Svnmerge merge r15
         os.chdir("../test-branch")
@@ -1050,10 +1066,10 @@ D    test3"""
         os.chdir("../trunk")
         open("newfile", "w").close()
         self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
+        self.launch('svn commit -m "Adding newfile"', match=r"Committed revision 15")
         open("anothernewfile", "w").close()
         self.launch("svn add anothernewfile")
-        self.launch("svn commit -m 'Adding anothernewfile'", match=r"Committed revision 16")
+        self.launch('svn commit -m "Adding anothernewfile"', match=r"Committed revision 16")
 
         # Svnmerge block r16, merge r15
         os.chdir("../test-branch")
@@ -1087,7 +1103,7 @@ D    test3"""
         os.chdir("../trunk")
         open("newfile", "w").close()
         self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'",
+        self.launch('svn commit -m "Adding newfile"',
                     match=r"Committed revision 15")
 
         # Merge a change from trunk to test-branch.

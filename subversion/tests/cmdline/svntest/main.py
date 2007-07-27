@@ -673,9 +673,15 @@ def merge_notify_line(revstart, revend=None):
   """Return an expected output line that describes the beginning of a
   merge operation on revisions REVSTART through REVEND."""
   if (revend is None):
-    return "--- Merging r%ld:\n" % revstart
+    if (revstart < 0):
+      return "--- Undoing r%ld:\n" % abs(revstart)
+    else:
+      return "--- Merging r%ld:\n" % revstart
   else:
-    return "--- Merging r%ld through r%ld:\n" % (revstart, revend)
+    if (revstart > revend):
+      return "--- Undoing r%ld through r%ld:\n" % (revstart, revend)
+    else:
+      return "--- Merging r%ld through r%ld:\n" % (revstart, revend)
 
 
 ######################################################################
