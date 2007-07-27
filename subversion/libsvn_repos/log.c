@@ -320,7 +320,7 @@ detect_changed(apr_hash_t **changed,
   return SVN_NO_ERROR;
 }
 
-/* This is used by svn_repos_get_logs3 to keep track of multiple
+/* This is used by svn_repos_get_logs to keep track of multiple
  * path history information while working through history.
  *
  * The two pools are swapped after each iteration through history because
