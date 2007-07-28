@@ -864,15 +864,22 @@ class SvnLogParser:
 def get_copyfrom(target):
     """Get copyfrom info for a given target (it represents the directory from
     where it was branched). NOTE: repos root has no copyfrom info. In this case
-    None is returned."""
+    None is returned.  
+    
+    Returns the:
+        - source file or directory from which the copy was made
+        - revision from which that source was copied
+        - revision in which the copy was committed
+    """
     repos_path = target_to_pathid(target)
     for chg in SvnLogParser(launchsvn('log -v --xml --stop-on-copy "%s"' % target,
                                       split_lines=False)):
         for p in chg.paths():
             if p.action() == 'A' and p.pathid() == repos_path:
-                return p.copyfrom_pathid(), p.copyfrom_rev()
-
-    return None,None
+                # These values will be None if the corresponding elements are 
+                # not found in the log.
+                return p.copyfrom_pathid(), p.copyfrom_rev(), chg.revision()
+    return None,None,None
 
 def get_latest_rev(url):
     """Get the latest revision of the repository of which URL is part."""
@@ -1122,29 +1129,51 @@ def action_init(target_dir, target_props):
     # If the user hasn't specified the revisions to use, see if the
     # "source" is a copy from the current tree and if so, we can use
     # the version data obtained from it.
-    if not opts["revision"]:
-        cf_source, cf_rev = get_copyfrom(opts["source-url"])
-        target_pathid = target_to_pathid(target_dir)
+    revision_range = opts["revision"]
+    if not revision_range:
+        # Determining a default endpoint for the revision range that "init"
+        # will use, since none was provided by the user.
+        cf_source, cf_rev, copy_committed_in_rev = \
+                                            get_copyfrom(opts["source-url"])
+        target_path = target_to_pathid(target_dir)
 
-        # If the target_pathid is the source path of "source",
-        # then "source" was branched from the current working tree
-        # and we can use the revisions determined by get_copyfrom
-        # (assumes pathid is a repository-relative-path)
-        if target_pathid == cf_source:
+        if target_path == cf_source:
+            # If source was originally copyied from target, and we are merging
+            # changes from source to target (the copy target is the merge source,
+            # and the copy source is the merge target), then we want to mark as 
+            # integrated up to the rev in which the copy was committed which 
+            # created the merge source:
             report('the source "%s" is a branch of "%s"' %
                    (opts["source-url"], target_dir))
-            opts["revision"] = "1-" + cf_rev
+            revision_range = "1-" + copy_committed_in_rev
+        else:
+            # If the copy source is the merge source, and 
+            # the copy target is the merge target, then we want to
+            # mark as integrated up to the specific rev of the merge
+            # target from which the merge source was copied.  (Longer
+            # discussion at:
+            # http://subversion.tigris.org/issues/show_bug.cgi?id=2810  )
+            target_url = target_to_url(target_dir)
+            source_path = target_to_pathid(opts["source-url"])
+            cf_source_path, cf_rev, copy_committed_in_rev = get_copyfrom(target_url)
+            if source_path == cf_source_path:
+                report('the merge source "%s" is the copy source of "%s"' %
+                       (opts["source-url"], target_dir))
+                revision_range = "1-" + cf_rev
 
-    # Get the initial revision set if not explicitly specified.
-    revs = opts["revision"] or "1-" + get_latest_rev(opts["source-url"])
+    # When neither the merge source nor target is a copy of the other, and 
+    # the user did not specify a revision range, then choose a default which is 
+    # the current revision; saying, in effect, "everything has been merged, so 
+    # mark as integrated up to the latest rev on source url).
+    revs = revision_range or "1-" + get_latest_rev(opts["source-url"])
     revs = RevisionSet(revs)
 
     report('marking "%s" as already containing revisions "%s" of "%s"' %
            (target_dir, revs, opts["source-url"]))
 
     revs = str(revs)
-    # If the source-pathid already has an entry in the svnmerge-integrated
-    # property, simply error out.
+    # If the local svnmerge-integrated property already has an entry 
+    # for the source-pathid, simply error out.
     if not opts["force"] and target_props.has_key(opts["source-pathid"]):
         error('Repository-relative path %s has already been initialized at %s\n'
               'Use --force to re-initialize' % (opts["source-pathid"], target_dir))
@@ -2000,7 +2029,7 @@ def main(args):
     report("calculate source path for the branch")
     if not source:
         if str(cmd) == "init":
-            cf_source, cf_rev = get_copyfrom(branch_dir)
+            cf_source, cf_rev, copy_committed_in_rev = get_copyfrom(branch_dir)
             if not cf_source:
                 error('no copyfrom info available. '
                       'Explicit source argument (-S/--source) required.')
