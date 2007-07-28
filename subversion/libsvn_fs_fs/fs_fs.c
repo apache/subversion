@@ -1823,7 +1823,8 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
        * return the ESTALE error on the last iteration of the loop. */
       svn_error_clear(err);
       err = svn_io_file_open(&revprop_file, path_revprops(fs, rev, iterpool),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, iterpool);
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                             iterpool);
       if (err)
         {
           if (APR_STATUS_IS_ENOENT(err->apr_err))
