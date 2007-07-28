@@ -1415,7 +1415,8 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
   chunk_pool = svn_pool_create(pool);
 
   SVN_ERR(svn_ra_svn_write_cmd(sess_baton->conn, pool, "get-file-revs",
-                               "c(?r)(?r)", path, start, end));
+                               "c(?r)(?r)?b", path, start, end,
+                               include_merged_revisions));
 
   /* Servers before 1.1 don't support this command.  Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),

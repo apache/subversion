@@ -1829,19 +1829,27 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t start_rev, end_rev;
   const char *path;
   const char *full_path;
+  apr_uint64_t include_merged_revs_param;
+  svn_boolean_t include_merged_revisions;
   
   /* Parse arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)",
-                                 &path, &start_rev, &end_rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)?B",
+                                 &path, &start_rev, &end_rev,
+                                 &include_merged_revs_param));
   path = svn_path_canonicalize(path, pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
   full_path = svn_path_join(b->fs_path->data, path, pool);
+
+  if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    include_merged_revisions = FALSE;
+  else
+    include_merged_revisions = include_merged_revs_param;
 
   frb.conn = conn;
   frb.pool = NULL;
 
   err = svn_repos_get_file_revs2(b->repos, full_path, start_rev, end_rev,
-                                 FALSE,
+                                 include_merged_revisions,
                                  authz_check_access_cb_func(b), b,
                                  file_rev_handler, &frb, pool);
   write_err = svn_ra_svn_write_word(conn, pool, "done");
