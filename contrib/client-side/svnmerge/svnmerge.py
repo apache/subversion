@@ -1114,25 +1114,25 @@ def display_revisions(revs, display_style, revisions_msg, source_url):
     else:
         assert False, "unhandled display style: %s" % display_style
 
-def action_init(branch_dir, branch_props):
-    """Initialize a branch for merges."""
-    # Check branch directory is ready for being modified
-    check_dir_clean(branch_dir)
+def action_init(target_dir, target_props):
+    """Initialize for merges."""
+    # Check that directory is ready for being modified
+    check_dir_clean(target_dir)
 
     # If the user hasn't specified the revisions to use, see if the
-    # "source" is a branch from the current tree and if so, we can use
+    # "source" is a copy from the current tree and if so, we can use
     # the version data obtained from it.
     if not opts["revision"]:
         cf_source, cf_rev = get_copyfrom(opts["source-url"])
-        branch_pathid = target_to_pathid(branch_dir)
+        target_pathid = target_to_pathid(target_dir)
 
-        # If the branch_pathid is the source path of "source",
+        # If the target_pathid is the source path of "source",
         # then "source" was branched from the current working tree
         # and we can use the revisions determined by get_copyfrom
         # (assumes pathid is a repository-relative-path)
-        if branch_pathid == cf_source:
+        if target_pathid == cf_source:
             report('the source "%s" is a branch of "%s"' %
-                   (opts["source-url"], branch_dir))
+                   (opts["source-url"], target_dir))
             opts["revision"] = "1-" + cf_rev
 
     # Get the initial revision set if not explicitly specified.
@@ -1140,18 +1140,18 @@ def action_init(branch_dir, branch_props):
     revs = RevisionSet(revs)
 
     report('marking "%s" as already containing revisions "%s" of "%s"' %
-           (branch_dir, revs, opts["source-url"]))
+           (target_dir, revs, opts["source-url"]))
 
     revs = str(revs)
     # If the source-pathid already has an entry in the svnmerge-integrated
     # property, simply error out.
-    if not opts["force"] and branch_props.has_key(opts["source-pathid"]):
+    if not opts["force"] and target_props.has_key(opts["source-pathid"]):
         error('Repository-relative path %s has already been initialized at %s\n'
-              'Use --force to re-initialize' % (opts["source-pathid"], branch_dir))
-    branch_props[opts["source-pathid"]] = revs
+              'Use --force to re-initialize' % (opts["source-pathid"], target_dir))
+    target_props[opts["source-pathid"]] = revs
 
     # Set property
-    set_merge_props(branch_dir, branch_props)
+    set_merge_props(target_dir, target_props)
 
     # Write out commit message if desired
     if opts["commit-file"]:
