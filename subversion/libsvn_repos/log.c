@@ -716,7 +716,7 @@ combine_mergeinfo_rangelists(apr_array_header_t **rangelist,
 }
 
 /* Determine all the revisions which were merged into PATHS in REV.  Return
-   them as a new RANGELIST.  */
+   them as a new MERGEINFO.  */
 static svn_error_t *
 get_merged_rev_mergeinfo(apr_hash_t **mergeinfo,
                          svn_fs_t *fs,
