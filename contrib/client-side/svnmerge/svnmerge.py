@@ -819,6 +819,13 @@ def target_to_pathid(target):
     assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
     return url[len(root):]
 
+def getAttributeOrNone(element, name):
+    '''Returns None if not found.'''
+    if element.hasAttribute(name):
+        return element.getAttribute(name)
+    else:
+        return None
+
 class SvnLogParser:
     def __init__(self, xml):
         self._events = pulldom.parseString(xml)
@@ -827,13 +834,13 @@ class SvnLogParser:
             if event == pulldom.START_ELEMENT and node.tagName == "logentry":
                 self._events.expandNode(node)
                 return self.SvnLogRevision(node)
-        raise IndexError
+        raise IndexError, "Could not find 'logentry' tag in xml"
 
     class SvnLogRevision:
         def __init__(self, xmlnode):
             self._node = xmlnode
         def revision(self):
-            return self._node.getAttribute("revision")
+            return getAttributeOrNone(self._node, "revision")
         def author(self):
             return self._node.getElementsByTagName("author")[0].firstChild.data
         def paths(self):
@@ -846,13 +853,13 @@ class SvnLogParser:
             def __init__(self, xmlnode):
                 self._node = xmlnode
             def action(self):
-                return self._node.getAttribute("action")
+                return getAttributeOrNone(self._node, "action")
             def pathid(self):
                 return self._node.firstChild.data
             def copyfrom_rev(self):
-                return self._node.getAttribute("copyfrom-rev")
+                return getAttributeOrNone(self._node, "copyfrom-rev")
             def copyfrom_pathid(self):
-                return self._node.getAttribute("copyfrom-path")
+                return getAttributeOrNone(self._node, "copyfrom-path")
 
 def get_copyfrom(target):
     """Get copyfrom info for a given target (it represents the directory from
