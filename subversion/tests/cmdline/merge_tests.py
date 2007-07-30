@@ -6984,11 +6984,14 @@ def single_file_replace_style_merge_capability(sbox):
                                         wc_dir)
 
   # Merge the file mu alone to rev1 
-  svntest.actions.run_and_verify_svn(None, [svntest.main.merge_notify_line(-2),
-                                            'D    ' + mu_path + '\n',
-                                            'A    ' + mu_path + '\n'],
-                                           [], 'merge', '-r2:1',
-                                           mu_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [svntest.main.merge_notify_line(-2),
+                                      'D    ' + mu_path + '\n',
+                                      'A    ' + mu_path + '\n'],
+                                     [], 'merge',
+                                     mu_path + '@2',
+                                     mu_path + '@1',
+                                     mu_path)
 
 
 ########################################################################
