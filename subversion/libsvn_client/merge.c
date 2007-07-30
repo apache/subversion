@@ -2379,6 +2379,23 @@ single_file_merge_get_file(const char **filename,
 }
 
 
+/* Send a notification specific to a single-file merge. */
+static APR_INLINE void
+single_file_merge_notify(void *notify_baton, const char *target_wcpath,
+                         svn_wc_notify_action_t action,
+                         svn_wc_notify_state_t text_state,
+                         svn_wc_notify_state_t prop_state, apr_pool_t *pool)
+{
+  svn_wc_notify_t *notify = svn_wc_create_notify(target_wcpath, action, pool);
+  notify->kind = svn_node_file;
+  notify->content_state = text_state;
+  notify->prop_state = prop_state;
+  if (notify->content_state == svn_wc_notify_state_missing)
+    notify->action = svn_wc_notify_skip;
+  notification_receiver(notify_baton, notify, pool);
+}
+
+
 /* The single-file, simplified version of do_merge. */
 static svn_error_t *
 do_single_file_merge(const char *initial_URL1,
@@ -2657,17 +2674,9 @@ do_single_file_merge(const char *initial_URL1,
                                      mimetype1, mimetype2,
                                      props1,
                                      merge_b));
-          {
-            svn_wc_notify_t *notify
-            = svn_wc_create_notify(target_wcpath, svn_wc_notify_update_delete,
-                                   subpool);
-            notify->kind = svn_node_file;
-            notify->content_state = text_state;
-
-            if (notify->content_state == svn_wc_notify_state_missing)
-              notify->action = svn_wc_notify_skip;
-            notification_receiver(&notify_b, notify, subpool);
-          }
+          single_file_merge_notify(&notify_b, target_wcpath,
+                                   svn_wc_notify_update_delete, text_state,
+                                   svn_wc_notify_state_unknown, subpool);
 
           SVN_ERR(merge_file_added(adm_access,
                                    &text_state, &prop_state,
@@ -2679,18 +2688,9 @@ do_single_file_merge(const char *initial_URL1,
                                    mimetype1, mimetype2,
                                    propchanges, props1,
                                    merge_b));
-          {
-            svn_wc_notify_t *notify
-            = svn_wc_create_notify(target_wcpath, svn_wc_notify_update_add,
-                                   subpool);
-            notify->kind = svn_node_file;
-            notify->content_state = text_state;
-            notify->prop_state = prop_state;
-
-            if (notify->content_state == svn_wc_notify_state_missing)
-              notify->action = svn_wc_notify_skip;
-            notification_receiver(&notify_b, notify, subpool);
-          }
+          single_file_merge_notify(&notify_b, target_wcpath,
+                                   svn_wc_notify_update_add, text_state,
+                                   prop_state, subpool);
         }
       else
         {
@@ -2704,18 +2704,9 @@ do_single_file_merge(const char *initial_URL1,
                                      mimetype1, mimetype2,
                                      propchanges, props1,
                                      merge_b));
-          {
-            svn_wc_notify_t *notify
-            = svn_wc_create_notify(target_wcpath, svn_wc_notify_update_update,
-                                   subpool);
-            notify->kind = svn_node_file;
-            notify->content_state = text_state;
-            notify->prop_state = prop_state;
-
-            if (notify->content_state == svn_wc_notify_state_missing)
-              notify->action = svn_wc_notify_skip;
-            notification_receiver(&notify_b, notify, subpool);
-          }
+          single_file_merge_notify(&notify_b, target_wcpath,
+                                   svn_wc_notify_update_update, text_state,
+                                   prop_state, subpool);
         }
 
       /* Ignore if temporary file not found. It may have been renamed. */
