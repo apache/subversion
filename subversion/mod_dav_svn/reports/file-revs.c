@@ -2,7 +2,7 @@
  * file_revs.c: handle the file-revs-report request and response
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -224,6 +224,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   /* These get determined from the request document. */
   svn_revnum_t start = SVN_INVALID_REVNUM;
   svn_revnum_t end = SVN_INVALID_REVNUM;
+  svn_boolean_t include_merged_revisions = FALSE;    /* off by default */
 
   /* Construct the authz read check baton. */
   arb.r = resource->info->r;
@@ -254,6 +255,8 @@ dav_svn__file_revs_report(const dav_resource *resource,
         start = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "end-revision") == 0)
         end = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
+      else if (strcmp(child->name, "include-merged-revisions") == 0)
+        include_merged_revisions = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "path") == 0)
         {
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
@@ -275,7 +278,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* Get the revisions and send them. */
   serr = svn_repos_get_file_revs2(resource->info->repos->repos,
-                                  path, start, end, FALSE,
+                                  path, start, end, include_merged_revisions,
                                   dav_svn__authz_read_func(&arb), &arb,
                                   file_rev_handler, &frb, resource->pool);
 

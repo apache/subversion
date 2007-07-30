@@ -317,6 +317,13 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
                            apr_psprintf(pool,
                                         "<S:end-revision>%ld"
                                         "</S:end-revision>", end));
+  if (include_merged_revisions)
+    {
+      svn_stringbuf_appendcstr(request_body,
+                               apr_psprintf(pool,
+                                            "<S:include-merged-revisions/>"));
+    }
+
   svn_stringbuf_appendcstr(request_body, "<S:path>");
   svn_stringbuf_appendcstr(request_body,
                            apr_xml_quote_string(pool, path, 0));

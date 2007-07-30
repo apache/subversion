@@ -411,6 +411,13 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                "S:end-revision", apr_ltoa(pool, end),
                                session->bkt_alloc);
 
+  if (include_merged_revisions)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:include-merged-revisions", NULL,
+                                   session->bkt_alloc);
+    }
+
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", path,
                                session->bkt_alloc);
