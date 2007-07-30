@@ -7059,7 +7059,7 @@ test_list = [ None,
               Skip(mergeinfo_and_skipped_paths, svntest.main.is_ra_type_file),
               update_loses_mergeinfo,
               merge_loses_mergeinfo,
-              XFail(single_file_replace_style_merge_capability),
+              single_file_replace_style_merge_capability,
              ]
 
 if __name__ == '__main__':
