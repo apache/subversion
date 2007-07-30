@@ -303,7 +303,7 @@ housekeeping property).</p>
     (<i>unimplemented</i>)</li>
 
   <li><a href="#commutative-author-and-rev">Commutative Author and Revision
-    Reporting</a> (<i>unimplemented</i>)</li>
+    Reporting</a> (<i>partially implemented</i>)</li>
 </ul>
 
 <div class="h4" id="show-changesets-available">
@@ -457,6 +457,12 @@ Whitespace fixes.  No functional change.
   of XML to include child messages as subelements of the corresponding parent
   log messages.  Consumers can use the location of a particular log message in
   the tree to determine its ancestry.</p>
+
+  <p>This output may be useful for auditing purposes to those migrating from
+  <a href="http://www.orcaware.com/svn/wiki/Svnmerge.py">svnmerge.py</a>, as
+  a replacement for repeating the entirety of the merged ranges' log
+  messages in the log message for the commit of a merge (e.g. svnmerge.py's
+  generated <em>svnmerge-commit-message.txt</em> file).</p>
 
   </dd>
 
