@@ -157,8 +157,8 @@ tracking.</p>
 
 <p>Allow change sets to be marked as merged, effectively a way to
 manipulate the merge memory on target for a given merge source.  This
-is related to the <a href="#revision-blocking">revision blocking</a>
-concept.</p>
+is related to -- but not semantically equivalent to -- the <a
+href="#revision-blocking">revision blocking</a> concept.</p>
 
 <p>Fundamentally, the use case is to support merge tracking of a
 change set which is sufficiently different when ported to a different
@@ -200,8 +200,11 @@ features (<a href="#auditing">Auditing</a> section).</p>
 <div class="h4" id="revision-blocking">
 <h4>Block/Unblock Change Set</h4>
 
-<p>Protect revisions which should never be merged from accidental
-merging.</p>
+<p>Protect revisions of a source which should never be merged from
+accidental merging.</p>
+
+<p>This includes both blocking merging of specific revisions into a
+path, and blocking merging of a specific revision to any path.</p>
 
 </div>  <!-- revision-blocking -->
 
