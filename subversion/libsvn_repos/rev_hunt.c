@@ -29,6 +29,7 @@
 #include "svn_sorts.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "repos.h"
 
 #include <assert.h>
@@ -784,6 +785,68 @@ struct revision_path
   const char *path;
 };
 
+/* Get the mergeinfo for PATH in REPOS as REVNUM and store it in MERGEINFO. */
+static svn_error_t *
+get_path_mergeinfo(apr_hash_t **mergeinfo,
+                   svn_repos_t *repos,
+                   const char *path,
+                   svn_revnum_t revnum,
+                   apr_pool_t *pool)
+{
+  apr_hash_t *tmp_mergeinfo;
+  const char *mergeinfo_str;
+  svn_fs_root_t *root;
+  apr_array_header_t *paths = apr_array_make(pool, 1,
+                                             sizeof(const char *));
+
+  APR_ARRAY_PUSH(paths, const char *) = path;
+
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, revnum, pool));
+  SVN_ERR(svn_fs_get_mergeinfo(&tmp_mergeinfo, root, paths,
+                               svn_mergeinfo_inherited, pool));
+  
+  mergeinfo_str = apr_hash_get(tmp_mergeinfo, path, APR_HASH_KEY_STRING);
+  if (mergeinfo_str != NULL)
+    SVN_ERR(svn_mergeinfo_parse(mergeinfo, mergeinfo_str, pool));
+  else
+    *mergeinfo = apr_hash_make(pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Check to see if OLD_REV_PATH->PATH was changed as the result of a merge,
+   and if so, add the merged revision/path pairs to REVISION_PATHS. */
+static svn_error_t *
+get_merged_revision_paths(apr_array_header_t *revision_paths,
+                          svn_repos_t *repos,
+                          struct revision_path *old_rev_path,
+                          apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *curr_mergeinfo, *prev_mergeinfo, *deleted, *changed;
+
+  /* First, figure out if old_rev_path is a merging revision or not. */
+  SVN_ERR(get_path_mergeinfo(&curr_mergeinfo, repos, old_rev_path->path,
+                             old_rev_path->revnum, subpool));
+  SVN_ERR(get_path_mergeinfo(&prev_mergeinfo, repos, old_rev_path->path - 1,
+                             old_rev_path->revnum, subpool));
+  SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
+                             subpool));
+  SVN_ERR(svn_mergeinfo_merge(&changed, deleted, subpool));
+  if (apr_hash_count(changed) == 0)
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
+
+  /* ### TODO: search and find revisions to add to the REVISION_PATHS list. */
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+                          
+
 svn_error_t *
 svn_repos_get_file_revs2(svn_repos_t *repos,
                          const char *path,
@@ -854,6 +917,10 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 
       rev_path->path = apr_pstrdup(pool, rev_path->path);
       APR_ARRAY_PUSH(revision_paths, struct revision_path *) = rev_path;
+
+      if (include_merged_revisions)
+        SVN_ERR(get_merged_revision_paths(revision_paths, repos, rev_path,
+                                          pool));
 
       if (rev_path->revnum <= start)
         break;
