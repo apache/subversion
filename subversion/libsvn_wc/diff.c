@@ -153,6 +153,16 @@ struct edit_baton {
   /* Empty file used to diff adds / deletes */
   const char *empty_file;
 
+  /* The stream attached to an @c svnpatch_file.  This is to avoid
+   * allocating <tt>svn_stream_t *</tt> every now and then. */
+  svn_stream_t *svnpatch_stream;
+
+  /* The list of diffable files of interest to svnpatch. */
+  apr_array_header_t *diff_targets;
+
+  /* A token holder, helps to build the svnpatch. */
+  int next_token;
+
   apr_pool_t *pool;
 };
 
@@ -188,6 +198,9 @@ struct dir_baton {
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
 
+  /* Set when dealing with svnpatch diff. */
+  const char *token;
+
   apr_pool_t *pool;
 };
 
@@ -221,6 +234,9 @@ struct file_baton {
 
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
+
+  /* Set when dealing with svnpatch diff. */
+  const char *token;
 
   apr_pool_t *pool;
 };
@@ -263,11 +279,21 @@ make_editor_baton(svn_wc_adm_access_t *anchor,
   eb->ignore_ancestry = ignore_ancestry;
   eb->use_text_base = use_text_base;
   eb->reverse_order = reverse_order;
+  eb->diff_targets = apr_array_make(pool, 1, sizeof(const char *));
+  eb->next_token = 0;
+  eb->svnpatch_stream = NULL;
   eb->pool = pool;
 
   return eb;
 }
 
+static const char *
+make_token(char type,
+           struct edit_baton *eb,
+           apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "%c%d", type, eb->next_token++);
+}
 
 /* Create a new directory baton.  PATH is the directory path,
  * including anchor_path.  ADDED is set if this directory is being
@@ -282,6 +308,7 @@ make_dir_baton(const char *path,
                struct dir_baton *parent_baton,
                struct edit_baton *edit_baton,
                svn_boolean_t added,
+               const char *token,
                apr_pool_t *pool)
 {
   struct dir_baton *dir_baton = apr_pcalloc(pool, sizeof(*dir_baton));
@@ -293,19 +320,22 @@ make_dir_baton(const char *path,
   dir_baton->propchanges = apr_array_make(pool, 1, sizeof(svn_prop_t));
   dir_baton->compared = apr_hash_make(dir_baton->pool);
   dir_baton->path = path;
+  dir_baton->token = token;
 
   return dir_baton;
 }
 
 /* Create a new file baton.  PATH is the file path, including
  * anchor_path.  ADDED is set if this file is being added rather than
- * replaced.  PARENT_BATON is the baton of the parent directory.  The
- * directory and its parent may or may not exist in the working copy.
+ * replaced.  PARENT_BATON is the baton of the parent directory.  TOKEN
+ * is used when dealing with svnpatch.  The directory and its parent
+ * may or may not exist in the working copy.
  */
 static struct file_baton *
 make_file_baton(const char *path,
                 svn_boolean_t added,
                 struct dir_baton *parent_baton,
+                const char *token,
                 apr_pool_t *pool)
 {
   struct file_baton *file_baton = apr_pcalloc(pool, sizeof(*file_baton));
@@ -316,6 +346,7 @@ make_file_baton(const char *path,
   file_baton->pool = pool;
   file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
   file_baton->path = path;
+  file_baton->token = token;
 
   /* If the parent directory is added rather than replaced it does not
      exist in the working copy.  Determine a working copy path whose
@@ -492,6 +523,7 @@ file_diff(struct dir_baton *dir_baton,
   const char *translated = NULL;
   apr_array_header_t *propchanges = NULL;
   apr_hash_t *baseprops = NULL;
+  svn_boolean_t file_to_diff = FALSE; /* whether or not to push to diffables */
 
   assert(! eb->use_text_base);
 
@@ -500,8 +532,9 @@ file_diff(struct dir_baton *dir_baton,
 
   /* If the item is schedule-add *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
-     vs. text-base comparision. */
-  if (copied)
+     vs. text-base comparision; we also don't want svnpatch be affected
+     by this behaviour as replace operations could slip through doing so. */
+  if (copied && ! eb->svnpatch_stream)
     schedule = svn_wc_schedule_normal;
 
   /* If this was scheduled replace and we are ignoring ancestry,
@@ -552,6 +585,8 @@ file_diff(struct dir_baton *dir_baton,
                baseprops,
                dir_baton->edit_baton->callback_baton));
 
+        file_to_diff = TRUE;
+
       /* Replace will fallthrough! */
       if (schedule == svn_wc_schedule_delete)
         break;
@@ -576,6 +611,8 @@ file_diff(struct dir_baton *dir_baton,
                working_mimetype,
                propchanges, baseprops,
                dir_baton->edit_baton->callback_baton));
+
+      file_to_diff = TRUE;
 
       break;
 
@@ -616,8 +653,28 @@ file_diff(struct dir_baton *dir_baton,
                    working_mimetype,
                    propchanges, baseprops,
                    dir_baton->edit_baton->callback_baton));
+
+          /* As far as svnpatch is concerned, we only grab binary stuff
+           * and prop changes here.  In other words, no grab if this is
+           * a non-binary file that carries text changes only as this
+           * is left to the unidiff part. */
+          svn_boolean_t mt_binary = FALSE;
+          svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
+          if (base_mimetype)
+            mt1_binary = svn_mime_type_is_binary(base_mimetype);
+          if (working_mimetype)
+            mt1_binary = svn_mime_type_is_binary(working_mimetype);
+
+          mt_binary = (mt1_binary || mt2_binary);
+          if (mt_binary || (propchanges->nelts > 0 && ! mt_binary))
+            file_to_diff = TRUE;
         }
     }
+
+  if (file_to_diff)
+    APR_ARRAY_PUSH(eb->diff_targets, const char *)
+      = apr_pstrdup(eb->pool, path);
+
   return SVN_NO_ERROR;
 }
 
@@ -629,32 +686,45 @@ dir_diff(struct dir_baton *dir_baton,
          const svn_wc_entry_t *entry,
          apr_pool_t *pool)
 {
-  switch(entry->schedule)
+  struct edit_baton *eb = dir_baton->edit_baton;
+  svn_boolean_t dir_to_diff = FALSE; /* whether or not to push to diffables */
+
+  switch (entry->schedule)
     {
       case svn_wc_schedule_replace:
       case svn_wc_schedule_delete:
-        SVN_ERR(dir_baton->edit_baton->callbacks->dir_deleted
+        SVN_ERR(eb->callbacks->dir_deleted
                 (NULL,
                  NULL,
                  path,
-                 dir_baton->edit_baton->callback_baton));
+                 eb->callback_baton));
+
+        dir_to_diff = TRUE;
 
         /* So that 'replace' falls through */
         if (entry->schedule == svn_wc_schedule_delete)
           break;
 
       case svn_wc_schedule_add:
-        SVN_ERR(dir_baton->edit_baton->callbacks->dir_added
+        SVN_ERR(eb->callbacks->dir_added
                 (NULL,
                  NULL,
                  path,
                  entry->revision,
-                 dir_baton->edit_baton->callback_baton));
+                 eb->callback_baton));
+
+        dir_to_diff = TRUE;
+
         break;
-      
+
       default:
         break;
     }
+
+  if (dir_to_diff)
+    APR_ARRAY_PUSH(eb->diff_targets, const char *)
+      = apr_pstrdup(eb->pool, path);
+
   return SVN_NO_ERROR;
 }
 
@@ -673,6 +743,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
   svn_boolean_t in_anchor_not_target;
   apr_pool_t *subpool;
   svn_wc_adm_access_t *adm_access;
+  struct edit_baton *eb = dir_baton->edit_baton;
 
   /* This directory should have been unchanged or replaced, not added,
      since an added directory can only contain added files and these will
@@ -719,6 +790,10 @@ directory_elements_diff(struct dir_baton *dir_baton)
                    dir_baton->path,
                    propchanges, baseprops,
                    dir_baton->edit_baton->callback_baton));
+
+          if (eb->svnpatch_stream)
+            APR_ARRAY_PUSH(eb->diff_targets, const char *)
+              = apr_pstrdup(eb->pool, dir_baton->path);
         }
     }
 
@@ -787,6 +862,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
               subdir_baton = make_dir_baton(path, dir_baton,
                                             dir_baton->edit_baton,
                                             FALSE,
+                                            NULL,
                                             subpool);
 
               SVN_ERR(directory_elements_diff(subdir_baton));
@@ -974,6 +1050,7 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
                                                               dir_baton,
                                                               eb,
                                                               FALSE,
+                                                              NULL,
                                                               subpool);
 
               SVN_ERR(report_wc_directory_as_added(subdir_baton, subpool));
@@ -990,6 +1067,261 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
   return SVN_NO_ERROR;
 }
 
+
+/* svnpatch-specific editor functions follow */
+
+static svn_error_t *
+svnpatch_open_root(void *edit_baton,
+                   svn_revnum_t base_revision,
+                   apr_pool_t *dir_pool,
+                   void **root_baton)
+{
+  struct edit_baton *eb = edit_baton;
+  const char *token = make_token('d', eb, dir_pool);
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "open-root", "c", token));
+
+  eb->root_opened = TRUE;
+  *root_baton = make_dir_baton(eb->anchor_path, NULL, eb,
+                               FALSE, token, dir_pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svnpatch_open_directory(const char *path,
+                        void *parent_baton,
+                        svn_revnum_t base_revision,
+                        apr_pool_t *dir_pool,
+                        void **child_baton)
+{
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  const char *token = make_token('d', eb, dir_pool);
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "open-dir", "ccc", path, pb->token, token));
+  *child_baton = make_dir_baton(path, pb, eb, FALSE, token, dir_pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svnpatch_close_directory(void *dir_baton,
+                         apr_pool_t *pool)
+{
+  struct dir_baton *b = dir_baton;
+  struct edit_baton *eb = b->edit_baton;
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "close-dir", "c", b->token));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svnpatch_add_directory(const char *path,
+                       void *parent_baton,
+                       const char *copyfrom_path,
+                       svn_revnum_t copyfrom_revision,
+                       apr_pool_t *dir_pool,
+                       void **child_baton)
+{
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  const char *token = make_token('d', eb, dir_pool);
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "add-dir", "ccc(?c)", path, pb->token,
+                           token, copyfrom_path));
+  *child_baton = make_dir_baton(path, pb, eb, TRUE, token, dir_pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svnpatch_change_dir_prop(void *dir_baton,
+                         const char *name,
+                         const svn_string_t *value,
+                         apr_pool_t *pool)
+{
+  struct dir_baton *pb = dir_baton;
+  struct edit_baton *eb = pb->edit_baton;
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "change-dir-prop", "cc(?s)", pb->token, name,
+                           value));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svnpatch_open_file(const char *path,
+                   void *parent_baton,
+                   svn_revnum_t base_revision,
+                   apr_pool_t *file_pool,
+                   void **file_baton)
+{
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  const char *token = make_token('c', eb, file_pool);
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "open-file", "ccc", path, pb->token,
+                           token));
+  *file_baton = make_file_baton(path, FALSE, pb, token, file_pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svnpatch_add_file(const char *path,
+                  void *parent_baton,
+                  const char *copyfrom_path,
+                  svn_revnum_t copyfrom_revision,
+                  apr_pool_t *file_pool,
+                  void **file_baton)
+{
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  const char *token = make_token('c', eb, file_pool);
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "add-file", "ccc(?c)", path, pb->token,
+                           token, copyfrom_path));
+  *file_baton = make_file_baton(path, TRUE, pb, token, file_pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svnpatch_close_file(void *file_baton,
+                    const char *text_checksum,
+                    apr_pool_t *pool)
+{
+  struct file_baton *b = file_baton;
+  struct edit_baton *eb = b->edit_baton;
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "close-file", "c(?c)",
+                           b->token, text_checksum));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svnpatch_change_file_prop(void *file_baton,
+                          const char *name,
+                          const svn_string_t *value,
+                          apr_pool_t *pool)
+{
+  struct file_baton *b = file_baton;
+  struct edit_baton *eb = b->edit_baton;
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "change-file-prop", "cc(?s)",
+                           b->token, name, value));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svnpatch_delete_entry(const char *path,
+                      svn_revnum_t base_revision,
+                      void *parent_baton,
+                      apr_pool_t *pool)
+{
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "delete-entry", "cc",
+                           path, pb->token));
+  return SVN_NO_ERROR;
+}
+
+/* Used in svnpatch_apply_textdelta() to set up the diff_stream. */
+static svn_error_t *
+svndiff_write_handler(void *baton,
+                      const char *data,
+                      apr_size_t *len)
+{
+  struct file_baton *f = baton;
+  struct edit_baton *eb = f->edit_baton;
+  svn_string_t str;
+
+  str.data = data;
+  str.len = *len;
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "textdelta-chunk", "cs", f->token, &str));
+  return SVN_NO_ERROR;
+}
+
+/* Used in svnpatch_apply_textdelta() to set up the diff_stream. */
+static svn_error_t *
+svndiff_close_handler(void *baton)
+{
+  struct file_baton *f = baton;
+  struct edit_baton *eb = f->edit_baton;
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "textdelta-end", "c", f->token));
+  return SVN_NO_ERROR;
+  
+}
+static svn_error_t *
+svnpatch_apply_textdelta(void *file_baton,
+                         const char *base_checksum,
+                         apr_pool_t *pool,
+                         svn_txdelta_window_handler_t *handler,
+                         void **handler_baton)
+{
+  struct file_baton *f = file_baton;
+  struct edit_baton *eb = f->edit_baton;
+  svn_stream_t *diff_stream;
+
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "apply-textdelta", "c(?c)", f->token,
+                           base_checksum));
+  diff_stream = svn_stream_create(f, pool);
+  svn_stream_set_write(diff_stream, svndiff_write_handler);
+  svn_stream_set_close(diff_stream, svndiff_close_handler);
+  svn_txdelta_to_svndiff2(handler, handler_baton, diff_stream, 1, pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svnpatch_close_edit(void *edit_baton,
+                    apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+  
+  assert(eb->root_opened);
+  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                           "close-edit", ""));
+  return SVN_NO_ERROR;
+}
+
+/* Create an editor, close to what svn_wc_get_diff_editor4() does for
+ * rep/wc diff.  As svnpatch is revisionless, no need for @c
+ * set_target_revision callback.  No cancel facility here as this is
+ * wc/wc diff. */
+static void /* Only invoked in this same file, yet. */
+get_svnpatch_diff_editor(svn_delta_editor_t **editor,
+                         apr_pool_t *pool)
+{
+  svn_delta_editor_t *diff_editor;
+
+  diff_editor = svn_delta_default_editor(pool);
+
+  diff_editor->open_root = svnpatch_open_root;
+  diff_editor->delete_entry = svnpatch_delete_entry;
+  diff_editor->add_directory = svnpatch_add_directory;
+  diff_editor->open_directory = svnpatch_open_directory;
+  diff_editor->close_directory = svnpatch_close_directory;
+  diff_editor->add_file = svnpatch_add_file;
+  diff_editor->open_file = svnpatch_open_file;
+  diff_editor->apply_textdelta = svnpatch_apply_textdelta;
+  diff_editor->change_file_prop = svnpatch_change_file_prop;
+  diff_editor->change_dir_prop = svnpatch_change_dir_prop;
+  diff_editor->close_file = svnpatch_close_file;
+  diff_editor->close_edit = svnpatch_close_edit;
+
+  *editor = diff_editor;
+}
+
+
 /* An editor function. */
 static svn_error_t *
 set_target_revision(void *edit_baton, 
@@ -1013,7 +1345,7 @@ open_root(void *edit_baton,
   struct dir_baton *b;
 
   eb->root_opened = TRUE;
-  b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, dir_pool);
+  b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, NULL, dir_pool);
   *root_baton = b;
 
   return SVN_NO_ERROR;
@@ -1096,7 +1428,7 @@ delete_entry(const char *path,
       break;
 
     case svn_node_dir:
-      b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE, pool);
+      b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE, NULL, pool);
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. */
       SVN_ERR(report_wc_directory_as_added(b, pool));
@@ -1125,7 +1457,7 @@ add_directory(const char *path,
   /* ### TODO: support copyfrom? */
 
   full_path = svn_path_join(pb->edit_baton->anchor_path, path, dir_pool);
-  b = make_dir_baton(full_path, pb, pb->edit_baton, TRUE, dir_pool);
+  b = make_dir_baton(full_path, pb, pb->edit_baton, TRUE, NULL, dir_pool);
   *child_baton = b;
 
   return SVN_NO_ERROR;
@@ -1146,7 +1478,7 @@ open_directory(const char *path,
   /* Allocate path from the parent pool since the memory is used in the
      parent's compared hash */
   full_path = svn_path_join(pb->edit_baton->anchor_path, path, pb->pool);
-  b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE, dir_pool);
+  b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE, NULL, dir_pool);
   *child_baton = b;
 
   return SVN_NO_ERROR;
@@ -1253,7 +1585,7 @@ add_file(const char *path,
   /* ### TODO: support copyfrom? */
 
   full_path = svn_path_join(pb->edit_baton->anchor_path, path, file_pool);
-  b = make_file_baton(full_path, TRUE, pb, file_pool);
+  b = make_file_baton(full_path, TRUE, pb, NULL, file_pool);
   *file_baton = b;
 
   /* Add this filename to the parent directory's list of elements that
@@ -1277,7 +1609,7 @@ open_file(const char *path,
   const char *full_path;
 
   full_path = svn_path_join(pb->edit_baton->anchor_path, path, file_pool);
-  b = make_file_baton(full_path, FALSE, pb, file_pool);
+  b = make_file_baton(full_path, FALSE, pb, NULL, file_pool);
   *file_baton = b;
 
   /* Add this filename to the parent directory's list of elements that
@@ -1574,7 +1906,7 @@ close_edit(void *edit_baton,
     {
       struct dir_baton *b;
 
-      b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, eb->pool);
+      b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, NULL, eb->pool);
       SVN_ERR(directory_elements_diff(b));
     }
 
@@ -1836,17 +2168,163 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
                                  editor, edit_baton, pool);
 }
 
+struct path_driver_cb_baton
+{
+  svn_wc_adm_access_t *adm_access;     /* top-level access baton */
+  const svn_delta_editor_t *editor;    /* diff editor */
+  void *edit_baton;                    /* diff editor's baton */
+  apr_hash_t *diffable_entries;        /* diff targets (svnpatch) */
+};
+
+/* This function is directly related to svnpatch and implements @c
+ * svn_delta_path_driver_cb_func_t callback needed by
+ * svn_delta_path_driver() to achieve an editor drive.  It is in many
+ * ways similar to do_item_commit() in a sense that it looks up
+ * <tt>svn_wc_entry_t *</tt> objects from a hashmap of diffables (as in
+ * 'commitables') keyed on their path and do what needs to be done by
+ * invoking editor functions against them, which in turn write ra_svn
+ * protocol bytes to the pipe.  Except the pipe is a temporary file we
+ * dump to stdout when done, rather than a network connection.  */
+static svn_error_t *
+path_driver_cb_func(void **dir_baton,
+                    void *parent_baton,
+                    void *callback_baton,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  struct path_driver_cb_baton *cb_baton = callback_baton;
+  const svn_delta_editor_t *editor = cb_baton->editor;
+  svn_wc_adm_access_t *adm_access = cb_baton->adm_access;
+  svn_wc_entry_t *entry = apr_hash_get(cb_baton->diffable_entries,
+                                       path, APR_HASH_KEY_STRING);
+  struct edit_baton *eb = cb_baton->edit_baton;
+  struct dir_baton *pb = parent_baton;
+  void *fb = NULL; /* file baton */
+  const char *copyfrom_url = NULL;
+  svn_boolean_t file_modified; /* text modifications */
+  svn_boolean_t file_is_binary;
+  svn_boolean_t file_need_close = FALSE;
+
+  *dir_baton = NULL;
+  if (entry->copyfrom_url)
+    copyfrom_url = svn_path_basename(entry->copyfrom_url, pb->pool);
+
+  switch (entry->schedule)
+    {
+      case svn_wc_schedule_replace: /* fallthrough del + add */
+      case svn_wc_schedule_delete:
+        if (entry->kind == svn_node_file)
+          {
+            assert(pb);
+            SVN_ERR(editor->delete_entry
+                    (path, SVN_INVALID_REVNUM, pb, pool));
+          }
+
+        if (svn_wc_schedule_delete) /* we're done */
+          break;
+
+      case svn_wc_schedule_add:
+        if (entry->kind == svn_node_file)
+          {
+            assert(pb);
+            SVN_ERR(editor->add_file
+                    (path, pb, copyfrom_url, SVN_INVALID_REVNUM,
+                     pool, &fb));
+            file_need_close = TRUE;
+          }
+        else /* dir */
+          {
+            assert(pb);
+            SVN_ERR(editor->add_directory
+                    (path, pb, copyfrom_url, SVN_INVALID_REVNUM,
+                     pool, dir_baton));
+          }
+
+      /* No break here so that the current entry scheduled for addition
+       * also benefits the code below dealing with prop changes and binary
+       * changes processing. */
+
+      case svn_wc_schedule_normal:
+
+        /* Open the current entry -- root, dir or file -- if it needs to. */
+        if (entry->kind == svn_node_file)
+          {
+            if (! fb)
+              {
+                assert(pb);
+                SVN_ERR(editor->open_file
+                        (path, pb, SVN_INVALID_REVNUM, pool, &fb));
+                file_need_close = TRUE;
+              }
+          }
+        else
+          {
+            if (! *dir_baton)
+              {
+                if (! pb)
+                  {
+                    SVN_ERR(editor->open_root
+                            (eb, SVN_INVALID_REVNUM, pool, dir_baton));
+                  }
+                else
+                  {
+                    SVN_ERR(editor->open_directory
+                            (path, pb, SVN_INVALID_REVNUM, pool, dir_baton));
+                  }
+              }
+          }
+
+        /* Process property changes. */
+        if (entry->has_prop_mods)
+          {
+            SVN_ERR(svn_wc_transmit_prop_deltas
+                    (path, adm_access, entry, editor,
+                     (entry->kind == svn_node_file) ? fb : *dir_baton,
+                     NULL, pool));
+            if (entry->kind == svn_node_file)
+              file_need_close = TRUE;
+          }
+
+        /* Process binary changes. */
+        SVN_ERR(svn_wc_has_binary_prop(&file_is_binary, path,
+                                       adm_access, pool));
+        if ((entry->kind == svn_node_file) && file_is_binary)
+          {
+            SVN_ERR(svn_wc_text_modified_p(&file_modified, path,
+                                           TRUE, adm_access, pool));
+            if (file_modified)
+              SVN_ERR(svn_wc_transmit_text_deltas2
+                      (NULL,
+                       NULL,/* TODO:digest bin stuff */
+                       path, adm_access, TRUE,
+                       editor, fb, pool));
+            /* svn_wc_transmit_text_deltas2() does the close itself. */
+            file_need_close = FALSE; 
+          }
+
+        /* A non-binary file may need to be closed. */
+        if (file_need_close)
+          SVN_ERR(editor->close_file(fb, NULL, pool));
+        break;
+
+      default:
+        break;
+    }
+  return SVN_NO_ERROR;
+}
+
 
 /* Compare working copy against the text-base.
    ### TODO(sd): I'm not sure we need to change RECURSE to DEPTH here,
    ### since this only descends within the working copy anyway. */
 svn_error_t *
-svn_wc_diff3(svn_wc_adm_access_t *anchor,
+svn_wc_diff4(svn_wc_adm_access_t *anchor,
              const char *target,
              const svn_wc_diff_callbacks2_t *callbacks,
              void *callback_baton,
              svn_boolean_t recurse,
              svn_boolean_t ignore_ancestry,
+             apr_file_t *svnpatch_file,
              apr_pool_t *pool)
 {
   struct edit_baton *eb;
@@ -1854,10 +2332,21 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
   const svn_wc_entry_t *entry;
   const char *target_path;
   svn_wc_adm_access_t *adm_access;
+  svn_delta_editor_t *diff_editor;
 
   eb = make_editor_baton(anchor, target, callbacks, callback_baton,
                          SVN_DEPTH_FROM_RECURSE(recurse),
                          ignore_ancestry, FALSE, FALSE, pool);
+
+  /* Get ready with svnpatch work: initiate a stream once and for all to
+   * manipulate the svnpatch file.  As much of the functions called
+   * below down through the stack all have access to the @c edit_baton,
+   * we'll be testing whether or not we want svnpatch diff against the
+   * nullity of @c edit_baton->svnpatch_stream. */
+  if (svnpatch_file)
+      eb->svnpatch_stream =
+        svn_stream_from_aprfile2(svnpatch_file,
+                                 FALSE, eb->pool);
 
   target_path = svn_path_join(svn_wc_adm_access_path(anchor), target,
                               eb->pool);
@@ -1868,13 +2357,64 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
                                   eb->pool));
 
   if (entry->kind == svn_node_dir)
-    b = make_dir_baton(target_path, NULL, eb, FALSE, eb->pool);
+    b = make_dir_baton(target_path, NULL, eb, FALSE, NULL, eb->pool);
   else
-    b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, eb->pool);
+    b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, NULL, eb->pool);
 
   SVN_ERR(directory_elements_diff(b));
 
+  if (svnpatch_file && eb->diff_targets->nelts > 0)
+    {
+      int i = 0;
+      struct path_driver_cb_baton cb_baton;
+
+      /* Set up @c diff_editor with the set of svnpatch editor
+       * functions defined in this same file. */
+      get_svnpatch_diff_editor(&diff_editor, eb->pool);
+
+      /* Create a hashmap of @c svn_wc_entry_t * objects from the array
+       * of diff_targets, i.e. the list of *diffable* entries, keyed on
+       * their path.  This hash is looked up from path_driver_cb_func().
+       */
+      apr_hash_t *diffable_entries = apr_hash_make(pool);
+
+      for (i = 0; i < eb->diff_targets->nelts; ++i)
+        {
+          const char *name = APR_ARRAY_IDX(eb->diff_targets, i, const char *);
+          const svn_wc_entry_t *new_entry;
+
+          SVN_ERR(svn_wc_entry(&new_entry, name, adm_access, TRUE, eb->pool));
+          apr_hash_set(diffable_entries, name, APR_HASH_KEY_STRING, new_entry);
+        }
+
+      cb_baton.editor = diff_editor;
+      cb_baton.adm_access = adm_access;
+      cb_baton.edit_baton = eb;
+      cb_baton.diffable_entries = diffable_entries;
+
+      /* Drive the editor to dump serialized editor commands to the
+       * svnpatch tempfile. */
+      SVN_ERR(svn_delta_path_driver(diff_editor, eb,
+                                    SVN_INVALID_REVNUM, eb->diff_targets,
+                                    path_driver_cb_func, (void *)&cb_baton,
+                                    pool));
+      SVN_ERR(diff_editor->close_edit(eb, pool));
+    }
+
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_diff3(svn_wc_adm_access_t *anchor,
+             const char *target,
+             const svn_wc_diff_callbacks2_t *callbacks,
+             void *callback_baton,
+             svn_boolean_t recurse,
+             svn_boolean_t ignore_ancestry,
+             apr_pool_t *pool)
+{
+  return svn_wc_diff4(anchor, target, callbacks, callback_baton,
+                      recurse, ignore_ancestry, FALSE, pool);
 }
 
 svn_error_t *

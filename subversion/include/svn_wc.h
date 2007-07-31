@@ -3498,7 +3498,30 @@ svn_error_t *svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
  *
+ * @a svnpatch_file is the temporary file to which the function dumps
+ * serialized ra_svn protocol editor commands.  It somehow determines whether
+ * or not to utilize svnpatch format in the diff output when checked against @c
+ * NULL.  The caller must allocate the file handler, open and close the file
+ * respectively before and after the call.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_diff4(svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          const svn_wc_diff_callbacks2_t *callbacks,
+                          void *callback_baton,
+                          svn_boolean_t recurse,
+                          svn_boolean_t ignore_ancestry,
+                          apr_file_t *svnpatch_file,
+                          apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_diff4(), but with @a svnpatch_format always set
+ * to @c FALSE.
+ *
  * @since New in 1.2.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *svn_wc_diff3(svn_wc_adm_access_t *anchor,
                           const char *target,
@@ -4264,6 +4287,71 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
                       svn_wc_notify_func2_t notify_func,
                       void *notify_baton,
                       apr_pool_t *pool);
+
+
+
+/**
+ *
+ * @defgroup svn_wc_svnpatch svnpatch related functions
+ *
+ * @{
+ *
+ */
+
+/* Append @a number into @a target stream. */
+svn_error_t *
+svn_wc_write_number(svn_stream_t *target,
+                    apr_pool_t *pool,
+                    const apr_uint64_t number);
+
+/* Append @a str into @a target stream.  Is binary-able. */
+svn_error_t *
+svn_wc_write_string(svn_stream_t *target,
+                    apr_pool_t *pool,
+                    const svn_string_t *str);
+
+/* Append @a s cstring into @a target stream. */
+svn_error_t *
+svn_wc_write_cstring(svn_stream_t *target,
+                     apr_pool_t *pool,
+                     const char *s);
+
+/* Append @a word into @a target stream. */
+svn_error_t *
+svn_wc_write_word(svn_stream_t *target,
+                  apr_pool_t *pool,
+                  const char *word);
+
+/* Append a list of properties @a props into @a target. */
+svn_error_t *
+svn_wc_write_proplist(svn_stream_t *target,
+                      apr_hash_t *props,
+                      apr_pool_t *pool);
+
+/* Begin a list, appended into @target */
+svn_error_t *
+svn_wc_start_list(svn_stream_t *target);
+
+/* End a list, appended into @target */
+svn_error_t *
+svn_wc_end_list(svn_stream_t *target);
+
+/* Append a tuple into @target in a printf-like fashion.
+ * @see svn_ra_svn_write_tuple() for further details with the format. */
+svn_error_t *
+svn_wc_write_tuple(svn_stream_t *target,
+                   apr_pool_t *pool,
+                   const char *fmt, ...);
+
+/* Append a command into @target, using the same format notation as
+ * svn_wc_write_tuple(). */
+svn_error_t *
+svn_wc_write_cmd(svn_stream_t *target,
+                 apr_pool_t *pool,
+                 const char *cmdname,
+                 const char *fmt, ...);
+
+/** @} end group: svnpatch related functions */
 
 
 #ifdef __cplusplus
