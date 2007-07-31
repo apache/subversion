@@ -66,7 +66,7 @@ maybe_send_header(struct log_receiver_baton *lrb)
 }
 
 
-/* This implements `svn_log_message_receiver_t'.
+/* This implements `svn_log_message_receiver2_t'.
    BATON is a `struct log_receiver_baton *'.  */
 static svn_error_t *
 log_receiver(void *baton,
