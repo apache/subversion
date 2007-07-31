@@ -309,11 +309,23 @@ housekeeping property).</p>
 <div class="h4" id="show-changesets-available">
 <h4>Changeset Merge Availability</h4>
 
-<p>TODO: Show changesets available from a merge source.</p>
+<p>Show changesets available for merge/already merged from a merge
+source.  The command-line client's default output format should be
+equivalent to that of <code>svn log</code>, and allow for
+XML-formatted output (for machine parsing).  Blue sky, the
+command-line could also produce an output format equivalent to that of
+<code>svn diff</code>.</p>
 
 <p>Recent discussion can be found <a
 href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=128233"
->here</a>.</p>
+>here</a>.  Development is tracked <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2820">here</a>.</p>
+
+<p>The <a href="requirements.html#change-set-availability">Show
+Changesets Blocked from Merging</a> portion of this feature is
+scheduled for implementation post-1.5, and is dependent upon the <a
+href="requirements.html#revision-blocking">revision blocking</a>
+feature slated for the same timeframe.</p>
 
 </div>  <!-- show-changesets-available -->
 
@@ -321,11 +333,17 @@ href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=12823
 <h4>Find Changeset</h4>
 
 <p>Show where a changeset has been merged from/merged to, providing
-merging revision, URL, and rangelist.</p>
+merging revision, URL, and rangelist.  The command-line client should
+allow for XML-formatted output (for machine parsing).</p>
 
 <p>Recent discussion can be found <a
 href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=128233"
->here</a>.</p>
+>here</a>.  Development is tracked <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2835">here</a>.</p>
+
+<p>The <a href="requirements.html#find-changeset">Find Paths
+containing Specific Incarnation of Versioned Resource</a> portion of
+this feature is not yet scheduled for implementation.</p>
 
 </div>  <!-- find-changeset -->
 
