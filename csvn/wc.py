@@ -280,6 +280,28 @@ class WC(object):
                             self.client, self.iterpool)
                             
         self.iterpool.clear()
+        
+    def proplist(self, target="", recurse=True):
+        """Returns an array of the values of the normal properties of TARGET,
+        which defaults to the working copy root. The contents of the array
+        are svn_client_proplist_item_t objects.
+        
+        If RECURSE is True, directories will be recursed."""
+        peg_revision = svn_opt_revision_t()
+        peg_revision.kind = svn_opt_revision_unspecified
+        
+        revision = svn_opt_revision_t()
+        revision.kind = svn_opt_revision_working
+        
+        props = _types.Array(svn_client_proplist_item_t)
+        
+        svn_client_proplist2(byref(props.header), self._build_path(target),
+                     byref(peg_revision), byref(revision), recurse,
+                     self.client, self.iterpool)
+        
+        self.iterpool.clear()
+                 
+        return props
     
     # Internal method to wrap status callback.
     def _status_wrapper(baton, path, status):
