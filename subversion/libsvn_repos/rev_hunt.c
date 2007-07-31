@@ -849,9 +849,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
           SVN_ERR(authz_read_func(&readable, tmp_root, rev_path->path,
                                   authz_read_baton, iter_pool));
           if (! readable)
-            {
-              break;
-            }
+            break;
         }
 
       rev_path->path = apr_pstrdup(pool, rev_path->path);
