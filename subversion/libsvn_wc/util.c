@@ -28,6 +28,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "wc.h"   /* just for prototypes of things in this .c file */
 #include "private/svn_wc_private.h"
 
@@ -288,6 +289,205 @@ svn_wc__path_switched(const char *wc_path,
 
   parent_child_url = svn_path_join(parent_entry->url, wc_basename, pool);
   *switched = strcmp(parent_child_url, entry->url) != 0;
+
+  return SVN_NO_ERROR;
+}
+
+/* --- SVNPATCH ROUTINES --- */
+
+/* --- WRITING DATA ITEMS --- */
+ 
+svn_error_t *
+svn_wc_write_number(svn_stream_t *target,
+                    apr_pool_t *pool,
+                    apr_uint64_t number)
+{
+  return svn_stream_printf(target, pool, "%" APR_UINT64_T_FMT " ",
+                           number);
+}
+
+svn_error_t *
+svn_wc_write_string(svn_stream_t *target,
+                    apr_pool_t *pool,
+                    const svn_string_t *str)
+{
+  /* @c svn_stream_printf() doesn't support binary bytes.  Since
+   * str->data might contain binary stuff, let's use svn_stream_write()
+   * instead. */
+  SVN_ERR(svn_stream_printf(target, pool, "%" APR_SIZE_T_FMT ":",
+                            str->len));
+  apr_size_t len;
+  len = str->len;
+  SVN_ERR(svn_stream_write(target, str->data, &len));
+  SVN_ERR(svn_stream_printf(target, pool, "%s", " "));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_write_cstring(svn_stream_t *target,
+                     apr_pool_t *pool,
+                     const char *s)
+{
+  return svn_stream_printf(target, pool, "%" APR_SIZE_T_FMT ":%s ",
+                           strlen(s), s);
+}
+
+svn_error_t *
+svn_wc_write_word(svn_stream_t *target,
+                  apr_pool_t *pool,
+                  const char *word)
+{
+  return svn_stream_printf(target, pool, "%s ", word);
+}
+
+svn_error_t *
+svn_wc_write_proplist(svn_stream_t *target,
+                      apr_hash_t *props,
+                      apr_pool_t *pool)
+{
+  apr_pool_t *iterpool;
+  apr_hash_index_t *hi;
+  const void *key;
+  void *val;
+  const char *propname;
+  svn_string_t *propval;
+
+  if (props)
+    {
+      iterpool = svn_pool_create(pool);
+      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+        {
+          svn_pool_clear(iterpool);
+          apr_hash_this(hi, &key, NULL, &val);
+          propname = key;
+          propval = val;          
+          SVN_ERR(svn_wc_write_tuple(target, iterpool, "cs", propname,
+                                     propval));
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_start_list(svn_stream_t *target)
+{
+  apr_size_t len = 2;
+  return svn_stream_write(target, "( ", &len);
+}
+
+svn_error_t *
+svn_wc_end_list(svn_stream_t *target)
+{
+  apr_size_t len = 2;
+  return svn_stream_write(target, ") ", &len);
+}
+
+/* --- WRITING TUPLES --- */
+
+static svn_error_t *
+vwrite_tuple(svn_stream_t *target,
+             apr_pool_t *pool,
+             const char *fmt,
+             va_list ap)
+{
+  svn_boolean_t opt = FALSE;
+  svn_revnum_t rev;
+  const char *cstr;
+  const svn_string_t *str;
+
+  if (*fmt == '!')
+    fmt++;
+  else
+    SVN_ERR(svn_wc_start_list(target));
+  for (; *fmt; fmt++)
+    {
+      if (*fmt == 'n' && !opt)
+        SVN_ERR(svn_wc_write_number(target, pool,
+                                    va_arg(ap, apr_uint64_t)));
+      else if (*fmt == 'r')
+        {
+          rev = va_arg(ap, svn_revnum_t);
+          assert(opt || SVN_IS_VALID_REVNUM(rev));
+          if (SVN_IS_VALID_REVNUM(rev))
+            SVN_ERR(svn_wc_write_number(target, pool, rev));
+        }
+      else if (*fmt == 's')
+        {
+          str = va_arg(ap, const svn_string_t *);
+          assert(opt || str);
+          if (str)
+            SVN_ERR(svn_wc_write_string(target, pool, str));
+        }
+      else if (*fmt == 'c')
+        {
+          cstr = va_arg(ap, const char *);
+          assert(opt || cstr);
+          if (cstr)
+            SVN_ERR(svn_wc_write_cstring(target, pool, cstr));
+        }
+      else if (*fmt == 'w')
+        {
+          cstr = va_arg(ap, const char *);
+          assert(opt || cstr);
+          if (cstr)
+            SVN_ERR(svn_wc_write_word(target, pool, cstr));
+        }
+      else if (*fmt == 'b' && !opt)
+        {
+          cstr = va_arg(ap, svn_boolean_t) ? "true" : "false";
+          SVN_ERR(svn_wc_write_word(target, pool, cstr));
+        }
+      else if (*fmt == '?')
+        opt = TRUE;
+      else if (*fmt == '(' && !opt)
+        SVN_ERR(svn_wc_start_list(target));
+      else if (*fmt == ')')
+        {
+          SVN_ERR(svn_wc_end_list(target));
+          opt = FALSE;
+        }
+      else if (*fmt == '!' && !*(fmt + 1))
+        return SVN_NO_ERROR;
+      else
+        abort();
+    }
+  SVN_ERR(svn_wc_end_list(target));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_write_tuple(svn_stream_t *target,
+                   apr_pool_t *pool,
+                   const char *fmt, ...)
+{
+  va_list ap;
+  svn_error_t *err;
+
+  va_start(ap, fmt);
+  err = vwrite_tuple(target, pool, fmt, ap);
+  va_end(ap);
+  return err;
+}
+
+svn_error_t *
+svn_wc_write_cmd(svn_stream_t *target,
+                 apr_pool_t *pool,
+                 const char *cmdname,
+                 const char *fmt, ...)
+{
+  va_list ap;
+  svn_error_t *err;
+
+  SVN_ERR(svn_wc_start_list(target));
+  SVN_ERR(svn_wc_write_word(target, pool, cmdname));
+  va_start(ap, fmt);
+  err = vwrite_tuple(target, pool, fmt, ap);
+  va_end(ap);
+  if (err)
+    return err;
+  SVN_ERR(svn_wc_end_list(target));
 
   return SVN_NO_ERROR;
 }
