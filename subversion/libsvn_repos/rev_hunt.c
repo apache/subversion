@@ -778,6 +778,12 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+struct revision_path
+{
+  svn_revnum_t revnum;
+  const char *path;
+};
+
 svn_error_t *
 svn_repos_get_file_revs2(svn_repos_t *repos,
                          const char *path,
@@ -792,9 +798,8 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 {
   apr_pool_t *iter_pool, *last_pool;
   svn_fs_history_t *history;
-  apr_array_header_t *revnums = apr_array_make(pool, 0,
-                                               sizeof(svn_revnum_t));
-  apr_array_header_t *paths = apr_array_make(pool, 0, sizeof(char *));
+  apr_array_header_t *revision_paths = apr_array_make(pool, 0,
+                                                sizeof(struct revision_path *));
   apr_hash_t *last_props;
   svn_fs_root_t *root, *last_root;
   const char *last_path;
@@ -824,8 +829,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   /* Get the revisions we are interested in. */
   while (1)
     {
-      const char* rev_path;
-      svn_revnum_t rev;
+      struct revision_path *rev_path = apr_palloc(pool, sizeof(*rev_path));
       apr_pool_t *tmp_pool;
 
       svn_pool_clear(iter_pool);
@@ -833,23 +837,27 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
       SVN_ERR(svn_fs_history_prev(&history, history, TRUE, iter_pool));
       if (!history)
         break;
-      SVN_ERR(svn_fs_history_location(&rev_path, &rev, history, iter_pool));
+      SVN_ERR(svn_fs_history_location(&rev_path->path, &rev_path->revnum,
+                                      history, iter_pool));
       if (authz_read_func)
         {
           svn_boolean_t readable;
           svn_fs_root_t *tmp_root;
 
-          SVN_ERR(svn_fs_revision_root(&tmp_root, repos->fs, rev, iter_pool));
-          SVN_ERR(authz_read_func(&readable, tmp_root, rev_path,
+          SVN_ERR(svn_fs_revision_root(&tmp_root, repos->fs, rev_path->revnum,
+                                       iter_pool));
+          SVN_ERR(authz_read_func(&readable, tmp_root, rev_path->path,
                                   authz_read_baton, iter_pool));
           if (! readable)
             {
               break;
             }
         }
-      APR_ARRAY_PUSH(revnums, svn_revnum_t) = rev;
-      APR_ARRAY_PUSH(paths, char *) = apr_pstrdup(pool, rev_path);
-      if (rev <= start)
+
+      rev_path->path = apr_pstrdup(pool, rev_path->path);
+      APR_ARRAY_PUSH(revision_paths, struct revision_path *) = rev_path;
+
+      if (rev_path->revnum <= start)
         break;
 
       /* Swap pools. */
@@ -859,7 +867,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
     }
 
   /* We must have at least one revision to get. */
-  assert(revnums->nelts > 0);
+  assert(revision_paths->nelts > 0);
 
   /* We want the first txdelta to be against the empty file. */
   last_root = NULL;
@@ -869,10 +877,10 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   last_props = apr_hash_make(last_pool);
 
   /* Walk through the revisions in chronological order. */
-  for (i = revnums->nelts; i > 0; --i)
+  for (i = revision_paths->nelts; i > 0; --i)
     {
-      svn_revnum_t rev = APR_ARRAY_IDX(revnums, i - 1, svn_revnum_t);
-      const char *rev_path = APR_ARRAY_IDX(paths, i - 1, const char *);
+      struct revision_path *rev_path = APR_ARRAY_IDX(revision_paths, i - 1,
+                                                     struct revision_path *);
       apr_hash_t *rev_props;
       apr_hash_t *props;
       apr_array_header_t *prop_diffs;
@@ -886,13 +894,14 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 
       /* Get the revision properties. */
       SVN_ERR(svn_fs_revision_proplist(&rev_props, repos->fs,
-                                       rev, iter_pool));
+                                       rev_path->revnum, iter_pool));
 
       /* Open the revision root. */
-      SVN_ERR(svn_fs_revision_root(&root, repos->fs, rev, iter_pool));
+      SVN_ERR(svn_fs_revision_root(&root, repos->fs, rev_path->revnum,
+                                   iter_pool));
 
       /* Get the file's properties for this revision and compute the diffs. */
-      SVN_ERR(svn_fs_node_proplist(&props, root, rev_path, iter_pool));
+      SVN_ERR(svn_fs_node_proplist(&props, root, rev_path->path, iter_pool));
       SVN_ERR(svn_prop_diffs(&prop_diffs, props, last_props, pool));
 
       /* Check if the contents changed. */
@@ -900,12 +909,13 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
       if (last_root)
         SVN_ERR(svn_fs_contents_changed(&contents_changed,
                                         last_root, last_path,
-                                        root, rev_path, iter_pool));
+                                        root, rev_path->path, iter_pool));
       else
         contents_changed = TRUE;
 
       /* We have all we need, give to the handler. */
-      SVN_ERR(handler(handler_baton, rev_path, rev, rev_props, FALSE,
+      SVN_ERR(handler(handler_baton, rev_path->path, rev_path->revnum,
+                      rev_props, FALSE,
                       contents_changed ? &delta_handler : NULL,
                       contents_changed ? &delta_baton : NULL,
                       prop_diffs, iter_pool));
@@ -918,7 +928,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
           /* Get the content delta. */
           SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
                                                last_root, last_path,
-                                               root, rev_path,
+                                               root, rev_path->path,
                                                iter_pool));
           /* And send. */
           SVN_ERR(svn_txdelta_send_txstream(delta_stream,
@@ -928,7 +938,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 
       /* Remember root, path and props for next iteration. */
       last_root = root;
-      last_path = rev_path;
+      last_path = rev_path->path;
       last_props = props;
 
       /* Swap the pools. */
