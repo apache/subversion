@@ -2691,12 +2691,15 @@ def diff_svnpatch(sbox):
     "Name: svn:mime-type\n",
     "   + application/octet-stream\n",
     "\n",
-    "========================= SVNPATCH1 BLOCK =========================\n",
-    "\n".join(textwrap.wrap\
-              (base64.b64encode(zlib.compress(svnpatch_output)),\
-               76)),
-    "\n"
+    "========================= SVNPATCH1 BLOCK =========================\n"
   ]
+
+  def append_newline(s): return s + "\n"
+
+  expected_output += map(append_newline,
+                         textwrap.wrap(
+                          base64.b64encode(zlib.compress(svnpatch_output)),
+                          76))
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--svnpatch')
