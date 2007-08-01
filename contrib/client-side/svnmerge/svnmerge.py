@@ -538,6 +538,19 @@ class VersionedProperty:
                     old_val = val
             return changed_revs
 
+    def initialized_revs(self):
+        """
+        Get a list of the revisions in which keys were added or
+        removed in this property. 
+        """
+        initialized_revs = []
+        old_len = len(self._initial_value)
+        for rev, val in zip(self._changed_revs, self._changed_values):
+            if len(val) != old_len:
+                initialized_revs.append(rev)
+                old_len = len(val)
+        return initialized_revs
+
 class RevisionSet:
     """
     A set of revisions, held in dictionary form for easy manipulation. If we
@@ -1000,10 +1013,11 @@ def analyze_revs(target_pathid, url, begin=1, end=None,
     target_pathid, analyze the revisions in the interval begin-end (which
     defaults to 1-HEAD), to find out which revisions are changes in
     the url, which are changes elsewhere (so-called 'phantom'
-    revisions), and optionally which are reflected changes (to avoid
+    revisions), optionally which are reflected changes (to avoid
     conflicts that can occur when doing bidirectional merging between
-    branches).  Return a tuple of three RevisionSet's:
-        (real_revs, phantom_revs, reflected_revs).
+    branches), and which revisions initialize merge tracking against other
+    branches.  Return a tuple of four RevisionSet's:
+        (real_revs, phantom_revs, reflected_revs, initialized_revs).
 
     NOTE: To maximize speed, if "end" is not provided, the function is
     not able to find phantom revisions following the last real
@@ -1016,7 +1030,7 @@ def analyze_revs(target_pathid, url, begin=1, end=None,
     else:
         end = str(end)
         if long(begin) > long(end):
-            return RevisionSet(""), RevisionSet(""), RevisionSet("")
+            return RevisionSet(""), RevisionSet(""), RevisionSet(""), RevisionSet("")
 
     logs[url] = RevisionLog(url, begin, end, find_reflected)
     revs = RevisionSet(logs[url].revs)
@@ -1035,9 +1049,11 @@ def analyze_revs(target_pathid, url, begin=1, end=None,
     else:
         reflected_revs = []
 
+    initialized_revs = RevisionSet(logs[url].merge_metadata().initialized_revs())
+
     reflected_revs = RevisionSet(reflected_revs)
 
-    return revs, phantom_revs, reflected_revs
+    return revs, phantom_revs, reflected_revs, initialized_revs
 
 def analyze_source_revs(branch_target, source_url, **kwargs):
     """For the given branch and source, extract the real and phantom
@@ -1193,15 +1209,17 @@ def action_init(target_dir, target_props):
 
 def action_avail(branch_dir, branch_props):
     """Show commits available for merges."""
-    source_revs, phantom_revs, reflected_revs = \
+    source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"],
                                    find_reflected=opts["bidirectional"])
     report('skipping phantom revisions: %s' % phantom_revs)
     if reflected_revs:
         report('skipping reflected revisions: %s' % reflected_revs)
+        report('skipping initialized revisions: %s' % initialized_revs)
 
     blocked_revs = get_blocked_revs(branch_dir, opts["source-pathid"])
-    avail_revs = source_revs - opts["merged-revs"] - blocked_revs - reflected_revs
+    avail_revs = source_revs - opts["merged-revs"] - blocked_revs - \
+                 reflected_revs - initialized_revs
 
     # Compose the set of revisions to show
     revs = RevisionSet("")
@@ -1251,7 +1269,7 @@ def action_merge(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    source_revs, phantom_revs, reflected_revs = \
+    source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"],
                                    find_reflected=opts["bidirectional"])
 
@@ -1274,9 +1292,12 @@ def action_merge(branch_dir, branch_props):
             report('memorizing reflected revision(s): %s' % reflected_revs)
         if blocked_revs & revs:
             report('skipping blocked revisions(s): %s' % (blocked_revs & revs))
+        if initialized_revs:
+            report('skipping initialized revision(s): %s' % initialized_revs)
 
     # Compute final merge set.
-    revs = revs - merged_revs - blocked_revs - reflected_revs - phantom_revs
+    revs = revs - merged_revs - blocked_revs - reflected_revs - \
+           phantom_revs - initialized_revs
     if not revs:
         report('no revisions to merge, exiting')
         return
@@ -1310,7 +1331,7 @@ def action_merge(branch_dir, branch_props):
             # TODO: to support graph merging, add logic to merge the property meta-data manually
 
     # Update the set of merged revisions.
-    merged_revs = merged_revs | revs | reflected_revs | phantom_revs
+    merged_revs = merged_revs | revs | reflected_revs | phantom_revs | initialized_revs
     branch_props[opts["source-pathid"]] = str(merged_revs)
     set_merge_props(branch_dir, branch_props)
     # Reset the blocked revs
@@ -1338,7 +1359,7 @@ def action_block(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    source_revs, phantom_revs, reflected_revs = \
+    source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"])
     revs_to_block = source_revs - opts["merged-revs"]
 
@@ -1812,7 +1833,7 @@ common_opts = [
     Option("-b", "--bidirectional",
            value=True,
            default=False,
-           help="remove reflected revisions from merge candidates"),
+           help="remove reflected and initialized revisions from merge candidates"),
     OptionArg("-f", "--commit-file", metavar="FILE",
               default="svnmerge-commit-message.txt",
               help="set the name of the file where the suggested log message "
