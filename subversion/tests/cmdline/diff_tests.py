@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#  -*- coding: utf-8 -*-
 #
 #  diff_tests.py:  some basic diff tests
 #
@@ -18,6 +19,8 @@
 
 # General modules
 import sys, re, os
+import zlib, base64 #needed for diff_svnpatch test
+import textwrap
 
 # Our testing module
 import svntest
@@ -2609,21 +2612,71 @@ def diff_svnpatch(sbox):
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', 'iota')  
 
+  # update A/B/E/alpha and set a property
+  alpha_path = os.path.join('A', 'B', 'E', 'alpha')
+  svntest.main.file_append(alpha_path, "\nSome more bytes.\n")
+  svntest.main.run_svn(None, 'propset', 'newprop',
+                       'new val', alpha_path)  
+
   # add dir
   os.mkdir(os.path.join('A', 'T'))
   svntest.main.run_svn(None, 'add', os.path.join('A', 'T'))
 
   # copy file and modify
   mu_path = os.path.join('A', 'mu')
-  mumu_path = os.path.join('A', 'mumu')
+  mumu_path = os.path.join('A', 'T', 'mumu')
   svntest.main.run_svn(None, 'cp', mu_path, mumu_path)  
   svntest.main.file_append(mumu_path, "\nSome more bytes.\n")
 
+  svnpatch_output = \
+    '( open-root ( 2:d0 ) ) '\
+    '( open-dir ( 1:A 2:d0 2:d1 ) ) '\
+    '( open-dir ( 3:A/B 2:d1 2:d2 ) ) '\
+    '( open-dir ( 5:A/B/E 2:d2 2:d3 ) ) '\
+    '( open-file ( 11:A/B/E/alpha 2:d3 2:c4 ) ) '\
+    '( change-file-prop ( 2:c4 7:newprop ( 7:new val ) ) ) '\
+    '( close-file ( 2:c4 ( ) ) ) '\
+    '( close-dir ( 2:d3 ) ) '\
+    '( close-dir ( 2:d2 ) ) '\
+    '( add-dir ( 3:A/T 2:d1 2:d5 ( ) ) ) '\
+    '( add-file ( 8:A/T/mumu 2:d5 2:c6 ( 2:mu ) ) ) '\
+    '( close-file ( 2:c6 ( ) ) ) '\
+    '( close-dir ( 2:d5 ) ) '\
+    '( close-dir ( 2:d1 ) ) '\
+    '( open-file ( 4:iota 2:d0 2:c7 ) ) '\
+    '( change-file-prop ( 2:c7 13:svn:mime-type ( 24:application/octet-stream ) ) ) '\
+    '( apply-textdelta ( 2:c7 ( ) ) ) '\
+    '( textdelta-chunk ( 2:c7 4:SVN\001 ) ) '\
+    '( textdelta-chunk ( 2:c7 5:\000\000+\002, ) ) '\
+    '( textdelta-chunk ( 2:c7 2:\001\253 ) ) '\
+    '( textdelta-chunk ( 2:c7 44:+This is the file \'iota\'.\n'\
+    '\n'\
+    'Some more bytes.\n'\
+    ' ) ) '\
+    '( textdelta-end ( 2:c7 ) ) '\
+    '( close-file ( 2:c7 ( 32:1460795fd593ab45ddf5c1f7d7ef28f8 ) ) ) '\
+    '( close-dir ( 2:d0 ) ) '\
+    '( close-edit ( ) ) '\
+
   expected_output = [
-    "Index: A/mumu\n",
+    "Index: A/B/E/alpha\n",
     "===================================================================\n",
-    "--- A/mumu\t(revision 1)\n",
-    "+++ A/mumu\t(working copy)\n",
+    "--- A/B/E/alpha\t(revision 1)\n",
+    "+++ A/B/E/alpha\t(working copy)\n",
+    "@@ -1 +1,3 @@\n",
+    " This is the file 'alpha'.\n",
+    "+\n",
+    "+Some more bytes.\n",
+    "\n",
+    "Property changes on: A/B/E/alpha\n",
+    "___________________________________________________________________\n",
+    "Name: newprop\n",
+    "   + new val\n",
+    "\n",
+    "Index: A/T/mumu\n",
+    "===================================================================\n",
+    "--- A/T/mumu\t(revision 0)\n",
+    "+++ A/T/mumu\t(working copy)\n",
     "@@ -1 +1,3 @@\n",
     " This is the file 'mu'.\n",
     "+\n",
@@ -2638,43 +2691,12 @@ def diff_svnpatch(sbox):
     "Name: svn:mime-type\n",
     "   + application/octet-stream\n",
     "\n",
-    "H4sICL/sikYAA291dACFkcFSgzAQhq3HvoG33NrOFGtIAiS3voCXdrynySIZgTCQOvadfEgDBcVW\n",
-    "6sCEkP12998/S2QrKIPaWoeW/lmhUOgn/1n5ny6kTe23WGzPEb/gjjsjUuueIGK72Z/DfglHjMpt\n",
-    "Az3VhX5SU5OD30Y+tzgWxyFdkbZg3J1OlcFjkX0dKox1chCq6FhEJstX6MCgqm3VFfEEJqJ5L0Vh\n",
-    "CgjcqWqrhFTIqsqNks7YcmOVAxc0rgZZTIkZHGvzToGDD6ch90qWwzBD3ncoUNmxfBsAKnYvz7Mr\n",
-    "Bko9EOO2/bQXpf/s3VpAQhFqnCgGLIaEKnZIJAMuI8AklYRTrW7ro1P6fjFM3D2s74PbUChmn/+0\n",
-    "YmK9z0yD/OsyQN2wi/ZeF4/z+c4WgApbAzqcHDT+ZNo0OmFa70mcJpRxnsaERqnGSmGuacpJRCX3\n",
-    "xrCLuwZtXO/2/AuhTZnRNgMAAA==\n",
+    "========================= SVNPATCH1 BLOCK =========================\n",
+    "\n".join(textwrap.wrap\
+              (base64.b64encode(zlib.compress(svnpatch_output)),\
+               76)),
+    "\n"
   ]
-
-  # 'clean' cleartext chunk translation (directory addition + property change +
-  # binary change):
-  #
-  # ( open-root ( ( ) 2:d0 ) )
-  # ( open-dir ( 1:A 2:d0 2:d1 ( ) ) )
-  # ( add-dir ( 3:A/T 2:d1 2:d2 ( ) ) )
-  # ( close-dir ( 2:d2 ) )
-  # ( add-file ( 6:A/mumu 2:d1 2:c3 ( 37:A/mu ) ) )
-  # ( close-dir ( 2:d1 ) )
-  # ( open-file ( 4:iota 2:d0 2:c4 ( ) ) )
-  # ( change-file-prop ( 2:c4 13:svn:mime-type ( 24:application/octet-stream ) ) )
-  # ( close-dir ( 2:d0 ) )
-  # ( apply-textdelta ( 2:c3 ( ) ) )
-  # ( textdelta-chunk ( 2:c3 4:SVN^A ) )
-  # ( textdelta-end ( 2:c3 ) )
-  # ( close-file ( 2:c3 ( ) ) )
-  # ( apply-textdelta ( 2:c4 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) )
-  # ( textdelta-chunk ( 2:c4 4:SVN^A ) )
-  # ( textdelta-chunk ( 2:c4 5:^@^Y,^B- ) )
-  # ( textdelta-chunk ( 2:c4 2:^A¬ ) )
-  # ( textdelta-chunk ( 2:c4 45:,This is the file 'iota'.
-  #
-  # Some more bytes.
-  #
-  #  ) )
-  # ( textdelta-end ( 2:c4 ) )
-  # ( close-file ( 2:c4 ( 32:7f84599f7346fd1cc19d4f9364a913f5 ) ) )
-  # ( close-edit ( ) )
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--svnpatch')
