@@ -845,51 +845,32 @@ get_merged_path_revisions(apr_array_header_t *path_revisions,
 
   return SVN_NO_ERROR;
 }
-                          
 
-svn_error_t *
-svn_repos_get_file_revs2(svn_repos_t *repos,
-                         const char *path,
-                         svn_revnum_t start,
-                         svn_revnum_t end,
-                         svn_boolean_t include_merged_revisions,
-                         svn_repos_authz_func_t authz_read_func,
-                         void *authz_read_baton,
-                         svn_file_rev_handler_t handler,
-                         void *handler_baton,
-                         apr_pool_t *pool)
+
+static svn_error_t *
+find_interesting_revisions(apr_array_header_t *path_revisions,
+                           svn_repos_t *repos,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_boolean_t include_merged_revisions,
+                           svn_repos_authz_func_t authz_read_func,
+                           void *authz_read_baton,
+                           apr_pool_t *pool)
 {
   apr_pool_t *iter_pool, *last_pool;
   svn_fs_history_t *history;
-  apr_array_header_t *path_revisions = apr_array_make(pool, 0,
-                                                sizeof(struct path_revision *));
-  apr_hash_t *last_props;
-  svn_fs_root_t *root, *last_root;
-  const char *last_path;
-  int i;
-  svn_node_kind_t kind;
-
+  svn_fs_root_t *root;
+  
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */
   iter_pool = svn_pool_create(pool);
   last_pool = svn_pool_create(pool);
 
-  /* Open revision root for path@end. */
-  /* ### Can we use last_pool for this? How long does the history
-     object need the root? */
-  SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, pool));
-
-  /* The path had better be a file in this revision. This avoids calling
-     the callback before reporting an uglier error below. */
-  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
-  if (kind != svn_node_file)
-    return svn_error_createf
-      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path);
-
   /* Open a history object. */
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, last_pool));
   SVN_ERR(svn_fs_node_history(&history, root, path, last_pool));
   
-  /* Get the revisions we are interested in. */
   while (1)
     {
       struct path_revision *path_rev = apr_palloc(pool, sizeof(*path_rev));
@@ -930,6 +911,56 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
       iter_pool = last_pool;
       last_pool = tmp_pool;
     }
+
+  svn_pool_destroy(iter_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_get_file_revs2(svn_repos_t *repos,
+                         const char *path,
+                         svn_revnum_t start,
+                         svn_revnum_t end,
+                         svn_boolean_t include_merged_revisions,
+                         svn_repos_authz_func_t authz_read_func,
+                         void *authz_read_baton,
+                         svn_file_rev_handler_t handler,
+                         void *handler_baton,
+                         apr_pool_t *pool)
+{
+  apr_pool_t *iter_pool, *last_pool;
+  apr_array_header_t *path_revisions = apr_array_make(pool, 0,
+                                                sizeof(struct path_revision *));
+  apr_hash_t *last_props;
+  svn_fs_root_t *root, *last_root;
+  const char *last_path;
+  int i;
+  svn_node_kind_t kind;
+
+  /* We switch betwwen two pools while looping, since we need information from
+     the last iteration to be available. */
+  iter_pool = svn_pool_create(pool);
+  last_pool = svn_pool_create(pool);
+
+  /* Open revision root for path@end. */
+  /* ### Can we use last_pool for this? How long does the history
+     object need the root? */
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, pool));
+
+  /* The path had better be a file in this revision. This avoids calling
+     the callback before reporting an uglier error below. */
+  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+  if (kind != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path);
+
+  /* Get the revisions we are interested in. */
+  SVN_ERR(find_interesting_revisions(path_revisions, repos, path, start, end,
+                                     include_merged_revisions,
+                                     authz_read_func, authz_read_baton,
+                                     pool));
 
   /* We must have at least one revision to get. */
   assert(path_revisions->nelts > 0);

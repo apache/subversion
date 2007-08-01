@@ -106,6 +106,7 @@ try:
   platform_with_os_wait = True
 except ImportError:
   platform_with_os_wait = False
+platform_with_os_wait = False
 
 # The location of our mock svneditor script.
 svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
