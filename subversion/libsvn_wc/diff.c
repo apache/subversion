@@ -533,9 +533,13 @@ file_diff(struct dir_baton *dir_baton,
   /* If the item is schedule-add *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
      vs. text-base comparision; we also don't want svnpatch be affected
-     by this behaviour as replace operations could slip through doing so. */
-  if (copied && ! eb->svnpatch_stream)
-    schedule = svn_wc_schedule_normal;
+     by this behaviour as replace operations -- which we want svnpatch to
+     carry -- could slip through doing so. */
+  if (copied)
+    {
+      schedule = svn_wc_schedule_normal;
+      file_to_diff = TRUE;
+    }
 
   /* If this was scheduled replace and we are ignoring ancestry,
      report it as a normal file modification. */
