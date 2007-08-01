@@ -38,7 +38,7 @@
    each revision are in chronological order.  That is if revision A >
    revision B, then A's datestamp is younger then B's datestamp.
 
-   If some moron comes along and sets a bogus datestamp, this routine
+   If someone comes along and sets a bogus datestamp, this routine
    might not work right.
 
    ### todo:  you know, we *could* have svn_fs_change_rev_prop() do
