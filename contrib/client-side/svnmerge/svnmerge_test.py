@@ -957,11 +957,14 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 20")
 
+        # Initialized revs should not be available for merge
+        self.svnmerge("avail -v --bidirectional", match=r"initialized.*17-18")
+
         # Latest revision on trunk which was merged from test-branch2
         # should be available for test-branch with --bidirectional flag.
-        self.svnmerge("avail -vv --bidirectional", match=r"20$")
+        self.svnmerge("avail -vv --bidirectional", match=r"merged are:\n20$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"merge --force -r 17:20")
+        self.svnmerge("merge -vv --bidirectional", match=r"merge --force -r 19:20")
         p = self.getproperty()
         self.assertEqual("/trunk:1-20", p)
 
