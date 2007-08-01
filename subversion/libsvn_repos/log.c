@@ -590,6 +590,9 @@ branching_copy_filter(void *baton,
   apr_hash_t *implied_mergeinfo;
   apr_hash_t *deleted, *added;
 
+  /* Assume *omit is FALSE, unless determined otherwise. */
+  *omit = FALSE;
+
   /* If the rev isn't the rev of interest for which we are currently looking
      for new mergeinfo, don't omit this path's mergeinfo.
      
@@ -605,23 +608,23 @@ branching_copy_filter(void *baton,
      
      Whew!  That's a long explantion for a single line of code. :) */
   if (!fb->finding_current_revision)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   /* Find out if the path even exists in fb->root. */
   SVN_ERR(svn_fs_check_path(&kind, fb->root, path, pool));
   if (kind == svn_node_none)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   /* Check and see if there was a copy in this revision.  If not, set omit to
      FALSE and return.  */
   SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, fb->root, path,
                               pool));
   if (copy_root == NULL)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   copy_rev = svn_fs_revision_root_revision(copy_root);
   if (copy_rev != fb->rev)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   /* At this point, we know that PATH was created as a copy in REV.  Using an
      algorithm similar to libsvn_client/copy.c:get_implied_mergeinfo(), check
@@ -633,13 +636,11 @@ branching_copy_filter(void *baton,
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, implied_mergeinfo,
                              path_mergeinfo, pool));
   if (apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
+  /* If we've reached this point, we should omit this revision. */
   *omit = TRUE;
-  return SVN_NO_ERROR;
 
-omit_false:
-  *omit = FALSE;
   return SVN_NO_ERROR;
 }
 
