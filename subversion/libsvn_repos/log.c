@@ -590,11 +590,11 @@ branching_copy_filter(void *baton,
   apr_hash_t *implied_mergeinfo;
   apr_hash_t *deleted, *added;
 
-  /* If we rev isn't the rev of interest for which we are currently looking
+  /* If the rev isn't the rev of interest for which we are currently looking
      for new mergeinfo, don't omit this path's mergeinfo.
      
      Consider the following scenario:  We are finding the mergeinfo difference
-     between r10, which is a branching copy, and r9 which is the it's previous
+     between r10, which is a branching copy, and r9 which is the previous
      revision.  If the current revision is r10, *and*, we are looking for 
      mergeinfo in r10, we may want to omit, so this test should fail.
      
