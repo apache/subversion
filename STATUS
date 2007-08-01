@@ -116,7 +116,7 @@ Candidate changes:
     Justification:
       Bug fix for user-reported error.  Includes test case.
     Votes:
-      +1: dlr
+      +1: dlr, vgeorgescu
 
 Veto-blocked changes:
 
