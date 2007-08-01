@@ -302,6 +302,27 @@ class WC(object):
         self.iterpool.clear()
                  
         return props
+        
+    def propget(self, propname, target="", recurse=True):
+        """Get the the value of PROPNAME for TARGET. Returns a hash the keys
+        of which are file paths and the values are the value of PROPNAME for
+        the corresponding file. The values of the hash are c_char_p objects,
+        which can be treated much like strings.
+        
+        If RECURSE is True (True by default) directories will be recursed."""
+        peg_revision = svn_opt_revision_t()
+        peg_revision.kind = svn_opt_revision_unspecified
+        
+        revision = svn_opt_revision_t()
+        revision.kind = svn_opt_revision_working
+        
+        props = _types.Hash(c_char_p)
+        
+        svn_client_propget2(byref(props.hash), propname,
+                    self._build_path(target), byref(peg_revision),
+                    byref(revision), recurse, self.client, self.pool)
+                    
+        return props
     
     # Internal method to wrap status callback.
     def _status_wrapper(baton, path, status):
