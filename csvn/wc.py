@@ -358,3 +358,36 @@ class WC(object):
         self.iterpool.clear()
                             
         return result_rev
+        
+    def checkout(self, url, revnum=None, path=None, recurse=True,
+                 ignore_externals=False):
+        """Checkout a new working copy from URL@PEG_REV at REVNUM. The new
+        working copy will be created at path, which defaults to the working
+        copy root.
+        
+        If RECURSE is True (True by default) the contents of any directories
+        that are checked out will also be checked out.
+        
+        If IGNORE_EXTERNALS is True (False by default) externals will not be
+        checked out."""
+
+        rev = svn_opt_revision_t()
+        if revnum is not None:
+            rev.kind = svn_opt_revision_number
+            rev.value.number = revnum
+        else:
+            rev.kind = svn_opt_revision_head
+
+        peg_rev = svn_opt_revision_t()
+        URL = String("")
+        svn_opt_parse_path(byref(peg_rev), byref(URL), url, self.iterpool)
+
+        if not path:
+            path = self.path
+        canon_path = svn_path_canonicalize(path, self.iterpool)
+
+        result_rev = svn_revnum_t()
+
+        svn_client_checkout2(byref(result_rev), URL, canon_path,
+                             byref(peg_rev), byref(rev), recurse,
+                             ignore_externals, self.client, self.iterpool)
