@@ -6956,6 +6956,43 @@ def merge_loses_mergeinfo(sbox):
                                        expected_skip,
                                        check_props=1)
 
+def single_file_replace_style_merge_capability(sbox):
+  "replace-style merge capability for a single file"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2853. ##
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # delete mu and replace it with a copy of iota
+  svntest.main.run_svn(None, 'rm', mu_path)
+  svntest.main.run_svn(None, 'mv', iota_path, mu_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='  ', wc_rev=2)
+  expected_status.remove('iota')
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota': Item(verb='Deleting'),
+    'A/mu': Item(verb='Replacing'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Merge the file mu alone to rev1 
+  svntest.actions.run_and_verify_svn(None,
+                                     [svntest.main.merge_notify_line(-2),
+                                      'D    ' + mu_path + '\n',
+                                      'A    ' + mu_path + '\n'],
+                                     [], 'merge',
+                                     mu_path + '@2',
+                                     mu_path + '@1',
+                                     mu_path)
+
 
 ########################################################################
 # Run the tests
@@ -7022,6 +7059,7 @@ test_list = [ None,
               Skip(mergeinfo_and_skipped_paths, svntest.main.is_ra_type_file),
               update_loses_mergeinfo,
               merge_loses_mergeinfo,
+              single_file_replace_style_merge_capability,
              ]
 
 if __name__ == '__main__':

@@ -74,6 +74,8 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
      was created (copied or added). */
   err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
                        revnum_receiver, oldest_rev, pool);
+  /* ### This function really shouldn't even be called on schedule-add
+     ### WC paths.  FIXME: Adjust copy.c and merge.c accordingly... */
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
               err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
     {

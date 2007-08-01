@@ -320,7 +320,7 @@ detect_changed(apr_hash_t **changed,
   return SVN_NO_ERROR;
 }
 
-/* This is used by svn_repos_get_logs3 to keep track of multiple
+/* This is used by svn_repos_get_logs to keep track of multiple
  * path history information while working through history.
  *
  * The two pools are swapped after each iteration through history because
@@ -590,11 +590,14 @@ branching_copy_filter(void *baton,
   apr_hash_t *implied_mergeinfo;
   apr_hash_t *deleted, *added;
 
-  /* If we rev isn't the rev of interest for which we are currently looking
+  /* Assume *omit is FALSE, unless determined otherwise. */
+  *omit = FALSE;
+
+  /* If the rev isn't the rev of interest for which we are currently looking
      for new mergeinfo, don't omit this path's mergeinfo.
      
      Consider the following scenario:  We are finding the mergeinfo difference
-     between r10, which is a branching copy, and r9 which is the it's previous
+     between r10, which is a branching copy, and r9 which is the previous
      revision.  If the current revision is r10, *and*, we are looking for 
      mergeinfo in r10, we may want to omit, so this test should fail.
      
@@ -605,23 +608,23 @@ branching_copy_filter(void *baton,
      
      Whew!  That's a long explantion for a single line of code. :) */
   if (!fb->finding_current_revision)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   /* Find out if the path even exists in fb->root. */
   SVN_ERR(svn_fs_check_path(&kind, fb->root, path, pool));
   if (kind == svn_node_none)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   /* Check and see if there was a copy in this revision.  If not, set omit to
      FALSE and return.  */
   SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, fb->root, path,
                               pool));
   if (copy_root == NULL)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   copy_rev = svn_fs_revision_root_revision(copy_root);
   if (copy_rev != fb->rev)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   /* At this point, we know that PATH was created as a copy in REV.  Using an
      algorithm similar to libsvn_client/copy.c:get_implied_mergeinfo(), check
@@ -633,13 +636,11 @@ branching_copy_filter(void *baton,
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, implied_mergeinfo,
                              path_mergeinfo, pool));
   if (apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
+  /* If we've reached this point, we should omit this revision. */
   *omit = TRUE;
-  return SVN_NO_ERROR;
 
-omit_false:
-  *omit = FALSE;
   return SVN_NO_ERROR;
 }
 
@@ -716,7 +717,7 @@ combine_mergeinfo_rangelists(apr_array_header_t **rangelist,
 }
 
 /* Determine all the revisions which were merged into PATHS in REV.  Return
-   them as a new RANGELIST.  */
+   them as a new MERGEINFO.  */
 static svn_error_t *
 get_merged_rev_mergeinfo(apr_hash_t **mergeinfo,
                          svn_fs_t *fs,

@@ -45,6 +45,7 @@ extern "C" {
 #define PATH_REVS_DIR      "revs"          /* Directory of revisions */
 #define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
 #define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
+#define PATH_TXN_CURRENT   "transaction-current" /* File with next txn key */
 #define PATH_LOCKS_DIR     "locks"         /* Directory of locks */
 
 /* Names of special files and file extensions for transactions */
@@ -66,6 +67,10 @@ extern "C" {
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
+
+/* The minimum format number that supports transaction ID generation
+   using a transaction sequence in the transaction-current file. */
+#define SVN_FS_FS__MIN_TXN_CURRENT_FORMAT 3
 
 /* The minimum format number that supports the "layout" filesystem
    format option. */
@@ -89,9 +94,12 @@ typedef struct fs_fs_shared_txn_data_t
      transaction. */
   struct fs_fs_shared_txn_data_t *next;
 
-  /* This transaction's ID.  This is in the form
-     <hostname>_<pid>_<time>_<uniquifier>, where <uniquifier> runs
-     from 0-99999 (see create_txn_dir() in fs_fs.c). */
+  /* This transaction's ID.  For repositories whose format is less
+     than SVN_FS_FS__MIN_TXN_CURRENT_FORMAT, the ID is in the form
+     <rev>-<uniqueifier>, where <uniqueifier> runs from 0-99999 (see
+     create_txn_dir_pre_1_5() in fs_fs.c).  For newer repositories,
+     the form is <rev>-<200 digit base 36 number> (see
+     create_txn_dir() in fs_fs.c). */
   char txn_id[SVN_FS__TXN_MAX_LEN+1];
 
   /* Whether the transaction's prototype revision file is locked for

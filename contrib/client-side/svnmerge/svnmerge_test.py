@@ -735,7 +735,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                     match=r"Committed revision")
 
         p = self.getproperty()
-        self.assertEqual("/branches/testYYY-branch:1-14 /trunk:1-13", p)
+        self.assertTrue(re.search("/branches/testYYY-branch:1-\d+? /trunk:1-\d+?", p))
 
         open("test1", "a").write("foo")
 
@@ -744,18 +744,57 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         self.svnmerge("uninit -F --source " + self.test_repo_url + "/branches/testYYY-branch")
         p = self.getproperty()
-        self.assertEqual("/trunk:1-13", p)
-
-    def testCheckInitializeEverything(self):
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
-        p = self.getproperty()
-        r = svnmerge.get_svninfo(".")["Revision"]
-        self.assertEqual("/trunk:1-%d" % long(r), p)
+        self.assertTrue(re.search("^/trunk:1-\d+", p))
 
     def testCheckNoCopyfrom(self):
         os.chdir("..")
         os.chdir("trunk")
         self.svnmerge("init", error=True, match=r"no copyfrom")
+
+    def testInitScenarios(self):
+        """ Run various scenarios w/ svnmerge.py init and verify
+        the default values that are set as the integrated
+        revisions."""
+        
+        # Run init with branch as merge source and trunk as merge target
+        os.chdir("..")
+        os.chdir("trunk")
+        self.svnmerge("init ../test-branch")
+        # Verify range ends at rev in which branch was created
+        self.launch("svn proplist -v", match=r":1-13")
+        self.revert()
+
+        # Run init with TRUNK as merge source and BRANCH as merge target
+        os.chdir("..")
+        os.chdir("test-branch")
+        self.svnmerge("init ../trunk")
+        # Verify range ends at rev of trunk which was copied to create branch
+        self.launch("svn proplist -v", match=r":1-6")
+        self.revert()
+        
+        # Same thing, but with no explicit parameter (should work implicitly)
+        self.svnmerge("init")
+        # Verify range ends at rev of trunk which was copied to create branch
+        self.launch("svn proplist -v", match=r":1-6")
+        self.revert()
+        
+        # Run init with TRUNK as merge src, & any other branch which is not 
+        # a copy of trunk (or the source from which trunk was copied) 
+        # as the merge target.
+        os.chdir("../trunk")
+        os.chdir("..")
+        self.launch('svn mkdir -m "create /other" %(TEST_REPO_URL)s/other') # creates r14
+        self.launch("svn co %(TEST_REPO_URL)s/other")
+        os.chdir("other")
+        self.svnmerge("init ../trunk")
+        # Verify integrated range ends with merge source's latest rev as of
+        # the time of initialization:
+        self.launch("svn proplist -v", match=r":1-14")
+        self.revert()
+        
+        # Run init w/ explicit parms; verify them
+        self.svnmerge("init ../trunk -r 1-999")
+        self.launch("svn proplist -v", match=r":1-999")
 
     def testTrimmedAvailMerge(self):
         """Check that both avail and merge do not search for phantom revs too hard."""
@@ -809,7 +848,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 16")
 
-        self.svnmerge("avail -vv --bidirectional", match=r"\n16$")
+        # test-branch was copied from trunk's r6.  So non-phantom revs
+        # since that point should still be available to merge from 
+        # trunk to test-branch:
+        self.svnmerge("avail -vv --bidirectional", match=r"\n9-10,16$")
         self.svnmerge("merge -vv --bidirectional", match=r"svn merge --force -r 15:16")
         p = self.getproperty()
         self.assertEqual("/trunk:1-16", p)
@@ -915,11 +957,14 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 20")
 
+        # Initialized revs should not be available for merge
+        self.svnmerge("avail -v --bidirectional", match=r"initialized.*17-18")
+
         # Latest revision on trunk which was merged from test-branch2
         # should be available for test-branch with --bidirectional flag.
-        self.svnmerge("avail -vv --bidirectional", match=r"20$")
+        self.svnmerge("avail -vv --bidirectional", match=r"merged are:\n20$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"merge --force -r 17:20")
+        self.svnmerge("merge -vv --bidirectional", match=r"merge --force -r 19:20")
         p = self.getproperty()
         self.assertEqual("/trunk:1-20", p)
 

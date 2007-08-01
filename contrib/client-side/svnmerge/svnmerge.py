@@ -538,6 +538,19 @@ class VersionedProperty:
                     old_val = val
             return changed_revs
 
+    def initialized_revs(self):
+        """
+        Get a list of the revisions in which keys were added or
+        removed in this property. 
+        """
+        initialized_revs = []
+        old_len = len(self._initial_value)
+        for rev, val in zip(self._changed_revs, self._changed_values):
+            if len(val) != old_len:
+                initialized_revs.append(rev)
+                old_len = len(val)
+        return initialized_revs
+
 class RevisionSet:
     """
     A set of revisions, held in dictionary form for easy manipulation. If we
@@ -819,6 +832,13 @@ def target_to_pathid(target):
     assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
     return url[len(root):]
 
+def getAttributeOrNone(element, name):
+    '''Returns None if not found.'''
+    if element.hasAttribute(name):
+        return element.getAttribute(name)
+    else:
+        return None
+
 class SvnLogParser:
     def __init__(self, xml):
         self._events = pulldom.parseString(xml)
@@ -827,13 +847,13 @@ class SvnLogParser:
             if event == pulldom.START_ELEMENT and node.tagName == "logentry":
                 self._events.expandNode(node)
                 return self.SvnLogRevision(node)
-        raise IndexError
+        raise IndexError, "Could not find 'logentry' tag in xml"
 
     class SvnLogRevision:
         def __init__(self, xmlnode):
             self._node = xmlnode
         def revision(self):
-            return self._node.getAttribute("revision")
+            return getAttributeOrNone(self._node, "revision")
         def author(self):
             return self._node.getElementsByTagName("author")[0].firstChild.data
         def paths(self):
@@ -846,26 +866,33 @@ class SvnLogParser:
             def __init__(self, xmlnode):
                 self._node = xmlnode
             def action(self):
-                return self._node.getAttribute("action")
+                return getAttributeOrNone(self._node, "action")
             def pathid(self):
                 return self._node.firstChild.data
             def copyfrom_rev(self):
-                return self._node.getAttribute("copyfrom-rev")
+                return getAttributeOrNone(self._node, "copyfrom-rev")
             def copyfrom_pathid(self):
-                return self._node.getAttribute("copyfrom-path")
+                return getAttributeOrNone(self._node, "copyfrom-path")
 
 def get_copyfrom(target):
     """Get copyfrom info for a given target (it represents the directory from
     where it was branched). NOTE: repos root has no copyfrom info. In this case
-    None is returned."""
+    None is returned.  
+    
+    Returns the:
+        - source file or directory from which the copy was made
+        - revision from which that source was copied
+        - revision in which the copy was committed
+    """
     repos_path = target_to_pathid(target)
     for chg in SvnLogParser(launchsvn('log -v --xml --stop-on-copy "%s"' % target,
                                       split_lines=False)):
         for p in chg.paths():
             if p.action() == 'A' and p.pathid() == repos_path:
-                return p.copyfrom_pathid(), p.copyfrom_rev()
-
-    return None,None
+                # These values will be None if the corresponding elements are 
+                # not found in the log.
+                return p.copyfrom_pathid(), p.copyfrom_rev(), chg.revision()
+    return None,None,None
 
 def get_latest_rev(url):
     """Get the latest revision of the repository of which URL is part."""
@@ -986,10 +1013,11 @@ def analyze_revs(target_pathid, url, begin=1, end=None,
     target_pathid, analyze the revisions in the interval begin-end (which
     defaults to 1-HEAD), to find out which revisions are changes in
     the url, which are changes elsewhere (so-called 'phantom'
-    revisions), and optionally which are reflected changes (to avoid
+    revisions), optionally which are reflected changes (to avoid
     conflicts that can occur when doing bidirectional merging between
-    branches).  Return a tuple of three RevisionSet's:
-        (real_revs, phantom_revs, reflected_revs).
+    branches), and which revisions initialize merge tracking against other
+    branches.  Return a tuple of four RevisionSet's:
+        (real_revs, phantom_revs, reflected_revs, initialized_revs).
 
     NOTE: To maximize speed, if "end" is not provided, the function is
     not able to find phantom revisions following the last real
@@ -1002,7 +1030,7 @@ def analyze_revs(target_pathid, url, begin=1, end=None,
     else:
         end = str(end)
         if long(begin) > long(end):
-            return RevisionSet(""), RevisionSet(""), RevisionSet("")
+            return RevisionSet(""), RevisionSet(""), RevisionSet(""), RevisionSet("")
 
     logs[url] = RevisionLog(url, begin, end, find_reflected)
     revs = RevisionSet(logs[url].revs)
@@ -1021,9 +1049,11 @@ def analyze_revs(target_pathid, url, begin=1, end=None,
     else:
         reflected_revs = []
 
+    initialized_revs = RevisionSet(logs[url].merge_metadata().initialized_revs())
+
     reflected_revs = RevisionSet(reflected_revs)
 
-    return revs, phantom_revs, reflected_revs
+    return revs, phantom_revs, reflected_revs, initialized_revs
 
 def analyze_source_revs(branch_target, source_url, **kwargs):
     """For the given branch and source, extract the real and phantom
@@ -1107,44 +1137,66 @@ def display_revisions(revs, display_style, revisions_msg, source_url):
     else:
         assert False, "unhandled display style: %s" % display_style
 
-def action_init(branch_dir, branch_props):
-    """Initialize a branch for merges."""
-    # Check branch directory is ready for being modified
-    check_dir_clean(branch_dir)
+def action_init(target_dir, target_props):
+    """Initialize for merges."""
+    # Check that directory is ready for being modified
+    check_dir_clean(target_dir)
 
     # If the user hasn't specified the revisions to use, see if the
-    # "source" is a branch from the current tree and if so, we can use
+    # "source" is a copy from the current tree and if so, we can use
     # the version data obtained from it.
-    if not opts["revision"]:
-        cf_source, cf_rev = get_copyfrom(opts["source-url"])
-        branch_pathid = target_to_pathid(branch_dir)
+    revision_range = opts["revision"]
+    if not revision_range:
+        # Determining a default endpoint for the revision range that "init"
+        # will use, since none was provided by the user.
+        cf_source, cf_rev, copy_committed_in_rev = \
+                                            get_copyfrom(opts["source-url"])
+        target_path = target_to_pathid(target_dir)
 
-        # If the branch_pathid is the source path of "source",
-        # then "source" was branched from the current working tree
-        # and we can use the revisions determined by get_copyfrom
-        # (assumes pathid is a repository-relative-path)
-        if branch_pathid == cf_source:
+        if target_path == cf_source:
+            # If source was originally copyied from target, and we are merging
+            # changes from source to target (the copy target is the merge source,
+            # and the copy source is the merge target), then we want to mark as 
+            # integrated up to the rev in which the copy was committed which 
+            # created the merge source:
             report('the source "%s" is a branch of "%s"' %
-                   (opts["source-url"], branch_dir))
-            opts["revision"] = "1-" + cf_rev
+                   (opts["source-url"], target_dir))
+            revision_range = "1-" + copy_committed_in_rev
+        else:
+            # If the copy source is the merge source, and 
+            # the copy target is the merge target, then we want to
+            # mark as integrated up to the specific rev of the merge
+            # target from which the merge source was copied.  (Longer
+            # discussion at:
+            # http://subversion.tigris.org/issues/show_bug.cgi?id=2810  )
+            target_url = target_to_url(target_dir)
+            source_path = target_to_pathid(opts["source-url"])
+            cf_source_path, cf_rev, copy_committed_in_rev = get_copyfrom(target_url)
+            if source_path == cf_source_path:
+                report('the merge source "%s" is the copy source of "%s"' %
+                       (opts["source-url"], target_dir))
+                revision_range = "1-" + cf_rev
 
-    # Get the initial revision set if not explicitly specified.
-    revs = opts["revision"] or "1-" + get_latest_rev(opts["source-url"])
+    # When neither the merge source nor target is a copy of the other, and 
+    # the user did not specify a revision range, then choose a default which is 
+    # the current revision; saying, in effect, "everything has been merged, so 
+    # mark as integrated up to the latest rev on source url).
+    revs = revision_range or "1-" + get_latest_rev(opts["source-url"])
     revs = RevisionSet(revs)
 
     report('marking "%s" as already containing revisions "%s" of "%s"' %
-           (branch_dir, revs, opts["source-url"]))
+           (target_dir, revs, opts["source-url"]))
 
     revs = str(revs)
-    # If the source-pathid already has an entry in the svnmerge-integrated
-    # property, simply error out.
-    if not opts["force"] and branch_props.has_key(opts["source-pathid"]):
+    # If the local svnmerge-integrated property already has an entry 
+    # for the source-pathid, simply error out.
+    if not opts["force"] and target_props.has_key(opts["source-pathid"]):
         error('Repository-relative path %s has already been initialized at %s\n'
-              'Use --force to re-initialize' % (opts["source-pathid"], branch_dir))
-    branch_props[opts["source-pathid"]] = revs
+              'Use --force to re-initialize' % (opts["source-pathid"], target_dir))
+    target_props[opts["source-pathid"]] = revs
 
     # Set property
-    set_merge_props(branch_dir, branch_props)
+    set_merge_props(target_dir, target_props)
 
     # Write out commit message if desired
     if opts["commit-file"]:
@@ -1157,15 +1209,17 @@ def action_init(branch_dir, branch_props):
 
 def action_avail(branch_dir, branch_props):
     """Show commits available for merges."""
-    source_revs, phantom_revs, reflected_revs = \
+    source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"],
                                    find_reflected=opts["bidirectional"])
     report('skipping phantom revisions: %s' % phantom_revs)
     if reflected_revs:
         report('skipping reflected revisions: %s' % reflected_revs)
+        report('skipping initialized revisions: %s' % initialized_revs)
 
     blocked_revs = get_blocked_revs(branch_dir, opts["source-pathid"])
-    avail_revs = source_revs - opts["merged-revs"] - blocked_revs - reflected_revs
+    avail_revs = source_revs - opts["merged-revs"] - blocked_revs - \
+                 reflected_revs - initialized_revs
 
     # Compose the set of revisions to show
     revs = RevisionSet("")
@@ -1215,7 +1269,7 @@ def action_merge(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    source_revs, phantom_revs, reflected_revs = \
+    source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"],
                                    find_reflected=opts["bidirectional"])
 
@@ -1238,9 +1292,12 @@ def action_merge(branch_dir, branch_props):
             report('memorizing reflected revision(s): %s' % reflected_revs)
         if blocked_revs & revs:
             report('skipping blocked revisions(s): %s' % (blocked_revs & revs))
+        if initialized_revs:
+            report('skipping initialized revision(s): %s' % initialized_revs)
 
     # Compute final merge set.
-    revs = revs - merged_revs - blocked_revs - reflected_revs - phantom_revs
+    revs = revs - merged_revs - blocked_revs - reflected_revs - \
+           phantom_revs - initialized_revs
     if not revs:
         report('no revisions to merge, exiting')
         return
@@ -1274,7 +1331,7 @@ def action_merge(branch_dir, branch_props):
             # TODO: to support graph merging, add logic to merge the property meta-data manually
 
     # Update the set of merged revisions.
-    merged_revs = merged_revs | revs | reflected_revs | phantom_revs
+    merged_revs = merged_revs | revs | reflected_revs | phantom_revs | initialized_revs
     branch_props[opts["source-pathid"]] = str(merged_revs)
     set_merge_props(branch_dir, branch_props)
     # Reset the blocked revs
@@ -1302,7 +1359,7 @@ def action_block(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    source_revs, phantom_revs, reflected_revs = \
+    source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"])
     revs_to_block = source_revs - opts["merged-revs"]
 
@@ -1776,7 +1833,7 @@ common_opts = [
     Option("-b", "--bidirectional",
            value=True,
            default=False,
-           help="remove reflected revisions from merge candidates"),
+           help="remove reflected and initialized revisions from merge candidates"),
     OptionArg("-f", "--commit-file", metavar="FILE",
               default="svnmerge-commit-message.txt",
               help="set the name of the file where the suggested log message "
@@ -1993,7 +2050,7 @@ def main(args):
     report("calculate source path for the branch")
     if not source:
         if str(cmd) == "init":
-            cf_source, cf_rev = get_copyfrom(branch_dir)
+            cf_source, cf_rev, copy_committed_in_rev = get_copyfrom(branch_dir)
             if not cf_source:
                 error('no copyfrom info available. '
                       'Explicit source argument (-S/--source) required.')
