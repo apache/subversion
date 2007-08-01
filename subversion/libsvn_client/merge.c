@@ -3230,7 +3230,7 @@ svn_client_merge_peg3(const char *source,
   const svn_wc_entry_t *entry;
   struct merge_cmd_baton merge_cmd_baton;
   const char *URL;
-  const char *path;
+  const char *path = NULL;
   apr_array_header_t *children_with_mergeinfo;
 
   if (source)
@@ -3247,6 +3247,8 @@ svn_client_merge_peg3(const char *source,
         return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                  _("'%s' has no URL"),
                                  svn_path_local_style(source, pool));
+      if (URL != source)
+        path = source;
     }
   else
     {
@@ -3254,45 +3256,36 @@ svn_client_merge_peg3(const char *source,
       apr_array_header_t *suggested_sources;
       svn_revnum_t rev;
       svn_opt_revision_t target_revision;
+      const char *repos_root;
+      svn_ra_session_t *ra_session;
+      const char *target_url;
       target_revision.kind = svn_opt_revision_working;
       SVN_ERR(svn_client__suggest_merge_sources(target_wcpath,
                                                 &target_revision,
                                                 &suggested_sources,
                                                 ctx, pool));
-      if (suggested_sources->nelts > 0)
-        {
-          /* Prepend the repository root path to the copy source path. */
-          const char *repos_root;
-          svn_ra_session_t *ra_session;
-          const char *target_url;
+      if (! suggested_sources->nelts)
+        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                 _("Unable to determine merge source for "
+                                   "'%s', please provide an explicit source"),
+                                 svn_path_local_style(target_wcpath, pool));
 
-          /* ### TODO: Try something cheaper than creating a RA session. */
-          SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                                   &rev,
-                                                   &target_url,
-                                                   target_wcpath,
-                                                   &target_revision,
-                                                   &target_revision,
-                                                   ctx,
-                                                   pool));
-          SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
-          URL = apr_pstrcat(pool, repos_root,
-                            APR_ARRAY_IDX(suggested_sources, 0, char *),
-                            NULL);
-        }
-      else
-        {
-          return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                   _("Unable to determine merge source for "
-                                     "'%s', please provide an explicit source"),
-                                   svn_path_local_style(target_wcpath, pool));
-        }
+      /* Prepend the repository root path to the copy source path. */
+
+      /* ### TODO: Try something cheaper than creating a RA session. */
+      SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                               &rev,
+                                               &target_url,
+                                               target_wcpath,
+                                               &target_revision,
+                                               &target_revision,
+                                               ctx,
+                                               pool));
+      SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
+      URL = apr_pstrcat(pool, repos_root,
+                        APR_ARRAY_IDX(suggested_sources, 0, char *),
+                        NULL);
     }
-
-  if (URL == source)
-    path = NULL;
-  else
-    path = source;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
                                  ! dry_run,
