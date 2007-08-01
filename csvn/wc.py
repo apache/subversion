@@ -39,6 +39,10 @@ class WC(object):
         self._status_func = \
             svn_wc_status_func2_t(self._status_wrapper)
         self._status = None
+        
+        self._info_func = \
+            svn_info_receiver_t(self._info_wrapper)
+        self._info = None
 
     def copy(self, src, dest, rev = ""):
         """Copy SRC to DEST"""
@@ -379,6 +383,36 @@ class WC(object):
         self.iterpool.clear()
                             
         return result_rev
+        
+    def _info_wrapper(baton, path, info, pool):
+        self = cast(baton, py_object).value
+        
+        if self._info:
+            self._info(path, info.contents)
+    _info_wrapper = staticmethod(_info_wrapper)
+    
+    def set_info_func(self, info):
+        """Set a callback to be used to process svn_info_t objects during
+        calls to the info method.
+        
+        INFO should accept a path and a svn_info_t object as arguments."""
+        self._info = info
+        
+    def info(self, path="", recurse=True, info_func=None):
+        """Get info about PATH (defaults to the WC root), using callbacks to
+        INFO_FUNC. INFO_FUNC may be set earlier using set_info_func. If
+        INFO_FUNC is not provided, the previously registered callback will be
+        used.
+        
+        If RECURSE is True (True by default), directories will be
+        recursed."""
+        
+        if info_func:
+            self.set_info_func(info_func)
+        
+        svn_client_info(self._build_path(path), NULL, NULL, self._info_func,
+                cast(id(self), c_void_p), recurse, self.client,
+                self.iterpool)
         
     def checkout(self, url, revnum=None, path=None, recurse=True,
                  ignore_externals=False):
