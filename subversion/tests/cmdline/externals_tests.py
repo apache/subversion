@@ -801,6 +801,42 @@ def external_with_peg_and_op_revision(sbox):
                           external_chi_path)
   fp.close()
 
+#----------------------------------------------------------------------
+
+def new_style_externals(sbox):
+  "check the new '-rN URL PATH' syntax"
+
+  externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+
+  repo_url       = sbox.repo_url
+  other_repo_url = repo_url + ".other"
+
+  # Checkout a working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     repo_url, wc_dir)
+
+  # Set an external property using the new '-rN URL PATH' syntax.
+  new_externals_desc = \
+           other_repo_url + "/A/D/G exdir_G \n" + \
+           "-r 1 " + other_repo_url + "/A/D/H exdir_H \n"
+
+  # Set and commit the property.
+  change_external(os.path.join(wc_dir, "A/C"), new_externals_desc)
+
+  # Update other working copy.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  exdir_H_omega_path = os.path.join(wc_dir, "A", "C", "exdir_H", "omega")
+  fp = open(exdir_H_omega_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
+    raise svntest.Failure("Unexpected contents for rev 1 of " +
+                          exdir_H_omega_path)
+
 
 
 ########################################################################
@@ -820,6 +856,7 @@ test_list = [ None,
               export_with_externals,
               export_wc_with_externals,
               external_with_peg_and_op_revision,
+              new_style_externals,
              ]
 
 if __name__ == '__main__':

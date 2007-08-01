@@ -2283,12 +2283,14 @@ parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
     {
       /* We're dealing with one of these two forms:
        *
-       *    rN   TARGET_DIR  URL
-       *    r N  TARGET_DIR  URL
+       *    rN   URL  TARGET_DIR
+       *    r N  URL  TARGET_DIR
        * 
        * Handle either way.
        */
       const char *r_part_1 = NULL, *r_part_2 = NULL;
+
+      item->revision.kind = svn_opt_revision_number;
 
       if (line_parts->nelts == 3)
         {
