@@ -471,13 +471,9 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                copying 'yours' to 'mine', isn't enough; we need to get
                the whole text-base and props installed too, just as if
                we had called 'svn cp wc wc'. */
-
-            SVN_ERR(svn_wc_add_repos_file2(mine, adm_access,
-                                           yours, NULL,
-                                           new_props, NULL,
-                                           copyfrom_url,
-                                           rev2,
-                                           subpool));
+            SVN_ERR(svn_wc_add_repos_file2(mine, adm_access, yours, NULL,
+                                           new_props, NULL, copyfrom_url,
+                                           rev2, subpool));
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
@@ -2553,6 +2549,7 @@ do_single_file_merge(const char *initial_URL1,
 
       if (is_replace) 
         {
+          /* Delete... */
           SVN_ERR(merge_file_deleted(adm_access,
                                      &text_state,
                                      target_wcpath,
@@ -2565,6 +2562,7 @@ do_single_file_merge(const char *initial_URL1,
                                    svn_wc_notify_update_delete, text_state,
                                    svn_wc_notify_state_unknown, subpool);
 
+          /* ...plus add... */
           SVN_ERR(merge_file_added(adm_access,
                                    &text_state, &prop_state,
                                    target_wcpath,
@@ -2578,6 +2576,7 @@ do_single_file_merge(const char *initial_URL1,
           single_file_merge_notify(&notify_b, target_wcpath,
                                    svn_wc_notify_update_add, text_state,
                                    prop_state, subpool);
+          /* ... equals replace. */
         }
       else
         {
