@@ -2535,10 +2535,6 @@ do_single_file_merge(const char *initial_URL1,
       SVN_ERR(single_file_merge_get_file(&tmpfile1, ra_session1, &props1, 
                                          r->start, initial_URL1, 
                                          target_wcpath, subpool));
-
-      /* ### CMP ### */
-      if (is_replace)
-        SVN_ERR(svn_ra_reparent(ra_session2, initial_URL1, pool));
       SVN_ERR(single_file_merge_get_file(&tmpfile2, ra_session2, &props2, 
                                          r->end, initial_URL2,
                                          target_wcpath, subpool));
