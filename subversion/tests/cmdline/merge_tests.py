@@ -791,6 +791,7 @@ def simple_property_merges(sbox):
   expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
   expected_status.tweak('', status=' M')
   expected_status.tweak('E', 'E/alpha', 'E/beta', status=' C')
+  expected_output.tweak('E', 'E/alpha', 'E/beta', status=' C')
   svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url,
                                        expected_output,
                                        expected_disk,
@@ -6612,7 +6613,7 @@ def avoid_reflected_revs(sbox):
     ''   : Item(status=' U'),
     'mu' : Item(status='U '),
     })
-  expected_disk.tweak("", props={SVN_PROP_MERGE_INFO : "/A_COPY:7-8"})
+  expected_disk.tweak("", props={SVN_PROP_MERGE_INFO : "/A:3-6\n/A_COPY:7-8\n"})
   expected_disk.tweak("mu", contents=svntest.main.file_read(mu_copy_path))
   my_expected_status = expected_status.copy().subtree("A")
   my_expected_status.wc_dir = short_A_path
