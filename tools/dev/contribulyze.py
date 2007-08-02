@@ -666,9 +666,12 @@ def process_committers(committers):
   matcher = re.compile('(\S+)\s+([^\(\)]+)\s+(\([^()]+\)){0,1}')
   line = committers.readline()
   while line:
-    # Every @-sign we see after this point indicates a committer line.
+    # Every @-sign we see after this point indicates a committer line...
     if line == 'Commit access for specific areas:\n':
       in_full_committers = False
+    # ...except in the "dormant committers" area, which comes last anyway.
+    if line == 'Committers who have asked to be listed as dormant:\n':
+      in_full_committers = True
     elif line.find('@') >= 0:
       line = line.strip()
       m = matcher.match(line)
