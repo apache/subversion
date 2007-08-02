@@ -2385,6 +2385,13 @@ do_single_file_merge(const char *initial_URL1,
   ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
                               initial_revision2->kind);
 
+  /* Ensure that the adm_access we're playing with is our TARGET_WCPATH's
+     parent, as required by some of underlying helper functions. */
+  SVN_ERR(svn_wc_adm_probe_try3(&adm_access, adm_access, target_wcpath,
+                                TRUE, -1, merge_b->ctx->cancel_func,
+                                merge_b->ctx->cancel_baton, 
+                                pool));
+
   SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
                                   pool));
 
