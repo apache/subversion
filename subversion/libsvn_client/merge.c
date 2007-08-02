@@ -2835,7 +2835,7 @@ discover_and_merge_children(apr_array_header_t **children_sw_or_with_mergeinfo,
                                        child_wcpath,
                                        adm_access,
                                        merge_cmd_baton,
-                                       TRUE, /* ignore_ancestry */
+                                       FALSE, /* ignore_ancestry */
                                        pool));
         }
       else if (child_entry->kind == svn_node_dir)
