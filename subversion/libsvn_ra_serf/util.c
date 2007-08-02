@@ -821,12 +821,13 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       if (APR_STATUS_IS_EOF(status))
         {
           xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
+          XML_ParserFree(ctx->xmlp);
           if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
             {
-              abort();
-            }
+              status = SVN_ERR_RA_DAV_REQUEST_FAILED;
 
-          XML_ParserFree(ctx->xmlp);
+              svn_error_clear(ctx->error);
+            }
 
           *ctx->done = TRUE;
           if (ctx->done_list)
