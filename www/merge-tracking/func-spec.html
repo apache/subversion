@@ -145,10 +145,17 @@ merge info inheritance and elision, specifically:</p>
    does not inherit merge info from its working copy ancestors.  PATH gets
    merge info for rev N plus any inherited mergeinfo from the repository.</li>
 
- <li>Merge rev N to PATH with switched CHILD with no explicit merge info:
-   CHILD does not inherit merge info from its working copy ancestors.  CHILD
-   gets merge info for rev N plus any inherited mergeinfo from the
-   repository.
+ <li>Merge rev N to PATH with switched CHILD:  If CHILD has no explicit
+   mergeinfo it does not inherit merge info from its working copy ancestors.
+   Instead CHILD gets merge info for rev N plus any inherited mergeinfo from
+   the repository.  Regardless of wether CHILD has explicit mergeinfo,
+   CHILD's immediate PARENT (which may be the same as PATH) gets
+   non-inheritable mergeinfo added for rev N.  If PARENT didn't have
+   pre-existing mergeinfo it will have mergeinfo added.  If CHILD has an
+   unswitched SIBLING, then SIBLING will get a full set of mergeinfo since
+   SIBLING and CHILD's common PARENT gets non-inheritable mergeinfo for this
+   merge.  Again,  like PARENT, if SIBLING does not have pre-existing
+   mergeinfo it will have mergeinfo added.
    </li>
 
  <li>Elision: Merge info on switched paths never elides.</li>
