@@ -189,7 +189,7 @@ on any child paths.</p>
 <p>Merge info set on a working copy "child" path as a result of a merge,
 switch, or update, may fully/partially elide to the path's nearest working
 copy or repository ancestor with fully/partially equivalent merge info.
-This elision is done as part of the merge/switch/update:</p>
+Elision is attempted as part of any merge/switch/update:</p>
 
 <div class="h3" id="full-elision">
 <h3>Full Elision</h3>
@@ -263,6 +263,17 @@ This elision is done as part of the merge/switch/update:</p>
 </ul>
 
 </div>  <!-- partial-elision -->
+
+<div class="h3" id="non-inheritable-elision">
+<h3>Elision and Non-Inheritable Revision Ranges</h3>
+
+<p>
+The above rules apply only to mergeinfo without non-inheritable revision
+ranges.  Mergeinfo with non-inheritable revision ranges cannot elide or be
+elided to.
+</p>
+
+</div>  <!-- non-inheritable-elision -->
 
 </div>  <!-- mergeinfo-elision -->
 
