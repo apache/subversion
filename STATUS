@@ -89,17 +89,6 @@ Candidate changes:
     Votes:
       +1: djh
 
-  * r25607
-    Tweak the expected output of one test so that it passes against both 1.4.x
-    and trunk (1.5) servers.
-    Justification:
-      With this backport, the entire 1.4.x test suite passes against trunk
-      servers (tested on svnserve); this is a good standard to try to keep
-      (especially so that we can make sure that things like the -N/--depth
-      backwards-compatibility code works).
-    Votes:
-      +1: glasser, dlr
-
   * r25833
     Fix administrative property file handling for prop changes to a
     file which is subsequently copied/moved over another
@@ -185,3 +174,15 @@ Approved changes:
     Branch: 1.4.x-issue-2804
     Votes:
       +1: dlr, lgo, vgeorgescu
+
+  * r25607
+    Tweak the expected output of one test so that it passes against both 1.4.x
+    and trunk (1.5) servers.
+    Justification:
+      With this backport, the entire 1.4.x test suite passes against trunk
+      servers (tested on svnserve); this is a good standard to try to keep
+      (especially so that we can make sure that things like the -N/--depth
+      backwards-compatibility code works).
+    Votes:
+      +1: glasser, dlr, hwright
+
