@@ -778,14 +778,14 @@ def simple_property_merges(sbox):
     '' : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,4'}),
     'E/dir_conflicts.prej'
     : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
-           + "but the property does not exist.\n"),
+           + "but it has been locally deleted.\n"),
     'E/alpha.prej'
     : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
-           + "but the property does not exist.\n"),
+           + "but it has been locally deleted.\n"),
     'E/beta.prej'
     : Item("Trying to change property 'foo' from 'foo?\\129val' to"
            + " 'mod?\\129foo',\n"
-           + "but the property does not exist.\n"),
+           + "but it has been locally deleted.\n"),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
   expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
@@ -3301,14 +3301,17 @@ def property_merge_undo_redo(sbox):
   
   # Change mind, re-apply the change ('svn merge -r1:2').
   # This should merge cleanly into existing prop-mod, status shows nothing.
-  expected_output = wc.State(wc_dir, {'A/B/E/alpha'  : Item(status=' U'), })
+  expected_output = wc.State(wc_dir, {'A/B/E/alpha'  : Item(status=' C'), })
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({'' : Item(props={SVN_PROP_MERGE_INFO : '/:2'}), })
-  expected_disk.tweak('A/B/E/alpha', props={'foo' : 'foo_val'})
+  expected_disk.add({'A/B/E/alpha.prej'
+     : Item("Trying to create property 'foo' with value 'foo_val',\n"
+            + "but it has been locally deleted.\n")})
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('', status=' M')
+  expected_status.tweak('A/B/E/alpha', status=' C')
 
   expected_skip = wc.State('', { })
   
@@ -4017,22 +4020,27 @@ def merge_eolstyle_handling(sbox):
                                        expected_backup_skip)
 
   # Test 2: now change the eol-style property to another value and commit,
-  # merge this revision in the still changed mu in the second working copy; 
-  # there should be no conflict!
+  # merge this revision in the still changed mu in the second working copy;
+  # there should be a property conflict! (Since this will overwrite a
+  # local change to a versioned resource.)
   svntest.main.run_svn(None, 'propset', 'svn:eol-style', "CR", mu_path)
   svntest.main.run_svn(None, 'commit', '-m', 'set eol-style property', wc_dir)
 
   expected_backup_disk = svntest.main.greek_state.copy()
   expected_backup_disk.add({
-  'A/mu' : Item(contents= "This is the file 'mu'.\015" +
-    "Added new line of text.\015")
+  'A/mu' : Item(contents= "This is the file 'mu'." + crlf +
+    "Added new line of text." + crlf)
   })
+  expected_backup_disk.add({
+    'A/mu.prej' : Item("Trying to change property 'svn:eol-style' from 'CRLF'"
+                       + " to 'CR',\nbut property has been locally added with"
+                       + " value 'CRLF'\n")})
   expected_backup_output = svntest.wc.State(wc_backup, {
-    'A/mu' : Item(status='GU'),
+    'A/mu' : Item(status='GC'),
     })
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 1)
   expected_backup_status.tweak('', status=' M')
-  expected_backup_status.tweak('A/mu', status='MM')
+  expected_backup_status.tweak('A/mu', status='MC')
   svntest.actions.run_and_verify_merge(wc_backup, '2', '3', sbox.repo_url,
                                         expected_backup_output,
                                         expected_backup_disk,
@@ -4040,23 +4048,24 @@ def merge_eolstyle_handling(sbox):
                                         expected_backup_skip)
 
   # Test 3: now delete the eol-style property and commit, merge this revision
-  # in the still changed mu in the second working copy; there should be no 
-  # conflict!
-  # EOL of mu should be unchanged (=CR).
+  # in the still changed mu in the second working copy; there should be no
+  # conflict! (after marking mu resolved from Test 2)
+  # EOL of mu should be unchanged (=CRLF).
   svntest.main.run_svn(None, 'propdel', 'svn:eol-style', mu_path)
   svntest.main.run_svn(None, 'commit', '-m', 'del eol-style property', wc_dir)
 
   expected_backup_disk = svntest.main.greek_state.copy()
   expected_backup_disk.add({
-  'A/mu' : Item(contents= "This is the file 'mu'.\015" +
-    "Added new line of text.\015")
+  'A/mu' : Item(contents= "This is the file 'mu'." + crlf +
+    "Added new line of text." + crlf)
   })
   expected_backup_output = svntest.wc.State(wc_backup, {
-    'A/mu' : Item(status=' U'),
+    'A/mu' : Item(status=' G'),
     })
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 1)
   expected_backup_status.tweak('', status=' M')
   expected_backup_status.tweak('A/mu', status='M ')
+  svntest.main.run_svn(None, 'resolved', path_backup)
   svntest.actions.run_and_verify_merge(wc_backup, '3', '4', sbox.repo_url,
                                        expected_backup_output,
                                        expected_backup_disk,
@@ -6476,7 +6485,7 @@ def empty_rev_range_mergeinfo(sbox):
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_svn(None,
                                      [svntest.main.merge_notify_line(-5),
-                                      ' U   ' + short_other_omega_path + \
+                                      ' G   ' + short_other_omega_path + \
                                       '\n'], [], 'merge', '-c-5',
                                      sbox.repo_url + '/A_COPY/B/E/beta',
                                      short_other_omega_path)
@@ -6525,7 +6534,7 @@ def empty_rev_range_mergeinfo(sbox):
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_svn(None,
                                      [svntest.main.merge_notify_line(-5),
-                                      ' U   ' + short_other_omega_path + \
+                                      ' G   ' + short_other_omega_path + \
                                       '\n'], [], 'merge', '-c-5',
                                      sbox.repo_url + '/A_COPY/B/E/beta',
                                      short_other_omega_path)
