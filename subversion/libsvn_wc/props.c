@@ -682,7 +682,25 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
   svn_string_t *working_val
     = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
 
-  if (working_val)
+  if (base_val)
+    {
+       if (working_val)
+         {
+           if (svn_string_compare(working_val, new_val))
+             set_prop_merge_state(state, svn_wc_notify_state_merged);
+           else
+             *conflict = svn_string_createf
+               (pool, _("Trying to create property '%s' with value '%s',\n"
+                        "but it already exists."),
+                propname, new_val->data);
+         }
+       else
+          *conflict = svn_string_createf
+            (pool, _("Trying to create property '%s' with value '%s',\n"
+                     "but it has been locally deleted."),
+             propname, new_val->data);
+    }
+  else if (working_val)
     {
       /* the property already exists in working_props... */
 
@@ -740,24 +758,39 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
   svn_string_t *working_val
     = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
 
-  if (! working_val)
+  if (! base_val)
     {
-      /* The property to be deleted doesn't exist, so it's a merge */
       apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
-      set_prop_merge_state(state, svn_wc_notify_state_merged);
+      if (old_val)
+        /* This is a merge, merging a delete into non-existent */
+        set_prop_merge_state(state, svn_wc_notify_state_merged);
     }
 
-  else if (svn_string_compare(working_val, old_val))
-    /* property has the expected 'from' value, so it's fine to delete it */
-    /* this is an update */
-    apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
+  else if (svn_string_compare(base_val, old_val))
+    {
+       if (working_val)
+         {
+           if (svn_string_compare(working_val, old_val))
+             /* they have the same values, so it's an update */
+             apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
+           else
+             *conflict = svn_string_createf
+               (pool,
+                _("Trying to delete property '%s' with value '%s'\n"
+                  "but it has been modified from '%s' to '%s'."),
+                propname, old_val->data, base_val->data, working_val->data);
+         }
+       else
+         /* The property is locally deleted, so it's a merge */
+         set_prop_merge_state(state, svn_wc_notify_state_merged);
+    }
 
-  else if (!svn_string_compare(old_val, working_val))
+  else
     *conflict = svn_string_createf
       (pool,
-       _("Trying to delete property '%s' but value"
-         " has been modified from '%s' to '%s'."),
-       propname, old_val->data, working_val->data);
+       _("Trying to delete property '%s' with value '%s'\n"
+         "but the local value is '%s'."),
+       propname, base_val->data, working_val->data);
 
   return SVN_NO_ERROR;
 }
@@ -788,7 +821,65 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
   svn_string_t *working_val
     = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
 
-  if (! working_val)  /* ... but it's not in the working_props */
+  if ((working_val && ! base_val)
+      || (! working_val && base_val)
+      || (working_val && base_val
+          && !svn_string_compare(working_val, base_val)))
+    {
+      /* Locally changed property */
+      if (working_val)
+        {
+          if (svn_string_compare(working_val, new_val))
+            /* The new value equals the changed value: a merge */
+            set_prop_merge_state(state, svn_wc_notify_state_merged);
+          else
+            {
+              if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+                {
+                  /* We have base, WC, and new values.  Discover
+                     deltas between base <-> WC, and base <->
+                     incoming.  Combine those deltas, and apply
+                     them to base to get the new value. */
+                  SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
+                                                         working_val,
+                                                         new_val, pool));
+                  apr_hash_set(working_props, propname,
+                               APR_HASH_KEY_STRING, new_val);
+                  set_prop_merge_state(state, svn_wc_notify_state_merged);
+                }
+
+              else
+                {
+                  if (base_val)
+                    *conflict = svn_string_createf
+                      (pool,
+                       _("Trying to change property '%s' from '%s' to '%s',\n"
+                         "but property has been locally changed "
+                         "from '%s' to '%s'."),
+                       propname, old_val->data, new_val->data,
+                       base_val->data, working_val->data);
+                  else
+                    *conflict = svn_string_createf
+                      (pool,
+                       _("Trying to change property '%s' from '%s' to '%s',\n"
+                         "but property has been locally added with value '%s'"),
+                       propname, old_val->data, new_val->data,
+                       working_val->data);
+                }
+            }
+        }
+
+      else
+        *conflict = svn_string_createf
+          (pool,
+           _("Trying to change property '%s' from '%s' to '%s',\n"
+             "but it has been locally deleted."),
+           propname, old_val->data, new_val->data);
+
+    }
+
+  else if (! working_val) /* means !working_val && !base_val due
+                             to conditions above: no prop at all */
     {
       if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
         {
@@ -812,18 +903,12 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
            propname, old_val->data, new_val->data);
     }
 
-  else  /* property already exists */
+  else /* means working && base && svn_string_compare(working, base) */
     {
-      if (svn_string_compare(working_val, old_val))
-        /* property has the expected 'from' value, so it's
-           fine to set it to the 'to' value.  */
+      if (svn_string_compare(old_val, base_val))
         apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
 
-      else if (svn_string_compare(working_val, new_val))
-        /* The value we want is already there, so it's a 'clean merge'. */
-        set_prop_merge_state(state, svn_wc_notify_state_merged);
-
-      else /* property has some random value */
+      else
         {
           if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
             {
@@ -847,6 +932,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                working_val->data);
         }
     }
+
 
   return SVN_NO_ERROR;
 }
@@ -916,7 +1002,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       const char *propname;
       svn_string_t *conflict = NULL;
       const svn_prop_t *incoming_change;
-      const svn_string_t *from_val, *to_val, *working_val;
+      const svn_string_t *from_val, *to_val, *working_val, *base_val;
       svn_boolean_t is_normal;
 
       /* For the incoming propchange, figure out the TO and FROM values. */
@@ -928,6 +1014,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       from_val = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
                 
       working_val = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
+      base_val = apr_hash_get(base_props, propname, APR_HASH_KEY_STRING);
 
       if (base_merge)
         apr_hash_set(base_props, propname, APR_HASH_KEY_STRING, to_val);
@@ -941,17 +1028,17 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       if (! from_val)  /* adding a new property */
         SVN_ERR(apply_single_prop_add(is_normal ? state : NULL,
                                       working_props, &conflict,
-                                      propname, NULL, to_val, pool));
+                                      propname, base_val, to_val, pool));
 
       else if (! to_val) /* delete an existing property */
         SVN_ERR(apply_single_prop_delete(is_normal ? state : NULL,
                                          working_props, &conflict,
-                                         propname, NULL, from_val, pool));
+                                         propname, base_val, from_val, pool));
 
       else  /* changing an existing property */
         SVN_ERR(apply_single_prop_change(is_normal ? state : NULL,
                                          working_props, &conflict,
-                                         propname, NULL, from_val,
+                                         propname, base_val, from_val,
                                          to_val, pool));
 
 
