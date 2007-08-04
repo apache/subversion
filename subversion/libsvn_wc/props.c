@@ -992,7 +992,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       /* Start out assuming no changes or conflicts.  Don't bother to
          examine propchanges->nelts yet; even if we knew there were
          propchanges, we wouldn't yet know if they are "normal" props,
-         as opposed wc or entry props.  */ 
+         as opposed wc or entry props.  */
       *state = svn_wc_notify_state_unchanged;
     }
 
@@ -1009,16 +1009,16 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       incoming_change = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
       propname = incoming_change->name;
       is_normal = svn_wc_is_normal_prop(propname);
-      to_val = incoming_change->value 
+      to_val = incoming_change->value
         ? svn_string_dup(incoming_change->value, pool) : NULL;
       from_val = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
-                
+
       working_val = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
       base_val = apr_hash_get(base_props, propname, APR_HASH_KEY_STRING);
 
       if (base_merge)
         apr_hash_set(base_props, propname, APR_HASH_KEY_STRING, to_val);
-      
+
       /* We already know that state is at least `changed', so mark
          that, but remember that we may later upgrade to `merged' or
          even `conflicted'. */
@@ -1044,21 +1044,21 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       /* merging logic complete, now we need to possibly log conflict
          data to tmpfiles.  */
-      
+
       if (conflict)
         {
           if (is_normal)
             set_prop_merge_state(state, svn_wc_notify_state_conflicted);
-          
+
           if (dry_run)
             continue;   /* skip to next incoming change */
-          
+
           if (! reject_tmp_fp)
             /* This is the very first prop conflict found on this item. */
             SVN_ERR(open_reject_tmp_file(&reject_tmp_fp, &reject_tmp_path,
                                          full_path, adm_access, is_dir,
                                          pool));
-          
+
           /* Append the conflict to the open tmp/PROPS/---.prej file */
           SVN_ERR(append_prop_conflict(reject_tmp_fp, conflict, pool));
         }
@@ -1066,7 +1066,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
     }  /* foreach propchange ... */
 
   /* Finished applying all incoming propchanges to our hashes! */
-  
+
   if (dry_run)
     return SVN_NO_ERROR;
 
@@ -1082,7 +1082,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       /* First, _close_ this temporary conflicts file.  We've been
          appending to it all along. */
       SVN_ERR(svn_io_file_close(reject_tmp_fp, pool));
-                                  
+
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
       SVN_ERR(get_existing_prop_reject_file(&reject_path,
@@ -1097,7 +1097,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
           const char *reserved_path;
           const char *full_reject_path;
 
-          full_reject_path = svn_path_join 
+          full_reject_path = svn_path_join
             (access_path, is_dir ? SVN_WC__THIS_DIR_PREJ : name, pool);
 
           SVN_ERR(svn_io_open_unique_file2(NULL, &reserved_path,
@@ -1123,7 +1123,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       /* And of course, delete the temporary reject file. */
       SVN_ERR(svn_wc__loggy_remove(entry_accum, adm_access,
                                    reject_tmp_path, pool));
-      
+
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
         svn_wc_entry_t entry;
@@ -1138,7 +1138,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       }
 
     } /* if (reject_tmp_fp) */
-  
 
   return SVN_NO_ERROR;
 }
