@@ -31,6 +31,8 @@
 #include "../include/org_tigris_subversion_javahl_StatusKind.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_ScheduleKind.h"
+#include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Action.h"
+#include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Reason.h"
 
 /**
  * Map a C commit state flag constant to the Java constant.
@@ -369,5 +371,43 @@ jint EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
 
     case svn_wc_status_incomplete:
       return org_tigris_subversion_javahl_StatusKind_incomplete;
+    }
+}
+
+jint EnumMapper::mapConflictAction(svn_wc_conflict_action_t action)
+{
+  switch (action)
+    {
+    case svn_wc_conflict_action_edit:
+    default:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Action_edit;
+
+    case svn_wc_conflict_action_add:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Action_add;
+
+    case svn_wc_conflict_action_delete:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Action_delete;
+    }
+}
+
+jint EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
+{
+  switch (reason)
+    {
+    case svn_wc_conflict_reason_edited:
+    default:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Reason_edited;
+
+    case svn_wc_conflict_reason_obstructed:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Reason_obstructed;
+
+    case svn_wc_conflict_reason_deleted:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Reason_deleted;
+
+    case svn_wc_conflict_reason_missing:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Reason_missing;
+
+    case svn_wc_conflict_reason_unversioned:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Reason_unversioned;
     }
 }

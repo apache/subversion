@@ -60,6 +60,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
                             svn_boolean_t *timestamp_sleep,
+                            svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
@@ -204,8 +205,10 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* We handle externals after the switch is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation. */
-  err = svn_client__handle_externals(traversal_info, FALSE,
-                                     use_sleep, ctx, pool);
+  if ((depth == svn_depth_infinity || depth == svn_depth_unknown)
+      && (! ignore_externals))
+    err = svn_client__handle_externals(traversal_info, FALSE,
+                                       use_sleep, ctx, pool);
 
   if (!err)
     {
@@ -272,12 +275,13 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    const char *switch_url,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
+                   svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   return svn_client__switch_internal(result_rev, path, switch_url, revision,
-                                     depth, NULL,
+                                     depth, NULL, ignore_externals,
                                      allow_unver_obstructions, ctx, pool);
 }
 
@@ -292,5 +296,5 @@ svn_client_switch(svn_revnum_t *result_rev,
 {
   return svn_client__switch_internal(result_rev, path, switch_url, revision,
                                      SVN_DEPTH_FROM_RECURSE(recurse),
-                                     NULL, FALSE, ctx, pool);
+                                     NULL, FALSE, FALSE, ctx, pool);
 }

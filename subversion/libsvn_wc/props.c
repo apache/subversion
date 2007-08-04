@@ -657,14 +657,11 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
   if (state)
     {
-      /* Start out assuming no conflicts.  Don't bother to examine
-         propchanges->nelts yet; even if we knew there were
+      /* Start out assuming no changes or conflicts.  Don't bother to
+         examine propchanges->nelts yet; even if we knew there were
          propchanges, we wouldn't yet know if they are "normal" props,
          as opposed wc or entry props.  */ 
-      if (propchanges->nelts > 0)
-        *state = svn_wc_notify_state_changed;
-      else
-        *state = svn_wc_notify_state_unchanged;
+      *state = svn_wc_notify_state_unchanged;
     }
 
   /* Looping over the array of incoming propchanges we want to apply: */
@@ -689,7 +686,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       if (base_merge)
         apr_hash_set(base_props, propname, APR_HASH_KEY_STRING, to_val);
       
-      /* We already know that state is at least `modified', so mark
+      /* We already know that state is at least `changed', so mark
          that, but remember that we may later upgrade to `merged' or
          even `conflicted'. */
       if (state && is_normal)
@@ -2286,12 +2283,14 @@ parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
     {
       /* We're dealing with one of these two forms:
        *
-       *    rN   TARGET_DIR  URL
-       *    r N  TARGET_DIR  URL
+       *    rN   URL  TARGET_DIR
+       *    r N  URL  TARGET_DIR
        * 
        * Handle either way.
        */
       const char *r_part_1 = NULL, *r_part_2 = NULL;
+
+      item->revision.kind = svn_opt_revision_number;
 
       if (line_parts->nelts == 3)
         {

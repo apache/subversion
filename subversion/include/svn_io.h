@@ -112,8 +112,8 @@ svn_error_t *svn_io_check_resolved_path(const char *path,
                                         apr_pool_t *pool);
 
 
-/** Open a new file (for writing) with a unique name based on utf-8
- * encoded @a path, in the same directory as @a path.  The file handle is
+/** Open a new file (for reading and writing) with a unique name based on
+ * utf-8 encoded @a path, in the same directory as @a path.  The file handle is
  * returned in @a *f, and the name, which ends with @a suffix, is returned
  * in @a *unique_name_p, also utf8-encoded.  Either @a f or @a unique_name_p
  * may be @c NULL.

@@ -851,17 +851,11 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * Update local copy to mirror a new url.
-     * @param path      the working copy path
-     * @param url       the new url for the working copy
-     * @param revision  the new base revision of working copy
-     * @param depth     how deep to traverse into subdirectories
-     * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.doSwitch(String, String, Revision, int, boolean, boolean)
      * @since 1.5
      */
     public native long doSwitch(String path, String url, Revision revision,
-                                int depth,
+                                int depth, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
@@ -877,7 +871,8 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse)
             throws ClientException
     {
-        return doSwitch(path, url, revision, Depth.fromRecurse(recurse), false);
+        return doSwitch(path, url, revision, Depth.fromRecurse(recurse),
+                        false, false);
     }
 
     /**

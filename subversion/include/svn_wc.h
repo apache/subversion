@@ -982,7 +982,9 @@ typedef struct svn_wc_conflict_description_t
   /** If the conflict involves the merging of two files descended from
    * a common ancestor, here are the paths of up to four fulltext
    * files that can be used to interactively resolve the conflict.
-   * (If any of these are not available, they default to NULL.) */
+   * All four files will be in repository-normal form -- LF line endings
+   * and contracted keywords.  (If any of these files are not available,
+   * they default to NULL.) */
 
   const char *base_file;     /* common ancestor of the two files being merged */
   const char *repos_file;    /* repository's version of the file */
@@ -1806,7 +1808,7 @@ svn_error_t *svn_wc_mark_missing_deleted(const char *path,
  * depth @a depth, and with repository UUID @a uuid and repository
  * root URL @a repos.  
  *
- * @a depth must be a definite depth, it cannot be @c svn_depth_unknown
+ * @a depth must be a definite depth, it cannot be @c svn_depth_unknown.
  * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must
  * be a prefix of @a url.
  *
@@ -2513,7 +2515,7 @@ svn_error_t *svn_wc_add(const char *path,
                         void *notify_baton,
                         apr_pool_t *pool);
 
-/** Add a file to a working copy at @a dst_path, obtaining the base-text's
+/** Add a file to a working copy at @a dst_path, obtaining the text-base's
  * contents from @a new_text_base_path, the wc file's content from
  * @a new_text_path, its base properties from @a new_base_props and
  * wc properties from @a new_props.
@@ -2551,7 +2553,6 @@ svn_error_t *svn_wc_add(const char *path,
  *
  * @since New in 1.4
  */
-
 svn_error_t *svn_wc_add_repos_file2(const char *dst_path,
                                     svn_wc_adm_access_t *adm_access,
                                     const char *new_text_base_path,

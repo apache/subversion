@@ -1569,6 +1569,9 @@ get_resource(request_rec *r,
   /* A name for the repository */
   repos->repo_name = repo_name;
 
+  /* The repository filesystem basename */
+  repos->repo_basename = repos_name;
+
   /* An XSL transformation */
   repos->xslt_uri = xslt_uri;
 
@@ -2593,7 +2596,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         "  <!ELEMENT index (updir?, (file | dir)*)>\n"
         "  <!ATTLIST index name    CDATA #IMPLIED\n"
         "                  path    CDATA #IMPLIED\n"
-        "                  rev     CDATA #IMPLIED>\n"
+        "                  rev     CDATA #IMPLIED\n"
+        "                  base    CDATA #IMPLIED>\n"
         "  <!ELEMENT updir EMPTY>\n"
         "  <!ELEMENT file  EMPTY>\n"
         "  <!ATTLIST file  name    CDATA #REQUIRED\n"
@@ -2678,9 +2682,12 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                 title = apr_psprintf(resource->pool,
                                      "Revision %ld: %s",
                                      resource->info->root.rev, title);
-
-              if (resource->info->repos->repo_name)
+              if (resource->info->repos->repo_basename)
                 title = apr_psprintf(resource->pool, "%s - %s",
+                                     resource->info->repos->repo_basename,
+                                     title);
+              if (resource->info->repos->repo_name)
+                title = apr_psprintf(resource->pool, "%s: %s",
                                      resource->info->repos->repo_name,
                                      title);
             }
@@ -2692,6 +2699,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         {
           const char *name = resource->info->repos->repo_name;
           const char *href = resource->info->repos_path;
+          const char *base = resource->info->repos->repo_basename;
 
           ap_fputs(output, bb, "<?xml version=\"1.0\"?>\n");
           ap_fprintf(output, bb,
@@ -2713,6 +2721,9 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                        apr_xml_quote_string(resource->pool,
                                             href,
                                             1));
+          if (base)
+            ap_fprintf(output, bb, " base=\"%s\"", base);
+
           ap_fputs(output, bb, ">\n");
         }
 

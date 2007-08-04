@@ -28,21 +28,15 @@ extern "C" {
    generates transaction names from a sequence expressed as a base 36
    number with a maximum of MAX_KEY_SIZE (currently 200) bytes.  The
    FSFS backend generates transaction names of the form
-   <hostname>-<pid>-<time>-<uniquifier>, where <uniquifier> runs from
-   0-99999 (see create_txn_dir() in fs_fs.c).  The maximum length is
-   APRMAXHOSTLEN + 39:
-     APRMAXHOSTLEN -> hostname
-     1             -> -
-     10            -> 32 bit process ID
-     1             -> -
-     20            -> 64 bit time
-     1             -> -
-     5             -> 0-99999
-     1             -> trailing \0
-
-   Use APRMAXHOSTLEN + 63 just to have some extra space.
+   <rev>-<base 36-number> where the base 36 number is a sequence value
+   with a maximum length of MAX_KEY_SIZE bytes.  The maximum length is
+   212, but use 220 just to have some extra space:
+     10   -> 32 bit revision number
+     1    -> '-'
+     200  -> 200 digit base 36 number
+     1    -> '\0'
  */
-#define SVN_FS__TXN_MAX_LEN (APRMAXHOSTLEN+63)
+#define SVN_FS__TXN_MAX_LEN 220
 
 #ifdef __cplusplus
 }

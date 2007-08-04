@@ -164,6 +164,15 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
     ra.get_file_revs(self.ra_ctx, "trunk/README.txt", 0, 10, rev_handler)
 
+  def test_lock(self):
+    def callback(baton, path, do_lock, lock, ra_err, pool):
+      pass
+    # This test merely makes sure that the arguments can be wrapped 
+    # properly. svn.ra.lock() currently fails because it is not possible 
+    # to retrieve the username from the auth_baton yet.
+    self.assertRaises(core.SubversionException, 
+      lambda: ra.lock(self.ra_ctx, {"/": 0}, "sleutel", False, callback))
+
   def test_update(self):
     class TestEditor(delta.Editor):
         pass

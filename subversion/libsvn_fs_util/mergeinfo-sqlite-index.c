@@ -388,7 +388,7 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
 
 /* Helper for get_mergeinfo_for_path() that retrieves mergeinfo for
    PATH at the revision LASTMERGED_REV, returning it in the merge
-   info hash *RESULT. */
+   info hash *RESULT (with rangelist elements in ascending order). */
 static svn_error_t *
 parse_mergeinfo_from_db(sqlite3 *db,
                         const char *path,
@@ -403,7 +403,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
                              "SELECT mergedfrom, mergedrevstart, "
                              "mergedrevend FROM mergeinfo "
                              "WHERE mergedto = ? AND revision = ? "
-                             "ORDER BY mergedfrom;",
+                             "ORDER BY mergedfrom, mergedrevstart;",
                              -1, &stmt, NULL), db);
   SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
   SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastmerged_rev), db);

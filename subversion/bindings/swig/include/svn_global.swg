@@ -128,6 +128,9 @@ static PyObject * _global_py_pool = NULL;
               apr_seek_where_t, apr_fileperms_t }
 %apply unsigned long { unsigned char, unsigned short, unsigned int, size_t }
 
+%clear long long;
+%clear unsigned long long;
+
 /* These typemaps use apr_int64_t so that they will work on Win32 and Unix */
 %typemap (in) long long
   " $1 = ($1_ltype) PyLong_AsLongLong($input); ";

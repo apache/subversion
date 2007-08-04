@@ -411,12 +411,21 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_merge_begin:
-      if (n->merge_range->start == n->merge_range->end)
+      if (n->merge_range->start == n->merge_range->end
+          || n->merge_range->start == n->merge_range->end - 1)
         err = svn_cmdline_printf(pool, _("--- Merging r%ld:\n"),
+                                 n->merge_range->end);
+      else if (n->merge_range->start - 1 == n->merge_range->end)
+        err = svn_cmdline_printf(pool, _("--- Undoing r%ld:\n"),
                                  n->merge_range->start);
-      else
+      else if (n->merge_range->start < n->merge_range->end)
         err = svn_cmdline_printf(pool, _("--- Merging r%ld through r%ld:\n"),
-                                 n->merge_range->start, n->merge_range->end);
+                                 n->merge_range->start + 1,
+                                 n->merge_range->end);
+      else /* n->merge_range->start > n->merge_range->end - 1 */
+        err = svn_cmdline_printf(pool, _("--- Undoing r%ld through r%ld:\n"),
+                                 n->merge_range->start,
+                                 n->merge_range->end + 1);
       if (err)
         goto print_error;
       break;

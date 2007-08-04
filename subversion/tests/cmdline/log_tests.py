@@ -331,7 +331,7 @@ class SVNUnexpectedLogs(svntest.Failure):
       chain_data = list(self.chain)
       for i in range(0, len(self.chain)):
         chain_data[i] = self.chain[i][self.field_selector]
-      msg = msg + ': %s list was %s' % (self.field_selector, chain_data)
+      msg = msg + ': Actual %s list was %s' % (self.field_selector, chain_data)
     return msg
 
 
@@ -772,8 +772,9 @@ def log_limit(sbox):
   log_chain = parse_log_output(out)
   check_log_chain(log_chain, [3, 6])
 
+  # Use -l instead of --limit to test both option forms.
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'log', '--limit', '2',
+                                                'log', '-l', '2',
                                                 '--revision', '1',
                                                 sbox.repo_url,
                                                 'A/B')
@@ -904,7 +905,7 @@ def check_merge_results(log_chain, expected_merges):
   # Check to see if the number and values of the revisions is correct
   for log in log_chain:
     if log['revision'] not in expected_merges:
-      raise SVNUnexpectedLogs("Rev %d not found in expected list" % 
+      raise SVNUnexpectedLogs("Found unexpected revision %d" %
                               log['revision'], log_chain)
 
   # Check to see that each rev in expected_merges contains the correct data

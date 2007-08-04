@@ -405,7 +405,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
              up the conflict before we mark the file 'conflicted' */
           if (conflict_func)
             {
-              svn_error_t *conflict_err;
               svn_wc_conflict_description_t cdesc;
               svn_wc_conflict_result_t result;
 
@@ -419,7 +418,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
               cdesc.reason = svn_wc_conflict_reason_edited;
               cdesc.base_file = left;
               cdesc.repos_file = right;
-              cdesc.user_file = merge_target;
+              cdesc.user_file = tmp_target;
               cdesc.merged_file = result_target;
 
               SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
@@ -650,7 +649,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
          up the conflict before we mark the file 'conflicted' */
       if (conflict_func)
         {
-          svn_error_t *conflict_err;
           svn_wc_conflict_description_t cdesc;
           svn_wc_conflict_result_t result;
 
@@ -664,7 +662,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           cdesc.reason = svn_wc_conflict_reason_edited;
           cdesc.base_file = left;
           cdesc.repos_file = right;
-          cdesc.user_file = merge_target;
+          cdesc.user_file = tmp_target;
           cdesc.merged_file = NULL;     /* notice there is NO merged file! */
 
           SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
