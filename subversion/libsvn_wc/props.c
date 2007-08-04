@@ -1825,14 +1825,6 @@ svn_wc_prop_set2(const char *name,
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   const svn_wc_entry_t *entry;
   
-  /* Keep this static, it may get stored (for read-only purposes) in a
-     hash that outlives this function. */
-  static const svn_string_t boolean_value =
-    {
-      SVN_PROP_BOOLEAN_TRUE,
-      sizeof(SVN_PROP_BOOLEAN_TRUE) - 1
-    };
-
   if (prop_kind == svn_prop_wc_kind)
     return svn_wc__wcprop_set(name, value, path, adm_access, TRUE, pool);
   else if (prop_kind == svn_prop_entry_kind)
@@ -1879,16 +1871,9 @@ svn_wc_prop_set2(const char *name,
          If the svn:executable property was deleted (NULL value passed
          in), then chmod -x. */
       if (value == NULL)
-        {
-          SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
-        }
+        SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
       else
-        {
-          /* Since we only check if the property exists or not, force the
-             property value to a specific value */
-          value = &boolean_value;
-          SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
-        }
+        SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
     }
 
   if (entry->kind == svn_node_file && strcmp(name, SVN_PROP_NEEDS_LOCK) == 0)
@@ -1896,16 +1881,9 @@ svn_wc_prop_set2(const char *name,
       /* If the svn:needs-lock property was set to NULL, set the file
          to read-write */
       if (value == NULL)
-        {
-          SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
-        }
-      else
-        {
-          /* Since we only check if the property exists or not, force the
-             property value to a specific value */
-          value = &boolean_value;
-          /* And we'll set the file to read-only at commit time. */
-        }
+        SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
+        
+      /* If not, we'll set the file to read-only at commit time. */
     }
 
   err = svn_wc__load_props(&base_prophash, &prophash, adm_access, base_name,
@@ -1987,6 +1965,14 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
 {
   svn_stringbuf_t *new_value = NULL;
 
+  /* Keep this static, it may get stored (for read-only purposes) in a
+     hash that outlives this function. */
+  static const svn_string_t boolean_value =
+    {
+      SVN_PROP_BOOLEAN_TRUE,
+      sizeof(SVN_PROP_BOOLEAN_TRUE) - 1
+    };
+
   SVN_ERR(validate_prop_against_node_kind(propname, path, kind, pool));
   
   if (!skip_some_checks && (strcmp(propname, SVN_PROP_EOL_STYLE) == 0))
@@ -2030,6 +2016,11 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
     {
       new_value = svn_stringbuf_create_from_string(propval, pool);
       svn_stringbuf_strip_whitespace(new_value);
+    }
+  else if (strcmp(propname, SVN_PROP_EXECUTABLE) == 0
+        || strcmp(propname, SVN_PROP_NEEDS_LOCK) == 0)
+    {
+      new_value = svn_stringbuf_create_from_string(&boolean_value, pool);
     }
 
   if (new_value)
