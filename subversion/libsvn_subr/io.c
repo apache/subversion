@@ -241,7 +241,11 @@ file_open(apr_file_t **f,
       flag &= ~APR_EXCL;
     }
 #endif /* AS400 */
-  return apr_file_open(f, fname, flag, perm, pool);
+  apr_status_t status;
+
+  status = apr_file_open(f, fname, flag, perm, pool);
+  WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+  return status;
 }
 
 
