@@ -1324,6 +1324,7 @@ diff_repos_wc(const apr_array_header_t *options,
                                   reverse,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   &diff_editor, &diff_edit_baton,
+                                  callback_baton->svnpatch_file,
                                   pool));
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
