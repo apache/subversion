@@ -3401,6 +3401,12 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton 
  * to periodically check if the client has canceled the operation.
  *
+ * @a svnpatch_file is the temporary file to which the function dumps
+ * serialized ra_svn protocol editor commands.  It somehow determines whether
+ * or not to utilize svnpatch format in the diff output when checked against @c
+ * NULL.  The caller must allocate the file handler, open and close the file
+ * respectively before and after the call.
+ *
  * @since New in 1.5.
  */
 svn_error_t *svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
@@ -3415,6 +3421,7 @@ svn_error_t *svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                                      void *cancel_baton,
                                      const svn_delta_editor_t **editor,
                                      void **edit_baton,
+                                     apr_file_t *svnpatch_file,
                                      apr_pool_t *pool);
 /**
  * Similar to svn_wc_get_diff_editor4(), but with @a depth set to
