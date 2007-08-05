@@ -765,7 +765,7 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
   return session->vtable->do_status(session,
                                     &(b->reporter3), &(b->reporter3_baton),
                                     status_target, revision,
-                                    SVN_DEPTH_FROM_RECURSE(recurse),
+                                    SVN_DEPTH_FROM_RECURSE_STATUS(recurse),
                                     status_editor, status_baton, pool);
 }
 

@@ -190,9 +190,9 @@ static const elem_defn *defn_from_id(svn_ra_neon__xml_elmid id)
 
 
 /* Assign URL to RSRC.  Use POOL for any allocations. */
-static void assign_rsrc_url(svn_ra_neon__resource_t *rsrc, 
-                            const char *url,
-                            apr_pool_t *pool)
+static svn_error_t *
+assign_rsrc_url(svn_ra_neon__resource_t *rsrc,
+                const char *url, apr_pool_t *pool)
 {
   char *url_path;
   apr_size_t len;
@@ -202,7 +202,13 @@ static void assign_rsrc_url(svn_ra_neon__resource_t *rsrc,
      NOTE: mod_dav does not (currently) use an absolute URL, but simply a
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
-  (void) ne_uri_parse(url, &parsed_url);
+  if (ne_uri_parse(url, &parsed_url) != 0)
+    {
+      ne_uri_free(&parsed_url);
+      return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                               _("Unable to parse URL '%s'"), url);
+    }
+
   url_path = apr_pstrdup(pool, parsed_url.path);
   ne_uri_free(&parsed_url);
 
@@ -211,6 +217,8 @@ static void assign_rsrc_url(svn_ra_neon__resource_t *rsrc,
   if (len > 1 && url_path[len - 1] == '/')
     url_path[len - 1] = '\0';
   rsrc->url = url_path;
+
+  return SVN_NO_ERROR;
 }
 
 /* Determine whether we're receiving the expected XML response.
@@ -398,10 +406,7 @@ static svn_error_t * end_element(void *baton, int state,
     case ELEM_href:
       /* Special handling for <href> that belongs to the <response> tag. */
       if (rsrc->href_parent == ELEM_response)
-        {
-          assign_rsrc_url(pc->rsrc, cdata, pc->pool);
-          return SVN_NO_ERROR;
-        }
+        return assign_rsrc_url(pc->rsrc, cdata, pc->pool);
 
       /* Use the parent element's name, not the href. */
       parent_defn = defn_from_id(rsrc->href_parent);

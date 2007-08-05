@@ -471,7 +471,13 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* The location is an absolute URI. We want just the path portion. */
   /* ### what to do with the rest? what if it points somewhere other
      ### than the current session? */
-  ne_uri_parse(locn, &parse);
+  if (ne_uri_parse(locn, &parse) != 0)
+    {
+      ne_uri_free(&parse);
+      return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                               _("Unable to parse URL '%s'"), locn);
+    }
+
   rsrc->wr_url = apr_pstrdup(rsrc->pool, parse.path);
   ne_uri_free(&parse);
 

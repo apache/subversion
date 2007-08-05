@@ -21,7 +21,6 @@
 #include <ctype.h>
 #include <assert.h>
 #include <errno.h>
-#include <sys/types.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>
@@ -55,13 +54,6 @@
 
 #include "svn_private_config.h"
 
-#ifdef WIN32
-#include <windows.h> /* for getpid() */
-#endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h> /* for getpid() */
-#endif
-
 /* An arbitrary maximum path length, so clients can't run us out of memory
  * by giving us arbitrarily large paths. */
 #define FSFS_MAX_PATH_LEN 4096
@@ -77,28 +69,6 @@
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
-
-/* Names of special files in the fs_fs filesystem. */
-#define PATH_FORMAT        "format"        /* Contains format number */
-#define PATH_UUID          "uuid"          /* Contains UUID */
-#define PATH_CURRENT       "current"       /* Youngest revision */
-#define PATH_LOCK_FILE     "write-lock"    /* Revision lock file */
-#define PATH_REVS_DIR      "revs"          /* Directory of revisions */
-#define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
-#define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
-#define PATH_LOCKS_DIR     "locks"         /* Directory of locks */
-
-/* Names of special files and file extensions for transactions */
-#define PATH_CHANGES       "changes"       /* Records changes made so far */
-#define PATH_TXN_PROPS     "props"         /* Transaction properties */
-#define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
-#define PATH_REV           "rev"           /* Proto rev file */
-#define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
-#define PATH_TXN_MERGEINFO "mergeinfo"     /* Transaction mergeinfo props */
-#define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
-#define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
-#define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
-#define PATH_EXT_PROPS     ".props"        /* Extension for node props */
 
 /* Headers used to describe node-revision in the revision file. */
 #define HEADER_ID          "id"
@@ -1089,6 +1059,10 @@ svn_fs_fs__hotcopy(const char *src_path,
                                         PATH_LOCKS_DIR, TRUE, NULL,
                                         NULL, pool));
 
+  /* Copy the transaction-current file. */
+  if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+    SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_TXN_CURRENT, pool));
+
   /* Hotcopied FS is complete. Stamp it with a format file. */
   SVN_ERR(write_format(svn_path_join(dst_path, PATH_FORMAT, pool),
                        format, max_files_per_dir, pool));
@@ -1845,7 +1819,8 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
        * return the ESTALE error on the last iteration of the loop. */
       svn_error_clear(err);
       err = svn_io_file_open(&revprop_file, path_revprops(fs, rev, iterpool),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, iterpool);
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                             iterpool);
       if (err)
         {
           if (APR_STATUS_IS_ENOENT(err->apr_err))
@@ -3164,54 +3139,132 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* A structure used by get_and_increment_txn_key_body(). */
+struct get_and_increment_txn_key_baton {
+  svn_fs_t *fs;
+  char *txn_id;
+  apr_pool_t *pool;
+};
+
+/* Callback used in the implementation of create_txn_dir().  This gets
+   the current base 36 value in PATH_TXN_CURRENT and increments it.
+   It returns the original value by the baton. */
+static svn_error_t *
+get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
+{
+  struct get_and_increment_txn_key_baton *cb = baton;
+  const char *txn_current_filename = svn_path_join(cb->fs->path,
+                                                   PATH_TXN_CURRENT,
+                                                   pool);
+  apr_file_t *txn_current_file;
+  const char *tmp_filename;
+  char next_txn_id[MAX_KEY_SIZE+3];
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_pool_t *iterpool;
+  apr_size_t len;
+  int i;
+
+  cb->txn_id = apr_palloc(cb->pool, MAX_KEY_SIZE);
+
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < SVN_ESTALE_RETRY_COUNT; ++i)
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_RETRY_ESTALE(err, svn_io_file_open(&txn_current_file,
+                                             txn_current_filename,
+                                             APR_READ | APR_BUFFERED,
+                                             APR_OS_DEFAULT, iterpool));
+      len = MAX_KEY_SIZE;
+      SVN_RETRY_ESTALE(err, svn_io_read_length_line(txn_current_file,
+                                                    cb->txn_id,
+                                                    &len,
+                                                    iterpool));
+      SVN_IGNORE_ESTALE(err, svn_io_file_close(txn_current_file, iterpool));
+
+      break;
+    }
+
+  svn_pool_destroy(iterpool);
+
+  /* Increment the key and add a trailing \n to the string so the
+     transaction-current file has a newline in it. */
+  svn_fs_fs__next_key(cb->txn_id, &len, next_txn_id);
+  next_txn_id[len] = '\n';
+  ++len;
+  next_txn_id[len] = '\0';
+
+  SVN_ERR(svn_io_open_unique_file2(&txn_current_file, &tmp_filename,
+                                   txn_current_filename, ".tmp",
+                                   svn_io_file_del_none, pool));
+
+  SVN_ERR(svn_io_file_write_full(txn_current_file,
+                                 next_txn_id,
+                                 len,
+                                 NULL,
+                                 pool));
+
+  SVN_ERR(svn_io_file_flush_to_disk(txn_current_file, pool));
+
+  SVN_ERR(svn_io_file_close(txn_current_file, pool));
+
+  SVN_ERR(svn_fs_fs__move_into_place(tmp_filename, txn_current_filename,
+                                     txn_current_filename, pool));
+
+  return err;
+}
+
 /* Create a unique directory for a transaction in FS based on revision
-   REV.  Return the ID for this transaction in *ID_P. */
+   REV.  Return the ID for this transaction in *ID_P.  Use a sequence
+   value in the transaction ID to prevent reuse of transaction IDs. */
 static svn_error_t *
 create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
                apr_pool_t *pool)
 {
-  char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
-  pid_t process_id;
-  apr_time_t now;
+  struct get_and_increment_txn_key_baton cb;
+  const char *txn_dir;
+
+  /* Get the current transaction sequence value, which is a base-36
+     number, from the transaction-current file, and write an
+     incremented value back out to the file.  Place the revision
+     number the transaction is based off into the transaction id. */
+  cb.pool = pool;
+  cb.fs = fs;
+  SVN_ERR(svn_fs_fs__with_write_lock(fs,
+                                     get_and_increment_txn_key_body,
+                                     &cb,
+                                     pool));
+  *id_p = apr_psprintf(pool, "%ld-%s", rev, cb.txn_id);
+
+  txn_dir = svn_path_join_many(pool,
+                               fs->path,
+                               PATH_TXNS_DIR,
+                               apr_pstrcat(pool, *id_p, PATH_EXT_TXN, NULL),
+                               NULL);
+
+  SVN_ERR(svn_io_dir_make(txn_dir, APR_OS_DEFAULT, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Create a unique directory for a transaction in FS based on revision
+   REV.  Return the ID for this transaction in *ID_P.  This
+   implementation is used in svn 1.4 and earlier repositories and is
+   kept in 1.5 and greater to support the --pre-1.4-compatible and
+   --pre-1.5-compatible repository creation options.  Reused
+   transaction IDs are possible with this implementation. */
+static svn_error_t *
+create_txn_dir_pre_1_5(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
+                       apr_pool_t *pool)
+{
   unsigned int i;
   apr_pool_t *subpool;
-  const char *unique_basename, *unique_path, *prefix;
-  char *p;
-  apr_status_t apr_err;
+  const char *unique_path, *prefix;
 
-  /* Try to create directories for the transaction named
-     "<txndir>/<hostname>-<pid>-<time>-<uniquifier>.txn".  Any periods
-     in the hostname are replaced with hyphens because FSFS cannot
-     work with periods in the transaction name.  It would be nice to
-     use underscores instead of hyphens, but svn_fs.h guarantees that
-     transaction names contain only letters (upper- and lower-case),
-     digits, `-', and `.', from the ASCII character set. */
-  apr_err = apr_gethostname(hostname_str, sizeof(hostname_str), pool);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't get local hostname"));
+  /* Try to create directories named "<txndir>/<rev>-<uniqueifier>.txn". */
+  prefix = svn_path_join_many(pool, fs->path, PATH_TXNS_DIR,
+                              apr_psprintf(pool, "%ld", rev), NULL);
 
-  for (p = hostname_str; *p; ++p)
-    if ('.' == *p)
-      *p = '-';
-
-  process_id = getpid();
-  now = apr_time_now();
-
-  unique_basename = apr_psprintf(pool, "%s-%05d-%" APR_TIME_T_FMT,
-                                 hostname_str, process_id, now);
-
-  if (strlen(unique_basename) + 6 > SVN_FS__TXN_MAX_LEN)
-    {
-      return svn_error_createf(SVN_ERR_FS_TXN_NAME_TOO_LONG,
-                               NULL,
-                               _("The auto-generated transaction name "
-                                 "'%s-XXXXX' is longer than the maximum "
-                                 "transaction name length %d"),
-                               unique_basename, SVN_FS__TXN_MAX_LEN);
-    }
-
-  prefix = svn_path_join_many(pool, fs->path, PATH_TXNS_DIR, unique_basename,
-                              NULL);
   subpool = svn_pool_create(pool);
   for (i = 1; i <= 99999; i++)
     {
@@ -3247,13 +3300,17 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   svn_fs_txn_t *txn;
   svn_fs_id_t *root_id;
 
   txn = apr_pcalloc(pool, sizeof(*txn));
 
   /* Get the txn_id. */
-  SVN_ERR(create_txn_dir(&txn->id, fs, rev, pool));
+  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+    SVN_ERR(create_txn_dir(&txn->id, fs, rev, pool));
+  else
+    SVN_ERR(create_txn_dir_pre_1_5(&txn->id, fs, rev, pool));
 
   txn->fs = fs;
   txn->base_rev = rev;
@@ -4956,7 +5013,8 @@ svn_fs_fs__create(svn_fs_t *fs,
       SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVS_DIR,
                                                         pool),
                                           pool));
-      SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVPROPS_DIR,
+      SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path,
+                                                        PATH_REVPROPS_DIR,
                                                         pool),
                                           pool));
     }
@@ -4970,6 +5028,12 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__set_uuid(fs, svn_uuid_generate(pool), pool));
 
   SVN_ERR(write_revision_zero(fs));
+
+  /* Create the transaction-current file if the repository supports
+     the transaction sequence file. */
+  if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+    SVN_ERR(svn_io_file_create(svn_path_join(path, PATH_TXN_CURRENT, pool),
+                               "0\n", pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),

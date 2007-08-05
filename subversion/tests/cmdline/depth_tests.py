@@ -627,6 +627,7 @@ def depth_update_to_more_depth(sbox):
                                         None, None,
                                         None, None, None, None,
                                         '--depth', 'files')
+  svntest.actions.run_and_verify_svn(None, "Depth: files", [], "info")
 
   # Run 'svn up --depth=immediates' in the now depth-files working copy.
   expected_output = svntest.wc.State('', {
@@ -648,6 +649,8 @@ def depth_update_to_more_depth(sbox):
                                         None, None,
                                         None, None, None, None,
                                         '--depth', 'immediates')
+  svntest.actions.run_and_verify_svn(None, "Depth: immediates", [], "info")
+  svntest.actions.run_and_verify_svn(None, "Depth: empty", [], "info", "A")
 
   # Run 'svn up --depth=infinity' in the now depth-immediates working copy.
   expected_output = svntest.wc.State('', {
@@ -679,6 +682,14 @@ def depth_update_to_more_depth(sbox):
                                         None, None,
                                         None, None, None, None,
                                         '--depth', 'infinity')
+  # svn info doesn't print a 'Depth:' line for infinity, so we verify
+  # that no such line is present in the output.
+  output1, err = svntest.actions.run_and_verify_svn(None, None, [], "info")
+  output2, err = svntest.actions.run_and_verify_svn(None, None, [], "info", "A")
+  for line in output1 + output2:
+    if line.startswith("Depth:"):
+      raise svntest.Failure("Non-infinity depth detected after an upgrade \
+                             to depth-infinity")
 
 #----------------------------------------------------------------------
 

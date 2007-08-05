@@ -1172,6 +1172,7 @@ add_directory(const char *path,
   dir_context_t *dir;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__simple_request_context_t *add_dir_ctx;
+  apr_status_t status;
 
   /* Ensure our parent is checked out. */
   SVN_ERR(checkout_dir(parent));
@@ -1218,7 +1219,13 @@ add_directory(const char *path,
 
       props = apr_hash_make(dir->pool);
 
-      apr_uri_parse(dir->pool, dir->copy_path, &uri);
+      status = apr_uri_parse(dir->pool, dir->copy_path, &uri);
+      if (status)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("Unable to parse URL '%s'"),
+                                   dir->copy_path);
+        }
 
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path,
                                          dir->commit->session,
@@ -1581,6 +1588,7 @@ close_file(void *file_baton,
 {
   file_context_t *ctx = file_baton;
   svn_boolean_t put_empty_file = FALSE;
+  apr_status_t status;
 
   ctx->result_checksum = text_checksum;
 
@@ -1594,7 +1602,13 @@ close_file(void *file_baton,
 
       props = apr_hash_make(pool);
 
-      apr_uri_parse(pool, ctx->copy_path, &uri);
+      status = apr_uri_parse(pool, ctx->copy_path, &uri);
+      if (status)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("Unable to parse URL '%s'"),
+                                   ctx->copy_path);
+        }
 
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path,
                                          ctx->commit->session,

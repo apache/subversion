@@ -166,6 +166,8 @@ file_open(apr_file_t **f,
           apr_fileperms_t perm,
           apr_pool_t *pool) 
 {
+  apr_status_t status;
+
 #ifdef AS400
 /* All files in OS400 are tagged with a metadata CCSID (Coded Character Set
  * Identifier) which indicates the character encoding of the file's
@@ -241,7 +243,9 @@ file_open(apr_file_t **f,
       flag &= ~APR_EXCL;
     }
 #endif /* AS400 */
-  return apr_file_open(f, fname, flag, perm, pool);
+  status = apr_file_open(f, fname, flag, perm, pool);
+  WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+  return status;
 }
 
 
@@ -343,7 +347,7 @@ svn_io_open_unique_file2(apr_file_t **f,
     {
       apr_status_t apr_err;
       apr_int32_t flag = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL
-                          | APR_BUFFERED);
+                          | APR_BUFFERED | APR_BINARY);
 
       if (delete_when == svn_io_file_del_on_close)
         flag |= APR_DELONCLOSE;
@@ -371,7 +375,7 @@ svn_io_open_unique_file2(apr_file_t **f,
       SVN_ERR(svn_path_cstring_from_utf8(&unique_name_apr, unique_name,
                                          pool));
 
-      apr_err = file_open(&file, unique_name_apr, flag | APR_BINARY,
+      apr_err = file_open(&file, unique_name_apr, flag,
                           APR_OS_DEFAULT, pool);
 
       if (APR_STATUS_IS_EEXIST(apr_err))

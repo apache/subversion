@@ -865,7 +865,8 @@ directory_elements_diff(struct dir_baton *dir_baton)
           /* Check the subdir if in the anchor (the subdir is the target), or
              if recursive */
           if (in_anchor_not_target
-              || (dir_baton->edit_baton->depth == svn_depth_infinity))
+              || (dir_baton->edit_baton->depth == svn_depth_infinity)
+              || (dir_baton->edit_baton->depth == svn_depth_unknown))
             {
               subdir_baton = make_dir_baton(path, dir_baton,
                                             dir_baton->edit_baton,

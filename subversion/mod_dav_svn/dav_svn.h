@@ -93,6 +93,9 @@ typedef struct {
   /* The name of this repository */
   const char *repo_name;
 
+  /* The repository filesystem basename */
+  const char *repo_basename;
+
   /* The URI of the XSL transform for directory indexes */
   const char *xslt_uri;
 

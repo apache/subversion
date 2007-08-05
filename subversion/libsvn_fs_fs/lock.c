@@ -40,9 +40,6 @@
 #include "private/svn_fs_util.h"
 #include "svn_private_config.h"
 
-/* Names of special lock directories in the fs_fs filesystem. */
-#define LOCK_ROOT_DIR "locks"
-
 /* Names of hash keys used to store a lock for writing to disk. */
 #define PATH_KEY "path"
 #define TOKEN_KEY "token"
@@ -117,7 +114,7 @@ digest_path_from_digest(svn_fs_t *fs,
                         const char *digest,
                         apr_pool_t *pool)
 {
-  return svn_path_join_many(pool, fs->path, LOCK_ROOT_DIR, 
+  return svn_path_join_many(pool, fs->path, PATH_LOCKS_DIR, 
                             apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN), 
                             digest, NULL);
 }
@@ -132,7 +129,7 @@ digest_path_from_path(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   const char *digest = make_digest(path, pool);
-  return svn_path_join_many(pool, fs->path, LOCK_ROOT_DIR, 
+  return svn_path_join_many(pool, fs->path, PATH_LOCKS_DIR, 
                             apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN), 
                             digest, NULL);
 }
@@ -178,7 +175,7 @@ write_digest_file(apr_hash_t *children,
   apr_hash_t *hash = apr_hash_make(pool);
   const char *tmp_path;
 
-  SVN_ERR(ensure_dir_exists(svn_path_join(fs->path, LOCK_ROOT_DIR, pool), 
+  SVN_ERR(ensure_dir_exists(svn_path_join(fs->path, PATH_LOCKS_DIR, pool), 
                             fs, pool));
   SVN_ERR(ensure_dir_exists(svn_path_dirname(digest_path, pool), fs, pool));
   SVN_ERR(svn_io_open_unique_file2

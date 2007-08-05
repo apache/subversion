@@ -986,6 +986,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### for 'svn add' and 'svn import', it defaults to 'no'."           NL
         "### Automatic properties are defined in the section 'auto-props'."  NL
         "# enable-auto-props = yes"                                          NL
+        "### Set interactive-conflicts to 'no' to disable interactive"       NL
+        "### confict resolution prompting.  It defaults to 'yes'."           NL
+        "# interactive-conflicts = no"                                       NL
         ""                                                                   NL
         "### Section for configuring automatic properties."                  NL
         "[auto-props]"                                                       NL

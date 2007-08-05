@@ -337,6 +337,14 @@ public interface SVNClientInterface
     void notification2(Notify2 notify);
 
     /**
+     * Set the conflict resolution callback.
+     *
+     * @param listener The conflict resolution callback.
+     * @since 1.5
+     */
+    void setConflictResolver(ConflictResolverCallback listener);
+
+    /**
      * Set the progress callback.
      *
      * @param listener The progress callback.
@@ -691,12 +699,13 @@ public interface SVNClientInterface
      * @param url       the new url for the working copy
      * @param revision  the new base revision of working copy
      * @param depth     how deep to traverse into subdirectories
+     * @param ignoreExternals whether to process externals definitions
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
      * @since 1.5
      */
     long doSwitch(String path, String url, Revision revision, int depth,
-                  boolean allowUnverObstructions)
+                  boolean ignoreExternals, boolean allowUnverObstructions)
             throws ClientException;
 
     /**
