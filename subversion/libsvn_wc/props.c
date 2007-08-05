@@ -2711,9 +2711,9 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
                                              svn_wc_external_item2_t *);
           svn_wc_external_item_t *item = apr_palloc(pool, sizeof (*item));
 
-          if (item->target_dir)
+          if (item2->target_dir)
             item->target_dir = apr_pstrdup(pool, item2->target_dir);
-          if (item->url)
+          if (item2->url)
             item->url = apr_pstrdup(pool, item2->url);
           item->revision = item2->revision;
 
