@@ -2007,7 +2007,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
              checks for this, so all we have to is invoke it --
              we're not interested in the parsed result, only in
              whether or the parsing errored. */
-          SVN_ERR(svn_wc_parse_externals_description2
+          SVN_ERR(svn_wc_parse_externals_description3
                   (NULL, path, propval->data, pool));
         }
     }
