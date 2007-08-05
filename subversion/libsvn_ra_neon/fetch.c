@@ -2690,7 +2690,9 @@ end_element(void *userdata, int state,
     case ELEM_href:
       if (rb->fetch_content)
         /* record the href that we just found */
-        svn_ra_neon__copy_href(rb->href, rb->cdata_accum->data);
+        SVN_ERR(svn_ra_neon__copy_href(rb->href, rb->cdata_accum->data,
+                                       rb->scratch_pool));
+
       svn_stringbuf_setempty(rb->cdata_accum);
 
       /* do nothing if we aren't fetching content. */

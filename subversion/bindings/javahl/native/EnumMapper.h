@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005, 2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,8 +19,8 @@
  * @brief Interface of the class EnumMapper
  */
 
-#if !defined(AFX_ENUMMAPPER_H__35D135AE_08C8_4722_8BF2_361449BC2FF9__INCLUDED_)
-#define AFX_ENUMMAPPER_H__35D135AE_08C8_4722_8BF2_361449BC2FF9__INCLUDED_
+#ifndef ENUM_MAPPER_H
+#define ENUM_MAPPER_H
 
 #if _MSC_VER > 1000
 #pragma once
@@ -45,6 +45,8 @@ class EnumMapper
   static jint mapNotifyLockState(svn_wc_notify_lock_state_t state);
   static jint mapStatusKind(svn_wc_status_kind svnKind);
   static jint mapScheduleKind(svn_wc_schedule_t schedule);
+  static jint mapConflictAction(svn_wc_conflict_action_t action);
+  static jint mapConflictReason(svn_wc_conflict_reason_t reason);
 };
 
-#endif // !defined(AFX_ENUMMAPPER_H__35D135AE_08C8_4722_8BF2_361449BC2FF9__INCLUDED_)
+#endif  // ENUM_MAPPER_H

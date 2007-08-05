@@ -42,13 +42,17 @@
 
   <xsl:template match="index">
     <div class="rev">
-      <xsl:if test="string-length(@name) != 0">
-        <xsl:value-of select="@name"/>
-        <xsl:if test="string-length(@rev) != 0">
-          <xsl:text> &#8212; </xsl:text>
+      <xsl:value-of select="@name"/>
+      <xsl:if test="@base">
+        <xsl:if test="@name">
+          <xsl:text>:&#xA0; </xsl:text>
         </xsl:if>
+        <xsl:value-of select="@base" />
       </xsl:if>
-      <xsl:if test="string-length(@rev) != 0">
+      <xsl:if test="@rev">
+        <xsl:if test="@base | @name">
+          <xsl:text> &#x2014; </xsl:text>
+        </xsl:if>
         <xsl:text>Revision </xsl:text>
         <xsl:value-of select="@rev"/>
       </xsl:if>
@@ -70,7 +74,6 @@
       </xsl:element>
       <xsl:text>]</xsl:text>
     </div>
-    <!-- xsl:apply-templates/ -->
   </xsl:template>
 
   <xsl:template match="dir">
@@ -83,7 +86,6 @@
         <xsl:text>/</xsl:text>
       </xsl:element>
     </div>
-    <!-- <xsl:apply-templates/ -->
   </xsl:template>
 
   <xsl:template match="file">
@@ -95,7 +97,6 @@
         <xsl:value-of select="@name"/>
       </xsl:element>
     </div>
-    <!-- xsl:apply-templates/ -->
   </xsl:template>
 
 </xsl:stylesheet>

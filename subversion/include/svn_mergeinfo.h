@@ -47,11 +47,11 @@ svn_error_t *
 svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input, 
                     apr_pool_t *pool);
 
-/** Calculate the delta between two hashes of mergeinfo, @a mergefrom
- * and @a mergeto (which may be @c NULL), and place the result in @a
- * deleted and @a added (neither output argument will ever be @c
- * NULL), stored as the usual mapping of paths to lists of @c
- * svn_merge_range_t *'s.
+/** Calculate the delta between two hashes of mergeinfo (with
+ * rangelists sorted in ascending order), @a mergefrom and @a mergeto
+ * (which may be @c NULL), and place the result in @a deleted and @a
+ * added (neither output argument will ever be @c NULL), stored as the
+ * usual mapping of paths to lists of @c svn_merge_range_t *'s.
  *
  * @since New in 1.5.
  */
@@ -84,9 +84,9 @@ svn_mergeinfo_remove(apr_hash_t **mergeoutput, apr_hash_t *eraser,
                      apr_hash_t *whiteboard, apr_pool_t *pool);
 
 /** Calculate the delta between two rangelists consisting of @c
- * svn_merge_range_t * elements, @a from and @a to, and place the
- * result in @a deleted and @a added (neither output argument will
- * ever be @c NULL).
+ * svn_merge_range_t * elements (sorted in ascending order), @a from
+ * and @a to, and place the result in @a deleted and @a added (neither
+ * output argument will ever be @c NULL).
  *
  * @since New in 1.5.
  */

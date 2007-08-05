@@ -74,68 +74,53 @@ svn_cl__print_commit_info(svn_commit_info_t *commit_info,
 }
 
 
-svn_error_t *
-svn_cl__edit_externally(svn_string_t **edited_contents /* UTF-8! */,
-                        const char **tmpfile_left /* UTF-8! */,
-                        const char *editor_cmd,
-                        const char *base_dir /* UTF-8! */,
-                        const svn_string_t *contents /* UTF-8! */,
-                        const char *prefix,
-                        apr_hash_t *config,
-                        svn_boolean_t as_text,
-                        const char *encoding,
-                        apr_pool_t *pool)
+/* Helper for the next two functions.  Set *EDITOR to some path to an
+   editor binary.  Sources to search include: the EDITOR_CMD argument
+   (if not NULL), $SVN_EDITOR, the runtime CONFIG variable (if CONFIG
+   is not NULL), $VISUAL, $EDITOR.  Return
+   SVN_ERR_CL_NO_EXTERNAL_EDITOR if no binary can be found. */
+static svn_error_t *
+find_editor_binary(const char **editor,
+                   const char *editor_cmd,
+                   apr_hash_t *config)
 {
-  const char *editor;
-  const char *cmd;
-  apr_file_t *tmp_file;
-  const char *tmpfile_name;
-  const char *tmpfile_native;
-  const char *tmpfile_apr, *base_dir_apr;
-  svn_string_t *translated_contents;
-  apr_status_t apr_err, apr_err2;
-  apr_size_t written;
-  apr_finfo_t finfo_before, finfo_after;
-  svn_error_t *err = SVN_NO_ERROR, *err2;
-  char *old_cwd;
-  int sys_err;
-  svn_boolean_t remove_file = TRUE;
+  const char *e;
   struct svn_config_t *cfg;
 
   /* Use the editor specified on the command line via --editor-cmd, if any. */
-  editor = editor_cmd;
+  e = editor_cmd;
 
   /* Otherwise look for the Subversion-specific environment variable. */
-  if (! editor)
-    editor = getenv("SVN_EDITOR");
+  if (! e)
+    e = getenv("SVN_EDITOR");
 
   /* If not found then fall back on the config file. */
-  if (! editor)
+  if (! e)
     {
       cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG, 
                                   APR_HASH_KEY_STRING) : NULL;
-      svn_config_get(cfg, &editor, SVN_CONFIG_SECTION_HELPERS, 
+      svn_config_get(cfg, &e, SVN_CONFIG_SECTION_HELPERS, 
                      SVN_CONFIG_OPTION_EDITOR_CMD, NULL);
     }
 
   /* If not found yet then try general purpose environment variables. */
-  if (! editor)
-    editor = getenv("VISUAL");
-  if (! editor)
-    editor = getenv("EDITOR");
+  if (! e)
+    e = getenv("VISUAL");
+  if (! e)
+    e = getenv("EDITOR");
 
 #ifdef SVN_CLIENT_EDITOR
   /* If still not found then fall back on the hard-coded default. */
-  if (! editor)
-    editor = SVN_CLIENT_EDITOR;
+  if (! e)
+    e = SVN_CLIENT_EDITOR;
 #endif
 
-  /* Abort if there is no editor specified */
-  if (editor)
+  /* Error if there is no editor specified */
+  if (e)
     {
       const char *c;
 
-      for (c = editor; *c; c++)
+      for (c = e; *c; c++)
         if (!svn_ctype_isspace(*c))
           break;
 
@@ -151,6 +136,65 @@ svn_cl__edit_externally(svn_string_t **edited_contents /* UTF-8! */,
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
        _("None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
          "set, and no 'editor-cmd' run-time configuration option was found"));
+
+  *editor = e;
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_cl__edit_file_externally(const char *path,
+                             const char *editor_cmd,
+                             apr_hash_t *config,
+                             apr_pool_t *pool)
+{
+  const char *editor, *cmd;
+  int sys_err;
+
+  SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
+
+  cmd = apr_psprintf(pool, "%s %s", editor, path);
+  sys_err = system(cmd);
+  if (sys_err != 0)
+    /* Extracting any meaning from sys_err is platform specific, so just
+       use the raw value. */
+    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                             _("system('%s') returned %d"), cmd, sys_err);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
+                               const char **tmpfile_left /* UTF-8! */,
+                               const char *editor_cmd,
+                               const char *base_dir /* UTF-8! */,
+                               const svn_string_t *contents /* UTF-8! */,
+                               const char *prefix,
+                               apr_hash_t *config,
+                               svn_boolean_t as_text,
+                               const char *encoding,
+                               apr_pool_t *pool)
+{
+  const char *editor;
+  const char *cmd;
+  apr_file_t *tmp_file;
+  const char *tmpfile_name;
+  const char *tmpfile_native;
+  const char *tmpfile_apr, *base_dir_apr;
+  svn_string_t *translated_contents;
+  apr_status_t apr_err, apr_err2;
+  apr_size_t written;
+  apr_finfo_t finfo_before, finfo_after;
+  svn_error_t *err = SVN_NO_ERROR, *err2;
+  char *old_cwd;
+  int sys_err;
+  svn_boolean_t remove_file = TRUE;
+
+  SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
 
   /* Convert file contents from UTF-8/LF if desired. */
   if (as_text)
@@ -620,12 +664,12 @@ svn_cl__get_log_message(const char **log_msg,
       /* Use the external edit to get a log message. */
       if (! lmb->non_interactive)
         {
-          err = svn_cl__edit_externally(&msg_string, &lmb->tmpfile_left,
-                                        lmb->editor_cmd, lmb->base_dir,
-                                        msg_string, "svn-commit",
-                                        lmb->config, TRUE,
-                                        lmb->message_encoding,
-                                        pool);
+          err = svn_cl__edit_string_externally(&msg_string, &lmb->tmpfile_left,
+                                               lmb->editor_cmd, lmb->base_dir,
+                                               msg_string, "svn-commit",
+                                               lmb->config, TRUE,
+                                               lmb->message_encoding,
+                                               pool);
         }
       else /* non_interactive flag says we can't pop up an editor, so error */
         {

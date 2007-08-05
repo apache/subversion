@@ -378,7 +378,11 @@ def create_config_dir(cfgdir, config_contents=None, server_contents=None):
 
   # define default config file contents if none provided
   if config_contents is None:
-    config_contents = "#\n"
+    config_contents = """
+#
+[miscellany]
+interactive-conflicts = false
+"""
 
   # define default server file contents if none provided
   if server_contents is None:
@@ -669,9 +673,15 @@ def merge_notify_line(revstart, revend=None):
   """Return an expected output line that describes the beginning of a
   merge operation on revisions REVSTART through REVEND."""
   if (revend is None):
-    return "--- Merging r%ld:\n" % revstart
+    if (revstart < 0):
+      return "--- Undoing r%ld:\n" % abs(revstart)
+    else:
+      return "--- Merging r%ld:\n" % revstart
   else:
-    return "--- Merging r%ld through r%ld:\n" % (revstart, revend)
+    if (revstart > revend):
+      return "--- Undoing r%ld through r%ld:\n" % (revstart, revend)
+    else:
+      return "--- Merging r%ld through r%ld:\n" % (revstart, revend)
 
 
 ######################################################################

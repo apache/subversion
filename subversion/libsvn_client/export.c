@@ -213,6 +213,7 @@ copy_versioned_files(const char *from,
                      const char *to,
                      svn_opt_revision_t *revision,
                      svn_boolean_t force,
+                     svn_boolean_t ignore_externals,
                      svn_depth_t depth,
                      const char *native_eol,
                      svn_client_ctx_t *ctx,
@@ -301,7 +302,8 @@ copy_versioned_files(const char *from,
                       const char *new_to = svn_path_join(to, item, iterpool);
                   
                       SVN_ERR(copy_versioned_files(new_from, new_to, 
-                                                   revision, force, depth,
+                                                   revision, force,
+                                                   ignore_externals, depth,
                                                    native_eol, ctx,
                                                    iterpool));
                     }
@@ -317,6 +319,53 @@ copy_versioned_files(const char *from,
                                               iterpool));
             }
         }
+
+      /* Handle externals. */
+      if (! ignore_externals && depth == svn_depth_infinity
+          && entry->depth == svn_depth_infinity)
+        {
+          apr_array_header_t *ext_items;
+          const svn_string_t *prop_val;
+
+          SVN_ERR(svn_wc_prop_get(&prop_val, SVN_PROP_EXTERNALS,
+                                  from, adm_access, pool));
+          if (prop_val != NULL)
+            {
+              int i;
+
+              SVN_ERR(svn_wc_parse_externals_description3(&ext_items, from,
+                                                          prop_val->data,
+                                                          pool));
+              for (i = 0; i < ext_items->nelts; ++i)
+                {
+                  svn_wc_external_item2_t *ext_item;
+                  const char *new_from, *new_to;
+
+                  svn_pool_clear(iterpool);
+
+                  ext_item = APR_ARRAY_IDX(ext_items, i,
+                                           svn_wc_external_item2_t *);
+                  new_from = svn_path_join(from, ext_item->target_dir,
+                                           iterpool);
+                  new_to = svn_path_join(to, ext_item->target_dir,
+                                         iterpool);
+
+                   /* The target dir might have multiple components.  Guarantee
+                      the path leading down to the last component. */
+                  if (svn_path_component_count(ext_item->target_dir) > 1)
+                    {
+                      const char *parent = svn_path_dirname(new_to, iterpool);
+                      SVN_ERR(svn_io_make_dir_recursively(parent, iterpool));
+                    }
+
+                  SVN_ERR(copy_versioned_files(new_from, new_to, 
+                                               revision, force, FALSE,
+                                               svn_depth_infinity, native_eol,
+                                               ctx, iterpool));
+                }
+            }
+        }
+
       svn_pool_destroy(iterpool);
     }
   else if (entry->kind == svn_node_file)
@@ -900,7 +949,8 @@ svn_client_export4(svn_revnum_t *result_rev,
       
       /* just copy the contents of the working copy into the target path. */
       SVN_ERR(copy_versioned_files(from, to, &working_revision, overwrite, 
-                                   depth, native_eol, ctx, pool));
+                                   ignore_externals, depth, native_eol,
+                                   ctx, pool));
     }
   
 

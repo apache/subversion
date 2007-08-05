@@ -186,7 +186,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "property set to 'native'.\n"
                        "                             "
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
-  {"limit",         svn_cl__limit_opt, 1,
+  {"limit",         'l', 1,
                     N_("maximum number of log entries")},
   {"no-unlock",     svn_cl__no_unlock_opt, 0,
                     N_("don't unlock the targets")},
@@ -443,8 +443,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  If PATH is omitted '.' is assumed.\n"
      "  Parent directories are created as necessary in the repository.\n"
      "  If PATH is a directory, the contents of the directory are added\n"
-     "  directly under URL.\n"),
-    {'q', 'N', svn_cl__depth_opt, svn_cl__autoprops_opt,
+     "  directly under URL.\n"
+     "  Unversionable items such as device files and pipes are ignored\n"
+     "  if --force is specified.\n"),
+    {'q', 'N', svn_cl__depth_opt, svn_cl__autoprops_opt, svn_cl__force_opt,
      svn_cl__no_autoprops_opt, SVN_CL__LOG_MSG_OPTIONS,
      svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
@@ -521,7 +523,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', svn_cl__targets_opt, svn_cl__stop_on_copy_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__limit_opt, svn_cl__changelist_opt} },
+     svn_cl__config_dir_opt, 'l', svn_cl__changelist_opt} },
 
   { "merge", svn_cl__merge, {0}, N_
     ("Apply the differences between two sources to a working copy path.\n"
@@ -615,8 +617,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "See 'svn help propset' for more on property setting.\n"),
     {'r', svn_cl__revprop_opt, SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
-     svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
-     svn_cl__config_dir_opt} },
+     svn_cl__force_opt, svn_cl__config_dir_opt} },
 #endif
 
   { "propget", svn_cl__propget, {"pget", "pg"}, N_
@@ -822,7 +823,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  are applied to the obstructing path.\n"),
     { 'r', 'N', svn_cl__depth_opt, 'q', svn_cl__merge_cmd_opt,
       svn_cl__relocate_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
-      svn_cl__force_opt} },
+      svn_cl__ignore_externals_opt, svn_cl__force_opt} },
 
   { "unlock", svn_cl__unlock, {0}, N_
     ("Unlock working copy paths or URLs.\n"
@@ -975,6 +976,7 @@ main(int argc, const char *argv[])
   svn_config_t *cfg;
   svn_boolean_t used_change_arg = FALSE;
   svn_boolean_t descend = TRUE;
+  svn_boolean_t interactive_conflicts = FALSE;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -1053,7 +1055,7 @@ main(int argc, const char *argv[])
       APR_ARRAY_PUSH(received_opts, int) = opt_id;
 
       switch (opt_id) {
-      case svn_cl__limit_opt:
+      case 'l':
         {
           char *end;
           opt_state.limit = strtol(opt_arg, &end, 10);
@@ -1611,7 +1613,7 @@ main(int argc, const char *argv[])
   if (descend == FALSE)
     {
       if (subcommand->cmd_func == svn_cl__status)
-        opt_state.depth = svn_depth_immediates;
+        opt_state.depth = SVN_DEPTH_FROM_RECURSE_STATUS(FALSE);
       else
         opt_state.depth = SVN_DEPTH_FROM_RECURSE(FALSE);
     }
@@ -1717,8 +1719,24 @@ main(int argc, const char *argv[])
   ctx->auth_baton = ab;
 
   /* Set up conflict resolution callback. */
-  ctx->conflict_func = svn_cl__ignore_conflicts;
-  ctx->conflict_baton = NULL;
+  if ((err = svn_config_get_bool(cfg, &interactive_conflicts,
+                                 SVN_CONFIG_SECTION_MISCELLANY,
+                                 SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
+                                 TRUE)))  /* ### interactivity on by default.
+                                                 we can change this. */
+    svn_handle_error2(err, stderr, TRUE, "svn: ");
+
+  if (interactive_conflicts
+      && (! opt_state.non_interactive ))
+    {
+      ctx->conflict_func = svn_cl__interactive_conflict_handler;
+      ctx->conflict_baton = NULL;
+    }
+  else
+    {
+      ctx->conflict_func = NULL;
+      ctx->conflict_baton = NULL;
+    }
 
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func)(os, &command_baton, pool);

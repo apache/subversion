@@ -451,6 +451,13 @@ complete_directory(struct edit_baton *eb,
                              svn_path_local_style(path, pool));
   entry->incomplete = FALSE;
 
+  /* After a depth upgrade the entry must reflect the new depth.
+     Upgrading to infinity changes the depth of *all* directories,
+     upgrading to something else only changes the root dir. */
+  if (eb->depth == svn_depth_infinity
+      || (is_root_dir && eb->depth > entry->depth))
+    entry->depth = eb->depth;
+
   /* Remove any deleted or missing entries. */
   subpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
@@ -3257,8 +3264,12 @@ svn_wc_add_repos_file2(const char *dst_path,
           apr_hash_t *empty_hash = apr_hash_make(pool);
           const char *propfile_path;
 
-          SVN_ERR(svn_wc__prop_path(&propfile_path, base_name,
-                                           svn_node_file, TRUE, pool));
+          SVN_ERR(svn_wc_create_tmp_file2(NULL,
+                                          &propfile_path,
+                                          full_path,
+                                          svn_io_file_del_none,
+                                          pool));
+          propfile_path = svn_path_is_child(full_path, propfile_path, pool);
 
           SVN_ERR(svn_wc__save_prop_file(svn_path_join(full_path,
                                                        propfile_path,

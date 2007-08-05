@@ -38,7 +38,7 @@ class ProgressListener
   /**
    * The Java object which handles the progress event. This is a
    * global reference, because it has to live longer than the
-   * SVNClient.onProgress() call.
+   * ProgressListener.onProgress() call.
    */
   jobject m_progressListener;
 

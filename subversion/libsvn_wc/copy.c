@@ -318,6 +318,53 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
   return SVN_NO_ERROR;
 } 
 
+/* A helper for copy_file_administratively() which sets *COPYFROM_URL
+   and *COPYFROM_REV appropriately (possibly to NULL/SVN_INVALID_REVNUM).
+   DST_ENTRY may be NULL. */
+static APR_INLINE svn_error_t *
+determine_copyfrom_info(const char **copyfrom_url, svn_revnum_t *copyfrom_rev,
+                        const char *src_path, svn_wc_adm_access_t *src_access,
+                        const svn_wc_entry_t *src_entry,
+                        const svn_wc_entry_t *dst_entry, apr_pool_t *pool)
+{
+  const char *url;
+  svn_revnum_t rev;
+
+  if (src_entry->copyfrom_url)
+    {
+      /* When copying/moving a file that was already explicitly
+         copied/moved then we know the URL it was copied from... */
+      url = src_entry->copyfrom_url;
+      rev = src_entry->copyfrom_rev;
+    }
+  else
+    {
+      /* ...But if this file is merely the descendant of an explicitly
+         copied/moved directory, we need to do a bit more work to
+         determine copyfrom_url and copyfrom_rev. */
+      SVN_ERR(get_copyfrom_url_rev_via_parent(src_path, &url, &rev,
+                                              src_access, pool));
+    }
+
+  if (dst_entry && rev == dst_entry->revision &&
+      strcmp(url, dst_entry->url) == 0)
+    {
+      /* Suppress copyfrom info when the copy source is the same as
+         for the destination. */
+      url = NULL;
+      rev = SVN_INVALID_REVNUM;
+    }
+  else if (src_entry->copyfrom_url)
+    {
+      /* As the URL was allocated for src_entry, make a copy. */
+      url = apr_pstrdup(pool, url);
+    }
+
+  *copyfrom_url = url;
+  *copyfrom_rev = rev;
+  return SVN_NO_ERROR;
+}
+
 /* This function effectively creates and schedules a file for
    addition, but does extra administrative things to allow it to
    function as a 'copy'.
@@ -396,22 +443,9 @@ copy_file_administratively(const char *src_path,
        but not committed? */
     if (src_entry->copied)
       {
-        if (src_entry->copyfrom_url)
-          {
-            /* When copying/moving a file that was already explicitly
-               copied/moved then we know the URL it was copied from... */
-            copyfrom_url = apr_pstrdup(pool, src_entry->copyfrom_url);
-            copyfrom_rev = src_entry->copyfrom_rev;
-          }
-        else
-          {
-            /* ...But if this file is merely the descendant of an explicitly
-               copied/moved directory, we need to do a bit more work to
-               determine copyfrom_url and copyfrom_rev. */
-            SVN_ERR(get_copyfrom_url_rev_via_parent(src_path, &copyfrom_url,
-                                                    &copyfrom_rev,
-                                                    src_access, pool));
-          }
+        SVN_ERR(determine_copyfrom_info(&copyfrom_url, &copyfrom_rev, src_path,
+                                        src_access, src_entry, dst_entry,
+                                        pool));
       }
     else
       {
@@ -693,22 +727,11 @@ copy_dir_administratively(const char *src_path,
     /* Are we copying a dir that is already copied but not committed? */
     if (src_entry->copied)
       {
-        if (src_entry->copyfrom_url)
-          {
-            /* When copying/moving a dir that was already explicitly
-               copied/moved then we know the URL it was copied from... */
-            copyfrom_url = apr_pstrdup(pool, src_entry->copyfrom_url);
-            copyfrom_rev = src_entry->copyfrom_rev;
-          }
-        else
-          {
-            /* ...But if this dir is merely the descendant of an explicitly
-               copied/moved directory, we need to do a bit more work to
-               determine copyfrom_url and copyfrom_rev. */
-            SVN_ERR(get_copyfrom_url_rev_via_parent(src_path, &copyfrom_url,
-                                                    &copyfrom_rev,
-                                                    src_access, pool));
-          }
+        const svn_wc_entry_t *dst_entry;
+        SVN_ERR(svn_wc_entry(&dst_entry, dst_path, dst_parent, FALSE, pool));
+        SVN_ERR(determine_copyfrom_info(&copyfrom_url, &copyfrom_rev, src_path,
+                                        src_access, src_entry, dst_entry,
+                                        pool));
 
         /* The URL for a copied dir won't exist in the repository, which
            will cause  svn_wc_add2() below to fail.  Set the URL to the

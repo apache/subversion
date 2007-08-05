@@ -10,6 +10,40 @@
 
 shopt -s extglob
 
+# Two helper functions which only use bash, to ease readability.
+
+# _svn_grcut shell-regular-expression
+# extract filenames from 'svn status' output
+function _svn_grcut()
+{
+    local re=$1 line=
+    while read -r line ; do
+	[[ ! $re || $line == $re ]] && echo ${line/???????/}
+    done
+}
+
+# _svn_lls (dir|file|all) files...
+# list svn-managed files from list
+# some 'svn status --all-files' would be welcome here?
+function _svn_lls()
+{
+    local opt=$1 f=
+    shift
+    for f in "$@" ; do
+	# could try to check in .svn/entries? hmmm...
+	if [[ $opt == @(dir|all) && -d "$f" ]] ; then
+	    echo "$f/"
+	elif [[ $opt == @(file|all) ]] ; then
+	    # split f in directory/file names
+	    local dn= fn="$f"
+	    [[ "$f" == */* ]] && dn=${f%\/*}/ fn=${f##*\/}
+	    # ??? this does not work for just added files, because they
+	    # do not have a content reference yet...
+	    [ -f "${dn}.svn/text-base/${fn}.svn-base" ] && echo "$f"
+	fi
+    done
+}
+
 # This completion guides the command/option order along the one suggested
 # by "svn help", although other syntaxes are allowed.
 #
@@ -17,7 +51,8 @@ shopt -s extglob
 #   and deduce what can be suggested further.
 # - although it is not a good practice, mixed options and arguments
 #   is supported by the completion as it is by the svn command.
-# - the completion works in the middle of a line.
+# - the completion works in the middle of a line,
+#   but not really in the middle of an argument or option.
 # - property names are completed: see comments about issues related to handling
 #   ":" within property names although it is a word completion separator.
 # - unknown properties are assumed to be simple file properties.
@@ -26,11 +61,24 @@ shopt -s extglob
 # - argument values are suggested to some other options, eg directory names
 #   for --config-dir.
 # - values for some options can be extended with environment variables:
-#     SVN_BASH_FILE_PROPS: other properties on files/directories
-#     SVN_BASH_REV_PROPS: other properties on revisions
-#     SVN_BASH_ENCODINGS: encodings to be suggested
-#     SVN_BASH_MIME_TYPE: mime types to be suggested
-#     SVN_BASH_KEYWORDS: keyword substitutions to be suggested
+#   SVN_BASH_FILE_PROPS: other properties on files/directories
+#   SVN_BASH_REV_PROPS: other properties on revisions
+#   SVN_BASH_ENCODINGS: encodings to be suggested
+#   SVN_BASH_MIME_TYPE: mime types to be suggested
+#   SVN_BASH_KEYWORDS: "svn:keywords" substitutions to be suggested
+#   SVN_BASH_COMPL_EXT: completion extensions for file arguments, based on the
+#      current subcommand, so that for instance only modified files are 
+#      suggested for 'revert', only not svn-managed files for 'add', and so on.
+#      Possible values are:
+#      - svnstatus: use 'svn status' for completion
+#      - recurse: allow recursion
+#      - externals: recurse into externals
+#     The former option is reasonable, but beware that both later options 
+#     may be unadvisable if used on large working copies.
+#     Note of these costly completions are activated by default.
+#     Argument completion outside a working copy results in an error message.
+#     Filenames with spaces are not completed properly.
+#     
 # - to do: other options? SVN_BASH_USERNAME?
 _svn()
 {
@@ -424,8 +472,102 @@ _svn()
 	fi
 
 	# if not typing an option,
-	# then fallback on ordinary filename expansion
+	# then fallback on filename expansion...
 	if [[ $cur != -* || $stat = 'onlyarg' ]]  ; then
+
+	    # do we allow possible expensive completion here?
+	    if [[ $SVN_BASH_COMPL_EXT == *svnstatus* ]] ; then
+
+		# build status command and options
+		# "--quiet" removes 'unknown' files
+		local status='svn status --non-interactive'
+
+		[[ $SVN_BASH_COMPL_EXT == *recurse* ]] || \
+		    status="$status --non-recursive"
+		
+    	        # I'm not sure that it can work with externals in call cases
+	        # the output contains translatable sentences (even with quiet)
+		[[ $SVN_BASH_COMPL_EXT == *externals* ]] || \
+		    status="$status --ignore-externals"
+
+		local cs= files=
+		# subtlety: must not set $cur* if $cur is empty in some cases
+		[[ $cur ]] && cs=$cur*
+
+		# 'files' is set according to the current subcommand
+		case $cmd in
+		    st*) # status completion must include all files
+			files=$cur*
+			;;
+		    ci|commit|revert|di*) # anything edited
+			files=$($status $cs| _svn_grcut '@([MADR!]*| M*)')
+			;;
+		    add) # unknown files
+			files=$($status $cs| _svn_grcut '\?*')
+			;;
+		    unlock) # unlock locked files
+			files=$($status $cs| _svn_grcut '@(??L*|?????[KOTB]*)')
+			;;
+		    resolved) # files in conflict
+			files=$($status $cs| _svn_grcut '@(?C*|C*)')
+			;;
+		    praise|blame|ann*) # any svn file but added
+			files=$( _svn_lls all $cur* )
+			;;
+		    p*) # prop commands
+			if [[ $cmd == @($propCmds) && \
+			      $prop == @(svn:ignore|svn:externals) ]] ; then
+			    # directory specific props
+			    files=$( _svn_lls dir . $cur* )
+			else
+			    # ??? added directories appear twice: foo foo/
+			    files="$( _svn_lls all $cur* ) 
+                                   $($status $cs | _svn_grcut 'A*' )"
+			fi
+			;;
+		    info) # information on any file
+			files="$( _svn_lls all $cur* ) 
+                               $($status $cs | _svn_grcut 'A*' )"
+			;;
+		    remove|rm|del*|move|mv|rename) # changing existing files
+			files=$( _svn_lls all $cur* )
+			;;
+		    mkdir) # completion in mkdir can only be for subdirs?
+			files=$( _svn_lls dir $cur* )
+			;;
+		    log|lock|up*|cl*|switch) # misc, all but added files
+			files=$( _svn_lls all $cur* )
+			;;
+		    merge) # may do a better job? URL/WCPATH
+			files=$( _svn_lls all $cur* )
+			;;
+		    ls|list) # better job? what about URLs?
+			files=$( _svn_lls all $cur* )
+			;;
+		    *) # other commands: changelist export import cat
+			local fallback=1
+			;;
+		esac
+
+		# when not recursive, some relevant files may exist
+		# within subdirectories, so they are added here.
+	        # should it be restricted to svn-managed subdirs? no??
+		if [[ $SVN_BASH_COMPL_EXT != *recurse* ]] ; then 
+		    files="$files $( _svn_lls dir $cur* )"
+		fi
+
+		# set completion depending on computed 'files'
+		if [[ $files ]] ; then
+		    COMPREPLY=( $( compgen -W "$files" -- $cur ) )
+		    # if empty, set to nope?
+		    [[ "${COMPREPLY[*]}" ]] || COMPREPLY=( '' )
+		elif [[ ! $fallback ]] ; then
+		    # this suggests no completion...
+		    echo -en "\a"
+		    COMPREPLY=( '' )
+		fi
+	    fi
+	    # else fallback to ordinary filename completion...
 	    return 0
 	fi
 
@@ -620,7 +762,7 @@ _svn()
 	COMPREPLY=( $( compgen -W "$cmdOpts" -- $cur ) )
 	return 0
 }
-complete -F _svn -o default -X '@(*/.svn|.svn)' svn
+complete -F _svn -o default -X '@(*/.svn|*/.svn/|.svn|.svn/)' svn
 
 _svnadmin ()
 {

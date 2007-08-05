@@ -521,9 +521,9 @@ public class BasicTests extends SVNTests
         }
         // modify file A/mu
         File mu = new File(thisTest.getWorkingCopy(), "A/mu");
-        PrintWriter muPW = new PrintWriter(new FileOutputStream(mu, true));
-        muPW.print("appended mu text");
-        muPW.close();
+        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print("appended mu text");
+        muWriter.close();
         thisTest.getWc().setItemTextStatus("A/mu", Status.Kind.modified);
 
         // delete A/B/lambda without svn
@@ -563,9 +563,9 @@ public class BasicTests extends SVNTests
 
         // modify file A/mu
         File mu = new File(thisTest.getWorkingCopy(), "A/mu");
-        PrintWriter muPW = new PrintWriter(new FileOutputStream(mu, true));
-        muPW.print("appended mu text");
-        muPW.close();
+        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print("appended mu text");
+        muWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
         thisTest.getWc().setItemContent("A/mu",
                 thisTest.getWc().getItemContent("A/mu") + "appended mu text");
@@ -575,9 +575,10 @@ public class BasicTests extends SVNTests
 
         // modify file A/D/G/rho
         File rho = new File(thisTest.getWorkingCopy(), "A/D/G/rho");
-        PrintWriter rhoPW = new PrintWriter(new FileOutputStream(rho, true));
-        rhoPW.print("new appended text for rho");
-        rhoPW.close();
+        PrintWriter rhoWriter =
+            new PrintWriter(new FileOutputStream(rho, true));
+        rhoWriter.print("new appended text for rho");
+        rhoWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 2);
         thisTest.getWc().setItemContent("A/D/G/rho",
                 thisTest.getWc().getItemContent("A/D/G/rho")
@@ -658,9 +659,9 @@ public class BasicTests extends SVNTests
 
         // modify A/mu
         File mu = new File(thisTest.getWorkingCopy(), "A/mu");
-        PrintWriter muPW = new PrintWriter(new FileOutputStream(mu, true));
-        muPW.print("appended mu text");
-        muPW.close();
+        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print("appended mu text");
+        muWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
         thisTest.getWc().setItemContent("A/mu",
                 thisTest.getWc().getItemContent("A/mu") + "appended mu text");
@@ -670,9 +671,10 @@ public class BasicTests extends SVNTests
 
         // modify A/D/G/rho
         File rho = new File(thisTest.getWorkingCopy(), "A/D/G/rho");
-        PrintWriter rhoPW = new PrintWriter(new FileOutputStream(rho, true));
-        rhoPW.print("new appended text for rho");
-        rhoPW.close();
+        PrintWriter rhoWriter =
+            new PrintWriter(new FileOutputStream(rho, true));
+        rhoWriter.print("new appended text for rho");
+        rhoWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 2);
         thisTest.getWc().setItemContent("A/D/G/rho",
                 thisTest.getWc().getItemContent("A/D/G/rho")
@@ -872,14 +874,14 @@ public class BasicTests extends SVNTests
 
         // append 10 lines to A/mu
         File mu = new File(thisTest.getWorkingCopy(), "A/mu");
-        PrintWriter muPW = new PrintWriter(new FileOutputStream(mu, true));
+        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
         String muContent = thisTest.getWc().getItemContent("A/mu");
         for (int i = 2; i < 11; i++)
         {
-            muPW.print("\nThis is line " + i + " in mu");
+            muWriter.print("\nThis is line " + i + " in mu");
             muContent = muContent + "\nThis is line " + i + " in mu";
         }
-        muPW.close();
+        muWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
         thisTest.getWc().setItemContent("A/mu", muContent);
         addExpectedCommitItem(thisTest.getWorkingCopy().getAbsolutePath(),
@@ -888,14 +890,15 @@ public class BasicTests extends SVNTests
 
         // append 10 line to A/D/G/rho
         File rho = new File(thisTest.getWorkingCopy(), "A/D/G/rho");
-        PrintWriter rhoPW = new PrintWriter(new FileOutputStream(rho, true));
+        PrintWriter rhoWriter =
+            new PrintWriter(new FileOutputStream(rho, true));
         String rhoContent = thisTest.getWc().getItemContent("A/D/G/rho");
         for (int i = 2; i < 11; i++)
         {
-            rhoPW.print("\nThis is line " + i + " in rho");
+            rhoWriter.print("\nThis is line " + i + " in rho");
             rhoContent = rhoContent + "\nThis is line " + i + " in rho";
         }
-        rhoPW.close();
+        rhoWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 2);
         thisTest.getWc().setItemContent("A/D/G/rho", rhoContent);
         addExpectedCommitItem(thisTest.getWCPath(),
@@ -916,11 +919,11 @@ public class BasicTests extends SVNTests
         OneTest backupTest = thisTest.copy(".backup");
 
         // change the last line of A/mu in the first working copy
-        muPW = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter = new PrintWriter(new FileOutputStream(mu, true));
         muContent = thisTest.getWc().getItemContent("A/mu");
-        muPW.print(" Appended to line 10 of mu");
+        muWriter.print(" Appended to line 10 of mu");
         muContent = muContent + " Appended to line 10 of mu";
-        muPW.close();
+        muWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/mu", 3);
         thisTest.getWc().setItemContent("A/mu", muContent);
         addExpectedCommitItem(thisTest.getWCPath(),
@@ -928,11 +931,11 @@ public class BasicTests extends SVNTests
                               CommitItemStateFlags.TextMods);
 
         // change the last line of A/mu in the first working copy
-        rhoPW = new PrintWriter(new FileOutputStream(rho, true));
+        rhoWriter = new PrintWriter(new FileOutputStream(rho, true));
         rhoContent = thisTest.getWc().getItemContent("A/D/G/rho");
-        rhoPW.print(" Appended to line 10 of rho");
+        rhoWriter.print(" Appended to line 10 of rho");
         rhoContent = rhoContent + " Appended to line 10 of rho";
-        rhoPW.close();
+        rhoWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 3);
         thisTest.getWc().setItemContent("A/D/G/rho", rhoContent);
         addExpectedCommitItem(thisTest.getWCPath(),
@@ -951,15 +954,15 @@ public class BasicTests extends SVNTests
 
         // modify the first line of A/mu in the backup working copy
         mu = new File(backupTest.getWorkingCopy(), "A/mu");
-        muPW = new PrintWriter(new FileOutputStream(mu));
-        muPW.print("This is the new line 1 in the backup copy of mu");
+        muWriter = new PrintWriter(new FileOutputStream(mu));
+        muWriter.print("This is the new line 1 in the backup copy of mu");
         muContent = "This is the new line 1 in the backup copy of mu";
         for (int i = 2; i < 11; i++)
         {
-            muPW.print("\nThis is line " + i + " in mu");
+            muWriter.print("\nThis is line " + i + " in mu");
             muContent = muContent + "\nThis is line " + i + " in mu";
         }
-        muPW.close();
+        muWriter.close();
         backupTest.getWc().setItemWorkingCopyRevision("A/mu", 3);
         muContent = muContent + " Appended to line 10 of mu";
         backupTest.getWc().setItemContent("A/mu", muContent);
@@ -967,15 +970,15 @@ public class BasicTests extends SVNTests
 
         // modify the first line of A/D/G/rho in the backup working copy
         rho = new File(backupTest.getWorkingCopy(), "A/D/G/rho");
-        rhoPW = new PrintWriter(new FileOutputStream(rho));
-        rhoPW.print("This is the new line 1 in the backup copy of rho");
+        rhoWriter = new PrintWriter(new FileOutputStream(rho));
+        rhoWriter.print("This is the new line 1 in the backup copy of rho");
         rhoContent = "This is the new line 1 in the backup copy of rho";
         for (int i = 2; i < 11; i++)
         {
-            rhoPW.print("\nThis is line " + i + " in rho");
+            rhoWriter.print("\nThis is line " + i + " in rho");
             rhoContent = rhoContent + "\nThis is line " + i + " in rho";
         }
-        rhoPW.close();
+        rhoWriter.close();
         backupTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 3);
         rhoContent = rhoContent + " Appended to line 10 of rho";
         backupTest.getWc().setItemContent("A/D/G/rho", rhoContent);
@@ -1006,11 +1009,11 @@ public class BasicTests extends SVNTests
 
         // append a line to A/mu in the first working copy
         File mu = new File(thisTest.getWorkingCopy(), "A/mu");
-        PrintWriter muPW = new PrintWriter(new FileOutputStream(mu, true));
+        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
         String muContent = thisTest.getWc().getItemContent("A/mu");
-        muPW.print("\nOriginal appended text for mu");
+        muWriter.print("\nOriginal appended text for mu");
         muContent = muContent + "\nOriginal appended text for mu";
-        muPW.close();
+        muWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
         thisTest.getWc().setItemContent("A/mu", muContent);
         addExpectedCommitItem(thisTest.getWCPath(),
@@ -1019,11 +1022,12 @@ public class BasicTests extends SVNTests
 
         // append a line to A/D/G/rho in the first working copy
         File rho = new File(thisTest.getWorkingCopy(), "A/D/G/rho");
-        PrintWriter rhoPW = new PrintWriter(new FileOutputStream(rho, true));
+        PrintWriter rhoWriter =
+            new PrintWriter(new FileOutputStream(rho, true));
         String rhoContent = thisTest.getWc().getItemContent("A/D/G/rho");
-        rhoPW.print("\nOriginal appended text for rho");
+        rhoWriter.print("\nOriginal appended text for rho");
         rhoContent = rhoContent + "\nOriginal appended text for rho";
-        rhoPW.close();
+        rhoWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 2);
         thisTest.getWc().setItemContent("A/D/G/rho", rhoContent);
         addExpectedCommitItem(thisTest.getWCPath(),
@@ -1042,13 +1046,13 @@ public class BasicTests extends SVNTests
 
         // append a different line to A/mu in the backup working copy
         mu = new File(backupTest.getWorkingCopy(), "A/mu");
-        muPW = new PrintWriter(new FileOutputStream(mu, true));
-        muPW.print("\nConflicting appended text for mu");
+        muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print("\nConflicting appended text for mu");
         muContent = "<<<<<<< .mine\nThis is the file 'mu'.\n"+
                     "Conflicting appended text for mu=======\n"+
                     "This is the file 'mu'.\n"+
                     "Original appended text for mu>>>>>>> .r2";
-        muPW.close();
+        muWriter.close();
         backupTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
         backupTest.getWc().setItemContent("A/mu", muContent);
         backupTest.getWc().setItemTextStatus("A/mu", Status.Kind.conflicted);
@@ -1067,13 +1071,13 @@ public class BasicTests extends SVNTests
 
         // append a different line to A/D/G/rho in the backup working copy
         rho = new File(backupTest.getWorkingCopy(), "A/D/G/rho");
-        rhoPW = new PrintWriter(new FileOutputStream(rho, true));
-        rhoPW.print("\nConflicting appended text for rho");
+        rhoWriter = new PrintWriter(new FileOutputStream(rho, true));
+        rhoWriter.print("\nConflicting appended text for rho");
         rhoContent = "<<<<<<< .mine\nThis is the file 'rho'.\n"+
                     "Conflicting appended text for rho=======\n"+
                     "his is the file 'rho'.\n"+
                     "Original appended text for rho>>>>>>> .r2";
-        rhoPW.close();
+        rhoWriter.close();
         backupTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 2);
         backupTest.getWc().setItemContent("A/D/G/rho", rhoContent);
         backupTest.getWc().setItemTextStatus("A/D/G/rho",
@@ -2019,6 +2023,22 @@ public class BasicTests extends SVNTests
         assertEquals(failureMsg, 1, infos.length);
         infos = client.info2(thisTest.getWCPath(), null, null, true);
         assertEquals(failureMsg, 21, infos.length);
+        for (int i = 0; i < infos.length; i++)
+        {
+            Info2 info = infos[i];
+            assertNull("Unexpected changelist present",
+                       info.getChangelistName());
+
+            boolean isFile = info.getKind() == NodeKind.file;
+            assertTrue("Unexpected working file size " + info.getWorkingSize()
+                       + " for '" + info + '\'',
+                       (isFile ? info.getWorkingSize() > -1 :
+                        info.getWorkingSize() == -1));
+            // We shouldn't know the repository file size when only
+            // examining the WC.
+            assertEquals("Unexpected repos file size for '" + info + '\'',
+                         -1, info.getReposSize());
+        }
         Revision rev = new Revision.Number(1);
         infos = client.info2(thisTest.getWCPath(), rev, rev, true);
         assertEquals(failureMsg, 21, infos.length);
@@ -2117,9 +2137,9 @@ public class BasicTests extends SVNTests
 
         // modify file A/mu
         File mu = new File(thisTest.getWorkingCopy(), "A/mu");
-        PrintWriter muPW = new PrintWriter(new FileOutputStream(mu, true));
-        muPW.print("appended mu text");
-        muPW.close();
+        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print("appended mu text");
+        muWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/mu", 4);
         thisTest.getWc().setItemContent("A/mu",
                 thisTest.getWc().getItemContent("A/mu") + "appended mu text");
@@ -2129,9 +2149,10 @@ public class BasicTests extends SVNTests
 
         // modify file A/D/G/rho
         File rho = new File(thisTest.getWorkingCopy(), "A/D/G/rho");
-        PrintWriter rhoPW = new PrintWriter(new FileOutputStream(rho, true));
-        rhoPW.print("new appended text for rho");
-        rhoPW.close();
+        PrintWriter rhoWriter =
+            new PrintWriter(new FileOutputStream(rho, true));
+        rhoWriter.print("new appended text for rho");
+        rhoWriter.close();
         thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 4);
         thisTest.getWc().setItemContent("A/D/G/rho",
                 thisTest.getWc().getItemContent("A/D/G/rho")
@@ -2193,6 +2214,66 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision number from commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true), 5);
+    }
+
+    /**
+     * Test automatic merge conflict resolution.
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testMergeConflictResolution() throws Throwable
+    {
+        // Add a conflict resolution callback which always chooses the
+        // user's version of a conflicted file.
+        client.setConflictResolver(new ConflictResolverCallback()
+            {
+                public int resolve(ConflictDescriptor descrip)
+                {
+                    return ConflictResolverCallback.Result.choose_repos;
+                }
+            });
+
+        OneTest thisTest = new OneTest();
+
+        // modify file A/mu
+        File mu = new File(thisTest.getWorkingCopy(), "A/mu");
+        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print("appended mu text");
+        muWriter.close();
+        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
+        String originalContents = thisTest.getWc().getItemContent("A/mu");
+        String expectedContents = originalContents + "appended mu text";
+        thisTest.getWc().setItemContent("A/mu", expectedContents);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+
+        // Commit the changes (r2).
+        assertEquals("wrong revision number from commit", 2,
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true));
+
+        // Backdate the WC to the previous revision (r1).
+        client.update(thisTest.getWCPath(), Revision.getInstance(1), true);
+
+        // Prep for a merge conflict by changing A/mu in a different way.
+        muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print(" other stuff");
+        muWriter.close();
+        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 1);
+        thisTest.getWc().setItemContent("A/mu",
+                                        originalContents + " other stuff");
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+
+        // Merge in the previous changes to A/mu (from r2).
+        client.merge(thisTest.getUrl(), Revision.HEAD, new Revision.Number(1),
+                     new Revision.Number(2), thisTest.getWCPath(),
+                     false, Depth.infinity, false, false);
+
+        assertFileContentsEquals("Unexpected conflict resolution",
+                                 expectedContents, mu);
     }
 
     /**
@@ -2559,7 +2640,7 @@ public class BasicTests extends SVNTests
         // Complete the switch using "--force" and check the status
         client.doSwitch(backupTest.getWCPath() + "/A/B/E",
                         backupTest.getUrl() + "/A/D/H",
-                        null, Depth.infinity, true);
+                        null, Depth.infinity, false, true);
 
         backupTest.getWc().setItemIsSwitched("A/B/E",true);
         backupTest.getWc().removeItem("A/B/E/alpha");

@@ -643,7 +643,7 @@ PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash,
   return convert_hash(hash, convert_mergeinfo_hash, type, py_pool);
 }
 
-static PyObject *proparray_to_dict(const apr_array_header_t *array)
+PyObject *svn_swig_py_proparray_to_dict(const apr_array_header_t *array)
 {
     PyObject *dict = PyDict_New();
     int i;
@@ -979,6 +979,58 @@ apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
   return hash;
 }
 
+apr_hash_t *svn_swig_py_path_revs_hash_from_dict(PyObject *dict,
+                                                 apr_pool_t *pool)
+{
+  apr_hash_t *hash;
+  PyObject *keys;
+  int i, num_keys;
+
+  if (dict == Py_None)
+    return NULL;
+
+  if (!PyDict_Check(dict))
+    {
+      PyErr_SetString(PyExc_TypeError, "not a dictionary");
+      return NULL;
+    }
+
+  hash = apr_hash_make(pool);
+  keys = PyDict_Keys(dict);
+  num_keys = PyList_Size(keys);
+  for (i = 0; i < num_keys; i++)
+    {
+      PyObject *key = PyList_GetItem(keys, i);
+      PyObject *value = PyDict_GetItem(dict, key);
+      const char *path = make_string_from_ob(key, pool);
+      svn_revnum_t *revnum;
+
+      if (!(path))
+        {
+          PyErr_SetString(PyExc_TypeError,
+                          "dictionary keys aren't strings");
+          Py_DECREF(keys);
+          return NULL;
+        }
+
+      revnum = apr_palloc(pool, sizeof(svn_revnum_t));
+
+      if (PyInt_Check(value))
+        *revnum = PyInt_AsLong(value);
+      else if (PyLong_Check(value))
+        *revnum = PyLong_AsLong(value);
+      else 
+        {
+          PyErr_SetString(PyExc_TypeError, "dictionary values aren't revnums");
+          Py_DECREF(keys);
+          return NULL;
+        }
+
+      apr_hash_set(hash, path, APR_HASH_KEY_STRING, revnum);
+    }
+  Py_DECREF(keys);
+  return hash;
+}
 
 const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
                                                        apr_pool_t *pool)
@@ -2933,7 +2985,7 @@ svn_error_t *svn_swig_py_ra_file_rev_handler_func(
       goto error;
     }
 
-  py_prop_diffs = proparray_to_dict(prop_diffs);
+  py_prop_diffs = svn_swig_py_proparray_to_dict(prop_diffs);
 
   if (py_prop_diffs == NULL)
     {
@@ -2965,6 +3017,42 @@ error:
 
   Py_XDECREF(py_rev_props);
   Py_XDECREF(py_prop_diffs);
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
+svn_error_t *svn_swig_py_ra_lock_callback(
+                    void *baton,
+                    const char *path,
+                    svn_boolean_t do_lock,
+                    const svn_lock_t *lock,
+                    svn_error_t *ra_err,
+                    apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  PyObject *py_callback = baton, *result;
+
+  if (py_callback == NULL || py_callback == Py_None)
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(py_callback,
+                                     (char *)"sbO&O&",
+                                     path, do_lock,
+                                     make_ob_lock, lock,
+                                     make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      err = callback_bad_return_error("Not None");
+    }
+
+  Py_XDECREF(result);
 
   svn_swig_py_release_py_lock();
 

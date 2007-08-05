@@ -60,7 +60,6 @@ typedef enum {
   svn_cl__ignore_ancestry_opt,
   svn_cl__ignore_externals_opt,
   svn_cl__incremental_opt,
-  svn_cl__limit_opt,
   svn_cl__merge_cmd_opt,
   svn_cl__native_eol_opt,
   svn_cl__new_cmd_opt,
@@ -251,9 +250,19 @@ svn_error_t *svn_cl__check_cancel(void *baton);
 /* A mindless implementation of svn_wc_conflict_resolver_func_t that
  * does absolutely nothing to resolve conflicts. */
 svn_error_t *svn_cl__ignore_conflicts(
+    svn_wc_conflict_result_t *result,
     const svn_wc_conflict_description_t *description,
     void *baton,
     apr_pool_t *pool);
+
+/* A conflict-resolution callback which prompts the user to choose
+   one of the 3 fulltexts, edit the merged file on the spot, or just
+   skip the conflict (to be resolved later). */
+svn_error_t *svn_cl__interactive_conflict_handler(
+                          svn_wc_conflict_result_t *result,
+                          const svn_wc_conflict_description_t *desc,
+                          void *baton,
+                          apr_pool_t *pool);
 
 
 
@@ -362,16 +371,33 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
 
    If return error, *EDITED_CONTENTS is not touched. */
 svn_error_t *
-svn_cl__edit_externally(svn_string_t **edited_contents,
-                        const char **tmpfile_left,
-                        const char *editor_cmd,
-                        const char *base_dir,
-                        const svn_string_t *contents,
-                        const char *prefix,
-                        apr_hash_t *config,
-                        svn_boolean_t as_text,
-                        const char *encoding,
-                        apr_pool_t *pool);
+svn_cl__edit_string_externally(svn_string_t **edited_contents,
+                               const char **tmpfile_left,
+                               const char *editor_cmd,
+                               const char *base_dir,
+                               const svn_string_t *contents,
+                               const char *prefix,
+                               apr_hash_t *config,
+                               svn_boolean_t as_text,
+                               const char *encoding,
+                               apr_pool_t *pool);
+
+
+/* Search for a text editor command in standard environment variables,
+   and invoke it to edit PATH.  Use POOL for all allocations.
+
+   If EDITOR_CMD is not NULL, it is the name of the external editor
+   command to use, overriding anything else that might determine the
+   editor.
+
+   CONFIG is a hash of svn_config_t * items keyed on a configuration
+   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.  */
+svn_error_t *
+svn_cl__edit_file_externally(const char *path,
+                             const char *editor_cmd,
+                             apr_hash_t *config,
+                             apr_pool_t *pool);
+
 
 
 
