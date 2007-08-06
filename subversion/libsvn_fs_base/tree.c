@@ -1408,6 +1408,7 @@ struct dir_entries_args
 };
 
 
+/* *(BATON->table_p) will never be NULL on successful return */
 static svn_error_t *
 txn_body_dir_entries(void *baton,
                      trail_t *trail)
@@ -1436,6 +1437,7 @@ base_dir_entries(apr_hash_t **table_p,
   struct dir_entries_args args;
   apr_hash_t *table;
   svn_fs_t *fs = root->fs;
+  apr_hash_index_t *hi;
 
   args.table_p = &table;
   args.root    = root;
@@ -1444,28 +1446,20 @@ base_dir_entries(apr_hash_t **table_p,
                                  pool));
 
   /* Add in the kind data. */
-  if (table)
+  for (hi = apr_hash_first(pool, table); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_index_t *hi;
-      for (hi = apr_hash_first(pool, table); hi; hi = apr_hash_next(hi))
-        {
-          svn_fs_dirent_t *entry;
-          struct node_kind_args nk_args;
-          void *val;
+      svn_fs_dirent_t *entry;
+      struct node_kind_args nk_args;
+      void *val;
 
-          /* KEY will be the entry name in ancestor (about which we
-             simple don't care), VAL the dirent. */
-          apr_hash_this(hi, NULL, NULL, &val);
-          entry = val;
-          nk_args.id = entry->id;
-          SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_node_kind, &nk_args,
-                                         pool));
-          entry->kind = nk_args.kind;
-        }
-    }
-  else
-    {
-      table = apr_hash_make(pool);
+      /* KEY will be the entry name in ancestor (about which we
+         simple don't care), VAL the dirent. */
+      apr_hash_this(hi, NULL, NULL, &val);
+      entry = val;
+      nk_args.id = entry->id;
+      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_node_kind, &nk_args,
+                                     pool));
+      entry->kind = nk_args.kind;
     }
 
   *table_p = table;
