@@ -7212,6 +7212,114 @@ def single_file_replace_style_merge_capability(sbox):
                                      mu_path + '@1',
                                      mu_path)
 
+# Test for issue 2786 fix.
+def merge_to_out_of_date_target(sbox):
+  "Merge to ood path can lead to inaccurate mergeinfo"
+
+  # Create a WC with a branch.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox, False, 1)
+
+  # Make second working copy
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  # Some paths we'll care about
+  A_COPY_H_path = os.path.join(wc_dir, "A_COPY", "D", "H")
+  other_A_COPY_H_path = os.path.join(other_wc, "A_COPY", "D", "H")
+
+  # Merge -c3 into A_COPY/D/H of first WC.
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_H_COPY_path = shorten_path_kludge(A_COPY_H_path)
+  expected_output = wc.State(short_H_COPY_path, {
+    'psi' : Item(status='U ')
+    })
+  expected_status = wc.State(short_H_COPY_path, {
+    ''      : Item(status=' M', wc_rev=2),
+    'psi'   : Item(status='M ', wc_rev=2),
+    'omega' : Item(status='  ', wc_rev=2),
+    'chi'   : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:1,3'}),
+    'psi'   : Item("New content"),
+    'omega' : Item("This is the file 'omega'.\n"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    })
+  expected_skip = wc.State(short_H_COPY_path, { })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_H_COPY_path, '2', '3',
+                                       sbox.repo_url + '/A/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+
+  # Commit merge to first WC.
+  wc_status.tweak('A_COPY/D/H/psi', 'A_COPY/D/H', wc_rev=7)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A_COPY/D/H'    : Item(verb='Sending'),
+    'A_COPY/D/H/psi': Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        wc_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Merge -c6 into A_COPY/D/H of other WC.
+  short_H_COPY_path = shorten_path_kludge(other_A_COPY_H_path)
+  expected_output = wc.State(short_H_COPY_path, {
+    'omega' : Item(status='U ')
+    })
+  expected_status = wc.State(short_H_COPY_path, {
+    ''      : Item(status=' M', wc_rev=2),
+    'psi'   : Item(status='  ', wc_rev=2),
+    'omega' : Item(status='M ', wc_rev=2),
+    'chi'   : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:1,6'}),
+    'psi'   : Item("This is the file 'psi'.\n"),
+    'omega' : Item("New content"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    })
+  expected_skip = wc.State(short_H_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_H_COPY_path, '5', '6',
+                                       sbox.repo_url + '/A/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+
+  # Update A_COPY/D/H in other WC.  Local mergeinfo for r6 on A_COPY/D/H
+  # should be *merged* with r3 from first WC.
+  expected_output = svntest.wc.State(other_A_COPY_H_path, {
+    ''     : Item(status=' G'),
+    'psi' : Item(status='U ')
+    })
+  other_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:1,3,6'}),
+    'psi'   : Item(contents="New content"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    'omega' : Item(contents="New content"),
+    })
+  other_status = wc.State(other_A_COPY_H_path,{
+    ''      : Item(wc_rev=7, status=' M'),
+    'chi'   : Item(wc_rev=7, status='  '),
+    'psi'   : Item(wc_rev=7, status='  '),
+    'omega' : Item(wc_rev=7, status='M ')
+    })
+  svntest.actions.run_and_verify_update(other_A_COPY_H_path,
+                                        expected_output,
+                                        other_disk,
+                                        other_status,
+                                        check_props=1)
 
 ########################################################################
 # Run the tests
@@ -7279,6 +7387,7 @@ test_list = [ None,
               update_loses_mergeinfo,
               merge_loses_mergeinfo,
               single_file_replace_style_merge_capability,
+              merge_to_out_of_date_target,
              ]
 
 if __name__ == '__main__':
