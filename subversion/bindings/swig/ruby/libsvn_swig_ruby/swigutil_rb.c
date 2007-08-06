@@ -2,6 +2,9 @@
 /* Tell swigutil_rb.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_RB_C
 
+#ifdef WIN32
+#  include "ruby/rubyhead.swg"
+#endif
 #include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
 #include <st.h>
