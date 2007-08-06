@@ -949,6 +949,7 @@ handle_response(serf_request_t *request,
 
   if (sl.code == 401)
     {
+      /* 401 Authorization required */
       svn_error_t *err;
 
       err = handle_auth(ctx->session, ctx->conn, request, response, pool);
@@ -964,8 +965,10 @@ handle_response(serf_request_t *request,
           status = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
         }
     }
-  else if (sl.code >= 500)
+  else if (sl.code == 409 || sl.code >= 500)
     {
+      /* 409 Conflict: can indicate a hook error. 
+         5xx (Internal) Server error. */
       ctx->session->pending_error =
           svn_ra_serf__handle_server_error(request, response, pool);
       return ctx->session->pending_error->apr_err;
