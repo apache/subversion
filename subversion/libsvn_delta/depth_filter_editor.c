@@ -391,9 +391,19 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
                               svn_boolean_t has_target,
                               apr_pool_t *pool)
 {
-  svn_delta_editor_t *depth_filter_editor = svn_delta_default_editor(pool);
-  struct edit_baton *eb = apr_palloc(pool, sizeof(*eb));
+  svn_delta_editor_t *depth_filter_editor;
+  struct edit_baton *eb;
 
+  /* Easy out: if the caller wants infinite depth, there's nothing to
+     filter, so just return the editor we were supposed to wrap. */
+  if (requested_depth == svn_depth_infinity)
+    {
+      *editor = wrapped_editor;
+      *edit_baton = wrapped_edit_baton;
+      return SVN_NO_ERROR;
+    }
+
+  depth_filter_editor = svn_delta_default_editor(pool);
   depth_filter_editor->set_target_revision = set_target_revision;
   depth_filter_editor->open_root = open_root;
   depth_filter_editor->delete_entry = delete_entry;
@@ -410,6 +420,7 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
   depth_filter_editor->absent_file = absent_file;
   depth_filter_editor->close_edit = close_edit;
 
+  eb = apr_palloc(pool, sizeof(*eb));
   eb->wrapped_editor = wrapped_editor;
   eb->wrapped_edit_baton = wrapped_edit_baton;
   eb->actual_depth = 0;
