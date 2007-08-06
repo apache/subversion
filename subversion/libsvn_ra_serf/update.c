@@ -2147,7 +2147,7 @@ finish_report(void *report_baton,
   svn_ra_serf__request_create(handler);
 
   for (i = 1; i < 4; i++) {
-      sess->conns[i] = apr_palloc(pool, sizeof(*sess->conns[i]));
+      sess->conns[i] = apr_palloc(sess->pool, sizeof(*sess->conns[i]));
       sess->conns[i]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
                                                                NULL, NULL);
       sess->conns[i]->address = sess->conns[0]->address;
