@@ -302,16 +302,11 @@ txn_body_txn_root(void *baton,
   /* Look for special txn props that represent the 'flags' behavior of
      the transaction. */
   SVN_ERR(svn_fs_base__txn_proplist_in_trail(&txnprops, svn_txn_id, trail));
-  if (txnprops)
-    {
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
-                       APR_HASH_KEY_STRING))
-        flags |= SVN_FS_TXN_CHECK_OOD;
+  if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
+    flags |= SVN_FS_TXN_CHECK_OOD;
 
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
-                       APR_HASH_KEY_STRING))
-        flags |= SVN_FS_TXN_CHECK_LOCKS;
-    }
+  if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS, APR_HASH_KEY_STRING))
+    flags |= SVN_FS_TXN_CHECK_LOCKS;
 
   root = make_txn_root(fs, svn_txn_id, txn->base_rev, flags, trail->pool);
 

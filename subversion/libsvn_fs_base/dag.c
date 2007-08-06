@@ -1454,18 +1454,13 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
               (fs, txn_id, SVN_FS_PROP_TXN_MERGEINFO, NULL, trail, pool));
     }
 
-  if (txnprops)
-    {
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
-                       APR_HASH_KEY_STRING))
-        SVN_ERR(svn_fs_base__set_txn_prop 
-                (fs, txn_id, SVN_FS_PROP_TXN_CHECK_OOD, NULL, trail, pool));
+  if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
+    SVN_ERR(svn_fs_base__set_txn_prop 
+            (fs, txn_id, SVN_FS_PROP_TXN_CHECK_OOD, NULL, trail, pool));
 
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
-                       APR_HASH_KEY_STRING))
-        SVN_ERR(svn_fs_base__set_txn_prop 
-                (fs, txn_id, SVN_FS_PROP_TXN_CHECK_LOCKS, NULL, trail, pool));
-    }
+  if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS, APR_HASH_KEY_STRING))
+    SVN_ERR(svn_fs_base__set_txn_prop 
+            (fs, txn_id, SVN_FS_PROP_TXN_CHECK_LOCKS, NULL, trail, pool));
   /* Promote the unfinished transaction to a committed one. */
   SVN_ERR(svn_fs_base__txn_make_committed(fs, txn_id, *new_rev, 
                                           trail, pool));
