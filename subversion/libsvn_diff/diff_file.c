@@ -837,8 +837,6 @@ svn_diff_file_diff4(svn_diff_t **diff,
 
 /** Display unified context diffs **/
 
-#define SVN_DIFF__UNIFIED_CONTEXT_SIZE 3
-
 typedef struct svn_diff__file_output_baton_t
 {
   svn_stream_t *output_stream;
