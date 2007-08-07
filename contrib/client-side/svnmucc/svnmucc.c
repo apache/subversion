@@ -108,7 +108,8 @@ commit_callback(svn_revnum_t revision,
   apr_pool_t *pool = baton;
 
   SVN_ERR(svn_cmdline_printf(pool, "r%ld committed by %s at %s\n",
-                             revision, author ? author : "(no author)", date));
+                             revision, author ? author : "(no author)", 
+                             date));
   return SVN_NO_ERROR;
 }
 
@@ -337,7 +338,7 @@ build(action_code_t action,
      ability to do a copy of a file followed by a put of new contents
      for the file, we don't let that happen (yet).
   */
-  if (! (operation->operation == OP_OPEN || operation->operation == OP_DELETE))
+  if (operation->operation != OP_OPEN && operation->operation != OP_DELETE)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                              "unsupported multiple operations on '%s'", path);
 
@@ -636,7 +637,7 @@ main(int argc, const char **argv)
           root_url = svn_path_canonicalize(root_url, pool);
           if (! svn_path_is_url(root_url))
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                           "'%s' is not an URL\n", root_url),
+                                           "'%s' is not a URL\n", root_url),
                          pool);
           break;
         case 'r':
@@ -646,8 +647,8 @@ main(int argc, const char **argv)
             if ((! SVN_IS_VALID_REVNUM(base_revision))
                 || (! digits_end)
                 || *digits_end)
-              handle_error(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                            "Invalid revision number"),
+              handle_error(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 
+                                            NULL, "Invalid revision number"),
                            pool);
           }
           break;
@@ -728,7 +729,7 @@ main(int argc, const char **argv)
               char *end;
               action->rev = strtol(rev_str, &end, 0);
               if (*end)
-                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, 
+                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                                "'%s' is not a revision\n", 
                                                rev_str), pool);
             }
@@ -770,7 +771,7 @@ main(int argc, const char **argv)
             url = svn_path_join(root_url, url, pool);
           else if (! svn_path_is_url(url))
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                           "'%s' is not an URL\n", url), pool);
+                                           "'%s' is not a URL\n", url), pool);
           url = svn_path_uri_from_iri(url, pool);
           url = svn_path_uri_autoescape(url, pool);
           url = svn_path_canonicalize(url, pool);
