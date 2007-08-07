@@ -43,6 +43,11 @@ class WC(object):
         self._info_func = \
             svn_info_receiver_t(self._info_wrapper)
         self._info = None
+        
+        self.client[0].log_msg_func2 = \
+            svn_client_get_commit_log2_t(self._log_func_wrapper)
+        self.client[0].log_msg_baton2 = cast(id(self), c_void_p)
+        self._log_func = None
 
     def copy(self, src, dest, rev = ""):
         """Copy SRC to DEST"""
@@ -446,3 +451,30 @@ class WC(object):
         svn_client_checkout2(byref(result_rev), URL, canon_path,
                              byref(peg_rev), byref(rev), recurse,
                              ignore_externals, self.client, self.iterpool)
+                             
+    def set_log_func(self, log_func):
+        """Register a callback to get a log message for commit and
+        commit-like operations. LOG_FUNC should take an array as an argument,
+        which holds the files to be commited. It should return a list of the
+        form [LOG, FILE] where LOG is a log message and FILE is the temporary
+        file, if one was created instead of a log message. If LOG is None,
+        the operation will be canceled and FILE will be treated as the
+        temporary file holding the temporary commit message."""
+        self._log_func = log_func
+        
+    def _log_func_wrapper(log_msg, tmp_file, commit_items, baton, pool):
+        self = cast(baton, py_object).value
+        if self._log_func:
+            [log, file] = self._log_func(_types.Array(String, commit_items))
+            
+            if log:
+                log_msg = pointer(c_char_p(log))
+            else:
+                log_msg = NULL
+                
+            if file:
+                tmp_file = pointer(c_char_p(file))
+            else:
+                tmp_file = NULL
+                
+    _log_func_wrapper = staticmethod(_log_func_wrapper)
