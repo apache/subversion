@@ -2,7 +2,7 @@
  * propfind_buckets.c :  serf bucket for a PROPFIND request
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -146,7 +146,7 @@ static void become_request(serf_bucket_t *bucket)
   hdrs_bkt = serf_bucket_request_get_headers(bucket);
 
   serf_bucket_headers_setn(hdrs_bkt, "Host", ctx->conn->hostinfo);
-  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "svn/ra_serf");
+  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", USER_AGENT);
   if (ctx->conn->using_compression == TRUE)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip");
