@@ -57,10 +57,12 @@ okay_to_edit(struct edit_baton *eb,
              struct node_baton *pb,
              svn_node_kind_t kind)
 {
+  int effective_depth;
+
   if (pb->filtered)
     return FALSE;
 
-  int effective_depth = eb->actual_depth - (eb->has_target ? 1 : 0);
+  effective_depth = eb->actual_depth - (eb->has_target ? 1 : 0);
   switch (eb->requested_depth)
     {
     case svn_depth_infinity:
