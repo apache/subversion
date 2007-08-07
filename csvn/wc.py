@@ -478,3 +478,17 @@ class WC(object):
                 tmp_file = NULL
                 
     _log_func_wrapper = staticmethod(_log_func_wrapper)
+    
+    def commit(self, paths="", recurse=True, keep_locks=False):
+        """Commit changes in the working copy. Changes to PATHS will be
+        commited. If RECURSE is True (True by default), the contents of
+        directories will also be commited.
+        
+        If KEEP_LOCKS is True (False by default), locks will not be
+        relinquished during the commit."""
+        
+        commit_info = pointer(svn_commit_info_t())
+        svn_client_commit3(byref(commit_info), self._build_path_list(paths),
+                            recurse, keep_locks, self.client, self.iterpool)
+                            
+        return commit_info.value
