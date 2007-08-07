@@ -84,10 +84,11 @@ open_tmp_file(apr_file_t **fp,
 static svn_ra_callbacks_t *
 ra_callbacks(const char *username,
              const char *password, 
+             svn_boolean_t non_interactive,
              apr_pool_t *pool)
 {
   svn_ra_callbacks_t *callbacks = apr_palloc(pool, sizeof(*callbacks));
-  svn_cmdline_setup_auth_baton(&callbacks->auth_baton, FALSE,
+  svn_cmdline_setup_auth_baton(&callbacks->auth_baton, non_interactive,
                                username, password,
                                NULL, FALSE, NULL, NULL, NULL, pool);
   callbacks->open_tmp_file = open_tmp_file;
@@ -444,6 +445,7 @@ execute(const apr_array_header_t *actions,
         const char *message,
         const char *username,
         const char *password,
+        svn_boolean_t non_interactive,
         svn_revnum_t base_revision,
         apr_pool_t *pool)
 {
@@ -455,7 +457,7 @@ execute(const apr_array_header_t *actions,
   svn_error_t *err;
   int i;
   SVN_ERR(svn_ra_open(&session, anchor, 
-                      ra_callbacks(username, password, pool), 
+                      ra_callbacks(username, password, non_interactive, pool),
                       NULL, NULL, pool));
 
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
@@ -551,6 +553,7 @@ usage(apr_pool_t *pool, int exit_val)
     "  -p, --password ARG    use ARG as the password\n"
     "  -U, --root-url ARG    interpret all action URLs are relative to ARG\n"
     "  -r, --revision ARG    use revision ARG as baseline for changes\n"
+    "  -n, --non-interactive don't prompt the user about anything\n"
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
     "                        use \"-\" to read from standard input)\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
@@ -584,11 +587,13 @@ main(int argc, const char **argv)
     {"revision", 'r', 1, ""},
     {"extra-args", 'X', 1, ""},
     {"help", 'h', 0, ""},
+    {"non-interactive", 'n', 0, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = "committed using svnmucc";
   const char *username = NULL, *password = NULL;
   const char *root_url = NULL, *extra_args_file = NULL;
+  svn_boolean_t non_interactive = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
   int i;
@@ -654,6 +659,9 @@ main(int argc, const char **argv)
           break;
         case 'X':
           extra_args_file = apr_pstrdup(pool, arg);
+          break;
+        case 'n':
+          non_interactive = TRUE;
           break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
@@ -796,7 +804,7 @@ main(int argc, const char **argv)
     usage(pool, EXIT_FAILURE);
 
   if ((err = execute(actions, anchor, message, username, password, 
-                     base_revision, pool)))
+                     non_interactive, base_revision, pool)))
     handle_error(err, pool);
 
   svn_pool_destroy(pool);
