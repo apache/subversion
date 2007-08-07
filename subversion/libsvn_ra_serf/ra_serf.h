@@ -35,6 +35,11 @@
 /** Use this to silence compiler warnings about unused parameters. */
 #define UNUSED_CTX(x) ((void)(x))
 
+/** Our User-Agent string. */
+#define USER_AGENT "SVN/" SVN_VERSION " serf/" \
+                   APR_STRINGIFY(SERF_MAJOR_VERSION) "." \
+                   APR_STRINGIFY(SERF_MINOR_VERSION) "." \
+                   APR_STRINGIFY(SERF_PATCH_VERSION)
 
 
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
