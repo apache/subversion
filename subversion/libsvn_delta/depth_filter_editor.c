@@ -65,8 +65,6 @@ okay_to_edit(struct edit_baton *eb,
   effective_depth = eb->actual_depth - (eb->has_target ? 1 : 0);
   switch (eb->requested_depth)
     {
-    case svn_depth_infinity:
-      return TRUE;
     case svn_depth_empty:
       return (kind == svn_node_dir && effective_depth <= 0);
     case svn_depth_files:
@@ -74,6 +72,8 @@ okay_to_edit(struct edit_baton *eb,
               || (kind == svn_node_file && effective_depth == 1));
     case svn_depth_immediates:
       return (effective_depth <= 1);
+    case svn_depth_infinity:
+      return TRUE; /* Shouldn't reach; see svn_delta_depth_filter_editor() */
     default:
       break;
     }
@@ -123,15 +123,15 @@ delete_entry(const char *path,
   struct node_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
-  /* Don't delete children of filtered nodes. */
-  if (pb->filtered)
-    return SVN_NO_ERROR;
-
-  /* ### FIXME: Because we don't know the type of the entry, we don't
-     know if it's okay to really delete it or not.  For example, if
-     we're filtering for depth=files and this is a delete of a
-     subdirectory, we don't want to really delete the thing. */
-  if (eb->requested_depth == svn_depth_infinity)
+  /* ### FIXME: We don't know the type of the entry, which ordinarily
+     doesn't matter, but is a key (*the* key, in fact) distinction
+     between depth "files" and depths "immediates".  If the server is
+     telling us to delete a subdirectory and our requested depth was
+     "immediates", that's fine; if our requested depth was "files",
+     though, this deletion shouldn't survive filtering.  For now,
+     we'll claim to our helper function that the to-be-deleted thing
+     is a file because that's the conservative route to take. */
+  if (okay_to_edit(eb, pb, svn_node_file))
     SVN_ERR(eb->wrapped_editor->delete_entry(path, base_revision,
                                              pb->wrapped_baton, pool));
 
