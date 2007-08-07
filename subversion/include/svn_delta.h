@@ -971,6 +971,10 @@ svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,
  * calls which operate "within" the request depth range through to @a
  * wrapped_editor.
  *
+ * @a requested_depth must be one of the following depth values: 
+ * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files, or
+ * @c svn_depth_immediates.
+ *
  * If filtering is deemed unncessary, @a *editor and @a *edit_baton
  * will be set to @a wrapped_editor and @a wrapped_baton,
  * respectively; otherwise, they'll be set to new objects allocated
