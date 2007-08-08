@@ -60,7 +60,7 @@ class TestCase_kwextract(unittest.TestCase):
 
 class TestCase_launch(unittest.TestCase):
     if os.name == "nt":
-        cmd = "dir"
+        cmd = "attrib"
     else:
         cmd = "ls"
 
@@ -576,39 +576,39 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir("trunk")
         self.launch("svn up")
         self.svnmerge("init ../test-branch")
-        self.launch("svn ci -m 'init test-branch -> trunk'",
+        self.launch('svn ci -m "init test-branch -> trunk"',
             match=r"Committed revision 14")
 
         os.chdir("../test-branch")
         self.svnmerge("init -r 1-6 ../testYYY-branch")
-        self.launch("svn ci -m 'init testYYY-branch -> test-branch'",
+        self.launch('svn ci -m "init testYYY-branch -> test-branch"',
             match=r"Committed revision 15")
 
         os.chdir("../testYYY-branch")
         open("test4", "w").write("test4")
         self.launch("svn add test4")
-        self.launch("svn ci -m 'add test4'",
+        self.launch('svn ci -m "add test4"',
             match=r"Committed revision 16")
 
         os.chdir("../test-branch")
         self.svnmerge("block -r 16")
-        self.launch("svn ci -m 'block r16'",
+        self.launch('svn ci -m "block r16"',
             match=r"Committed revision 17")
 
         #os.chdir("../test-branch")
         open("test5", "w").write("test5")
         self.launch("svn add test5")
-        self.launch("svn ci -m 'add test5'",
+        self.launch('svn ci -m "add test5"',
             match=r"Committed revision 18")
 
         os.chdir("../trunk")
         self.svnmerge("block -r 18")
-        self.launch("svn ci -m 'block r18'",
+        self.launch('svn ci -m "block r18"',
             match=r"Committed revision 19")
 
         #os.chdir("../trunk")
         self.svnmerge("merge -r 17")
-        self.launch("svn ci -m 'merge r17 from test-branch'",
+        self.launch('svn ci -m "merge r17 from test-branch"',
             match=r"Committed revision 20")
 
         p = self.getBlockedProperty()
@@ -1033,9 +1033,7 @@ D    test3"""
         os.remove("svnmerge-commit-message.txt")
 
         # Svnmerge rollback r5-7
-        expected_output = r"""
-D    test2
-D    test3"""
+        expected_output = "D\s+test2\s+D\s+test3"
         self.svnmerge("rollback -vv -S ../trunk -r5-7",
                       match = expected_output)
 

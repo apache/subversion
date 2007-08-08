@@ -947,6 +947,7 @@ def construct_merged_log_message(url, revnums):
     for r in revnums.sorted():
         message = get_commit_log(url, r)
         if message:
+            message = re.sub(r'(\r\n|\r|\n)', "\n", message)
             message = rstrip(message, "\n") + "\n"
             messages.append(prefix_lines(LOG_LINE_PREFIX, message))
             for match in LOG_SEPARATOR_RE.findall(message):

@@ -342,6 +342,7 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
       case CREATOR:
       case DATE:
       case COMMENT:
+      case NBR_CHILDREN:
       case ADDED_PATH:
       case REPLACED_PATH:
       case DELETED_PATH:

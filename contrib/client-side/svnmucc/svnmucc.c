@@ -84,10 +84,11 @@ open_tmp_file(apr_file_t **fp,
 static svn_ra_callbacks_t *
 ra_callbacks(const char *username,
              const char *password, 
+             svn_boolean_t non_interactive,
              apr_pool_t *pool)
 {
   svn_ra_callbacks_t *callbacks = apr_palloc(pool, sizeof(*callbacks));
-  svn_cmdline_setup_auth_baton(&callbacks->auth_baton, FALSE,
+  svn_cmdline_setup_auth_baton(&callbacks->auth_baton, non_interactive,
                                username, password,
                                NULL, FALSE, NULL, NULL, NULL, pool);
   callbacks->open_tmp_file = open_tmp_file;
@@ -108,7 +109,8 @@ commit_callback(svn_revnum_t revision,
   apr_pool_t *pool = baton;
 
   SVN_ERR(svn_cmdline_printf(pool, "r%ld committed by %s at %s\n",
-                             revision, author ? author : "(no author)", date));
+                             revision, author ? author : "(no author)", 
+                             date));
   return SVN_NO_ERROR;
 }
 
@@ -337,7 +339,7 @@ build(action_code_t action,
      ability to do a copy of a file followed by a put of new contents
      for the file, we don't let that happen (yet).
   */
-  if (! (operation->operation == OP_OPEN || operation->operation == OP_DELETE))
+  if (operation->operation != OP_OPEN && operation->operation != OP_DELETE)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                              "unsupported multiple operations on '%s'", path);
 
@@ -443,6 +445,7 @@ execute(const apr_array_header_t *actions,
         const char *message,
         const char *username,
         const char *password,
+        svn_boolean_t non_interactive,
         svn_revnum_t base_revision,
         apr_pool_t *pool)
 {
@@ -454,7 +457,7 @@ execute(const apr_array_header_t *actions,
   svn_error_t *err;
   int i;
   SVN_ERR(svn_ra_open(&session, anchor, 
-                      ra_callbacks(username, password, pool), 
+                      ra_callbacks(username, password, non_interactive, pool),
                       NULL, NULL, pool));
 
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
@@ -550,6 +553,7 @@ usage(apr_pool_t *pool, int exit_val)
     "  -p, --password ARG    use ARG as the password\n"
     "  -U, --root-url ARG    interpret all action URLs are relative to ARG\n"
     "  -r, --revision ARG    use revision ARG as baseline for changes\n"
+    "  -n, --non-interactive don't prompt the user about anything\n"
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
     "                        use \"-\" to read from standard input)\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
@@ -583,11 +587,13 @@ main(int argc, const char **argv)
     {"revision", 'r', 1, ""},
     {"extra-args", 'X', 1, ""},
     {"help", 'h', 0, ""},
+    {"non-interactive", 'n', 0, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = "committed using svnmucc";
   const char *username = NULL, *password = NULL;
   const char *root_url = NULL, *extra_args_file = NULL;
+  svn_boolean_t non_interactive = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
   int i;
@@ -636,7 +642,7 @@ main(int argc, const char **argv)
           root_url = svn_path_canonicalize(root_url, pool);
           if (! svn_path_is_url(root_url))
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                           "'%s' is not an URL\n", root_url),
+                                           "'%s' is not a URL\n", root_url),
                          pool);
           break;
         case 'r':
@@ -646,13 +652,16 @@ main(int argc, const char **argv)
             if ((! SVN_IS_VALID_REVNUM(base_revision))
                 || (! digits_end)
                 || *digits_end)
-              handle_error(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                            "Invalid revision number"),
+              handle_error(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 
+                                            NULL, "Invalid revision number"),
                            pool);
           }
           break;
         case 'X':
           extra_args_file = apr_pstrdup(pool, arg);
+          break;
+        case 'n':
+          non_interactive = TRUE;
           break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
@@ -728,7 +737,7 @@ main(int argc, const char **argv)
               char *end;
               action->rev = strtol(rev_str, &end, 0);
               if (*end)
-                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, 
+                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                                "'%s' is not a revision\n", 
                                                rev_str), pool);
             }
@@ -770,7 +779,7 @@ main(int argc, const char **argv)
             url = svn_path_join(root_url, url, pool);
           else if (! svn_path_is_url(url))
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                           "'%s' is not an URL\n", url), pool);
+                                           "'%s' is not a URL\n", url), pool);
           url = svn_path_uri_from_iri(url, pool);
           url = svn_path_uri_autoescape(url, pool);
           url = svn_path_canonicalize(url, pool);
@@ -795,7 +804,7 @@ main(int argc, const char **argv)
     usage(pool, EXIT_FAILURE);
 
   if ((err = execute(actions, anchor, message, username, password, 
-                     base_revision, pool)))
+                     non_interactive, base_revision, pool)))
     handle_error(err, pool);
 
   svn_pool_destroy(pool);

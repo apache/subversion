@@ -1204,6 +1204,8 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr(?c)(?c)(?c)?n",
                                      &cplist, &rev, &author, &date,
                                      &message, &nbr_children));
+      if (nbr_children == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+        nbr_children = 0;
       if (cplist->nelts > 0)
         {
           /* Interpret the changed-paths list. */

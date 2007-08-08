@@ -274,6 +274,10 @@ typedef struct {
   svn_boolean_t ignore_ancestry;
   svn_boolean_t text_deltas;
 
+  /* What was the requested depth? */
+  svn_depth_t depth;
+
+  /* Path -> lock token mapping. */
   apr_hash_t *lock_path_tokens;
 
   /* Our master update editor and baton. */
@@ -298,7 +302,7 @@ typedef struct {
   /* completed PROPFIND requests (contains propfind_context_t) */
   svn_ra_serf__list_t *done_propfinds;
 
-  /* list of files that will only have prop changes (contains report_info_t) */
+  /* list of files that only have prop changes (contains report_info_t) */
   svn_ra_serf__list_t *file_propchanges_only;
 
   /* The path to the REPORT request */
@@ -1177,7 +1181,27 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
   state = parser->state->current_state;
 
-  if (state == NONE && strcmp(name.name, "target-revision") == 0)
+  if (state == NONE && strcmp(name.name, "update-report") == 0)
+    {
+      /* If the server didn't reply with an actual depth value, it
+         isn't depth-aware, and we'll need to filter its response. */
+      if (! svn_ra_serf__find_attr(attrs, "depth"))
+        {
+          const svn_delta_editor_t *filter_editor;
+          void *filter_baton;
+          svn_depth_t depth = ctx->depth;
+          svn_boolean_t has_target = *(ctx->update_target) ? TRUE : FALSE;
+
+          SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, &filter_baton,
+                                                ctx->update_editor, 
+                                                ctx->update_baton, 
+                                                depth, has_target,
+                                                ctx->sess->pool));
+          ctx->update_editor = filter_editor;
+          ctx->update_baton = filter_baton;
+        }
+    }
+  else if (state == NONE && strcmp(name.name, "target-revision") == 0)
     {
       const char *rev;
 
@@ -2147,7 +2171,7 @@ finish_report(void *report_baton,
   svn_ra_serf__request_create(handler);
 
   for (i = 1; i < 4; i++) {
-      sess->conns[i] = apr_palloc(pool, sizeof(*sess->conns[i]));
+      sess->conns[i] = apr_palloc(sess->pool, sizeof(*sess->conns[i]));
       sess->conns[i]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
                                                                NULL, NULL);
       sess->conns[i]->address = sess->conns[0]->address;
@@ -2368,6 +2392,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->sess = ra_session->priv;
   report->conn = report->sess->conns[0];
   report->target_rev = revision;
+  report->depth = (depth == svn_depth_unknown ? svn_depth_infinity : depth);
   report->ignore_ancestry = ignore_ancestry;
   report->text_deltas = text_deltas;
   report->lock_path_tokens = apr_hash_make(pool);
