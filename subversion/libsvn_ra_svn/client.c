@@ -1060,9 +1060,9 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
 
 /* Set *RECURSE_P and *DEPTH to sane values based on DEPTH, the depth
    requested for an update-style editor drive operation. */
-static void refine_recurse_and_depth(svn_boolean_t *recurse_p,
-                                     svn_depth_t *depth_p,
-                                     svn_depth_t depth)
+static void normalize_depth_values(svn_boolean_t *recurse_p,
+                                   svn_depth_t *depth_p,
+                                   svn_depth_t depth)
 {
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
@@ -1082,7 +1082,7 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
   svn_boolean_t recurse;
 
   /* Normalize our recurse and depth values. */
-  refine_recurse_and_depth(&recurse, &depth, depth);
+  normalize_depth_values(&recurse, &depth, depth);
  
   /* Tell the server we want to start an update. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cbw", rev, target,
@@ -1109,7 +1109,7 @@ static svn_error_t *ra_svn_switch(svn_ra_session_t *session,
   svn_boolean_t recurse;
 
   /* Normalize our recurse and depth values. */
-  refine_recurse_and_depth(&recurse, &depth, depth);
+  normalize_depth_values(&recurse, &depth, depth);
  
   /* Tell the server we want to start a switch. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "(?r)cbcw", rev,
@@ -1137,7 +1137,7 @@ static svn_error_t *ra_svn_status(svn_ra_session_t *session,
   svn_boolean_t recurse;
 
   /* Normalize our recurse and depth values. */
-  refine_recurse_and_depth(&recurse, &depth, depth);
+  normalize_depth_values(&recurse, &depth, depth);
 
   /* Tell the server we want to start a status operation. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb(?r)w",
@@ -1168,7 +1168,7 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   svn_boolean_t recurse;
 
   /* Normalize our recurse and depth values. */
-  refine_recurse_and_depth(&recurse, &depth, depth);
+  normalize_depth_values(&recurse, &depth, depth);
 
   /* Tell the server we want to start a diff. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbcbw", rev,
