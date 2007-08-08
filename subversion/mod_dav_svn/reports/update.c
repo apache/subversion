@@ -916,7 +916,7 @@ dav_svn__update_report(const dav_resource *resource,
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = "";
   svn_boolean_t text_deltas = TRUE;
-  svn_depth_t depth = svn_depth_unknown;
+  svn_depth_t requested_depth = svn_depth_unknown;
   svn_boolean_t saw_depth = FALSE;
   svn_boolean_t saw_recursive = FALSE;
   svn_boolean_t resource_walk = FALSE;
@@ -1023,7 +1023,7 @@ dav_svn__update_report(const dav_resource *resource,
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          depth = svn_depth_from_word(cdata);
+          requested_depth = svn_depth_from_word(cdata);
           saw_depth = TRUE;
         }
       if ((child->ns == ns && strcmp(child->name, "recursive") == 0)
@@ -1033,9 +1033,9 @@ dav_svn__update_report(const dav_resource *resource,
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
           if (strcmp(cdata, "no") == 0)
-            depth = svn_depth_files;
+            requested_depth = svn_depth_files;
           else
-            depth = svn_depth_infinity;
+            requested_depth = svn_depth_infinity;
           /* Note that even modern, depth-aware clients still transmit
              "no" for "recursive" (along with "files" for "depth") in
              the svn_depth_files case, and transmit "no" in the
@@ -1077,8 +1077,8 @@ dav_svn__update_report(const dav_resource *resource,
         }
     }
           
-  if (!saw_depth && !saw_recursive && (depth == svn_depth_unknown))
-    depth = svn_depth_infinity;
+  if (!saw_depth && !saw_recursive && (requested_depth == svn_depth_unknown))
+    requested_depth = svn_depth_infinity;
 
   /* If the client never sent a <src-path> element, it's old and
      sending a style of report that we no longer allow. */
@@ -1175,7 +1175,7 @@ dav_svn__update_report(const dav_resource *resource,
                                       src_path, target,
                                       dst_path,
                                       text_deltas,
-                                      depth,
+                                      requested_depth,
                                       ignore_ancestry,
                                       editor, &uc,
                                       dav_svn__authz_read_func(&arb),
@@ -1203,7 +1203,7 @@ dav_svn__update_report(const dav_resource *resource,
             const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
             apr_xml_attr *this_attr = child->attr;
-            svn_depth_t itemdepth = svn_depth_unknown;
+            svn_depth_t depth = svn_depth_unknown;
 
             entry_counter++;
 
@@ -1212,7 +1212,7 @@ dav_svn__update_report(const dav_resource *resource,
                 if (! strcmp(this_attr->name, "rev"))
                   rev = SVN_STR_TO_REV(this_attr->value);
                 else if (! strcmp(this_attr->name, "depth"))
-                  itemdepth = svn_depth_from_word(this_attr->value);
+                  depth = svn_depth_from_word(this_attr->value);
                 else if (! strcmp(this_attr->name, "linkpath"))
                   linkpath = this_attr->value;
                 else if (! strcmp(this_attr->name, "start-empty"))
@@ -1244,12 +1244,11 @@ dav_svn__update_report(const dav_resource *resource,
               from_revnum = rev;
 
             if (! linkpath)
-              serr = svn_repos_set_path3(rbaton, path, rev, itemdepth,
+              serr = svn_repos_set_path3(rbaton, path, rev, depth,
                                          start_empty, locktoken, subpool);
             else
-              serr = svn_repos_link_path3(rbaton, path, linkpath, rev, 
-                                          itemdepth, start_empty, 
-                                          locktoken, subpool);
+              serr = svn_repos_link_path3(rbaton, path, linkpath, rev, depth,
+                                          start_empty, locktoken, subpool);
             if (serr != NULL)
               {
                 derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1425,7 +1424,7 @@ dav_svn__update_report(const dav_resource *resource,
                                   editor, &uc,
                                   dav_svn__authz_read_func(&arb),
                                   &arb, FALSE /* text-deltas */,
-                                  depth,
+                                  requested_depth,
                                   TRUE /* entryprops */, 
                                   FALSE /* ignore-ancestry */,
                                   resource->pool);
