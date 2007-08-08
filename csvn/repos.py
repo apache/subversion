@@ -286,7 +286,7 @@ class LocalRepository(object):
 
     def set_rev_prop(self, rev, name, value, author=NULL):
         """Set the NAME property to VALUE in the specified
-           REV."""
+           REV, attribute the change to AUTHOR if provided."""
         rev = svn_revnum_t(rev)
         svn_repos_fs_change_rev_prop2(self, rev, author, name, value,
                                       svn_repos_authz_func_t(),
