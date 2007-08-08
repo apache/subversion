@@ -1203,6 +1203,7 @@ dav_svn__update_report(const dav_resource *resource,
             const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
             apr_xml_attr *this_attr = child->attr;
+            svn_depth_t itemdepth = svn_depth_unknown;
 
             entry_counter++;
 
@@ -1211,7 +1212,7 @@ dav_svn__update_report(const dav_resource *resource,
                 if (! strcmp(this_attr->name, "rev"))
                   rev = SVN_STR_TO_REV(this_attr->value);
                 else if (! strcmp(this_attr->name, "depth"))
-                  depth = svn_depth_from_word(this_attr->value);
+                  itemdepth = svn_depth_from_word(this_attr->value);
                 else if (! strcmp(this_attr->name, "linkpath"))
                   linkpath = this_attr->value;
                 else if (! strcmp(this_attr->name, "start-empty"))
@@ -1243,11 +1244,12 @@ dav_svn__update_report(const dav_resource *resource,
               from_revnum = rev;
 
             if (! linkpath)
-              serr = svn_repos_set_path3(rbaton, path, rev, depth,
+              serr = svn_repos_set_path3(rbaton, path, rev, itemdepth,
                                          start_empty, locktoken, subpool);
             else
-              serr = svn_repos_link_path3(rbaton, path, linkpath, rev, depth,
-                                          start_empty, locktoken, subpool);
+              serr = svn_repos_link_path3(rbaton, path, linkpath, rev, 
+                                          itemdepth, start_empty, 
+                                          locktoken, subpool);
             if (serr != NULL)
               {
                 derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
