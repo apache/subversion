@@ -1055,6 +1055,18 @@ pre-revprop-change hook script and (if appropriate) making it executable."""
   hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
   main.create_python_hook_script (hook_path, 'import sys; sys.exit(0)')
 
+def disable_revprop_changes(repo_dir, message):
+  """Disable revprop changes in a repository REPO_DIR by creating a
+pre-revprop-change hook script like enable_revprop_changes, except that
+the hook prints MESSAGE to stderr and exits non-zero.  MESSAGE is printed
+very simply, and should have no newlines or quotes."""
+
+  hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
+  main.create_python_hook_script (hook_path,
+                                  'import sys\n'
+                                  'sys.stderr.write("%s")\n'
+                                  'sys.exit(1)\n' % (message,))
+
 def create_failing_post_commit_hook(repo_dir):
   """Disable commits in a repository REPOS_DIR by creating a post-commit hook
 script which always reports errors."""
