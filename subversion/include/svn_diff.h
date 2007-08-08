@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -516,6 +516,42 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
                            svn_boolean_t display_original_in_conflict,
                            svn_boolean_t display_resolved_conflicts,
                            apr_pool_t *pool);
+
+
+
+/* Diffs on in-memory structures */
+
+/** Generate @a diff output from the @a original and @a modified
+ * in-memory strings. @a diff will be allocated from @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_diff_mem_string_diff(svn_diff_t **diff,
+                         svn_string_t *original,
+                         svn_string_t *modified,
+                         apr_pool_t *pool);
+
+
+/** Outputs the @a diff object in unified diff format on
+ * @a output_stream, using @a original and @a modified
+ * for the text in the output.  Outputs the header and markers
+ * in @a header_encoding.
+ *
+ * @a original_header and @a modified header are
+ * used to fill the field after the "---" and "+++" header markers.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
+                                   svn_diff_t *diff,
+                                   const char *original_header,
+                                   const char *modified_header,
+                                   const char *header_encoding,
+                                   svn_string_t *original,
+                                   svn_string_t *modified,
+                                   apr_pool_t *pool);
 
 
 #ifdef __cplusplus
