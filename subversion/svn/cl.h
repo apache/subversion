@@ -159,7 +159,7 @@ typedef struct svn_cl__opt_state_t
   apr_hash_t *revprop_table;     /* table with revision properties to set */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
-  svn_accept_t accept_;          /* automatically resolve conflict */
+  svn_accept_t accept_which;     /* automatically resolve conflict */
 
 } svn_cl__opt_state_t;
 
