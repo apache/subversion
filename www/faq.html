@@ -3049,13 +3049,18 @@ working copy.</p>
 
 <p>Calm down, take a deep breath.</p>
 
-<p>On UNIX, notice that the directory which contains the cached
-passwords (usually ~/.subversion/auth/) has permissions
-of 700, meaning only you can read them.</p>
-
 <p>On Windows 2000 or later, svn 1.2 and above uses standard 
 Windows APIs to encrypt the data, so only the user can decrypt the 
 cached password.</p>
+
+<p>On Mac OS X, svn 1.4 and later uses the system Keychain
+facility to encrypt/store your svn password.</p>
+
+<p>On UNIX/Linux, there are no standard system encryption facilities,
+so the password is stored in ~/subversion/auth/.  Notice, however,
+that the directory which contains the cached passwords (usually
+~/.subversion/auth/) has permissions of 700, meaning only you can read
+them.</p>
 
 <p>Trust your OS to protect data on disk.</p>
 
