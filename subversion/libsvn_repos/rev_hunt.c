@@ -785,35 +785,6 @@ struct path_revision
   const char *path;
 };
 
-/* Get the mergeinfo for PATH in REPOS as REVNUM and store it in MERGEINFO. */
-static svn_error_t *
-get_path_mergeinfo(apr_hash_t **mergeinfo,
-                   svn_repos_t *repos,
-                   const char *path,
-                   svn_revnum_t revnum,
-                   apr_pool_t *pool)
-{
-  apr_hash_t *tmp_mergeinfo;
-  const char *mergeinfo_str;
-  svn_fs_root_t *root;
-  apr_array_header_t *paths = apr_array_make(pool, 1,
-                                             sizeof(const char *));
-
-  APR_ARRAY_PUSH(paths, const char *) = path;
-
-  SVN_ERR(svn_fs_revision_root(&root, repos->fs, revnum, pool));
-  SVN_ERR(svn_fs_get_mergeinfo(&tmp_mergeinfo, root, paths,
-                               svn_mergeinfo_inherited, pool));
-  
-  mergeinfo_str = apr_hash_get(tmp_mergeinfo, path, APR_HASH_KEY_STRING);
-  if (mergeinfo_str != NULL)
-    SVN_ERR(svn_mergeinfo_parse(mergeinfo, mergeinfo_str, pool));
-  else
-    *mergeinfo = apr_hash_make(pool);
-
-  return SVN_NO_ERROR;
-}
-
 /* Check to see if OLD_PATH_REV->PATH was changed as the result of a merge,
    and if so, add the merged revision/path pairs to REVISION_PATHS. */
 static svn_error_t *
@@ -826,10 +797,12 @@ get_merged_path_revisions(apr_array_header_t *path_revisions,
   apr_hash_t *curr_mergeinfo, *prev_mergeinfo, *deleted, *changed;
 
   /* First, figure out if old_path_rev is a merging revision or not. */
-  SVN_ERR(get_path_mergeinfo(&curr_mergeinfo, repos, old_path_rev->path,
-                             old_path_rev->revnum, subpool));
-  SVN_ERR(get_path_mergeinfo(&prev_mergeinfo, repos, old_path_rev->path - 1,
-                             old_path_rev->revnum, subpool));
+  SVN_ERR(svn_repos__get_path_mergeinfo(&curr_mergeinfo, repos->fs,
+                                        old_path_rev->path,
+                                        old_path_rev->revnum, subpool));
+  SVN_ERR(svn_repos__get_path_mergeinfo(&prev_mergeinfo, repos->fs,
+                                        old_path_rev->path - 1,
+                                        old_path_rev->revnum, subpool));
   SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
                              subpool));
   SVN_ERR(svn_mergeinfo_merge(&changed, deleted, subpool));
