@@ -492,3 +492,30 @@ class WC(object):
                             recurse, keep_locks, self.client, self.iterpool)
                             
         return commit_info.value
+        
+    def update(self, paths="", revnum=None, recurse=True,
+                ignore_externals=True):
+        """Update PATHS to REVNUM. PATHS defaults to the working copy root.
+        If no revnum is given, it defaults to HEAD. An array containing the
+        revisions to which revnum was resolved.
+        
+        If RECURSE is True (True by default), contents of directories will
+        also be updated.
+        
+        If IGNORE_EXTERNALS is True (True by default) externals will not be
+        updated."""
+        
+        rev = svn_opt_revision_t()
+        if revnum is not None:
+            rev.kind = svn_opt_revision_number
+            rev.value.number = revnum
+        else:
+            rev.kind = svn_opt_revision_head
+        
+        result_revs = _types.Array(svn_revnum_t, svn_revnum_t())
+        
+        svn_client_update2(byref(result_revs.header),
+                self._build_path_list(paths), byref(rev), recurse,
+                ignore_externals, self.client, self.iterpool)
+                   
+        return result_revs

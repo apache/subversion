@@ -136,6 +136,20 @@ class WCTestCase(unittest.TestCase):
                 props.keys():
                     
             self.fail("Property not set")
+            
+    def test_update(self):
+        results = self.wc.update("trunk/README.txt", revnum=7)
+        self.assertEqual(results[0], 7)
+        props = self.wc.propget("Awesome")
+        if os.path.join(wc_location, "trunk/README.txt") in \
+                props.keys():
+            self.fail("File not updated to old revision")
+        results = self.wc.update("trunk/README.txt")
+        self.assertEqual(results[0], 9)
+        props = self.wc.propget("Awesome")
+        if not os.path.join(wc_location, "trunk/README.txt") in \
+                props.keys():
+            self.fail("File not updated to head")
         
 
 def suite():
