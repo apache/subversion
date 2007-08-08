@@ -1333,12 +1333,14 @@ dav_svn__update_report(const dav_resource *resource,
             if (text_deltas)
               action = apr_psprintf(resource->pool,
                                     "update '%s' r%ld",
-                                    svn_path_uri_encode(spath, resource->pool),
+                                    svn_path_uri_encode(spath, 
+                                                        resource->pool),
                                     revnum);
             else
               action = apr_psprintf(resource->pool,
                                     "remote-status '%s' r%ld",
-                                    svn_path_uri_encode(spath, resource->pool),
+                                    svn_path_uri_encode(spath, 
+                                                        resource->pool),
                                     revnum);
           }
       }
@@ -1375,7 +1377,7 @@ dav_svn__update_report(const dav_resource *resource,
                                     resource->pool)))
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Failed checking destination path kind.",
+                                      "Failed checking destination path kind",
                                       resource->pool);
           goto cleanup;
         }
@@ -1400,7 +1402,8 @@ dav_svn__update_report(const dav_resource *resource,
           goto cleanup;
         }
 
-      serr = dav_svn__send_xml(uc.bb, uc.output, "<S:resource-walk>" DEBUG_CR);
+      serr = dav_svn__send_xml(uc.bb, uc.output, 
+                               "<S:resource-walk>" DEBUG_CR);
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1428,7 +1431,8 @@ dav_svn__update_report(const dav_resource *resource,
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Resource walk failed.", resource->pool);
+                                      "Resource walk failed.", 
+                                      resource->pool);
           goto cleanup;
         }
           
@@ -1447,8 +1451,8 @@ dav_svn__update_report(const dav_resource *resource,
      started in the first place. */
   if (uc.started_update)
     {
-      serr = dav_svn__send_xml(uc.bb, uc.output, "</S:update-report>" DEBUG_CR);
-      if (serr)
+      if ((serr = dav_svn__send_xml(uc.bb, uc.output, 
+                                    "</S:update-report>" DEBUG_CR)))
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                       "Unable to complete update report.",
