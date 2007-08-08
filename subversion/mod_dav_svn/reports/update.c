@@ -75,6 +75,9 @@ typedef struct {
   /* True iff client requested all data inline in the report. */
   svn_boolean_t send_all;
 
+  /* Actual depth used in the response. */
+  svn_depth_t depth;
+
   /* SVNDIFF version to send to client.  */
   int svndiff_version;
 } update_ctx_t;
@@ -499,7 +502,8 @@ maybe_start_update_report(update_ctx_t *uc)
                                 "<S:update-report xmlns:S=\""
                                 SVN_XML_NAMESPACE "\" "
                                 "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
-                                "xmlns:D=\"DAV:\" %s>" DEBUG_CR,
+                                "xmlns:D=\"DAV:\" depth=\"%s\" %s>" DEBUG_CR,
+                                svn_depth_to_word(uc->depth),
                                 uc->send_all ? "send-all=\"true\"" : ""));
       
       uc->started_update = TRUE;
@@ -1149,6 +1153,10 @@ dav_svn__update_report(const dav_resource *resource,
      contain actual text deltas. */
   if (! uc.send_all)
     text_deltas = FALSE;
+
+  /* Stash away the depth value we determined. */
+  uc.depth = (requested_depth == svn_depth_unknown ? svn_depth_infinity 
+                                                   : requested_depth);
 
   /* When we call svn_repos_finish_report, it will ultimately run
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
