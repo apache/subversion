@@ -66,7 +66,7 @@ svn_cl__resolved(apr_getopt_t *os,
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));    
       err = svn_client_resolved2(target,
                                 SVN_DEPTH_TO_RECURSE(opt_state->depth),
-                                opt_state->accept_,
+                                opt_state->accept_which,
                                 ctx,
                                 subpool);
       if (err)
