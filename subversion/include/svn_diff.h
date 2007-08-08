@@ -121,7 +121,7 @@ typedef struct svn_diff_fns_t
   /** A function for ordering the tokens, resembling 'strcmp' in functionality.
    * @a compare should contain the return value of the comparison:
    * If @a ltoken and @a rtoken are "equal", return 0.  If @a ltoken is
-   * "less than" @a rtoken, return a number < 0.  If @a ltoken  is 
+   * "less than" @a rtoken, return a number < 0.  If @a ltoken  is
    * "greater than" @a rtoken, return a number > 0.
    */
   svn_error_t *(*token_compare)(void *diff_baton,
@@ -195,7 +195,7 @@ svn_diff_contains_diffs(svn_diff_t *diff);
  *
  * Differences, similarities, and conflicts are described by lining up
  * "ranges" of data.
- *  
+ *
  * @note These callbacks describe data ranges in units of "tokens".
  * A "token" is whatever you've defined it to be in your datasource
  * @c svn_diff_fns_t vtable.
@@ -208,7 +208,7 @@ typedef struct svn_diff_output_fns_t
    * If doing a two-way diff, then an *identical* data range was found
    * between the "original" and "modified" datasources.  Specifically,
    * the match starts at @a original_start and goes for @a original_length
-   * tokens in the original data, and at @a modified_start for 
+   * tokens in the original data, and at @a modified_start for
    * @a modified_length tokens in the modified data.
    *
    * If doing a three-way diff, then all three datasources have
@@ -229,7 +229,7 @@ typedef struct svn_diff_output_fns_t
    * If doing a two-way diff, then an *conflicting* data range was found
    * between the "original" and "modified" datasources.  Specifically,
    * the conflict starts at @a original_start and goes for @a original_length
-   * tokens in the original data, and at @a modified_start for 
+   * tokens in the original data, and at @a modified_start for
    * @a modified_length tokens in the modified data.
    *
    * If doing a three-way diff, then an identical data range was discovered
@@ -271,9 +271,9 @@ typedef struct svn_diff_output_fns_t
                                      apr_off_t latest_length);
 
   /** All three datasources have conflicting data ranges.  The range
-   * @a latest_start, @a latest_length in the "latest" datasource conflicts 
-   * with the range @a original_start, @a original_length in the "original" 
-   * datasource, and also conflicts with the range @a modified_start, 
+   * @a latest_start, @a latest_length in the "latest" datasource conflicts
+   * with the range @a original_start, @a original_length in the "original"
+   * datasource, and also conflicts with the range @a modified_start,
    * @a modified_length in the "modified" datasource.
    * If there are common ranges in the "modified" and "latest" datasources
    * in this conflicting range, @a resolved_diff will contain a diff
@@ -362,14 +362,14 @@ svn_error_t *
 svn_diff_file_options_parse(svn_diff_file_options_t *options,
                             const apr_array_header_t *args,
                             apr_pool_t *pool);
-                            
+
 
 /** A convenience function to produce a diff between two files.
  *
  * @since New in 1.4.
  *
  * Return a diff object in @a *diff (allocated from @a pool) that represents
- * the difference between an @a original file and @a modified file.  
+ * the difference between an @a original file and @a modified file.
  * (The file arguments must be full paths to the files.)
  *
  * Compare lines according to the relevant fields of @a options.
