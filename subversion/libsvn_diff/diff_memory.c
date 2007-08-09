@@ -263,7 +263,7 @@ typedef struct output_baton_t
    from token-source index TOKENS with change-type TYPE
    to the current hunk.
 */
-static void
+static svn_error_t *
 output_unified_token_range(output_baton_t *btn,
                            int tokens,
                            unified_output_e type,
@@ -283,7 +283,7 @@ output_unified_token_range(output_baton_t *btn,
     first = (first < btn->next_token) ? btn->next_token : first;
 
   if (first >= past_last)
-    return;
+    return SVN_NO_ERROR;
 
   /* Do the loop with prefix and token */
   for (idx = first; idx < past_last; idx++)
@@ -305,14 +305,22 @@ output_unified_token_range(output_baton_t *btn,
 
     }
   if (past_last == source->tokens->nelts && source->ends_without_eol)
-    svn_stringbuf_appendcstr
-      /* The string below is intentionally not marked for translation:
-         it's vital to correct operation of the diff(1)/patch(1)
-         program pair. */
-      (btn->hunk, APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR);
+    {
+      const char *out_str;
+      SVN_ERR(svn_utf_cstring_from_utf8_ex2
+              (&out_str,
+               /* The string below is intentionally not marked for translation:
+                  it's vital to correct operation of the diff(1)/patch(1)
+                  program pair. */
+               APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR,
+               btn->header_encoding, btn->pool));
+      svn_stringbuf_appendcstr(btn->hunk, out_str);
+    }
 
   if (tokens == 0)
     btn->next_token = past_last;
+
+  return SVN_NO_ERROR;
 }
 
 /* Flush the hunk currently built up in BATON
@@ -331,8 +339,9 @@ output_unified_flush_hunk(output_baton_t *baton)
   /* Write the trailing context */
   target_token = baton->hunk_start[0] + baton->hunk_length[0]
     + SVN_DIFF__UNIFIED_CONTEXT_SIZE;
-  output_unified_token_range(baton, 0 /*original*/, unified_output_context,
-                             baton->next_token, target_token);
+  SVN_ERR(output_unified_token_range(baton, 0 /*original*/,
+                                     unified_output_context,
+                                     baton->next_token, target_token));
 
   /* Write the hunk header */
   if (baton->hunk_length[0] > 0)
@@ -398,12 +407,16 @@ output_unified_diff_modified(void *baton,
       btn->hunk_start[1] = targ_mod + targ_orig - original_start;
     }
 
-  output_unified_token_range(btn, 0/*original*/, unified_output_context,
-                             targ_orig, original_start);
-  output_unified_token_range(btn, 0/*original*/, unified_output_delete,
-                             original_start, original_start + original_length);
-  output_unified_token_range(btn, 1/*modified*/, unified_output_insert,
-                             modified_start, modified_start + modified_length);
+  SVN_ERR(output_unified_token_range(btn, 0/*original*/,
+                                     unified_output_context,
+                                     targ_orig, original_start));
+  SVN_ERR(output_unified_token_range(btn, 0/*original*/,
+                                     unified_output_delete,
+                                     original_start,
+                                     original_start + original_length));
+  SVN_ERR(output_unified_token_range(btn, 1/*modified*/, unified_output_insert,
+                                     modified_start,
+                                     modified_start + modified_length));
 
   return SVN_NO_ERROR;
 }
