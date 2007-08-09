@@ -306,6 +306,9 @@ output_unified_token_range(output_baton_t *btn,
     }
   if (past_last == source->tokens->nelts && source->ends_without_eol)
     svn_stringbuf_appendcstr
+      /* The string below is intentionally not marked for translation:
+         it's vital to correct operation of the diff(1)/patch(1)
+         program pair. */
       (btn->hunk, APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR);
 
   if (tokens == 0)
