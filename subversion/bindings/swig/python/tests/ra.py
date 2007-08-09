@@ -12,6 +12,11 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
   def setUp(self):
     """Load a Subversion repository"""
 
+    # Isolate each test from the others with a fresh repository.
+    # Eventually, we should move this into a shared TestCase base
+    # class that all test cases in this directory can use.
+    SubversionRepositoryTestSetup().setUp()
+
     ra.initialize()
 
     # Open repository directly for cross-checking
@@ -274,8 +279,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     reporter.finish_report(reporter_baton)
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test',
-                              suiteClass=SubversionRepositoryTestSetup)
+    return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test')
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()
