@@ -841,7 +841,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge(branch, rev1, branch, rev2, trunk)
     merge_info = ctx.merge_info(trunk)
     assert_equal(["/branch"], merge_info.keys)
-    assert_equal([[2, 2]], merge_info["/branch"].collect {|range| range.to_a})
+    assert_equal([[1, 2]], merge_info["/branch"].collect {|range| range.to_a})
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -854,12 +854,10 @@ class SvnClientTest < Test::Unit::TestCase
 
     merge_info = ctx.merge_info(trunk, rev4)
     assert_equal(["/branch"], merge_info.keys)
-    assert_equal([[2, 2], [4, 4]],
+    assert_equal([[1, 2], [3, 4]],
                  merge_info["/branch"].collect {|range| range.to_a })
     ctx.propdel("svn:mergeinfo", trunk)
-    merge_info = ctx.merge_info(trunk)
-    assert_equal(["/branch"], merge_info.keys)
-    assert_equal([[2, 2]], merge_info["/branch"].collect {|range| range.to_a})
+    assert_nil ctx.merge_info(trunk)
 
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
