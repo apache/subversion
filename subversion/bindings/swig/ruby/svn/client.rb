@@ -518,8 +518,8 @@ module Svn
                     fetch_locks, block, self)
       end
 
-      def switch(path, uri, rev=nil, depth=nil, allow_unver_obstruction=false)
-        Client.switch2(path, uri, rev, depth, allow_unver_obstruction, self)
+      def switch(path, uri, rev=nil, depth=nil, ignore_externals=false, allow_unver_obstruction=false)
+        Client.switch2(path, uri, rev, depth, ignore_externals, allow_unver_obstruction, self)
       end
 
       def add_simple_provider
