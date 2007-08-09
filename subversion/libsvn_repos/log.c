@@ -578,20 +578,23 @@ svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
   apr_hash_t *tmp_mergeinfo;
   const char *mergeinfo_str;
   svn_fs_root_t *root;
-  apr_array_header_t *paths = apr_array_make(pool, 1,
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_array_header_t *paths = apr_array_make(subpool, 1,
                                              sizeof(const char *));
 
   APR_ARRAY_PUSH(paths, const char *) = path;
 
-  SVN_ERR(svn_fs_revision_root(&root, fs, revnum, pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, revnum, subpool));
   SVN_ERR(svn_fs_get_mergeinfo(&tmp_mergeinfo, root, paths,
-                               svn_mergeinfo_inherited, pool));
+                               svn_mergeinfo_inherited, subpool));
   
   mergeinfo_str = apr_hash_get(tmp_mergeinfo, path, APR_HASH_KEY_STRING);
   if (mergeinfo_str != NULL)
     SVN_ERR(svn_mergeinfo_parse(mergeinfo, mergeinfo_str, pool));
   else
     *mergeinfo = apr_hash_make(pool);
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -609,6 +612,7 @@ svn_repos__is_branching_copy(svn_boolean_t *is_branching,
   apr_hash_t *mergeinfo, *implied_mergeinfo;
   apr_hash_t *deleted, *added;
   svn_revnum_t rev = svn_fs_revision_root_revision(root);
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Assume it's not a branching revision */
   *is_branching = FALSE;
@@ -618,34 +622,44 @@ svn_repos__is_branching_copy(svn_boolean_t *is_branching,
     mergeinfo = path_mergeinfo;
   else
     SVN_ERR(svn_repos__get_path_mergeinfo(&mergeinfo, svn_fs_root_fs(root),
-                                          path, rev, pool));
+                                          path, rev, subpool));
 
   /* Check and see if there was a copy in this revision.  If not, set omit to
      FALSE and return.  */
   SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root, path,
-                              pool));
+                              subpool));
   if (copy_root == NULL)
-    return SVN_NO_ERROR;
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
 
   copy_rev = svn_fs_revision_root_revision(copy_root);
   if (copy_rev != rev)
-    return SVN_NO_ERROR;
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
 
   /* At this point, we know that PATH was created as a copy in REV.  Using an
      algorithm similar to libsvn_client/copy.c:get_implied_mergeinfo(), check
      to see if the mergeinfo generated on a branching copy, and the mergeinfo
      that we are presented with matches.  If so, omit the path. */
   SVN_ERR(calculate_branching_copy_mergeinfo(&implied_mergeinfo, copy_root,
-                                             copy_path, path, rev, pool));
+                                             copy_path, path, rev, subpool));
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, implied_mergeinfo,
-                             mergeinfo, pool));
+                             mergeinfo, subpool));
   if (apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0)
-    return SVN_NO_ERROR;
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
 
   /* If we've reached this point, we've found a branching revision. */
   *is_branching = TRUE;
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
