@@ -489,9 +489,10 @@ open_dir(report_dir_t *dir)
       if (SVN_IS_VALID_REVNUM(dir->base_rev))
         {
           SVN_ERR(dir->update_editor->open_directory(dir->name,
-                                         dir->parent_dir->dir_baton,
-                                         dir->base_rev, dir->dir_baton_pool,
-                                         &dir->dir_baton));
+                                                     dir->parent_dir->dir_baton,
+                                                     dir->base_rev, 
+                                                     dir->dir_baton_pool,
+                                                     &dir->dir_baton));
         }
       else
         {
@@ -740,19 +741,19 @@ handle_fetch(serf_request_t *request,
       if (SVN_IS_VALID_REVNUM(info->base_rev))
         {
           err = info->dir->update_editor->open_file(info->name,
-                                          info->dir->dir_baton,
-                                          info->base_rev,
-                                          info->editor_pool,
-                                          &info->file_baton);
+                                                    info->dir->dir_baton,
+                                                    info->base_rev,
+                                                    info->editor_pool,
+                                                    &info->file_baton);
         }
       else
         {
           err = info->dir->update_editor->add_file(info->name,
-                                          info->dir->dir_baton,
-                                          NULL,
-                                          info->base_rev,
-                                          info->editor_pool,
-                                          &info->file_baton);
+                                                   info->dir->dir_baton,
+                                                   NULL,
+                                                   info->base_rev,
+                                                   info->editor_pool,
+                                                   &info->file_baton);
         }
 
       if (err)
@@ -761,10 +762,10 @@ handle_fetch(serf_request_t *request,
         }
 
       err = info->dir->update_editor->apply_textdelta(info->file_baton,
-                                                NULL,
-                                                info->editor_pool,
-                                                &info->textdelta,
-                                                &info->textdelta_baton);
+                                                      NULL,
+                                                      info->editor_pool,
+                                                      &info->textdelta,
+                                                      &info->textdelta_baton);
 
       if (err)
         {
