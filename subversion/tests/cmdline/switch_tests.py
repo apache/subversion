@@ -1715,6 +1715,7 @@ test_list = [ None,
               XFail(relocate_and_propset, svntest.main.is_ra_type_dav),
               forced_switch,
               forced_switch_failures,
+              switch_with_obstructing_local_adds,
               switch_scheduled_add,
               mergeinfo_switch_elision,
              ]
