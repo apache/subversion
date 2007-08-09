@@ -34,6 +34,18 @@
 
 #include <assert.h>
 
+static svn_error_t *
+find_interesting_revisions(apr_array_header_t *path_revisions,
+                           svn_repos_t *repos,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_boolean_t include_merged_revisions,
+                           svn_boolean_t mark_as_merged,
+                           svn_repos_authz_func_t authz_read_func,
+                           void *authz_read_baton,
+                           apr_pool_t *pool);
+
 
 /* Note:  this binary search assumes that the datestamp properties on
    each revision are in chronological order.  That is if revision A >
@@ -783,6 +795,10 @@ struct path_revision
 {
   svn_revnum_t revnum;
   const char *path;
+
+  /* Merged revision flag.  This is set if the path/revision pair is the
+     result of a merge. */
+  svn_boolean_t merged_revision;
 };
 
 /* Check to see if OLD_PATH_REV->PATH was changed as the result of a merge,
@@ -791,10 +807,14 @@ static svn_error_t *
 get_merged_path_revisions(apr_array_header_t *path_revisions,
                           svn_repos_t *repos,
                           struct path_revision *old_path_rev,
+                          svn_repos_authz_func_t authz_read_func,
+                          void *authz_read_baton,
                           apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *curr_mergeinfo, *prev_mergeinfo, *deleted, *changed;
+  apr_hash_index_t *hi;
+  svn_revnum_t start;
 
   /* First, figure out if old_path_rev is a merging revision or not. */
   SVN_ERR(svn_repos__get_path_mergeinfo(&curr_mergeinfo, repos->fs,
@@ -812,7 +832,28 @@ get_merged_path_revisions(apr_array_header_t *path_revisions,
       return SVN_NO_ERROR;
     }
 
-  /* ### TODO: search and find revisions to add to the PATH_REVISIONS list. */
+  /* Determine the source of the merge. */
+  for (hi = apr_hash_first(pool, changed); hi; hi = apr_hash_next(hi))
+    {
+      apr_array_header_t *rangelist;
+      const char *path;
+      int i;
+
+      apr_hash_this(hi, (void *) &path, NULL, (void *) &rangelist);
+
+      for (i = 0; i < rangelist->nelts; i++)
+        {
+          svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                                   svn_merge_range_t *);
+
+          /* Search and find revisions to add to the PATH_REVISIONS list. */
+          SVN_ERR(find_interesting_revisions(path_revisions, repos, path,
+                                             range->start, range->end,
+                                             TRUE, TRUE, authz_read_func,
+                                             authz_read_baton, pool));
+        }
+    }
+
 
   svn_pool_destroy(subpool);
 
@@ -827,6 +868,7 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
                            svn_revnum_t start,
                            svn_revnum_t end,
                            svn_boolean_t include_merged_revisions,
+                           svn_boolean_t mark_as_merged,
                            svn_repos_authz_func_t authz_read_func,
                            void *authz_read_baton,
                            apr_pool_t *pool)
@@ -870,11 +912,28 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
         }
 
       path_rev->path = apr_pstrdup(pool, path_rev->path);
+      path_rev->merged_revision = mark_as_merged;
       APR_ARRAY_PUSH(path_revisions, struct path_revision *) = path_rev;
 
       if (include_merged_revisions)
-        SVN_ERR(get_merged_path_revisions(path_revisions, repos, path_rev,
-                                          pool));
+        {
+          svn_boolean_t branching_rev;
+          svn_fs_root_t *merge_root;
+
+          SVN_ERR(get_merged_path_revisions(path_revisions, repos, path_rev,
+                                            authz_read_func, authz_read_baton,
+                                            pool));
+
+          /* Are looking at a branching revision?  If so, break. */
+          SVN_ERR(svn_fs_revision_root(&merge_root, repos->fs,
+                                       path_rev->revnum,
+                                       iter_pool));
+          SVN_ERR(svn_repos__is_branching_copy(&branching_rev, merge_root,
+                                               path_rev->path, NULL, pool));
+
+          if (branching_rev)
+            break;
+        }
 
       if (path_rev->revnum <= start)
         break;
@@ -890,6 +949,50 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
   return SVN_NO_ERROR;
 }
 
+
+static int
+compare_path_revision_revs(const void *a, const void *b)
+{
+  const struct path_revision *a_path_rev = *(const struct path_revision **)a;
+  const struct path_revision *b_path_rev = *(const struct path_revision **)b;
+
+  if (a_path_rev->revnum == b_path_rev->revnum)
+    return strcmp(a_path_rev->path, b_path_rev->path);
+
+  return a_path_rev->revnum < b_path_rev->revnum ? 1 : -1;
+}
+
+static svn_error_t *
+sort_and_scrub_revisions(apr_array_header_t **path_revisions,
+                         apr_pool_t *pool)
+{
+  int i;
+  struct path_revision previous_path_rev = { 0, NULL, FALSE };
+  apr_array_header_t *out_path_revisions = apr_array_make(pool, 0,
+                                            sizeof(struct path_revision *));
+
+  /* Sort the path_revision pairs by revnum in descending order, then path. */
+  qsort((*path_revisions)->elts, (*path_revisions)->nelts,
+        (*path_revisions)->elt_size, compare_path_revision_revs);
+
+  for (i = 0; i < (*path_revisions)->nelts; i++)
+    {
+      struct path_revision *path_rev = APR_ARRAY_IDX(*path_revisions, i,
+                                                     struct path_revision *);
+
+      if ( (previous_path_rev.revnum != path_rev->revnum)
+            || (previous_path_rev.merged_revision != path_rev->merged_revision)
+            || (strcmp(previous_path_rev.path, path_rev->path) != 0) )
+        {
+          previous_path_rev = *path_rev;
+          APR_ARRAY_PUSH(out_path_revisions, struct path_revision *) = path_rev;
+        }
+    }
+
+  *path_revisions = out_path_revisions;
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_repos_get_file_revs2(svn_repos_t *repos,
@@ -931,9 +1034,12 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 
   /* Get the revisions we are interested in. */
   SVN_ERR(find_interesting_revisions(path_revisions, repos, path, start, end,
-                                     include_merged_revisions,
+                                     include_merged_revisions, FALSE,
                                      authz_read_func, authz_read_baton,
                                      pool));
+
+  if (include_merged_revisions)
+    SVN_ERR(sort_and_scrub_revisions(&path_revisions, pool));
 
   /* We must have at least one revision to get. */
   assert(path_revisions->nelts > 0);
@@ -984,7 +1090,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 
       /* We have all we need, give to the handler. */
       SVN_ERR(handler(handler_baton, path_rev->path, path_rev->revnum,
-                      rev_props, FALSE,
+                      rev_props, path_rev->merged_revision,
                       contents_changed ? &delta_handler : NULL,
                       contents_changed ? &delta_baton : NULL,
                       prop_diffs, iter_pool));
