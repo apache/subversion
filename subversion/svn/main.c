@@ -1224,9 +1224,9 @@ main(int argc, const char *argv[])
                                  "from locale to UTF8")), pool, "svn: ");
         if (opt_state.relocate)
           {
-            err = svn_error_create(SVN_ERR_CL_OBSCURE_ARGS, NULL,
-                                   _("--relocate and --depth are obscure "
-                                     "combination of arguments"));
+            err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                   _("--relocate and --depth are mutually "
+                                     "exclusive"));
             return svn_cmdline_handle_exit_error(err, pool, "svn: ");
           }
         /* ### TODO(sd): Use svn_depth_from_word() here?  That could work
@@ -1303,9 +1303,9 @@ main(int argc, const char *argv[])
       case svn_cl__relocate_opt:
         if (opt_state.depth != svn_depth_unknown)
           {
-            err = svn_error_create(SVN_ERR_CL_OBSCURE_ARGS, NULL,
-                                   _("--depth and --relocate are obscure "
-                                     "combination of arguments"));
+            err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                   _("--depth and --relocate are mutually "
+                                     "exclusive"));
             return svn_cmdline_handle_exit_error(err, pool, "svn: ");
           }
         opt_state.relocate = TRUE;
