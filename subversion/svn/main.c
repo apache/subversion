@@ -1222,6 +1222,13 @@ main(int argc, const char *argv[])
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                _("Error converting depth "
                                  "from locale to UTF8")), pool, "svn: ");
+        if (opt_state.relocate)
+          {
+            err = svn_error_create(SVN_ERR_CL_OBSCURE_ARGS, NULL,
+                                   _("--relocate and --depth are obscure "
+                                     "combination of arguments"));
+            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+          }
         /* ### TODO(sd): Use svn_depth_from_word() here?  That could work
            ### as long as that function continues to return
            ### svn_depth_unknown for unrecognized words, but there's
@@ -1294,6 +1301,13 @@ main(int argc, const char *argv[])
         opt_state.ignore_externals = TRUE;
         break;
       case svn_cl__relocate_opt:
+        if (opt_state.depth != svn_depth_unknown)
+          {
+            err = svn_error_create(SVN_ERR_CL_OBSCURE_ARGS, NULL,
+                                   _("--depth and --relocate are obscure "
+                                     "combination of arguments"));
+            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+          }
         opt_state.relocate = TRUE;
         break;
       case 'x':
