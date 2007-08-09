@@ -305,7 +305,8 @@ output_unified_token_range(output_baton_t *btn,
 
     }
   if (past_last == source->tokens->nelts && source->ends_without_eol)
-    svn_stringbuf_appendcstr(btn->hunk, "\n\\ No newline at end of file\n");
+    svn_stringbuf_appendcstr
+      (btn->hunk, APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR);
 
   if (tokens == 0)
     btn->next_token = past_last;
