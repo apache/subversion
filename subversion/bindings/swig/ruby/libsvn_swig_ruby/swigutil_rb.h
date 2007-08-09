@@ -214,6 +214,13 @@ void svn_swig_rb_notify_func2(void *baton,
                               apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_error_t * svn_swig_rb_conflict_resolver_func(
+                            svn_wc_conflict_result_t *result,
+                            const svn_wc_conflict_description_t *description,
+                            void *baton,
+                            apr_pool_t *pool);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                                          const char *date,
                                          const char *author,
