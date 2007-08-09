@@ -957,7 +957,19 @@ compare_path_revision_revs(const void *a, const void *b)
   const struct path_revision *b_path_rev = *(const struct path_revision **)b;
 
   if (a_path_rev->revnum == b_path_rev->revnum)
-    return strcmp(a_path_rev->path, b_path_rev->path);
+    {
+      int strcmp_result = strcmp(a_path_rev->path, b_path_rev->path);
+
+      if (strcmp_result == 0)
+        {
+          if (a_path_rev->merged_revision == b_path_rev->merged_revision)
+            return 0;
+
+          return a_path_rev->merged_revision == TRUE ? 1 : -1;
+        }
+
+      return strcmp_result;
+    }
 
   return a_path_rev->revnum < b_path_rev->revnum ? 1 : -1;
 }
@@ -975,18 +987,22 @@ sort_and_scrub_revisions(apr_array_header_t **path_revisions,
   qsort((*path_revisions)->elts, (*path_revisions)->nelts,
         (*path_revisions)->elt_size, compare_path_revision_revs);
 
+  /* Filter out duplicat path/revision pairs.  Because we ensured that pairs
+     without the merged_revision flag set are ordered after pair with it set,
+     the following scrubbing process will prefer path/revision pairs from the
+     mainline of history, and not the result of a merge. */
   for (i = 0; i < (*path_revisions)->nelts; i++)
     {
       struct path_revision *path_rev = APR_ARRAY_IDX(*path_revisions, i,
                                                      struct path_revision *);
 
       if ( (previous_path_rev.revnum != path_rev->revnum)
-            || (previous_path_rev.merged_revision != path_rev->merged_revision)
             || (strcmp(previous_path_rev.path, path_rev->path) != 0) )
         {
-          previous_path_rev = *path_rev;
           APR_ARRAY_PUSH(out_path_revisions, struct path_revision *) = path_rev;
         }
+
+      previous_path_rev = *path_rev;
     }
 
   *path_revisions = out_path_revisions;
