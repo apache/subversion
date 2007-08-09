@@ -1115,6 +1115,10 @@ SVN_ERROR_START
              SVN_ERR_CL_CATEGORY_START + 9,
              "A log message was given where none was necessary")
 
+  SVN_ERRDEF(SVN_ERR_CL_OBSCURE_ARGS,
+             SVN_ERR_CL_CATEGORY_START + 10,
+             "The arguments are obscure and does not imply a valid usecase")
+
 SVN_ERROR_END
 
 
