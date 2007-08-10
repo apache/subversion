@@ -1076,7 +1076,7 @@ def analyze_source_revs(branch_target, source_url, **kwargs):
 
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
-    end_rev = get_latest_rev(branch_url)
+    end_rev = get_latest_rev(source_url)
 
     # Calculate the base of analysis. If there is a "1-XX" interval in the
     # merged_revs, we do not need to check those.
