@@ -1317,7 +1317,6 @@ def action_merge(branch_dir, branch_props):
     # is NOT inclusive so we have to subtract one from start.
     # We try to keep the number of merge operations as low as possible,
     # because it is faster and reduces the number of conflicts.
-    old_merge_props = branch_props
     old_block_props = get_block_props(branch_dir)
     merge_metadata = logs[opts["source-url"]].merge_metadata()
     for start,end in minimal_merge_intervals(revs, phantom_revs):
