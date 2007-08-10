@@ -2603,9 +2603,54 @@ def diff_in_renamed_folder(sbox):
 def diff_svnpatch(sbox):
   "test svnpatch format in various ways"
 
+  # a few helper functions
+  def append_newline(s): return s + "\n"
+
+  def extract_svnpatch(l):
+    re_svnpatch = re.compile("^=* SVNPATCH1 BLOCK =*$")
+    ll = []
+    i = len(l) - 1
+    while i > 0:
+      if re_svnpatch.match(l[i]):
+        break
+      i = i - 1
+    ll = l[i+1:]
+    return ll
+  
+  def svnpatch_encode(l):
+    return map(append_newline,
+               textwrap.wrap(
+                base64.b64encode(
+                 zlib.compress(
+                  "".join(l))),
+                76))
+
   sbox.build()
   wc_dir = sbox.wc_dir
   os.chdir(wc_dir)
+
+  # set a property and commit (we want to use propdel later)
+  beta_path = os.path.join('A', 'B', 'E', 'beta')
+  svntest.main.run_svn(None, 'propset', 'aprop',
+                       'a prop value', beta_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None, 'up')
+
+  # Ready.  Five subtests follow in which we only verify the svnpatch
+  # block, i.e. no check is performed against the unidiff part.  Editor
+  # commands are written in clear-text-lists which we encode
+  # (gzip-base64'ed) before comparing against the extracted encoded
+  # chunk from the output.
+  #
+  # 1: BASE -> WC w/ local mods                  (svn diff)
+  # 2: BASE(r2) -> REPOS(r3/HEAD)                (svn diff -rBASE:HEAD)
+  # 3: BASE(r2) w/ local mods -> REPOS(r3/HEAD)  (svn diff -rBASE:HEAD)
+  # 4: REPOS(r3/HEAD) -> BASE(r2) w/ local mods  (svn diff -rHEAD:BASE)
+  # 5: REPOS(r3/HEAD) -> WC w/ local mods        (svn diff -rBASE)
+
+  # subtest 1
+  # remove a property
+  svntest.main.run_svn(None, 'propdel', 'aprop', beta_path)
 
   # turn iota into a modified binary file
   svntest.main.file_append('iota', "\nSome more bytes.\n")
@@ -2619,90 +2664,268 @@ def diff_svnpatch(sbox):
                        'new val', alpha_path)  
 
   # add dir
-  os.mkdir(os.path.join('A', 'T'))
-  svntest.main.run_svn(None, 'add', os.path.join('A', 'T'))
+  a_t_path = os.path.join('A', 'T')
+  os.mkdir(a_t_path)
+  svntest.main.run_svn(None, 'add', a_t_path)
 
-  # copy file and modify
+  # set dir prop
+  a_d_g_path = os.path.join('A', 'D', 'G')
+  svntest.main.run_svn(None, 'propset', 'dirprop',
+                       'prop val', a_d_g_path)  
+
+  # copy file
   mu_path = os.path.join('A', 'mu')
   mumu_path = os.path.join('A', 'T', 'mumu')
   svntest.main.run_svn(None, 'cp', mu_path, mumu_path)  
-  svntest.main.file_append(mumu_path, "\nSome more bytes.\n")
 
-  svnpatch_output = \
-    '( open-root ( 2:d0 ) ) '\
-    '( open-dir ( 1:A 2:d0 2:d1 ) ) '\
-    '( open-dir ( 3:A/B 2:d1 2:d2 ) ) '\
-    '( open-dir ( 5:A/B/E 2:d2 2:d3 ) ) '\
-    '( open-file ( 11:A/B/E/alpha 2:d3 2:c4 ) ) '\
-    '( change-file-prop ( 2:c4 7:newprop ( 7:new val ) ) ) '\
-    '( close-file ( 2:c4 ( ) ) ) '\
-    '( close-dir ( 2:d3 ) ) '\
-    '( close-dir ( 2:d2 ) ) '\
-    '( add-dir ( 3:A/T 2:d1 2:d5 ( ) ) ) '\
-    '( add-file ( 8:A/T/mumu 2:d5 2:c6 ( 2:mu ) ) ) '\
-    '( close-file ( 2:c6 ( ) ) ) '\
-    '( close-dir ( 2:d5 ) ) '\
-    '( close-dir ( 2:d1 ) ) '\
-    '( open-file ( 4:iota 2:d0 2:c7 ) ) '\
-    '( change-file-prop ( 2:c7 13:svn:mime-type ( 24:application/octet-stream ) ) ) '\
-    '( apply-textdelta ( 2:c7 ( ) ) ) '\
-    '( textdelta-chunk ( 2:c7 4:SVN\001 ) ) '\
-    '( textdelta-chunk ( 2:c7 5:\000\000+\002, ) ) '\
-    '( textdelta-chunk ( 2:c7 2:\001\253 ) ) '\
-    '( textdelta-chunk ( 2:c7 44:+This is the file \'iota\'.\n'\
-    '\n'\
-    'Some more bytes.\n'\
-    ' ) ) '\
-    '( textdelta-end ( 2:c7 ) ) '\
-    '( close-file ( 2:c7 ( 32:1460795fd593ab45ddf5c1f7d7ef28f8 ) ) ) '\
-    '( close-dir ( 2:d0 ) ) '\
-    '( close-edit ( ) ) '\
+  # remove a file
+  lambda_path = os.path.join('A', 'B', 'lambda')
+  svntest.main.run_svn(None, 'rm', lambda_path)
 
-  expected_output = [
-    "Index: A/B/E/alpha\n",
-    "===================================================================\n",
-    "--- A/B/E/alpha\t(revision 1)\n",
-    "+++ A/B/E/alpha\t(working copy)\n",
-    "@@ -1 +1,3 @@\n",
-    " This is the file 'alpha'.\n",
-    "+\n",
-    "+Some more bytes.\n",
-    "\n",
-    "Property changes on: A/B/E/alpha\n",
-    "___________________________________________________________________\n",
-    "Name: newprop\n",
-    "   + new val\n",
-    "\n",
-    "Index: A/T/mumu\n",
-    "===================================================================\n",
-    "--- A/T/mumu\t(revision 0)\n",
-    "+++ A/T/mumu\t(working copy)\n",
-    "@@ -1 +1,3 @@\n",
-    " This is the file 'mu'.\n",
-    "+\n",
-    "+Some more bytes.\n",
-    "Index: iota\n",
-    "===================================================================\n",
-    "Cannot display: file marked as a binary type.\n",
-    "svn:mime-type = application/octet-stream\n",
-    "\n",
-    "Property changes on: iota\n",
-    "___________________________________________________________________\n",
-    "Name: svn:mime-type\n",
-    "   + application/octet-stream\n",
-    "\n",
-    "========================= SVNPATCH1 BLOCK =========================\n"
+  # remove a dir (and recursively its childs)
+  # this is to test we only remove the top directory
+  a_d_h_path = os.path.join('A', 'D', 'H')
+  svntest.main.run_svn(None, 'rm', a_d_h_path)
+
+  svnpatch = [
+    '( open-root ( 2:d0 ) ) ',
+    '( open-dir ( 1:A 2:d0 2:d1 ) ) ',
+    '( open-dir ( 3:A/B 2:d1 2:d2 ) ) ',
+    '( open-dir ( 5:A/B/E 2:d2 2:d3 ) ) ',
+    '( open-file ( 11:A/B/E/alpha 2:d3 2:c4 ) ) ',
+    '( change-file-prop ( 2:c4 7:newprop ( 7:new val ) ) ) ',
+    '( close-file ( 2:c4 ( ) ) ) ',
+    '( open-file ( 10:A/B/E/beta 2:d3 2:c5 ) ) ',
+    '( change-file-prop ( 2:c5 5:aprop ( ) ) ) ',
+    '( close-file ( 2:c5 ( ) ) ) ',
+    '( close-dir ( 2:d3 ) ) ',
+    '( delete-entry ( 10:A/B/lambda 2:d2 ) ) ',
+    '( close-dir ( 2:d2 ) ) ',
+    '( open-dir ( 3:A/D 2:d1 2:d6 ) ) ',
+    '( open-dir ( 5:A/D/G 2:d6 2:d7 ) ) ',
+    '( change-dir-prop ( 2:d7 7:dirprop ( 8:prop val ) ) ) ',
+    '( close-dir ( 2:d7 ) ) ',
+    '( delete-entry ( 5:A/D/H 2:d6 ) ) ',
+    '( close-dir ( 2:d6 ) ) ',
+    '( add-dir ( 3:A/T 2:d1 2:d8 ( ) ) ) ',
+    '( add-file ( 8:A/T/mumu 2:d8 2:c9 ( 2:mu ) ) ) ',
+    '( close-file ( 2:c9 ( ) ) ) ',
+    '( close-dir ( 2:d8 ) ) ',
+    '( close-dir ( 2:d1 ) ) ',
+    '( open-file ( 4:iota 2:d0 3:c10 ) ) ',
+    '( change-file-prop ( 3:c10 13:svn:mime-type ( 24:application/octet-stream ) ) ) ',
+    '( apply-textdelta ( 3:c10 ( ) ) ) ',
+    '( textdelta-chunk ( 3:c10 4:SVN\001 ) ) ',
+    '( textdelta-chunk ( 3:c10 5:\000\000+\002, ) ) ',
+    '( textdelta-chunk ( 3:c10 2:\001\253 ) ) ',
+    '( textdelta-chunk ( 3:c10 44:+This is the file \'iota\'.\n',
+    '\n',
+    'Some more bytes.\n',
+    ' ) ) ',
+    '( textdelta-end ( 3:c10 ) ) ',
+    '( close-file ( 3:c10 ( 32:1460795fd593ab45ddf5c1f7d7ef28f8 ) ) ) ',
+    '( close-dir ( 2:d0 ) ) ',
+    '( close-edit ( ) ) '
   ]
 
-  def append_newline(s): return s + "\n"
+  expected_svnpatch = svnpatch_encode(svnpatch)
 
-  expected_output += map(append_newline,
-                         textwrap.wrap(
-                          base64.b64encode(zlib.compress(svnpatch_output)),
-                          76))
+  diff_output, err =  svntest.actions.run_and_verify_svn(None, None, [],
+                                                         'diff', '--svnpatch')
+  svnpatch_output = extract_svnpatch(diff_output)
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'diff', '--svnpatch')
+  if (svnpatch_output != expected_svnpatch):
+    raise svntest.Failure
+
+  # subtest 2
+  # Now commit r3 and update to r2 to perform a base/repos diff.
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None, 'up', '-r2')
+
+  # As we receive depth-first file-ish order from the server, revamp
+  # this a bit as this was depth-first directory-ish.  In other words,
+  # the two delete-entry commands directly follow open-dir's, rather
+  # than right prior to close-dir's.
+  svnpatch_output_base_head = svnpatch[:3]
+  svnpatch_output_base_head.append(svnpatch[11])
+  svnpatch_output_base_head += svnpatch[3:11] + svnpatch[12:14]
+  svnpatch_output_base_head.append(svnpatch[17])
+  svnpatch_output_base_head += svnpatch[14:17] + svnpatch[18:]
+
+  # No copy-path is received from the server.
+  svnpatch_output_base_head[20] =\
+    svnpatch_output_base_head[20].replace('2:mu ','')
+
+  expected_svnpatch_base_head = svnpatch_encode(svnpatch_output_base_head)
+
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff', '--svnpatch',
+                                                        '-r', 'BASE:HEAD')
+
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  if (svnpatch_output != expected_svnpatch_base_head):
+    raise svntest.Failure
+
+  # subtest 3
+  # now do some local mods and diff -rBASE:HEAD once more
+  newfile_path = os.path.join('A', 'B', 'newfile')
+  gamma_path = os.path.join('A', 'D', 'gamma')
+  newdir_path = os.path.join('A', 'D', 'newdir')
+  foo_path = os.path.join('A', 'D', 'newdir', 'foo')
+  rho_path = os.path.join('A', 'D', 'G', 'rho')
+
+  svntest.main.file_append(newfile_path, "This is newfile.\n")
+  svntest.main.run_svn(None, 'add', newfile_path)
+  svntest.main.run_svn(None, 'rm', gamma_path)
+  svntest.main.run_svn(None, 'mkdir', newdir_path)
+  svntest.main.file_append(foo_path, "This is foo.\n")
+  svntest.main.run_svn(None, 'add', foo_path)
+  svntest.main.run_svn(None, 'ps', 'rhoprop', 'rhoprop val', rho_path)
+
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff', '--svnpatch',
+                                                        '-r', 'BASE:HEAD')
+
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  if (svnpatch_output != expected_svnpatch_base_head):
+    raise svntest.Failure
+
+  # subtest r4
+  # conversely compare HEAD to BASE now
+
+  svnpatch_output_head_base = [
+    '( open-root ( 2:d0 ) ) ',
+    '( open-dir ( 1:A 2:d0 2:d1 ) ) ',
+    '( open-dir ( 3:A/B 2:d1 2:d2 ) ) ',
+    '( add-file ( 10:A/B/lambda 2:d2 2:c3 ( ) ) ) ',
+    '( close-file ( 2:c3 ( ) ) ) ',
+    '( open-dir ( 5:A/B/E 2:d2 2:d4 ) ) ',
+    '( open-file ( 11:A/B/E/alpha 2:d4 2:c5 ) ) ',
+    '( change-file-prop ( 2:c5 7:newprop ( 7:new val ) ) ) ',
+    '( close-file ( 2:c5 ( ) ) ) ',
+    '( open-file ( 10:A/B/E/beta 2:d4 2:c6 ) ) ',
+    '( change-file-prop ( 2:c6 5:aprop ( ) ) ) ',
+    '( close-file ( 2:c6 ( ) ) ) ',
+    '( close-dir ( 2:d4 ) ) ',
+    '( close-dir ( 2:d2 ) ) ',
+    '( open-dir ( 3:A/D 2:d1 2:d7 ) ) ',
+    '( add-dir ( 5:A/D/H 2:d7 2:d8 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/chi 2:d8 2:c9 ( ) ) ) ',
+    '( close-file ( 2:c9 ( ) ) ) ',
+    '( add-file ( 11:A/D/H/omega 2:d8 3:c10 ( ) ) ) ',
+    '( close-file ( 3:c10 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/psi 2:d8 3:c11 ( ) ) ) ',
+    '( close-file ( 3:c11 ( ) ) ) ',
+    '( close-dir ( 2:d8 ) ) ',
+    '( open-dir ( 5:A/D/G 2:d7 3:d12 ) ) ',
+    '( change-dir-prop ( 3:d12 7:dirprop ( 8:prop val ) ) ) ',
+    '( close-dir ( 3:d12 ) ) ',
+    '( close-dir ( 2:d7 ) ) ',
+    '( add-dir ( 3:A/T 2:d1 3:d13 ( ) ) ) ',
+    '( add-file ( 8:A/T/mumu 3:d13 3:c14 ( ) ) ) ',
+    '( delete-entry ( 8:A/T/mumu 3:d13 ) ) ',
+    '( close-dir ( 3:d13 ) ) ',
+    '( close-dir ( 2:d1 ) ) ',
+    '( open-file ( 4:iota 2:d0 3:c15 ) ) ',
+    '( change-file-prop ( 3:c15 13:svn:mime-type ( 24:application/octet-stream ) ) ) ',
+    '( apply-textdelta ( 3:c15 ( ) ) ) ',
+    '( textdelta-chunk ( 3:c15 4:SVN\001 ) ) ',
+    '( textdelta-chunk ( 3:c15 5:\000\000+\002, ) ) ',
+    '( textdelta-chunk ( 3:c15 2:\001\253 ) ) ',
+    '( textdelta-chunk ( 3:c15 44:+This is the file \'iota\'.\n',
+    '\n',
+    'Some more bytes.\n',
+    ' ) ) ',
+    '( textdelta-end ( 3:c15 ) ) ',
+    '( close-file ( 3:c15 ( 32:1460795fd593ab45ddf5c1f7d7ef28f8 ) ) ) ',
+    '( close-dir ( 2:d0 ) ) ',
+    '( close-edit ( ) ) '
+  ]
+
+  expected_svnpatch_head_base = svnpatch_encode(svnpatch_output_head_base)
+
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff', '--svnpatch',
+                                                        '-r', 'HEAD:BASE')
+
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  if (svnpatch_output != expected_svnpatch_head_base):
+    raise svntest.Failure
+
+  # subtest 5
+  # last, compare HEAD to WC (with local mods)
+
+  svnpatch_output_head_wc = [
+    '( open-root ( 2:d0 ) ) ',
+    '( open-dir ( 1:A 2:d0 2:d1 ) ) ',
+    '( open-dir ( 3:A/B 2:d1 2:d2 ) ) ',
+    '( add-file ( 10:A/B/lambda 2:d2 2:c3 ( ) ) ) ',
+    '( close-file ( 2:c3 ( ) ) ) ',
+    '( open-dir ( 5:A/B/E 2:d2 2:d4 ) ) ',
+    '( open-file ( 11:A/B/E/alpha 2:d4 2:c5 ) ) ',
+    '( change-file-prop ( 2:c5 7:newprop ( 7:new val ) ) ) ',
+    '( close-file ( 2:c5 ( ) ) ) ',
+    '( open-file ( 10:A/B/E/beta 2:d4 2:c6 ) ) ',
+    '( change-file-prop ( 2:c6 5:aprop ( ) ) ) ',
+    '( close-file ( 2:c6 ( ) ) ) ',
+    '( close-dir ( 2:d4 ) ) ',
+    '( add-file ( 11:A/B/newfile 2:d2 2:c7 ( ) ) ) ',
+    '( close-file ( 2:c7 ( ) ) ) ',
+    '( close-dir ( 2:d2 ) ) ',
+    '( open-dir ( 3:A/D 2:d1 2:d8 ) ) ',
+    '( add-dir ( 5:A/D/H 2:d8 2:d9 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/chi 2:d9 3:c10 ( ) ) ) ',
+    '( close-file ( 3:c10 ( ) ) ) ',
+    '( add-file ( 11:A/D/H/omega 2:d9 3:c11 ( ) ) ) ',
+    '( close-file ( 3:c11 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/psi 2:d9 3:c12 ( ) ) ) ',
+    '( close-file ( 3:c12 ( ) ) ) ',
+    '( close-dir ( 2:d9 ) ) ',
+    '( open-dir ( 5:A/D/G 2:d8 3:d13 ) ) ',
+    '( change-dir-prop ( 3:d13 7:dirprop ( 8:prop val ) ) ) ',
+    '( open-file ( 9:A/D/G/rho 3:d13 3:c14 ) ) ',
+    '( change-file-prop ( 3:c14 7:rhoprop ( 11:rhoprop val ) ) ) ',
+    '( close-file ( 3:c14 ( ) ) ) ',
+    '( close-dir ( 3:d13 ) ) ',
+    '( delete-entry ( 9:A/D/gamma 2:d8 ) ) ',
+    '( add-dir ( 10:A/D/newdir 2:d8 3:d15 ( ) ) ) ',
+    '( add-file ( 14:A/D/newdir/foo 3:d15 3:c16 ( ) ) ) ',
+    '( close-file ( 3:c16 ( ) ) ) ',
+    '( close-dir ( 3:d15 ) ) ',
+    '( close-dir ( 2:d8 ) ) ',
+    '( add-dir ( 3:A/T 2:d1 3:d17 ( ) ) ) ',
+    '( add-file ( 8:A/T/mumu 3:d17 3:c18 ( ) ) ) ',
+    '( delete-entry ( 8:A/T/mumu 3:d17 ) ) ',
+    '( close-dir ( 3:d17 ) ) ',
+    '( close-dir ( 2:d1 ) ) ',
+    '( open-file ( 4:iota 2:d0 3:c19 ) ) ',
+    '( change-file-prop ( 3:c19 13:svn:mime-type ( 24:application/octet-stream ) ) ) ',
+    '( apply-textdelta ( 3:c19 ( ) ) ) ',
+    '( textdelta-chunk ( 3:c19 4:SVN\001 ) ) ',
+    '( textdelta-chunk ( 3:c19 5:\000\000+\002, ) ) ',
+    '( textdelta-chunk ( 3:c19 2:\001\253 ) ) ',
+    '( textdelta-chunk ( 3:c19 44:+This is the file \'iota\'.\n',
+    '\n',
+    'Some more bytes.\n',
+    ' ) ) ',
+    '( textdelta-end ( 3:c19 ) ) ',
+    '( close-file ( 3:c19 ( 32:1460795fd593ab45ddf5c1f7d7ef28f8 ) ) ) ',
+    '( close-dir ( 2:d0 ) ) ',
+    '( close-edit ( ) ) '
+  ]
+
+  expected_svnpatch_head_wc = svnpatch_encode(svnpatch_output_head_wc)
+
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff', '--svnpatch',
+                                                        '-r', 'HEAD')
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  if (svnpatch_output != expected_svnpatch_head_wc):
+    raise svntest.Failure
 
 ########################################################################
 #Run the tests
