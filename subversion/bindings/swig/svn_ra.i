@@ -36,6 +36,12 @@
 %ignore svn_ra_local_init;
 %ignore svn_ra_dav_init;
 %ignore svn_ra_serf_init;
+#ifdef SWIGMZSCHEME
+/* Not presently supported */
+%ignore svn_ra_get_file_revs;
+%ignore svn_ra_lock;
+%ignore svn_ra_unlock;
+#endif
 
 %apply Pointer NONNULL { svn_ra_callbacks2_t *callbacks };
 
@@ -71,7 +77,11 @@
 }
 /* FIXME: svn_ra_callbacks_t ? */
 #endif
-
+#ifdef SWIGMZSCHEME
+%typemap(in) (const svn_ra_callbacks2_t *callbacks, void *callback_baton) {
+  svn_swig_mzscm_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
+}
+#endif
 #ifdef SWIGPYTHON
 %callback_typemap(const svn_ra_reporter2_t *reporter, void *report_baton,
                   (svn_ra_reporter2_t *)&swig_py_ra_reporter2,
@@ -85,6 +95,13 @@
                   ,
                   svn_swig_rb_ra_reporter3,,,)
 #endif
+#ifdef SWIGMZSCM
+%callback_typemap(const svn_ra_reporter3_t *reporter, void *report_baton,
+                  ,
+                  ,
+                  svn_swig_mzscm_ra_reporter3,,,)
+#endif
+
 
 #ifndef SWIGPERL
 /* Questionable */

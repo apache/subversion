@@ -57,6 +57,7 @@
 #ifdef SWIGMZSCHEME
 %{
 #include "mzscheme.h"
+#define swig_malloc(size, FUNC_NAME) SWIG_MzScheme_Malloc(size, FUNC_NAME)
 %}
 #endif
 
@@ -204,6 +205,11 @@ static VALUE *_global_vresult_address = &vresult;
 %}
 #endif
 
+#ifdef SWIGMZSCHEME
+%{
+static apr_pool_t *_global_pool = NULL;
+%}
+#endif
 
 /* Now, include the main Subversion typemap library. */
 %include svn_types.swg

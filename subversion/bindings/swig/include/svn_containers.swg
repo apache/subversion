@@ -344,7 +344,6 @@
 }
 #endif
 
-<<<<<<< .working
 
 #ifdef SWIGMZSCHEME
 %typemap(in) apr_hash_t *config
@@ -361,7 +360,6 @@
 #endif
 
 
-=======
 #ifdef SWIGPYTHON
 %typemap(in) apr_hash_t *path_revs
 {
@@ -369,7 +367,6 @@
 }
 #endif
 
->>>>>>> .merge-right.r25925
 /* =======================================================================
    %typemap(argout) apr_array_header_t **
 */
@@ -390,7 +387,6 @@
 };
 #endif
 
-<<<<<<< .working
 #ifdef SWIGMZSCHEME
 %typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
  SWIG_fail
@@ -404,14 +400,14 @@
 };
 #endif
 
-=======
+
 #ifdef SWIGPYTHON
 %typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
   %append_output(svn_swig_py_proparray_to_dict(*$1));
 }
 #endif
 
->>>>>>> .merge-right.r25925
+
 /* -----------------------------------------------------------------------
    Output of apr_array_header_t * <const char *>
 */

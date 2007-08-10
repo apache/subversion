@@ -366,8 +366,10 @@ _svn_client_commit4(svn_commit_info_t **commit_info_p,
 #endif
 
 /* Ugliness because the constant is typedefed and SWIG ignores it
-   as a result. */
+   as a result. Does not get ignored by mzscheme */
+#ifndef SWIGMZSCHEME
 %constant apr_size_t SWIG_SVN_INFO_SIZE_UNKNOWN = -1;
+#endif
 
 #ifdef SWIGPYTHON
 

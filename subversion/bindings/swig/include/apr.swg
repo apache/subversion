@@ -60,7 +60,7 @@
  * MZScheme long long stuff
  */
 #ifdef SWIGMZSCHEME
-%typemap(in,numinputs=0) unsigned long long *OUTPUT (apr_int64_t temp) {
+%typemap(in,numinputs=0) unsigned long long *OUTPUT (apr_uint64_t temp) {
  "$1 = &temp;";
 %typemap(argout) unsigned long long *OUTPUT {
 	%append_output(SWIG_convert_unsigned_long(temp));
@@ -79,9 +79,8 @@
 
 /* Integers for which sizeof(type) <= sizeof(long) */
 %apply long { apr_int16_t, apr_int32_t, apr_ssize_t }
-%apply unsigned long { apr_byte_t, apr_uint16_t, apr_uint32_t, apr_size_t }
-%apply unsigned long *OUTPUT { apr_uint32_t *, apr_size_t * }
-
+%apply unsigned long { apr_byte_t, apr_uint16_t, apr_uint32_t , apr_size_t }
+%apply unsigned long *OUTPUT {  apr_size_t * , apr_unit32_t *}
 /* If sizeof(apr_off_t) > sizeof(apr_int64_t), apr_off_t will get truncated
  * to a 64-bit integer */
 %apply long long { apr_off_t, apr_int64_t }

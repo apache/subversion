@@ -701,15 +701,18 @@ copy-swig-mzscm: autogen-swig-mzscm $(SWIG_MZSCM_DIR)/libsvn
 	true
 
 swig-mzscm: autogen-swig-mzscm copy-swig-mzscm
+	cd $(SWIG_MZSCM_DIR);\
+	$(MAKE) shared-magic
 
 clean-swig-mzscm:
 	rm -rf $(SWIG_MZSCM_DIR)/libsvn
-
+	cd $(SWIG_MZSCM_DIR); \
+	$(MAKE) clean
 #Note: uses python for setting up test enviroment
 check-swig-mzscm: swig-mzscm svnserve
 	cd $(SWIG_MZSCM_DIR);\
 	$(PYTHON) $(SWIG_PY_SRC_DIR)/tests/setup_path.py; \
-	$(MZSCHEME) $(SWIG_MZSCM_SRC_DIR)/tests/run_tests.scm
+	$(MZSCHEME) -r  $(SWIG_MZSCM_SRC_DIR)/tests/run_tests.scm
 #Note: uses python for setting up test enviroment
 #Note: we copy all of the .scm's into one gigantic .scm since stalin wants everything as one file
 check-stalin-bindings: stalin-bindings svnserve

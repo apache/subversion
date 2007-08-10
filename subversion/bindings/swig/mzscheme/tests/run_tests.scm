@@ -1,5 +1,6 @@
 (require (planet "test.ss" ("schematics" "schemeunit.plt" 2 )))
 (require (planet "text-ui.ss" ("schematics" "schemeunit.plt" 2)))
+(require "../libsvn_swig_mzscheme/svn.scm")
 (define subversion-tests
 	(test-suite
          "Tests for subversion bindings"
@@ -9,3 +10,4 @@
          )
 	))
 (test/text-ui subversion-tests)
+(exit)
