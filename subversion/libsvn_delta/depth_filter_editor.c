@@ -397,8 +397,11 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
   struct edit_baton *eb;
 
   /* Easy out: if the caller wants infinite depth, there's nothing to
-     filter, so just return the editor we were supposed to wrap. */
-  if (requested_depth == svn_depth_infinity)
+     filter, so just return the editor we were supposed to wrap.  And
+     if they've asked for an unknown depth, we can't possibly know
+     what that means, so why bother?  */
+  if ((requested_depth == svn_depth_unknown)
+      || (requested_depth == svn_depth_infinity))
     {
       *editor = wrapped_editor;
       *edit_baton = wrapped_edit_baton;
