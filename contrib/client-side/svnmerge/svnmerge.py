@@ -770,7 +770,6 @@ def get_svninfo(target):
     """Extract the subversion information for a target (through 'svn info').
     This function uses an internal cache to let clients query information
     many times."""
-    global _cache_svninfo
     if _cache_svninfo.has_key(target):
         return _cache_svninfo[target]
     info = {}
@@ -790,13 +789,16 @@ def target_to_url(target):
         return info["URL"]
     return target
 
+_cache_reporoot = {}
 def get_repo_root(target):
     """Compute the root repos URL given a working-copy path, or a URL."""
     # Try using "svn info WCDIR". This works only on SVN clients >= 1.3
     if not is_url(target):
         try:
             info = get_svninfo(target)
-            return info["Repository Root"]
+            root = info["Repository Root"]
+            _cache_reporoot[root] = None
+            return root
         except KeyError:
             pass
         url = target_to_url(target)
@@ -804,10 +806,21 @@ def get_repo_root(target):
     else:
         url = target
 
+    # Go through the cache of the repository roots. This avoids extra
+    # server round-trips if we are asking the root of different URLs
+    # in the same repository (the cache in get_svninfo() cannot detect
+    # that of course and would issue a remote command).
+    assert is_url(url)
+    for r in _cache_reporoot:
+        if url.startswith(r):
+            return r
+
     # Try using "svn info URL". This works only on SVN clients >= 1.2
     try:
         info = get_svninfo(url)
-        return info["Repository Root"]
+        root = info["Repository Root"]
+        _cache_reporoot[root] = None
+        return root
     except LaunchError:
         pass
 
@@ -819,6 +832,7 @@ def get_repo_root(target):
         try:
             launchsvn('proplist "%s"' % temp)
         except LaunchError:
+            _cache_reporoot[url] = None
             return url
         url = temp
 
