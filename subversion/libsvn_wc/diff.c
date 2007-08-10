@@ -803,8 +803,17 @@ directory_elements_diff(struct dir_baton *dir_baton)
                    dir_baton->edit_baton->callback_baton));
 
           if (eb->svnpatch_stream)
-            APR_ARRAY_PUSH(eb->diff_targets, const char *)
-              = apr_pstrdup(eb->pool, dir_baton->path);
+            {
+              const svn_wc_entry_t *this_entry;
+              SVN_ERR(svn_wc_entry(&this_entry, dir_baton->path,
+                                   adm_access, TRUE, dir_baton->pool));
+
+              /* If scheduled for addition, this dir has already
+               * been pushed to our array, see dir_diff. */
+              if (this_entry->schedule != svn_wc_schedule_add)
+                APR_ARRAY_PUSH(eb->diff_targets, const char *)
+                  = apr_pstrdup(eb->pool, dir_baton->path);
+            }
         }
     }
 
@@ -895,6 +904,46 @@ directory_elements_diff(struct dir_baton *dir_baton)
 
   return SVN_NO_ERROR;
 }
+
+/* Drive @a editor against @a path's content modifications. */
+static svn_error_t *
+transmit_svndiff(const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const svn_delta_editor_t *editor,
+                 void *file_baton,
+                 apr_pool_t *pool)
+{
+  struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;
+  svn_txdelta_window_handler_t handler;
+  svn_txdelta_stream_t *txdelta_stream;
+  const char *empty_file;
+  apr_file_t *empty_f;
+  svn_stream_t *base_stream;
+  svn_stream_t *local_stream;
+  void *wh_baton;
+
+  /* Initialize window_handler/baton to produce svndiff from txdelta
+   * windows. */
+  SVN_ERR(eb->diff_editor->apply_textdelta
+          (fb, NULL, pool, &handler, &wh_baton));
+
+  /* Prepare an empty stream, TODO: try svn_stream_empty() instead. */
+  SVN_ERR(get_empty_file(eb, &empty_file));
+  SVN_ERR(svn_io_file_open(&empty_f, empty_file,
+                           APR_READ, APR_OS_DEFAULT, pool));
+  base_stream = svn_stream_from_aprfile(empty_f, pool);
+
+  SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
+                                   adm_access, SVN_WC_TRANSLATE_TO_NF,
+                                   pool));
+
+  svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
+  SVN_ERR(svn_txdelta_send_txstream(txdelta_stream, handler,
+                                    wh_baton, pool));
+  return SVN_NO_ERROR;
+}
+
 
 /* Report an existing file in the working copy (either in BASE or WORKING)
  * as having been added.
@@ -990,7 +1039,7 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
                 (path, adm_access, entry, eb->diff_editor,
                  fb, NULL, pool));
 
-      if (svn_mime_type_is_binary(mimetype))
+      if (mimetype && svn_mime_type_is_binary(mimetype))
         {
           SVN_ERR(svn_wc_transmit_text_deltas2
                   (NULL,
@@ -1113,7 +1162,8 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
                                                               NULL,
                                                               subpool);
 
-              SVN_ERR(report_wc_directory_as_added(subdir_baton, entry, subpool));
+              SVN_ERR(report_wc_directory_as_added(subdir_baton, entry,
+                                                   subpool));
             }
           break;
 
@@ -1669,10 +1719,20 @@ delete_entry(const char *path,
       break;
 
     case svn_node_dir:
-      b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE, NULL, pool);
-      /* A delete is required to change working-copy into requested
-         revision, so diff should show this as an add. */
-      SVN_ERR(report_wc_directory_as_added(b, entry, pool));
+      if (eb->reverse_order)
+        {
+          if (eb->svnpatch_stream)
+            SVN_ERR(eb->diff_editor->delete_entry
+                    (path, SVN_INVALID_REVNUM, pb, pool));
+        }
+      else
+        {
+          b = make_dir_baton(full_path, pb, pb->edit_baton,
+                             FALSE, NULL, pool);
+          /* A delete is required to change working-copy into requested
+             revision, so diff should show this as an add. */
+          SVN_ERR(report_wc_directory_as_added(b, entry, pool));
+        }
       break;
 
     default:
@@ -1927,6 +1987,11 @@ add_file(const char *path,
   b = make_file_baton(full_path, TRUE, pb, token, file_pool);
   *file_baton = b;
 
+  if (eb->svnpatch_stream)
+    SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                             "add-file", "ccc(?c)", path, pb->token,
+                             token, copyfrom_path));
+
   /* Add this filename to the parent directory's list of elements that
      have been compared. */
   apr_hash_set(pb->compared, apr_pstrdup(pb->pool, full_path),
@@ -2066,6 +2131,7 @@ close_file(void *file_baton,
   const svn_wc_entry_t *entry;
   const char *repos_mimetype;
   const char *empty_file;
+  svn_boolean_t binary_file;
 
   /* The BASE and repository properties of the file. */
   apr_hash_t *base_props;
@@ -2098,7 +2164,8 @@ close_file(void *file_baton,
   repos_props = apply_propchanges(base_props, b->propchanges);
 
   repos_mimetype = get_prop_mimetype(repos_props);
-
+  binary_file = repos_mimetype ?
+    svn_mime_type_is_binary(repos_mimetype) : FALSE;
 
   /* The repository version of the file is in the temp file we applied
      the BASE->repos delta to.  If we haven't seen any changes, it's
@@ -2118,24 +2185,21 @@ close_file(void *file_baton,
     {
       if (eb->reverse_order)
         {
-          void *fb;
-          int i;
-          apr_array_header_t *reg_props;
-
           /* svnpatch-related */
           if (eb->svnpatch_stream)
             {
-              SVN_ERR(eb->diff_editor->add_file(b->path, b->dir_baton, NULL,
-                                                SVN_INVALID_REVNUM, pool, &fb));
+              svn_boolean_t file_need_close = TRUE;
 
-              SVN_ERR(svn_categorize_props(b->propchanges, NULL, NULL, &reg_props, pool));
-              for (i = 0; i < reg_props->nelts; ++i)
-                {
-                  const svn_prop_t *p = &APR_ARRAY_IDX(reg_props, i, svn_prop_t);
-                  SVN_ERR(eb->diff_editor->change_file_prop(fb, p->name, p->value, pool));
-                }
+              /* If this new repos-incoming file hodls a binary
+               * mime-type, we want our svnpatch to convey the file's
+               * content. */
+              if (binary_file)
+                  SVN_ERR(transmit_svndiff(temp_file_path, adm_access,
+                                           eb->diff_editor, b, pool));
 
-              SVN_ERR(eb->diff_editor->close_file(fb, NULL, pool));
+              /* Last change to write a close-file command as a return
+               * statement follows. */
+              SVN_ERR(eb->diff_editor->close_file(b, binary_file ? text_checksum : NULL, pool));
             }
 
           /* Unidiff-related through libsvn_client. */
@@ -2213,9 +2277,18 @@ close_file(void *file_baton,
     {
       const char *original_mimetype = get_prop_mimetype(originalprops);
 
+      binary_file = binary_file ? TRUE :
+        (original_mimetype ? svn_mime_type_is_binary(original_mimetype)
+          : FALSE);
+
       if (b->propchanges->nelts > 0
           && ! eb->reverse_order)
         reverse_propchanges(originalprops, b->propchanges, b->pool);
+
+      if (eb->svnpatch_stream && binary_file)
+        SVN_ERR(transmit_svndiff
+                (/*eb->reverse_order ?*/ temp_file_path /*: localfile*/,
+                 adm_access, eb->diff_editor, b, pool));
 
       SVN_ERR(b->edit_baton->callbacks->file_changed
               (NULL, NULL, NULL,
@@ -2232,7 +2305,7 @@ close_file(void *file_baton,
 
   if (eb->svnpatch_stream)
     SVN_ERR(eb->diff_editor->close_file
-            (b, text_checksum, b->pool));
+            (b, binary_file ? text_checksum : NULL, b->pool));
 
   return SVN_NO_ERROR;
 }
