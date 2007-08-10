@@ -202,6 +202,7 @@ class TestCase_SvnMerge(unittest.TestCase):
                 # Clear svnmerge's internal cache before running any
                 # commands.
                 svnmerge._cache_svninfo = {}
+                svnmerge._cache_reporoot = {}
 
                 ret = svnmerge.main(args)
             except SystemExit, e:
