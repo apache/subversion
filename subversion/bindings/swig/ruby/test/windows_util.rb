@@ -85,6 +85,7 @@ module SvnTestUtil
                            ["DisplayName", SERVICE_NAME],
                            ["type", "own"]])
         end
+        service_control('stop') rescue nil
         service_control('start')
       end
 

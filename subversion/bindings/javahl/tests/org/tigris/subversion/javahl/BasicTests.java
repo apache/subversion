@@ -2089,7 +2089,7 @@ public class BasicTests extends SVNTests
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A/mu").getPath();
         final String mergeSrc = "/A/mu";
-        acquireMergeInfoAndAssertEquals("1-2", targetPath, mergeSrc);
+        acquireMergeInfoAndAssertEquals("0-2", targetPath, mergeSrc);
 
         // Commit the result of the merge in preparation for testing
         // retrieval of merge info from the repository.
@@ -2100,7 +2100,7 @@ public class BasicTests extends SVNTests
 
         // Test retrieval of inherited merge info from the repository.
         targetPath = thisTest.getUrl() + "/branches/A/mu";
-        acquireMergeInfoAndAssertEquals("1-2", targetPath, mergeSrc);
+        acquireMergeInfoAndAssertEquals("0-2", targetPath, mergeSrc);
     }
 
     /**
@@ -2189,7 +2189,7 @@ public class BasicTests extends SVNTests
         client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD,
                      branchPath, false, true, false, true);
         assertEquals("Notification of beginning of merge reported incorrect " +
-                     "start revision", new Revision.Number(3), actualRange[0]);
+                     "start revision", new Revision.Number(2), actualRange[0]);
         assertEquals("Notification of beginning of merge reported incorrect " +
                      "end revision", new Revision.Number(4), actualRange[1]);
 
@@ -2197,7 +2197,7 @@ public class BasicTests extends SVNTests
         client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD,
                      branchPath, false, true, false, false);
         assertEquals("Notification of beginning of merge reported incorrect " +
-                     "start revision", new Revision.Number(3), actualRange[0]);
+                     "start revision", new Revision.Number(2), actualRange[0]);
         assertEquals("Notification of beginning of merge reported incorrect " +
                      "end revision", new Revision.Number(4), actualRange[1]);
 

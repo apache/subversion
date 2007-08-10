@@ -1462,10 +1462,15 @@ handle_statii(struct edit_baton *eb,
               || depth == svn_depth_infinity))
         {
           svn_wc_adm_access_t *dir_access;
+          svn_depth_t depth_minus_one = depth;
+
           SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,
                                       key, subpool));
+          
+          if (depth_minus_one == svn_depth_immediates)
+            depth_minus_one = svn_depth_empty;
           SVN_ERR(get_dir_status(eb, dir_entry, dir_access, NULL,
-                                 ignores, depth, eb->get_all, 
+                                 ignores, depth_minus_one, eb->get_all, 
                                  eb->no_ignore, TRUE, status_func, 
                                  status_baton, eb->cancel_func, 
                                  eb->cancel_baton, subpool));

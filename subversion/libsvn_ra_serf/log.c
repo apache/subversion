@@ -342,6 +342,7 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
       case CREATOR:
       case DATE:
       case COMMENT:
+      case NBR_CHILDREN:
       case ADDED_PATH:
       case REPLACED_PATH:
       case DELETED_PATH:
@@ -476,7 +477,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                       vcc_url, peg_rev, "0",
-                                      checked_in_props, pool));
+                                      href_props, pool));
 
   baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
                                            "DAV:", "href");

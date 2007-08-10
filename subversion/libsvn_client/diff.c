@@ -1095,13 +1095,26 @@ unsupported_diff_error(svn_error_t *child_err)
 }
 
 
+/* For a given DEPTH, return the value that should be passed as the
+   depth parameter to svn_wc_adm_open() and friends. */
+static int adm_depth_from_depth(svn_depth_t depth)
+{
+  int adm_depth;
+
+  if (depth == svn_depth_immediates)
+    adm_depth = 1;
+  else if (depth == svn_depth_empty || depth == svn_depth_files)
+    adm_depth = 0;
+  else
+    adm_depth = -1;
+  return adm_depth;
+}
+
+
 /* Perform a diff between two working-copy paths.  
    
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
-
-   ### TODO(sd): I think RECURSE instead of DEPTH is okay here, because
-   ### this is strictly within a wc anyway.
 
    All other options are the same as those passed to svn_client_diff4(). */
 static svn_error_t *
@@ -1110,7 +1123,7 @@ diff_wc_wc(const apr_array_header_t *options,
            const svn_opt_revision_t *revision1,
            const char *path2,
            const svn_opt_revision_t *revision2,
-           svn_boolean_t recurse,
+           svn_depth_t depth,
            svn_boolean_t ignore_ancestry,
            const svn_wc_diff_callbacks2_t *callbacks,
            struct diff_cmd_baton *callback_baton,
@@ -1119,6 +1132,7 @@ diff_wc_wc(const apr_array_header_t *options,
 {
   svn_wc_adm_access_t *adm_access, *target_access;
   const char *target;
+  int adm_depth = adm_depth_from_depth(depth);
 
   /* Assert that we have valid input. */
   assert(! svn_path_is_url(path1));
@@ -1136,7 +1150,7 @@ diff_wc_wc(const apr_array_header_t *options,
           "and its working files are supported at this time")));
 
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &target_access, &target,
-                                 path1, FALSE, recurse ? -1 : 0,
+                                 path1, FALSE, adm_depth,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
@@ -1146,7 +1160,7 @@ diff_wc_wc(const apr_array_header_t *options,
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR(svn_wc_diff4(adm_access, target, callbacks, callback_baton,
-                       recurse, ignore_ancestry,
+                       depth, ignore_ancestry,
                        callback_baton->svnpatch_file, pool));
   SVN_ERR(svn_wc_adm_close(adm_access));
   return SVN_NO_ERROR;
@@ -1260,6 +1274,7 @@ diff_repos_wc(const apr_array_header_t *options,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
+  int adm_depth = adm_depth_from_depth(depth);
 
   /* Assert that we have valid input. */
   assert(! svn_path_is_url(path2));
@@ -1268,8 +1283,7 @@ diff_repos_wc(const apr_array_header_t *options,
   SVN_ERR(convert_to_url(&url1, path1, pool));
 
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target,
-                                 path2, FALSE,
-                                 SVN_DEPTH_TO_RECURSE(depth) ? -1 : 0,
+                                 path2, FALSE, adm_depth,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   anchor = svn_wc_adm_access_path(adm_access);
@@ -1408,7 +1422,7 @@ do_diff(const struct diff_parameters *diff_param,
           SVN_ERR(diff_wc_wc(diff_param->options,
                              diff_param->path1, diff_param->revision1,
                              diff_param->path2, diff_param->revision2,
-                             SVN_DEPTH_TO_RECURSE(diff_param->depth),
+                             diff_param->depth,
                              diff_param->ignore_ancestry,
                              callbacks, callback_baton, ctx, pool));
         }

@@ -3408,15 +3408,13 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * files are to be compared.
  *
  * If @a depth is @c svn_depth_empty, just diff exactly @a target or
- * @a anchor if @a target is empty.  If @c svn_depth_files or
- * @c svn_depth_immediates, then do the same and for top-level file
- * entries as well (if any).  If @c svn_depth_infinity, then diff
- * fully recursively.  In the latter case, @a anchor should be part of
- * an access baton set for the @a target hierarchy. 
+ * @a anchor if @a target is empty.  If @c svn_depth_files then do the same
+ * and for top-level file entries as well (if any).  If
+ * @c svn_depth_immediates, do the same as @c svn_depth_files but also diff
+ * top-level subdirectories at @c svn_depth_empty.  If @c svn_depth_infinity,
+ * then diff fully recursively.  In the latter case, @a anchor should be part
+ * of an access baton set for the @a target hierarchy. 
  * ### TODO(sd): I'm not sure what the last part of that last sentence means.
- *
- * ### TODO(sd): Also, is same behavior for svn_depth_files and
- * ### svn_depth_immediates the correct thing here?
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -3527,9 +3525,13 @@ svn_error_t *svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
  *
- * @a recurse determines whether to descend into subdirectories when @a target
- * is a directory.  If @a recurse is @c TRUE then @a anchor should be part of 
- * an access baton set for the @a target hierarchy.
+ * If @a depth is @c svn_depth_empty, just diff exactly @a target or
+ * @a anchor if @a target is empty.  If @c svn_depth_files then do the same
+ * and for top-level file entries as well (if any).  If
+ * @c svn_depth_immediates, do the same as @c svn_depth_files but also diff
+ * top-level subdirectories at @c svn_depth_empty.  If @c svn_depth_infinity,
+ * then diff fully recursively.  In the latter case, @a anchor should be part
+ * of an access baton set for the @a target hierarchy. 
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -3548,16 +3550,17 @@ svn_error_t *svn_wc_diff4(svn_wc_adm_access_t *anchor,
                           const char *target,
                           const svn_wc_diff_callbacks2_t *callbacks,
                           void *callback_baton,
-                          svn_boolean_t recurse,
+                          svn_depth_t depth,
                           svn_boolean_t ignore_ancestry,
                           apr_file_t *svnpatch_file,
                           apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_diff4(), but with @a svnpatch_format always set
- * to @c FALSE.
+ * Similar to svn_wc_diff4(), but with @a depth set to
+ * @c svn_depth_infinity if @a recurse is true, or @a svn_depth_files
+ * if @a recurse is false.
  *
- * @since New in 1.2.
+ * @a svnpatch_format is always set to @c FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
