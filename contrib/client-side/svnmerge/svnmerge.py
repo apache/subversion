@@ -342,20 +342,10 @@ class RevisionLog:
         list of the revisions which changed properties directly on the
         specified URL. URL must be the URL for a directory in the repository.
         """
-        # Save the specified URL
         self.url = url
 
-        # TODO: this should be fixed to use the new SvnLogParser class.
-        # Look for revisions
-        revision_re = re.compile(r"^r(\d+)")
-
-        # Look for changes which contain merge tracking information
-        repos_pathid = target_to_pathid(url)
-        srcdir_change_re = re.compile(r"\s*M\s+%s\s+$"
-                                      % re.escape(repos_pathid))
-
         # Setup the log options (--quiet, so we don't show log messages)
-        log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
+        log_opts = '--xml --quiet -r%s:%s "%s"' % (begin, end, url)
         if find_propchanges:
             # The --verbose flag lets us grab merge tracking information
             # by looking at propchanges
@@ -364,13 +354,13 @@ class RevisionLog:
         # Read the log to look for revision numbers and merge-tracking info
         self.revs = []
         self.propchange_revs = []
-        for line in launchsvn("log %s" % log_opts):
-            m = revision_re.match(line)
-            if m:
-                rev = int(m.groups()[0])
-                self.revs.append(rev)
-            elif srcdir_change_re.match(line):
-                self.propchange_revs.append(rev)
+        repos_pathid = target_to_pathid(url)
+        for chg in SvnLogParser(launchsvn("log %s" % log_opts,
+                                          split_lines=False)):
+            self.revs.append(chg.revision())
+            for p in chg.paths():
+                if p.action() == 'M' and p.pathid() == repos_pathid:
+                    self.propchange_revs.append(chg.revision())
 
         # Save the range of the log
         self.begin = int(begin)
@@ -378,7 +368,7 @@ class RevisionLog:
             # If end is not provided, we do not know which is the latest
             # revision in the repository. So we set 'end' to the latest
             # known revision.
-            self.end = log.revs[-1]
+            self.end = self.revs[-1]
         else:
             self.end = int(end)
 
