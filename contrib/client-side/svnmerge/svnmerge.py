@@ -1323,12 +1323,13 @@ def action_merge(branch_dir, branch_props):
     # because it is faster and reduces the number of conflicts.
     old_block_props = get_block_props(branch_dir)
     merge_metadata = logs[opts["source-url"]].merge_metadata()
+    block_metadata = logs[opts["source-url"]].block_metadata()
     for start,end in minimal_merge_intervals(revs, phantom_revs):
         if not record_only:
-            # Clear merge/blocked properties to avoid spurious property
-            # conflicts
-            set_merge_props(branch_dir, {})
-            set_block_props(branch_dir, {})
+            # Preset merge/blocked properties to the source value at
+            # the start rev to avoid spurious property conflicts
+            set_merge_props(branch_dir, merge_metadata.get(start - 1))
+            set_block_props(branch_dir, block_metadata.get(start - 1))
             # Do the merge
             svn_command("merge --force -r %d:%d %s %s" % \
                         (start - 1, end, opts["source-url"], branch_dir))
