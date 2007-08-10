@@ -1551,22 +1551,29 @@ calculate_requested_ranges(apr_array_header_t **requested_rangelist,
                            svn_merge_range_t *unrefined_range,
                            const char *src_url, const svn_wc_entry_t *entry,
                            svn_wc_adm_access_t *adm_access,
+                           svn_ra_session_t *ra_session,
                            svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   apr_array_header_t *src_rangelist_for_tgt = NULL;
   apr_hash_t *added_mergeinfo, *deleted_mergeinfo,
     *start_mergeinfo, *end_mergeinfo;
-  svn_opt_revision_t revision;
-  revision.kind = svn_opt_revision_number;
+  svn_revnum_t min_rev, max_rev;
+  const char *repos_rel_path;
+
+  SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, src_url,
+                                            entry->repos, ra_session,
+                                            NULL, pool));
 
   /* Find any mergeinfo added in RANGE. */
-  /* ### svn_ra_get_mergeinfo() might improve efficiency. */
-  revision.value.number = MIN(unrefined_range->start, unrefined_range->end);
-  SVN_ERR(svn_client_get_mergeinfo(&start_mergeinfo, src_url, &revision,
-                                   ctx, pool));
-  revision.value.number = MAX(unrefined_range->start, unrefined_range->end);
-  SVN_ERR(svn_client_get_mergeinfo(&end_mergeinfo, src_url, &revision,
-                                   ctx, pool));
+  min_rev = MIN(unrefined_range->start, unrefined_range->end);
+  SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &start_mergeinfo,
+                                          repos_rel_path, min_rev,
+                                          svn_mergeinfo_inherited, pool));
+  max_rev = MAX(unrefined_range->start, unrefined_range->end);
+  SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &end_mergeinfo,
+                                          repos_rel_path, max_rev,
+                                          svn_mergeinfo_inherited, pool));
+
   SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
                              start_mergeinfo, end_mergeinfo, pool));
 
@@ -1574,8 +1581,8 @@ calculate_requested_ranges(apr_array_header_t **requested_rangelist,
     {
       const char *src_rel_path;
       SVN_ERR(svn_client__path_relative_to_root(&src_rel_path, entry->url,
-                                                entry->repos, NULL, adm_access,
-                                                pool));
+                                                entry->repos, ra_session,
+                                                adm_access, pool));
       src_rangelist_for_tgt = apr_hash_get(added_mergeinfo, src_rel_path,
                                            APR_HASH_KEY_STRING);
     }
@@ -2114,7 +2121,7 @@ do_merge(const char *initial_URL1,
       /* Determine which of the requested ranges to consider merging... */
       SVN_ERR(calculate_requested_ranges(&requested_rangelist, &range, 
                                          initial_URL1, entry, adm_access, 
-                                         ctx, pool));
+                                         ra_session, ctx, pool));
 
       /* ...and of those ranges, determine which ones actually still
          need merging. */
@@ -2305,7 +2312,6 @@ single_file_merge_get_file(const char **filename,
                            svn_ra_session_t *ra_session,
                            apr_hash_t **props,
                            svn_revnum_t rev,
-                           const char *url,
                            const char *wc_target,
                            apr_pool_t *pool)
 {
@@ -2492,7 +2498,7 @@ do_single_file_merge(const char *initial_URL1,
       /* Determine which of the requested ranges to consider merging... */
       SVN_ERR(calculate_requested_ranges(&requested_rangelist, &range, 
                                          initial_URL1, entry, adm_access, 
-                                         ctx, pool));
+                                         ra_session1, ctx, pool));
       /* ...and of those ranges, determine which ones actually still
          need merging. */
       SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path,
@@ -2529,11 +2535,9 @@ do_single_file_merge(const char *initial_URL1,
       /* While we currently don't allow it, in theory we could be
          fetching two fulltexts from two different repositories here. */
       SVN_ERR(single_file_merge_get_file(&tmpfile1, ra_session1, &props1, 
-                                         r->start, initial_URL1, 
-                                         target_wcpath, subpool));
+                                         r->start, target_wcpath, subpool));
       SVN_ERR(single_file_merge_get_file(&tmpfile2, ra_session2, &props2, 
-                                         r->end, initial_URL2,
-                                         target_wcpath, subpool));
+                                         r->end, target_wcpath, subpool));
 
       /* Discover any svn:mime-type values in the proplists */
       pval = apr_hash_get(props1, SVN_PROP_MIME_TYPE,
@@ -3086,6 +3090,15 @@ svn_client_merge_peg3(const char *source,
   svn_opt_revision_t *rev1, *rev2;
   svn_config_t *cfg;
 
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
+                                 ! dry_run,
+                                 SVN_DEPTH_TO_RECURSE(depth) ? -1 : 0,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool));
+
+  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
+                                 pool));
+
   if (source)
     {
       /* If source is a path, we need to get the underlying URL from
@@ -3124,30 +3137,28 @@ svn_client_merge_peg3(const char *source,
                                  svn_path_local_style(target_wcpath, pool));
 
       /* Prepend the repository root path to the copy source path. */
-
-      /* ### TODO: Try something cheaper than creating a RA session. */
-      SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                               &rev,
-                                               &target_url,
-                                               target_wcpath,
-                                               &target_revision,
-                                               &target_revision,
-                                               ctx,
-                                               pool));
-      SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
-      URL = apr_pstrcat(pool, repos_root,
-                        APR_ARRAY_IDX(suggested_sources, 0, char *),
-                        NULL);
+      if (entry->repos)
+        {
+          URL = apr_pstrcat(pool, entry->repos,
+                            APR_ARRAY_IDX(suggested_sources, 0, char *),
+                            NULL);
+        }
+      else
+        {
+          SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                                   &rev,
+                                                   &target_url,
+                                                   target_wcpath,
+                                                   &target_revision,
+                                                   &target_revision,
+                                                   ctx,
+                                                   pool));
+          SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
+          URL = apr_pstrcat(pool, repos_root,
+                            APR_ARRAY_IDX(suggested_sources, 0, char *),
+                            NULL);
+        }
     }
-
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
-                                 ! dry_run,
-                                 SVN_DEPTH_TO_RECURSE(depth) ? -1 : 0,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
-
-  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
-                                 pool));
 
   if (depth == svn_depth_unknown)
     depth = entry->depth;

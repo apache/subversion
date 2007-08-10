@@ -2539,7 +2539,7 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_accept_t accept_,
+                          svn_accept_t accept_which,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           apr_pool_t *pool)
@@ -2551,7 +2551,7 @@ resolve_conflict_on_entry(const char *path,
 
   /* Handle automatic conflict resolution before the temporary files are
    * deleted, if necessary. */
-  switch (accept_)
+  switch (accept_which)
     {
       case svn_accept_left:
         auto_resolve_src = entry->conflict_old;
@@ -2562,7 +2562,7 @@ resolve_conflict_on_entry(const char *path,
       case svn_accept_right:
         auto_resolve_src = entry->conflict_new;
         break;
-      case svn_accept_default:
+      case svn_accept_none:
         auto_resolve_src = NULL;
         break;
       case svn_accept_invalid:
@@ -2733,7 +2733,7 @@ svn_wc_resolved_conflict2(const char *path,
                           apr_pool_t *pool)
 {
   return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
-                                   resolve_props, recurse, svn_accept_default,
+                                   resolve_props, recurse, svn_accept_none,
                                    notify_func, notify_baton, cancel_func,
                                    cancel_baton, pool);
 }

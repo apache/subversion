@@ -962,6 +962,35 @@ svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,
                                   void **edit_baton,
                                   apr_pool_t *pool);
 
+/** Set @a *editor and @a *edit_baton to an depth-based filtering
+ * editor that wraps @a wrapped_editor and @a wrapped_baton.
+ *
+ * The @a editor will track the depth of this drive against the @a
+ * requested_depth, taking into account whether not the edit drive is
+ * making use of a target (via @a has_target), and forward editor
+ * calls which operate "within" the request depth range through to @a
+ * wrapped_editor.
+ *
+ * @a requested_depth must be one of the following depth values: 
+ * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
+ * @c svn_depth_immediates, or @c svn_depth_unknown.
+ *
+ * If filtering is deemed unncessary (or if @a requested_depth is @c
+ * svn_depth_unknown), @a *editor and @a *edit_baton will be set to @a
+ * wrapped_editor and @a wrapped_baton, respectively; otherwise,
+ * they'll be set to new objects allocated from @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              const svn_delta_editor_t *wrapped_editor,
+                              void *wrapped_edit_baton,
+                              svn_depth_t requested_depth,
+                              svn_boolean_t has_target,
+                              apr_pool_t *pool);
+
 /** @} */
 
 

@@ -26,6 +26,7 @@
 #include "svn_diff.h"
 #include "svn_types.h"
 
+#define SVN_DIFF__UNIFIED_CONTEXT_SIZE 3
 
 typedef struct svn_diff__node_t svn_diff__node_t;
 typedef struct svn_diff__tree_t svn_diff__tree_t;

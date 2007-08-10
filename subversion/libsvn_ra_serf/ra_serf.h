@@ -35,6 +35,11 @@
 /** Use this to silence compiler warnings about unused parameters. */
 #define UNUSED_CTX(x) ((void)(x))
 
+/** Our User-Agent string. */
+#define USER_AGENT "SVN/" SVN_VERSION " serf/" \
+                   APR_STRINGIFY(SERF_MAJOR_VERSION) "." \
+                   APR_STRINGIFY(SERF_MINOR_VERSION) "." \
+                   APR_STRINGIFY(SERF_PATCH_VERSION)
 
 
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
@@ -212,6 +217,12 @@ static const svn_ra_serf__dav_props_t uuid_props[] =
 static const svn_ra_serf__dav_props_t repos_root_props[] =
 {
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
+  { NULL }
+};
+
+static const svn_ra_serf__dav_props_t href_props[] =
+{
+  { "DAV:", "href" },
   { NULL }
 };
 

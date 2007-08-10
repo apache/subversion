@@ -741,6 +741,18 @@ def revprop_change(sbox):
 
   sbox.build()
 
+  # First test the error when no revprop-change hook exists.
+  svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change',
+                                     'propset', '--revprop', '-r', '0',
+                                     'cash-sound', 'cha-ching!', sbox.wc_dir)
+
+  # Now test error output from revprop-change hook.
+  message = 'revprop_change test'
+  svntest.actions.disable_revprop_changes(sbox.repo_dir, message)
+  svntest.actions.run_and_verify_svn(None, None, '.*' + message,
+                                     'propset', '--revprop', '-r', '0',
+                                     'cash-sound', 'cha-ching!', sbox.wc_dir)
+
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
@@ -1361,7 +1373,9 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              Skip(revprop_change, is_non_posix_and_non_windows_os),
+              # XFail for issue 2861.
+              XFail(Skip(revprop_change, is_non_posix_and_non_windows_os), 
+                    svntest.main.is_ra_type_dav),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,

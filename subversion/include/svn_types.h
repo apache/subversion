@@ -215,7 +215,7 @@ typedef enum
   svn_accept_invalid = -1,
 
   /* Resolve the conflict as usual */
-  svn_accept_default,
+  svn_accept_none,
 
   /* Resolve the conflict with the pre-conflict base file */
   svn_accept_left,
