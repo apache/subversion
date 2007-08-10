@@ -1353,7 +1353,7 @@ output_line(svn_diff3__file_output_baton_t *baton,
 }
 
 static svn_error_t *
-output_hunk(void *baton, int idx, apr_off_t target_line, 
+output_hunk(void *baton, int idx, apr_off_t target_line,
             apr_off_t target_length)
 {
   svn_diff3__file_output_baton_t *output_baton = baton;
@@ -1376,7 +1376,7 @@ output_hunk(void *baton, int idx, apr_off_t target_line,
 
 static svn_error_t *
 output_common(void *baton, apr_off_t original_start, apr_off_t original_length,
-              apr_off_t modified_start, apr_off_t modified_length, 
+              apr_off_t modified_start, apr_off_t modified_length,
               apr_off_t latest_start, apr_off_t latest_length)
 {
   return output_hunk(baton, 1, modified_start, modified_length);
