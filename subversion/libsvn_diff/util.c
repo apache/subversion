@@ -23,6 +23,7 @@
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_types.h"
+#include "svn_ctype.h"
 
 #include "diff.h"
 
@@ -179,6 +180,123 @@ svn_diff_output(svn_diff_t *diff,
 
   return SVN_NO_ERROR;
 }
+
+
+void
+svn_diff__normalize_buffer(char *buf,
+                           apr_off_t *lengthp,
+                           svn_diff__normalize_state_t *statep,
+                           const svn_diff_file_options_t *opts)
+{
+  char *curp, *endp;
+  /* Start of next chunk to copy. */
+  char *start = buf;
+  /* The current end of the normalized buffer. */
+  char *newend = buf;
+  svn_diff__normalize_state_t state = *statep;
+
+  /* If this is a noop, then just get out of here. */
+  if (! opts->ignore_space && ! opts->ignore_eol_style)
+    return;
+
+  for (curp = buf, endp = buf + *lengthp; curp != endp; ++curp)
+    {
+      switch (state)
+        {
+        case svn_diff__normalize_state_cr:
+          state = svn_diff__normalize_state_normal;
+          if (*curp == '\n' && opts->ignore_eol_style)
+            {
+              start = curp + 1;
+              break;
+            }
+          /* Else, fall through. */
+        case svn_diff__normalize_state_normal:
+          if (svn_ctype_isspace(*curp))
+            {
+              /* Flush non-ws characters. */
+              if (newend != start)
+                memmove(newend, start, curp - start);
+              newend += curp - start;
+              start = curp;
+              switch (*curp)
+                {
+                case '\r':
+                  state = svn_diff__normalize_state_cr;
+                  if (opts->ignore_eol_style)
+                    {
+                      /* Replace this CR with an LF; if we're followed by an
+                         LF, that will be ignored. */
+                      *newend++ = '\n';
+                      ++start;
+                    }
+                  break;
+                case '\n':
+                  break;
+                default:
+                  /* Some other whitespace character. */
+                  if (opts->ignore_space)
+                    {
+                      state = svn_diff__normalize_state_whitespace;
+                      if (opts->ignore_space
+                          == svn_diff_file_ignore_space_change)
+                        *newend++ = ' ';
+                    }
+                  break;
+                }
+            }
+          break;
+        case svn_diff__normalize_state_whitespace:
+          /* This is only entered if we're ignoring whitespace. */
+          if (svn_ctype_isspace(*curp))
+            switch (*curp)
+              {
+              case '\r':
+                state = svn_diff__normalize_state_cr;
+                if (opts->ignore_eol_style)
+                  {
+                    *newend++ = '\n';
+                    start = curp + 1;
+                  }
+                else
+                  start = curp;
+                break;
+              case '\n':
+                state = svn_diff__normalize_state_normal;
+                start = curp;
+                break;
+              default:
+                break;
+              }
+          else
+            {
+              /* Non-whitespace character. */
+              start = curp;
+              state = svn_diff__normalize_state_normal;
+            }
+          break;
+        }
+    }
+
+  /* If we're not in whitespace, flush the last chunk of data.
+   * Note that this will work correctly when this is the last chunk of the
+   * file:
+   * * If there is an eol, it will either have been output when we entered
+   *   the state_cr, or it will be output now.
+   * * If there is no eol and we're not in whitespace, then we just output
+   *   everything below.
+   * * If there's no eol and we are in whitespace, we want to ignore
+   *   whitespace unconditionally. */
+  if (state != svn_diff__normalize_state_whitespace)
+    {
+      if (start != newend)
+        memmove(newend, start, curp - start);
+      newend += curp - start;
+    }
+  *lengthp = newend - buf;
+  *statep = state;
+}
+
 
 /* Return the library version number. */
 const svn_version_t *
