@@ -1017,7 +1017,7 @@ main(int argc, const char *argv[])
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
   opt_state.depth = svn_depth_unknown;
-  opt_state.accept_ = svn_accept_default;
+  opt_state.accept_which = svn_accept_none;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -1395,13 +1395,13 @@ main(int argc, const char *argv[])
         opt_state.use_merge_history = TRUE;
         break;
       case svn_cl__accept_opt:
-        opt_state.accept_ = svn_accept_from_word(opt_arg);
+        opt_state.accept_which = svn_accept_from_word(opt_arg);
 
         /* We need to make sure that the value passed to the accept flag
          * was one of the available options.  Since svn_accept_invalid is what
          * gets set when one of the three expected are not passed, checking
          * for this as part of the command line parsing makes sense. */
-        if (opt_state.accept_ == svn_accept_invalid)
+        if (opt_state.accept_which == svn_accept_invalid)
           {
             return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -1587,6 +1587,17 @@ main(int argc, const char *argv[])
                 }
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
+        }
+    }
+
+  if (subcommand->cmd_func == svn_cl__switch)
+    {
+      if ((opt_state.depth != svn_depth_unknown) && opt_state.relocate)
+        {
+          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                 _("--relocate and --depth are mutually "
+                                   "exclusive"));
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         }
     }
 

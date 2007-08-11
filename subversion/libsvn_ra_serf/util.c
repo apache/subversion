@@ -2,7 +2,7 @@
  * util.c : serf utility routines for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -263,7 +263,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
   serf_bucket_headers_setn(hdrs_bkt, "Host", conn->hostinfo);
-  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "svn/ra_serf");
+  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", USER_AGENT);
   if (content_type)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
@@ -821,12 +821,13 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       if (APR_STATUS_IS_EOF(status))
         {
           xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
+          XML_ParserFree(ctx->xmlp);
           if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
             {
-              abort();
-            }
+              status = SVN_ERR_RA_DAV_REQUEST_FAILED;
 
-          XML_ParserFree(ctx->xmlp);
+              svn_error_clear(ctx->error);
+            }
 
           *ctx->done = TRUE;
           if (ctx->done_list)
@@ -948,6 +949,7 @@ handle_response(serf_request_t *request,
 
   if (sl.code == 401)
     {
+      /* 401 Authorization required */
       svn_error_t *err;
 
       err = handle_auth(ctx->session, ctx->conn, request, response, pool);
@@ -963,8 +965,10 @@ handle_response(serf_request_t *request,
           status = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
         }
     }
-  else if (sl.code >= 500)
+  else if (sl.code == 409 || sl.code >= 500)
     {
+      /* 409 Conflict: can indicate a hook error. 
+         5xx (Internal) Server error. */
       ctx->session->pending_error =
           svn_ra_serf__handle_server_error(request, response, pool);
       return ctx->session->pending_error->apr_err;

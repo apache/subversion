@@ -142,21 +142,49 @@ find_editor_binary(const char **editor,
 }
 
 
-
+/* Use the visual editor to edit files. This requires that the file name itself
+   be shell-safe, although the path to reach that file need not be shell-safe.
+ */
 svn_error_t *
 svn_cl__edit_file_externally(const char *path,
                              const char *editor_cmd,
                              apr_hash_t *config,
                              apr_pool_t *pool)
 {
-  const char *editor, *cmd;
+  const char *editor, *cmd, *base_dir, *file_name, *base_dir_apr;
+  char *old_cwd;
   int sys_err;
+  apr_status_t apr_err;
+  
+  svn_path_split(path, &base_dir, &file_name, pool);
 
   SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
 
-  cmd = apr_psprintf(pool, "%s %s", editor, path);
+  apr_err = apr_filepath_get(&old_cwd, APR_FILEPATH_NATIVE, pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get working directory"));
+
+  /* APR doesn't like "" directories */
+  if (base_dir[0] == '\0')
+    base_dir_apr = ".";
+  else
+    SVN_ERR(svn_path_cstring_from_utf8(&base_dir_apr, base_dir, pool));
+
+  apr_err = apr_filepath_set(base_dir_apr, pool);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err, _("Can't change working directory to '%s'"), base_dir);
+
+  cmd = apr_psprintf(pool, "%s \'%s\'", editor, file_name);
   sys_err = system(cmd);
-  if (sys_err != 0)
+
+  apr_err = apr_filepath_set(old_cwd, pool);
+  if (apr_err)
+    svn_handle_error2(svn_error_wrap_apr
+                      (apr_err, _("Can't restore working directory")),
+                      stderr, TRUE /* fatal */, "svn: ");
+
+  if (sys_err)
     /* Extracting any meaning from sys_err is platform specific, so just
        use the raw value. */
     return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,

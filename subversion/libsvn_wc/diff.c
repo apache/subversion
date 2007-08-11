@@ -3,7 +3,7 @@
  *           repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -162,6 +162,9 @@ struct dir_baton {
   /* Gets set if the directory is added rather than replaced/unchanged. */
   svn_boolean_t added;
 
+  /* The depth at which this directory should be diffed. */
+  svn_depth_t depth;
+
   /* The "correct" path of the directory, but it may not exist in the
      working copy. */
   const char *path;
@@ -282,6 +285,7 @@ make_dir_baton(const char *path,
                struct dir_baton *parent_baton,
                struct edit_baton *edit_baton,
                svn_boolean_t added,
+               svn_depth_t depth,
                apr_pool_t *pool)
 {
   struct dir_baton *dir_baton = apr_pcalloc(pool, sizeof(*dir_baton));
@@ -289,6 +293,7 @@ make_dir_baton(const char *path,
   dir_baton->dir_baton = parent_baton;
   dir_baton->edit_baton = edit_baton;
   dir_baton->added = added;
+  dir_baton->depth = depth;
   dir_baton->pool = pool;
   dir_baton->propchanges = apr_array_make(pool, 1, sizeof(svn_prop_t));
   dir_baton->compared = apr_hash_make(dir_baton->pool);
@@ -685,6 +690,9 @@ directory_elements_diff(struct dir_baton *dir_baton)
         }
     }
 
+  if (dir_baton->depth == svn_depth_empty)
+    return SVN_NO_ERROR;
+
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, dir_baton->pool));
 
   subpool = svn_pool_create(dir_baton->pool);
@@ -742,12 +750,17 @@ directory_elements_diff(struct dir_baton *dir_baton)
           /* Check the subdir if in the anchor (the subdir is the target), or
              if recursive */
           if (in_anchor_not_target
-              || (dir_baton->edit_baton->depth == svn_depth_infinity)
-              || (dir_baton->edit_baton->depth == svn_depth_unknown))
+              || (dir_baton->depth > svn_depth_files)
+              || (dir_baton->depth == svn_depth_unknown))
             {
+              svn_depth_t depth_below_here = dir_baton->depth;
+
+              if (depth_below_here == svn_depth_immediates)
+                depth_below_here = svn_depth_empty;
+
               subdir_baton = make_dir_baton(path, dir_baton,
                                             dir_baton->edit_baton,
-                                            FALSE,
+                                            FALSE, depth_below_here,
                                             subpool);
 
               SVN_ERR(directory_elements_diff(subdir_baton));
@@ -929,13 +942,17 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
           break;
 
         case svn_node_dir:
-          if (eb->depth == svn_depth_infinity)
+          if (dir_baton->depth > svn_depth_files
+              || dir_baton->depth == svn_depth_unknown)
             {
-              struct dir_baton *subdir_baton = make_dir_baton(path,
-                                                              dir_baton,
-                                                              eb,
-                                                              FALSE,
-                                                              subpool);
+              svn_depth_t depth_below_here = dir_baton->depth;
+              struct dir_baton *subdir_baton;
+
+              if (depth_below_here == svn_depth_immediates)
+                depth_below_here = svn_depth_empty;
+
+              subdir_baton = make_dir_baton(path, dir_baton, eb, FALSE,
+                                            depth_below_here, subpool);
 
               SVN_ERR(report_wc_directory_as_added(subdir_baton, subpool));
             }
@@ -974,7 +991,7 @@ open_root(void *edit_baton,
   struct dir_baton *b;
 
   eb->root_opened = TRUE;
-  b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, dir_pool);
+  b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, eb->depth, dir_pool);
   *root_baton = b;
 
   return SVN_NO_ERROR;
@@ -1057,7 +1074,8 @@ delete_entry(const char *path,
       break;
 
     case svn_node_dir:
-      b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE, pool);
+      b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE,
+                         svn_depth_infinity, pool);
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. */
       SVN_ERR(report_wc_directory_as_added(b, pool));
@@ -1082,11 +1100,14 @@ add_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct dir_baton *b;
   const char *full_path;
+  svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
+                              ? svn_depth_empty : pb->depth;
 
   /* ### TODO: support copyfrom? */
 
   full_path = svn_path_join(pb->edit_baton->anchor_path, path, dir_pool);
-  b = make_dir_baton(full_path, pb, pb->edit_baton, TRUE, dir_pool);
+  b = make_dir_baton(full_path, pb, pb->edit_baton, TRUE,
+                     subdir_depth, dir_pool);
   *child_baton = b;
 
   return SVN_NO_ERROR;
@@ -1103,11 +1124,14 @@ open_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct dir_baton *b;
   const char *full_path;
+  svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
+                              ? svn_depth_empty : pb->depth;
 
   /* Allocate path from the parent pool since the memory is used in the
      parent's compared hash */
   full_path = svn_path_join(pb->edit_baton->anchor_path, path, pb->pool);
-  b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE, dir_pool);
+  b = make_dir_baton(full_path, pb, pb->edit_baton, FALSE,
+                     subdir_depth, dir_pool);
   *child_baton = b;
 
   return SVN_NO_ERROR;
@@ -1535,7 +1559,8 @@ close_edit(void *edit_baton,
     {
       struct dir_baton *b;
 
-      b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, eb->pool);
+      b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE,
+                         eb->depth, eb->pool);
       SVN_ERR(directory_elements_diff(b));
     }
 
@@ -1798,15 +1823,13 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
 }
 
 
-/* Compare working copy against the text-base.
-   ### TODO(sd): I'm not sure we need to change RECURSE to DEPTH here,
-   ### since this only descends within the working copy anyway. */
+/* Compare working copy against the text-base. */
 svn_error_t *
-svn_wc_diff3(svn_wc_adm_access_t *anchor,
+svn_wc_diff4(svn_wc_adm_access_t *anchor,
              const char *target,
              const svn_wc_diff_callbacks2_t *callbacks,
              void *callback_baton,
-             svn_boolean_t recurse,
+             svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
              apr_pool_t *pool)
 {
@@ -1817,8 +1840,7 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
   svn_wc_adm_access_t *adm_access;
 
   eb = make_editor_baton(anchor, target, callbacks, callback_baton,
-                         SVN_DEPTH_FROM_RECURSE(recurse),
-                         ignore_ancestry, FALSE, FALSE, pool);
+                         depth, ignore_ancestry, FALSE, FALSE, pool);
 
   target_path = svn_path_join(svn_wc_adm_access_path(anchor), target,
                               eb->pool);
@@ -1829,13 +1851,27 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
                                   eb->pool));
 
   if (entry->kind == svn_node_dir)
-    b = make_dir_baton(target_path, NULL, eb, FALSE, eb->pool);
+    b = make_dir_baton(target_path, NULL, eb, FALSE, depth, eb->pool);
   else
-    b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, eb->pool);
+    b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, depth, eb->pool);
 
   SVN_ERR(directory_elements_diff(b));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_diff3(svn_wc_adm_access_t *anchor,
+             const char *target,
+             const svn_wc_diff_callbacks2_t *callbacks,
+             void *callback_baton,
+             svn_boolean_t recurse,
+             svn_boolean_t ignore_ancestry,
+             apr_pool_t *pool)
+{
+  return svn_wc_diff4(anchor, target, callbacks, callback_baton,
+                      SVN_DEPTH_FROM_RECURSE(recurse), ignore_ancestry,
+                      pool);
 }
 
 svn_error_t *

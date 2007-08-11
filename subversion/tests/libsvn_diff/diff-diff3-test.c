@@ -157,6 +157,38 @@ three_way_merge(const char *filename1,
   char *merge_name = apr_psprintf(pool, "merge-%s-%s-%s",
                                   filename1, filename2, filename3);
 
+  if (!options
+      || (options->ignore_space == svn_diff_file_ignore_space_none
+          && !options->ignore_eol_style))
+    {
+      /* We have an EXPECTED string we can match, because we don't support
+         any other combinations (yet) than the ones above. */
+      svn_string_t *original = svn_string_create(contents1, pool);
+      svn_string_t *modified = svn_string_create(contents2, pool);
+      svn_string_t *latest = svn_string_create(contents3, pool);
+
+      SVN_ERR(svn_diff_mem_string_diff3(&diff,
+                                        original, modified, latest, pool));
+
+      actual = svn_stringbuf_create("", pool);
+      ostream = svn_stream_from_stringbuf(actual, pool);
+
+      SVN_ERR(svn_diff_mem_string_output_merge
+              (ostream, diff, original, modified, latest,
+               apr_psprintf(pool, "||||||| %s", filename1),
+               apr_psprintf(pool, "<<<<<<< %s", filename2),
+               apr_psprintf(pool, ">>>>>>> %s", filename3),
+               NULL, /* separator */
+               FALSE, FALSE, pool));
+
+      SVN_ERR(svn_stream_close(ostream));
+      if (strcmp(actual->data, expected) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Failed mem-diff, expected and actual "
+                                 "outputs differ.\nEXPECED:\n%s\n"
+                                 "ACTUAL:\n%s\n", expected, actual->data);
+    }
+
   SVN_ERR(make_file(filename1, contents1, pool));
   SVN_ERR(make_file(filename2, contents2, pool));
   SVN_ERR(make_file(filename3, contents3, pool));
@@ -222,6 +254,32 @@ two_way_diff(const char *filename1,
   apr_status_t status;
   svn_stringbuf_t *actual;
   char *diff_name = apr_psprintf(pool, "diff-%s-%s", filename1, filename2);
+
+  if (!options
+      || (options->ignore_space == svn_diff_file_ignore_space_none
+          && !options->ignore_eol_style))
+    {
+      /* We have an EXPECTED string we can match, because we don't support
+         any other combinations (yet) than the ones above. */
+      svn_string_t *original = svn_string_create(contents1, pool);
+      svn_string_t *modified = svn_string_create(contents2, pool);
+
+      SVN_ERR(svn_diff_mem_string_diff(&diff, original, modified, pool));
+
+      actual = svn_stringbuf_create( "", pool);
+      ostream = svn_stream_from_stringbuf( actual, pool);
+
+      SVN_ERR(svn_diff_mem_string_output_unified(ostream, diff,
+                                                 filename1, filename2,
+                                                 SVN_APR_LOCALE_CHARSET,
+                                                 original, modified, pool));
+      SVN_ERR(svn_stream_close(ostream));
+      if (strcmp(actual->data, expected) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Failed mem-diff, expected and actual "
+                                 "outputs differ.\nEXPECED:\n%s\n"
+                                 "ACTUAL:\n%s\n", expected, actual->data);
+    }
 
   SVN_ERR(make_file(filename1, contents1, pool));
   SVN_ERR(make_file(filename2, contents2, pool));

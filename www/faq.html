@@ -240,9 +240,9 @@ a <tt>file:</tt> URL?</a></li>
     <tt>SSL negotiation failed: SSL error: decryption failed or bad
     record mac</tt>.</a></li>
 <li><a href="#broken-subclipse">I get an error that says "This client is too
-    old".</li>
+    old".</a></li>
 <li><a href="#switch-problems">Why doesn't <tt>svn switch</tt> work
-    in some cases?</li>
+    in some cases?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -3049,13 +3049,18 @@ working copy.</p>
 
 <p>Calm down, take a deep breath.</p>
 
-<p>On UNIX, notice that the directory which contains the cached
-passwords (usually ~/.subversion/auth/) has permissions
-of 700, meaning only you can read them.</p>
-
 <p>On Windows 2000 or later, svn 1.2 and above uses standard 
 Windows APIs to encrypt the data, so only the user can decrypt the 
 cached password.</p>
+
+<p>On Mac OS X, svn 1.4 and later uses the system Keychain
+facility to encrypt/store your svn password.</p>
+
+<p>On UNIX/Linux, there are no standard system encryption facilities,
+so the password is stored in ~/.subversion/auth/.  Notice, however,
+that the directory which contains the cached passwords (usually
+~/.subversion/auth/) has permissions of 700, meaning only you can read
+them.</p>
 
 <p>Trust your OS to protect data on disk.</p>
 
@@ -3422,7 +3427,7 @@ stops, leaving the working copy half-switched.</p>
 up with an unusable working copy.  Sometimes with these situations,
 the user is directed to do <tt>svn cleanup</tt>.  But the <tt>svn
 cleanup</tt> may also encounter an error.  See <a
-href=http://subversion.tigris.org/issues/show_bug.cgi?id=2505>issue
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2505">issue
 #2505</a>.</p>
 
 <p>The user can manually remove the directories or files causing
@@ -3431,21 +3436,21 @@ recover from this situation.</p>
 
 <p>Note that a switch from a <i>pristine</i> clean checkout always
 works without error.  There are three ways of working if you are using
-<tt>svn switch</tt> as part of your development process:
+<tt>svn switch</tt> as part of your development process:</p>
 
 <ol>
 
 <li>Fully clean your working copy of unversioned (including ignored)
-files before switching. <br><b>WARNING! This deletes all unversioned
+files before switching. <br/><b>WARNING! This deletes all unversioned
 dirs/files. Be VERY sure that you do not need anything that will be
 removed.</b>
 
 <blockquote>
-<div><code><pre>
+<div><pre><code>
 # Check and delete svn unversioned files: 
-svn status --no-ignore | grep "^[I?]" | sed 's/^[I?]//'
+svn status --no-ignore | grep ^[I?]" | sed 's/^[I?]//'
 svn status --no-ignore | grep "^[I?]" | sed 's/^[I?]//' |xargs rm -rf
-</pre></code></div>
+</code></pre></div>
 </blockquote>
 
 </li>
@@ -3463,30 +3468,28 @@ and switch the copy when a switch to another branch is desired.</li>
 
 </ol>
 
-</p>
-
 <p>Some examples are detailed 
-<a href=http://subversion.tigris.org/issues/show_bug.cgi?id=2505>here in issue 2505</a>.
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2505">here in issue 2505</a>.
 The problem is that the svn client plays it 
 safe and doesn't want to delete anything unversioned. 
 </p>
 
 <p>Two specific examples are detailed here to illustrate a problem like this.
 There are also other svn switch errors, not covered here, which you
-  can avoid by switching only from a <em>pristine</em> checkout.
+  can avoid by switching only from a <em>pristine</em> checkout.</p>
 
 <ol>
 
 <li>If any directory has been moved or renamed between the branches, then
 anything unversioned will cause a problem.
 In this case, you'll see this error:
-<br>
+<br/>
 <blockquote>
-<div><code><pre>
+<div><pre><code>
 wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
 svn: Won't delete locally modified directory '&lt;dir&gt;'
 svn: Left locally modified or unversioned files
-</pre></code></div>
+</code></pre></div>
 </blockquote>
 <p>Removing all unversioned files, and continuing the switch will recover from this.</p>
 </li>
@@ -3494,19 +3497,20 @@ svn: Left locally modified or unversioned files
 <li>If a temporary build file has ever been added and removed, then a switch
 in a repository with that unversioned file (likely after a build) fails. 
 You'll see the same error:
-<br>
+
 <blockquote>
-<div><code><pre>
+<div><pre><code>
 wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
 svn: Won't delete locally modified directory '&lt;dir&gt;'
 svn: Left locally modified or unversioned files
-</pre></code></div>
+</code></pre></div>
 </blockquote>
+
 <p>In this case, just removing the unversioned items will not recover.
-A cleanup fails, but svnswitch directs you to run "svn cleanup".
-<br>
+A cleanup fails, but svnswitch directs you to run "svn cleanup".</p>
+
 <blockquote>
-<div><code><pre>
+<div><pre><code>
 wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
 svn: Directory '&lt;dir&gt;/.svn' containing working copy admin area is missing
 wc/$ svn cleanup
@@ -3514,9 +3518,9 @@ svn: '&lt;dir&gt;' is not a working copy directory
 wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
 svn: Working copy '.' locked
 svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)
-</pre></code></div>
+</code></pre></div>
 </blockquote>
-</p>
+
 <p>Removing the directory (and all other unversioned files, to prevent
  "switch" from breaking on a similar error repeatedly), and continuing the switch
  will recover from this.</p>
@@ -3525,28 +3529,27 @@ svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)
 </ol>
 
 <p>The TortoiseSVN cleanup error is a bit different.  You might encounter this:
+</p>
 <blockquote>
-<div><code><pre>
+<div><pre><code>
 Subversion reported an error while doing a cleanup!
 &lt;dir&gt;/&lt;anotherdir&gt; is not a working copy directory
-</pre></code></div>
+</code></pre></div>
 </blockquote>
-</p>
 
 <p>In each case here, the "svn switch" breaks leaving you with a half-switched 
 working copy. "svn status" will show items with S for switched items (different
  from top directory), ! for directories with problems, and ~ for the files that are
- the problem (and with maybe L for locked). Like this:
+ the problem (and with maybe L for locked). Like this:</p>
 <blockquote>
-<div><code><pre>
+<div><pre><code>
 wc/$ svn status 
 !      .
 !      &lt;dir&gt;
     S  &lt;switched_things&gt;
 ~      &lt;dir&gt;/&lt;thing_that_is_now_unversioned&gt;
-</pre></code></div>
+</code></pre></div>
 </blockquote>
-</p>
 
 </div>
 

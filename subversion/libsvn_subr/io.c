@@ -166,6 +166,8 @@ file_open(apr_file_t **f,
           apr_fileperms_t perm,
           apr_pool_t *pool) 
 {
+  apr_status_t status;
+
 #ifdef AS400
 /* All files in OS400 are tagged with a metadata CCSID (Coded Character Set
  * Identifier) which indicates the character encoding of the file's
@@ -241,7 +243,9 @@ file_open(apr_file_t **f,
       flag &= ~APR_EXCL;
     }
 #endif /* AS400 */
-  return apr_file_open(f, fname, flag, perm, pool);
+  status = apr_file_open(f, fname, flag, perm, pool);
+  WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+  return status;
 }
 
 

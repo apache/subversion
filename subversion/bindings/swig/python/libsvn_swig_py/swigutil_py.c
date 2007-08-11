@@ -1994,7 +1994,11 @@ svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
     {
       err = callback_exception_error();
     }
-  else if (result != Py_None)
+  else if (result == Py_None)
+    {
+      *dir_baton = NULL;
+    }
+  else
     {
       if (svn_swig_ConvertPtr(result, dir_baton, svn_swig_TypeQuery("void *")) == -1)
         {
