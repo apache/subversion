@@ -75,12 +75,10 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
 	      apr_pool_t *pool);
 
-			    
 
 /*
  * Support functions to build a tree of token positions
  */
-
 void
 svn_diff__tree_create(svn_diff__tree_t **tree, apr_pool_t *pool);
 
@@ -112,7 +110,7 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
                            apr_pool_t *pool);
 
 
-/**
+/*
  * Return an adler32 checksum based on CHECKSUM, updated with
  * DATA of size LEN.
  */
