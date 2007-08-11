@@ -70,6 +70,19 @@ struct svn_diff__lcs_t
 };
 
 
+/* State used when normalizing whitespace and EOL styles. */
+typedef enum svn_diff__normalize_state_t
+{
+  /* Initial state; not in a sequence of whitespace. */
+  svn_diff__normalize_state_normal,
+  /* We're in a sequence of whitespace characters.  Only entered if
+     we ignore whitespace. */
+  svn_diff__normalize_state_whitespace,
+  /* The previous character was CR. */
+  svn_diff__normalize_state_cr
+} svn_diff__normalize_state_t;
+
+
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
@@ -116,6 +129,18 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
  */
 apr_uint32_t
 svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_size_t len);
+
+
+/* Normalize the characters pointed to by BUF of length *LENGTTHP, starting
+ * in state *STATEP according to the OPTIONS.
+ * Adjust *LENGTHP and *STATEP to be the length of the normalized buffer and
+ * the final state, respectively.
+ * The normalization is done in-place, so the new length will be <= the old. */
+void
+svn_diff__normalize_buffer(char *buf,
+                           apr_off_t *lengthp,
+                           svn_diff__normalize_state_t *statep,
+                           const svn_diff_file_options_t *opts);
 
 
 #endif /* DIFF_H */
