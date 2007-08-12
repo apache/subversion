@@ -892,8 +892,9 @@ directory_elements_diff(struct dir_baton *dir_baton)
 
               subdir_baton = make_dir_baton(path, dir_baton,
                                             dir_baton->edit_baton,
-                                            FALSE, depth_below_here,
+                                            FALSE,
                                             NULL,
+                                            depth_below_here,
                                             subpool);
 
               /* Before we recurse, let's trigger directory's callbacks */
@@ -941,11 +942,7 @@ transmit_svndiff(const char *path,
   SVN_ERR(eb->diff_editor->apply_textdelta
           (fb, NULL, pool, &handler, &wh_baton));
 
-  /* Prepare an empty stream, TODO: try svn_stream_empty() instead. */
-  SVN_ERR(get_empty_file(eb, &empty_file));
-  SVN_ERR(svn_io_file_open(&empty_f, empty_file,
-                           APR_READ, APR_OS_DEFAULT, pool));
-  base_stream = svn_stream_from_aprfile(empty_f, pool);
+  base_stream = svn_stream_empty(pool);
 
   SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
                                    adm_access, SVN_WC_TRANSLATE_TO_NF,
@@ -1215,7 +1212,7 @@ svnpatch_open_root(void *edit_baton,
 
   eb->root_opened = TRUE;
   *root_baton = make_dir_baton(eb->anchor_path, NULL, eb,
-                               FALSE, token, dir_pool);
+                               FALSE, token, eb->depth, dir_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1229,10 +1226,13 @@ svnpatch_open_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   const char *token = make_token('d', eb, dir_pool);
+  svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
+                              ? svn_depth_empty : pb->depth;
 
   SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
                            "open-dir", "ccc", path, pb->token, token));
-  *child_baton = make_dir_baton(path, pb, eb, FALSE, token, dir_pool);
+  *child_baton = make_dir_baton(path, pb, eb, FALSE, token,
+                                subdir_depth, dir_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1259,11 +1259,14 @@ svnpatch_add_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   const char *token = make_token('d', eb, dir_pool);
+  svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
+                              ? svn_depth_empty : pb->depth;
 
   SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
                            "add-dir", "ccc(?c)", path, pb->token,
                            token, copyfrom_path));
-  *child_baton = make_dir_baton(path, pb, eb, TRUE, token, dir_pool);
+  *child_baton = make_dir_baton(path, pb, eb, TRUE, token,
+                                subdir_depth, dir_pool);
   return SVN_NO_ERROR;
 }
 

@@ -1219,7 +1219,8 @@ diff_repos_repos(const struct diff_parameters *diff_param,
            FALSE /* doesn't matter for diff */, extra_ra_session, drr.rev1, 
            NULL /* no notify_func */, NULL /* no notify_baton */,
            ctx->cancel_func, ctx->cancel_baton,
-           &diff_editor, &diff_edit_baton, pool));
+           &diff_editor, &diff_edit_baton,
+           callback_baton->svnpatch_file, pool));
   
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3

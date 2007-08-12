@@ -512,6 +512,12 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
  * file and directory operated on during the edit.
  *
  * EDITOR/EDIT_BATON return the newly created editor and baton/
+ *
+ * SVNPATCH_FILE is the temporary file to which the library dumps
+ * serialized ra_svn protocol Editor Commands.  It somehow determines
+ * whether or not to utilize svnpatch format in the diff output when
+ * checked against NULL.  The caller must allocate the file handler,
+ * open and close the file respectively before and after the call.
  */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
@@ -528,6 +534,7 @@ svn_client__get_diff_editor(const char *target,
                             void *cancel_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
+                            apr_file_t *svnpatch_file,
                             apr_pool_t *pool);
 
 
