@@ -131,15 +131,21 @@ apr_uint32_t
 svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_size_t len);
 
 
-/* Normalize the characters pointed to by BUF of length *LENGTTHP, starting
+/* Normalize the characters pointed to by BUF of length *LENGTHP, starting
  * in state *STATEP according to the OPTIONS.
  * Adjust *LENGTHP and *STATEP to be the length of the normalized buffer and
  * the final state, respectively.
- * The normalization is done in-place, so the new length will be <= the old. */
+ * Normalized data is written to the memory at *TGT. BUF and TGT may point
+ * to the same memory area.  The memory area pointed to by *TGT should be
+ * large enough to hold *LENGTHP bytes.
+ * When on return *TGT is not equal to the value passed in, it points somewhere
+ * into the memory region designated by BUF and *LENGTHP.
+ */
 void
-svn_diff__normalize_buffer(char *buf,
+svn_diff__normalize_buffer(char **tgt,
                            apr_off_t *lengthp,
                            svn_diff__normalize_state_t *statep,
+                           const char *buf,
                            const svn_diff_file_options_t *opts);
 
 

@@ -324,9 +324,9 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       length = endp - curp;
       file_token->raw_length += length;
-      svn_diff__normalize_buffer(curp, &length,
+      svn_diff__normalize_buffer(&curp, &length,
                                  &file_baton->normalize_state[idx],
-                                 file_baton->options);
+                                 curp, file_baton->options);
       file_token->length += length;
       h = svn_diff__adler32(h, curp, length);
 
@@ -363,9 +363,9 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
    * line. */
   if (file_token->raw_length > 0)
     {
-      svn_diff__normalize_buffer(curp, &length,
+      svn_diff__normalize_buffer(&curp, &length,
                                  &file_baton->normalize_state[idx],
-                                 file_baton->options);
+                                 curp, file_baton->options);
       file_token->length += length;
 
       *hash = svn_diff__adler32(h, curp, length);
@@ -469,8 +469,10 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
                                  file_baton->pool));
               offset[i] += length[i];
               raw_length[i] -= length[i];
-              svn_diff__normalize_buffer(bufp[i], &length[i], &state[i],
-                                         file_baton->options);
+              /* bufp[i] gets reset to buffer[i] before reading each chunk,
+                 so, overwriting it isn't a problem */
+              svn_diff__normalize_buffer(&bufp[i], &length[i], &state[i],
+                                         bufp[i], file_baton->options);
             }
         }
 
