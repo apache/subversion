@@ -183,98 +183,172 @@ svn_diff_output(svn_diff_t *diff,
 
 
 void
-svn_diff__normalize_buffer(char *buf,
+svn_diff__normalize_buffer(char **tgt,
                            apr_off_t *lengthp,
                            svn_diff__normalize_state_t *statep,
+                           const char *buf,
                            const svn_diff_file_options_t *opts)
 {
-  char *curp, *endp;
-  /* Start of next chunk to copy. */
-  char *start = buf;
-  /* The current end of the normalized buffer. */
-  char *newend = buf;
+  /* Variables for looping through BUF */
+  const char *curp, *endp;
+
+  /* Variable to record normalizing state */
   svn_diff__normalize_state_t state = *statep;
+
+  /* Variables to track what needs copying into the target buffer */
+  const char *start = buf;
+  apr_size_t include_len = 0;
+  svn_boolean_t last_skipped = FALSE; /* makes sure we set 'start' */
+
+  /* Variable to record the state of the target buffer */
+  char *tgt_newend = *tgt;
 
   /* If this is a noop, then just get out of here. */
   if (! opts->ignore_space && ! opts->ignore_eol_style)
-    return;
+    {
+      *tgt = (char *)buf;
+      return;
+    }
+
+
+  /* It only took me forever to get this routine right,
+     so here my thoughts go:
+
+    Below, we loop through the data, doing 2 things:
+
+     - Normalizing
+     - Copying other data
+
+     The routine tries its hardest *not* to copy data, but instead
+     returning a pointer into already normalized existing data.
+
+     To this end, a block 'other data' shouldn't be copied when found,
+     but only as soon as it can't be returned in-place.
+
+     On a character level, there are 3 possible operations:
+
+     - Skip the character (don't include in the normalized data)
+     - Include the character (do include in the normalizad data)
+     - Include as another character
+       This is essentially the same as skipping the current character
+       and inserting a given character in the output data.
+
+    The macros below (SKIP, INCLUDE and INCLUDE_AS) are defined to
+    handle the character based operations.  The macros themselves
+    collect character level data into blocks.
+
+    At all times designate the START, INCLUDED_LEN and CURP pointers
+    an included and and skipped block like this:
+
+      [ start, start + included_len ) [ start + included_len, curp )
+             INCLUDED                        EXCLUDED
+
+    When the routine flips from skipping to including, the last
+    included block has to be flushed to the output buffer.
+  */
+
+  /* Going from including to skipping; only schedules the current
+     included section for flushing.
+     Also, simply chop off the character if it's the first in the buffer,
+     so we can possibly just return the remainder of the buffer */
+#define SKIP             \
+  do {                   \
+    if (buf == curp)     \
+      start = ++buf;     \
+    last_skipped = TRUE; \
+  } while (0)
+
+#define INCLUDE                \
+  do {                         \
+    if (last_skipped)          \
+      COPY_INCLUDED_SECTION;   \
+    ++include_len;             \
+    last_skipped = FALSE;      \
+  } while (0)
+
+#define COPY_INCLUDED_SECTION                     \
+  do {                                            \
+    if (include_len > 0)                          \
+      {                                           \
+         memmove(tgt_newend, start, include_len); \
+         tgt_newend += include_len;               \
+         include_len = 0;                         \
+      }                                           \
+    start = curp;                                 \
+  } while (0)
+
+  /* Include the current character as character X.
+     If the current character already *is* X, add it to the
+     currently included region, increasing chances for consecutive
+     fully normalized blocks. */
+#define INCLUDE_AS(x)          \
+  do {                         \
+    if (*curp == (x))          \
+      INCLUDE;                 \
+    else                       \
+      {                        \
+        INSERT((x));           \
+        SKIP;                  \
+      }                        \
+  } while (0)
+
+  /* Insert character X in the output buffer */
+#define INSERT(x)              \
+  do {                         \
+    COPY_INCLUDED_SECTION;     \
+    *tgt_newend++ = (x);       \
+  } while (0)
 
   for (curp = buf, endp = buf + *lengthp; curp != endp; ++curp)
     {
-      switch (state)
+      switch (*curp)
         {
-        case svn_diff__normalize_state_cr:
-          state = svn_diff__normalize_state_normal;
-          if (*curp == '\n' && opts->ignore_eol_style)
-            {
-              start = curp + 1;
-              break;
-            }
-          /* Else, fall through. */
-        case svn_diff__normalize_state_normal:
-          if (svn_ctype_isspace(*curp))
-            {
-              /* Flush non-ws characters. */
-              if (newend != start)
-                memmove(newend, start, curp - start);
-              newend += curp - start;
-              start = curp;
-              switch (*curp)
-                {
-                case '\r':
-                  state = svn_diff__normalize_state_cr;
-                  if (opts->ignore_eol_style)
-                    {
-                      /* Replace this CR with an LF; if we're followed by an
-                         LF, that will be ignored. */
-                      *newend++ = '\n';
-                      ++start;
-                    }
-                  break;
-                case '\n':
-                  break;
-                default:
-                  /* Some other whitespace character. */
-                  if (opts->ignore_space)
-                    {
-                      state = svn_diff__normalize_state_whitespace;
-                      if (opts->ignore_space
-                          == svn_diff_file_ignore_space_change)
-                        *newend++ = ' ';
-                    }
-                  break;
-                }
-            }
+        case '\r':
+          if (opts->ignore_eol_style)
+            INCLUDE_AS('\n');
+          else
+            INCLUDE;
+          state = svn_diff__normalize_state_cr;
           break;
-        case svn_diff__normalize_state_whitespace:
-          /* This is only entered if we're ignoring whitespace. */
+
+        case '\n':
+          if (state == svn_diff__normalize_state_cr
+              && opts->ignore_eol_style)
+            SKIP;
+          else
+            INCLUDE;
+          state = svn_diff__normalize_state_normal;
+          break;
+
+        default:
           if (svn_ctype_isspace(*curp))
-            switch (*curp)
-              {
-              case '\r':
-                state = svn_diff__normalize_state_cr;
-                if (opts->ignore_eol_style)
-                  {
-                    *newend++ = '\n';
-                    start = curp + 1;
-                  }
-                else
-                  start = curp;
-                break;
-              case '\n':
-                state = svn_diff__normalize_state_normal;
-                start = curp;
-                break;
-              default:
-                break;
-              }
+            {
+              /* Whitespace but not '\r' or '\n' */
+              if (state != svn_diff__normalize_state_whitespace
+                  && opts->ignore_space
+                     == svn_diff_file_ignore_space_change)
+                /*### If we can postpone insertion of the space
+                  until the next non-whitespace character,
+                  we have a potential of reducing the number of copies:
+                  If this space is followed by more spaces,
+                  this will cause a block-copy.
+                  If the next non-space block is considered normalized
+                  *and* preceded by a space, we can take advantage of that. */
+                /* Note, the above optimization applies to 90% of the source
+                   lines in our own code, since it (generally) doesn't use
+                   more than one space per blank section, except for the
+                   beginning of a line. */
+                INCLUDE_AS(' ');
+              else
+                SKIP;
+              state = svn_diff__normalize_state_whitespace;
+            }
           else
             {
-              /* Non-whitespace character. */
-              start = curp;
+              /* Non-whitespace character */
+              INCLUDE;
               state = svn_diff__normalize_state_normal;
             }
-          break;
         }
     }
 
@@ -287,14 +361,28 @@ svn_diff__normalize_buffer(char *buf,
    *   everything below.
    * * If there's no eol and we are in whitespace, we want to ignore
    *   whitespace unconditionally. */
-  if (state != svn_diff__normalize_state_whitespace)
+
+  if (start == buf)
     {
-      if (start != newend)
-        memmove(newend, start, curp - start);
-      newend += curp - start;
+      /* we haven't copied any data in to *tgt and our chunk consists
+         only of one block of (already normalized) data.
+         Just return the block. */
+      *tgt = (char *)buf;
+      *lengthp = include_len;
     }
-  *lengthp = newend - buf;
+  else
+    {
+      COPY_INCLUDED_SECTION;
+      *lengthp = tgt_newend - *tgt;
+    }
+
   *statep = state;
+
+#undef SKIP
+#undef INCLUDE
+#undef INCLUDE_AS
+#undef INSERT
+#undef COPY_INCLUDED_SECTION
 }
 
 
