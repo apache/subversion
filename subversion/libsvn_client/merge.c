@@ -2188,6 +2188,7 @@ do_merge(const char *initial_URL1,
                                           ctx->cancel_baton,
                                           &diff_editor,
                                           &diff_edit_baton,
+                                          NULL, /* disable svnpatch */
                                           subpool));
 
       SVN_ERR(svn_ra_do_diff3(ra_session,
