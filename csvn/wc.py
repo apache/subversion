@@ -567,3 +567,21 @@ class WC(object):
                      self.iterpool)
                      
          self.iterpool.clear()
+         
+    def switch(self, path, url, revnum=None, recurse=True):
+        """Switch working copy PATH to URL at REVNUM. If REVNUM is not
+        provided, it defaults to the head revision.
+         
+        If RECURSE is True, the operation will recurse."""
+        result_rev = svn_revnum_t()
+        
+        revision = svn_opt_revision_t()
+        if revnum:
+            revision.kind = svn_opt_revision_number
+            revision.value.number = revnum
+        else:
+            revision.kind = svn_opt_revision_head
+        
+        svn_client_switch(byref(result_rev),
+                  self._build_path(path), url, byref(revision),
+                  recurse, self.client, self.pool)

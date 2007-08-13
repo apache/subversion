@@ -150,6 +150,11 @@ class WCTestCase(unittest.TestCase):
         if not os.path.join(wc_location, "trunk/README.txt") in \
                 props.keys():
             self.fail("File not updated to head")
+            
+    def test_switch(self):
+        self.wc.switch("trunk", os.path.join(repo_url,"tags"))
+        if os.path.exists(os.path.join(wc_location,"README.txt")):
+            self.fail("Switch did not happen")
         
 
 def suite():
