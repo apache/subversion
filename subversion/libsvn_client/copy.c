@@ -1942,10 +1942,11 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                        subpool);
     }
 
-  if (commit_info)
-    *commit_info_p = svn_commit_info_dup(commit_info, pool);
-  else
-    *commit_info_p = commit_info;
+  if (commit_info_p != NULL)
+    if (commit_info)
+      *commit_info_p = svn_commit_info_dup(commit_info, pool);
+    else
+      *commit_info_p = commit_info;
 
   svn_pool_destroy(subpool);
   return err;
@@ -2094,11 +2095,12 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                        ctx,
                        subpool);
     }
-  
-  if (commit_info)
-    *commit_info_p = svn_commit_info_dup(commit_info, pool);
-  else
-    *commit_info_p = commit_info;
+ 
+  if (commit_info_p != NULL)
+    if (commit_info)
+      *commit_info_p = svn_commit_info_dup(commit_info, pool);
+    else
+      *commit_info_p = commit_info;
 
   svn_pool_destroy(subpool);
   return err;
