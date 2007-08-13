@@ -326,6 +326,9 @@ typedef enum svn_diff_file_ignore_space_t
  * @note This structure may be extended in the future, so to preserve binary
  * compatibility, users must not allocate structs of this type themselves.
  * @see svn_diff_file_options_create().
+ *
+ * @note Although its name suggests otherwise, this structure is used to
+ *       pass options to file as well as in-memory diff functions.
  */
 typedef struct svn_diff_file_options_t
 {
@@ -530,6 +533,7 @@ svn_error_t *
 svn_diff_mem_string_diff(svn_diff_t **diff,
                          svn_string_t *original,
                          svn_string_t *modified,
+                         const svn_diff_file_options_t *options,
                          apr_pool_t *pool);
 
 
@@ -543,6 +547,7 @@ svn_diff_mem_string_diff3(svn_diff_t **diff,
                           svn_string_t *original,
                           svn_string_t *modified,
                           svn_string_t *latest,
+                          const svn_diff_file_options_t *options,
                           apr_pool_t *pool);
 
 
@@ -557,6 +562,7 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
                           svn_string_t *modified,
                           svn_string_t *latest,
                           svn_string_t *ancestor,
+                          const svn_diff_file_options_t *options,
                           apr_pool_t *pool);
 
 
