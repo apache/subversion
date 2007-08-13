@@ -588,6 +588,57 @@ class TestCase_TestRepo(TestCase_SvnMerge):
             match=r"Committed revision 15")
 
         os.chdir("../testYYY-branch")
+        open("test6", "w").write("test6")
+        self.launch("svn add test6")
+        self.launch('svn ci -m "add test6"',
+            match=r"Committed revision 16")
+
+        os.chdir("../test-branch")
+        self.svnmerge("merge -r 16")
+        self.launch('svn ci -m "merge r16"',
+            match=r"Committed revision 17")
+
+        #os.chdir("../test-branch")
+        open("test5", "w").write("test5")
+        self.launch("svn add test5")
+        self.launch('svn ci -m "add test5"',
+            match=r"Committed revision 18")
+
+        os.chdir("../trunk")
+        self.svnmerge("block -r 18")
+        self.launch('svn ci -m "block r18"',
+            match=r"Committed revision 19")
+
+        #os.chdir("../trunk")
+        out = self.svnmerge("merge -r 17")
+
+        self.launch('svn ci -m "merge r17 from test-branch"',
+            match=r"Committed revision 20")
+
+        p = self.getproperty()
+        self.assertEqual(p, '/branches/test-branch:1-13,17')
+        p = self.getBlockedProperty()
+        self.assertEqual(p, '/branches/test-branch:18')
+
+    def testTransitiveMergeWithBlock(self):
+        """
+        Test a merge of a change from testYYY-branch -> test-branch -> trunk
+        """
+        os.chdir("..")
+        self.launch("svn co %(TEST_REPO_URL)s/branches/testYYY-branch testYYY-branch")
+
+        os.chdir("trunk")
+        self.launch("svn up")
+        self.svnmerge("init ../test-branch")
+        self.launch('svn ci -m "init test-branch -> trunk"',
+            match=r"Committed revision 14")
+
+        os.chdir("../test-branch")
+        self.svnmerge("init -r 1-6 ../testYYY-branch")
+        self.launch('svn ci -m "init testYYY-branch -> test-branch"',
+            match=r"Committed revision 15")
+
+        os.chdir("../testYYY-branch")
         open("test4", "w").write("test4")
         self.launch("svn add test4")
         self.launch('svn ci -m "add test4"',
@@ -614,6 +665,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch('svn ci -m "merge r17 from test-branch"',
             match=r"Committed revision 20")
 
+        p = self.getproperty()
+        self.assertEqual(p, '/branches/test-branch:1-13,17')
         p = self.getBlockedProperty()
         self.assertEqual(p, '/branches/test-branch:18')
 

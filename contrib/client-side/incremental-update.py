@@ -152,6 +152,8 @@ def main():
     argc = len(sys.argv)
     if argc < 2:
         usage_and_exit("No working copy directory specified")
+    if '--help' in sys.argv:
+        usage_and_exit(None)
     path = sys.argv[-1]
     args = ' '.join(sys.argv[1:-1] + ['--non-interactive'])
     print "Fetch HEAD revision...",

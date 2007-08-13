@@ -86,9 +86,10 @@ static const svn_ra_neon__xml_elm_t multistatus_elements[] =
     { "DAV:", "propstat", ELEM_propstat, SVN_RA_NEON__XML_CDATA },
     { "DAV:", "prop", ELEM_prop, SVN_RA_NEON__XML_CDATA },
 
-    /* We start out basic and are not interested in propstat */
+    /* We start out basic and are not interested in other elements */
     { "", "", ELEM_unknown, 0 },
 
+    { NULL }
   };
 
 
