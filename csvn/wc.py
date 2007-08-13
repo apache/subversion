@@ -44,6 +44,10 @@ class WC(object):
             svn_info_receiver_t(self._info_wrapper)
         self._info = None
         
+        self._list_func = \
+            svn_client_list_func_t(self._list_wrapper)
+        self._list = None
+        
         self.client[0].log_msg_func2 = \
             svn_client_get_commit_log2_t(self._log_func_wrapper)
         self.client[0].log_msg_baton2 = cast(id(self), c_void_p)
@@ -519,3 +523,36 @@ class WC(object):
                 ignore_externals, self.client, self.iterpool)
                    
         return result_revs
+    
+    #internal method to wrap ls callbacks
+    def _list_wrapper(baton, path, dirent, abs_path, pool):
+        self = cast(baton, py_object).value
+        if self._list:
+            self._list(path, dirent.contents, lock.contents, abs_path)
+    _list_wrapper = staticmethod(_list_wrapper)
+        
+    def set_list_func(self, list_func):
+        """Set the callback function for list operations."""
+        self._list = list_func
+        
+    def list(self, path="", recurse=True, fetch_locks=False, list_func=None):
+        """List items in the working copy. Fetch information about PATH
+        (which defaults to the WC root). If PATH is a directory and RECURSE
+        is True (True by default) then this operation will recurse.
+        
+        If FETCH_LOCKS is True (False by default), locks will be included.
+        
+        If LIST_FUNC is provided, it will be set as the callback to be used.
+        """
+        peg = svn_opt_revision_t()
+        peg.kind = svn_opt_revision_working
+        
+        rev = svn_opt_revision_t()
+        rev.kind = svn_opt_revision_working
+        
+        if list_func:
+            self.set_list_func(list_func)
+        
+        svn_client_list(self._build_path(path), byref(peg), byref(rev),
+            recurse, SVN_DIRENT_ALL, fetch_locks, self._list_func,
+            cast(id(self), c_void_p), self.client, self.iterpool)
