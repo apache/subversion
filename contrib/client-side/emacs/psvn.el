@@ -3919,9 +3919,14 @@ When called with a negative prefix argument, only update the selected files."
     (if selective-update
         (progn
           (message "Running svn-update for %s" (svn-status-marked-file-names))
-          (svn-run t t 'update "update" (when rev (list "-r" rev)) (svn-status-marked-file-names)))
+          (svn-run t t 'update "update"
+                   (when rev (list "-r" rev))
+                   (list "--non-interactive")
+                   (svn-status-marked-file-names)))
       (message "Running svn-update for %s" default-directory)
-      (svn-run t t 'update "update" (when rev (list "-r" rev))))))
+      (svn-run t t 'update "update"
+               (when rev (list "-r" rev))
+               (list "--non-interactive")))))
 
 (defun svn-status-commit ()
   "Commit selected files.
