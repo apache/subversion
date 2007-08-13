@@ -2647,6 +2647,8 @@ def diff_svnpatch(sbox):
   # 3: BASE(r2) w/ local mods -> REPOS(r3/HEAD)  (svn diff -rBASE:HEAD)
   # 4: REPOS(r3/HEAD) -> BASE(r2) w/ local mods  (svn diff -rHEAD:BASE)
   # 5: REPOS(r3/HEAD) -> WC w/ local mods        (svn diff -rBASE)
+  # 6: REPOS(r2) -> REPOS(r3/HEAD)               (svn diff -r2:HEAD)
+  # 7: REPOS(r3/HEAD) -> REPOS(r2)               (svn diff -rHEAD:2)
 
   # subtest 1
   # remove a property
@@ -2803,10 +2805,10 @@ def diff_svnpatch(sbox):
     '( close-file ( 2:c3 ( ) ) ) ',
     '( open-dir ( 5:A/B/E 2:d2 2:d4 ) ) ',
     '( open-file ( 11:A/B/E/alpha 2:d4 2:c5 ) ) ',
-    '( change-file-prop ( 2:c5 7:newprop ( 7:new val ) ) ) ',
+    '( change-file-prop ( 2:c5 7:newprop ( ) ) ) ',
     '( close-file ( 2:c5 ( ) ) ) ',
     '( open-file ( 10:A/B/E/beta 2:d4 2:c6 ) ) ',
-    '( change-file-prop ( 2:c6 5:aprop ( ) ) ) ',
+    '( change-file-prop ( 2:c6 5:aprop ( 12:a prop value ) ) ) ',
     '( close-file ( 2:c6 ( ) ) ) ',
     '( close-dir ( 2:d4 ) ) ',
     '( close-dir ( 2:d2 ) ) ',
@@ -2820,26 +2822,21 @@ def diff_svnpatch(sbox):
     '( close-file ( 3:c11 ( ) ) ) ',
     '( close-dir ( 2:d8 ) ) ',
     '( open-dir ( 5:A/D/G 2:d7 3:d12 ) ) ',
-    '( change-dir-prop ( 3:d12 7:dirprop ( 8:prop val ) ) ) ',
+    '( change-dir-prop ( 3:d12 7:dirprop ( ) ) ) ',
     '( close-dir ( 3:d12 ) ) ',
     '( close-dir ( 2:d7 ) ) ',
-    '( add-dir ( 3:A/T 2:d1 3:d13 ( ) ) ) ',
-    '( add-file ( 8:A/T/mumu 3:d13 3:c14 ( ) ) ) ',
-    '( delete-entry ( 8:A/T/mumu 3:d13 ) ) ',
-    '( close-dir ( 3:d13 ) ) ',
+    '( delete-entry ( 3:A/T 2:d1 ) ) ',
     '( close-dir ( 2:d1 ) ) ',
-    '( open-file ( 4:iota 2:d0 3:c15 ) ) ',
-    '( change-file-prop ( 3:c15 13:svn:mime-type ( 24:application/octet-stream ) ) ) ',
-    '( apply-textdelta ( 3:c15 ( ) ) ) ',
-    '( textdelta-chunk ( 3:c15 4:SVN\001 ) ) ',
-    '( textdelta-chunk ( 3:c15 5:\000\000+\002, ) ) ',
-    '( textdelta-chunk ( 3:c15 2:\001\253 ) ) ',
-    '( textdelta-chunk ( 3:c15 44:+This is the file \'iota\'.\n',
-    '\n',
-    'Some more bytes.\n',
+    '( open-file ( 4:iota 2:d0 3:c14 ) ) ',
+    '( change-file-prop ( 3:c14 13:svn:mime-type ( ) ) ) ',
+    '( apply-textdelta ( 3:c14 ( ) ) ) ',
+    '( textdelta-chunk ( 3:c14 4:SVN\001 ) ) ',
+    '( textdelta-chunk ( 3:c14 5:\000\000\031\002\032 ) ) ',
+    '( textdelta-chunk ( 3:c14 2:\001\231 ) ) ',
+    '( textdelta-chunk ( 3:c14 26:\031This is the file \'iota\'.\n',
     ' ) ) ',
-    '( textdelta-end ( 3:c15 ) ) ',
-    '( close-file ( 3:c15 ( 32:1460795fd593ab45ddf5c1f7d7ef28f8 ) ) ) ',
+    '( textdelta-end ( 3:c14 ) ) ',
+    '( close-file ( 3:c14 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) ) ',
     '( close-dir ( 2:d0 ) ) ',
     '( close-edit ( ) ) '
   ]
@@ -2856,7 +2853,7 @@ def diff_svnpatch(sbox):
     raise svntest.Failure
 
   # subtest 5
-  # last, compare HEAD to WC (with local mods)
+  # compare HEAD to WC (with local mods)
 
   svnpatch_output_head_wc = [
     '( open-root ( 2:d0 ) ) ',
@@ -2866,10 +2863,10 @@ def diff_svnpatch(sbox):
     '( close-file ( 2:c3 ( ) ) ) ',
     '( open-dir ( 5:A/B/E 2:d2 2:d4 ) ) ',
     '( open-file ( 11:A/B/E/alpha 2:d4 2:c5 ) ) ',
-    '( change-file-prop ( 2:c5 7:newprop ( 7:new val ) ) ) ',
+    '( change-file-prop ( 2:c5 7:newprop ( ) ) ) ',
     '( close-file ( 2:c5 ( ) ) ) ',
     '( open-file ( 10:A/B/E/beta 2:d4 2:c6 ) ) ',
-    '( change-file-prop ( 2:c6 5:aprop ( ) ) ) ',
+    '( change-file-prop ( 2:c6 5:aprop ( 12:a prop value ) ) ) ',
     '( close-file ( 2:c6 ( ) ) ) ',
     '( close-dir ( 2:d4 ) ) ',
     '( add-file ( 11:A/B/newfile 2:d2 2:c7 ( ) ) ) ',
@@ -2885,7 +2882,7 @@ def diff_svnpatch(sbox):
     '( close-file ( 3:c12 ( ) ) ) ',
     '( close-dir ( 2:d9 ) ) ',
     '( open-dir ( 5:A/D/G 2:d8 3:d13 ) ) ',
-    '( change-dir-prop ( 3:d13 7:dirprop ( 8:prop val ) ) ) ',
+    '( change-dir-prop ( 3:d13 7:dirprop ( ) ) ) ',
     '( open-file ( 9:A/D/G/rho 3:d13 3:c14 ) ) ',
     '( change-file-prop ( 3:c14 7:rhoprop ( 11:rhoprop val ) ) ) ',
     '( close-file ( 3:c14 ( ) ) ) ',
@@ -2896,23 +2893,18 @@ def diff_svnpatch(sbox):
     '( close-file ( 3:c16 ( ) ) ) ',
     '( close-dir ( 3:d15 ) ) ',
     '( close-dir ( 2:d8 ) ) ',
-    '( add-dir ( 3:A/T 2:d1 3:d17 ( ) ) ) ',
-    '( add-file ( 8:A/T/mumu 3:d17 3:c18 ( ) ) ) ',
-    '( delete-entry ( 8:A/T/mumu 3:d17 ) ) ',
-    '( close-dir ( 3:d17 ) ) ',
+    '( delete-entry ( 3:A/T 2:d1 ) ) ',
     '( close-dir ( 2:d1 ) ) ',
-    '( open-file ( 4:iota 2:d0 3:c19 ) ) ',
-    '( change-file-prop ( 3:c19 13:svn:mime-type ( 24:application/octet-stream ) ) ) ',
-    '( apply-textdelta ( 3:c19 ( ) ) ) ',
-    '( textdelta-chunk ( 3:c19 4:SVN\001 ) ) ',
-    '( textdelta-chunk ( 3:c19 5:\000\000+\002, ) ) ',
-    '( textdelta-chunk ( 3:c19 2:\001\253 ) ) ',
-    '( textdelta-chunk ( 3:c19 44:+This is the file \'iota\'.\n',
-    '\n',
-    'Some more bytes.\n',
+    '( open-file ( 4:iota 2:d0 3:c18 ) ) ',
+    '( change-file-prop ( 3:c18 13:svn:mime-type ( ) ) ) ',
+    '( apply-textdelta ( 3:c18 ( ) ) ) ',
+    '( textdelta-chunk ( 3:c18 4:SVN\001 ) ) ',
+    '( textdelta-chunk ( 3:c18 5:\000\000\031\002\032 ) ) ',
+    '( textdelta-chunk ( 3:c18 2:\001\231 ) ) ',
+    '( textdelta-chunk ( 3:c18 26:\031This is the file \'iota\'.\n',
     ' ) ) ',
-    '( textdelta-end ( 3:c19 ) ) ',
-    '( close-file ( 3:c19 ( 32:1460795fd593ab45ddf5c1f7d7ef28f8 ) ) ) ',
+    '( textdelta-end ( 3:c18 ) ) ',
+    '( close-file ( 3:c18 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) ) ',
     '( close-dir ( 2:d0 ) ) ',
     '( close-edit ( ) ) '
   ]
@@ -2925,6 +2917,82 @@ def diff_svnpatch(sbox):
   svnpatch_output = extract_svnpatch(diff_output)
 
   if (svnpatch_output != expected_svnpatch_head_wc):
+    raise svntest.Failure
+
+  # subtest 6
+  # repos/repos diff, r2:r3
+
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff', '--svnpatch',
+                                                        '-r', '2:HEAD')
+
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  # should be rigorously equal to -rBASE:HEAD svnpatch diff (BASE is r2)
+  if (svnpatch_output != expected_svnpatch_base_head):
+    raise svntest.Failure
+
+  # subtest 7
+  # conversely, repos/repos diff, r3:r2
+
+  # Note this output is pretty similar to svnpatch_output_head_base[] as
+  # it ought to be.  But, as we have some order-mismatches (depth-first
+  # directory-ish/file-ish), we rather put it clearly here and not start
+  # playing with a bloody list re-ordering plus a token-strip rampage.
+
+  svnpatch_output_head_r2 = [
+    '( open-root ( 2:d0 ) ) ',
+    '( open-dir ( 1:A 2:d0 2:d1 ) ) ',
+    '( delete-entry ( 3:A/T 2:d1 ) ) ',
+    '( open-dir ( 3:A/B 2:d1 2:d2 ) ) ',
+    '( add-file ( 10:A/B/lambda 2:d2 2:c3 ( ) ) ) ',
+    '( close-file ( 2:c3 ( ) ) ) ',
+    '( open-dir ( 5:A/B/E 2:d2 2:d4 ) ) ',
+    '( open-file ( 11:A/B/E/alpha 2:d4 2:c5 ) ) ',
+    '( change-file-prop ( 2:c5 7:newprop ( ) ) ) ',
+    '( close-file ( 2:c5 ( ) ) ) ',
+    '( open-file ( 10:A/B/E/beta 2:d4 2:c6 ) ) ',
+    '( change-file-prop ( 2:c6 5:aprop ( 12:a prop value ) ) ) ',
+    '( close-file ( 2:c6 ( ) ) ) ',
+    '( close-dir ( 2:d4 ) ) ',
+    '( close-dir ( 2:d2 ) ) ',
+    '( open-dir ( 3:A/D 2:d1 2:d7 ) ) ',
+    '( open-dir ( 5:A/D/G 2:d7 2:d8 ) ) ',
+    '( change-dir-prop ( 2:d8 7:dirprop ( ) ) ) ',
+    '( close-dir ( 2:d8 ) ) ',
+    '( add-dir ( 5:A/D/H 2:d7 2:d9 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/chi 2:d9 3:c10 ( ) ) ) ',
+    '( close-file ( 3:c10 ( ) ) ) ',
+    '( add-file ( 11:A/D/H/omega 2:d9 3:c11 ( ) ) ) ',
+    '( close-file ( 3:c11 ( ) ) ) ',
+    '( add-file ( 9:A/D/H/psi 2:d9 3:c12 ( ) ) ) ',
+    '( close-file ( 3:c12 ( ) ) ) ',
+    '( close-dir ( 2:d9 ) ) ',
+    '( close-dir ( 2:d7 ) ) ',
+    '( close-dir ( 2:d1 ) ) ',
+    '( open-file ( 4:iota 2:d0 3:c13 ) ) ',
+    '( change-file-prop ( 3:c13 13:svn:mime-type ( ) ) ) ',
+    '( apply-textdelta ( 3:c13 ( ) ) ) ',
+    '( textdelta-chunk ( 3:c13 4:SVN\001 ) ) ',
+    '( textdelta-chunk ( 3:c13 5:\000\000\031\002\032 ) ) ',
+    '( textdelta-chunk ( 3:c13 2:\001\231 ) ) ',
+    '( textdelta-chunk ( 3:c13 26:\031This is the file \'iota\'.\n',
+    ' ) ) ',
+    '( textdelta-end ( 3:c13 ) ) ',
+    '( close-file ( 3:c13 ( 32:2d18c5e57e84c5b8a5e9a6e13fa394dc ) ) ) ',
+    '( close-dir ( 2:d0 ) ) ',
+    '( close-edit ( ) ) '
+  ]
+
+  expected_svnpatch_head_r2 = svnpatch_encode(svnpatch_output_head_r2)
+  
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff', '--svnpatch',
+                                                        '-r', 'HEAD:2')
+
+  svnpatch_output = extract_svnpatch(diff_output)
+
+  if (svnpatch_output != expected_svnpatch_head_r2):
     raise svntest.Failure
 
 def diff_with_depth(sbox):
