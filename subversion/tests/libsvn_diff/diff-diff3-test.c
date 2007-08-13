@@ -1324,6 +1324,28 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Dd",
                           NULL, pool));
 
+  diff_opts->ignore_space = svn_diff_file_ignore_space_all;
+  diff_opts->ignore_eol_style = FALSE;
+  SVN_ERR(three_way_merge("zig8", "zag8", "zog8",
+                          "Aa\n"
+                          "Bb\n"
+                          "Cc\n",
+
+                          "   Aa\n"
+                          "B b\n"
+                          "C c\n",
+
+                          "A a\n"
+                          "Bb \n"
+                          " Cc\n"
+                          "New line in zog8\n",
+
+                          "   Aa\n"
+                          "B b\n"
+                          "C c\n"
+                          "New line in zog8\n",
+                          diff_opts, pool));
+
   return SVN_NO_ERROR;
 }
 
