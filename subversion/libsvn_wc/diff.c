@@ -43,6 +43,7 @@
 #include <assert.h>
 
 #include <apr_hash.h>
+#include <apr_md5.h>
 
 #include "svn_pools.h"
 #include "svn_path.h"
@@ -954,6 +955,48 @@ transmit_svndiff(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Call @a change_prop_fn against the list of property changes @a
+ * propchanges.  This can be used for files and directories as their
+ * change_prop callbacks have the same prototype. */
+static svn_error_t *
+transmit_prop_deltas(apr_array_header_t *propchanges,
+                     apr_hash_t *originalprops,
+                     void *baton,
+                     struct edit_baton *eb,
+                     svn_error_t *(*change_prop_fn)
+                                   (void *baton,
+                                    const char *name,
+                                    const svn_string_t *value,
+                                    apr_pool_t *pool),
+                     apr_pool_t *pool)
+{
+  int i;
+  apr_array_header_t *props;
+
+  SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, pool));
+  for (i = 0; i < props->nelts; ++i)
+    {
+      const svn_string_t *original_value;
+      const svn_prop_t *propchange
+        = &APR_ARRAY_IDX(props, i, svn_prop_t);
+
+      if (originalprops)
+        original_value = apr_hash_get(originalprops, 
+            propchange->name, APR_HASH_KEY_STRING);
+      else
+        original_value = NULL;
+
+      /* The property was removed. */
+      if (original_value != NULL)
+        SVN_ERR(change_prop_fn(baton, propchange->name, NULL, pool));
+
+      if (propchange->value != NULL)
+        SVN_ERR(change_prop_fn(baton, propchange->name,
+                               propchange->value, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* Report an existing file in the working copy (either in BASE or WORKING)
  * as having been added.
@@ -1359,9 +1402,10 @@ svnpatch_delete_entry(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
-  SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                           "delete-entry", "cc",
-                           path, pb->token));
+  if (eb->reverse_order)
+    SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                             "delete-entry", "cc",
+                             path, pb->token));
   return SVN_NO_ERROR;
 }
 
@@ -1518,8 +1562,10 @@ path_driver_cb_func(void **dir_baton,
       case svn_wc_schedule_replace: /* fallthrough del + add */
       case svn_wc_schedule_delete:
         assert(pb);
+        eb->reverse_order = 1; /* TODO: fix this crappy workaround */
         SVN_ERR(editor->delete_entry
                 (path, SVN_INVALID_REVNUM, pb, pool));
+        eb->reverse_order = 0;
 
         if (svn_wc_schedule_delete) /* we're done */
           break;
@@ -1775,15 +1821,26 @@ add_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *b;
   const char *full_path;
-  const char *token = make_token('d', eb, dir_pool);
+  const char *token = NULL;
   svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
                               ? svn_depth_empty : pb->depth;
 
+  if (eb->reverse_order)
+    token = make_token('d', eb, dir_pool);
+
+
   if (eb->svnpatch_stream)
     {
-      SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                               "add-dir", "ccc(?c)", path, pb->token,
-                               token, copyfrom_path));
+      /* reverse_order is half-assed: we're actually dealing with a file
+       * addition when reverse_order is true. */
+      if (eb->reverse_order)
+        SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                                 "add-dir", "ccc(?c)", path, pb->token,
+                                 token, copyfrom_path));
+      else
+        SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                                 "delete-entry", "cc",
+                                 path, pb->token));
     }
 
   /* ### TODO: support copyfrom? */
@@ -1895,6 +1952,11 @@ close_directory(void *dir_baton,
                originalprops,
                b->edit_baton->callback_baton));
 
+      if (b->edit_baton->svnpatch_stream)
+        SVN_ERR(transmit_prop_deltas
+                (b->propchanges, originalprops, b, eb,
+                 eb->diff_editor->change_dir_prop, b->pool));
+
       /* Mark the properties of this directory as having already been
          compared so that we know not to show any local modifications
          later on. */
@@ -1983,9 +2045,12 @@ close_directory(void *dir_baton,
             ;
 
         }
-        else
-          SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
-                                   "close-dir", "c", b->token));
+      else
+        {
+          if (eb->reverse_order || ! b->added)
+            SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
+                                     "close-dir", "c", b->token));
+        }
 
     }
 
@@ -2013,7 +2078,7 @@ add_file(const char *path,
   b = make_file_baton(full_path, TRUE, pb, token, file_pool);
   *file_baton = b;
 
-  if (eb->svnpatch_stream)
+  if (eb->svnpatch_stream && eb->reverse_order)
     SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
                              "add-file", "ccc(?c)", path, pb->token,
                              token, copyfrom_path));
@@ -2216,7 +2281,11 @@ close_file(void *file_baton,
             {
               svn_boolean_t file_need_close = TRUE;
 
-              /* If this new repos-incoming file hodls a binary
+              SVN_ERR(transmit_prop_deltas
+                      (b->propchanges, NULL, b, eb,
+                       eb->diff_editor->change_file_prop, b->pool));
+
+              /* If this new repos-incoming file holds a binary
                * mime-type, we want our svnpatch to convey the file's
                * content. */
               if (binary_file)
@@ -2311,10 +2380,30 @@ close_file(void *file_baton,
           && ! eb->reverse_order)
         reverse_propchanges(originalprops, b->propchanges, b->pool);
 
-      if (eb->svnpatch_stream && binary_file)
-        SVN_ERR(transmit_svndiff
-                (/*eb->reverse_order ?*/ temp_file_path /*: localfile*/,
-                 adm_access, eb->diff_editor, b, pool));
+      if (eb->svnpatch_stream)
+        {
+          SVN_ERR(transmit_prop_deltas
+                  (b->propchanges, originalprops, b, eb,
+                   eb->diff_editor->change_file_prop, b->pool));
+
+          if (binary_file)
+            {
+              unsigned char tmp_digest[APR_MD5_DIGESTSIZE];
+              const char *base_digest_hex = NULL;
+              const char *the_right_path = eb->reverse_order ?
+                                           temp_file_path : localfile;
+
+              SVN_ERR(transmit_svndiff
+                      (the_right_path, adm_access,
+                       eb->diff_editor, b, pool));
+
+              /* Calculate the file's checksum since the one above might
+               * be wrong. */
+              SVN_ERR (svn_io_file_checksum (tmp_digest, the_right_path, pool));
+              text_checksum = (const char*)svn_md5_digest_to_cstring_display
+                                            (tmp_digest, pool);
+            }
+        }
 
       SVN_ERR(b->edit_baton->callbacks->file_changed
               (NULL, NULL, NULL,
@@ -2352,11 +2441,6 @@ change_file_prop(void *file_baton,
   propchange->name = apr_pstrdup(b->pool, name);
   propchange->value = value ? svn_string_dup(value, b->pool) : NULL;
 
-  /* Restrict to Regular Properties. */
-  if (eb->svnpatch_stream
-      && svn_property_kind(NULL, name) == svn_prop_regular_kind)
-    SVN_ERR(eb->diff_editor->change_file_prop
-            (b, name, value, pool));
   return SVN_NO_ERROR;
 }
 
@@ -2375,12 +2459,6 @@ change_dir_prop(void *dir_baton,
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
   propchange->value = value ? svn_string_dup(value, db->pool) : NULL;
-
-  /* Restrict to Regular Properties. */
-  if (eb->svnpatch_stream
-      && svn_property_kind(NULL, name) == svn_prop_regular_kind)
-    SVN_ERR(eb->diff_editor->change_dir_prop
-            (dir_baton, name, value, pool));
 
   return SVN_NO_ERROR;
 }
