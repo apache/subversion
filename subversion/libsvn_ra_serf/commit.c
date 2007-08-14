@@ -366,10 +366,9 @@ checkout_dir(dir_context_t *dir)
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
-        return svn_error_createf
-          (err->apr_err, err,
-           _("Your file or directory '%s' is probably out-of-date"),
-           svn_path_local_style(dir->name, dir->pool));
+        SVN_ERR_W(err, apr_psprintf(dir->pool, 
+                  _("Your file or directory '%s' is probably out-of-date"),
+                  svn_path_local_style(dir->name, dir->pool)));
       return err;
     }
 
