@@ -592,8 +592,8 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
 /**
  * Similar to svn_wc_parse_externals_description3(), but returns an
- * array of @c svn_wc_external_item2_t * objects instead of 
- * @c svn_wc_external_item_t * objects.
+ * array of @c svn_wc_external_item_t * objects instead of 
+ * @c svn_wc_external_item2_t * objects.
  *
  * @since New in 1.1.
  *
