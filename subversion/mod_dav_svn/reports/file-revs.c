@@ -124,7 +124,7 @@ delta_window_handler(svn_txdelta_window_t *window, void *baton)
 }
 
 
-/* This implements the svn_repos_file_rev_handler_t interface. */
+/* This implements the svn_repos_file_rev_handler2_t interface. */
 static svn_error_t *
 file_rev_handler(void *baton,
                  const char *path,
@@ -179,6 +179,14 @@ file_rev_handler(void *baton,
                                                          1)));
         }
     }
+
+  /* Send whether this was the result of a merge or not. */
+  if (merged_revision)
+    {
+     SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
+                                "<S:merged-revision/>"));
+    }
+
 
   /* Maybe send text delta. */
   if (window_handler)

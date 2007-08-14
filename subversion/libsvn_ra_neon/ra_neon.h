@@ -771,7 +771,8 @@ enum {
   ELEM_mergeinfo_item,
   ELEM_mergeinfo_path,
   ELEM_mergeinfo_info,
-  ELEM_nbr_children
+  ELEM_nbr_children,
+  ELEM_merged_revision
 };
 
 /* ### docco */

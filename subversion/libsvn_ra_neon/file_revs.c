@@ -65,6 +65,9 @@ struct report_baton {
   /* Stream for writing text delta to. */
   svn_stream_t *stream;
 
+  /* Merged revision flag. */
+  svn_boolean_t merged_rev;
+
   svn_boolean_t had_txdelta;  /* Did we have a txdelta in this file-rev elem? */
 
   apr_pool_t *subpool;
@@ -79,6 +82,7 @@ reset_file_rev(struct report_baton *rb)
   rb->revnum = SVN_INVALID_REVNUM;
   rb->rev_props = apr_hash_make(rb->subpool);
   rb->prop_diffs = apr_array_make(rb->subpool, 0, sizeof(svn_prop_t));
+  rb->merged_rev = FALSE;
   rb->had_txdelta = FALSE;
   /* Just in case... */
   rb->stream = NULL;
@@ -93,6 +97,7 @@ static const svn_ra_neon__xml_elm_t report_elements[] =
     { SVN_XML_NAMESPACE, "rev-prop", ELEM_rev_prop, 0 },
     { SVN_XML_NAMESPACE, "set-prop", ELEM_set_prop, 0 },
     { SVN_XML_NAMESPACE, "remove-prop", ELEM_remove_prop, 0 },
+    { SVN_XML_NAMESPACE, "merged-revision", ELEM_merged_revision, 0 },
     { SVN_XML_NAMESPACE, "txdelta", ELEM_txdelta, 0 },
     { NULL }
   };
@@ -174,12 +179,17 @@ start_element(int *elem, void *userdata, int parent_state, const char *ns,
             void *wbaton;
             /* It's time to call our hanlder. */
             SVN_ERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
-                                rb->rev_props, FALSE, &whandler, &wbaton,
-                                rb->prop_diffs, rb->subpool));
+                                rb->rev_props, rb->merged_rev, &whandler,
+                                &wbaton, rb->prop_diffs, rb->subpool));
             if (whandler)
               rb->stream = svn_base64_decode
                 (svn_txdelta_parse_svndiff(whandler, wbaton, TRUE,
                                            rb->subpool), rb->subpool);
+          }
+          break;
+        case ELEM_merged_revision:
+          {
+            rb->merged_rev = TRUE;
           }
           break;
         default:
