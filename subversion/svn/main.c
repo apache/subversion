@@ -594,6 +594,22 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'q', svn_cl__force_opt, svn_cl__parents_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
+  { "patch", svn_cl__patch, {0}, N_
+    ("Apply a patch to a working copy path.\n"
+     "usage: patch PATCHFILE [WCPATH]\n"
+     "\n"
+     "  PATCHFILE is an input file which, when applied, turns the working\n"
+     "  copy WCPATH into a modified tree that reflects all the changes the\n"
+     "  patch carries along.  When WCPATH is omitted '.' is assumed.\n"
+     "\n"
+     "  The format of bytes embedded in the patch can be of two types: Unified\n"
+     "  diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+     "\n"
+     "  This command allows some amount of fuzzing as Unidiff is contextual\n"
+     "  and svnpatch revisionless.  However, you might see failure warnings\n"
+     "  when pushing this feature too hard.\n"),
+    {'q', svn_cl__dry_run_opt, svn_cl__config_dir_opt} },
+
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
      "usage: 1. propdel PROPNAME [PATH...]\n"

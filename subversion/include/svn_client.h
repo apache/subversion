@@ -3938,6 +3938,39 @@ svn_client_info(const char *path_or_url,
 
 /** @} */
 
+
+/**
+ * @defgroup Patch
+ *
+ * @{
+ */
+
+/**
+ * Apply a patch that's located at @a patch_path against a working copy
+ * pointed by @a wc_path.
+ *
+ * The patch might carry Unified diffs, svnpatch diffs, or both.
+ * Although we're pretty much able to handle the svnpatch block, we'll
+ * be using external tools to process the Unidiff.  On Unix-like systems
+ * we'll invoke the patch(1) binary while we'll leave the user with its
+ * own tools on other platforms.
+ * Note: hopefuly this is temporary and we'll have our own implementation
+ * one day to cut off the dependency.
+ *
+ * If @a dry_run is true, the patch is carried out, and full notification
+ * feedback is provided, but the working copy is not modified.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_patch(const char *patch_path,
+                 const char *wc_path,
+                 svn_boolean_t dry_run,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/** @} */
+
 /** @} end group: Client working copy management */
 
 /**
