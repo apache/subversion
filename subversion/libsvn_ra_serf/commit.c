@@ -1273,8 +1273,11 @@ add_directory(const char *path,
       
   SVN_ERR(svn_ra_serf__context_run_wait(&add_dir_ctx->done,
                                         dir->commit->session, dir->pool));
-      
-  if (add_dir_ctx->status != 201)
+
+  /* 201 Created:    item was successfully copied
+     204 No Content: item successfully replaced an existing target */
+  if (add_dir_ctx->status != 201 && 
+      add_dir_ctx->status != 204)
     {
       SVN_ERR(add_dir_ctx->server_error.error);
       return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
