@@ -157,13 +157,13 @@ three_way_merge(const char *filename1,
   char *merge_name = apr_psprintf(pool, "merge-%s-%s-%s",
                                   filename1, filename2, filename3);
 
-  options = options ? options : svn_diff_file_options_create(pool);
-
   /* We have an EXPECTED string we can match, because we don't support
      any other combinations (yet) than the ones above. */
   svn_string_t *original = svn_string_create(contents1, pool);
   svn_string_t *modified = svn_string_create(contents2, pool);
   svn_string_t *latest = svn_string_create(contents3, pool);
+
+  options = options ? options : svn_diff_file_options_create(pool);
 
   SVN_ERR(svn_diff_mem_string_diff3(&diff,
                                     original, modified, latest, options, pool));
@@ -250,12 +250,12 @@ two_way_diff(const char *filename1,
   svn_stringbuf_t *actual;
   char *diff_name = apr_psprintf(pool, "diff-%s-%s", filename1, filename2);
 
-  options = options ? options : svn_diff_file_options_create(pool);
-
   /* We have an EXPECTED string we can match, because we don't support
      any other combinations (yet) than the ones above. */
   svn_string_t *original = svn_string_create(contents1, pool);
   svn_string_t *modified = svn_string_create(contents2, pool);
+
+  options = options ? options : svn_diff_file_options_create(pool);
 
   SVN_ERR(svn_diff_mem_string_diff(&diff, original, modified, options, pool));
 
