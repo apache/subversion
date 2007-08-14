@@ -48,6 +48,7 @@ struct rev
 struct blame
 {
   struct rev *rev;    /* the responsible revision */
+  struct rev *merged_rev; /* the responsible merged revision (if any) */
   apr_off_t start;    /* the starting diff-token (line) */
   struct blame *next; /* the next chunk */
 };
@@ -89,7 +90,10 @@ struct delta_baton {
 /* Return a blame chunk associated with REV for a change starting
    at token START, and allocated in BATON->mainpool. */
 static struct blame *
-blame_create(struct file_rev_baton *baton, struct rev *rev, apr_off_t start)
+blame_create(struct file_rev_baton *baton,
+             struct rev *rev,
+             struct rev *merged_rev,
+             apr_off_t start)
 {
   struct blame *blame;
   if (baton->avail)
@@ -100,6 +104,7 @@ blame_create(struct file_rev_baton *baton, struct rev *rev, apr_off_t start)
   else
     blame = apr_palloc(baton->mainpool, sizeof(*blame));
   blame->rev = rev;
+  blame->merged_rev = merged_rev;
   blame->start = start;       
   blame->next = NULL;
   return blame;
@@ -193,7 +198,7 @@ blame_insert_range(struct file_rev_baton *db, apr_off_t start,
 
   if (point->start == start)
     {
-      insert = blame_create(db, point->rev, point->start + length);
+      insert = blame_create(db, point->rev, NULL, point->start + length);
       point->rev = db->rev;
       insert->next = point->next;
       point->next = insert;
@@ -201,8 +206,8 @@ blame_insert_range(struct file_rev_baton *db, apr_off_t start,
   else
     {
       struct blame *middle;
-      middle = blame_create(db, db->rev, start);
-      insert = blame_create(db, point->rev, start + length);
+      middle = blame_create(db, db->rev, NULL, start);
+      insert = blame_create(db, point->rev, NULL, start + length);
       middle->next = insert;
       insert->next = point->next;
       point->next = middle;
@@ -294,7 +299,7 @@ add_file_blame(const char *last_file, const char *cur_file,
   if (!last_file)
     {
       assert(frb->blame == NULL);
-      frb->blame = blame_create(frb, frb->rev, 0);
+      frb->blame = blame_create(frb, frb->rev, NULL, 0);
     }
   else
     {
@@ -485,6 +490,70 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   return SVN_NO_ERROR;
 }
 
+/* Merge BLAME_ORIG and BLAME_MERGED into a single blame list.  Use FRB to do
+   new blame allocations. */
+static struct blame *
+merge_blames(struct blame *blame_orig,
+             struct blame *blame_merged,
+             struct file_rev_baton *frb,
+             apr_pool_t *pool)
+{
+  struct blame *out;
+
+  if (blame_orig == NULL)
+    return blame_merged;
+  else if (blame_merged == NULL)
+    return blame_orig;
+
+  /* In both the initial case, and the recursive cases, both blames should
+     start at the same position. */
+  assert(blame_orig->start == blame_merged->start);
+
+  /* Create the new blame chunk, with both the merged revision and the
+     original revision. */
+  if (blame_merged->rev->revision == blame_orig->rev->revision)
+    out = blame_create(frb, blame_orig->rev, NULL, blame_orig->start);
+  else
+    out = blame_create(frb, blame_orig->rev, blame_merged->rev,
+                       blame_orig->start);
+
+  /* Check to see if either are at the end of the list. */
+  if (blame_orig->next == NULL)
+    {
+      out->next = blame_merged;
+      return out;
+    }
+  else if (blame_merged->next == NULL)
+    {
+      out->next = blame_orig;
+      return out;
+    }
+
+  /* Update each blame list by removing the chunk we just merged. */
+  if (blame_orig->next->start == blame_merged->next->start)
+    {
+      blame_orig = blame_orig->next;
+      blame_merged = blame_merged->next;
+    }
+  else if (blame_orig->next->start < blame_merged->next->start)
+    {
+      blame_orig = blame_orig->next;
+      blame_merged = blame_create(frb, NULL, blame_merged->rev,
+                                  blame_orig->start);
+    }
+  else
+    {
+      blame_merged = blame_merged->next;
+      blame_orig = blame_create(frb, blame_orig->rev, NULL,
+                                blame_merged->start);
+    }
+
+  /* Recurse */
+  out->next = merge_blames(blame_orig, blame_merged, frb, pool);
+
+  return out;
+}
+
 static svn_error_t *
 old_blame(const char *target, const char *url,
           svn_ra_session_t *ra_session,
@@ -503,12 +572,12 @@ svn_client_blame4(const char *target,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  struct file_rev_baton frb;
+  struct file_rev_baton frb, frbm;
   svn_ra_session_t *ra_session;
   const char *url;
   svn_revnum_t start_revnum, end_revnum;
   struct blame *walk;
-  apr_file_t *file;
+  apr_file_t *file; 
   apr_pool_t *iterpool;
   svn_stream_t *stream;
   svn_error_t *err;
@@ -562,8 +631,7 @@ svn_client_blame4(const char *target,
      revision. */
   err = svn_ra_get_file_revs2(ra_session, "",
                               start_revnum - (start_revnum > 0 ? 1 : 0),
-                              end_revnum, include_merged_revisions,
-                              file_rev_handler, &frb, pool);
+                              end_revnum, FALSE, file_rev_handler, &frb, pool);
   
   /* Fall back if it wasn't supported by the server.  Servers earlier
      than 1.1 need this. */
@@ -574,6 +642,44 @@ svn_client_blame4(const char *target,
     }
 
   SVN_ERR(err);
+
+  if (include_merged_revisions)
+    {
+      frbm.start_rev = start_revnum;
+      frbm.end_rev = end_revnum;
+      frbm.target = target;
+      frbm.ctx = ctx;
+      frbm.diff_options = diff_options;
+      frbm.ignore_mime_type = ignore_mime_type;
+      frbm.last_filename = NULL;
+      frbm.blame = NULL;
+      frbm.avail = NULL;
+
+      SVN_ERR(svn_io_temp_dir(&frb.tmp_path, pool));
+      frbm.tmp_path = svn_path_join(frb.tmp_path, "tmp", pool),
+
+      frbm.mainpool = pool;
+      /* The callback will flip the following two pools, because it needs
+         information from the previous call.  Obviously, it can't rely on
+         the lifetime of the pool provided by get_file_revs. */
+      frbm.lastpool = svn_pool_create(pool);
+      frbm.currpool = svn_pool_create(pool);
+
+      /* Collect all blame information.
+         We need to ensure that we get one revision before the start_rev,
+         if available so that we can know what was actually changed in the start
+         revision. */
+      SVN_ERR(svn_ra_get_file_revs2(ra_session, "",
+                                    start_revnum - (start_revnum > 0 ? 1 : 0),
+                                    end_revnum, TRUE,
+                                    file_rev_handler, &frbm, pool));
+
+      walk = merge_blames(frb.blame, frbm.blame, &frb, pool);
+    }
+  else
+    {
+      walk = frb.blame;
+    }
 
   /* Report the blame to the caller. */
 
@@ -590,7 +696,7 @@ svn_client_blame4(const char *target,
                                        "\n", TRUE, NULL, FALSE, pool);
 
   /* Process each blame item. */
-  for (walk = frb.blame; walk; walk = walk->next)
+  for (; walk; walk = walk->next)
     {
       apr_off_t line_no;
       for (line_no = walk->start;
@@ -599,6 +705,22 @@ svn_client_blame4(const char *target,
         {
           svn_boolean_t eof;
           svn_stringbuf_t *sb;
+          svn_revnum_t merged_rev;
+          const char *merged_author, *merged_date;
+
+          if (walk->merged_rev)
+            {
+              merged_rev = walk->merged_rev->revision;
+              merged_author = walk->merged_rev->author;
+              merged_date = walk->merged_rev->date;
+            }
+          else
+            {
+              merged_rev = SVN_INVALID_REVNUM;
+              merged_author = NULL;
+              merged_date = NULL;
+            }
+
           apr_pool_clear(iterpool);
           SVN_ERR(svn_stream_readline(stream, &sb, "\n", &eof, iterpool));
           if (ctx->cancel_func)
@@ -606,7 +728,7 @@ svn_client_blame4(const char *target,
           if (!eof || sb->len)
             SVN_ERR(receiver(receiver_baton, line_no, walk->rev->revision,
                              walk->rev->author, walk->rev->date,
-                             SVN_INVALID_REVNUM, NULL, NULL,
+                             merged_rev, merged_author, merged_date,
                              sb->data, iterpool));
           if (eof) break;
         }
@@ -619,6 +741,11 @@ svn_client_blame4(const char *target,
 
   svn_pool_destroy(frb.lastpool);
   svn_pool_destroy(frb.currpool);
+  if (include_merged_revisions)
+    {
+      svn_pool_destroy(frbm.lastpool);
+      svn_pool_destroy(frbm.currpool);
+    }
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -841,7 +968,7 @@ old_blame(const char *target, const char *url,
       rev->revision = SVN_INVALID_REVNUM;
       rev->author = NULL;
       rev->date = NULL;
-      frb->blame = blame_create(frb, rev, 0);
+      frb->blame = blame_create(frb, rev, NULL, 0);
     }
   else if (lmb.action == 'M' || SVN_IS_VALID_REVNUM(lmb.copyrev))
     {
@@ -857,11 +984,11 @@ old_blame(const char *target, const char *url,
       rev->revision = SVN_INVALID_REVNUM;
       rev->author = NULL;
       rev->date = NULL;
-      frb->blame = blame_create(frb, rev, 0);
+      frb->blame = blame_create(frb, rev, NULL, 0);
     }
   else if (lmb.action == 'A')
     {
-      frb->blame = blame_create(frb, lmb.eldest, 0);
+      frb->blame = blame_create(frb, lmb.eldest, NULL, 0);
     }
   else
     return svn_error_createf(APR_EGENERAL, NULL,

@@ -512,7 +512,7 @@ test_list = [ None,
               blame_eol_styles,
               blame_ignore_whitespace,
               blame_ignore_eolstyle,
-              XFail(blame_merge_info),
+              blame_merge_info,
              ]
 
 if __name__ == '__main__':
