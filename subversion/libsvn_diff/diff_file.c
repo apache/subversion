@@ -33,7 +33,6 @@
 #include "svn_io.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
-#include "svn_ctype.h"
 #include "diff.h"
 #include "svn_private_config.h"
 
@@ -46,25 +45,14 @@ typedef struct svn_diff__file_token_t
   svn_diff_datasource_e datasource;
   /* Offset in the datasource. */
   apr_off_t offset;
+  /* Offset of the normalized token (may skip leading whitespace) */
+  apr_off_t norm_offset;
   /* Total length - before normalization. */
   apr_off_t raw_length;
   /* Total length - after normalization. */
   apr_off_t length;
 } svn_diff__file_token_t;
 
-
-/* State used when normalizing whitespace and EOL styles. */
-typedef enum normalize_state_t
-{
-  /* Initial state; not in a sequence of whitespace. */
-  state_normal,
-  /* We're in a sequence of whitespace characters.  Only entered if
-     we ignore whitespace. */
-  state_whitespace,
-  /* The previous character was CR. */
-  state_cr
-} normalize_state_t;
-  
 
 typedef struct svn_diff__file_baton_t
 {
@@ -82,7 +70,7 @@ typedef struct svn_diff__file_baton_t
   /* List of free tokens that may be reused. */
   svn_diff__file_token_t *tokens;
 
-  normalize_state_t normalize_state[4];
+  svn_diff__normalize_state_t normalize_state[4];
 
   apr_pool_t *pool;
 } svn_diff__file_baton_t;
@@ -102,7 +90,7 @@ find_eol_start(char *buf, apr_size_t len)
     }
   return NULL;
 }
-      
+
 static int
 datasource_to_index(svn_diff_datasource_e datasource)
 {
@@ -265,124 +253,6 @@ datasource_close(void *baton, svn_diff_datasource_e datasource)
   return SVN_NO_ERROR;
 }
 
-/* Normalize the characters pointed to by BUF of length *LENGTTHP, starting
- * in state *STATEP according to the OPTIONS.
- * Adjust *LENGTHP and *STATEP to be the length of the normalized buffer and
- * the final state, respectively.
- * The normalization is done in-place, so the new length will be <= the old. */
-static void
-normalize(char *buf, apr_off_t *lengthp, normalize_state_t *statep,
-          const svn_diff_file_options_t *opts)
-{
-  char *curp, *endp;
-  /* Start of next chunk to copy. */
-  char *start = buf;
-  /* The current end of the normalized buffer. */
-  char *newend = buf;
-  normalize_state_t state = *statep;
-
-  /* If this is a noop, then just get out of here. */
-  if (! opts->ignore_space && ! opts->ignore_eol_style)
-    return;
-
-  for (curp = buf, endp = buf + *lengthp; curp != endp; ++curp)
-    {
-      switch (state)
-        {
-        case state_cr:
-          state = state_normal;
-          if (*curp == '\n' && opts->ignore_eol_style)
-            {
-              start = curp + 1;
-              break;
-            }
-          /* Else, fall through. */
-        case state_normal:
-          if (svn_ctype_isspace(*curp))
-            {
-              /* Flush non-ws characters. */
-              if (newend != start)
-                memmove(newend, start, curp - start);
-              newend += curp - start;
-              start = curp;
-              switch (*curp)
-                {
-                case '\r':
-                  state = state_cr;
-                  if (opts->ignore_eol_style)
-                    {
-                      /* Replace this CR with an LF; if we're followed by an
-                         LF, that will be ignored. */
-                      *newend++ = '\n';
-                      ++start;
-                    }
-                  break;
-                case '\n':
-                  break;
-                default:
-                  /* Some other whitespace character. */
-                  if (opts->ignore_space)
-                    {
-                      state = state_whitespace;
-                      if (opts->ignore_space
-                          == svn_diff_file_ignore_space_change)
-                        *newend++ = ' ';
-                    }
-                  break;
-                }
-            }
-          break;
-        case state_whitespace:
-          /* This is only entered if we're ignoring whitespace. */
-          if (svn_ctype_isspace(*curp))
-            switch (*curp)
-              {
-              case '\r':
-                state = state_cr;
-                if (opts->ignore_eol_style)
-                  {
-                    *newend++ = '\n';
-                    start = curp + 1;
-                  }
-                else
-                  start = curp;
-                break;
-              case '\n':
-                state = state_normal;
-                start = curp;
-                break;
-              default:
-                break;
-              }
-          else
-            {
-              /* Non-whitespace character. */
-              start = curp;
-              state = state_normal;
-            }
-          break;
-        }
-    }
-                  
-  /* If we're not in whitespace, flush the last chunk of data.
-   * Note that this will work correctly when this is the last chunk of the
-   * file:
-   * * If there is an eol, it will either have been output when we entered
-   *   the state_cr, or it will be output now.
-   * * If there is no eol and we're not in whitespace, then we just output
-   *   everything below.
-   * * If there's no eol and we are in whitespace, we want to ignore
-   *   whitespace unconditionally. */
-  if (state != state_whitespace)
-    {
-      if (start != newend)
-        memmove(newend, start, curp - start);
-      newend += curp - start;
-    }
-  *lengthp = newend - buf;
-  *statep = state;
-}
-
 /* Implements svn_diff_fns_t::datasource_get_next_token */
 static svn_error_t *
 datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
@@ -456,20 +326,21 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       length = endp - curp;
       file_token->raw_length += length;
-      normalize(curp, &length, &file_baton->normalize_state[idx],
-                file_baton->options);
+      svn_diff__normalize_buffer(&curp, &length,
+                                 &file_baton->normalize_state[idx],
+                                 curp, file_baton->options);
       file_token->length += length;
       h = svn_diff__adler32(h, curp, length);
 
       curp = endp = file_baton->buffer[idx];
       file_baton->chunk[idx]++;
-      length = file_baton->chunk[idx] == last_chunk ? 
+      length = file_baton->chunk[idx] == last_chunk ?
         offset_in_chunk(file_baton->size[idx]) : CHUNK_SIZE;
       endp += length;
       file_baton->endp[idx] = endp;
 
       SVN_ERR(read_chunk(file_baton->file[idx], file_baton->path[idx],
-                         curp, length, 
+                         curp, length,
                          chunk_to_offset(file_baton->chunk[idx]),
                          file_baton->pool));
 
@@ -494,11 +365,15 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
    * line. */
   if (file_token->raw_length > 0)
     {
-      normalize(curp, &length, &file_baton->normalize_state[idx],
-                file_baton->options);
+      char *c = curp;
+      svn_diff__normalize_buffer(&c, &length,
+                                 &file_baton->normalize_state[idx],
+                                 curp, file_baton->options);
+
+      file_token->norm_offset = file_token->offset + (c - curp);
       file_token->length += length;
 
-      *hash = svn_diff__adler32(h, curp, length);
+      *hash = svn_diff__adler32(h, c, length);
       *token = file_token;
     }
 
@@ -523,7 +398,7 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
   apr_off_t raw_length[2];
   int i;
   int chunk[2];
-  normalize_state_t state[2];
+  svn_diff__normalize_state_t state[2];
 
   file_token[0] = token1;
   file_token[1] = token2;
@@ -549,9 +424,9 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
   for (i = 0; i < 2; ++i)
     {
       idx[i] = datasource_to_index(file_token[i]->datasource);
-      offset[i] = file_token[i]->offset;
+      offset[i] = file_token[i]->norm_offset;
       chunk[i] = file_baton->chunk[idx[i]];
-      state[i] = state_normal;
+      state[i] = svn_diff__normalize_state_normal;
 
       if (offset_to_chunk(offset[i]) == chunk[i])
         {
@@ -560,7 +435,7 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
            */
           bufp[i] = file_baton->buffer[idx[i]];
           bufp[i] += offset_in_chunk(offset[i]);
-          
+
           length[i] = total_length;
           raw_length[i] = 0;
         }
@@ -590,7 +465,7 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
 
               /* Read a chunk from disk into a buffer */
               bufp[i] = buffer[i];
-              length[i] = raw_length[i] > COMPARE_CHUNK_SIZE ? 
+              length[i] = raw_length[i] > COMPARE_CHUNK_SIZE ?
                 COMPARE_CHUNK_SIZE : raw_length[i];
 
               SVN_ERR(read_chunk(file_baton->file[idx[i]],
@@ -599,7 +474,10 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
                                  file_baton->pool));
               offset[i] += length[i];
               raw_length[i] -= length[i];
-              normalize(bufp[i], &length[i], &state[i], file_baton->options);
+              /* bufp[i] gets reset to buffer[i] before reading each chunk,
+                 so, overwriting it isn't a problem */
+              svn_diff__normalize_buffer(&bufp[i], &length[i], &state[i],
+                                         bufp[i], file_baton->options);
             }
         }
 
@@ -691,7 +569,7 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
   argv[0] = "";
   memcpy(argv + 1, args->elts, sizeof(char*) * args->nelts);
   argv[args->nelts + 1] = NULL;
-  
+
   apr_getopt_init(&os, pool, args->nelts + 1, argv);
   /* No printing of error messages, please! */
   os->errfn = NULL;
@@ -946,7 +824,7 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
                     {
                       svn_stringbuf_appendbytes(baton->hunk, curp, len);
                     }
-                  
+
                   baton->curp[idx] = eol;
                   baton->length[idx] = length;
 
@@ -1005,9 +883,10 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
           const char *out_str;
           SVN_ERR(svn_utf_cstring_from_utf8_ex2
                   (&out_str,
-                   apr_psprintf(baton->pool,
-                                _("%s\\ No newline at end of file%s"),
-                                APR_EOL_STR, APR_EOL_STR),
+                   /* The string below is intentionally not marked for
+                      translation: it's vital to correct operation of
+                      the diff(1)/patch(1) program pair. */
+                   APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR,
                    baton->header_encoding, baton->pool));
           svn_stringbuf_appendcstr(baton->hunk, out_str);
         }
@@ -1224,7 +1103,7 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
                                             header_encoding, pool));
       SVN_ERR(svn_utf_cstring_from_utf8_ex2(&baton.insert_str, "+",
                                             header_encoding, pool));
-      
+
       for (i = 0; i < 2; i++)
         {
           SVN_ERR(svn_io_file_open(&baton.file[i], baton.path[i],
@@ -1352,7 +1231,7 @@ output_line(svn_diff3__file_output_baton_t *baton,
 }
 
 static svn_error_t *
-output_hunk(void *baton, int idx, apr_off_t target_line, 
+output_hunk(void *baton, int idx, apr_off_t target_line,
             apr_off_t target_length)
 {
   svn_diff3__file_output_baton_t *output_baton = baton;
@@ -1375,7 +1254,7 @@ output_hunk(void *baton, int idx, apr_off_t target_line,
 
 static svn_error_t *
 output_common(void *baton, apr_off_t original_start, apr_off_t original_length,
-              apr_off_t modified_start, apr_off_t modified_length, 
+              apr_off_t modified_start, apr_off_t modified_length,
               apr_off_t latest_start, apr_off_t latest_length)
 {
   return output_hunk(baton, 1, modified_start, modified_length);

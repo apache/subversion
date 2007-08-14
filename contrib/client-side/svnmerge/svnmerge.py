@@ -25,8 +25,8 @@
 #   John Belmonte <john at neggie dot net> - metadata and usability
 #     improvements
 #   Blair Zajac <blair at orcaware dot com> - random improvements
-#   Raman Gupta <rocketraman at fastmail dot fm> - bidirectional and transitive merging
-#     support
+#   Raman Gupta <rocketraman at fastmail dot fm> - bidirectional and transitive
+#     merging support
 #
 # $HeadURL$
 # $LastChangedDate$
@@ -236,8 +236,8 @@ try:
                                      close_fds=False, stderr=subprocess.PIPE)
             else:
                 # Use shlex to break up the parameters intelligently,
-                # respecting quotes
-                args = shlex.split(cmd.encode('ascii')) # shlex can't handle unicode
+                # respecting quotes. shlex can't handle unicode.
+                args = shlex.split(cmd.encode('ascii'))
                 p = subprocess.Popen(args, stdout=subprocess.PIPE, \
                                      close_fds=False, stderr=subprocess.PIPE)
             stdoutAndErr = p.communicate()
@@ -342,19 +342,10 @@ class RevisionLog:
         list of the revisions which changed properties directly on the
         specified URL. URL must be the URL for a directory in the repository.
         """
-
-        # Save the specified URL
         self.url = url
 
-        # Look for revisions
-        revision_re = re.compile(r"^r(\d+)")
-
-        # Look for changes which contain merge tracking information
-        repos_pathid = target_to_pathid(url)
-        srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(repos_pathid))
-
         # Setup the log options (--quiet, so we don't show log messages)
-        log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
+        log_opts = '--xml --quiet -r%s:%s "%s"' % (begin, end, url)
         if find_propchanges:
             # The --verbose flag lets us grab merge tracking information
             # by looking at propchanges
@@ -363,13 +354,13 @@ class RevisionLog:
         # Read the log to look for revision numbers and merge-tracking info
         self.revs = []
         self.propchange_revs = []
-        for line in launchsvn("log %s" % log_opts):
-            m = revision_re.match(line)
-            if m:
-                rev = int(m.groups()[0])
-                self.revs.append(rev)
-            elif srcdir_change_re.match(line):
-                self.propchange_revs.append(rev)
+        repos_pathid = target_to_pathid(url)
+        for chg in SvnLogParser(launchsvn("log %s" % log_opts,
+                                          split_lines=False)):
+            self.revs.append(chg.revision())
+            for p in chg.paths():
+                if p.action() == 'M' and p.pathid() == repos_pathid:
+                    self.propchange_revs.append(chg.revision())
 
         # Save the range of the log
         self.begin = int(begin)
@@ -377,7 +368,7 @@ class RevisionLog:
             # If end is not provided, we do not know which is the latest
             # revision in the repository. So we set 'end' to the latest
             # known revision.
-            self.end = log.revs[-1]
+            self.end = self.revs[-1]
         else:
             self.end = int(end)
 
@@ -769,7 +760,6 @@ def get_svninfo(target):
     """Extract the subversion information for a target (through 'svn info').
     This function uses an internal cache to let clients query information
     many times."""
-    global _cache_svninfo
     if _cache_svninfo.has_key(target):
         return _cache_svninfo[target]
     info = {}
@@ -789,13 +779,16 @@ def target_to_url(target):
         return info["URL"]
     return target
 
+_cache_reporoot = {}
 def get_repo_root(target):
     """Compute the root repos URL given a working-copy path, or a URL."""
     # Try using "svn info WCDIR". This works only on SVN clients >= 1.3
     if not is_url(target):
         try:
             info = get_svninfo(target)
-            return info["Repository Root"]
+            root = info["Repository Root"]
+            _cache_reporoot[root] = None
+            return root
         except KeyError:
             pass
         url = target_to_url(target)
@@ -803,10 +796,21 @@ def get_repo_root(target):
     else:
         url = target
 
+    # Go through the cache of the repository roots. This avoids extra
+    # server round-trips if we are asking the root of different URLs
+    # in the same repository (the cache in get_svninfo() cannot detect
+    # that of course and would issue a remote command).
+    assert is_url(url)
+    for r in _cache_reporoot:
+        if url.startswith(r):
+            return r
+
     # Try using "svn info URL". This works only on SVN clients >= 1.2
     try:
         info = get_svninfo(url)
-        return info["Repository Root"]
+        root = info["Repository Root"]
+        _cache_reporoot[root] = None
+        return root
     except LaunchError:
         pass
 
@@ -818,6 +822,7 @@ def get_repo_root(target):
         try:
             launchsvn('proplist "%s"' % temp)
         except LaunchError:
+            _cache_reporoot[url] = None
             return url
         url = temp
 
@@ -832,14 +837,11 @@ def target_to_pathid(target):
     assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
     return url[len(root):]
 
-def getAttributeOrNone(element, name):
-    '''Returns None if not found.'''
-    if element.hasAttribute(name):
-        return element.getAttribute(name)
-    else:
-        return None
-
 class SvnLogParser:
+    """
+    Parse the "svn log", going through the XML output and using pulldom (which
+    would even allow streaming the command output).
+    """
     def __init__(self, xml):
         self._events = pulldom.parseString(xml)
     def __getitem__(self, idx):
@@ -851,28 +853,28 @@ class SvnLogParser:
 
     class SvnLogRevision:
         def __init__(self, xmlnode):
-            self._node = xmlnode
+            self.n = xmlnode
         def revision(self):
-            return getAttributeOrNone(self._node, "revision")
+            return self.n.getAttribute("revision")
         def author(self):
-            return self._node.getElementsByTagName("author")[0].firstChild.data
+            return self.n.getElementsByTagName("author")[0].firstChild.data
         def paths(self):
-            paths = []
-            for n in self._node.getElementsByTagName("path"):
-                paths.append(self.SvnLogPath(n))
-            return paths
+            return [self.SvnLogPath(n)
+                    for n in  self.n.getElementsByTagName("path")]
 
         class SvnLogPath:
             def __init__(self, xmlnode):
-                self._node = xmlnode
+                self.n = xmlnode
             def action(self):
-                return getAttributeOrNone(self._node, "action")
+                return self.n.getAttribute("action")
             def pathid(self):
-                return self._node.firstChild.data
+                return self.n.firstChild.data
             def copyfrom_rev(self):
-                return getAttributeOrNone(self._node, "copyfrom-rev")
+                try: return self.n.getAttribute("copyfrom-rev")
+                except KeyError: return None
             def copyfrom_pathid(self):
-                return getAttributeOrNone(self._node, "copyfrom-path")
+                try: return self.n.getAttribute("copyfrom-path")
+                except KeyError: return None
 
 def get_copyfrom(target):
     """Get copyfrom info for a given target (it represents the directory from
@@ -885,8 +887,8 @@ def get_copyfrom(target):
         - revision in which the copy was committed
     """
     repos_path = target_to_pathid(target)
-    for chg in SvnLogParser(launchsvn('log -v --xml --stop-on-copy "%s"' % target,
-                                      split_lines=False)):
+    for chg in SvnLogParser(launchsvn('log -v --xml --stop-on-copy "%s"'
+                                      % target, split_lines=False)):
         for p in chg.paths():
             if p.action() == 'A' and p.pathid() == repos_path:
                 # These values will be None if the corresponding elements are 
@@ -1031,7 +1033,8 @@ def analyze_revs(target_pathid, url, begin=1, end=None,
     else:
         end = str(end)
         if long(begin) > long(end):
-            return RevisionSet(""), RevisionSet(""), RevisionSet(""), RevisionSet("")
+            return RevisionSet(""), RevisionSet(""), \
+                   RevisionSet(""), RevisionSet("")
 
     logs[url] = RevisionLog(url, begin, end, find_reflected)
     revs = RevisionSet(logs[url].revs)
@@ -1051,7 +1054,6 @@ def analyze_revs(target_pathid, url, begin=1, end=None,
         reflected_revs = []
 
     initialized_revs = RevisionSet(logs[url].merge_metadata().initialized_revs())
-
     reflected_revs = RevisionSet(reflected_revs)
 
     return revs, phantom_revs, reflected_revs, initialized_revs
@@ -1064,7 +1066,7 @@ def analyze_source_revs(branch_target, source_url, **kwargs):
 
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
-    end_rev = get_latest_rev(branch_url)
+    end_rev = get_latest_rev(source_url)
 
     # Calculate the base of analysis. If there is a "1-XX" interval in the
     # merged_revs, we do not need to check those.
@@ -1156,10 +1158,10 @@ def action_init(target_dir, target_props):
 
         if target_path == cf_source:
             # If source was originally copyied from target, and we are merging
-            # changes from source to target (the copy target is the merge source,
-            # and the copy source is the merge target), then we want to mark as 
-            # integrated up to the rev in which the copy was committed which 
-            # created the merge source:
+            # changes from source to target (the copy target is the merge
+            # source, and the copy source is the merge target), then we want to
+            # mark as integrated up to the rev in which the copy was committed
+            # which created the merge source:
             report('the source "%s" is a branch of "%s"' %
                    (opts["source-url"], target_dir))
             revision_range = "1-" + copy_committed_in_rev
@@ -1167,9 +1169,9 @@ def action_init(target_dir, target_props):
             # If the copy source is the merge source, and 
             # the copy target is the merge target, then we want to
             # mark as integrated up to the specific rev of the merge
-            # target from which the merge source was copied.  (Longer
-            # discussion at:
-            # http://subversion.tigris.org/issues/show_bug.cgi?id=2810  )
+            # target from which the merge source was copied. Longer
+            # discussion here:
+            # http://subversion.tigris.org/issues/show_bug.cgi?id=2810
             target_url = target_to_url(target_dir)
             source_path = target_to_pathid(opts["source-url"])
             cf_source_path, cf_rev, copy_committed_in_rev = get_copyfrom(target_url)
@@ -1193,7 +1195,8 @@ def action_init(target_dir, target_props):
     # for the source-pathid, simply error out.
     if not opts["force"] and target_props.has_key(opts["source-pathid"]):
         error('Repository-relative path %s has already been initialized at %s\n'
-              'Use --force to re-initialize' % (opts["source-pathid"], target_dir))
+              'Use --force to re-initialize'
+              % (opts["source-pathid"], target_dir))
     target_props[opts["source-pathid"]] = revs
 
     # Set property
@@ -1318,18 +1321,20 @@ def action_merge(branch_dir, branch_props):
     # is NOT inclusive so we have to subtract one from start.
     # We try to keep the number of merge operations as low as possible,
     # because it is faster and reduces the number of conflicts.
-    old_merge_props = branch_props
     old_block_props = get_block_props(branch_dir)
     merge_metadata = logs[opts["source-url"]].merge_metadata()
+    block_metadata = logs[opts["source-url"]].block_metadata()
     for start,end in minimal_merge_intervals(revs, phantom_revs):
         if not record_only:
-            # Clear merge/blocked properties to avoid spurious property conflicts
-            set_merge_props(branch_dir, {})
-            set_block_props(branch_dir, {})
+            # Preset merge/blocked properties to the source value at
+            # the start rev to avoid spurious property conflicts
+            set_merge_props(branch_dir, merge_metadata.get(start - 1))
+            set_block_props(branch_dir, block_metadata.get(start - 1))
             # Do the merge
             svn_command("merge --force -r %d:%d %s %s" % \
                         (start - 1, end, opts["source-url"], branch_dir))
-            # TODO: to support graph merging, add logic to merge the property meta-data manually
+            # TODO: to support graph merging, add logic to merge the property
+            # meta-data manually
 
     # Update the set of merged revisions.
     merged_revs = merged_revs | revs | reflected_revs | phantom_revs | initialized_revs
@@ -1505,7 +1510,8 @@ def action_uninit(branch_dir, branch_props):
     # If the source-pathid does not have an entry in the svnmerge-integrated
     # property, simply error out.
     if not branch_props.has_key(opts["source-pathid"]):
-        error('Repository-relative path "%s" does not contain merge tracking information for "%s"' \
+        error('Repository-relative path "%s" does not contain merge '
+              'tracking information for "%s"' \
                 % (opts["source-pathid"], branch_dir))
 
     del branch_props[opts["source-pathid"]]
@@ -2083,13 +2089,16 @@ def main(args):
                 source = get_repo_root(branch_dir) + found[0]
             else:
                 error('"%s" is neither a valid URL, nor an unambiguous '
-                      'substring of a repository path, nor a working directory' % source)
+                      'substring of a repository path, nor a working directory'
+                      % source)
 
         source_pathid = target_to_pathid(source)
         if str(cmd) == "init" and \
                source_pathid == target_to_pathid("."):
-            error("cannot init integration source path '%s'\nIts repository-relative path must "
-                  "differ from the repository-relative path of the current directory." % source_pathid)
+            error("cannot init integration source path '%s'\n"
+                  "Its repository-relative path must differ from the "
+                  "repository-relative path of the current directory."
+                  % source_pathid)
         opts["source-pathid"] = source_pathid
         opts["source-url"] = target_to_url(source)
 

@@ -7214,7 +7214,7 @@ def single_file_replace_style_merge_capability(sbox):
 
 # Test for issue 2786 fix.
 def merge_to_out_of_date_target(sbox):
-  "Merge to ood path can lead to inaccurate mergeinfo"
+  "merge to ood path can lead to inaccurate mergeinfo"
 
   # Create a WC with a branch.
   sbox.build()

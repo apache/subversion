@@ -2312,7 +2312,6 @@ single_file_merge_get_file(const char **filename,
                            svn_ra_session_t *ra_session,
                            apr_hash_t **props,
                            svn_revnum_t rev,
-                           const char *url,
                            const char *wc_target,
                            apr_pool_t *pool)
 {
@@ -2536,11 +2535,9 @@ do_single_file_merge(const char *initial_URL1,
       /* While we currently don't allow it, in theory we could be
          fetching two fulltexts from two different repositories here. */
       SVN_ERR(single_file_merge_get_file(&tmpfile1, ra_session1, &props1, 
-                                         r->start, initial_URL1, 
-                                         target_wcpath, subpool));
+                                         r->start, target_wcpath, subpool));
       SVN_ERR(single_file_merge_get_file(&tmpfile2, ra_session2, &props2, 
-                                         r->end, initial_URL2,
-                                         target_wcpath, subpool));
+                                         r->end, target_wcpath, subpool));
 
       /* Discover any svn:mime-type values in the proplists */
       pval = apr_hash_get(props1, SVN_PROP_MIME_TYPE,

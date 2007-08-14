@@ -83,21 +83,28 @@ static const svn_ra_neon__xml_elm_t multistatus_elements[] =
       SVN_RA_NEON__XML_CDATA },
     { "DAV:", "status", ELEM_status, SVN_RA_NEON__XML_CDATA },
     { "DAV:", "href", ELEM_href, SVN_RA_NEON__XML_CDATA },
+    { "DAV:", "propstat", ELEM_propstat, SVN_RA_NEON__XML_CDATA },
+    { "DAV:", "prop", ELEM_prop, SVN_RA_NEON__XML_CDATA },
 
-    /* We start out basic and are not interested in propstat */
+    /* We start out basic and are not interested in other elements */
     { "", "", ELEM_unknown, 0 },
 
+    { NULL }
   };
 
 
-static const int multistatus_nesting_table[][4] =
+static const int multistatus_nesting_table[][5] =
   { { ELEM_root, ELEM_multistatus, SVN_RA_NEON__XML_INVALID },
     { ELEM_multistatus, ELEM_response, ELEM_responsedescription,
       SVN_RA_NEON__XML_DECLINE },
     { ELEM_responsedescription, SVN_RA_NEON__XML_INVALID },
-    { ELEM_response, ELEM_href, ELEM_status, SVN_RA_NEON__XML_DECLINE },
+    { ELEM_response, ELEM_href, ELEM_status, ELEM_propstat,
+      SVN_RA_NEON__XML_DECLINE },
     { ELEM_status, SVN_RA_NEON__XML_INVALID },
     { ELEM_href, SVN_RA_NEON__XML_INVALID },
+    { ELEM_propstat, ELEM_prop, ELEM_status, ELEM_responsedescription,
+      SVN_RA_NEON__XML_INVALID },
+    { ELEM_prop, SVN_RA_NEON__XML_DECLINE },
     { SVN_RA_NEON__XML_DECLINE },
   };
 
@@ -109,7 +116,7 @@ validate_element(int parent, int child)
   int j = 0;
 
   while (parent != multistatus_nesting_table[i][0]
-         && multistatus_nesting_table[i][0] > 0)
+         && (multistatus_nesting_table[i][0] > 0 || i == 0))
     i++;
 
   if (parent == multistatus_nesting_table[i][0])
@@ -210,6 +217,9 @@ multistatus_parser_create(svn_ra_neon__request_t *req)
                                    start_207_element,
                                    svn_ra_neon__xml_collect_cdata,
                                    end_207_element, b);
+  b->cdata = svn_stringbuf_create("", req->pool);
+  b->req = req;
+
   return multistatus_parser;
 }
 

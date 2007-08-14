@@ -202,6 +202,7 @@ class TestCase_SvnMerge(unittest.TestCase):
                 # Clear svnmerge's internal cache before running any
                 # commands.
                 svnmerge._cache_svninfo = {}
+                svnmerge._cache_reporoot = {}
 
                 ret = svnmerge.main(args)
             except SystemExit, e:
@@ -457,12 +458,14 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         rmtree(self.test_path)
 
     def command_dict(self):
-        return dict(TEMPLATE_PATH=self.template_path,
-                    TEMPLATE_REPO_PATH=self.template_repo_path,
-                    TEMPLATE_REPO_URL=self.template_repo_url,
-                    TEST_PATH=self.test_path,
-                    TEST_REPO_PATH=self.test_repo_path,
-                    TEST_REPO_URL=self.test_repo_url)
+        return {
+            "TEMPLATE_PATH": self.template_path,
+            "TEMPLATE_REPO_PATH": self.template_repo_path,
+            "TEMPLATE_REPO_URL": self.template_repo_url,
+            "TEST_PATH": self.test_path,
+            "TEST_REPO_PATH": self.test_repo_path,
+            "TEST_REPO_URL": self.test_repo_url,
+        }
 
     def launch(self, cmd, *args, **kwargs):
         cmd = cmd % self.command_dict()
@@ -585,6 +588,57 @@ class TestCase_TestRepo(TestCase_SvnMerge):
             match=r"Committed revision 15")
 
         os.chdir("../testYYY-branch")
+        open("test6", "w").write("test6")
+        self.launch("svn add test6")
+        self.launch('svn ci -m "add test6"',
+            match=r"Committed revision 16")
+
+        os.chdir("../test-branch")
+        self.svnmerge("merge -r 16")
+        self.launch('svn ci -m "merge r16"',
+            match=r"Committed revision 17")
+
+        #os.chdir("../test-branch")
+        open("test5", "w").write("test5")
+        self.launch("svn add test5")
+        self.launch('svn ci -m "add test5"',
+            match=r"Committed revision 18")
+
+        os.chdir("../trunk")
+        self.svnmerge("block -r 18")
+        self.launch('svn ci -m "block r18"',
+            match=r"Committed revision 19")
+
+        #os.chdir("../trunk")
+        out = self.svnmerge("merge -r 17")
+
+        self.launch('svn ci -m "merge r17 from test-branch"',
+            match=r"Committed revision 20")
+
+        p = self.getproperty()
+        self.assertEqual(p, '/branches/test-branch:1-13,17')
+        p = self.getBlockedProperty()
+        self.assertEqual(p, '/branches/test-branch:18')
+
+    def testTransitiveMergeWithBlock(self):
+        """
+        Test a merge of a change from testYYY-branch -> test-branch -> trunk
+        """
+        os.chdir("..")
+        self.launch("svn co %(TEST_REPO_URL)s/branches/testYYY-branch testYYY-branch")
+
+        os.chdir("trunk")
+        self.launch("svn up")
+        self.svnmerge("init ../test-branch")
+        self.launch('svn ci -m "init test-branch -> trunk"',
+            match=r"Committed revision 14")
+
+        os.chdir("../test-branch")
+        self.svnmerge("init -r 1-6 ../testYYY-branch")
+        self.launch('svn ci -m "init testYYY-branch -> test-branch"',
+            match=r"Committed revision 15")
+
+        os.chdir("../testYYY-branch")
         open("test4", "w").write("test4")
         self.launch("svn add test4")
         self.launch('svn ci -m "add test4"',
@@ -611,6 +665,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch('svn ci -m "merge r17 from test-branch"',
             match=r"Committed revision 20")
 
+        p = self.getproperty()
+        self.assertEqual(p, '/branches/test-branch:1-13,17')
         p = self.getBlockedProperty()
         self.assertEqual(p, '/branches/test-branch:18')
 
@@ -655,7 +711,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir("trunk")
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 13")
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch", "-r1-13"])
+        self.svnmerge2(["init", "-r1-13",
+                        self.test_repo_url + "/branches/test-branch"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 14")
 
@@ -735,7 +792,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                     match=r"Committed revision")
 
         p = self.getproperty()
-        self.assertTrue(re.search("/branches/testYYY-branch:1-\d+? /trunk:1-\d+?", p))
+        self.assert_(re.search("/branches/testYYY-branch:1-\d+? /trunk:1-\d+?", p))
 
         open("test1", "a").write("foo")
 
@@ -744,7 +801,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         self.svnmerge("uninit -F --source " + self.test_repo_url + "/branches/testYYY-branch")
         p = self.getproperty()
-        self.assertTrue(re.search("^/trunk:1-\d+", p))
+        self.assert_(re.search("^/trunk:1-\d+", p))
 
     def testCheckNoCopyfrom(self):
         os.chdir("..")
@@ -793,7 +850,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.revert()
         
         # Run init w/ explicit parms; verify them
-        self.svnmerge("init ../trunk -r 1-999")
+        self.svnmerge("init -r 1-999 ../trunk")
         self.launch("svn proplist -v", match=r":1-999")
 
     def testTrimmedAvailMerge(self):
@@ -830,7 +887,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 14")
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch", "-r1-14"])
+        self.svnmerge2(["init", "-r1-14",
+                       self.test_repo_url + "/branches/test-branch"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 15")
         os.remove("svnmerge-commit-message.txt")
@@ -896,7 +954,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         os.chdir("test-branch")
 
-        self.svnmerge2(["init", self.test_repo_url + "/trunk", "-r1-13"])
+        self.svnmerge2(["init", "-r1-13", self.test_repo_url + "/trunk"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 15")
         os.remove("svnmerge-commit-message.txt")
@@ -904,7 +962,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir("..")
         os.chdir("test-branch2")
 
-        self.svnmerge2(["init", self.test_repo_url + "/trunk", "-r1-14"])
+        self.svnmerge2(["init",  "-r1-14", self.test_repo_url + "/trunk"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 16")
         os.remove("svnmerge-commit-message.txt")
@@ -915,11 +973,13 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 16")
 
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch", "-r1-16"])
+        self.svnmerge2(["init", "-r1-16",
+                       self.test_repo_url + "/branches/test-branch"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 17")
         os.remove("svnmerge-commit-message.txt")
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch2", "-r1-17"])
+        self.svnmerge2(["init", "-r1-17",
+                       self.test_repo_url + "/branches/test-branch2"])
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 18")
         os.remove("svnmerge-commit-message.txt")
@@ -1180,7 +1240,7 @@ D    test3"""
             self.launch("svn commit -F svnmerge-commit-message.txt",
                         match=r"Committed revision 18")
         except AssertionError:
-            self.assertTrue(os.path.isfile("dir_conflicts.prej"))
+            self.assert_(os.path.isfile("dir_conflicts.prej"))
 
 if __name__ == "__main__":
     # If an existing template repository and working copy for testing

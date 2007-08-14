@@ -749,7 +749,7 @@ class SvnClientTest < Test::Unit::TestCase
     rev2 = commit_info.revision
 
     diffs = []
-    ctx.diff_summarize(path, rev1, path, rev2) do |diff|
+    ctx.diff_summarize(@wc_path, rev1, @wc_path, rev2) do |diff|
       diffs << diff
     end
     assert_equal([file], diffs.collect {|d| d.path})
@@ -775,7 +775,6 @@ class SvnClientTest < Test::Unit::TestCase
     before_path = File.join(@wc_path, before_file)
     after_path = File.join(@wc_path, after_file)
     moved_path = File.join(@wc_path, moved_file)
-    after_uri = "#{@repos_uri}/#{after_file}"
 
     File.open(before_path, "w") {|f| f.print(before)}
 
@@ -801,7 +800,7 @@ class SvnClientTest < Test::Unit::TestCase
     rev5 = commit_info.revision
 
     diffs = []
-    ctx.diff_summarize_peg(after_uri, rev3, rev4, rev3) do |diff|
+    ctx.diff_summarize_peg(@repos_uri, rev3, rev4, rev3) do |diff|
       diffs << diff
     end
     assert_equal([after_file], diffs.collect {|d| d.path})
@@ -841,7 +840,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge(branch, rev1, branch, rev2, trunk)
     merge_info = ctx.merge_info(trunk)
     assert_equal(["/branch"], merge_info.keys)
-    assert_equal([[2, 2]], merge_info["/branch"].collect {|range| range.to_a})
+    assert_equal([[1, 2]], merge_info["/branch"].collect {|range| range.to_a})
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -854,12 +853,10 @@ class SvnClientTest < Test::Unit::TestCase
 
     merge_info = ctx.merge_info(trunk, rev4)
     assert_equal(["/branch"], merge_info.keys)
-    assert_equal([[2, 2], [4, 4]],
+    assert_equal([[1, 2], [3, 4]],
                  merge_info["/branch"].collect {|range| range.to_a })
     ctx.propdel("svn:mergeinfo", trunk)
-    merge_info = ctx.merge_info(trunk)
-    assert_equal(["/branch"], merge_info.keys)
-    assert_equal([[2, 2]], merge_info["/branch"].collect {|range| range.to_a})
+    assert_nil ctx.merge_info(trunk)
 
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
