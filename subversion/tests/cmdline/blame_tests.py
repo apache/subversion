@@ -483,8 +483,8 @@ def blame_merge_info(sbox):
   expected_blame = [
       { 'revision' : 2,
         'author' : 'jrandom',
-        'merge_revision' : 2,
-        'merge_author' : 'jrandom',
+        'merge_revision' : None,
+        'merge_author' : None,
         'text' : "This is the file 'iota'.\n",
       },
       { 'revision' : 14,
