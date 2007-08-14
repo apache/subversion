@@ -40,7 +40,7 @@ typedef struct
 
 /*** Code. ***/
 
-/* This implements the svn_client_blame_receiver_t interface, printing
+/* This implements the svn_client_blame_receiver2_t interface, printing
    XML to stdout. */
 static svn_error_t *
 blame_receiver_xml(void *baton,
@@ -133,7 +133,7 @@ print_line_info(svn_stream_t *out,
 
 }
 
-/* This implements the svn_client_blame_receiver_t interface. */
+/* This implements the svn_client_blame_receiver2_t interface. */
 static svn_error_t *
 blame_receiver(void *baton,
                apr_int64_t line_no,
