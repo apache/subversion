@@ -1162,7 +1162,11 @@ delete_entry(const char *path,
       return err;
     }
 
-  if (delete_ctx->progress.status != 204)
+  /* 204 No Content: item successfully deleted
+     404 Not found:  ignored, the item might have been deleted in this 
+                     transaction. */
+  if (delete_ctx->progress.status != 204 &&
+      delete_ctx->progress.status != 404)
     {
       return return_response_err(handler, &delete_ctx->progress);
     }
