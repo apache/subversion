@@ -72,7 +72,8 @@ class SVNClient :public SVNBase
 
   void blame(const char *path, Revision &pegRevision,
              Revision &revisionStart, Revision &revisionEnd,
-             bool ignoreMimeType, BlameCallback *callback);
+             bool ignoreMimeType, bool includeMergedRevisions,
+             BlameCallback *callback);
   void relocate(const char *from, const char *to, const char *path,
                 bool recurse);
   jbyteArray fileContent(const char *path, Revision &revision,
