@@ -545,8 +545,8 @@ proppatch_walker(void *baton,
   if (binary_prop == TRUE)
     {
       tmp_bkt =
-          SERF_BUCKET_SIMPLE_STRING_LEN("V:encoding=\"base64\"",
-                                        sizeof("V:encoding=\"base64\"") - 1,
+          SERF_BUCKET_SIMPLE_STRING_LEN(" V:encoding=\"base64\"",
+                                        sizeof(" V:encoding=\"base64\"") - 1,
                                         alloc);
       serf_bucket_aggregate_append(body_bkt, tmp_bkt);
     }
