@@ -292,6 +292,7 @@ checkout_dir(dir_context_t *dir)
 {
   checkout_context_t *checkout_ctx;
   svn_ra_serf__handler_t *handler;
+  svn_error_t *err;
 
   if (dir->checkout)
     {
@@ -359,9 +360,18 @@ checkout_dir(dir_context_t *dir)
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&checkout_ctx->progress.done,
-                                        dir->commit->session,
-                                        dir->pool));
+  err = svn_ra_serf__context_run_wait(&checkout_ctx->progress.done,
+                                      dir->commit->session,
+                                      dir->pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_CONFLICT)
+        return svn_error_createf
+          (err->apr_err, err,
+           _("Your file or directory '%s' is probably out-of-date"),
+           svn_path_local_style(dir->name, dir->pool));
+      return err;
+    }
 
   if (checkout_ctx->progress.status != 201)
     {
