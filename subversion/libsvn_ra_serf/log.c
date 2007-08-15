@@ -475,38 +475,34 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
    */
   peg_rev = (start > end) ? start : end;
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      vcc_url, peg_rev, "0",
-                                      checked_in_props, pool));
-
-  baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
-                                           "DAV:", "href");
-
-  if (!baseline_url)
+  if (peg_rev != SVN_INVALID_REVNUM)
     {
-      /* If the baseline_url is NULL, it may mean that we didn't properly get
-         the value out of the cache, because we were looking for DAV:checked-in,
-         and not DAV:href.  So, let's try again, this time looking for the
-         right property. */
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, peg_rev, "0",
-                                          href_props, pool));
+                                          baseline_props, pool));
 
-      baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
-                                               "DAV:", "href");
+      basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
+                                               "DAV:", "baseline-collection");
     }
-
-  if (!baseline_url)
+  else
     {
-      abort();
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          vcc_url, peg_rev, "0",
+                                          checked_in_props, pool));
+      baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
+                                               "DAV:", "checked-in");
+      if (!baseline_url)
+        {
+          abort();
+        }
+
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          baseline_url, peg_rev, "0",
+                                          baseline_props, pool));
+
+      basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, peg_rev,
+                                               "DAV:", "baseline-collection");
     }
-
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      baseline_url, peg_rev, "0",
-                                      baseline_props, pool));
-
-  basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, peg_rev,
-                                           "DAV:", "baseline-collection");
 
   if (!basecoll_url)
     {
