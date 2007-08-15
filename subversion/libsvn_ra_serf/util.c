@@ -755,6 +755,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               *ctx->done_list = ctx->done_item;
             }
         }
+      ctx->error = svn_ra_serf__handle_server_error(request, response, pool);
       return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
 
@@ -865,9 +866,7 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
         }
     }
 
-  SVN_ERR(server_err.error);
-
-  return svn_error_create(APR_EGENERAL, NULL, _("Unspecified error message"));
+  return server_err.error;
 }
 
 /* Implements the serf_response_handler_t interface.  Wait for HTTP
@@ -971,6 +970,12 @@ handle_response(serf_request_t *request,
          5xx (Internal) Server error. */
       ctx->session->pending_error =
           svn_ra_serf__handle_server_error(request, response, pool);
+      if (!ctx->session->pending_error)
+        {
+          ctx->session->pending_error =
+              svn_error_create(APR_EGENERAL, NULL,
+                               _("Unspecified error message"));
+        }
       return ctx->session->pending_error->apr_err;
     }
   else

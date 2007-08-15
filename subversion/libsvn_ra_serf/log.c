@@ -80,6 +80,7 @@ typedef struct {
 
   /* are we done? */
   svn_boolean_t done;
+  int status_code;
 
   /* log receiver function and baton */
   svn_log_message_receiver2_t receiver;
@@ -379,6 +380,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   apr_hash_t *props;
   svn_revnum_t peg_rev;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
+  svn_error_t *error;
 
   log_ctx = apr_pcalloc(pool, sizeof(*log_ctx));
   log_ctx->pool = pool;
@@ -528,13 +530,22 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   parser_ctx->end = end_log;
   parser_ctx->cdata = cdata_log;
   parser_ctx->done = &log_ctx->done;
+  parser_ctx->status_code = &log_ctx->status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&log_ctx->done, session, pool));
+  error = svn_ra_serf__context_run_wait(&log_ctx->done, session, pool);
+
+  if (parser_ctx->error)
+    {
+      svn_error_clear(error);
+      SVN_ERR(parser_ctx->error);
+    }
+
+  SVN_ERR(error);
 
   return SVN_NO_ERROR;
 }
