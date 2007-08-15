@@ -66,21 +66,7 @@ blame_receiver_xml(void *baton,
                         NULL);
 
   if (SVN_IS_VALID_REVNUM(revision))
-    {
-      /* "<commit ...>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "commit",
-                            "revision",
-                            apr_psprintf(pool, "%ld", revision), NULL);
-
-      /* "<author>xx</author>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "author", author);
-
-      /* "<date>xx</date>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "date", date);
-
-      /* "</commit>" */
-      svn_xml_make_close_tag(&sb, pool, "commit");
-    }
+    svn_cl__print_xml_commit(&sb, revision, author, date, pool);
 
   /* "</entry>" */
   svn_xml_make_close_tag(&sb, pool, "entry");

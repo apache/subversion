@@ -346,10 +346,16 @@ dav_svn__log_report(const dav_resource *resource,
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
-  if (((apr_err = ap_fflush(output, lrb.bb))) && (! derr))
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade.",
-                                resource->pool);
+  if (!lrb.needs_header)
+    {
+       apr_err = ap_fflush(output, lrb.bb);
+       if (!derr && apr_err)
+         {
+           derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                       HTTP_INTERNAL_SERVER_ERROR,
+                                       "Error flushing brigade.",
+                                       resource->pool);
+         }
+    }
   return derr;
 }

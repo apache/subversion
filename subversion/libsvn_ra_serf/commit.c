@@ -292,6 +292,7 @@ checkout_dir(dir_context_t *dir)
 {
   checkout_context_t *checkout_ctx;
   svn_ra_serf__handler_t *handler;
+  svn_error_t *err;
 
   if (dir->checkout)
     {
@@ -359,9 +360,17 @@ checkout_dir(dir_context_t *dir)
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&checkout_ctx->progress.done,
-                                        dir->commit->session,
-                                        dir->pool));
+  err = svn_ra_serf__context_run_wait(&checkout_ctx->progress.done,
+                                      dir->commit->session,
+                                      dir->pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_CONFLICT)
+        SVN_ERR_W(err, apr_psprintf(dir->pool, 
+                  _("Your file or directory '%s' is probably out-of-date"),
+                  svn_path_local_style(dir->name, dir->pool)));
+      return err;
+    }
 
   if (checkout_ctx->progress.status != 201)
     {
@@ -545,8 +554,8 @@ proppatch_walker(void *baton,
   if (binary_prop == TRUE)
     {
       tmp_bkt =
-          SERF_BUCKET_SIMPLE_STRING_LEN("V:encoding=\"base64\"",
-                                        sizeof("V:encoding=\"base64\"") - 1,
+          SERF_BUCKET_SIMPLE_STRING_LEN(" V:encoding=\"base64\"",
+                                        sizeof(" V:encoding=\"base64\"") - 1,
                                         alloc);
       serf_bucket_aggregate_append(body_bkt, tmp_bkt);
     }
@@ -1004,7 +1013,12 @@ open_root(void *edit_baton,
 
   if (mkact_ctx->status != 201)
     {
-      abort();
+      return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                               _("%s of '%s': %d %s (%s://%s)"),
+                               handler->method, handler->path, 
+                               mkact_ctx->status, mkact_ctx->reason,
+                               ctx->session->repos_url.scheme,
+                               ctx->session->repos_url.hostinfo);
     }
 
   SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
@@ -1153,7 +1167,11 @@ delete_entry(const char *path,
       return err;
     }
 
-  if (delete_ctx->progress.status != 204)
+  /* 204 No Content: item successfully deleted
+     404 Not found:  ignored, the item might have been deleted in this 
+                     transaction. */
+  if (delete_ctx->progress.status != 204 &&
+      delete_ctx->progress.status != 404)
     {
       return return_response_err(handler, &delete_ctx->progress);
     }
@@ -1264,8 +1282,11 @@ add_directory(const char *path,
       
   SVN_ERR(svn_ra_serf__context_run_wait(&add_dir_ctx->done,
                                         dir->commit->session, dir->pool));
-      
-  if (add_dir_ctx->status != 201)
+
+  /* 201 Created:    item was successfully copied
+     204 No Content: item successfully replaced an existing target */
+  if (add_dir_ctx->status != 201 && 
+      add_dir_ctx->status != 204)
     {
       SVN_ERR(add_dir_ctx->server_error.error);
       return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
@@ -1825,9 +1846,13 @@ abort_edit(void *edit_baton,
   SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
                                         pool));
 
-  /* 204 if deleted, 404 if the activity wasn't found. */
+  /* 204 if deleted, 
+     403 if DELETE was forbidden (indicates MKACTIVITY was forbidded too,
+     404 if the activity wasn't found. */
   if (delete_ctx->status != 204 &&
-      delete_ctx->status != 404)
+      delete_ctx->status != 403 &&
+      delete_ctx->status != 404 
+      )
     {
       abort();
     }
