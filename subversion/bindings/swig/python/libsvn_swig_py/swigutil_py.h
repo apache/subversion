@@ -135,6 +135,13 @@ PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash);
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash);
 
+/* helper function to convert an apr_array_header_t* (of
+   svn_merge_range_t *) to a Python list */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *svn_swig_py_rangelist_to_list(apr_array_header_t *rangelist,
+                                        swig_type_info *type,
+                                        PyObject *py_pool);
+
 /* helper function to convert an apr_hash_t* (const char *->array of
    svn_merge_range_t *) to a Python dict */
 SVN_SWIG_SWIGUTIL_EXPORT
@@ -193,6 +200,13 @@ apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
 SVN_SWIG_SWIGUTIL_EXPORT
 apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
                                              apr_pool_t *pool);
+
+/* helper function to convert a Python dictionary mapping strings to
+   strings into an 'apr_array_header_t *' of svn_prop_t *
+   allocated in POOL. */
+SVN_SWIG_SWIGUTIL_EXPORT
+apr_array_header_t *svn_swig_py_proparray_from_dict(PyObject *dict,
+                                                    apr_pool_t *pool);
 
 /* helper function to convert a Python dictionary mapping strings to
    strings into an apr_hash_t mapping const char *'s to svn_string_t's,

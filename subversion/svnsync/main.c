@@ -617,6 +617,9 @@ open_root(void *edit_baton,
   dir_baton->edit_baton = edit_baton;
   *root_baton = dir_baton;
 
+  SVN_ERR(svn_cmdline_printf(pool, _("Transmitting file data ")));
+  SVN_ERR(svn_cmdline_fflush(stdout));
+
   return SVN_NO_ERROR;
 }
 
@@ -737,6 +740,10 @@ apply_textdelta(void *file_baton,
 {
   node_baton_t *fb = file_baton;
   edit_baton_t *eb = fb->edit_baton;
+
+  SVN_ERR(svn_cmdline_printf(pool, _(".")));
+  SVN_ERR(svn_cmdline_fflush(stdout));
+
   return eb->wrapped_editor->apply_textdelta(fb->wrapped_node_baton,
                                              base_checksum, pool,
                                              handler, handler_baton);
@@ -837,6 +844,8 @@ close_edit(void *edit_baton,
                                             &baton));
       SVN_ERR(eb->wrapped_editor->close_directory(baton, pool));
     }
+
+  SVN_ERR(svn_cmdline_printf(pool, _("\n")));
 
   return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
 }

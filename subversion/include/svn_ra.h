@@ -824,9 +824,7 @@ svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,
  * represented by the @a session's URL).  If @a update_target is the
  * empty string, the entire directory is updated.
  *
- * Update the target only as deeply as @a depth indicates (though note
- * that this also depends on the correct depths being reported in
- * calls to @a *reporter->set_path() and @a *reporter->link_path()).
+ * Update the target only as deeply as @a depth indicates.
  *
  * ### TODO(sd): Make sure the behavior described above is what happens.
  *
@@ -859,11 +857,8 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                apr_pool_t *pool);
 
 /**
- * Similar to @c svn_ra_do_update2, but taking @c svn_ra_reporter2_t
+ * Similar to svn_ra_do_update2(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t.
- *
- * ### TODO(sd): (see svn_ra_do_update2 about possible change of recurse
- * ### to depth as well)
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -899,9 +894,7 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
  * directory represented by the @a session's URL, or empty if the
  * entire directory is meant to be switched.
  *
- * Switch the target only as deeply as @a depth indicates (though note
- * that this also depends on the correct depths being reported in
- * calls to @a *reporter->set_path() and @a *reporter->link_path()).
+ * Switch the target only as deeply as @a depth indicates.
  *
  * ### TODO(sd): Make sure the behavior described above is what happens.
  *
@@ -936,9 +929,9 @@ svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
                                apr_pool_t *pool);
 
 /**
- * Similar to svn_ra_do_switch2, but taking svn_ra_reporter2_t instead
- * of svn_ra_reporter3_t, and therefore only able to report
- * svn_depth_infinity for depths.
+ * Similar to svn_ra_do_switch2(), but taking @c svn_ra_reporter2_t
+ * instead of @c svn_ra_reporter3_t, and therefore only able to report
+ * @c svn_depth_infinity for depths.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -974,9 +967,7 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
  * represented by the @a session's URL, or empty if the entire directory
  * is meant to be examined.
  *
- * Get status only as deeply as @a depth indicates (though note that
- * this also depends on the correct depths being reported in calls to
- * @a *reporter->set_path() and @a *reporter->link_path()).
+ * Get status only as deeply as @a depth indicates.
  *
  * ### TODO(sd): Make sure the behavior described above is what happens.
  *
@@ -1007,9 +998,9 @@ svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
 
 
 /**
- * Similar to svn_ra_do_status2(), but taking svn_ra_reporter2_t 
- * instead of svn_ra_reporter3_t, and therefore only able to report
- * svn_depth_infinity for depths.
+ * Similar to svn_ra_do_status2(), but taking @c svn_ra_reporter2_t
+ * instead of @c svn_ra_reporter3_t, and therefore only able to report
+ * @c svn_depth_infinity for depths.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -1058,9 +1049,7 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  * and the addition of another, but if this flag is @c TRUE,
  * unrelated items will be diffed as if they were related.
  *
- * Diff only as deeply as @a depth indicates (though note that this
- * also depends on the correct depths being reported in calls to
- * @a *reporter->set_path() and @a *reporter->link_path()).
+ * Diff only as deeply as @a depth indicates.
  *
  * ### TODO(sd): Make sure the behavior described above is what happens.
  * 
@@ -1098,9 +1087,9 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              apr_pool_t *pool);
 
 /**
- * Similar to svn_ra_do_diff3(), but taking svn_ra_reporter2_t instead
- * of svn_ra_reporter3_t, and therefore only able to report
- * svn_depth_infinity for depths.
+ * Similar to svn_ra_do_diff3(), but taking @c svn_ra_reporter2_t
+ * instead of @c svn_ra_reporter3_t, and therefore only able to report
+ * @c svn_depth_infinity for depths.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */

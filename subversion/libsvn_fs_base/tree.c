@@ -57,7 +57,7 @@
 #include "bdb/changes-table.h"
 #include "bdb/copies-table.h"
 #include "../libsvn_fs/fs-loader.h"
-#include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_mergeinfo_private.h"
 
@@ -4659,7 +4659,7 @@ static root_vtable_t root_vtable = {
   base_get_file_delta_stream,
   base_merge,
   base_change_merge_info,
-  svn_fs_merge_info__get_merge_info
+  svn_fs_mergeinfo__get_merge_info
 };
 
 

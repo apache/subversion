@@ -512,11 +512,12 @@ public interface SVNClientInterface
      * <code>destPath</code> is not a URL.
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
+     * @param makeParents Whether to create intermediate parents
      * @throws ClientException If the copy operation fails.
      * @since 1.5
      */
     void copy(CopySource[] sources, String destPath, String message,
-              boolean copyAsChild)
+              boolean copyAsChild, boolean makeParents)
         throws ClientException;
 
     /**
@@ -543,11 +544,12 @@ public interface SVNClientInterface
      * modifications exist.
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
+     * @param makeParents Whether to create intermediate parents
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
     void move(String[] srcPaths, String destPath, String message,
-              boolean force, boolean moveAsChild)
+              boolean force, boolean moveAsChild, boolean makeParents)
         throws ClientException;
 
     /**
@@ -572,6 +574,18 @@ public interface SVNClientInterface
      */
     void move(String srcPath, String destPath, String message,
               boolean force) throws ClientException;
+
+    /**
+     * Creates a directory directly in a repository or creates a
+     * directory on disk and schedules it for addition.
+     * @param path      directories to be created
+     * @param message   commit message to used if path contains urls
+     * @param makeParents Whether to create intermediate parents
+     * @throws ClientException
+     * @since 1.5
+     */
+    void mkdir(String[] path, String message, boolean makeParents)
+            throws ClientException;
 
     /**
      * Creates a directory directly in a repository or creates a

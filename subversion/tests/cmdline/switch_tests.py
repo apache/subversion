@@ -27,8 +27,7 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-# Constant for the merge info property.
-SVN_PROP_MERGE_INFO = "svn:mergeinfo"
+from svntest.main import SVN_PROP_MERGE_INFO
 
 ### Bummer.  It would be really nice to have easy access to the URL
 ### member of our entries files so that switches could be testing by
@@ -587,9 +586,6 @@ def relocate_deleted_missing_copied(sbox):
   # Commit to verify that copyfrom URLs have been relocated
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H2'       : Item(verb='Adding'),
-    'A/D/H2/chi'   : Item(verb='Adding'),
-    'A/D/H2/omega' : Item(verb='Adding'),
-    'A/D/H2/psi'   : Item(verb='Adding'),
     })
   expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
                         status='  ', wc_rev='3', copied=None)
@@ -1528,7 +1524,7 @@ def mergeinfo_switch_elision(sbox):
     'F'       : Item(status='  ', wc_rev=2),
     })
   expected_merge_disk = svntest.wc.State('', {
-    ''        : Item(props={"svn:mergeinfo" : '/A/B:1,3-4'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-4'}),
     'lambda'  : Item("This is the file 'lambda'.\n"),
     'E'       : Item(),
     'E/alpha' : Item("New content"),
@@ -1578,7 +1574,7 @@ def mergeinfo_switch_elision(sbox):
     'beta'  : Item(status='M ', wc_rev=2),
     })
   expected_merge_disk = svntest.wc.State('', {
-    ''        : Item(props={"svn:mergeinfo" : '/A/B/E:1,3-4'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1,3-4'}),
     'alpha' : Item("New content"),
     'beta'  : Item("New content"),
     })
@@ -1613,13 +1609,13 @@ def mergeinfo_switch_elision(sbox):
   expected_disk.tweak("A/B/E/alpha", contents="New content")
   expected_disk.tweak("A/B/E/beta", contents="New content")
   expected_disk.add({
-    "A/B_COPY_1"         : Item(props={'svn:mergeinfo' : '/A/B:1,3-4'}),
+    "A/B_COPY_1"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-4'}),
     "A/B_COPY_1/E"       : Item(),
     "A/B_COPY_1/F"       : Item(),
     "A/B_COPY_1/lambda"  : Item("This is the file 'lambda'.\n"),
     "A/B_COPY_1/E/alpha" : Item("New content"),
     "A/B_COPY_1/E/beta"  : Item("New content"),
-    "A/B_COPY_2"         : Item(props={'svn:mergeinfo' : '/A/B:1,3-4'}),
+    "A/B_COPY_2"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-4'}),
     "A/B_COPY_2/E"       : Item(),
     "A/B_COPY_2/F"       : Item(),
     "A/B_COPY_2/lambda"  : Item("This is the file 'lambda'.\n"),

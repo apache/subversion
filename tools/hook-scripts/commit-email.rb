@@ -10,7 +10,7 @@ require "socket"
 
 SMTP_PORT = 25
 KILO_SIZE = 1000
-DEFAULT_MAX_SIZE = "500M"
+DEFAULT_MAX_SIZE = "100M"
 
 class OptionParser
   class CannotCoexistOption < ParseError
@@ -29,6 +29,7 @@ def parse_args(args)
   options.repository_uri = nil
   options.rss_path = nil
   options.rss_uri = nil
+  options.multi_project = false
   options.name = nil
   options.use_utf7 = false
   options.server = "localhost"
@@ -78,6 +79,11 @@ def parse_args(args)
 
     opts.separator ""
     opts.separator "Output related options:"
+
+    opts.on("--[no-]multi-project",
+            "Treat as multi-project hosting repository") do |bool|
+      options.multi_project = bool
+    end
 
     opts.on("--name=NAME", "Use NAME as repository name") do |name|
       options.name = name
@@ -374,17 +380,40 @@ def make_header(to, from, info, params, body_encoding, body_encoding_bit)
   headers << "Content-Transfer-Encoding: #{body_encoding_bit}"
   headers << "From: #{from}"
   headers << "To: #{to.join(', ')}"
-  headers << "Subject: #{make_subject(params[:name], info)}"
+  headers << "Subject: #{make_subject(params[:name], info, params)}"
   headers << "Date: #{Time.now.rfc2822}"
   headers.find_all do |header|
     /\A\s*\z/ !~ header
   end.join("\n")
 end
 
-def make_subject(name, info)
+def detect_project(info, params)
+  return nil unless params[:multi_project]
+  project = nil
+  [
+   :added_files, :deleted_files, :updated_files, :copied_files,
+   :added_dirs, :deleted_dirs, :updated_dirs, :copied_dirs,
+  ].each do |targets|
+    info.send(targets).each do |path, from_path, |
+      [path, from_path].compact.each do |target_path|
+        first_component = target_path.split("/", 2)[0]
+        project ||= first_component
+        return nil if project != first_component
+      end
+    end
+  end
+  project
+end
+
+def make_subject(name, info, params)
   subject = ""
-  subject << "#{name}:" if name
-  subject << "r#{info.revision}: "
+  project = detect_project(info, params)
+  subject << "#{name} " if name
+  if project
+    subject << "[#{project} r#{info.revision}] "
+  else
+    subject << "r#{info.revision}: "
+  end
   subject << info.log.lstrip.to_a.first.to_s.chomp
   NKF.nkf("-WM", subject)
 end
@@ -551,6 +580,7 @@ def main
     :add_diff => options.add_diff,
     :use_utf7 => options.use_utf7,
     :max_size => options.max_size,
+    :multi_project => options.multi_project,
   }
   sendmail(to, from, make_mail(to, from, info, params),
            options.server, options.port)

@@ -986,8 +986,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPYTHON
 %typemap(argout) unsigned char digest[ANY]
 {
-  %append_output(PyString_FromString(svn_md5_digest_to_cstring($1,
-                                                               _global_pool)));
+  %append_output(PyString_FromStringAndSize((char *)$1, APR_MD5_DIGESTSIZE));
 }
 #endif
 

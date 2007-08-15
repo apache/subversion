@@ -280,7 +280,81 @@ Contents
    servers, and they'll say they can't because they don't have control
    over the server, and we'll say "So?  This ain't no Grand Hotel!"
 
-5. Current Status
+5. Compatability Matters
+========================
+
+   This feature introduces two new concepts into the RA protocol which
+   will not be understood by older servers:
+
+      * Reported Depths -- the depths associated with individual paths
+        included by the client in the description (via the
+        svn_ra_reporter_t) of its working copy state.  
+
+      * Requested Depth -- the single depth value used to limit the
+        scope of the server's response to the client.
+        
+   As such, it's useful to understand how these concepts will be
+   handled across the compatability matrix of depth-aware and
+   non-depth-aware clients and servers.
+
+   NOTE: in the sections below, it is not necessarily that case that a
+   value or state which is said to be "transmitted" literally has a
+   presence in the RA protocol.  Some such bits of state have default
+   values in the protocol and can therefore be effectively transmitted
+   while not literally identifiable in a network trace of the
+   client-server traffic.
+
+   Depth-aware Clients (DACs)
+
+      DACs will transmit reported depths (with "infinity" as the
+      default) and will transmit a requested depth (with "unknown" as
+      the default).  They will also -- for the sake of older,
+      non-depth-aware servers (NDASs) -- transmit a requested recurse
+      value derived from the requested depth:
+   
+         depth        recurse
+         -----        -------
+         empty        no
+         files        no
+         unknown      yes
+         immediates   yes
+         infinity     yes
+
+      When speaking to an NDAS, the requested recurse value is the
+      only thing the server understands , but is obviously more
+      "grainy" than the requested depth concept.  The DAC, therefore,
+      must filter out any additional, unwanted data that the server
+      transmits in its response.  (This filtering will happen in the
+      RA implementation itself so the RA APIs behave as expected
+      regardless of the server's pedigree.)
+
+      When speaking to a depth-aware server (DAS), the requested
+      recurse value is ignored.  A requested depth of "unknown" means
+      "only send information about the stuff in my report,
+      depth-aware-ily".  Other requested depth values are honored by
+      the server properly, and the DAC must handle the transformation
+      of any working copy depths from their pre-update to their
+      post-update depths and content as described in `3. Examples'.
+
+   Non-depth-aware Clients (NDACs)
+
+      NDACs will never transmit reported depths and never transmit a
+      requested depth.  But they will transmit a requested recurse
+      value (either "yes" or "no", with "yes" being the default).  (A
+      DAS uses the presence of a requested depth in the actual protocol
+      to distinguish DACs from NDACs, and knows to ignore the
+      requested recurse value transmitted by a DAC.)
+
+      When speaking to an NDAS, what happens happens.  It's the past,
+      man -- you don't get to define the interaction this late in the
+      game!
+
+      When speaking to a DAS, the not-reported depths are treated like
+      reported depths of "infinity", and the reported recurse values
+      "yes" and "no" map to depths of "infinity" and "files",
+      respectively.
+
+6. Current Status
 =================
 
    The sparse-directories code is merged to trunk in revision r23994.
@@ -341,14 +415,6 @@ Contents
         whether a deletion of an immediate child should be allowed to
         pass thru when using svn_depth_files.
 
-      * I haven't done anything with 'svn status' yet, don't know if
-        it would behave correctly w.r.t. depths out of the box or not.
-        Clearly, this needs investigation.
-
-      * I haven't done anything with either 'svn switch --depth' or
-        'svn switch' handling mixed-depth working copies automatically.  
-        Probably some bits work right now, and other bits don't.
-
       * There's no interface for getting rid of stuff once you've
         brought it into your working copy -- no "exclusion" interface,
         in other words.  So you can do this:
@@ -385,6 +451,8 @@ Contents
            svn_client_diff_summarize_peg2()
            svn_client_diff_peg3()
 
+      * We need tests for 'svn status --depth' and 'svn switch --depth'.
+
       * Some APIs still take recurse booleans.  It's not clear to me
         that all of these should be switched to depth, but the
         question needs some more consideration:
@@ -400,7 +468,6 @@ Contents
            svn_client_info()      # I don't think this needs to take depth.
            svn_client_add3()      # I don't think this needs to take depth.
 
-           svn_wc_get_switch_editor3() # Yes, probably should take depth.
            svn_wc_revert2()            # Really not sure about this one.
            svn_wc_resolved_conflict2() # Really not sure about this one.
            svn_wc_queue_committed()    # Really not sure about this one.

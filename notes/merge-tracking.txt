@@ -31,15 +31,16 @@ history index).
 
   * Need new RA call.
 
-* Allow for merge info which contains empty range lists, necessary for
-  override of merge info by child paths which would otherwise inherit
-  merge info from their parents which they don't reflect.
+* Allow for merge info which contains empty merge info for a path,
+  necessary for override of merge info by child paths which would
+  otherwise inherit merge info from their parents which they don't
+  reflect.
 
-  * Assure that the code path from client to FS allows such values to
-    make it all the way through to the FS and into the merge info
-    index in a meaningful fashion yet.
-
-    * Fix issue #2769.  (dlr)
+  * FIXME: The code path from client to FS allows such values to
+    make it all the way through to the FS, but empty merge info for a
+    path are not making it into the merge info index in a meaningful
+    fashion yet (the "mergeinfo" table isn't getting updated, only the
+    "mergeinfo_changed" table).  (dlr)
 
 * Handle notifications resulting from a merge.  (sussman)
 
@@ -118,6 +119,9 @@ history index).
 * Account for merge info differences for switched directories when
   gathering and setting merge info.  (pburba)
 
+* Support --depth option for merge: Limit search for children with merge
+  info to depth and set appropriate merge info at depth.  (pburba)
+
 * Handle sparsely-populated directories, or portions of a tree not
   checked out due to lack of authorization.
 
@@ -162,6 +166,10 @@ Implement auditing/reporting and other high-level features.
     unblock       Revert the effect of 'block'
 
   * Write up outcome in func-spec.html.
+
+* Add commutative author and revision reporting to 'svn log' and 'svn blame'.
+  The 'svn log' portion is currently being implemented on the
+  merge-sensitive-log branch.  (hwright)
 
 * Improve heuristics for grokking the source URL parameter to the
   'svn merge -cN URL' command.  See the comments inlined into the

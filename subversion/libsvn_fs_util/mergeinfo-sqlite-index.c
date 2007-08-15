@@ -1,7 +1,7 @@
 /* merge-info-sqlite-index.c
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -30,7 +30,7 @@
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 
-#include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_mergeinfo.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
 
@@ -66,8 +66,7 @@ util_sqlite_exec(sqlite3 *db, const char *sql,
 {
   char *err_msg;
   if (sqlite3_exec(db, sql, NULL, NULL, &err_msg) != SQLITE_OK)
-    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                            err_msg);
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL, err_msg);
   return SVN_NO_ERROR;
 }
 
@@ -152,7 +151,7 @@ open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
 {
   svn_error_t *err;
   const char *db_path = svn_path_join(repos_path, 
-                                      SVN_FS_MERGE_INFO__DB_NAME, pool);
+                                      SVN_FS_MERGEINFO__DB_NAME, pool);
   SQLITE_ERR(sqlite3_open(db_path, db), *db);
 #ifdef SQLITE3_DEBUG
   sqlite3_trace(*db, sqlite_tracer, *db);
@@ -174,7 +173,7 @@ open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
 /* Create an sqlite DB for our merge info index under PATH.  Use POOL
    for temporary allocations. */
 svn_error_t *
-svn_fs_merge_info__create_index(const char *path, apr_pool_t *pool)
+svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool)
 {
   sqlite3 *db;
   SVN_ERR(open_db(&db, path, pool));
@@ -183,50 +182,50 @@ svn_fs_merge_info__create_index(const char *path, apr_pool_t *pool)
 }
 
 /* Insert the necessary indexing data into the DB for all the merges
-   on PATH as of NEW_REV, which is provided (unparsed) in MINFOSTRING.
-   Use POOL for temporary allocations.*/
+   on PATH as of NEW_REV, which is provided (unparsed) in
+   MERGEINFO_STR.  Use POOL for temporary allocations.*/
 static svn_error_t *
 index_path_merge_info(svn_revnum_t new_rev, sqlite3 *db, const char *path, 
-                      svn_string_t *minfostring, apr_pool_t *pool)
+                      svn_string_t *mergeinfo_str, apr_pool_t *pool)
 {
-  apr_hash_t *minfo;
+  apr_hash_t *mergeinfo;
   apr_hash_index_t *hi;
   sqlite3_stmt *stmt;
 
-  SVN_ERR(svn_mergeinfo_parse(&minfo, minfostring->data, pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_str->data, pool));
 
-  for (hi = apr_hash_first(pool, minfo);
+  for (hi = apr_hash_first(pool, mergeinfo);
        hi != NULL;
        hi = apr_hash_next(hi))
     {
       const char *from;
-      apr_array_header_t *revlist;
+      apr_array_header_t *rangelist;
       const void *key;
       void *val;
 
       apr_hash_this(hi, &key, NULL, &val);
 
       from = key;
-      revlist = val;
-      if (from && revlist)
+      rangelist = val;
+      if (from && rangelist)
         {
           int i;
           SQLITE_ERR(sqlite3_prepare
                      (db, 
-                      "INSERT INTO mergeinfo (revision, mergedto, "
-                      "mergedfrom, mergedrevstart, mergedrevend) VALUES "
+                      "INSERT INTO mergeinfo (revision, mergedfrom, "
+                      "mergedto, mergedrevstart, mergedrevend) VALUES "
                       "(?, ?, ?, ?, ?);",
                       -1, &stmt, NULL), db);
           SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
-          SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
+          SQLITE_ERR(sqlite3_bind_text(stmt, 2, from, -1, SQLITE_TRANSIENT),
                      db);
-          SQLITE_ERR(sqlite3_bind_text(stmt, 3, from, -1, SQLITE_TRANSIENT),
+          SQLITE_ERR(sqlite3_bind_text(stmt, 3, path, -1, SQLITE_TRANSIENT),
                      db);
-          for (i = 0; i < revlist->nelts; i++)
+          for (i = 0; i < rangelist->nelts; i++)
             {
               svn_merge_range_t *range;
 
-              range = APR_ARRAY_IDX(revlist, i, svn_merge_range_t *);
+              range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
               SQLITE_ERR(sqlite3_bind_int64(stmt, 4, range->start),
                          db);
               SQLITE_ERR(sqlite3_bind_int64(stmt, 5, range->end),
@@ -259,30 +258,24 @@ index_path_merge_info(svn_revnum_t new_rev, sqlite3 *db, const char *path,
 }
 
 
-/* Create the index for any merge info in TXN (a no-op if TXN has no
-   associated merge info). */
+/* Index the merge info for each path in MERGEINFO_FOR_PATHS (a
+   mapping of const char * -> to apr_hash_t *). */
 static svn_error_t *
-index_txn_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev, 
-                     apr_hash_t *minfoprops, sqlite3 *db, apr_pool_t *pool)
+index_txn_merge_info(sqlite3 *db, svn_revnum_t new_rev,
+                     apr_hash_t *mergeinfo_for_paths, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(pool, minfoprops);
+  for (hi = apr_hash_first(pool, mergeinfo_for_paths);
        hi != NULL;
        hi = apr_hash_next(hi))
     {
-      const char *minfopath;
-      svn_string_t *minfostring;
-      const void *key;
-      void *val;
+      const void *path;
+      void *mergeinfo;
 
-      apr_hash_this(hi, &key, NULL, &val);
-
-      minfopath = key;
-      minfostring = val;
-
-      SVN_ERR(index_path_merge_info(new_rev, db, minfopath, minfostring,
-                                    pool));
+      apr_hash_this(hi, &path, NULL, &mergeinfo);
+      SVN_ERR(index_path_merge_info(new_rev, db, (const char *) path,
+                                    (svn_string_t *) mergeinfo, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -291,8 +284,9 @@ index_txn_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev,
    revision number as NEW_REV, and if the current transaction contains
    merge info, record it. */
 svn_error_t *
-svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
-                                apr_hash_t *mergeinfo, apr_pool_t *pool)
+svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
+                               apr_hash_t *mergeinfo_for_paths,
+                               apr_pool_t *pool)
 {
   const char *deletestring;
   sqlite3 *db;
@@ -313,10 +307,10 @@ svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   SVN_ERR(util_sqlite_exec(db, deletestring, NULL, NULL));
 
   /* Record any merge info from the current transaction. */
-  if (mergeinfo)
-    SVN_ERR(index_txn_merge_info(txn, new_rev, mergeinfo, db, pool));
+  if (mergeinfo_for_paths)
+    SVN_ERR(index_txn_merge_info(db, new_rev, mergeinfo_for_paths, pool));
 
-  /* This is moved here from commit_txn, because we don't want to
+  /* This is moved here from FSFS's commit_txn, because we don't want to
    * write the final current file if the sqlite commit fails.
    * On the other hand, if we commit the transaction and end up failing
    * the current file, we just end up with inaccessible data in the
@@ -545,11 +539,11 @@ get_merge_info_for_path(sqlite3 *db,
 
 /* Get the merge info for a set of paths.  */
 svn_error_t *
-svn_fs_merge_info__get_merge_info(apr_hash_t **mergeinfo,
-                                  svn_fs_root_t *root,
-                                  const apr_array_header_t *paths,
-                                  svn_boolean_t include_parents,
-                                  apr_pool_t *pool)
+svn_fs_mergeinfo__get_merge_info(apr_hash_t **mergeinfo,
+                                 svn_fs_root_t *root,
+                                 const apr_array_header_t *paths,
+                                 svn_boolean_t include_parents,
+                                 apr_pool_t *pool)
 {
   apr_hash_t *mergeinfo_cache = apr_hash_make(pool);
   sqlite3 *db;

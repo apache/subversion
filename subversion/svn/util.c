@@ -196,7 +196,7 @@ svn_cl__edit_externally(svn_string_t **edited_contents /* UTF-8! */,
   err = svn_io_open_unique_file2(&tmp_file, &tmpfile_name,
                                  prefix, ".tmp", svn_io_file_del_none, pool);
 
-  if (err && APR_STATUS_IS_EACCES(err->apr_err))
+  if (err && (APR_STATUS_IS_EACCES(err->apr_err) || err->apr_err == EROFS))
     {
       const char *temp_dir_apr;
 

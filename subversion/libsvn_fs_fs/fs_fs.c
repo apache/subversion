@@ -48,7 +48,7 @@
 #include "fs_fs.h"
 #include "id.h"
 
-#include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -998,7 +998,7 @@ svn_fs_fs__hotcopy(const char *src_path,
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
   
   /* Copy the merge tracking info. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS_MERGE_INFO__DB_NAME,
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS_MERGEINFO__DB_NAME,
                                pool));
 
   /* Find the youngest revision from this current file. */
@@ -4796,8 +4796,8 @@ commit_body(void *baton, apr_pool_t *pool)
                                      old_rev_filename, pool));
 
   /* Update the merge tracking information index. */
-  SVN_ERR(svn_fs_merge_info__update_index(cb->txn, new_rev,
-                                          target_mergeinfo, pool));
+  SVN_ERR(svn_fs_mergeinfo__update_index(cb->txn, new_rev, target_mergeinfo,
+                                         pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
@@ -4933,7 +4933,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                        ffd->format, ffd->max_files_per_dir, pool));
 
   /* ### this should be before the format file */
-  SVN_ERR(svn_fs_merge_info__create_index(path, pool)); 
+  SVN_ERR(svn_fs_mergeinfo__create_index(path, pool));
   return SVN_NO_ERROR;
 }
 

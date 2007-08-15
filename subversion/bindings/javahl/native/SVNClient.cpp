@@ -383,7 +383,7 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
 }
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
-                     const char *message, bool copyAsChild)
+                     const char *message, bool copyAsChild, bool makeParents)
 {
     Pool requestPool;
 
@@ -404,11 +404,14 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
-                                 copyAsChild, ctx, requestPool.pool()), );
+                                 copyAsChild, makeParents, ctx,
+                                 requestPool.pool()),
+                );
 }
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
-                     const char *message, bool force, bool moveAsChild)
+                     const char *message, bool force, bool moveAsChild,
+                     bool makeParents)
 {
     Pool requestPool;
 
@@ -425,13 +428,13 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_move5(&commit_info, (apr_array_header_t *) srcs,
                                  destinationPath.c_str(), force, moveAsChild,
-                                 ctx, requestPool.pool()), );
+                                 makeParents, ctx, requestPool.pool()), );
 }
 
-void SVNClient::mkdir(Targets &targets, const char *message)
+void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents)
 {
     Pool requestPool;
-    svn_client_commit_info_t *commit_info = NULL;
+    svn_commit_info_t *commit_info = NULL;
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
@@ -439,8 +442,8 @@ void SVNClient::mkdir(Targets &targets, const char *message)
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_mkdir(&commit_info, targets2, ctx,
-                                 requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_mkdir3(&commit_info, targets2, makeParents, ctx,
+                                  requestPool.pool()), );
 }
 
 void SVNClient::cleanup(const char *path)
