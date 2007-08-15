@@ -52,6 +52,12 @@
 #define DO_AUTH svn_ra_svn__do_internal_auth
 #endif
 
+/* We aren't using SVN_DEPTH_TO_RECURSE here because that macro (for
+   whatever reason) deems svn_depth_immediates as non-recursive, which
+   is ... kinda true, but not true enough for our purposes.  We need
+   our requested recursion level to be *at least* as recursive as the
+   real depth we're looking for.
+ */
 #define DEPTH_TO_RECURSE(d)    \
         (((d) == svn_depth_unknown || (d) > svn_depth_files) ? TRUE : FALSE)
 
