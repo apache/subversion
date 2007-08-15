@@ -684,7 +684,8 @@ typedef enum svn_client_diff_summarize_kind_t
  */
 typedef struct svn_client_diff_summarize_t
 {
-  /** Path relative to the target. */
+  /** Path relative to the target.  If the target is a file, path is
+   * the empty string. */
   const char *path;
 
   /** Change kind */
@@ -727,107 +728,6 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
 
 /** @} */
 
-/**
- * Client conflicts
- *
- * @defgroup clnt_diff Client conflict callback functionality
- *
- * @{
- */
-
-/** The type of action being attempted on an object.
- *
- * @since New in 1.5.
- */
-typedef enum svn_client_conflict_action_t
-{
-  svn_client_conflict_action_edit,    /* attempting to change text or props */
-  svn_client_conflict_action_add,     /* attempting to add object */
-  svn_client_conflict_action_delete  /* attempting to delete object */
-
-} svn_client_conflict_action_t;
-
-
-/** The pre-existing condition which is causing a state of conflict.
- *
- * @since New in 1.5.
- */
-typedef enum svn_client_conflict_reason_t
-{
-  svn_client_conflict_reason_edited,     /* local edits are already present */
-  svn_client_conflict_reason_added,      /* schedule-add object is in the way */
-  svn_client_conflict_reason_deleted,    /* object is already schedule-delete */
-  svn_client_conflict_reason_missing,    /* object is unknown or missing */
-  svn_client_conflict_reason_unversioned /* object is unversioned */
-
-} svn_client_conflict_reason_t;
-
-
-/** A struct that describes a conflict that has occurred in the
- * working copy.  Passed to @c svn_client_conflict_resolver_func_t.
- *
- * @note Fields may be added to the end of this structure in future
- * versions.  Therefore, users shouldn't allocate structures of this
- * type, to preserve binary compatibility.
- *
- * @since New in 1.5.
- */
-typedef struct svn_client_conflict_description_t
-{
-  /* The path that is being operated on, its node type, and
-  its svn:mime-type (if applicable and available, else NULL.) */
-  const char *path;
-  svn_node_kind_t node_kind;
-  const char *mime_type;
-
-  /* The action being attempted on the path. */
-  svn_client_conflict_action_t action;
-
-  /* The reason for the conflict. */
-  svn_client_conflict_reason_t reason;
-
-  /* If the conflict involves the merging of two files descended from
-     a common ancestor, here are the paths of up to four fulltext
-     files that can be used to interactively resolve the conflict.
-     (If any of these are not available, they default to NULL.) */
-
-  const char *base_file;     /* common ancestor of the two files being merged */
-  const char *repos_file;    /* repository's version of the file */
-  const char *edited_file;   /* user's locally-edited version of the file */
-  const char *conflict_file; /* merged version of file; has conflict markers */
-
-} svn_client_conflict_description_t;
-
-
-/** A callback used in svn_client_merge3(), svn_client_update3(), and
- * svn_client_switch2() for resolving conflicts during the application
- * of a tree delta to a working copy.
- *
- * @a description describes the exact nature of the conflict, and
- * provides information to help resolve it.  @a baton is a closure
- * object; it should be provided by the implementation, and passed by
- * the caller.  All allocations should be performed in @a pool.
- *
- * If the callback wholly resolves the conflict, return SVN_NO_ERROR.
- * If the conflict still persists, it return an svn_error_t.
- *
- * Implementations of this callback are free to present the conflict
- * using any user interface.  This may include simple contextual
- * conflicts in a file's text or properties, or more complex
- * 'tree'-based conflcts related to obstructed additions, deletions,
- * and edits.  The callback implementation is free to decide which
- * sorts of conflicts to handle; it's also free to decide which types
- * of conflicts are automatically resolvable and which require user
- * interaction.
- *
- * @since New in 1.5.
- */
-typedef svn_error_t *(*svn_client_conflict_resolver_func_t)
-  (const svn_client_conflict_description_t *description,
-   void *baton,
-   apr_pool_t *pool);
-
-/** @} */
 
 /**
  * Client context
@@ -927,8 +827,8 @@ typedef struct svn_client_ctx_t
 
   /** Conflict resolution callback and baton, if available.
    * @since New in 1.5. */
-  svn_client_conflict_resolver_func_t conflict_resolver_func;
-  void *conflict_resolver_baton;
+  svn_wc_conflict_resolver_func_t conflict_func;
+  void *conflict_baton;
 
 } svn_client_ctx_t;
 
@@ -1228,6 +1128,9 @@ svn_client_update(svn_revnum_t *result_rev,
  * ### TODO(sd): But, I think the svn_depth_immediates behavior is not
  * ### actually implemented yet.
  *
+ * If @a ignore_externals is set, don't process externals definitions
+ * as part of this operation.
+ *
  * If @a allow_unver_obstructions is true then the switch tolerates
  * existing unversioned items that obstruct added paths from @a URL.  Only
  * obstructions of the same type (file or dir) as the added item are
@@ -1251,6 +1154,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    const char *url,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
+                   svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
@@ -1258,9 +1162,10 @@ svn_client_switch2(svn_revnum_t *result_rev,
 
 /**
  * Similar to svn_client_switch2() but with @a allow_unver_obstructions
- * always set to false, and @a depth set according to @a recurse: if
- * @a recurse is true, set @a depth to @c svn_depth_infinity, if @a
- * recurse is false, set @a depth to @c svn_depth_files.
+ * and @a ignore_externals always set to false, and @a depth set according
+ * to @a recurse: if @a recurse is true, set @a depth to
+ * @c svn_depth_infinity, if @a recurse is false, set @a depth to
+ * @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -1519,28 +1424,28 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  */
 
 /** Import file or directory @a path into repository directory @a url at
- * head, authenticating with the authentication baton cached in @a ctx, 
- * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message 
- * for the (implied) commit.  Set @a *commit_info_p to the results of the 
+ * head, authenticating with the authentication baton cached in @a ctx,
+ * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message
+ * for the (implied) commit.  Set @a *commit_info_p to the results of the
  * commit, allocated in @a pool.  If some components of @a url do not exist
  * then create parent directories as necessary.
  *
  * If @a path is a directory, the contents of that directory are
  * imported directly into the directory identified by @a url.  Note that the
- * directory @a path itself is not imported -- that is, the basename of 
+ * directory @a path itself is not imported -- that is, the basename of
  * @a path is not part of the import.
  *
  * If @a path is a file, then the dirname of @a url is the directory
  * receiving the import.  The basename of @a url is the filename in the
  * repository.  In this case if @a url already exists, return error.
  *
- * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with 
- * @a ctx->notify_baton2 as the import progresses, with any of the following 
+ * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with
+ * @a ctx->notify_baton2 as the import progresses, with any of the following
  * actions: @c svn_wc_notify_commit_added,
  * @c svn_wc_notify_commit_postfix_txdelta.
  *
- * Use @a pool for any temporary allocation.  
- * 
+ * Use @a pool for any temporary allocation.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1553,8 +1458,11 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * Use @a nonrecursive to indicate that imported directories should not
  * recurse into any subdirectories they may have.
  *
- * If @a no_ignore is false, don't add files or directories that match
+ * If @a no_ignore is @c FALSE, don't add files or directories that match
  * ignore patterns.
+ *
+ * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
+ * node type is unknown, such as device files and pipes.
  *
  * ### kff todo: This import is similar to cvs import, in that it does
  * not change the source tree into a working copy.  However, this
@@ -1563,7 +1471,24 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * option. However, doing so is a bit involved, and we don't need it
  * right now.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_client_import3(svn_commit_info_t **commit_info_p,
+                                const char *path,
+                                const char *url,
+                                svn_boolean_t nonrecursive,
+                                svn_boolean_t no_ignore,
+                                svn_boolean_t ignore_unknown_node_types,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_import3(), but with @a ignore_unknown_node_types
+ * always set to @c FALSE.
+ *
  * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API
  */
 svn_error_t *svn_client_import2(svn_commit_info_t **commit_info_p,
                                 const char *path,
@@ -3919,7 +3844,7 @@ typedef struct svn_info_t
   
   /** 
    * The size of the file after being translated into its local
-   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKOWN if
+   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN if
    * unknown.  Not applicable for directories.
    * @since New in 1.5.
    */

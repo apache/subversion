@@ -2,7 +2,7 @@
  * blame.c :  entry point for blame RA functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -349,11 +349,7 @@ cdata_blame(svn_ra_serf__xml_parser_t *parser,
 
             ret_len = len;
 
-            svn_stream_write(info->stream, data, &ret_len);
-            if (ret_len != len)
-              {
-                abort();
-              }
+            SVN_ERR(svn_stream_write(info->stream, data, &ret_len));
           }
         break;
       default:

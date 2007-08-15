@@ -25,6 +25,7 @@
 #include "Notify2.h"
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
+#include "ConflictResolverCallback.h"
 #include "ProgressListener.h"
 #include "Prompter.h"
 #include "Pool.h"
@@ -72,6 +73,7 @@ SVNClient::SVNClient()
     m_progressListener = NULL;
     m_prompter = NULL;
     m_commitMessage = NULL;
+    m_conflictResolver = NULL;
 }
 
 SVNClient::~SVNClient()
@@ -80,6 +82,7 @@ SVNClient::~SVNClient()
     delete m_notify2;
     delete m_progressListener;
     delete m_prompter;
+    delete m_conflictResolver;
 }
 
 SVNClient *SVNClient::getCppObject(jobject jthis)
@@ -268,6 +271,12 @@ void SVNClient::notification2(Notify2 *notify2)
 {
     delete m_notify2;
     m_notify2 = notify2;
+}
+
+void SVNClient::setConflictResolver(ConflictResolverCallback *conflictResolver)
+{
+    delete m_conflictResolver;
+    m_conflictResolver = conflictResolver;
 }
 
 void SVNClient::setProgressListener(ProgressListener *listener)
@@ -512,7 +521,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
 
 jlong SVNClient::doSwitch(const char *path, const char *url,
                           Revision &revision, svn_depth_t depth,
-                          bool allowUnverObstructions)
+                          bool ignoreExternals, bool allowUnverObstructions)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", -1);
@@ -531,6 +540,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
                                    intUrl.c_str(),
                                    revision.revision(),
                                    depth,
+                                   ignoreExternals,
                                    allowUnverObstructions,
                                    ctx,
                                    requestPool.pool()),
@@ -1058,6 +1068,9 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     ctx->progress_func = ProgressListener::progress;
     ctx->progress_baton = m_progressListener;
 
+    ctx->conflict_func = ConflictResolverCallback::resolveConflict;
+    ctx->conflict_baton = m_conflictResolver;
+
     return ctx;
 }
 
@@ -1405,7 +1418,8 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     SVN_JNI_ERR(svn_client_blame3(intPath.c_str(), pegRevision.revision(),
                                   revisionStart.revision(),
                                   revisionEnd.revision(),
-                                  svn_diff_file_options_create(pool), false,
+                                  svn_diff_file_options_create(pool),
+                                  ignoreMimeType,
                                   BlameCallback::callback, callback, ctx,
                                   pool),
         );

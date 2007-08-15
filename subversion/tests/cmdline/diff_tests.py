@@ -2597,6 +2597,156 @@ def diff_in_renamed_folder(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-r3:4', kappa_path)
 
+def diff_with_depth(sbox):
+  "test diffs at various depths"
+
+  sbox.build()
+
+  diff = [
+    "\n",
+    "Property changes on: .\n",
+    "___________________________________________________________________\n",
+    "Name: foo1\n",
+    "   + bar1\n",
+    "\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Name: foo2\n",
+    "   + bar2\n",
+    "\n",
+    "\n",
+    "Property changes on: A\n",
+    "___________________________________________________________________\n",
+    "Name: foo3\n",
+    "   + bar3\n",
+    "\n",
+    "\n",
+    "Property changes on: " + os.path.join('A', 'B') + "\n",
+    "___________________________________________________________________\n",
+    "Name: foo4\n",
+    "   + bar4\n",
+    "\n" ]
+
+  expected_empty = svntest.actions.UnorderedOutput(diff[:6])
+  expected_files = svntest.actions.UnorderedOutput(diff[:12])
+  expected_immediates = svntest.actions.UnorderedOutput(diff[:18])
+  expected_infinity = svntest.actions.UnorderedOutput(diff[:])
+
+  os.chdir(sbox.wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo1', 'bar1', '.')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo2', 'bar2', 'iota')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo3', 'bar3', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo4', 'bar4', os.path.join('A', 'B'))
+
+  # Test wc-wc diff.
+  svntest.actions.run_and_verify_svn(None, expected_empty, [],
+                                     'diff', '--depth', 'empty')
+  svntest.actions.run_and_verify_svn(None, expected_files, [],
+                                     'diff', '--depth', 'files')
+  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
+                                     'diff', '--depth', 'immediates')
+  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
+                                     'diff', '--depth', 'infinity')
+
+  # Commit the changes.
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', '')
+
+  # Test repos-repos diff.  Reuse the expected outputs from above.
+  svntest.actions.run_and_verify_svn(None, expected_empty, [],
+                                     'diff', '-c2', '--depth', 'empty')
+  svntest.actions.run_and_verify_svn(None, expected_files, [],
+                                     'diff', '-c2', '--depth', 'files')
+  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
+                                     'diff', '-c2', '--depth', 'immediates')
+  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
+                                     'diff', '-c2', '--depth', 'infinity')
+
+  diff_wc_repos = [
+    "\n",
+    "Property changes on: .\n",
+    "___________________________________________________________________\n",
+    "Name: foo1\n",
+    "   - bar1\n",
+    "   + baz1\n",
+    "\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Name: foo2\n",
+    "   - bar2\n",
+    "   + baz2\n",
+    "\n",
+    "\n",
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 2)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+new text\n",
+    "Property changes on: A\n",
+    "___________________________________________________________________\n",
+    "Name: foo3\n",
+    "   - bar3\n",
+    "   + baz3\n",
+    "\n",
+    "\n",
+    "Property changes on: " + os.path.join('A', 'B') + "\n",
+    "___________________________________________________________________\n",
+    "Name: foo4\n",
+    "   - bar4\n",
+    "   + baz4\n",
+    "\n",
+    "Index: A/mu\n",
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'mu'.\n",
+    "+new text\n" ]
+
+  expected_empty = svntest.actions.UnorderedOutput(diff_wc_repos[:7])
+  expected_files = svntest.actions.UnorderedOutput(diff_wc_repos[1:22])
+  expected_immediates = svntest.actions.UnorderedOutput(diff_wc_repos[1:29])
+  expected_infinity = svntest.actions.UnorderedOutput(diff_wc_repos[:])
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo1', 'baz1', '.')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo2', 'baz2', 'iota')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo3', 'baz3', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo4', 'baz4', os.path.join('A', 'B'))
+  svntest.main.file_append(os.path.join('A', 'mu'), "new text\n")
+  svntest.main.file_append('iota', "new text\n")
+
+  # Test wc-repos diff.
+  svntest.actions.run_and_verify_svn(None, expected_empty, [],
+                                     'diff', '-rHEAD', '--depth', 'empty')
+  svntest.actions.run_and_verify_svn(None, expected_files, [],
+                                     'diff', '-rHEAD', '--depth', 'files')
+  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
+                                     'diff', '-rHEAD', '--depth', 'immediates')
+  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
+                                     'diff', '-rHEAD', '--depth', 'infinity')
+
 ########################################################################
 #Run the tests
 
@@ -2639,11 +2789,12 @@ test_list = [ None,
               diff_repos_working_added_dir,
               diff_base_repos_moved,
               diff_added_subtree,
-              XFail(basic_diff_summarize),
+              basic_diff_summarize,
               diff_weird_author,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
               diff_in_renamed_folder,
+              diff_with_depth,
               ]
 
 if __name__ == '__main__':

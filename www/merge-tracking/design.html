@@ -92,7 +92,7 @@ themselves.</p>
 <ul>
   <li>Doing actual <a href="func-spec.html#as-merge">history sensitive
   merging</a>.  Subversion does not yet have sufficient support for
-  creation of fully accurate change set graphs, which are necessary to
+  creation of fully accurate changeset graphs, which are necessary to
   handle cyclic merging (e.g. of so-called "reflected"
   revisions, also known as repeated bi-directional mergeing).  For
   details on this problem (caused by lack of tracking of multiple
@@ -148,11 +148,13 @@ merge results.</p>
 <p>Any path may have merge info attached to it.</p>
 
 <p>The way we choose which path's merge info to use in case of
-conflicts simple system of inheritance <a
-href="#merge-history-footnotes">[1]</a> where the "most specific"
+conflicts involves a simple system of inheritance <a
+href="#merge-history-footnotes">[1]</a>, where the "most specific"
 place wins.  This means that if the property is set on a file, that
 completely overrides the directory level properties for the directory
-containing the file.</p>
+containing the file.  Non-inheritable merge info can be set on
+directories, signifying that the merge info applies only to the
+directory but not its children.</p>
 
 <p>The way we choose which to store to depends on how much and where
 you merge, and will be covered in the semantics.</p>
@@ -191,7 +193,7 @@ range end and beginning points are separated by "-".</p>
 </tr>
 <tr>
   <td>revisioneelement</td>
-  <td>revisionrange | REVISION</td>
+  <td>(revisionrange | REVISION)"*"?</td>
 </tr>
 <tr>
   <td>rangelist</td>
@@ -213,6 +215,9 @@ changes that have ever been merged into this object (file, dir or
 repo) within this repository.  It specifies the sources of the merges,
 (and thus two or more pathnames may be required to represent one
 source object at different revisions due to renaming).</p>
+
+<p>The optional "*" following a revisionelement token signifies a
+non-inheritable revision/revision range.</p>
 
 <p>This list will <em>not</em> be stored in a canonicalized minimal
 form for a path (e.g. it may contain single revision numbers that
@@ -619,9 +624,9 @@ tracking auditting is the ability to report information about merge
 operations.  It consists of three sections:</p>
 
 <ul>
-  <li>Change Set Merge Availability (TODO)</li>
+  <li>Changeset Merge Availability (TODO)</li>
 
-  <li>Find Change Set (TODO)</li>
+  <li>Find Changeset (TODO)</li>
 
   <li><a href="#commutative-reporting">Commutative Author and Revision
   Reporting</a></li>

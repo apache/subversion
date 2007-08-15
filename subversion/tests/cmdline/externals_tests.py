@@ -716,6 +716,50 @@ def export_with_externals(sbox):
 
 #----------------------------------------------------------------------
 
+# Test for issue #2429
+def export_wc_with_externals(sbox):
+  "test exports from working copies with externals"
+
+  externals_test_setup(sbox)
+
+  wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+  export_target = sbox.add_wc_path('export')
+
+  # Create a working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     repo_url, wc_dir)
+  # Export the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'export', wc_dir, export_target)
+
+  paths = [
+    os.path.join(export_target, "A", "C", "exdir_G"),
+    os.path.join(export_target, "A", "C", "exdir_G", "pi"),
+    os.path.join(export_target, "A", "C", "exdir_H"),
+    os.path.join(export_target, "A", "C", "exdir_H", "omega"),
+    os.path.join(export_target, "A", "D", "x"),
+    os.path.join(export_target, "A", "D", "x", "y"),
+    os.path.join(export_target, "A", "D", "x", "y", "z"),
+    os.path.join(export_target, "A", "D", "x", "y", "z", "blah"),
+    os.path.join(export_target, "A", "D", "x", "y", "z", "blah", "E", "alpha"),
+    os.path.join(export_target, "A", "D", "x", "y", "z", "blah", "E", "beta"),
+    ]
+  probe_paths_exist(paths)
+
+  svntest.main.safe_rmtree(export_target)
+
+  # Export it again, without externals.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'export', '--ignore-externals',
+                                     wc_dir, export_target)
+  probe_paths_missing(paths)
+
+#----------------------------------------------------------------------
+
 def external_with_peg_and_op_revision(sbox):
   "use a peg revision to specify an external module"
 
@@ -757,6 +801,42 @@ def external_with_peg_and_op_revision(sbox):
                           external_chi_path)
   fp.close()
 
+#----------------------------------------------------------------------
+
+def new_style_externals(sbox):
+  "check the new '-rN URL PATH' syntax"
+
+  externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+
+  repo_url       = sbox.repo_url
+  other_repo_url = repo_url + ".other"
+
+  # Checkout a working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     repo_url, wc_dir)
+
+  # Set an external property using the new '-rN URL PATH' syntax.
+  new_externals_desc = \
+           other_repo_url + "/A/D/G exdir_G \n" + \
+           "-r 1 " + other_repo_url + "/A/D/H exdir_H \n"
+
+  # Set and commit the property.
+  change_external(os.path.join(wc_dir, "A/C"), new_externals_desc)
+
+  # Update other working copy.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  exdir_H_omega_path = os.path.join(wc_dir, "A", "C", "exdir_H", "omega")
+  fp = open(exdir_H_omega_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
+    raise svntest.Failure("Unexpected contents for rev 1 of " +
+                          exdir_H_omega_path)
+
 
 
 ########################################################################
@@ -774,7 +854,9 @@ test_list = [ None,
               modify_and_update_receive_new_external,
               disallow_dot_or_dotdot_directory_reference,
               export_with_externals,
+              export_wc_with_externals,
               external_with_peg_and_op_revision,
+              new_style_externals,
              ]
 
 if __name__ == '__main__':

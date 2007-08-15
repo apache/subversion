@@ -36,13 +36,27 @@ in participating in the definition or implementation process.</p>
   <li><a href="design.html">Design Specification</a></li>
 </ul>
 
-<p>The current Subversion trunk is roughly equivalent in functionality
-to <a href="http://www.orcaware.com/svn/wiki/Svnmerge.py">svnmerge.py</a>.
-It adds <a href="http://www.sqlite.org/">sqlite</a> as a dependency, and
-supports both the FSFS and BerkeleyDB Subversion file system backends. 
-Tasks remaining for this implementation are tracked <a
-href="http://svn.collab.net/repos/svn/trunk/notes/merge-tracking.txt"
->here</a>.</p>
+<p>Merge Tracking in Subversion 1.5.0 is roughly equivalent in
+functionality to <a
+href="http://www.orcaware.com/svn/wiki/Svnmerge.py">svnmerge.py</a>,
+recording and using merge history to avoid common cases of the
+repeated merge problem, and allowing for cherry-picking of changes.
+It exposes merge history via properties, and allows for repository
+dump/load (including the ability to re-create the merge history
+index).  It adds <a href="http://www.sqlite.org/">sqlite</a> as a
+dependency, and supports both the FSFS and BerkeleyDB Subversion file
+system backends.</p>
+
+<p>Remaining tasks for 1.5.0 are tracked in the <a
+href="/issues/buglist.cgi?component=subversion&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;target_milestone=1.5&amp;keywords=merge-tracking&amp;keywords_type=anytokens&amp;cmdtype=doit&amp;order=%27Importance%27&amp;Submit+query=Submit+query"
+>issue tracker</a>.</p>
+
+<p>Additional Merge Tracking features planned for post-1.5.0 include
+blocking of changes, misc. auditing/reporting, handling of cyclic
+merges, and other high-level features described in the recorded <a
+href="requirements.html">use cases</a>.  This list of issues can also
+be found in the <a href="/issues/">issue tracker</a> (query for the
+<em>merge-tracking</em> keyword to get the comprehensive list).</p>
 
 
 </div>  <!-- internal -->

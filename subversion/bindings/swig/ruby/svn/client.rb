@@ -518,8 +518,8 @@ module Svn
                     fetch_locks, block, self)
       end
 
-      def switch(path, uri, rev=nil, depth=nil, allow_unver_obstruction=false)
-        Client.switch2(path, uri, rev, depth, allow_unver_obstruction, self)
+      def switch(path, uri, rev=nil, depth=nil, ignore_externals=false, allow_unver_obstruction=false)
+        Client.switch2(path, uri, rev, depth, ignore_externals, allow_unver_obstruction, self)
       end
 
       def add_simple_provider
@@ -622,6 +622,7 @@ module Svn
 
       def merge_info(path_or_url, revision=nil)
         info = Client.get_mergeinfo(path_or_url, revision, self)
+        return nil if info.nil?
         Core::MergeInfo.new(info)
       end
       alias_method :mergeinfo, :merge_info

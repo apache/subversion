@@ -34,12 +34,9 @@ public class SubversionException extends Exception
     private static final long serialVersionUID = 1L;
 
     /**
-     * This constructor is only used by the native library.
+     * This constructor is only used by sub-classes.
      *
      * @param message A description of the problem.
-     * @param source The error's source.
-     * @param aprError Any associated APR error code for a wrapped
-     * <code>svn_error_t</code>.
      */
     protected SubversionException(String message)
     {

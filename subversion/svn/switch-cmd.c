@@ -99,12 +99,6 @@ svn_cl__switch(apr_getopt_t *os,
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
                                         opt_state->targets, pool));
 
-  /* ### TODO(sd): I'm not completely sure we should allow explicit depth
-     ### on this command.  It took -N but not -R.  Why was -N
-     ### useful?  Does it make sense in a depthy universe? */
-  if (opt_state->depth == svn_depth_unknown)
-    opt_state->depth = svn_depth_infinity;
-
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
     return rewrite_urls(targets,
@@ -160,7 +154,8 @@ svn_cl__switch(apr_getopt_t *os,
   /* Do the 'switch' update. */
   SVN_ERR(svn_client_switch2(NULL, target, switch_url,
                              &(opt_state->start_revision),
-                             opt_state->depth, opt_state->force, ctx, pool));
+                             opt_state->depth, opt_state->ignore_externals,
+                             opt_state->force, ctx, pool));
 
   return SVN_NO_ERROR;
 }

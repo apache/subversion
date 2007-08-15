@@ -21,8 +21,9 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include <apr_uri.h>
+
 #include <ne_alloc.h>
-#include <ne_uri.h>
 #include <ne_compress.h>
 #include <ne_basic.h>
 
@@ -82,21 +83,28 @@ static const svn_ra_neon__xml_elm_t multistatus_elements[] =
       SVN_RA_NEON__XML_CDATA },
     { "DAV:", "status", ELEM_status, SVN_RA_NEON__XML_CDATA },
     { "DAV:", "href", ELEM_href, SVN_RA_NEON__XML_CDATA },
+    { "DAV:", "propstat", ELEM_propstat, SVN_RA_NEON__XML_CDATA },
+    { "DAV:", "prop", ELEM_prop, SVN_RA_NEON__XML_CDATA },
 
-    /* We start out basic and are not interested in propstat */
+    /* We start out basic and are not interested in other elements */
     { "", "", ELEM_unknown, 0 },
 
+    { NULL }
   };
 
 
-static const int multistatus_nesting_table[][4] =
+static const int multistatus_nesting_table[][5] =
   { { ELEM_root, ELEM_multistatus, SVN_RA_NEON__XML_INVALID },
     { ELEM_multistatus, ELEM_response, ELEM_responsedescription,
       SVN_RA_NEON__XML_DECLINE },
     { ELEM_responsedescription, SVN_RA_NEON__XML_INVALID },
-    { ELEM_response, ELEM_href, ELEM_status, SVN_RA_NEON__XML_DECLINE },
+    { ELEM_response, ELEM_href, ELEM_status, ELEM_propstat,
+      SVN_RA_NEON__XML_DECLINE },
     { ELEM_status, SVN_RA_NEON__XML_INVALID },
     { ELEM_href, SVN_RA_NEON__XML_INVALID },
+    { ELEM_propstat, ELEM_prop, ELEM_status, ELEM_responsedescription,
+      SVN_RA_NEON__XML_INVALID },
+    { ELEM_prop, SVN_RA_NEON__XML_DECLINE },
     { SVN_RA_NEON__XML_DECLINE },
   };
 
@@ -108,7 +116,7 @@ validate_element(int parent, int child)
   int j = 0;
 
   while (parent != multistatus_nesting_table[i][0]
-         && multistatus_nesting_table[i][0] > 0)
+         && (multistatus_nesting_table[i][0] > 0 || i == 0))
     i++;
 
   if (parent == multistatus_nesting_table[i][0])
@@ -209,6 +217,9 @@ multistatus_parser_create(svn_ra_neon__request_t *req)
                                    start_207_element,
                                    svn_ra_neon__xml_collect_cdata,
                                    end_207_element, b);
+  b->cdata = svn_stringbuf_create("", req->pool);
+  b->req = req;
+
   return multistatus_parser;
 }
 
@@ -427,10 +438,10 @@ svn_ra_neon__xml_collect_cdata(void *baton, int state,
 
 
 
-void svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src)
+svn_error_t *
+svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src,
+                       apr_pool_t *pool)
 {
-  ne_uri parsed_url;
-
   /* parse the PATH element out of the URL and store it.
 
      ### do we want to verify the rest matches the current session?
@@ -438,9 +449,20 @@ void svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src)
      Note: mod_dav does not (currently) use an absolute URL, but simply a
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
-  (void) ne_uri_parse(src, &parsed_url);
-  svn_stringbuf_set(dst, parsed_url.path);
-  ne_uri_free(&parsed_url);
+
+  apr_uri_t uri;
+  apr_status_t apr_status
+    = apr_uri_parse(pool, src, &uri);
+
+  if (apr_status != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_status,
+                              _("Unable to parse URL '%s'"),
+                              src);
+
+  svn_stringbuf_setempty(dst);
+  svn_stringbuf_appendcstr(dst, uri.path);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

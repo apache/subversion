@@ -61,6 +61,7 @@ svn_error_t *
 svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
                             const svn_wc_entry_t *entry,
                             const char *wcpath,
+                            svn_boolean_t pristine,
                             svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
@@ -72,7 +73,7 @@ svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
      ### DannyB thinks that later we'll need behavior more like
      ### svn_client__get_prop_from_wc(). */
   SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGE_INFO,
-                                       wcpath, FALSE, entry, adm_access,
+                                       wcpath, pristine, entry, adm_access,
                                        FALSE, ctx, pool));
   propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
   if (propval)

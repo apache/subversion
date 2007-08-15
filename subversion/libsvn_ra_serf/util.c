@@ -160,7 +160,7 @@ apr_status_t svn_ra_serf__handle_client_cert(void *data,
     svn_ra_serf__session_t *session = conn->session;
     const char *realm;
     apr_port_t port;
-    svn_error_t *error;
+    svn_error_t *err;
     void *creds;
 
     *cert_path = NULL;
@@ -181,24 +181,24 @@ apr_status_t svn_ra_serf__handle_client_cert(void *data,
 
     if (!conn->ssl_client_auth_state)
       {
-        error = svn_auth_first_credentials(&creds,
-                                           &conn->ssl_client_auth_state,
-                                           SVN_AUTH_CRED_SSL_CLIENT_CERT,
-                                           realm,
-                                           session->wc_callbacks->auth_baton,
-                                           session->pool);
+        err = svn_auth_first_credentials(&creds,
+                                         &conn->ssl_client_auth_state,
+                                         SVN_AUTH_CRED_SSL_CLIENT_CERT,
+                                         realm,
+                                         session->wc_callbacks->auth_baton,
+                                         session->pool);
       }
     else
       {
-        error = svn_auth_next_credentials(&creds,
-                                          conn->ssl_client_auth_state,
-                                          session->pool);
+        err = svn_auth_next_credentials(&creds,
+                                        conn->ssl_client_auth_state,
+                                        session->pool);
       }
 
-    if (error)
+    if (err)
       {
-        session->pending_error = error;
-        return error->apr_err;
+        session->pending_error = err;
+        return err->apr_err;
       }
 
     if (creds)
@@ -217,31 +217,31 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
 {
     svn_ra_serf__connection_t *conn = data;
     svn_ra_serf__session_t *session = conn->session;
-    svn_error_t *error;
+    svn_error_t *err;
     void *creds;
 
     *password = NULL;
 
     if (!conn->ssl_client_pw_auth_state)
       {
-        error = svn_auth_first_credentials(&creds,
-                                           &conn->ssl_client_pw_auth_state,
-                                           SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
-                                           cert_path,
-                                           session->wc_callbacks->auth_baton,
-                                           session->pool);
+        err = svn_auth_first_credentials(&creds,
+                                         &conn->ssl_client_pw_auth_state,
+                                         SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+                                         cert_path,
+                                         session->wc_callbacks->auth_baton,
+                                         session->pool);
       }
     else
       {
-        error = svn_auth_next_credentials(&creds,
-                                          conn->ssl_client_pw_auth_state,
-                                          session->pool);
+        err = svn_auth_next_credentials(&creds,
+                                        conn->ssl_client_pw_auth_state,
+                                        session->pool);
       }
 
-    if (error)
+    if (err)
       {
-        session->pending_error = error;
-        return error->apr_err;
+        session->pending_error = err;
+        return err->apr_err;
       }
 
     if (creds)
@@ -269,7 +269,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
   serf_bucket_headers_setn(hdrs_bkt, "Host", conn->hostinfo);
-  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "svn/ra_serf");
+  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", USER_AGENT);
   if (content_type)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
@@ -625,6 +625,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               *ctx->done_list = ctx->done_item;
             }
         }
+      ctx->error = svn_ra_serf__handle_server_error(request, response, pool);
       return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
 
@@ -691,12 +692,13 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       if (APR_STATUS_IS_EOF(status))
         {
           xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
+          XML_ParserFree(ctx->xmlp);
           if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
             {
-              abort();
-            }
+              status = SVN_ERR_RA_DAV_REQUEST_FAILED;
 
-          XML_ParserFree(ctx->xmlp);
+              svn_error_clear(ctx->error);
+            }
 
           *ctx->done = TRUE;
           if (ctx->done_list)
@@ -734,9 +736,7 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
         }
     }
 
-  SVN_ERR(server_err.error);
-
-  return svn_error_create(APR_EGENERAL, NULL, _("Unspecified error message"));
+  return server_err.error;
 }
 
 /* Implements the serf_response_handler_t interface.  Wait for HTTP
@@ -818,6 +818,7 @@ handle_response(serf_request_t *request,
 
   if (sl.code == 401)
     {
+      /* 401 Authorization required */
       svn_error_t *err;
 
       err = handle_auth(ctx->session, ctx->conn, request, response, pool);
@@ -840,10 +841,18 @@ handle_response(serf_request_t *request,
             }
         }
     }
-  else if (sl.code >= 500)
+  else if (sl.code == 409 || sl.code >= 500)
     {
+      /* 409 Conflict: can indicate a hook error. 
+         5xx (Internal) Server error. */
       ctx->session->pending_error =
           svn_ra_serf__handle_server_error(request, response, pool);
+      if (!ctx->session->pending_error)
+        {
+          ctx->session->pending_error =
+              svn_error_create(APR_EGENERAL, NULL,
+                               _("Unspecified error message"));
+        }
       return ctx->session->pending_error->apr_err;
     }
   else

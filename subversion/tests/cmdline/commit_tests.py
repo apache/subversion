@@ -28,7 +28,7 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
-
+server_has_revprop_commit = svntest.main.server_has_revprop_commit
 
 ######################################################################
 # Utilities
@@ -1912,6 +1912,16 @@ def local_mods_are_not_commits(sbox):
                                      os.path.join(wc_dir, 'A', 'mu'),
                                      os.path.join(wc_dir, 'A', 'yu'))
 
+# Helper for hook tests: returns the "hook failed" line, with precise
+# wording that changed with Subversion 1.5.
+def hook_failure_message(hookname):
+  if svntest.main.server_minor_version < 5:
+    return "'%s' hook failed with error output:\n" % hookname
+  else:
+    return "'%s' hook failed (exited with a " \
+           "non-zero exitcode of 1).  The following error output " \
+           "was produced by the hook:\n" % hookname
+    
 
 #----------------------------------------------------------------------
 # Test if the post-commit error message is returned back to the svn
@@ -1940,9 +1950,7 @@ def post_commit_hook_test(sbox):
                       "Transmitting file data .\n",
                       "Committed revision 2.\n",
                       "\n",
-                      "Warning: 'post-commit' hook failed (exited with a "
-                      "non-zero exitcode of 1).  The following error output "
-                      "was produced by the hook:\n",
+                      "Warning: " + hook_failure_message('post-commit'),
                       "Post-commit hook failed\n",
                     ]
 
@@ -2320,9 +2328,7 @@ sys.exit(1)"""
   # contain source code file and line numbers.
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: 'start-commit' hook failed "
-                      "(exited with a non-zero exitcode of 1).  "
-                      "The following error output was produced by the hook:\n",
+  expected_stderr = [ "svn: " + hook_failure_message('start-commit'),
                       "Start-commit hook failed\n"
                     ]
   svntest.actions.compare_and_display_lines('Start-commit hook test',  
@@ -2365,9 +2371,7 @@ sys.exit(1)"""
   # contain source code file and line numbers.
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: 'pre-commit' hook failed "
-                      "(exited with a non-zero exitcode of 1).  "
-                      "The following error output was produced by the hook:\n",
+  expected_stderr = [ "svn: " + hook_failure_message('pre-commit'),
                       "Pre-commit hook failed\n"
                     ]
   svntest.actions.compare_and_display_lines('Pre-commit hook test',  
@@ -2415,18 +2419,20 @@ test_list = [ None,
               post_commit_hook_test,
               commit_same_folder_in_targets,
               commit_inconsistent_eol,
-              mkdir_with_revprop,
-              delete_with_revprop,
-              commit_with_revprop,
-              import_with_revprop,
-              copy_R2R_with_revprop,
-              copy_WC2R_with_revprop,
-              move_R2R_with_revprop,
-              propedit_with_revprop,
-              set_multiple_props_with_revprop,
-              use_empty_value_in_revprop_pair,
-              no_equals_in_revprop_pair,
-              set_invalid_revprops,
+              SkipUnless(mkdir_with_revprop, server_has_revprop_commit),
+              SkipUnless(delete_with_revprop, server_has_revprop_commit),
+              SkipUnless(commit_with_revprop, server_has_revprop_commit),
+              SkipUnless(import_with_revprop, server_has_revprop_commit),
+              SkipUnless(copy_R2R_with_revprop, server_has_revprop_commit),
+              SkipUnless(copy_WC2R_with_revprop, server_has_revprop_commit),
+              SkipUnless(move_R2R_with_revprop, server_has_revprop_commit),
+              SkipUnless(propedit_with_revprop, server_has_revprop_commit),
+              SkipUnless(set_multiple_props_with_revprop,
+                         server_has_revprop_commit),
+              SkipUnless(use_empty_value_in_revprop_pair,
+                         server_has_revprop_commit),
+              SkipUnless(no_equals_in_revprop_pair, server_has_revprop_commit),
+              SkipUnless(set_invalid_revprops, server_has_revprop_commit),
               start_commit_hook_test,
               pre_commit_hook_test,
              ]

@@ -451,13 +451,27 @@ equivalent to \".\", so you would commit more than you intended."
   :group 'psvn)
 (put 'svn-status-default-commit-arguments 'risky-local-variable t)
 
-(defcustom svn-status-default-diff-arguments '()
+(defcustom svn-status-default-diff-arguments '("-x" "--ignore-eol-style")
   "*A list of arguments that is passed to the svn diff command.
-If you'd like to suppress whitespace changes use the following value:
-'(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")"
+When the built in diff command is used,
+the following options are available: --ignore-eol-style, --ignore-space-change,
+--ignore-all-space, --ignore-eol-style.
+The following setting ignores eol style changes and all white space changes:
+'(\"-x\" \"--ignore-eol-style --ignore-all-space\")
+
+If you'd like to suppress whitespace changes using the external diff command
+use the following value:
+'(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")
+
+"
   :type '(repeat string)
   :group 'psvn)
 (put 'svn-status-default-diff-arguments 'risky-local-variable t)
+
+(defcustom svn-status-default-blame-arguments '("-x" "--ignore-eol-style")
+  "*A list of arguments that is passed to the svn blame command.
+See `svn-status-default-diff-arguments' for some examples.")
+(put 'svn-status-default-blame-arguments 'risky-local-variable t)
 
 (defvar svn-trac-project-root nil
   "Path for an eventual existing trac issue tracker.
@@ -1349,13 +1363,28 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
            (while (accept-process-output process 0 100))
            ;; find last error message and show it.
            (goto-char (point-max))
-           (message "svn failed: %s"
-                    (if (re-search-backward "^svn: \\(.*\\)" nil t)
-                        (match-string 1)
-                      event)))
+           (if (re-search-backward "^svn: \\(.*\\)" nil t)
+               (svn-process-handle-error (match-string 1))
+             (message "svn failed: %s" event)))
           (t
            (message "svn process had unknown event: %s" event))
           (svn-status-show-process-output nil t))))
+
+(defun svn-process-handle-error (error-msg)
+  (let ((svn-process-handle-error-msg error-msg))
+    (electric-helpify 'svn-process-help-with-error-msg)))
+
+(defun svn-process-help-with-error-msg ()
+  (interactive)
+  (let ((help-msg (cadr (assoc svn-process-handle-error-msg
+                               '(("Cannot non-recursively commit a directory deletion"
+                                  "Please unmark all files and position point at the directory you would like to remove.\nThen run commit again."))))))
+    (if help-msg
+        (save-excursion
+          (with-output-to-temp-buffer (help-buffer)
+            (princ (format "svn failed: %s\n\n%s" svn-process-handle-error-msg help-msg))))
+      (message "svn failed: %s" svn-process-handle-error-msg))))
+
 
 (defun svn-process-filter (process str)
   "Track the svn process output and ask user questions in the minibuffer when appropriate."
@@ -3348,8 +3377,16 @@ Unlike `svn-status-marked-files', this does not select the file under point
 if no files have been marked."
   ;; `some' would be shorter but requires cl-seq at runtime.
   ;; (Because it accepts both lists and vectors, it is difficult to inline.)
-  (loop for file in svn-status-info
-        thereis (svn-status-line-info->has-usermark file)))
+  (loop for line-info in svn-status-info
+        thereis (svn-status-line-info->has-usermark line-info)))
+
+(defun svn-status-only-dirs-or-nothing-marked-p ()
+  "Return non-nil iff only dirs has been marked by `svn-status-set-user-mark'."
+  ;; `some' would be shorter but requires cl-seq at runtime.
+  ;; (Because it accepts both lists and vectors, it is difficult to inline.)
+  (loop for line-info in svn-status-info
+        thereis (and (not (svn-status-line-info->directory-p line-info))
+                     (svn-status-line-info->has-usermark line-info))))
 
 (defun svn-status-ui-information-hash-table ()
   (let ((st-info svn-status-info)
@@ -3417,6 +3454,12 @@ Consider svn-status-window-alist to choose the buffer name."
             (other-window 1))
         (svn-status-show-process-buffer-internal scroll-to-top)))))
 
+(defun svn-status-svn-log-switches (arg)
+  (cond ((eq arg 0)  '())
+        ((or (eq arg -1) (eq arg '-)) '("-q"))
+        (arg         '("-v"))
+        (t           svn-status-default-log-arguments)))
+
 (defun svn-status-show-svn-log (arg)
   "Run `svn log' on selected files.
 The output is put into the *svn-log* buffer
@@ -3428,17 +3471,11 @@ The optional prefix argument ARG determines which switches are passed to `svn lo
 
 See `svn-status-marked-files' for what counts as selected."
   (interactive "P")
-  (let ((switches (cond ((eq arg 0)  '())
-                        ((or (eq arg -1) (eq arg '-)) '("-q"))
-                        (arg         '("-v"))
-                        (t           svn-status-default-log-arguments)))
+  (let ((switches (svn-status-svn-log-switches arg))
         (svn-status-get-line-information-for-file t))
     ;; (message "svn-status-show-svn-log %S" arg)
     (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-    (svn-run t t 'log "log" "--targets" svn-status-temp-arg-file switches)
-    (save-excursion
-      (set-buffer svn-process-buffer-name)
-      (svn-log-view-mode))))
+    (svn-run t t 'log "log" "--targets" svn-status-temp-arg-file switches)))
 
 (defun svn-status-version ()
   "Show the version numbers for psvn.el and the svn command line client.
@@ -3496,7 +3533,7 @@ When called from a file buffer, go to the current line in the resulting blame ou
     (setq revision (svn-status-read-revision-string "Blame for version: " "BASE")))
   (unless revision (setq revision "BASE"))
   (setq svn-status-blame-file-name (svn-status-line-info->filename (svn-status-get-file-information)))
-  (svn-run t t 'blame "blame" "-r" revision svn-status-blame-file-name))
+  (svn-run t t 'blame "blame" svn-status-default-blame-arguments "-r" revision svn-status-blame-file-name))
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
@@ -3896,9 +3933,14 @@ When called with a negative prefix argument, only update the selected files."
     (if selective-update
         (progn
           (message "Running svn-update for %s" (svn-status-marked-file-names))
-          (svn-run t t 'update "update" (when rev (list "-r" rev)) (svn-status-marked-file-names)))
+          (svn-run t t 'update "update"
+                   (when rev (list "-r" rev))
+                   (list "--non-interactive")
+                   (svn-status-marked-file-names)))
       (message "Running svn-update for %s" default-directory)
-      (svn-run t t 'update "update" (when rev (list "-r" rev))))))
+      (svn-run t t 'update "update"
+               (when rev (list "-r" rev))
+               (list "--non-interactive")))))
 
 (defun svn-status-commit ()
   "Commit selected files.
@@ -3908,10 +3950,9 @@ normally marks all of its files as well.
 If no files have been marked, commit recursively the file at point."
   (interactive)
   (svn-status-save-some-buffers)
-  (let* ((selected-files (svn-status-marked-files))
-         (marked-files-p (svn-status-some-files-marked-p)))
+  (let* ((selected-files (svn-status-marked-files)))
     (setq svn-status-files-to-commit selected-files
-          svn-status-recursive-commit (not marked-files-p))
+          svn-status-recursive-commit (not (svn-status-only-dirs-or-nothing-marked-p)))
     (svn-log-edit-show-files-to-commit)
     (svn-status-pop-to-commit-buffer)
     (when svn-log-edit-insert-files-to-commit
@@ -5227,6 +5268,7 @@ Currently is the output from the svn update command known."
   (define-key svn-blame-mode-map (kbd "a") 'svn-blame-highlight-author)
   (define-key svn-blame-mode-map (kbd "r") 'svn-blame-highlight-revision)
   (define-key svn-blame-mode-map (kbd "=") 'svn-blame-show-changeset)
+  (define-key svn-blame-mode-map (kbd "l") 'svn-blame-show-log)
   (define-key svn-blame-mode-map [?q] 'bury-buffer))
 
 (easy-menu-define svn-blame-mode-menu svn-blame-mode-map
@@ -5234,6 +5276,7 @@ Currently is the output from the svn update command known."
                   '("SvnBlame"
                     ["Jump to source location" svn-blame-open-source-file t]
                     ["Show changeset" svn-blame-show-changeset t]
+                    ["Show log" svn-blame-show-log t]
                     ["Highlight by author" svn-blame-highlight-author t]
                     ["Highlight by revision" svn-blame-highlight-revision t]))
 
@@ -5308,15 +5351,31 @@ The current buffer must contain a valid output from svn blame"
     (goto-line src-line-number)
     (forward-char src-line-col)))
 
-(defun svn-blame-show-changeset (arg)
-  "Show a diff for the revision at point.
-When called with a prefix argument, allow the user to edit the revision."
-  (interactive "P")
+(defun svn-blame-rev-at-point ()
   (let ((rev))
     (dolist (ov (overlays-in (svn-point-at-bol) (line-end-position)))
       (when (overlay-get ov 'svn-blame-line-info)
         (setq rev (car (overlay-get ov 'rev-info)))))
-    (svn-status-diff-show-changeset rev arg)))
+    rev))
+
+(defun svn-blame-show-changeset (arg)
+  "Show a diff for the revision at point.
+When called with a prefix argument, allow the user to edit the revision."
+  (interactive "P")
+  (svn-status-diff-show-changeset (svn-blame-rev-at-point) arg))
+
+(defun svn-blame-show-log (arg)
+  "Show the log for the revision at point.
+The output is put into the *svn-log* buffer
+The optional prefix argument ARG determines which switches are passed to `svn log':
+ no prefix               --- use whatever is in the list `svn-status-default-log-arguments'
+ prefix argument of -1:  --- use the -q switch (quiet)
+ prefix argument of 0    --- use no arguments
+ other prefix arguments: --- use the -v switch (verbose)"
+  (interactive "P")
+  (let ((switches (svn-status-svn-log-switches arg))
+        (rev (svn-blame-rev-at-point)))
+    (svn-run t t 'log "log" "--revision" rev switches)))
 
 (defun svn-blame-highlight-line-maybe (compare-func)
   (let ((reference-value)

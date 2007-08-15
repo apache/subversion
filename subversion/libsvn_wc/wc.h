@@ -227,6 +227,10 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
    When MERGE_OPTIONS are specified, they are used by the internal
    diff3 routines, or passed to the external diff3 tool.
 
+   If CONFLICT_FUNC is non-NULL, then call it with CONFLICT_BATON if a
+   conflict is encountered, giving the callback a chance to resolve
+   the conflict (before marking the file 'conflicted').
+
    For a complete description, see svn_wc_merge2() for which this is
    the (loggy) implementation.
 
@@ -245,6 +249,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
                        const apr_array_header_t *prop_diff,
+                       svn_wc_conflict_resolver_func_t conflict_func,
+                       void *conflict_baton,
                        apr_pool_t *pool);
 
 #ifdef __cplusplus

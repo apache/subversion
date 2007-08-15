@@ -320,7 +320,7 @@ detect_changed(apr_hash_t **changed,
   return SVN_NO_ERROR;
 }
 
-/* This is used by svn_repos_get_logs3 to keep track of multiple
+/* This is used by svn_repos_get_logs to keep track of multiple
  * path history information while working through history.
  *
  * The two pools are swapped after each iteration through history because
@@ -520,7 +520,8 @@ next_history_rev(apr_array_header_t *histories)
   return next_rev;
 }
 
-struct filter_baton {
+struct filter_baton
+{
   svn_fs_t *fs;
   svn_revnum_t rev;
   svn_fs_root_t *root;
@@ -567,10 +568,13 @@ calculate_branching_copy_mergeinfo(apr_hash_t **implied_mergeinfo,
   return SVN_NO_ERROR;
 }
 
-/* Filter function to be used with svn_fs_get_mergeinfo_for_tree().  This
-   should return FALSE if path is a branching copy.
+/* Filter function to be used with svn_fs_get_mergeinfo_for_tree().
+   This should return FALSE if PATH is a copy which is considered a
+   "branch"; that is, a copied path which has merge info identical to
+   what would be expected for a copy from source to destination
+   without any modification.
 
-   This implements svn_fs_mergeinfo_filter_func_t */
+   This function implements the svn_fs_mergeinfo_filter_func_t API. */
 static svn_error_t *
 branching_copy_filter(void *baton,
                       svn_boolean_t *omit,
@@ -586,11 +590,14 @@ branching_copy_filter(void *baton,
   apr_hash_t *implied_mergeinfo;
   apr_hash_t *deleted, *added;
 
-  /* If we rev isn't the rev of interest for which we are currently looking
+  /* Assume *omit is FALSE, unless determined otherwise. */
+  *omit = FALSE;
+
+  /* If the rev isn't the rev of interest for which we are currently looking
      for new mergeinfo, don't omit this path's mergeinfo.
      
      Consider the following scenario:  We are finding the mergeinfo difference
-     between r10, which is a branching copy, and r9 which is the it's previous
+     between r10, which is a branching copy, and r9 which is the previous
      revision.  If the current revision is r10, *and*, we are looking for 
      mergeinfo in r10, we may want to omit, so this test should fail.
      
@@ -601,41 +608,39 @@ branching_copy_filter(void *baton,
      
      Whew!  That's a long explantion for a single line of code. :) */
   if (!fb->finding_current_revision)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   /* Find out if the path even exists in fb->root. */
   SVN_ERR(svn_fs_check_path(&kind, fb->root, path, pool));
   if (kind == svn_node_none)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   /* Check and see if there was a copy in this revision.  If not, set omit to
      FALSE and return.  */
   SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, fb->root, path,
                               pool));
   if (copy_root == NULL)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   copy_rev = svn_fs_revision_root_revision(copy_root);
   if (copy_rev != fb->rev)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
   /* At this point, we know that PATH was created as a copy in REV.  Using an
      algorithm similar to libsvn_client/copy.c:get_implied_mergeinfo(), check
      to see if the mergeinfo generated on a branching copy, and the mergeinfo
-     that we are presented matches.  If so, omit the path. */
+     that we are presented with matches.  If so, omit the path. */
   SVN_ERR(calculate_branching_copy_mergeinfo(&implied_mergeinfo, copy_root,
                                              copy_path, path, fb->rev, pool));
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, implied_mergeinfo,
                              path_mergeinfo, pool));
   if (apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0)
-    goto omit_false;
+    return SVN_NO_ERROR;
 
+  /* If we've reached this point, we should omit this revision. */
   *omit = TRUE;
-  return SVN_NO_ERROR;
 
-omit_false:
-  *omit = FALSE;
   return SVN_NO_ERROR;
 }
 
@@ -712,7 +717,7 @@ combine_mergeinfo_rangelists(apr_array_header_t **rangelist,
 }
 
 /* Determine all the revisions which were merged into PATHS in REV.  Return
-   them as a new RANGELIST.  */
+   them as a new MERGEINFO.  */
 static svn_error_t *
 get_merged_rev_mergeinfo(apr_hash_t **mergeinfo,
                          svn_fs_t *fs,
@@ -875,7 +880,7 @@ find_merge_source(const char **merge_source,
           svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                    svn_merge_range_t *);
 
-          if (revision >= range->start && revision <= range->end)
+          if (revision > range->start && revision <= range->end)
             {
               *merge_source = key;
               return SVN_NO_ERROR;
@@ -1305,9 +1310,12 @@ svn_repos_get_logs4(svn_repos_t *repos,
      only about answering that question, and we already know the
      answer ... well, you get the picture.
   */
-  if (! paths ||
-      (paths->nelts == 1 &&
-       svn_path_is_empty(APR_ARRAY_IDX(paths, 0, const char *))))
+  if (! paths)
+    paths = apr_array_make(pool, 0, sizeof(const char *));
+
+  if ((! paths->nelts) 
+      || (paths->nelts == 1 &&
+          svn_path_is_empty(APR_ARRAY_IDX(paths, 0, const char *))))
     {
       int send_count = 0;
       int i;

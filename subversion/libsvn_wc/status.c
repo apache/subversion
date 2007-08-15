@@ -1462,10 +1462,15 @@ handle_statii(struct edit_baton *eb,
               || depth == svn_depth_infinity))
         {
           svn_wc_adm_access_t *dir_access;
+          svn_depth_t depth_minus_one = depth;
+
           SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,
                                       key, subpool));
+          
+          if (depth_minus_one == svn_depth_immediates)
+            depth_minus_one = svn_depth_empty;
           SVN_ERR(get_dir_status(eb, dir_entry, dir_access, NULL,
-                                 ignores, depth, eb->get_all, 
+                                 ignores, depth_minus_one, eb->get_all, 
                                  eb->no_ignore, TRUE, status_func, 
                                  status_baton, eb->cancel_func, 
                                  eb->cancel_baton, subpool));
@@ -2140,7 +2145,7 @@ svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
                                    edit_revision,
                                    anchor,
                                    target,
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   SVN_DEPTH_FROM_RECURSE_STATUS(recurse),
                                    get_all,
                                    no_ignore,
                                    ignores,
@@ -2195,7 +2200,7 @@ svn_wc_get_status_editor(const svn_delta_editor_t **editor,
   SVN_ERR(svn_wc_get_default_ignores(&ignores, config, pool));
   return svn_wc_get_status_editor3(editor, edit_baton, NULL, edit_revision,
                                    anchor, target, 
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   SVN_DEPTH_FROM_RECURSE_STATUS(recurse),
                                    get_all, no_ignore, ignores,
                                    old_status_func_cb, b, 
                                    cancel_func, cancel_baton,

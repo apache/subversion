@@ -12,6 +12,11 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
   def setUp(self):
     """Load a Subversion repository"""
 
+    # Isolate each test from the others with a fresh repository.
+    # Eventually, we should move this into a shared TestCase base
+    # class that all test cases in this directory can use.
+    SubversionRepositoryTestSetup().setUp()
+
     ra.initialize()
 
     # Open repository directly for cross-checking
@@ -109,6 +114,92 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     child = editor.add_directory("blah", root, None, 0)
     editor.close_edit(edit_baton)
 
+  def test_delta_driver_commit(self):
+    # Setup paths we'll commit in this test.
+    to_delete = ['trunk/README.txt', 'trunk/dir1/dir2']
+    to_mkdir = ['test_delta_driver_commit.d', 'test_delta_driver_commit2.d']
+    to_add = ['test_delta_driver_commit', 'test_delta_driver_commit2']
+    to_dir_prop = ['trunk/dir1/dir3', 'test_delta_driver_commit2.d']
+    to_file_prop = ['trunk/README2.txt', 'test_delta_driver_commit2']
+    all_paths = set(to_delete + to_mkdir + to_add + to_dir_prop + to_file_prop)
+    # base revision for the commit
+    revision = fs.youngest_rev(self.fs)
+
+    commit_info = []
+    def commit_cb(info, pool):
+      commit_info.append(info)
+    revprops = {"svn:log": "foobar", "testprop": ""}
+    (editor, edit_baton) = ra.get_commit_editor3(self.ra_ctx, revprops,
+                                                 commit_cb, None, False)
+    try:
+      def driver_cb(parent, path, pool):
+        self.assert_(path in all_paths)
+        dir_baton = file_baton = None
+        if path in to_delete:
+          # Leave dir_baton alone, as it must be None for delete.
+          editor.delete_entry(path, revision, parent, pool)
+        elif path in to_mkdir:
+          dir_baton = editor.add_directory(path, parent,
+                                           None, -1, # copyfrom
+                                           pool)
+        elif path in to_add:
+          file_baton = editor.add_file(path, parent,
+                                       None, -1, # copyfrom
+                                       pool)
+        # wc.py:test_commit tests apply_textdelta .
+        if path in to_dir_prop:
+          if dir_baton is None:
+            dir_baton = editor.open_directory(path, parent, revision, pool)
+          editor.change_dir_prop(dir_baton,
+                                 'test_delta_driver_commit', 'foo', pool)
+        elif path in to_file_prop:
+          if file_baton is None:
+            file_baton = editor.open_file(path, parent, revision, pool)
+          editor.change_file_prop(file_baton,
+                                  'test_delta_driver_commit', 'foo', pool)
+        if file_baton is not None:
+          editor.close_file(file_baton, None, pool)
+        return dir_baton
+      delta.path_driver(editor, edit_baton, -1, list(all_paths), driver_cb)
+      editor.close_edit(edit_baton)
+    except:
+      try:
+        editor.abort_edit(edit_baton)
+      except:
+        # We already have an exception in progress, not much we can do
+        # about this.
+        pass
+      raise
+    info = commit_info[0]
+
+    if info.author is not None:
+      revprops['svn:author'] = info.author
+    revprops['svn:date'] = info.date
+    self.assertEqual(ra.rev_proplist(self.ra_ctx, info.revision), revprops)
+
+    receiver_called = [False]
+    def receiver(changed_paths, revision, author, date, message, pool):
+      receiver_called[0] = True
+      self.assertEqual(revision, info.revision)
+      self.assertEqual(author, info.author)
+      self.assertEqual(date, info.date)
+      self.assertEqual(message, revprops['svn:log'])
+      for (path, change) in changed_paths.iteritems():
+        path = path.lstrip('/')
+        self.assert_(path in all_paths)
+        if path in to_delete:
+          self.assertEqual(change.action, 'D')
+        elif path in to_mkdir or path in to_add:
+          self.assertEqual(change.action, 'A')
+        elif path in to_dir_prop or path in to_file_prop:
+          self.assertEqual(change.action, 'M')
+    ra.get_log(self.ra_ctx, [''], info.revision, info.revision,
+               0,                       # limit
+               True,                    # discover_changed_paths
+               True,                    # strict_node_history
+               receiver)
+    self.assert_(receiver_called[0])
+
   def test_do_diff2(self):
 
     class ChangeReceiver(delta.Editor):
@@ -164,6 +255,15 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
     ra.get_file_revs(self.ra_ctx, "trunk/README.txt", 0, 10, rev_handler)
 
+  def test_lock(self):
+    def callback(baton, path, do_lock, lock, ra_err, pool):
+      pass
+    # This test merely makes sure that the arguments can be wrapped 
+    # properly. svn.ra.lock() currently fails because it is not possible 
+    # to retrieve the username from the auth_baton yet.
+    self.assertRaises(core.SubversionException, 
+      lambda: ra.lock(self.ra_ctx, {"/": 0}, "sleutel", False, callback))
+
   def test_update(self):
     class TestEditor(delta.Editor):
         pass
@@ -179,8 +279,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     reporter.finish_report(reporter_baton)
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test',
-                              suiteClass=SubversionRepositoryTestSetup)
+    return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test')
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

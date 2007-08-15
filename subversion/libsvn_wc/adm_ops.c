@@ -2130,6 +2130,22 @@ svn_wc_revert2(const char *path,
           SVN_ERR(revert_admin_things(dir_access, SVN_WC_ENTRY_THIS_DIR, entry,
                                       &reverted, use_commit_times, pool));
 
+          /* Also revert the entry in the parent (issue #2804). */
+          if (reverted && bname)
+            {
+              svn_boolean_t dummy_reverted;
+              svn_wc_entry_t *entry_in_parent;
+              apr_hash_t *entries;
+
+              SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
+                                          pool));
+              entry_in_parent = apr_hash_get(entries, bname,
+                                             APR_HASH_KEY_STRING);
+              SVN_ERR(revert_admin_things(parent_access, bname,
+                                          entry_in_parent, &dummy_reverted,
+                                          use_commit_times, pool));
+            }
+
           /* Force recursion on replaced directories. */
           if (entry->schedule == svn_wc_schedule_replace)
             recursive = TRUE;
@@ -2523,7 +2539,7 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_accept_t accept_,
+                          svn_accept_t accept_which,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           apr_pool_t *pool)
@@ -2535,7 +2551,7 @@ resolve_conflict_on_entry(const char *path,
 
   /* Handle automatic conflict resolution before the temporary files are
    * deleted, if necessary. */
-  switch (accept_)
+  switch (accept_which)
     {
       case svn_accept_left:
         auto_resolve_src = entry->conflict_old;
@@ -2546,7 +2562,7 @@ resolve_conflict_on_entry(const char *path,
       case svn_accept_right:
         auto_resolve_src = entry->conflict_new;
         break;
-      case svn_accept_default:
+      case svn_accept_none:
         auto_resolve_src = NULL;
         break;
       case svn_accept_invalid:
@@ -2717,7 +2733,7 @@ svn_wc_resolved_conflict2(const char *path,
                           apr_pool_t *pool)
 {
   return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
-                                   resolve_props, recurse, svn_accept_default,
+                                   resolve_props, recurse, svn_accept_none,
                                    notify_func, notify_baton, cancel_func,
                                    cancel_baton, pool);
 }

@@ -192,6 +192,9 @@ typedef struct {
      it's not really updating the top level directory. */
   const char *target;
 
+  /* The depth requested from the server. */
+  svn_depth_t depth;
+
   /* Use an intermediate tmpfile for the REPORT response. */
   svn_boolean_t spool_response;
 
@@ -2019,10 +2022,25 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
     {
     case ELEM_update_report:
       att = svn_xml_get_attr_value("send-all", atts);
-
       if (att && (strcmp(att, "true") == 0))
         rb->receiving_all = TRUE;
 
+      /* If the server didn't reply with an actual depth value, it
+         isn't depth-aware, and we'll need to filter its response. */
+      if (! svn_xml_get_attr_value("depth", atts))
+        {
+          const svn_delta_editor_t *filter_editor;
+          void *filter_baton;
+          svn_depth_t depth = rb->depth;
+          svn_boolean_t has_target = *(rb->target) ? TRUE : FALSE;
+
+          SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, &filter_baton,
+                                                rb->editor, rb->edit_baton, 
+                                                depth, has_target, rb->pool));
+          rb->editor = filter_editor;
+          rb->edit_baton = filter_baton;
+        }
+        
       break;
 
     case ELEM_target_revision:
@@ -2690,7 +2708,9 @@ end_element(void *userdata, int state,
     case ELEM_href:
       if (rb->fetch_content)
         /* record the href that we just found */
-        svn_ra_neon__copy_href(rb->href, rb->cdata_accum->data);
+        SVN_ERR(svn_ra_neon__copy_href(rb->href, rb->cdata_accum->data,
+                                       rb->scratch_pool));
+
       svn_stringbuf_setempty(rb->cdata_accum);
 
       /* do nothing if we aren't fetching content. */
@@ -3040,6 +3060,7 @@ make_reporter(svn_ra_session_t *session,
   rb->svndiff_decoder = NULL;
   rb->base64_decoder = NULL;
   rb->cdata_accum = svn_stringbuf_create("", pool);
+  rb->depth = (depth == svn_depth_unknown ? svn_depth_infinity : depth);
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use

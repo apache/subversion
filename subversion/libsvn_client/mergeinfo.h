@@ -36,12 +36,14 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 apr_pool_t *pool);
 
 /* Parse any mergeinfo from the WCPATH's ENTRY and store it in
-   MERGEINFO.  If no record of any mergeinfo exists, set MERGEINFO to
-   NULL.  Does not acount for inherited mergeinfo. */
+   MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,
+   working otherwise. If no record of any mergeinfo exists, set
+   MERGEINFO to NULL.  Does not acount for inherited mergeinfo. */
 svn_error_t *
 svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
                             const svn_wc_entry_t *entry,
                             const char *wcpath,
+                            svn_boolean_t pristine,
                             svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);

@@ -1,0 +1,27 @@
+set MSDEV=C:\Program Files\VS6.0
+set HTTPD_BIN_DIR=C:\Program Files\Apache2
+set TEST_DIR=C:\tmp\svn-auto-test
+set SDK_DIR=C:\Program Files\VS.NET\Vc7\PlatformSDK\
+
+set HTTPD_SRC_DIR=..\httpd
+set BDB_DIR=..\db4-win32
+set NEON_DIR=..\neon
+set ZLIB_DIR=..\zlib
+set OPENSSL_DIR=..\openssl
+set INTL_DIR=..\svn-win32-libintl
+
+REM Uncomment this if you want clean subversion build, after testing
+REM set CLEAN_SVN=1
+
+REM Uncomment this if you want disable ra_svn tests
+REM set NO_RA_SVN=1
+
+REM Uncomment this if you want disable ra_dav tests
+REM set NO_RA_HTTP=1
+
+set SDKINC=%SDK_DIR%\include
+set SDKLIB=%SDK_DIR%\lib
+
+set PATH=%MSDEV%\VC98\Bin;%MSDEV%\Common\MSDev98\Bin\;%PATH%
+set INCLUDE=%SDKINC%;%MSDEV%\VC98\ATL\INCLUDE;%MSDEV%\VC98\INCLUDE;%MSDEV%\VC98\MFC\INCLUDE
+set LIB=%SDKLIB%;%MSDEV%\VC98\LIB;%MSDEV%\VC98\MFC\LIB
