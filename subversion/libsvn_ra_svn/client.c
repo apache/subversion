@@ -1422,6 +1422,8 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
   svn_txdelta_window_handler_t d_handler;
   void *d_baton;
   apr_size_t size;
+  apr_uint64_t merged_rev_param;
+  svn_boolean_t merged_rev;
 
   /* One sub-pool for each revision and one for each txdelta chunk.
      Note that the rev_pool must live during the following txdelta. */
@@ -1429,7 +1431,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
   chunk_pool = svn_pool_create(pool);
 
   SVN_ERR(svn_ra_svn_write_cmd(sess_baton->conn, pool, "get-file-revs",
-                               "c(?r)(?r)?b", path, start, end,
+                               "c(?r)(?r)b", path, start, end,
                                include_merged_revisions));
 
   /* Servers before 1.1 don't support this command.  Check for this here. */
@@ -1450,11 +1452,15 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
                                 _("Revision entry not a list"));
 
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, rev_pool,
-                                     "crll", &p, &rev, &rev_proplist,
-                                     &proplist));
+                                     "crll?B", &p, &rev, &rev_proplist,
+                                     &proplist, &merged_rev_param));
       p = svn_path_canonicalize(p, rev_pool);
       SVN_ERR(svn_ra_svn_parse_proplist(rev_proplist, rev_pool, &rev_props));
       SVN_ERR(parse_prop_diffs(proplist, rev_pool, &props));
+      if (merged_rev_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+        merged_rev = FALSE;
+      else
+        merged_rev = merged_rev_param;
 
       /* Get the first delta chunk so we know if there is a delta. */
       SVN_ERR(svn_ra_svn_read_item(sess_baton->conn, chunk_pool, &item));
@@ -1463,7 +1469,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
                                 _("Text delta chunk not a string"));
       has_txdelta = item->u.string->len > 0;
 
-      SVN_ERR(handler(handler_baton, p, rev, rev_props, FALSE,
+      SVN_ERR(handler(handler_baton, p, rev, rev_props, merged_rev,
                       has_txdelta ? &d_handler : NULL, &d_baton,
                       props, rev_pool));
 

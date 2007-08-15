@@ -1800,7 +1800,7 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
   SVN_ERR(svn_ra_svn_write_proplist(frb->conn, pool, rev_props));
   SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)(!"));
   SVN_ERR(write_prop_diffs(frb->conn, pool, prop_diffs));
-  SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)"));
+  SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)b", merged_revision));
 
   /* Store the pool for the delta stream. */
   frb->pool = pool;
