@@ -1373,9 +1373,7 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              # XFail for issue 2861.
-              XFail(Skip(revprop_change, is_non_posix_and_non_windows_os), 
-                    svntest.main.is_ra_type_dav),
+              Skip(revprop_change, is_non_posix_and_non_windows_os)
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,
