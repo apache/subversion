@@ -1013,7 +1013,12 @@ open_root(void *edit_baton,
 
   if (mkact_ctx->status != 201)
     {
-      abort();
+      return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                               _("%s of '%s': %d %s (%s://%s)"),
+                               handler->method, handler->path, 
+                               mkact_ctx->status, mkact_ctx->reason,
+                               ctx->session->repos_url.scheme,
+                               ctx->session->repos_url.hostinfo);
     }
 
   SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
@@ -1841,9 +1846,13 @@ abort_edit(void *edit_baton,
   SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
                                         pool));
 
-  /* 204 if deleted, 404 if the activity wasn't found. */
+  /* 204 if deleted, 
+     403 if DELETE was forbidden (indicates MKACTIVITY was forbidded too,
+     404 if the activity wasn't found. */
   if (delete_ctx->status != 204 &&
-      delete_ctx->status != 404)
+      delete_ctx->status != 403 &&
+      delete_ctx->status != 404 
+      )
     {
       abort();
     }
