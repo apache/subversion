@@ -49,6 +49,7 @@ typedef enum {
   REV_PROP,
   SET_PROP,
   REMOVE_PROP,
+  MERGED_REVISION,
   TXDELTA,
 } blame_state_e;
 
@@ -84,6 +85,9 @@ typedef struct {
   apr_size_t prop_attr_len;
 
   svn_string_t *prop_string;
+
+  /* Merged revision flag */
+  svn_boolean_t merged_revision;
 
 } blame_info_t;
 
@@ -127,6 +131,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       info->prop_diffs = apr_array_make(info->pool, 0, sizeof(svn_prop_t));
 
       info->stream = NULL;
+      info->merged_revision = FALSE;
 
       parser->state->private = info;
     }
@@ -203,11 +208,15 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
         {
           push_state(parser, blame_ctx, REMOVE_PROP);
         }
+      else if (strcmp(name.name, "merged-revision") == 0)
+        {
+          push_state(parser, blame_ctx, MERGED_REVISION);
+        }
       else if (strcmp(name.name, "txdelta") == 0)
         {
           SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
                                       info->path, info->rev,
-                                      info->rev_props, FALSE,
+                                      info->rev_props, info->merged_revision,
                                       &info->txdelta, &info->txdelta_baton,
                                       info->prop_diffs, info->pool));
 
@@ -239,6 +248,9 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
             {
               info->prop_base64 = FALSE;
             }
+          break;
+        case MERGED_REVISION:
+            info->merged_revision = TRUE;
           break;
         default:
           break;
@@ -302,6 +314,11 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
       prop->name = info->prop_name;
       prop->value = create_propval(info);
 
+      svn_ra_serf__xml_pop_state(parser);
+    }
+  else if (state == MERGED_REVISION &&
+           strcmp(name.name, "merged-revision") == 0)
+    {
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == TXDELTA &&
