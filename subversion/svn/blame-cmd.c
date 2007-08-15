@@ -54,6 +54,8 @@ blame_receiver_xml(void *baton,
                    const char *line,
                    apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state =
+    ((blame_baton_t *) baton)->opt_state;
   svn_stringbuf_t *sb = ((blame_baton_t *) baton)->sbuf;
 
   /* "<entry ...>" */
@@ -67,6 +69,19 @@ blame_receiver_xml(void *baton,
 
   if (SVN_IS_VALID_REVNUM(revision))
     svn_cl__print_xml_commit(&sb, revision, author, date, pool);
+
+  if (opt_state->use_merge_history && SVN_IS_VALID_REVNUM(merged_revision))
+    {
+      /* "<merged>" */
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "merged", NULL);
+
+      svn_cl__print_xml_commit(&sb, merged_revision, merged_author,
+                               merged_date, pool);
+
+      /* "</merged>" */
+      svn_xml_make_close_tag(&sb, pool, "merged");
+      
+    }
 
   /* "</entry>" */
   svn_xml_make_close_tag(&sb, pool, "entry");
