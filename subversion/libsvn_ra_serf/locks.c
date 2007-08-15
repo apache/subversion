@@ -564,7 +564,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_info_t *lock_ctx;
       const void *key;
       void *val;
-      svn_error_t *error;
+      svn_error_t *err;
 
       apr_pool_clear(subpool);
 
@@ -609,16 +609,16 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       handler->response_baton = parser_ctx;
       
       svn_ra_serf__request_create(handler);
-      error = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
+      err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
       if (lock_ctx->error || parser_ctx->error)
         {
-          svn_error_clear(error);
+          svn_error_clear(err);
           SVN_ERR(lock_ctx->error);
           SVN_ERR(parser_ctx->error);
         }
-      if (error)
+      if (err)
         {
-          return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, error,
+          return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
                                   _("Lock request failed"));
         }
 

@@ -154,7 +154,7 @@ apr_status_t svn_ra_serf__handle_client_cert(void *data,
     svn_ra_serf__session_t *session = conn->session;
     const char *realm;
     apr_port_t port;
-    svn_error_t *error;
+    svn_error_t *err;
     void *creds;
 
     *cert_path = NULL;
@@ -175,24 +175,24 @@ apr_status_t svn_ra_serf__handle_client_cert(void *data,
 
     if (!conn->ssl_client_auth_state)
       {
-        error = svn_auth_first_credentials(&creds,
-                                           &conn->ssl_client_auth_state,
-                                           SVN_AUTH_CRED_SSL_CLIENT_CERT,
-                                           realm,
-                                           session->wc_callbacks->auth_baton,
-                                           session->pool);
+        err = svn_auth_first_credentials(&creds,
+                                         &conn->ssl_client_auth_state,
+                                         SVN_AUTH_CRED_SSL_CLIENT_CERT,
+                                         realm,
+                                         session->wc_callbacks->auth_baton,
+                                         session->pool);
       }
     else
       {
-        error = svn_auth_next_credentials(&creds,
-                                          conn->ssl_client_auth_state,
-                                          session->pool);
+        err = svn_auth_next_credentials(&creds,
+                                        conn->ssl_client_auth_state,
+                                        session->pool);
       }
 
-    if (error)
+    if (err)
       {
-        session->pending_error = error;
-        return error->apr_err;
+        session->pending_error = err;
+        return err->apr_err;
       }
 
     if (creds)
@@ -211,31 +211,31 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
 {
     svn_ra_serf__connection_t *conn = data;
     svn_ra_serf__session_t *session = conn->session;
-    svn_error_t *error;
+    svn_error_t *err;
     void *creds;
 
     *password = NULL;
 
     if (!conn->ssl_client_pw_auth_state)
       {
-        error = svn_auth_first_credentials(&creds,
-                                           &conn->ssl_client_pw_auth_state,
-                                           SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
-                                           cert_path,
-                                           session->wc_callbacks->auth_baton,
-                                           session->pool);
+        err = svn_auth_first_credentials(&creds,
+                                         &conn->ssl_client_pw_auth_state,
+                                         SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+                                         cert_path,
+                                         session->wc_callbacks->auth_baton,
+                                         session->pool);
       }
     else
       {
-        error = svn_auth_next_credentials(&creds,
-                                          conn->ssl_client_pw_auth_state,
-                                          session->pool);
+        err = svn_auth_next_credentials(&creds,
+                                        conn->ssl_client_pw_auth_state,
+                                        session->pool);
       }
 
-    if (error)
+    if (err)
       {
-        session->pending_error = error;
-        return error->apr_err;
+        session->pending_error = err;
+        return err->apr_err;
       }
 
     if (creds)
