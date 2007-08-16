@@ -557,7 +557,7 @@ class WC(object):
             recurse, SVN_DIRENT_ALL, fetch_locks, self._list_func,
             cast(id(self), c_void_p), self.client, self.iterpool)
 
-     def relocate(self, from_url, to_url, dir="", recurse=True):
+    def relocate(self, from_url, to_url, dir="", recurse=True):
          """Modify a working copy directory DIR (defaults to WC root),
          changing any repository URLs that begin with FROM_URL to begin with
          TO_URL instead, recursing into subdirectories if RECURSE is True
