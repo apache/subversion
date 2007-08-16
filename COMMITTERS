@@ -13,7 +13,6 @@ Blanket commit access:
        sussman   Ben Collins-Sussman <sussman@red-bean.com>
         kfogel   Karl Fogel <kfogel@red-bean.com>
         gstein   Greg Stein <gstein@lyra.org>
-         brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
        ghudson   Greg Hudson <ghudson@mit.edu>
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
@@ -51,6 +50,7 @@ Blanket commit access:
            lgo   Lieven Govaerts <lgo@mobsol.be>
        hwright   Hyrum Wright <hyrum_wright@mail.utexas.edu>
     vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
+       kameshj   Kamesh Jayachandran <kamesh@collab.net>
 
 Commit access for specific areas:
 
@@ -102,7 +102,6 @@ Commit access for specific areas:
        madanus   Madan U S <madanus@gmail.com>               (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
-       kameshj   Kamesh Jayachandran <kamesh@collab.net>     (svntest)
         aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
 
@@ -160,6 +159,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
 
 Committers who have asked to be listed as dormant:
 
+         brane   Branko Čibej <brane@xbc.nu>
         bdenny   Brian Estlin <brian@implementality.com>
       rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
          kraai   Matt Kraai <kraai@alumni.cmu.edu>

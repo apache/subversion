@@ -23,6 +23,7 @@
 #include "JNIUtil.h"
 #include "SVNClient.h"
 #include "EnumMapper.h"
+#include "RevisionRange.h"
 
 /**
  * Create a new object and store the Java object.
@@ -139,7 +140,8 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
       midCT = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;IILjava/lang/String;"
                                "Lorg/tigris/subversion/javahl/Lock;"
-                               "Ljava/lang/String;IIIJ)V");
+                               "Ljava/lang/String;IIIJLjava/lang/String;L"
+                               JAVA_PACKAGE "/RevisionRange;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         return;
     }
@@ -166,11 +168,29 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
   jint jContentState = EnumMapper::mapNotifyState(wcNotify->content_state);
   jint jPropState = EnumMapper::mapNotifyState(wcNotify->prop_state);
   jint jLockState = EnumMapper::mapNotifyLockState(wcNotify->lock_state);
+
+  jstring jChangelistName = JNIUtil::makeJString(wcNotify->changelist_name);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  jobject jMergeRange;
+  if (wcNotify->merge_range)
+    {
+      jMergeRange = RevisionRange::makeJRevisionRange(wcNotify->merge_range);
+      if (jMergeRange == NULL)
+        return;
+    }
+  else
+    {
+      jMergeRange = NULL;
+    }
+
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
                                  jKind, jMimeType, jLock, jErr,
                                  jContentState, jPropState, jLockState,
-                                 (jlong) wcNotify->revision);
+                                 (jlong) wcNotify->revision, jChangelistName,
+                                 jMergeRange);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -192,6 +212,10 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
     return;
 
   env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  env->DeleteLocalRef(jChangelistName);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

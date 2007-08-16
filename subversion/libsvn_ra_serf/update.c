@@ -1804,6 +1804,9 @@ cdata_report(svn_ra_serf__xml_parser_t *parser,
              apr_size_t len)
 {
   report_context_t *ctx = userData;
+
+  UNUSED_CTX(ctx);
+
   if (parser->state->current_state == PROP)
     {
       report_info_t *info = parser->state->private;
@@ -1846,13 +1849,10 @@ set_path(void *report_baton,
 
   if (lock_token)
     {
-      const char *path_copy, *token_copy;
-
-      path_copy = apr_pstrdup(report->pool, path);
-      token_copy = apr_pstrdup(report->pool, lock_token);
-
-      apr_hash_set(report->lock_path_tokens, path_copy, APR_HASH_KEY_STRING,
-                   token_copy);
+      apr_hash_set(report->lock_path_tokens, 
+                   apr_pstrdup(report->pool, path), 
+                   APR_HASH_KEY_STRING,
+                   apr_pstrdup(report->pool, lock_token));
 
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" lock-token=\"",
                                           sizeof(" lock-token=\"")-1,
@@ -1916,16 +1916,14 @@ delete_path(void *report_baton,
 {
   report_context_t *report = report_baton;
   serf_bucket_t *tmp;
-  const char *path_copy;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:missing>",
                                       sizeof("<S:missing>")-1,
                                       report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
-  path_copy = apr_pstrdup(report->pool, path);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING(path_copy, report->sess->bkt_alloc);
+  tmp = SERF_BUCKET_SIMPLE_STRING(apr_pstrdup(report->pool, path), 
+                                  report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:missing>",
@@ -1948,7 +1946,7 @@ link_path(void *report_baton,
 {
   report_context_t *report = report_baton;
   serf_bucket_t *tmp;
-  const char *path_copy, *link_copy, *vcc_url;
+  const char *link, *vcc_url;
   apr_uri_t uri;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
@@ -1966,13 +1964,10 @@ link_path(void *report_baton,
 
   if (lock_token)
     {
-      const char *path_copy, *token_copy;
-
-      path_copy = apr_pstrdup(report->pool, path);
-      token_copy = apr_pstrdup(report->pool, lock_token);
-
-      apr_hash_set(report->lock_path_tokens, path_copy, APR_HASH_KEY_STRING,
-                   token_copy);
+      apr_hash_set(report->lock_path_tokens, 
+                   apr_pstrdup(report->pool, path), 
+                   APR_HASH_KEY_STRING, 
+                   apr_pstrdup(report->pool, lock_token));
 
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" lock-token=\"",
                                           sizeof(" lock-token=\"")-1,
@@ -2020,13 +2015,11 @@ link_path(void *report_baton,
    * TODO Confirm that it's on the same server?
    */
   apr_uri_parse(pool, url, &uri);
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link_copy,
-                                     report->sess, report->sess->conns[0],
-                                     uri.path, pool));
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link, report->sess, 
+                                     report->sess->conns[0], uri.path, pool));
 
-  link_copy = apr_pstrdup(report->pool, link_copy);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING(link_copy, report->sess->bkt_alloc);
+  tmp = SERF_BUCKET_SIMPLE_STRING(apr_pstrdup(report->pool, link), 
+                                  report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
@@ -2037,9 +2030,8 @@ link_path(void *report_baton,
                                       report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
-  path_copy = apr_pstrdup(report->pool, path);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING(path_copy, report->sess->bkt_alloc);
+  tmp = SERF_BUCKET_SIMPLE_STRING(apr_pstrdup(report->pool, path), 
+                                  report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:entry>",
@@ -2115,6 +2107,7 @@ finish_report(void *report_baton,
       sess->conns[i]->hostinfo = sess->conns[0]->hostinfo;
       sess->conns[i]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[i]->using_compression = sess->conns[0]->using_compression;
+      sess->conns[i]->last_status_code = -1;
       sess->conns[i]->ssl_context = NULL;
       sess->conns[i]->session = sess;
       sess->conns[i]->auth_header = sess->auth_header;

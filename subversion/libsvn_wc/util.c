@@ -127,6 +127,7 @@ svn_wc_create_notify(const char *path,
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
   ret->changelist_name = NULL;
+  ret->merge_range = NULL;
 
   return ret;
 }
@@ -161,6 +162,8 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify,
     }
   if (ret->changelist_name)
     ret->changelist_name = apr_pstrdup(pool, ret->changelist_name);
+  if (ret->merge_range)
+    ret->merge_range = svn_merge_range_dup(ret->merge_range, pool);
 
   return ret;
 }
@@ -272,6 +275,16 @@ svn_wc__path_switched(const char *wc_path,
 
   if (!svn_path_is_uri_safe(wc_basename))
     wc_basename = svn_path_uri_encode(wc_basename, pool);
+
+  /* Without complete entries (and URLs) for WC_PATH and it's parent
+     we return SVN_ERR_ENTRY_MISSING_URL. */
+  if (!parent_entry->url || !entry->url)
+    {
+      const char *no_url_path = parent_entry->url ? wc_path : wc_parent_path;
+      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL, 
+                               _("Cannot find a URL for '%s'"),
+                               svn_path_local_style(no_url_path, pool));
+    }
 
   parent_child_url = svn_path_join(parent_entry->url, wc_basename, pool);
   *switched = strcmp(parent_child_url, entry->url);

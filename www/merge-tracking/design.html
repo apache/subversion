@@ -56,13 +56,20 @@ in this section.</p>
 <h3>Goals</h3>
 
 <p>The goal of the Merge History portion of the design is to track the
-information needed by the operations outlined by the <a
-href="requirements.html">use cases</a> (e.g. the revision numbers
+information needed by the operations outlined by the majority of the
+<a href="requirements.html">use cases</a> (e.g. the revision numbers
 being merged by a merge operation), and keeping this information in
 the right places as various operations (<code>copy</code>,
 <code>delete</code>, <code>add</code>, etc.) are performed.  This
 portion of the design does <em>not</em> encompass the operations
-themselves.</p>
+themselves, and is insufficient for handling cyclic merging (e.g. of
+so-called "reflected" revisions).  For details on problems with cyclic
+merging (caused by lack of tracking of multiple parents for a change),
+see <a
+href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=127537"
+>this thread</a>, especially <a
+href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=127570"
+>this follow-up</a>.</p>
 
 <p>The goals:</p>
 
@@ -482,9 +489,6 @@ and <code>svn_fs_merge_info__get_merge_info()</code>.</p>
 
 <div class="h4" id="audit-log">
 <h4><code>svn log</code> Implementation</h4>
-<p><em>This work is currently being done on the
-<a href="http://svn.collab.net/repos/svn/branches/merge-sensitive-log/">
-merge-sensitive-log</a> branch.</em></p>
 
 <p>Prior to merge tracking, log messages had a linear relationship to one
 another.  That is, the only information gleaned from the order in which a
@@ -518,6 +522,17 @@ effect, this method implements a preorder traversal of the log message tree.</p>
 
 <p>(For convenience, we may want to consolidate all the data parameters of
 <code>svn_log_message_receiver_t</code> into a single structure.)</p>
+
+<p>A revision, R, is considered a <em>merging revision</em> if the mergeinfo
+for any path for which the log was requested changed between R and R-1.  The
+difference in the mergeinfo, both added revisions and removed revisions,
+between R and R-1 indicates the revisions which are children of R.</p>
+
+<p>The exception for this is the case of a copy which is the creation of a
+branch.  When a branch is created, the mergeinfo for R-1 is empty, and the
+mergeinfo for R is 1:R-1.  In this case, the revision should not be considered
+a merging revision, and none of the revisions R:R-1 should be shown as R's
+children.</p>
 
 </div>  <!-- audit-log -->
 

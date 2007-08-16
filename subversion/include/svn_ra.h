@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -783,26 +783,26 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_pool_t *pool);
 
 /**
- * Fetch the merge info for @a paths at @a rev, and save it to @a
+ * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
  * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
  * (from @a paths) to hashes mapping merged-from paths (of @c char *)
  * to revision range lists (of @c apr_array_header_t * with @c
  * svn_merge_range_t * elements), or @c NULL if there is no merge
  * info available.  Allocate the returned values in @a pool.
  *
- * When @a include_parents is @c TRUE, include inherited merge info
- * from parent directories of @a paths.
+ * @a inherit indicates whether explicit, explicit or inherited, or
+ * only inherited merge info for @paths is retrieved.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,
-                                   apr_hash_t **mergeoutput,
-                                   const apr_array_header_t *paths,
-                                   svn_revnum_t revision,
-                                   svn_boolean_t include_parents,
-                                   apr_pool_t *pool);
+svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
+                                  apr_hash_t **mergeoutput,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t revision,
+                                  svn_mergeinfo_inheritance_t inherit,
+                                  apr_pool_t *pool);
 
 /**
  * Ask the RA layer to update a working copy.
@@ -1149,6 +1149,12 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  * If @a strict_node_history is set, copy history will not be traversed
  * (if any exists) when harvesting the revision logs for each path.
  *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a targets will also be returned.
+ *
+ * If @a omit_log_text is set, the contents of the log message will not
+ * be returned.
+ *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
  *
@@ -1162,7 +1168,29 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
+ * @since New in 1.5.
+ */
+
+svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
+                             const apr_array_header_t *paths,
+                             svn_revnum_t start,
+                             svn_revnum_t end,
+                             int limit,
+                             svn_boolean_t discover_changed_paths,
+                             svn_boolean_t strict_node_history,
+                             svn_boolean_t include_merged_revisions,
+                             svn_boolean_t omit_log_text,
+                             svn_log_message_receiver2_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_get_log2(), but uses @c svn_log_message_receiver_t
+ * instead of @c svn_log_message_recevier2_t.  Also @a omit_log_text is
+ * always set to @c FALSE.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
                             const apr_array_header_t *paths,
@@ -1452,7 +1480,7 @@ svn_error_t *svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
  */
 typedef struct svn_ra_plugin_t
 {
-  /** The proper name of the RA library, (like "ra_dav" or "ra_local") */
+  /** The proper name of the RA library, (like "ra_neon" or "ra_local") */
   const char *name;         
   
   /** Short doc string printed out by `svn --version` */
@@ -1723,7 +1751,7 @@ typedef svn_error_t *(*svn_ra_init_func_t)(int abi_version,
 
 /* Public RA implementations. */
 
-/** Initialize libsvn_ra_dav.
+/** Initialize libsvn_ra_neon.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API. */
 svn_error_t * svn_ra_dav_init(int abi_version,

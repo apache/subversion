@@ -32,7 +32,7 @@
 #include "svn_xml.h"
 #include "../libsvn_ra/ra_loader.h"
 
-#include "ra_dav.h"
+#include "ra_neon.h"
 
 
 
@@ -42,7 +42,7 @@
 struct log_baton
 {
   /*WARNING: WANT_CDATA should stay the first element in the baton:
-    svn_ra_dav__xml_collect_cdata() assumes the baton starts with a stringbuf.
+    svn_ra_neon__xml_collect_cdata() assumes the baton starts with a stringbuf.
   */
   svn_stringbuf_t *want_cdata;
   svn_stringbuf_t *cdata;
@@ -53,24 +53,14 @@ struct log_baton
   apr_pool_t *subpool;
 
   /* Information about each log item in turn. */
-  svn_revnum_t revision;
-  const char *author;
-  const char *date;
-  const char *msg;
-
-  /* Keys are the paths changed in this commit, allocated in SUBPOOL;
-     the table itself is also allocated in SUBPOOL.  If this table is
-     NULL, no changed paths were indicated -- which doesn't mean no
-     paths were changed, just means that this log invocation didn't
-     ask for them to be reported. */
-  apr_hash_t *changed_paths;
+  svn_log_entry_t *log_entry;
 
   /* The current changed path item. */
   svn_log_changed_path_t *this_path_item;
 
   /* Client's callback, invoked on the above fields when the end of an
      item is seen. */
-  svn_log_message_receiver_t receiver;
+  svn_log_message_receiver2_t receiver;
   void *receiver_baton;
 
   int limit;
@@ -93,18 +83,19 @@ struct log_baton
 static void
 reset_log_item(struct log_baton *lb)
 {
-  lb->revision      = SVN_INVALID_REVNUM;
-  lb->author        = NULL;
-  lb->date          = NULL;
-  lb->msg           = NULL;
-  lb->changed_paths = NULL;
+  lb->log_entry->revision      = SVN_INVALID_REVNUM;
+  lb->log_entry->author        = NULL;
+  lb->log_entry->date          = NULL;
+  lb->log_entry->message       = NULL;
+  lb->log_entry->changed_paths = NULL;
+  lb->log_entry->nbr_children  = 0;
 
   svn_pool_clear(lb->subpool);
 }
 
 
 /*
- * This implements the `svn_ra_dav__xml_startelm_cb' prototype.
+ * This implements the `svn_ra_neon__xml_startelm_cb' prototype.
  */
 static svn_error_t *
 log_start_element(int *elem, void *baton, int parent,
@@ -113,29 +104,31 @@ log_start_element(int *elem, void *baton, int parent,
   const char *copyfrom_path, *copyfrom_revstr;
   svn_revnum_t copyfrom_rev;
   struct log_baton *lb = baton;
-  static const svn_ra_dav__xml_elm_t log_report_elements[] =
+  static const svn_ra_neon__xml_elm_t log_report_elements[] =
     {
       { SVN_XML_NAMESPACE, "log-report", ELEM_log_report, 0 },
       { SVN_XML_NAMESPACE, "log-item", ELEM_log_item, 0 },
-      { SVN_XML_NAMESPACE, "date", ELEM_log_date, SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "date", ELEM_log_date, SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "added-path", ELEM_added_path,
-        SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "deleted-path", ELEM_deleted_path,
-        SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "modified-path", ELEM_modified_path,
-        SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path,
-        SVN_RA_DAV__XML_CDATA },
-      { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
+      { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
-        SVN_RA_DAV__XML_CDATA },
-      { "DAV:", "comment", ELEM_comment, SVN_RA_DAV__XML_CDATA },
+        SVN_RA_NEON__XML_CDATA },
+      { "DAV:", "comment", ELEM_comment, SVN_RA_NEON__XML_CDATA },
+      { SVN_XML_NAMESPACE, "nbr-children", ELEM_nbr_children,
+        SVN_RA_NEON__XML_CDATA },
       { NULL }
     };
-  const svn_ra_dav__xml_elm_t *elm
-    = svn_ra_dav__lookup_xml_elem(log_report_elements, nspace, name);
+  const svn_ra_neon__xml_elm_t *elm
+    = svn_ra_neon__lookup_xml_elem(log_report_elements, nspace, name);
 
-  *elem = elm ? elm->id : SVN_RA_DAV__XML_DECLINE;
+  *elem = elm ? elm->id : SVN_RA_NEON__XML_DECLINE;
   if (!elm)
     return SVN_NO_ERROR;
 
@@ -149,6 +142,7 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_deleted_path:
     case ELEM_modified_path:
     case ELEM_comment:
+    case ELEM_nbr_children:
       lb->want_cdata = lb->cdata;
       svn_stringbuf_setempty(lb->cdata);
       break;
@@ -205,7 +199,7 @@ log_start_element(int *elem, void *baton, int parent,
 
 
 /*
- * This implements the `svn_ra_dav__xml_endelm_cb' prototype.
+ * This implements the `svn_ra_neon__xml_endelm_cb' prototype.
  */
 static svn_error_t *
 log_end_element(void *baton, int state,
@@ -216,13 +210,16 @@ log_end_element(void *baton, int state,
   switch (state)
     {
     case ELEM_version_name:
-      lb->revision = SVN_STR_TO_REV(lb->cdata->data);
+      lb->log_entry->revision = SVN_STR_TO_REV(lb->cdata->data);
+      break;
+    case ELEM_nbr_children:
+      lb->log_entry->nbr_children = atol(lb->cdata->data);
       break;
     case ELEM_creator_displayname:
-      lb->author = apr_pstrdup(lb->subpool, lb->cdata->data);
+      lb->log_entry->author = apr_pstrdup(lb->subpool, lb->cdata->data);
       break;
     case ELEM_log_date:
-      lb->date = apr_pstrdup(lb->subpool, lb->cdata->data);
+      lb->log_entry->date = apr_pstrdup(lb->subpool, lb->cdata->data);
       break;
     case ELEM_added_path:
     case ELEM_replaced_path:
@@ -230,14 +227,14 @@ log_end_element(void *baton, int state,
     case ELEM_modified_path:
       {
         char *path = apr_pstrdup(lb->subpool, lb->cdata->data);
-        if (! lb->changed_paths)
-          lb->changed_paths = apr_hash_make(lb->subpool);
-        apr_hash_set(lb->changed_paths, path, APR_HASH_KEY_STRING, 
+        if (! lb->log_entry->changed_paths)
+          lb->log_entry->changed_paths = apr_hash_make(lb->subpool);
+        apr_hash_set(lb->log_entry->changed_paths, path, APR_HASH_KEY_STRING, 
                      lb->this_path_item);
         break;
       }
     case ELEM_comment:
-      lb->msg = apr_pstrdup(lb->subpool, lb->cdata->data);
+      lb->log_entry->message = apr_pstrdup(lb->subpool, lb->cdata->data);
       break;
     case ELEM_log_item:
       {
@@ -255,11 +252,7 @@ log_end_element(void *baton, int state,
           }
  
         SVN_ERR((*(lb->receiver))(lb->receiver_baton,
-                                  lb->changed_paths,
-                                  lb->revision,
-                                  lb->author,
-                                  lb->date,
-                                  lb->msg,
+                                  lb->log_entry,
                                   lb->subpool));
         reset_log_item(lb);
       }
@@ -320,30 +313,32 @@ log_end_element(void *baton, int state,
 }
 
 
-svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
-                                  const apr_array_header_t *paths,
-                                  svn_revnum_t start,
-                                  svn_revnum_t end,
-                                  int limit,
-                                  svn_boolean_t discover_changed_paths,
-                                  svn_boolean_t strict_node_history,
-                                  svn_log_message_receiver_t receiver,
-                                  void *receiver_baton,
-                                  apr_pool_t *pool)
+svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
+                                   const apr_array_header_t *paths,
+                                   svn_revnum_t start,
+                                   svn_revnum_t end,
+                                   int limit,
+                                   svn_boolean_t discover_changed_paths,
+                                   svn_boolean_t strict_node_history,
+                                   svn_boolean_t include_merged_revisions,
+                                   svn_boolean_t omit_log_text,
+                                   svn_log_message_receiver2_t receiver,
+                                   void *receiver_baton,
+                                   apr_pool_t *pool)
 {
   /* The Plan: Send a request to the server for a log report.
    * Somewhere in mod_dav_svn, there will be an implementation, R, of
-   * the `svn_log_message_receiver_t' function type.  Some other
+   * the `svn_log_message_receiver2_t' function type.  Some other
    * function in mod_dav_svn will use svn_repos_get_logs() to loop R
    * over the log messages, and the successive invocations of R will
    * collectively transmit the report back here, where we parse the
    * report and invoke RECEIVER (which is an entirely separate
-   * instance of `svn_log_message_receiver_t') on each individual
+   * instance of `svn_log_message_receiver2_t') on each individual
    * message in that report.
    */
 
   int i;
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct log_baton lb;
   svn_string_t bc_url, bc_relative;
@@ -393,6 +388,20 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
                                             "<S:strict-node-history/>"));
     }
 
+  if (include_merged_revisions)
+    {
+      svn_stringbuf_appendcstr(request_body,
+                               apr_psprintf(pool,
+                                            "<S:include-merged-revisions/>"));
+    }
+
+  if (omit_log_text)
+    {
+      svn_stringbuf_appendcstr(request_body,
+                               apr_psprintf(pool,
+                                            "<S:omit-log-text/>"));
+    }
+
   if (paths)
     {
       for (i = 0; i < paths->nelts; i++)
@@ -416,6 +425,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
   lb.count = 0;
   lb.limit_compat_bailout = FALSE;
   lb.cdata = svn_stringbuf_create("", pool);
+  lb.log_entry = svn_log_entry_create(pool);
   lb.want_cdata = NULL;
   reset_log_item(&lb);
 
@@ -425,27 +435,27 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
      baseline-collection URL, which we get from the largest of the
      START and END revisions. */
   use_rev = (start > end) ? start : end;
-  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                        ras, ras->url->data, use_rev,
-                                        pool));
+  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                         ras, ras->url->data, use_rev,
+                                         pool));
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             pool);
 
 
-  err = svn_ra_dav__parsed_request(ras,
-                                   "REPORT",
-                                   final_bc_url,
-                                   request_body->data,
-                                   0,  /* ignored */
-                                   NULL,
-                                   log_start_element,
-                                   svn_ra_dav__xml_collect_cdata,
-                                   log_end_element,
-                                   &lb,
-                                   NULL,
-                                   NULL,
-                                   FALSE,
-                                   pool);
+  err = svn_ra_neon__parsed_request(ras,
+                                    "REPORT",
+                                    final_bc_url,
+                                    request_body->data,
+                                    0,  /* ignored */
+                                    NULL,
+                                    log_start_element,
+                                    svn_ra_neon__xml_collect_cdata,
+                                    log_end_element,
+                                    &lb,
+                                    NULL,
+                                    NULL,
+                                    FALSE,
+                                    pool);
   svn_pool_destroy(lb.subpool);
 
   if (err && lb.limit_compat_bailout)

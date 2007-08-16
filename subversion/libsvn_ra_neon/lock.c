@@ -29,14 +29,14 @@
 #include "svn_time.h"
 #include "svn_private_config.h"
 
-#include "ra_dav.h"
+#include "ra_neon.h"
 
-static const svn_ra_dav__xml_elm_t lock_elements[] =
+static const svn_ra_neon__xml_elm_t lock_elements[] =
 {
   /* lockdiscovery elements */
   { "DAV:", "response", ELEM_response, 0 },
   { "DAV:", "propstat", ELEM_propstat, 0 },
-  { "DAV:", "status", ELEM_status, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "status", ELEM_status, SVN_RA_NEON__XML_CDATA },
   /* extend lockdiscovery elements here;
      ### Remember to update do_lock() when you change the number of
      elements here: it contains a hard reference to the next element. */
@@ -45,14 +45,14 @@ static const svn_ra_dav__xml_elm_t lock_elements[] =
   { "DAV:", "prop", ELEM_prop, 0 },
   { "DAV:", "lockdiscovery", ELEM_lock_discovery, 0 },
   { "DAV:", "activelock", ELEM_lock_activelock, 0 },
-  { "DAV:", "locktype", ELEM_lock_type, SVN_RA_DAV__XML_CDATA },
-  { "DAV:", "lockscope", ELEM_lock_scope, SVN_RA_DAV__XML_CDATA },
-  { "DAV:", "depth", ELEM_lock_depth, SVN_RA_DAV__XML_CDATA },
-  { "DAV:", "owner", ELEM_lock_owner, SVN_RA_DAV__XML_COLLECT },
-  { "DAV:", "timeout", ELEM_lock_timeout, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "locktype", ELEM_lock_type, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", "lockscope", ELEM_lock_scope, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", "depth", ELEM_lock_depth, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", "owner", ELEM_lock_owner, SVN_RA_NEON__XML_COLLECT },
+  { "DAV:", "timeout", ELEM_lock_timeout, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "locktoken", ELEM_lock_token, 0 },
-  { "DAV:", "href", ELEM_href, SVN_RA_DAV__XML_CDATA },
-  { "", "", ELEM_unknown, SVN_RA_DAV__XML_COLLECT },
+  { "DAV:", "href", ELEM_href, SVN_RA_NEON__XML_CDATA },
+  { "", "", ELEM_unknown, SVN_RA_NEON__XML_COLLECT },
   /* extend lock elements here */
 
   { NULL }
@@ -62,7 +62,7 @@ typedef struct
 {
   svn_stringbuf_t *cdata;
   apr_pool_t *pool;
-  const svn_ra_dav__xml_elm_t *xml_table;
+  const svn_ra_neon__xml_elm_t *xml_table;
 
   /* lockdiscovery fields */
   svn_stringbuf_t *href;
@@ -81,8 +81,8 @@ lock_start_element(int *elem, void *baton, int parent,
                    const char *nspace, const char *name, const char **atts)
 {
   lock_baton_t *b = baton;
-  const svn_ra_dav__xml_elm_t *elm =
-    svn_ra_dav__lookup_xml_elem(b->xml_table, nspace, name);
+  const svn_ra_neon__xml_elm_t *elm =
+    svn_ra_neon__lookup_xml_elem(b->xml_table, nspace, name);
 
   if (! elm)
     {
@@ -167,7 +167,7 @@ lock_cdata(void *baton, int state, const char *cdata, size_t len)
 
 static svn_error_t *
 lock_from_baton(svn_lock_t **lock,
-                svn_ra_dav__request_t *req,
+                svn_ra_neon__request_t *req,
                 const char *path,
                 lock_baton_t *lrb, apr_pool_t *pool)
 {
@@ -229,30 +229,30 @@ do_lock(svn_lock_t **lock,
         svn_revnum_t current_rev,
         apr_pool_t *pool)
 {
-  svn_ra_dav__request_t *req;
+  svn_ra_neon__request_t *req;
   svn_stringbuf_t *body;
   ne_uri uri;
   int code;
   const char *url;
   svn_string_t fs_path;
   ne_xml_parser *lck_parser;
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
   apr_hash_t *extra_headers;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component(ras->url->data, path, pool);
-  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
-                                        url, SVN_INVALID_REVNUM, pool));
+  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
+                                         url, SVN_INVALID_REVNUM, pool));
 
 
   ne_uri_parse(url, &uri);
-  req = svn_ra_dav__request_create(ras, "LOCK", uri.path, pool);
+  req = svn_ra_neon__request_create(ras, "LOCK", uri.path, pool);
   ne_uri_free(&uri);
 
   lrb->pool = pool;
   lrb->xml_table = &(lock_elements[3]);
-  lck_parser = svn_ra_dav__xml_parser_create
+  lck_parser = svn_ra_neon__xml_parser_create
     (req, ne_accept_2xx,
      lock_start_element, lock_cdata, lock_end_element, lrb);
 
@@ -269,42 +269,42 @@ do_lock(svn_lock_t **lock,
       : ""));
 
   extra_headers = apr_hash_make(req->pool);
-  svn_ra_dav__set_header(extra_headers, "Depth", "0");
-  svn_ra_dav__set_header(extra_headers, "Timeout", "Infinite");
-  svn_ra_dav__set_header(extra_headers, "Content-Type",
+  svn_ra_neon__set_header(extra_headers, "Depth", "0");
+  svn_ra_neon__set_header(extra_headers, "Timeout", "Infinite");
+  svn_ra_neon__set_header(extra_headers, "Content-Type",
                          "text/xml; charset=\"utf-8\"");
   if (force)
-    svn_ra_dav__set_header(extra_headers, SVN_DAV_OPTIONS_HEADER,
-                           SVN_DAV_OPTION_LOCK_STEAL);
+    svn_ra_neon__set_header(extra_headers, SVN_DAV_OPTIONS_HEADER,
+                            SVN_DAV_OPTION_LOCK_STEAL);
   if (SVN_IS_VALID_REVNUM(current_rev))
-    svn_ra_dav__set_header(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
-                           apr_psprintf(req->pool, "%ld", current_rev));
+    svn_ra_neon__set_header(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
+                            apr_psprintf(req->pool, "%ld", current_rev));
 
-  SVN_ERR(svn_ra_dav__request_dispatch(&code, req, extra_headers, body->data,
-                                       200, 0, pool));
+  SVN_ERR(svn_ra_neon__request_dispatch(&code, req, extra_headers, body->data,
+                                        200, 0, pool));
 
   /*###FIXME: we never verified whether we have received back the type
     of lock we requested: was it shared/exclusive? was it write/otherwise?
     How many did we get back? Only one? */
   SVN_ERR(lock_from_baton(lock, req, fs_path.data, lrb, pool));
 
-  svn_ra_dav__request_destroy(req);
+  svn_ra_neon__request_destroy(req);
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_ra_dav__lock(svn_ra_session_t *session,
-                 apr_hash_t *path_revs,
-                 const char *comment,
-                 svn_boolean_t force,
-                 svn_ra_lock_callback_t lock_func, 
-                 void *lock_baton,
-                 apr_pool_t *pool)
+svn_ra_neon__lock(svn_ra_session_t *session,
+                  apr_hash_t *path_revs,
+                  const char *comment,
+                  svn_boolean_t force,
+                  svn_ra_lock_callback_t lock_func, 
+                  void *lock_baton,
+                  apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
   svn_error_t *ret_err = NULL;
 
   /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
@@ -349,7 +349,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
   svn_pool_destroy(iterpool);
 
  departure:
-  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras, pool);
+  return svn_ra_neon__maybe_store_auth_info_after_result(ret_err, ras, pool);
 }
 
 
@@ -361,7 +361,7 @@ do_unlock(svn_ra_session_t *session,
           svn_boolean_t force,
           apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
   const char *url;
   const char *url_path;
   ne_uri uri;
@@ -386,7 +386,7 @@ do_unlock(svn_ra_session_t *session,
     {
       svn_lock_t *lock;
 
-      SVN_ERR(svn_ra_dav__get_lock(session, &lock, path, pool));
+      SVN_ERR(svn_ra_neon__get_lock(session, &lock, path, pool));
       if (! lock)
         return svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
                                  _("'%s' is not locked in the repository"),
@@ -402,22 +402,22 @@ do_unlock(svn_ra_session_t *session,
     apr_hash_set(extra_headers, SVN_DAV_OPTIONS_HEADER, APR_HASH_KEY_STRING,
                  SVN_DAV_OPTION_LOCK_BREAK);
 
-  return svn_ra_dav__simple_request(NULL, ras, "UNLOCK", url_path,
-                                    extra_headers, NULL, 204, 0, pool);
+  return svn_ra_neon__simple_request(NULL, ras, "UNLOCK", url_path,
+                                     extra_headers, NULL, 204, 0, pool);
 }
 
 
 svn_error_t *
-svn_ra_dav__unlock(svn_ra_session_t *session,
-                   apr_hash_t *path_tokens,
-                   svn_boolean_t force,
-                   svn_ra_lock_callback_t lock_func, 
-                   void *lock_baton,
-                   apr_pool_t *pool)
+svn_ra_neon__unlock(svn_ra_session_t *session,
+                    apr_hash_t *path_tokens,
+                    svn_boolean_t force,
+                    svn_ra_lock_callback_t lock_func, 
+                    void *lock_baton,
+                    apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
   svn_error_t *ret_err = NULL;
 
   /* ### TODO for issue 2263: Send all the lock tokens over the wire at once.
@@ -464,23 +464,23 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
   svn_pool_destroy(iterpool);
 
  departure:
-  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras, pool);
+  return svn_ra_neon__maybe_store_auth_info_after_result(ret_err, ras, pool);
 }
 
 
 svn_error_t *
-svn_ra_dav__get_lock(svn_ra_session_t *session,
-                     svn_lock_t **lock,
-                     const char *path,
-                     apr_pool_t *pool)
+svn_ra_neon__get_lock(svn_ra_session_t *session,
+                      svn_lock_t **lock,
+                      const char *path,
+                      apr_pool_t *pool)
 {
   const char *url;
   svn_string_t fs_path;
   svn_error_t *err;
   ne_uri uri;
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
-  svn_ra_dav__request_t *req;
+  svn_ra_neon__request_t *req;
   ne_xml_parser *lck_parser;
   apr_hash_t *extra_headers;
   static const char *body =
@@ -494,28 +494,28 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component(ras->url->data, path, pool);  
 
-  err = svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
-                                      url, SVN_INVALID_REVNUM, pool);
-  SVN_ERR(svn_ra_dav__maybe_store_auth_info_after_result(err, ras, pool));
+  err = svn_ra_neon__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
+                                       url, SVN_INVALID_REVNUM, pool);
+  SVN_ERR(svn_ra_neon__maybe_store_auth_info_after_result(err, ras, pool));
 
   ne_uri_parse(url, &uri);
   url = apr_pstrdup(pool, uri.path);
   ne_uri_free(&uri);
 
-  req = svn_ra_dav__request_create(ras, "PROPFIND", url, pool);
+  req = svn_ra_neon__request_create(ras, "PROPFIND", url, pool);
 
   lrb->pool = pool;
   lrb->xml_table = lock_elements;
-  lck_parser = svn_ra_dav__xml_parser_create
+  lck_parser = svn_ra_neon__xml_parser_create
     (req, ne_accept_207, lock_start_element, lock_cdata, lock_end_element, lrb);
 
   extra_headers = apr_hash_make(req->pool);
-  svn_ra_dav__set_header(extra_headers, "Depth", "0");
-  svn_ra_dav__set_header(extra_headers, "Content-Type",
-                         "text/xml; charset=\"utf-8\"");
+  svn_ra_neon__set_header(extra_headers, "Depth", "0");
+  svn_ra_neon__set_header(extra_headers, "Content-Type",
+                          "text/xml; charset=\"utf-8\"");
 
-  SVN_ERR_W(svn_ra_dav__request_dispatch(NULL, req, extra_headers, body,
-                                         200, 207, pool),
+  SVN_ERR_W(svn_ra_neon__request_dispatch(NULL, req, extra_headers, body,
+                                          200, 207, pool),
             _("Failed to fetch lock information"));
   /*###FIXME We assume here we only got one lock response. The WebDAV
     spec makes no such guarantees. How to make sure we grab the one we need? */

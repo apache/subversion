@@ -244,28 +244,24 @@ def blame_peg_rev(sbox):
   expected_output_r1 = [
     "     1    jrandom This is the file 'iota'.\n" ]
 
-  current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
-  try:
-    # Modify iota and commit it (r2).
-    svntest.main.file_write('iota', "This is no longer the file 'iota'.\n")
-    expected_output = svntest.wc.State('.', {
-      'iota' : Item(verb='Sending'),
-      })
-    svntest.actions.run_and_verify_commit('.', expected_output, None)
 
-    # Check that we get a blame of r1 when we specify a peg revision of r1
-    # and no explicit revision.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
-                                       'blame', 'iota@1')
+  # Modify iota and commit it (r2).
+  svntest.main.file_write('iota', "This is no longer the file 'iota'.\n")
+  expected_output = svntest.wc.State('.', {
+    'iota' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit('.', expected_output, None)
 
-    # Check that an explicit revision overrides the default provided by
-    # the peg revision.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
-                                       'blame', 'iota@2', '-r1')
+  # Check that we get a blame of r1 when we specify a peg revision of r1
+  # and no explicit revision.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+                                     'blame', 'iota@1')
 
-  finally:
-    os.chdir(current_dir)
+  # Check that an explicit revision overrides the default provided by
+  # the peg revision.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+                                     'blame', 'iota@2', '-r1')
 
 def blame_eol_styles(sbox):
   "blame with different eol styles"

@@ -30,6 +30,7 @@
 #include "Pool.h"
 #include "Targets.h"
 #include "Revision.h"
+#include "RevisionRange.h"
 #include "BlameCallback.h"
 #include "ProplistCallback.h"
 #include "LogMessageCallback.h"
@@ -194,7 +195,8 @@ void SVNClient::setPrompt(Prompter *prompter)
 void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             Revision &revisionStart,
                             Revision &revisionEnd, bool stopOnCopy,
-                            bool discoverPaths, long limit,
+                            bool discoverPaths, bool includeMergedRevisions,
+                            bool omitLogText, long limit,
                             LogMessageCallback *callback)
 {
     Pool requestPool;
@@ -208,13 +210,15 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     Targets target(path);
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
-    SVN_JNI_ERR(svn_client_log3(targets,
+    SVN_JNI_ERR(svn_client_log4(targets,
                                 pegRevision.revision(),
                                 revisionStart.revision(),
                                 revisionEnd.revision(),
                                 limit,
                                 discoverPaths,
                                 stopOnCopy,
+                                includeMergedRevisions,
+                                omitLogText,
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }
@@ -304,7 +308,8 @@ void SVNClient::revert(const char *path, bool recurse)
     SVN_JNI_ERR(svn_client_revert(targets, recurse, ctx, requestPool.pool()), );
 }
 
-void SVNClient::add(const char *path, bool recurse, bool force)
+void SVNClient::add(const char *path, bool recurse, bool force, bool no_ignore,
+                    bool add_parents)
 {
     Pool requestPool;
 
@@ -316,8 +321,8 @@ void SVNClient::add(const char *path, bool recurse, bool force)
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_add3(intPath.c_str(), recurse, force, FALSE,
-                                ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_add4(intPath.c_str(), recurse, force, no_ignore,
+                                add_parents, ctx, requestPool.pool()), );
 }
 
 jlongArray SVNClient::update(Targets &targets, Revision &revision,
@@ -629,6 +634,8 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
                                          rev.revision(), ctx,
                                          requestPool.pool()),
                 NULL);
+    if (mergeinfo == NULL)
+        return NULL;
 
     // Transform mergeinfo into Java MergeInfo object.
     jclass clazz = env->FindClass(JAVA_PACKAGE "/MergeInfo");
@@ -688,27 +695,17 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
         for (int i = 0; i < ranges->nelts; ++i)
         {
             // Convert svn_merge_range_t *'s to Java RevisionRange objects.
-            jclass rangeClazz = env->FindClass(JAVA_PACKAGE "/RevisionRange");
-            static jmethodID rangeCtor = 0;
-            if (rangeCtor == 0)
-            {
-                rangeCtor = env->GetMethodID(rangeClazz, "<init>", "(JJ)V");
-                if (JNIUtil::isJavaExceptionThrown())
-                    return NULL;
-            }
             svn_merge_range_t *range = APR_ARRAY_IDX(ranges, i,
                                                      svn_merge_range_t *);
-            jobject jrevision = env->NewObject(rangeClazz, rangeCtor,
-                                               (jlong) range->start,
-                                               (jlong) range->end);
+            jobject jrange = RevisionRange::makeJRevisionRange(range);
+            if (jrange == NULL)
+                return NULL;
+
+            env->CallBooleanMethod(jranges, addToList, jrange);
             if (JNIUtil::isJavaExceptionThrown())
                 return NULL;
 
-            env->CallBooleanMethod(jranges, addToList, jrevision);
-            if (JNIUtil::isJavaExceptionThrown())
-                return NULL;
-
-            env->DeleteLocalRef(jrevision);
+            env->DeleteLocalRef(jrange);
             if (JNIUtil::isJavaExceptionThrown())
                 return NULL;
         }
@@ -766,7 +763,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
 }
 
 void SVNClient::properties(const char *path, Revision &revision,
-                           Revision &pegRevision, bool recurse,
+                           Revision &pegRevision, svn_depth_t depth,
                            ProplistCallback *callback)
 {
     Pool requestPool;
@@ -779,7 +776,7 @@ void SVNClient::properties(const char *path, Revision &revision,
         return;
 
     SVN_JNI_ERR(svn_client_proplist3(intPath.c_str(), pegRevision.revision(),
-                                     revision.revision(), recurse,
+                                     revision.revision(), depth,
                                      ProplistCallback::callback, callback,
                                      ctx, requestPool.pool()), );
 
@@ -2099,6 +2096,10 @@ SVNClient::getCopySource(const char *path, Revision &revision)
         JNIUtil::handleSVNError(err);
         return NULL;
     }
+
+    if (!SVN_IS_VALID_REVNUM(copyfromRev))
+        // "path" has no copy source.
+        return NULL;
     return CopySources::makeJCopySource(copyfromPath, copyfromRev,
                                         requestPool);
 }

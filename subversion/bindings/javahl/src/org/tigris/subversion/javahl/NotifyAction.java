@@ -140,6 +140,12 @@ public interface NotifyAction
     public static final int changelist_failed = 28;
 
     /**
+     * @since 1.5
+     * A merge operation has begun.
+     */
+    public static final int merge_begin = 29;
+
+    /**
      * textual representation of the action types
      */
     public static final String[] actionNames =
@@ -169,5 +175,10 @@ public interface NotifyAction
         "unlocked",
         "locking failed",
         "unlocking failed",
+        "path exists",
+        "changelist set",
+        "changelist cleared",
+        "changelist failed",
+        "merge begin",
     };
 }

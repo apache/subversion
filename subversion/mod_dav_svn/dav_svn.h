@@ -31,6 +31,7 @@
 #include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "private/svn_dav_protocol.h"
 #include "mod_authz_svn.h"
 
 #ifdef __cplusplus
@@ -499,6 +500,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "file-revs-report" },
   { SVN_XML_NAMESPACE, "get-locks-report" },
   { SVN_XML_NAMESPACE, "replay-report" },
+  { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
   { NULL, NULL },
 };
 
@@ -529,9 +531,9 @@ dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output);
 dav_error *
-dav_svn__get_merge_info_report(const dav_resource *resource,
-                               const apr_xml_doc *doc,
-                               ap_filter_t *output);
+dav_svn__get_mergeinfo_report(const dav_resource *resource,
+                              const apr_xml_doc *doc,
+                              ap_filter_t *output);
 dav_error *
 dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,

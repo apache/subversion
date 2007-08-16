@@ -354,20 +354,11 @@ def import_and_checkout(sbox):
 def checkout_broken_eol(sbox):
   "checkout file with broken eol style"
 
-  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                          'update_tests_data')
-  dump_str = svntest.main.file_read(os.path.join(data_dir,
-                                                 "checkout_broken_eol.dump"),
-                                                 "rb")
-
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'update_tests_data',
+                                               'checkout_broken_eol.dump'))
 
   URL = sbox.repo_url
-
-  # Load the dumpfile into the repos.
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'file': Item(status='A '),
@@ -602,19 +593,19 @@ def co_with_obstructing_local_adds(sbox):
     'A/D/H/I/J'     : Item(),
     'A/D/H/I/K'     : Item(),
     'A/D/H/I/K/xi'  : Item("This is file 'xi'\n"),
-    'A/D/H/I/K/eta' : Item("""<<<<<<< .mine
-This is WC file 'eta'
-=======
-This is REPOS file 'eta'
->>>>>>> .r2
-"""),
+    'A/D/H/I/K/eta' : Item("\n".join(["<<<<<<< .mine",
+                                      "This is WC file 'eta'",
+                                      "=======",
+                                      "This is REPOS file 'eta'",
+                                      ">>>>>>> .r2",
+                                      ""])),
     'A/D/H/I/L'     : Item(),
-    'A/D/kappa'     : Item("""<<<<<<< .mine
-This is WC file 'kappa'
-=======
-This is REPOS file 'kappa'
->>>>>>> .r2
-"""),
+    'A/D/kappa'     : Item("\n".join(["<<<<<<< .mine",
+                                      "This is WC file 'kappa'",
+                                      "=======",
+                                      "This is REPOS file 'kappa'",
+                                      ">>>>>>> .r2",
+                                      ""])),
     })
 
   # Create expected status tree for the update.  Since the obstructing

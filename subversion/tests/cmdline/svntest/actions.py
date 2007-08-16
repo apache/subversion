@@ -64,8 +64,7 @@ def do_sleep_for_timestamps():
   os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'yes'
 
 def setup_pristine_repository():
-  """Create the pristine repository, 'svn import' the greek tree and 
-  checkout the pristine working copy"""
+  """Create the pristine repository and 'svn import' the greek tree"""
 
   # these directories don't exist out of the box, so we may have to create them
   if not os.path.exists(main.general_wc_dir):
@@ -251,6 +250,24 @@ def run_and_verify_dump(repo_dir):
     raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
 
   return output
+
+
+def load_repo(sbox, dumpfile_path = None, dump_str = None):
+  "Loads the dumpfile into sbox"
+  if not dump_str:
+    dump_str = main.file_read(dumpfile_path, "rb")
+
+  # Create a virgin repos and working copy
+  main.safe_rmtree(sbox.repo_dir, 1)
+  main.safe_rmtree(sbox.wc_dir, 1)
+  main.create_repos(sbox.repo_dir)
+
+  # Load the mergetracking dumpfile into the repos, and check it out the repo
+  run_and_verify_load(sbox.repo_dir, dump_str)
+  run_and_verify_svn(None, None, [], "co", sbox.repo_url, sbox.wc_dir)
+
+  return dump_str
+
 
 ######################################################################
 # Subversion Actions
@@ -467,7 +484,8 @@ def run_and_verify_merge(dir, rev1, rev2, url,
                          check_props = 0,
                          dry_run = 1,
                          *args):
-  """Run 'svn merge -rREV1:REV2 URL DIR'."""
+  """Run 'svn merge -rREV1:REV2 URL DIR', leaving off the '-r'
+  argument if both REV1 and REV2 are None."""
   if args:
     run_and_verify_merge2(dir, rev1, rev2, url, None, output_tree, disk_tree,
                           status_tree, skip_tree, error_re_string,
@@ -493,7 +511,8 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   """Run 'svn merge URL1@REV1 URL2@REV2 DIR' if URL2 is not None
   (for a three-way merge between URLs and WC).
 
-  If URL2 is None, run 'svn merge -rREV1:REV2 URL1 DIR'.
+  If URL2 is None, run 'svn merge -rREV1:REV2 URL1 DIR'.  If both REV1
+  and REV2 are None, leave off the '-r' argument.
 
   If ERROR_RE_STRING, the merge must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
@@ -524,11 +543,15 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   if isinstance(skip_tree, wc.State):
     skip_tree = skip_tree.old_tree()
 
+  merge_command = [ "merge" ]
   if url2:
-    merge_command = ("merge", url1 + "@" + str(rev1),url2 + "@" + str(rev2),
-                     dir)
+    merge_command.extend((url1 + "@" + str(rev1), url2 + "@" + str(rev2)))
   else:
-    merge_command = ("merge", "-r", str(rev1) + ":" + str(rev2), url1, dir)
+    if not (rev1 is None and rev2 is None):
+      merge_command.append("-r" + str(rev1) + ":" + str(rev2))
+    merge_command.append(url1)
+  merge_command.append(dir)
+  merge_command = tuple(merge_command)
 
   if dry_run:
     pre_disk = tree.build_tree_from_wc(dir)
@@ -1040,4 +1063,17 @@ script which always reports errors."""
   main.create_python_hook_script (hook_path, 'import sys; '
     'sys.stderr.write("Post-commit hook failed"); '
     'sys.exit(1)')
+
+def check_prop(name, path, exp_out):
+  """Verify that property NAME on PATH has a value of EXP_OUT"""
+  # Not using run_svn because binary_mode must be set
+  out, err = main.run_command(main.svn_binary, None, 1, 'pg', '--strict',
+                              name, path, '--config-dir',
+                              main.default_config_dir)
+  if out != exp_out:
+    print "svn pg --strict", name, "output does not match expected."
+    print "Expected standard output: ", exp_out, "\n"
+    print "Actual standard output: ", out, "\n"
+    raise Failure
+
 ### End of file.

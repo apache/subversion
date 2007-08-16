@@ -72,6 +72,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA      "ssl-trust-default-ca"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE      "ssl-client-cert-file"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_PASSWORD  "ssl-client-cert-password"
+#define SVN_CONFIG_OPTION_HTTP_LIBRARY              "http-library"
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
@@ -90,6 +91,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
+#define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 /** @} */

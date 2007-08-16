@@ -33,6 +33,7 @@
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_sorts.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -112,26 +113,43 @@ copyfrom_info_receiver(void *baton,
 
   if (changed_paths)
     {
-      apr_hash_index_t *hi;
-      char *path;
+      int i;
+      const char *path;
       svn_log_changed_path_t *changed_path;
+      /* Sort paths into depth-first order. */
+      apr_array_header_t *sorted_changed_paths =
+        svn_sort__hash(changed_paths, svn_sort_compare_items_as_paths, pool);
 
-      for (hi = apr_hash_first(NULL, changed_paths);
-           hi;
-           hi = apr_hash_next(hi))
+      for (i = (sorted_changed_paths->nelts -1) ; i >= 0 ; i--)
         {
-          void *val;
-          apr_hash_this(hi, (void *) &path, NULL, &val);
-          changed_path = val;
+          svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_changed_paths, i,
+                                                  svn_sort__item_t);
+          path = item->key;
+          changed_path = item->value;
 
           /* Consider only the path we're interested in. */
-          /* ### FIXME: Look for moved parents of target_path. */
           if (changed_path->copyfrom_path &&
               SVN_IS_VALID_REVNUM(changed_path->copyfrom_rev) &&
-              strcmp(path, copyfrom_info->target_path) == 0)
+              svn_path_is_ancestor(path, copyfrom_info->target_path))
             {
-              copyfrom_info->path = apr_pstrdup(copyfrom_info->pool,
-                                                changed_path->copyfrom_path);
+              /* Copy source found!  Determine path and note revision. */
+              if (strcmp(path, copyfrom_info->target_path) == 0)
+                {
+                  /* We have the details for a direct copy to
+                     copyfrom_info->target_path. */
+                  copyfrom_info->path =
+                    apr_pstrdup(copyfrom_info->pool,
+                                changed_path->copyfrom_path);
+                }
+              else
+                {
+                  /* We have a parent of copyfrom_info->target_path. */
+                  copyfrom_info->path =
+                    apr_pstrcat(copyfrom_info->pool,
+                                changed_path->copyfrom_path,
+                                copyfrom_info->target_path +
+                                strlen(path), NULL);
+                }
               copyfrom_info->rev = changed_path->copyfrom_rev;
               break;
             }
@@ -233,15 +251,20 @@ svn_client__suggest_merge_sources(const char *path_or_url,
   /* ### TODO: Use RA APIs directly to improve efficiency. */
   SVN_ERR(svn_client__get_copy_source(path_or_url, revision, &copyfrom_path,
                                       &copyfrom_rev, ctx, pool));
-  APR_ARRAY_PUSH(*suggestions, const char *) = copyfrom_path;
+  if (copyfrom_path)
+    APR_ARRAY_PUSH(*suggestions, const char *) = copyfrom_path;
 
   SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, revision,
                                    ctx, pool));
+
+  if (!mergeinfo)
+    return SVN_NO_ERROR;
+
   for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *path;
       apr_hash_this(hi, (void *) &path, NULL, NULL);
-      if (strcmp(path, copyfrom_path) != 0)
+      if (copyfrom_path == NULL || strcmp(path, copyfrom_path) != 0)
         {
           APR_ARRAY_PUSH(*suggestions, const char *) = apr_pstrdup(pool, path);
         }
@@ -256,14 +279,16 @@ svn_client__suggest_merge_sources(const char *path_or_url,
 
 
 svn_error_t *
-svn_client_log3(const apr_array_header_t *targets,
+svn_client_log4(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
                 const svn_opt_revision_t *start,
                 const svn_opt_revision_t *end,
                 int limit,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
-                svn_log_message_receiver_t receiver,
+                svn_boolean_t include_merged_revisions,
+                svn_boolean_t omit_log_text,
+                svn_log_message_receiver2_t receiver,
                 void *receiver_baton,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
@@ -476,36 +501,65 @@ svn_client_log3(const apr_array_header_t *targets,
               SVN_ERR(svn_client__get_revision_number
                       (&end_revnum, ra_session, end, target, pool));
 
-            err = svn_ra_get_log(ra_session,
-                                 condensed_targets,
-                                 start_revnum,
-                                 end_revnum,
-                                 limit,
-                                 discover_changed_paths,
-                                 strict_node_history,
-                                 receiver,
-                                 receiver_baton,
-                                 pool);
+            err = svn_ra_get_log2(ra_session,
+                                  condensed_targets,
+                                  start_revnum,
+                                  end_revnum,
+                                  limit,
+                                  discover_changed_paths,
+                                  strict_node_history,
+                                  include_merged_revisions,
+                                  omit_log_text,
+                                  receiver,
+                                  receiver_baton,
+                                  pool);
             if (err)
               break;
           }
       }
     else  /* both revisions are static, so no loop needed */
       {
-        err = svn_ra_get_log(ra_session,
-                             condensed_targets,
-                             start_revnum,
-                             end_revnum,
-                             limit,
-                             discover_changed_paths,
-                             strict_node_history,
-                             receiver,
-                             receiver_baton,
-                             pool);
+        err = svn_ra_get_log2(ra_session,
+                              condensed_targets,
+                              start_revnum,
+                              end_revnum,
+                              limit,
+                              discover_changed_paths,
+                              strict_node_history,
+                              include_merged_revisions,
+                              omit_log_text,
+                              receiver,
+                              receiver_baton,
+                              pool);
       }
   
     return err;
   }
+}
+
+svn_error_t *
+svn_client_log3(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_log_message_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  svn_log_message_receiver2_t receiver2;
+  void *receiver2_baton;
+
+  svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
+                               receiver, receiver_baton,
+                               pool);
+
+  return svn_client_log4(targets, peg_revision, start, end, limit,
+                         discover_changed_paths, strict_node_history, FALSE,
+                         FALSE, receiver2, receiver2_baton, ctx, pool);
 }
 
 svn_error_t *

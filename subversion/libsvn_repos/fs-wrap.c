@@ -212,80 +212,6 @@ svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
 }
 
 
-/* A revision's changed paths are either all readable, all unreadable,
-   or a mixture of the two. */
-enum rev_readability_level
-{
-  rev_readable = 1,
-  rev_partially_readable,
-  rev_unreadable
-};
-
-
-/* Helper func: examine the changed-paths of REV in FS using
-   AUTHZ_READ_FUNC.  Set *CAN_READ to one of the three
-   readability_level enum values.  Use POOL for invoking the authz func. */
-static svn_error_t *
-get_readability(int *can_read,
-                svn_fs_t *fs,
-                svn_revnum_t rev,
-                svn_repos_authz_func_t authz_read_func,
-                void *authz_read_baton,
-                apr_pool_t *pool)
-{
-  svn_fs_root_t *root;
-  apr_hash_t *changes;
-  apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_boolean_t found_readable = FALSE, found_unreadable = FALSE;
-
-  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
-  SVN_ERR(svn_fs_paths_changed(&changes, root, pool));
-
-  if (apr_hash_count(changes) == 0)
-    {
-      /* No paths changed in this revision?  Uh, sure, I guess the
-         revision is readable, then.  */
-      *can_read = rev_readable;
-      return SVN_NO_ERROR;
-    }
-
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      const char *path;
-      svn_boolean_t readable;
-
-      svn_pool_clear(subpool);
-
-      apr_hash_this(hi, &key, NULL, NULL);
-      path = (const char *) key;
-
-      SVN_ERR(authz_read_func(&readable, root, path,
-                              authz_read_baton, subpool));
-      if (readable)
-        found_readable = TRUE;
-      else
-        found_unreadable = TRUE;
-
-      /* If we've found one of each, we don't need to keep looking. */
-      if (found_readable && found_unreadable)
-        break;
-    }
-
-  svn_pool_destroy(subpool);
-
-  if (found_unreadable && (! found_readable))
-    *can_read = rev_unreadable;
-  else if (found_readable && (! found_unreadable))
-    *can_read = rev_readable;
-  else  /* found both readable and unreadable */
-    *can_read = rev_partially_readable;
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
                               svn_revnum_t rev,
@@ -299,13 +225,14 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
                               apr_pool_t *pool)
 {
   svn_string_t *old_value;
-  int readability = rev_readable;
+  svn_repos_revision_access_level_t readability;
   char action;
 
-  if (authz_read_func)
-    SVN_ERR(get_readability(&readability, repos->fs, rev,
-                            authz_read_func, authz_read_baton, pool));    
-  if (readability == rev_readable)
+  SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
+                                          authz_read_func, authz_read_baton,
+                                          pool));
+
+  if (readability == svn_repos_revision_access_full)
     {
       SVN_ERR(validate_prop(name, pool));
       SVN_ERR(svn_fs_revision_prop(&old_value, repos->fs, rev, name, pool));
@@ -377,18 +304,18 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
                            void *authz_read_baton,
                            apr_pool_t *pool)
 {
-  int readability = rev_readable;
+  svn_repos_revision_access_level_t readability;
 
-  if (authz_read_func)
-    SVN_ERR(get_readability(&readability, repos->fs, rev,
-                            authz_read_func, authz_read_baton, pool));    
+  SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
+                                          authz_read_func, authz_read_baton, 
+                                          pool));    
 
-  if (readability == rev_unreadable)
+  if (readability == svn_repos_revision_access_none)
     {
       /* Property?  What property? */
       *value_p = NULL;
     }
-  else if (readability == rev_partially_readable)
+  else if (readability == svn_repos_revision_access_partial)
     {      
       /* Only svn:author and svn:date are fetchable. */
       if ((strncmp(propname, SVN_PROP_REVISION_AUTHOR,
@@ -419,18 +346,18 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
                                void *authz_read_baton,
                                apr_pool_t *pool)
 {
-  int readability = rev_readable;
+  svn_repos_revision_access_level_t readability;
 
-  if (authz_read_func)
-    SVN_ERR(get_readability(&readability, repos->fs, rev,
-                            authz_read_func, authz_read_baton, pool));    
+  SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
+                                          authz_read_func, authz_read_baton, 
+                                          pool));    
 
-  if (readability == rev_unreadable)
+  if (readability == svn_repos_revision_access_none)
     {
       /* Return an empty hash. */
       *table_p = apr_hash_make(pool);
     }
-  else if (readability == rev_partially_readable)
+  else if (readability == svn_repos_revision_access_partial)
     {      
       apr_hash_t *tmphash;
       svn_string_t *value;
@@ -624,14 +551,14 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
 
 
 svn_error_t *
-svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
-                            svn_repos_t *repos,
-                            const apr_array_header_t *paths,
-                            svn_revnum_t rev,
-                            svn_boolean_t include_parents,
-                            svn_repos_authz_func_t authz_read_func,
-                            void *authz_read_baton,
-                            apr_pool_t *pool)
+svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
+                           svn_repos_t *repos,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t rev,
+                           svn_mergeinfo_inheritance_t inherit,
+                           svn_repos_authz_func_t authz_read_func,
+                           void *authz_read_baton,
+                           apr_pool_t *pool)
 {
   apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
   svn_fs_root_t *root;
@@ -678,8 +605,8 @@ svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
      us to protect the name of where a change was merged from, but not
      the change itself. */
   if (readable_paths->nelts > 0)
-    SVN_ERR(svn_fs_get_merge_info(mergeinfo, root, readable_paths,
-                                  include_parents, pool));
+    SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
+                                 pool));
   else
     *mergeinfo = NULL;
 

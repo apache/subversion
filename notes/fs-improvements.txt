@@ -11,6 +11,10 @@ Three things that need to happen in the filesystem:
    c) We need to do reverse-delta storage in the filesystem (with
       checksums).
 
+   d) Record (potentially) multiple parents per change.
+
+   e) Implement atomic renames.
+
 Some thoughts on them:
 
 
@@ -508,3 +512,32 @@ existing version (copy, modify).
      optimal" -- it would make sense to take into account the number
      of delta combinations that could be skipped by replacing the
      current representation when comparing sizes.)
+
+
+d) Multiple parents per change
+==============================
+
+This is necessary for -- at least -- accurrate Merge Tracking, to
+allow for accurate calculation of change set graph.  Use cases
+include:
+
+1) Avoiding repeated merges when performing cyclic merging
+   (e.g branch A -> B -> A).
+
+2) Sussing explicit merge info when a change in merge info occurs
+   during a copy operation (e.g. to avoid paying attention to implied
+   merge info from the copy source).
+
+Mercurial (hg) does this.
+
+
+e) Atomic renames
+=================
+
+This may just be a means to an end?  Mercurial (hg) gets by without
+this, but this may be due to its distributed repository implementation.
+
+It seems we can handle a lot of the desired use cases (see
+notes/tree-conflicts.txt) without true renames.
+
+Exploratory work has been started on the fs-atomic-renames branch.

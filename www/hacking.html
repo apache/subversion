@@ -189,7 +189,7 @@ in the description for the svn-breakage list.</p>
 <li> <p>Network Protocols</p>
 
      <p>The <a href="webdav-usage.html">WebDAV Usage</a> document is
-     an introduction to Subversion's ra_dav network protocol, which is
+     an introduction to Subversion's DAV network protocol, which is
      an extended dialect of HTTP and uses URLs beginning with
      "http://" or "https://".</p>
 
@@ -1192,7 +1192,7 @@ more crucial, so let's all get in the habit of using it early.
 <h2>Debugging the server</h2>
 
 <div class="h3" id="debugging-ra-dav" title="debugging-ra-dav">
-<h3>Debugging the ra_dav server</h3>
+<h3>Debugging the DAV server</h3>
 
 <p>'mod_dav_svn.so' contains the main Subversion server logic; it runs
 as a module within mod_dav, which runs as a module within httpd.
@@ -1713,21 +1713,33 @@ voted for the change to be merged.</p>
 <div class="h2" id="patches" title="patches">
 <h2>Patch submission guidelines</h2>
 
-<p>Mail patches to dev@subversion.tigris.org, with a subject line
-that contains the word "PATCH" in all uppercase, for example</p>
+<p>Mail patches to dev@subversion.tigris.org, starting the subject
+line with <tt>[PATCH]</tt>.  This helps our patch manager spot patches
+right away.  For example:</p>
 
 <pre>
    Subject: [PATCH] fix for rev printing bug in svn status
 </pre>
 
+<p>If the patch addresses a particular issue, include the issue number
+as well: "<tt>[PATCH]&nbsp;issue&nbsp;#1729: ...</tt>".  Developers
+who are interested in that particular issue will know to read the
+mail.</p>
+
 <p>A patch submission should contain one logical change; please don't
 mix N unrelated changes in one submission&nbsp;&mdash;&nbsp;send N
 separate emails instead.</p>
 
-<p>You can put the patch's log message in the body of the email, or at
-the top of the patch attachment (see below).  Either way, it should
-follow the guidelines given in <a href="#log-messages">Writing
-log messages</a>, and be enclosed in triple square brackets, like so:</p>
+<p>Generate the patch using <tt>svn&nbsp;diff</tt> from the top of a
+Subversion trunk working copy.  If the file you're diffing is not
+under revision control, you can achieve the same effect by using
+<tt>diff&nbsp;-u</tt>.</p>
+
+<p>Please include a log message with your patch.  You can put the log
+message in the body of the email, or at the top of the patch
+attachment (see below).  Either way, it should follow the guidelines
+given in <a href="#log-messages">Writing log messages</a>, and be
+enclosed in triple square brackets, like so:</p>
 
 <pre>
    [[[
@@ -1738,41 +1750,42 @@ log messages</a>, and be enclosed in triple square brackets, like so:</p>
    ]]]
 </pre>
 
-<p>The brackets are not actually part of the log message, they are
+<p>(The brackets are not actually part of the log message, they're
 just a way to clearly mark off the log message from its surrounding
-context.</p>
+context.)</p>
 
-<p>The patch itself should be in unified diff format (e.g., "svn diff"
-or "diff -u").  Send the patch as an attachment, with a mime-type of
-text/x-diff, text/x-patch, or text/plain.  (Most people's mailreaders
+<p>If possible, send the patch as an attachment with a mime-type of
+text/x-diff, text/x-patch, or text/plain.  Most people's mailreaders
 can display those inline, and having the patch as an attachment allows
-them to extract the patch from the message conveniently.)</p>
+them to extract the patch from the message conveniently.  Never send
+patches in archived or compressed form (e.g., tar, gzip, zip, bzip2),
+because that prevents people from reviewing the patch directly in
+their mailreaders.</p>
 
 <p>If you can't attach the patch with one of these mime-types, or if
-the patch is very short, then just include it directly in the body of
-your message.  But if your mailer forces wrapping of long lines, then
-you must attach the patch, otherwise it is likely to get munged.
-Never send patches in archived or compressed form (e.g., tar, gzip,
-zip, bzip2), because that prevents people from reviewing the patch
-directly in their mailreaders.</p>
+the patch is very short, then it's okay to include it directly in the
+body of your message.  But watch out: some mail editors munge inline
+patches by inserting unasked-for line breaks in the middle of long
+lines.  If you think your mail software might do this, then please use
+an attachment instead.</p>
 
 <p>If the patch implements a new feature, make sure to describe the
 feature completely in your mail; if the patch fixes a bug, describe
 the bug in detail and give a reproduction recipe.  An exception to
 these guidelines is when the patch addresses a specific issue in the
-issues database&nbsp;&mdash;&nbsp;in that case, just make sure to
-refer to the issue number in your log message, as described
+issues database&nbsp;&mdash;&nbsp;in that case, just refer to the
+issue number in your log message, as described
 in <a href="#log-messages">Writing log messages</a>.</p>
 
 <p>It is normal for patches to undergo several rounds of feedback and
 change before being applied.  Don't be discouraged if your patch is
 not accepted immediately&nbsp;&mdash;&nbsp;it doesn't mean you goofed,
-it just means that there are a *lot* of eyes looking at every code
-submission, and it's a rare patch that doesn't have at least a little
-room for improvement.  After reading people's responses to your patch,
-make the appropriate changes and resubmit, wait for the next round of
-feedback, and lather, rinse, repeat, until some committer applies
-it.</p>
+it just means that there are a <em>lot</em> of eyes looking at every
+code submission, and it's a rare patch that doesn't have at least a
+little room for improvement.  After reading people's responses to your
+patch, make the appropriate changes and resubmit, wait for the next
+round of feedback, and lather, rinse, repeat, until some committer
+applies it.</p>
 
 <p>If you don't get a response for a while, and don't see the patch
 applied, it may just mean that people are really busy.  Go ahead and

@@ -228,10 +228,10 @@ svn_fs_t *svn_repos_fs(svn_repos_t *repos);
  * means deleting copied, unused logfiles for a Berkeley DB source
  * repository.
  */
-svn_error_t * svn_repos_hotcopy(const char *src_path,
-                                const char *dst_path,
-                                svn_boolean_t clean_logs,
-                                apr_pool_t *pool);
+svn_error_t *svn_repos_hotcopy(const char *src_path,
+                               const char *dst_path,
+                               svn_boolean_t clean_logs,
+                               apr_pool_t *pool);
 
 /**
  * Run database recovery procedures on the repository at @a path,
@@ -869,7 +869,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                              void *authz_baton,
                              apr_pool_t *pool);
 
-/*
+/**
  * Similar to svn_repos_get_commit_editor5(), but with @a revprop_table
  * set to a hash containing @a user and @a log_msg as the
  * @c SVN_PROP_REVISION_AUTHOR and @c SVN_PROP_REVISION_LOG properties,
@@ -1150,6 +1150,9 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each path.
  *
+ * If @a omit_log_text is set, the text of the log message will not be
+ * returned.
+ *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
  *
@@ -1164,11 +1167,35 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  * readable and unreadable changed-paths, then silently omit the
  * unreadable changed-paths when pushing the revision.
  *
- * See also the documentation for @c svn_log_message_receiver_t.
+ * See also the documentation for @c svn_log_message_receiver2_t.
  *
  * Use @a pool for temporary allocations.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_get_logs4(svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    int limit,
+                    svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
+                    svn_boolean_t include_merged_revisions,
+                    svn_boolean_t omit_log_text,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_log_message_receiver2_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool);
+
+/**
+ * Same as svn_repos_get_logs4(), but with @a receiver being a 
+ * @c svn_log_message_receiver_t instead of @c svn_log_message_receiver2_t.
+ * Also, @a omit_log_text is set to @c FALSE.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_repos_get_logs3(svn_repos_t *repos,
@@ -1227,20 +1254,20 @@ svn_repos_get_logs(svn_repos_t *repos,
 /* Retrieving merge info. */
 
 /**
- * Fetch the merge info for @a paths at @rev, and save it to @a
+ * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
  * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
  * (from @a paths) to textual (@c char *) representations of merge
  * info (as managed by svn_mergeinfo.h), or @c NULL if there is no
  * merge info visible or available.
  *
- * When @a include_parents is @c TRUE, include inherited merge info
- * from parent directories of @a paths.
+ * @a inherit indicates whether explicit, explicit or inherited, or
+ * only inherited merge info for @paths is fetched.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
- * of each path which merge info was requested for (from @a paths).
+ * of each path which mergeinfo was requested for (from @a paths).
  * Silently omit unreadable paths from the request for merge info.
  *
  * Use @a pool for temporary allocations.
@@ -1248,14 +1275,14 @@ svn_repos_get_logs(svn_repos_t *repos,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_repos_fs_get_merge_info(apr_hash_t **mergeoutput,
-                            svn_repos_t *repos,
-                            const apr_array_header_t *paths,
-                            svn_revnum_t revision,
-                            svn_boolean_t include_parents,
-                            svn_repos_authz_func_t authz_read_func,
-                            void *authz_read_baton,
-                            apr_pool_t *pool);
+svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
+                           svn_repos_t *repos,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t revision,
+                           svn_mergeinfo_inheritance_t inherit,
+                           svn_repos_authz_func_t authz_read_func,
+                           void *authz_read_baton,
+                           apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/
@@ -2133,6 +2160,90 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
                              svn_repos_authz_access_t required_access,
                              svn_boolean_t *access_granted,
                              apr_pool_t *pool);
+
+
+
+/** Revision Access Levels
+ *
+ * Like most version control systems, access to versioned objects in
+ * Subversion is determined on primarily path-based system.  Users either
+ * do or don't have the ability to read a given path.
+ * 
+ * However, unlike many version control systems where versioned objects
+ * maintain their own distinct version information (revision numbers,
+ * authors, log messages, change timestamps, etc.), Subversion binds
+ * multiple paths changed as part of a single commit operation into a
+ * set, calls the whole thing a revision, and hangs commit metadata
+ * (author, date, log message, etc.) off of that revision.  So, commit
+ * metadata is shared across all the paths changed as part of a given
+ * commit operation.
+ * 
+ * It is common (or, at least, we hope it is) for log messages to give
+ * detailed information about changes made in the commit to which the log
+ * message is attached.  Such information might include a mention of all
+ * the files changed, what was changed in them, and so on.  But this
+ * causes a problem when presenting information to readers who aren't
+ * authorized to read every path in the repository.  Simply knowing that
+ * a given path exists may be a security leak, even if the user can't see
+ * the contents of the data located at that path.
+ * 
+ * So Subversion does what it reasonably can to prevent the leak of this
+ * information, and does so via a staged revision access policy.  A
+ * reader can be said to have one of three levels of access to a given
+ * revision's metadata, based solely on the reader's access rights to the
+ * paths changed or copied in that revision:
+ * 
+ *   'full access' -- Granted when the reader has access to all paths
+ *      changed or copied in the revision, or when no paths were 
+ *      changed in the revision at all, this access level permits
+ *      full visibility of all revision property names and values,
+ *      and the full changed-paths information.
+ * 
+ *   'no access' -- Granted when the reader does not have access to any
+ *      paths changed or copied in the revision, this access level
+ *      denies the reader access to all revision properties and all
+ *      changed-paths information.
+ * 
+ *   'partial access' -- Granted when the reader has access to at least
+ *      one, but not all, of the paths changed or copied in the revision,
+ *      this access level permits visibility of the svn:date and
+ *      svn:author revision properties and only the paths of the
+ *      changed-paths information to which the reader has access.
+ *
+ */
+
+
+/** An enum defining levels of revision access.
+ *
+ * @since New in 1.5.
+ */
+typedef enum
+{
+  svn_repos_revision_access_none,
+  svn_repos_revision_access_partial,
+  svn_repos_revision_access_full
+}
+svn_repos_revision_access_level_t;
+
+
+/**
+ * Set @a access to the access level granted for @a revision in @a
+ * repos, as determined by consulting the @a authz_read_func callback
+ * function and its associated @a authz_read_baton.
+ *
+ * @a authz_read_func may be @c NULL, in which case @a access will be 
+ * set to @c svn_repos_revision_access_full.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
+                                svn_repos_t *repos,
+                                svn_revnum_t revision,
+                                svn_repos_authz_func_t authz_read_func,
+                                void *authz_read_baton,
+                                apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

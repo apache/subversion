@@ -22,11 +22,9 @@ import re, os, stat
 # Our testing module
 import svntest
 
-# A helper function for examining svn:needs-lock
-from prop_tests import check_prop
-
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -125,7 +123,10 @@ def commit_file_keep_lock(sbox):
 
   # make a change and commit it, holding lock
   svntest.main.file_append(file_path, "Tweak!\n")
-  svntest.main.run_svn(None, 'commit', '-m', '', '--no-unlock', file_path)
+  svntest.main.run_svn(None, 'commit', '-m', '', '--no-unlock',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       file_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
@@ -151,7 +152,10 @@ def commit_file_unlock(sbox):
 
   # make a change and commit it, allowing lock to be released
   svntest.main.file_append(file_path, "Tweak!\n")
-  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+  svntest.main.run_svn(None, 'commit', '-m', '',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       file_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
@@ -364,13 +368,13 @@ def enforce_lock(sbox):
 
   # svn:needs-lock value should be forced to a '*'
   svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '', lambda_path)
+  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '*', lambda_path)
   svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '      ', mu_path)
 
   # Check svn:needs-lock
-  check_prop('svn:needs-lock', iota_path, ['*'])
-  check_prop('svn:needs-lock', lambda_path, ['*'])
-  check_prop('svn:needs-lock', mu_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', iota_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', lambda_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', mu_path, ['*'])
 
   svntest.main.run_svn(None, 'commit',
                        '--username', svntest.main.wc_author,
@@ -436,7 +440,10 @@ def update_while_needing_lock(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', iota_path)
   svntest.main.file_append(iota_path, "This line added in r2.\n")
-  svntest.main.run_svn(None, 'commit', '-m', '', iota_path) # auto-unlocks
+  svntest.main.run_svn(None, 'commit',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', iota_path) # auto-unlocks
 
   # Backdate to r2.
   svntest.main.run_svn(None, 'update', '-r2', iota_path)
@@ -1543,8 +1550,8 @@ test_list = [ None,
               lock_several_files,
               lock_switched_files,
               lock_uri_encoded,
-              Skip(lock_and_exebit1, (os.name != 'posix')),
-              Skip(lock_and_exebit2, (os.name != 'posix')),
+              SkipUnless(lock_and_exebit1, svntest.main.is_posix_os),
+              SkipUnless(lock_and_exebit2, svntest.main.is_posix_os),
               commit_xml_unsafe_file_unlock,
               repos_lock_with_info,
               unlock_already_unlocked_files,

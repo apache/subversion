@@ -83,6 +83,18 @@ public class NotifyInformation extends EventObject
     private long revision;
 
     /**
+     * The name of the changelist.
+     * @since 1.5
+     */
+    private String changelistName;
+
+    /**
+     * The range of the merge just beginning to occur.
+     * @since 1.5
+     */
+    private RevisionRange mergeRange;
+
+    /**
      * This constructor is to be used by the native code.
      *
      * @param path The path of the item, which is the source of the event.
@@ -97,10 +109,13 @@ public class NotifyInformation extends EventObject
      * the item.
      * @param lockState The {@link LockStatus} of the lock of the item.
      * @param revision The revision of the item.
+     * @param changelistName The name of the changelist.
+     * @param mergeRange The range of the merge just beginning to occur.
      */
     NotifyInformation(String path, int action, int kind, String mimeType,
                       Lock lock, String errMsg, int contentState,
-                      int propState, int lockState, long revision)
+                      int propState, int lockState, long revision,
+                      String changelistName, RevisionRange mergeRange)
     {
         super(path);
         this.action = action;
@@ -112,6 +127,8 @@ public class NotifyInformation extends EventObject
         this.propState = propState;
         this.lockState = lockState;
         this.revision = revision;
+        this.changelistName = changelistName;
+        this.mergeRange = mergeRange;
     }
 
     /**
@@ -192,5 +209,23 @@ public class NotifyInformation extends EventObject
     public long getRevision()
     {
         return revision;
+    }
+
+    /**
+     * @return The name of the changelist.
+     * @since 1.5
+     */
+    public String getChangelistName()
+    {
+        return changelistName;
+    }
+
+    /**
+     * @return The range of the merge just beginning to occur.
+     * @since 1.5
+     */
+    public RevisionRange getMergeRange()
+    {
+        return mergeRange;
     }
 }

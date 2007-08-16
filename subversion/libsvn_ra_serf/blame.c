@@ -325,6 +325,8 @@ cdata_blame(svn_ra_serf__xml_parser_t *parser,
   blame_state_e state;
   blame_info_t *info;
 
+  UNUSED_CTX(blame_ctx);
+
   state = parser->state->current_state;
   info = parser->state->private;
 

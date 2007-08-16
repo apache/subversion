@@ -454,22 +454,23 @@ def update_modified_with_translation(sbox):
     })
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/D/G/rho', contents="""<<<<<<< .mine
-1
-2
-3
-4
-4.5
-5
-6
-7
-8
-9
-10
-=======
-This is the file 'rho'.
->>>>>>> .r1
-""")
+  expected_disk.tweak('A/D/G/rho',
+                      contents="\n".join(["<<<<<<< .mine",
+                                          "1",
+                                          "2",
+                                          "3",
+                                          "4",
+                                          "4.5",
+                                          "5",
+                                          "6",
+                                          "7",
+                                          "8",
+                                          "9",
+                                          "10",
+                                          "=======",
+                                          "This is the file 'rho'.",
+                                          ">>>>>>> .r1",
+                                          ""]))
 
   # Updating back to revision 1 should not error; the merge should
   # work, with eol-translation turned on.

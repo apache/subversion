@@ -258,6 +258,9 @@ public interface SVNClientInterface
      * @param stopOnCopy    do not continue on copy operations
      * @param discoverPath  returns the paths of the changed items in the
      *                      returned objects
+     * @param includeMergedRevisions include log messages for revisions which
+     *                               were merged.
+     * @param omitLogText   supress log message text.
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @param callback      the object to receive the log messages
@@ -266,7 +269,8 @@ public interface SVNClientInterface
     void logMessages(String path, Revision pegRevision,
                      Revision revisionStart,
                      Revision revisionEnd, boolean stopOnCopy,
-                     boolean discoverPath, long limit,
+                     boolean discoverPath, boolean includeMergedRevisions,
+                     boolean omitLogText, long limit,
                      LogMessageCallback callback)
             throws ClientException;
 
@@ -397,6 +401,22 @@ public interface SVNClientInterface
      * @since 1.2
      */
     void add(String path, boolean recurse, boolean force)
+        throws ClientException;
+
+    /**
+     * Adds a file to the repository.
+     * @param path      path to be added.
+     * @param recurse   recurse into subdirectories
+     * @param force     if adding a directory and recurse true and path is a
+     *                  directory, all not already managed files are added.
+     * @param noIgnores if false, don't add files or directories matching
+     *                  ignore patterns
+     * @param addParents add any intermediate parents to the working copy
+     * @throws ClientException
+     * @since 1.5
+     */
+    void add(String path, boolean recurse, boolean force, boolean noIgnores,
+             boolean addParents)
         throws ClientException;
 
     /**
@@ -1007,12 +1027,12 @@ public interface SVNClientInterface
      * @param path        the path of the item
      * @param revision    the revision of the item
      * @param pegRevision the revision to interpret path
-     * @param recurse     get properties from subdirectories also
+     * @param depth       the depth to recurse into subdirectories
      * @param callback    the callback to use to return the properties
      * @since 1.5
      */
     void properties(String path, Revision revision, Revision pegRevision,
-                    boolean recurse, ProplistCallback callback)
+                    int depth, ProplistCallback callback)
             throws ClientException;
 
     /**
@@ -1310,9 +1330,11 @@ public interface SVNClientInterface
     /**
      * Set directory for the configuration information, taking the
      * usual steps to ensure that Subversion's config file templates
-     * exist in the specified location.
-     *
-     * @param configDir     path of the directory
+     * exist in the specified location..  On Windows, setting a
+     * non-<code>null</code> value will override lookup of
+     * configuration in the registry.
+     * @param configDir Path of the directory, or <code>null</code>
+     * for the platform's default.
      * @throws ClientException
      */
     void setConfigDirectory(String configDir) throws ClientException;

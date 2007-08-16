@@ -25,24 +25,13 @@ import svntest
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-
-# Helper functions
-def check_prop(name, path, exp_out):
-  """Verify that property NAME on PATH has a value of EXP_OUT"""
-  # Not using run_svn because binary_mode must be set
-  out, err = svntest.main.run_command(svntest.main.svn_binary, None, 1,
-                                      'pg', '--strict', name, path,
-                                      '--config-dir', 
-                                      svntest.main.default_config_dir)
-  if out != exp_out:
-    print "svn pg --strict", name, "output does not match expected."
-    print "Expected standard output: ", exp_out, "\n"
-    print "Actual standard output: ", out, "\n"
-    raise svntest.Failure
-
+def is_non_posix_and_non_windows_os():
+  """lambda function to skip revprop_change test"""
+  return (not svntest.main.is_posix_os()) and sys.platform != 'win32'
 
 ######################################################################
 # Tests
@@ -800,12 +789,13 @@ def prop_value_conversions(sbox):
   propval_path = os.path.join(wc_dir, 'propval.tmp')
   propval_file = open(propval_path, 'wb')
 
-  def set_prop(name, value, path, valf=propval_file, valp=propval_path):
+  def set_prop(name, value, path, valf=propval_file, valp=propval_path,
+               expected_error=None):
     valf.seek(0)
     valf.truncate(0)
     valf.write(value)
     valf.flush()
-    svntest.main.run_svn(None, 'propset', '-F', valp, name, path)
+    svntest.main.run_svn(expected_error, 'propset', '-F', valp, name, path)
 
   # Leading and trailing whitespace should be stripped
   set_prop('svn:mime-type', ' text/html\n\n', iota_path)
@@ -830,8 +820,13 @@ def prop_value_conversions(sbox):
 
   # svn:executable value should be forced to a '*'
   set_prop('svn:executable', 'foo', iota_path)
-  set_prop('svn:executable', '', lambda_path)
-  set_prop('svn:executable', '      ', mu_path)
+  set_prop('svn:executable', '*', lambda_path)
+  for pval in ('      ', '', 'no', 'off', 'false'):
+    set_prop('svn:executable', pval, mu_path, propval_file, propval_path,
+             ["svn: warning: To turn off the svn:executable property, "
+              "use 'svn propdel';\n",
+              "setting the property to '" + pval +
+              "' will not turn it off.\n"])
 
   # Anything else should be untouched
   set_prop('svn:some-prop', 'bar', lambda_path)
@@ -853,41 +848,41 @@ def prop_value_conversions(sbox):
   # part of the prop value and it doesn't get converted in the pipe.
 
   # Check svn:mime-type
-  check_prop('svn:mime-type', iota_path, ['text/html'])
-  check_prop('svn:mime-type', mu_path, ['text/html'])
+  svntest.actions.check_prop('svn:mime-type', iota_path, ['text/html'])
+  svntest.actions.check_prop('svn:mime-type', mu_path, ['text/html'])
 
   # Check svn:eol-style
-  check_prop('svn:eol-style', iota_path, ['native'])
-  check_prop('svn:eol-style', mu_path, ['native'])
+  svntest.actions.check_prop('svn:eol-style', iota_path, ['native'])
+  svntest.actions.check_prop('svn:eol-style', mu_path, ['native'])
 
   # Check svn:ignore
-  check_prop('svn:ignore', A_path,
-             ['*.o'+os.linesep, 'foo.c'+os.linesep])
-  check_prop('svn:ignore', B_path,
-             ['*.o'+os.linesep, 'foo.c'+os.linesep])
+  svntest.actions.check_prop('svn:ignore', A_path,
+                             ['*.o'+os.linesep, 'foo.c'+os.linesep])
+  svntest.actions.check_prop('svn:ignore', B_path,
+                             ['*.o'+os.linesep, 'foo.c'+os.linesep])
 
   # Check svn:externals
-  check_prop('svn:externals', A_path,
-             ['foo http://foo.com/repos'+os.linesep])
-  check_prop('svn:externals', B_path,
-             ['foo http://foo.com/repos'+os.linesep])
+  svntest.actions.check_prop('svn:externals', A_path,
+                             ['foo http://foo.com/repos'+os.linesep])
+  svntest.actions.check_prop('svn:externals', B_path,
+                             ['foo http://foo.com/repos'+os.linesep])
 
   # Check svn:keywords
-  check_prop('svn:keywords', iota_path, ['Rev Date'])
-  check_prop('svn:keywords', mu_path, ['Rev  Date'])
+  svntest.actions.check_prop('svn:keywords', iota_path, ['Rev Date'])
+  svntest.actions.check_prop('svn:keywords', mu_path, ['Rev  Date'])
 
   # Check svn:executable
-  check_prop('svn:executable', iota_path, ['*'])
-  check_prop('svn:executable', lambda_path, ['*'])
-  check_prop('svn:executable', mu_path, ['*'])
+  svntest.actions.check_prop('svn:executable', iota_path, ['*'])
+  svntest.actions.check_prop('svn:executable', lambda_path, ['*'])
+  svntest.actions.check_prop('svn:executable', mu_path, ['*'])
 
   # Check other props
-  check_prop('svn:some-prop', lambda_path, ['bar'])
-  check_prop('svn:some-prop', mu_path, [' bar baz'])
-  check_prop('svn:some-prop', iota_path, ['bar'+os.linesep])
-  check_prop('some-prop', lambda_path, ['bar'])
-  check_prop('some-prop', mu_path,[' bar baz'])
-  check_prop('some-prop', iota_path, ['bar\n'])
+  svntest.actions.check_prop('svn:some-prop', lambda_path, ['bar'])
+  svntest.actions.check_prop('svn:some-prop', mu_path, [' bar baz'])
+  svntest.actions.check_prop('svn:some-prop', iota_path, ['bar'+os.linesep])
+  svntest.actions.check_prop('some-prop', lambda_path, ['bar'])
+  svntest.actions.check_prop('some-prop', mu_path,[' bar baz'])
+  svntest.actions.check_prop('some-prop', iota_path, ['bar\n'])
 
 
 #----------------------------------------------------------------------
@@ -979,13 +974,30 @@ def binary_props(sbox):
                                         None, None, None, None, None, 0)
     
   # Now, check those properties.
-  check_prop('prop_zb', B_path_bak, [prop_zb])
-  check_prop('prop_ff', iota_path_bak, [prop_ff])
-  check_prop('prop_xml', lambda_path_bak, [prop_xml])
-  check_prop('prop_binx', mu_path_bak, [prop_binx])
-  check_prop('prop_binx', A_path_bak, [prop_binx])
+  svntest.actions.check_prop('prop_zb', B_path_bak, [prop_zb])
+  svntest.actions.check_prop('prop_ff', iota_path_bak, [prop_ff])
+  svntest.actions.check_prop('prop_xml', lambda_path_bak, [prop_xml])
+  svntest.actions.check_prop('prop_binx', mu_path_bak, [prop_binx])
+  svntest.actions.check_prop('prop_binx', A_path_bak, [prop_binx])
 
 #----------------------------------------------------------------------
+
+# Ensure that each line of output contains the corresponding string of
+# expected_out, and that errput is empty.
+def verify_output(expected_out, output, errput):
+  if errput != []:
+    print 'Error: stderr:'
+    print errput
+    raise svntest.Failure
+  output.sort()
+  ln = 0
+  for line in output:
+    if ((line.find(expected_out[ln]) == -1) or
+        (line != '' and expected_out[ln] == '')):
+      print 'Error: expected keywords: ', expected_out
+      print '       actual full output:', output
+      raise svntest.Failure
+    ln = ln + 1
 
 def recursive_base_wc_ops(sbox):
   "recursive property operations in BASE and WC"
@@ -1012,23 +1024,6 @@ def recursive_base_wc_ops(sbox):
   svntest.main.run_svn(None, 'propset', 'p', 'new-del', fp_del)
   svntest.main.run_svn(None, 'propset', 'p', 'new-keep',fp_keep)
   svntest.main.run_svn(None, 'del', '--force', fp_del)
-
-  # Ensure that each line of output contains the corresponding string of
-  # expected_out, and that errput is empty.
-  def verify_output(expected_out, output, errput):
-    if errput != []:
-      print 'Error: stderr:'
-      print errput
-      raise svntest.Failure
-    output.sort()
-    ln = 0
-    for line in output:
-      if ((line.find(expected_out[ln]) == -1) or
-          (line != '' and expected_out[ln] == '')):
-        print 'Error: expected keywords: ', expected_out
-        print '       actual full output:', output
-        raise svntest.Failure
-      ln = ln + 1
 
   # Test recursive proplist
   output, errput = svntest.main.run_svn(None, 'proplist', '-R', '-v', wc_dir,
@@ -1095,23 +1090,6 @@ def url_props_ops(sbox):
 
   # Commit again
   svntest.main.run_svn(None, 'ci', '-m', 'logmsg', sbox.wc_dir)
-
-  # Ensure that each line of output contains the corresponding string of
-  # expected_out, and that errput is empty.
-  def verify_output(expected_out, output, errput):
-    if errput != []:
-      print 'Error: stderr:'
-      print errput
-      raise svntest.Failure
-    output.sort()
-    ln = 0
-    for line in output:
-      if ((line.find(expected_out[ln]) == -1) or
-          (line != '' and expected_out[ln] == '')):
-        print 'Error: expected keywords: ', expected_out
-        print '       actual full output:', output
-        raise svntest.Failure
-      ln = ln + 1
 
   # Test propget
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
@@ -1277,6 +1255,94 @@ def props_on_replaced_file(sbox):
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
 
+#----------------------------------------------------------------------
+
+def depthy_wc_proplist(sbox):
+  """test proplist at various depths on a wc"""
+  # Bootstrap.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(A_path, 'mu')
+  
+  # Set up properties.
+  svntest.main.run_svn(None, 'propset', 'p', 'prop1', wc_dir)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop2', iota_path)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop3', A_path)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop4', mu_path)
+
+  # Commit.
+  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+  
+  # Test depth-empty proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'empty',
+                                        '-v', wc_dir) 
+  verify_output([ 'prop1', 'Properties on ' ],
+                output, errput)
+
+  # Test depth-files proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'files',
+                                        '-v', wc_dir) 
+  verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
+                output, errput)
+
+  # Test depth-immediates proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
+                                        'immediates', '-v', wc_dir) 
+  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
+                output, errput)
+
+  # Test depth-infinity proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
+                                        'infinity', '-v', wc_dir) 
+  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
+                output, errput)
+
+#----------------------------------------------------------------------
+
+def depthy_url_proplist(sbox):
+  """test proplist at various depths on a url"""
+  # Bootstrap.
+  sbox.build()
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(A_path, 'mu')
+  
+  # Set up properties.
+  svntest.main.run_svn(None, 'propset', 'p', 'prop1', wc_dir)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop2', iota_path)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop3', A_path)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop4', mu_path)
+
+  # Test depth-empty proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'empty',
+                                        '-v', repo_url) 
+  verify_output([ 'prop1', 'Properties on ' ],
+                output, errput)
+
+  # Test depth-files proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'files',
+                                        '-v', repo_url) 
+  verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
+                output, errput)
+
+  # Test depth-immediates proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
+                                        'immediates', '-v', repo_url) 
+  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
+                output, errput)
+
+  # Test depth-infinity proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
+                                        'infinity', '-v', repo_url) 
+  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
+                output, errput)
+  
 ########################################################################
 # Run the tests
 
@@ -1295,8 +1361,7 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              Skip(revprop_change, (os.name != 'posix'
-                                    and sys.platform != 'win32')),
+              Skip(revprop_change, is_non_posix_and_non_windows_os),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,
@@ -1304,6 +1369,8 @@ test_list = [ None,
               removal_schedule_added_props,
               update_props_on_wc_root,
               props_on_replaced_file,
+              depthy_wc_proplist,
+              depthy_url_proplist,
              ]
 
 if __name__ == '__main__':

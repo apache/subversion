@@ -640,19 +640,18 @@ make_reporter(svn_ra_session_t *session,
 
 
 static svn_error_t *
-svn_ra_local__get_merge_info(svn_ra_session_t *session,
-                             apr_hash_t **mergeinfo,
-                             const apr_array_header_t *paths,
-                             svn_revnum_t revision,
-                             svn_boolean_t include_parents,
-                             apr_pool_t *pool)
+svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
+                            apr_hash_t **mergeinfo,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t revision,
+                            svn_mergeinfo_inheritance_t inherit,
+                            apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
   apr_hash_t *tmp_mergeinfo;
 
-  SVN_ERR(svn_repos_fs_get_merge_info(&tmp_mergeinfo, baton->repos, paths,
-                                      revision, include_parents,
-                                      NULL, NULL, pool));
+  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_mergeinfo, baton->repos, paths,
+                                     revision, inherit, NULL, NULL, pool));
   if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
     {
       const void *key;
@@ -792,17 +791,13 @@ svn_ra_local__do_diff(svn_ra_session_t *session,
 struct log_baton
 {
   svn_ra_local__session_baton_t *session;
-  svn_log_message_receiver_t real_cb;
+  svn_log_message_receiver2_t real_cb;
   void *real_baton;
 };
 
 static svn_error_t *
 cancellation_log_receiver(void *baton,
-                          apr_hash_t *changed_paths,
-                          svn_revnum_t revision,
-                          const char *author,
-                          const char *date,
-                          const char *message,
+                          svn_log_entry_t *log_entry,
                           apr_pool_t *pool)
 {
   struct log_baton *b = baton;
@@ -810,8 +805,7 @@ cancellation_log_receiver(void *baton,
 
   SVN_ERR((session->callbacks->cancel_func)(session->callback_baton));
 
-  return b->real_cb(b->real_baton, changed_paths, revision, author,
-                    date, message, pool);
+  return b->real_cb(b->real_baton, log_entry, pool);
 }
 
 
@@ -823,7 +817,9 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                       int limit,
                       svn_boolean_t discover_changed_paths,
                       svn_boolean_t strict_node_history,
-                      svn_log_message_receiver_t receiver,
+                      svn_boolean_t include_merged_revisions,
+                      svn_boolean_t omit_log_text,
+                      svn_log_message_receiver2_t receiver,
                       void *receiver_baton,
                       apr_pool_t *pool)
 {
@@ -859,13 +855,15 @@ svn_ra_local__get_log(svn_ra_session_t *session,
       receiver_baton = &lb;
     }
 
-  return svn_repos_get_logs3(sbaton->repos,
+  return svn_repos_get_logs4(sbaton->repos,
                              abs_paths,
                              start,
                              end,
                              limit,
                              discover_changed_paths,
                              strict_node_history,
+                             include_merged_revisions,
+                             omit_log_text,
                              NULL, NULL,
                              receiver,
                              receiver_baton,
@@ -1397,7 +1395,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_commit_editor,
   svn_ra_local__get_file,
   svn_ra_local__get_dir,
-  svn_ra_local__get_merge_info,
+  svn_ra_local__get_mergeinfo,
   svn_ra_local__do_update,
   svn_ra_local__do_switch,
   svn_ra_local__do_status,

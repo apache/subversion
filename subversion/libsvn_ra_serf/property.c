@@ -393,6 +393,8 @@ cdata_propfind(svn_ra_serf__xml_parser_t *parser,
   prop_state_e state;
   prop_info_t *info;
 
+  UNUSED_CTX(ctx);
+
   state = parser->state->current_state;
   info = parser->state->private;
 
@@ -488,12 +490,13 @@ check_cache(apr_hash_t *ret_props,
 
 /*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
- * serf context for the properties listed in FIND_PROPS at URL for
+ * serf context for the properties listed in LOOKUP_PROPS at URL for
  * DEPTH ("0","1","infinity").
  *
- * This function will not block waiting for the response.  Instead, the
- * caller is expected to call context_run and wait for the PROP_CTX->done
- * flag to be set.
+ * This function will not block waiting for the response.  If the
+ * request can be satisfied from a local cache, set PROP_CTX to NULL
+ * as a signal to callers of that fact.  Otherwise, callers are 
+ * expected to call svn_ra_serf__wait_for_props().
  */
 svn_error_t *
 svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,

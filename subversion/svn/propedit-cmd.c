@@ -242,6 +242,9 @@ svn_cl__propedit(apr_getopt_t *os,
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Bad encoding option: prop value not stored as UTF8"));
 
+              svn_cl__check_boolean_prop_val(pname_utf8, edited_propval->data,
+                                             subpool);
+
               if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
                                                    opt_state, NULL, ctx->config,

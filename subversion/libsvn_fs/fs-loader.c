@@ -43,8 +43,7 @@
 #define FS_TYPE_FILENAME "fs-type"
 
 /* A pool common to all FS objects.  See the documentation on the
-   serialized_init function in fs-loader.h and for
-   svn_fs_initialize(). */
+   open/create functions in fs-loader.h and for svn_fs_initialize(). */
 static apr_pool_t *common_pool;
 #if APR_HAS_THREADS
 static apr_thread_mutex_t *common_pool_lock;
@@ -112,6 +111,30 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+acquire_fs_mutex(void)
+{
+#if APR_HAS_THREADS
+  apr_status_t status;
+  status = apr_thread_mutex_lock(common_pool_lock);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't grab FS mutex"));
+#endif
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+release_fs_mutex(void)
+{
+#if APR_HAS_THREADS
+  apr_status_t status;
+  status = apr_thread_mutex_unlock(common_pool_lock);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't ungrab FS mutex"));
+#endif
+  return SVN_NO_ERROR;
+}
+
 /* Fetch a library vtable by a pointer into the library definitions array. */
 static svn_error_t *
 get_library_vtable_direct(fs_library_vtable_t **vtable,
@@ -131,7 +154,33 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
                              _("Failed to load module for FS type '%s'"),
                              fst->fs_type);
 
-  SVN_ERR(initfunc(my_version, vtable));
+  {
+    svn_error_t *err;
+    svn_error_t *err2;
+
+    /* Per our API compatibility rules, we cannot ensure that
+       svn_fs_initialize is called by the application.  If not, we
+       cannot create the common pool and lock in a thread-safe fashion,
+       nor can we clean up the common pool if libsvn_fs is dynamically
+       unloaded.  This function makes a best effort by creating the
+       common pool as a child of the global pool; the window of failure
+       due to thread collision is small. */
+    if (!common_pool)
+      SVN_ERR(svn_fs_initialize(NULL));
+
+    /* Invoke the FS module's initfunc function with the common
+       pool protected by a lock. */
+    SVN_ERR(acquire_fs_mutex());
+    err = initfunc(my_version, vtable, common_pool);
+    err2 = release_fs_mutex();
+    if (err)
+      {
+        svn_error_clear(err2);
+        return err;
+      }
+    if (err2)
+      return err2;
+  }
   fs_version = (*vtable)->get_version();
   if (!svn_ver_equal(my_version, fs_version))
     return svn_error_createf(SVN_ERR_VERSION_MISMATCH, NULL,
@@ -172,7 +221,8 @@ svn_fs_type(const char **fs_type, const char *path, apr_pool_t *pool)
   apr_file_t *file;
   apr_size_t len;
 
-  /* Read the fsap-name file to get the FSAP name, or assume the default. */
+  /* Read the fsap-name file to get the FSAP name, or assume the (old)
+     default. */
   filename = svn_path_join(path, FS_TYPE_FILENAME, pool);
   err = svn_io_file_open(&file, filename, APR_READ|APR_BUFFERED, 0, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -263,40 +313,6 @@ svn_fs_initialize(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-serialized_init(svn_fs_t *fs, apr_pool_t *pool)
-{
-  svn_error_t *err;
-#if APR_HAS_THREADS
-  apr_status_t status;
-#endif
-
-  /* Per our API compatibility rules, we cannot ensure that
-     svn_fs_initialize is called by the application.  If not, we
-     cannot create the common pool and lock in a thread-safe fashion,
-     nor can we clean up the common pool if libsvn_fs is dynamically
-     unloaded.  This function makes a best effort by creating the
-     common pool as a child of the global pool; the window of failure
-     due to thread collision is small. */
-  if (!common_pool)
-    SVN_ERR(svn_fs_initialize(NULL));
-
-  /* Invoke the FS module's serialized_init function with the common
-     pool protected by a lock. */
-#if APR_HAS_THREADS
-  status = apr_thread_mutex_lock(common_pool_lock);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't grab FS mutex"));
-#endif
-  err = fs->vtable->serialized_init(fs, common_pool, pool);
-#if APR_HAS_THREADS
-  status = apr_thread_mutex_unlock(common_pool_lock);
-  if (status && !err)
-    return svn_error_wrap_apr(status, _("Can't ungrab FS mutex"));
-#endif
-  return err;
-}
-
 /* A default warning handling function.  */
 static void
 default_warning_func(void *baton, svn_error_t *err)
@@ -307,12 +323,12 @@ default_warning_func(void *baton, svn_error_t *err)
   abort();
 }
 
+/* This API is publicly deprecated, but we continue to use it
+   internally to properly allocate svn_fs_t structures. */
 svn_fs_t *
 svn_fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
 {
-  svn_fs_t *fs;
-
-  fs = apr_palloc(pool, sizeof(*fs));
+  svn_fs_t *fs = apr_palloc(pool, sizeof(*fs));
   fs->pool = pool;
   fs->path = NULL;
   fs->warning = default_warning_func;
@@ -336,6 +352,8 @@ svn_error_t *
 svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
               apr_pool_t *pool)
 {
+  svn_error_t *err;
+  svn_error_t *err2;
   fs_library_vtable_t *vtable;
   const char *fs_type = NULL;
 
@@ -352,20 +370,36 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   /* Perform the actual creation. */
   *fs_p = svn_fs_new(fs_config, pool);
-  SVN_ERR(vtable->create(*fs_p, path, pool));
-  return serialized_init(*fs_p, pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->create(*fs_p, path, pool, common_pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+  return err2;
 }
 
 svn_error_t *
 svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
             apr_pool_t *pool)
 {
+  svn_error_t *err;
+  svn_error_t *err2;
   fs_library_vtable_t *vtable;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   *fs_p = svn_fs_new(fs_config, pool);
-  SVN_ERR(vtable->open(*fs_p, path, pool));
-  return serialized_init(*fs_p, pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->open(*fs_p, path, pool, common_pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+  return err2;
 }
 
 const char *
@@ -403,14 +437,24 @@ svn_fs_recover(const char *path,
                svn_cancel_func_t cancel_func, void *cancel_baton,
                apr_pool_t *pool)
 {
+  svn_error_t *err;
+  svn_error_t *err2;
   fs_library_vtable_t *vtable;
   svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = svn_fs_new(NULL, pool);
-  SVN_ERR(vtable->open_for_recovery(fs, path, pool));
-  SVN_ERR(serialized_init(fs, pool));
-  return vtable->recover(fs, cancel_func, cancel_baton, pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->open_for_recovery(fs, path, pool, common_pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+  if (! err2)
+    err2 = vtable->recover(fs, cancel_func, cancel_baton, pool);
+  return err2;
 }
 
 
@@ -419,6 +463,8 @@ svn_fs_recover(const char *path,
 svn_error_t *
 svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
 {
+  svn_error_t *err;
+  svn_error_t *err2;
   fs_library_vtable_t *vtable;
 
   SVN_ERR(get_library_vtable(&vtable, SVN_FS_TYPE_BDB, fs->pool));
@@ -428,18 +474,34 @@ svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
   SVN_ERR(write_fs_type(path, SVN_FS_TYPE_BDB, fs->pool));
 
   /* Perform the actual creation. */
-  SVN_ERR(vtable->create(fs, path, fs->pool));
-  return serialized_init(fs, fs->pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->create(fs, path, fs->pool, common_pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+  return err2;
 }
 
 svn_error_t *
 svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
 {
+  svn_error_t *err;
+  svn_error_t *err2;
   fs_library_vtable_t *vtable;
 
   SVN_ERR(fs_library_vtable(&vtable, path, fs->pool));
-  SVN_ERR(vtable->open(fs, path, fs->pool));
-  return serialized_init(fs, fs->pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->open(fs, path, fs->pool, common_pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+  return err2;
 }
 
 const char *
@@ -738,22 +800,31 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
-svn_fs_change_merge_info(svn_fs_root_t *root, const char *path, 
-                         apr_hash_t *minfo,
-                         apr_pool_t *pool)
+svn_fs_change_mergeinfo(svn_fs_root_t *root, const char *path, 
+                        apr_hash_t *minfo,
+                        apr_pool_t *pool)
 {
-  return root->vtable->change_merge_info(root, path, minfo, pool);
+  return root->vtable->change_mergeinfo(root, path, minfo, pool);
 }
 
 svn_error_t *
-svn_fs_get_merge_info(apr_hash_t **minfohash,
-                      svn_fs_root_t *root,
-                      const apr_array_header_t *paths,
-                      svn_boolean_t include_parents,
-                      apr_pool_t *pool)
+svn_fs_get_mergeinfo(apr_hash_t **minfohash,
+                     svn_fs_root_t *root,
+                     const apr_array_header_t *paths,
+                     svn_mergeinfo_inheritance_t inherit,
+                     apr_pool_t *pool)
 {
-  return root->vtable->get_merge_info(minfohash, root, paths, include_parents,
-                                      pool);
+  return root->vtable->get_mergeinfo(minfohash, root, paths, inherit, pool);
+}
+
+svn_error_t *
+svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
+                              svn_fs_root_t *root,
+                              const apr_array_header_t *paths,
+                              apr_pool_t *pool)
+{
+  return root->vtable->get_mergeinfo_for_tree(mergeinfo, root, paths,
+                                              pool);
 }
 
 svn_error_t *
@@ -1062,8 +1133,7 @@ svn_fs_print_modules(svn_stringbuf_t *output,
         }
 
       line = apr_psprintf(iterpool, "* fs_%s : %s\n",
-                          defn->fsap_name,
-                          vtable->get_description());
+                          defn->fsap_name, vtable->get_description());
       svn_stringbuf_appendcstr(output, line);
     }
 

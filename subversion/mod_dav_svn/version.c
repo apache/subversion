@@ -32,6 +32,7 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+#include "private/svn_dav_protocol.h"
 
 #include "dav_svn.h"
 
@@ -978,9 +979,9 @@ deliver_report(request_rec *r,
         {
           return dav_svn__replay_report(resource, doc, output);
         }
-      else if (strcmp(doc->root->name, "merge-info-report") == 0)
+      else if (strcmp(doc->root->name, SVN_DAV__MERGEINFO_REPORT) == 0)
         {
-          return dav_svn__get_merge_info_report(resource, doc, output);
+          return dav_svn__get_mergeinfo_report(resource, doc, output);
         }
 
       /* NOTE: if you add a report, don't forget to add it to the

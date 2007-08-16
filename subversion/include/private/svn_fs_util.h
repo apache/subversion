@@ -20,6 +20,7 @@
 #ifndef SVN_FS_UTIL_H
 #define SVN_FS_UTIL_H
 
+#include "svn_private_config.h"
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -39,35 +40,104 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
    error if this is not the case.  */
 svn_error_t *svn_fs__check_fs(svn_fs_t *fs);
 
-/* SVN_ERR_FS_NOT_MUTABLE: the caller attempted to change a node
-   outside of a transaction.  */
-svn_error_t *svn_fs__err_not_mutable(svn_fs_t *fs, svn_revnum_t rev,
-                                        const char *path);
+/* Constructing nice error messages for roots.  */
 
-/* SVN_ERR_FS_NOT_DIRECTORY: PATH does not refer to a directory in FS.  */
-svn_error_t *svn_fs__err_not_directory(svn_fs_t *fs, const char *path);
+/* Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
+   for PATH in ROOT. ROOT is of type svn_fs_root_t *. */
+#define SVN_FS__NOT_FOUND(root, path) (                        \
+  root->is_txn_root ?                                          \
+    svn_error_createf                                          \
+      (SVN_ERR_FS_NOT_FOUND, 0,                                \
+       _("File not found: transaction '%s', path '%s'"),       \
+       root->txn, path)                                        \
+  :                                                            \
+    svn_error_createf                                          \
+      (SVN_ERR_FS_NOT_FOUND, 0,                                \
+       _("File not found: revision %ld, path '%s'"),           \
+       root->rev, path)                                        \
+  )
 
-/* SVN_ERR_FS_NOT_FILE: PATH does not refer to a file in FS.  */
-svn_error_t *svn_fs__err_not_file(svn_fs_t *fs, const char *path);
 
-/* SVN_ERR_FS_PATH_ALREADY_LOCKED: a path is already locked.  */
-svn_error_t *svn_fs__err_path_already_locked(svn_fs_t *fs,
-                                                svn_lock_t *lock);
+/* Build a detailed `file already exists' message for PATH in ROOT.
+   ROOT is of type svn_fs_root_t *. */
+#define SVN_FS__ALREADY_EXISTS(root, path_str) (                               \
+  root->is_txn_root ?                                                          \
+    svn_error_createf                                                          \
+      (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
+       _("File already exists: filesystem '%s', transaction '%s', path '%s'"), \
+       root->fs->path, root->txn, path_str)                                    \
+  :                                                                            \
+    svn_error_createf                                                          \
+      (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
+       _("File already exists: filesystem '%s', revision %ld, path '%s'"),     \
+       root->fs->path, root->rev, path_str)                                    \
+  )
 
-/* SVN_ERR_FS_NO_SUCH_LOCK: there is no lock on PATH in FS.  */
-svn_error_t *svn_fs__err_no_such_lock(svn_fs_t *fs, const char *path);
+/* ROOT is of type svn_fs_root_t *. */
+#define SVN_FS__NOT_TXN(root)                         \
+  svn_error_create                                    \
+    (SVN_ERR_FS_NOT_TXN_ROOT, NULL,                   \
+     _("Root object must be a transaction root"))
 
-/* SVN_ERR_FS_LOCK_EXPIRED: TOKEN's lock in FS has been auto-expired. */
-svn_error_t *svn_fs__err_lock_expired(svn_fs_t *fs, const char *token);
+/* SVN_FS__ERR_NOT_MUTABLE: the caller attempted to change a node 
+   outside of a transaction. FS is of type "svn_fs_t *". */
+#define SVN_FS__ERR_NOT_MUTABLE(fs, rev, path_in_repo)                   \
+  svn_error_createf                                                      \
+    (SVN_ERR_FS_NOT_MUTABLE, 0,                                          \
+     _("File is not mutable: filesystem '%s', revision %ld, path '%s'"), \
+     fs->path, rev, path_in_repo)
 
-/* SVN_ERR_FS_NO_USER: FS does not have a user associated with it. */
-svn_error_t *svn_fs__err_no_user(svn_fs_t *fs);
+/* FS is of type "svn fs_t *".*/
+#define SVN_FS__ERR_NOT_DIRECTORY(fs, path_in_repo)    \
+  svn_error_createf                                    \
+    (SVN_ERR_FS_NOT_DIRECTORY, 0,                      \
+     _("'%s' is not a directory in filesystem '%s'"),  \
+     path_in_repo, fs->path)
 
-/* SVN_ERR_FS_LOCK_OWNER_MISMATCH: trying to use a lock whose LOCK_OWNER
-   doesn't match the USERNAME associated with FS.  */
-svn_error_t *svn_fs__err_lock_owner_mismatch(svn_fs_t *fs,
-                                                const char *username,
-                                                const char *lock_owner);
+/* FS is of type "svn fs_t *".   */
+#define SVN_FS__ERR_NOT_FILE(fs, path_in_repo)         \
+  svn_error_createf                                    \
+    (SVN_ERR_FS_NOT_FILE, 0,                           \
+     _("'%s' is not a file in filesystem '%s'"),       \
+     path_in_repo, fs->path)
+
+/* FS is of type "svn fs_t *", LOCK is of type "svn_lock_t *".   */
+#define SVN_FS__ERR_PATH_ALREADY_LOCKED(fs, lock)                      \
+  svn_error_createf                                                    \
+    (SVN_ERR_FS_PATH_ALREADY_LOCKED, 0,                                \
+     _("Path '%s' is already locked by user '%s' in filesystem '%s'"), \
+     lock->path, lock->owner, fs->path)
+
+/* FS is of type "svn fs_t *". */
+#define SVN_FS__ERR_NO_SUCH_LOCK(fs, path_in_repo)     \
+  svn_error_createf                                    \
+    (SVN_ERR_FS_NO_SUCH_LOCK, 0,                       \
+     _("No lock on path '%s' in filesystem '%s'"),     \
+     path_in_repo, fs->path)
+
+/* FS is of type "svn fs_t *". */
+#define SVN_FS__ERR_LOCK_EXPIRED(fs, token)                      \
+  svn_error_createf                                              \
+    (SVN_ERR_FS_LOCK_EXPIRED, 0,                                 \
+     _("Lock has expired:  lock-token '%s' in filesystem '%s'"), \
+     token, fs->path)
+
+/* FS is of type "svn fs_t *". */
+#define SVN_FS__ERR_NO_USER(fs)                                     \
+  svn_error_createf                                                 \
+    (SVN_ERR_FS_NO_USER, 0,                                         \
+     _("No username is currently associated with filesystem '%s'"), \
+     fs->path)
+
+/* SVN_FS__ERR_LOCK_OWNER_MISMATCH: trying to use a lock whose 
+   LOCK_OWNER doesn't match the USERNAME associated with FS.
+   FS is of type "svn fs_t *". */ 
+#define SVN_FS__ERR_LOCK_OWNER_MISMATCH(fs, username, lock_owner)  \
+  svn_error_createf                                                \
+    (SVN_ERR_FS_LOCK_OWNER_MISMATCH, 0,                            \
+     _("User '%s' is trying to use a lock owned by '%s' in "       \
+       "filesystem '%s'"),                                         \
+     username, lock_owner, fs->path)
 
 /* Return a NULL-terminated copy of the first component of PATH,
    allocated in POOL.  If path is empty, or consists entirely of

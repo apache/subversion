@@ -792,6 +792,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   ssl-client-cert-file       PKCS#12 format client certificate file"
                                                                              NL
         "###   ssl-client-cert-password   Client Key password, if needed."   NL
+        "###   http-library               Which library to use for http/https"
+                                                                             NL
+        "###                              connections (neon or serf)"        NL
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL
         "### of 0, i.e. zero, causes a builtin default to be used."          NL
@@ -971,9 +974,14 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### releasing locks on files."                                      NL
         "# no-unlock = yes"                                                  NL
         "### Set mime-types-file to a MIME type registry file, used to"      NL
-        "### provide hints to Subversion's MIME type auto-detection algorithm."
-                                                                             NL
+        "### provide hints to Subversion's MIME type auto-detection"         NL
+        "### algorithm."                                                     NL
         "# mime-types-file = /path/to/mime.types"                            NL
+        "### Set preserved-conflict-file-exts to a whitespace-delimited"     NL
+        "### list of patterns matching file extensions which should be"      NL
+        "### preserved in generated conflict file names.  By default,"       NL
+        "### conflict files use custom extensions."                          NL
+        "# preserved-conflict-file-exts = doc ppt xls od?"                   NL
         "### Set enable-auto-props to 'yes' to enable automatic properties"  NL
         "### for 'svn add' and 'svn import', it defaults to 'no'."           NL
         "### Automatic properties are defined in the section 'auto-props'."  NL
@@ -984,9 +992,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### The format of the entries is:"                                  NL
         "###   file-name-pattern = propname[=value][;propname[=value]...]"   NL
         "### The file-name-pattern can contain wildcards (such as '*' and"   NL
-        "### '?').  All entries which match will be applied to the file."    NL
-        "### Note that auto-props functionality must be enabled, which"      NL
-        "### is typically done by setting the 'enable-auto-props' option."   NL
+        "### '?').  All entries which match (case-insensitively) will be"    NL
+        "### applied to the file.  Note that auto-props functionality"       NL
+        "### must be enabled, which is typically done by setting the"        NL
+        "### 'enable-auto-props' option."                                    NL
         "# *.c = svn:eol-style=native"                                       NL
         "# *.cpp = svn:eol-style=native"                                     NL
         "# *.h = svn:eol-style=native"                                       NL

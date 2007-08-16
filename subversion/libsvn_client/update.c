@@ -32,7 +32,6 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_io.h"
-#include "svn_sorts.h"
 #include "client.h"
 #include "mergeinfo.h"
 
@@ -60,7 +59,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *anchor, *target;
-  svn_node_kind_t kind;
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
@@ -74,8 +72,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   svn_ra_session_t *ra_session;
   svn_wc_adm_access_t *dir_access;
   svn_wc_adm_access_t *path_adm_access;
-  apr_array_header_t *children_with_mergeinfo;
-  apr_hash_t *children_with_mergeinfo_hash;
+  apr_hash_t *children_with_mergeinfo;
+  const char *preserved_exts_str;
+  apr_array_header_t *preserved_exts;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config, 
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -119,42 +118,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                              _("Entry '%s' has no URL"),
                              svn_path_local_style(anchor, pool));
 
-  /* Figure out the real depth for the update, using sophisticated
-     techniques from http://en.wikipedia.org/wiki/Bone_divination. */
-  if (depth == svn_depth_unknown)
-    {
-      SVN_ERR(svn_io_check_path(path, &kind, pool));
-      if (kind == svn_node_none || kind == svn_node_file)
-        depth = svn_depth_infinity;
-      else if (kind == svn_node_dir)
-        {
-          if (adm_access == dir_access)
-            depth = entry->depth;
-          else
-            {
-              /* I'm not sure this situation can ever happen in real
-                 life, but svn_wc_adm_open_anchor() doesn't explicitly
-                 prohibit it, so we must be prepared. */
-              const svn_wc_entry_t *tmp_ent;
-              SVN_ERR(svn_wc_entry(&tmp_ent, path, dir_access, FALSE, pool));
-              if (tmp_ent)
-                depth = tmp_ent->depth;
-              else
-                return svn_error_createf
-                  (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                   _("'%s' is not a working copy directory"),
-                   svn_path_local_style(path, pool));
-            }
-        }
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-             _("'%s' is neither a file nor a directory"),
-             svn_path_local_style(path, pool));
-        }
-    }
-
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */
   if (revision->kind == svn_opt_revision_number)
@@ -170,6 +133,14 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
                               SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
+
+  /* See which files the user wants to preserve the extension of when
+     conflict files are made. */
+  svn_config_get(cfg, &preserved_exts_str, SVN_CONFIG_SECTION_MISCELLANY,
+                 SVN_CONFIG_OPTION_PRESERVED_CF_EXTS, "");
+  preserved_exts = *preserved_exts_str 
+    ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, pool)
+    : NULL;
 
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, entry->url,
@@ -199,7 +170,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
-                                    diff3_cmd,
+                                    diff3_cmd, preserved_exts,
                                     &update_editor, &update_edit_baton,
                                     traversal_info,
                                     pool));
@@ -233,7 +204,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  if ((depth == svn_depth_infinity) && (! ignore_externals))
+  if ((depth == svn_depth_infinity || depth == svn_depth_unknown)
+      && (! ignore_externals))
     SVN_ERR(svn_client__handle_externals(traversal_info, 
                                          TRUE, /* update unchanged ones */
                                          use_sleep, ctx, pool));
@@ -258,8 +230,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
     /* Check if any mergeinfo on PATH or any its children elides as a
      result of the update. */
-  children_with_mergeinfo_hash = apr_hash_make(pool);  
-  err = svn_client__get_prop_from_wc(children_with_mergeinfo_hash,
+  children_with_mergeinfo = apr_hash_make(pool);  
+  err = svn_client__get_prop_from_wc(children_with_mergeinfo,
                                      SVN_PROP_MERGE_INFO, path, FALSE,
                                      entry, path_adm_access, TRUE, ctx,
                                      pool);
@@ -277,28 +249,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     }
   else
     {
-      int i;
-      children_with_mergeinfo = svn_sort__hash(children_with_mergeinfo_hash,
-                                               svn_sort_compare_items_as_paths,
-                                               pool);
-
-      /* children_with_mergeinfo is sorted in depth first order.
-         To minimize svn_client__elide_mergeinfo()'s crawls up the
-         working copy from each child, run through the array backwards,
-         effectively doing a right-left post-order traversal. */
-      for (i = children_with_mergeinfo->nelts -1; i >= 0; i--)
-        {
-          const svn_wc_entry_t *child_entry;
-          const char *child_wcpath;
-          svn_sort__item_t *item = &APR_ARRAY_IDX(children_with_mergeinfo,
-                                                  i,
-                                                  svn_sort__item_t);
-          child_wcpath = item->key;
-          SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath,
-                                          adm_access, FALSE, pool));
-          SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL, child_entry,
-                                              adm_access, ctx, pool));
-        }
+      SVN_ERR(svn_client__elide_mergeinfo_for_tree(children_with_mergeinfo,
+                                                   adm_access, ctx, pool));
     }
 
   SVN_ERR(svn_wc_adm_close(adm_open_depth ? path_adm_access : adm_access));

@@ -335,12 +335,12 @@ int main(int argc, const char *argv[])
   if (svn_cmdline_init("svnserve", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
-#ifdef SVN_HAVE_SASL
-  SVN_INT_ERR(cyrus_init());
-#endif
-
   /* Create our top-level pool. */
   pool = svn_pool_create(NULL);
+
+#ifdef SVN_HAVE_SASL
+  SVN_INT_ERR(cyrus_init(pool));
+#endif
 
   /* Check library versions */
   err = check_lib_versions();

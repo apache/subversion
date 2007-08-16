@@ -85,7 +85,8 @@ typedef enum {
   svn_cl__xml_opt,
   svn_cl__keep_local_opt,
   svn_cl__with_revprop_opt,
-  svn_cl__make_parents_opt
+  svn_cl__parents_opt,
+  svn_cl__accept_opt
 } svn_cl__longopt_t;
 
 
@@ -157,7 +158,9 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t keep_changelist; /* don't remove changelist after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
   apr_hash_t *revprop_table;     /* table with revision properties to set */
-  svn_boolean_t make_parents;  /* create intermediate directories */
+  svn_boolean_t parents;         /* create intermediate directories */
+  svn_boolean_t use_merge_history; /* use/display extra merge information */
+  svn_accept_t accept_;          /* automatically resolve conflict */
 
 } svn_cl__opt_state_t;
 
@@ -455,6 +458,17 @@ svn_error_t *svn_cl__xml_print_footer(const char *tagname,
 /* Return a (non-localised) string representation of KIND, being "dir" or
    "file" or, in any other case, the empty string. */
 const char *svn_cl__node_kind_str(svn_node_kind_t kind);
+
+
+/* If PROPNAME is one of the svn: properties with a boolean value, and
+ * PROPVAL looks like an attempt to turn the property off (i.e., it's
+ * "off", "no", "false", or ""), then print a warning to the user that
+ * setting the property to this value might not do what they expect.
+ * Perform temporary allocations in POOL.
+ */
+void svn_cl__check_boolean_prop_val(const char *propname,
+                                    const char *propval,
+                                    apr_pool_t *pool);
 
 
 #ifdef __cplusplus

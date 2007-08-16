@@ -276,6 +276,7 @@ svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
  *   c     const char **          String
  *   w     const char **          Word
  *   b     svn_boolean_t *        Word ("true" or "false")
+ *   B     apr_uint64_t *         Word ("true" or "false")
  *   l     apr_array_header_t **  List
  *   (                            Begin tuple
  *   )                            End tuple
@@ -286,11 +287,14 @@ svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
  * the end of the specification.  So if @a fmt is "c?cc" and @a list
  * contains two elements, an error will result.
  *
+ * 'B' is similar to 'b', but may be used in the optional tuple specification.
+ * It returns TRUE, FALSE, or SVN_RA_SVN_UNSPECIFIED_NUMBER.
+ *
  * If an optional part of a tuple contains no data, 'r' values will be
- * set to @c SVN_INVALID_REVNUM, 'n' values will be set to
+ * set to @c SVN_INVALID_REVNUM, 'n' and 'B' values will be set to
  * SVN_RA_SVN_UNSPECIFIED_NUMBER, and 's', 'c', 'w', and 'l' values
  * will be set to @c NULL.  'b' may not appear inside an optional
- * tuple specification.
+ * tuple specification; use 'B' instead.
  */
 svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
                                     apr_pool_t *pool,

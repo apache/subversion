@@ -40,10 +40,15 @@ class NativeResources
      *
      * @throws UnsatisfiedLinkError If the native library cannot be
      * loaded.
+     * @throws LinkageError If the version of the loaded native
+     * library is not compatible with this version of JavaHL's Java
+     * APIs.
      * @since 1.3.0
      */
     public static synchronized void loadNativeLibrary()
     {
+        UnsatisfiedLinkError loadException = null;
+
         // If the user specified the fully qualified path to the
         // native library, try loading that first.
         try
@@ -59,32 +64,39 @@ class NativeResources
         }
         catch (UnsatisfiedLinkError ex)
         {
-            // ignore that error to try again
+            // Since the user explicitly specified this path, this is
+            // the best error to return if no other method succeeds.
+            loadException = ex;
         }
 
         // Try to load the library by its name.  Failing that, try to
         // load it by its old name.
-        try
-        {
-            System.loadLibrary("svnjavahl-1");
-            init();
-            return;
-        }
-        catch (UnsatisfiedLinkError ex)
+        String[] libraryNames = {"svnjavahl-1", "libsvnjavahl-1", "svnjavahl"};
+        for (int i = 0; i < libraryNames.length; i++)
         {
             try
             {
-                System.loadLibrary("libsvnjavahl-1");
+                System.loadLibrary(libraryNames[i]);
                 init();
                 return;
             }
-            catch (UnsatisfiedLinkError e)
+            catch (UnsatisfiedLinkError ex)
             {
-                System.loadLibrary("svnjavahl");
-                init();
-                return;
+                if (loadException == null)
+                {
+                    loadException = ex;
+                }
             }
         }
+
+        // Re-throw the most relevant exception.
+        if (loadException == null)
+        {
+            // This could only happen as the result of a programming error.
+            loadException = new UnsatisfiedLinkError("Unable to load JavaHL " +
+                                                     "native library");
+        }
+        throw loadException;
     }
 
     /**
@@ -92,10 +104,24 @@ class NativeResources
      * the native library has been loaded.  Sets library version
      * information, and initializes the re-entrance hack for native
      * code.
+     * @throws LinkageError If the version of the loaded native
+     * library is not compatible with this version of JavaHL's Java
+     * APIs.
      */
     private static final void init()
     {
+        initNativeLibrary();
         version = new Version();
-        SVNClient.initNative();
+        if (!version.isAtLeast(1, 5, 0))
+        {
+            throw new LinkageError("Native library version must be at least " +
+                                   "1.5.0, but is only " + version);
+        }
     }
+
+    /**
+     * Initialize the native library layer.
+     * @since 1.5.0
+     */
+    private static native void initNativeLibrary();
 }

@@ -97,7 +97,7 @@ def test_misc(sbox):
   expect('uuid', [ uuid + '\n' ], run_svnlook('uuid', repo_dir))
 
   # it would be nice to test the author too, but the current test framework
-  # does not pull a username when testing over ra_dav or ra_svn,
+  # does not pull a username when testing over ra_neon or ra_svn,
   # so the commits have an empty author.
 
   expect('log', [ 'log msg\n' ], run_svnlook('log', repo_dir))
@@ -313,12 +313,8 @@ text
 
 """
 
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
   # load dumpfile with inconsistent newlines into repos.
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  svntest.actions.load_repo(sbox, dump_str=dump_str)
 
   output, errput = svntest.main.run_svnlook("info", sbox.repo_dir, "-r1")
   if errput:

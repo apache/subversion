@@ -94,7 +94,10 @@ typedef struct svn_fs_t svn_fs_t;
  * effort to bootstrap a mutex for protecting data common to FS
  * objects; however, there is a small window of failure.  Also, a
  * small amount of data will be leaked if the Subversion FS library is
- * dynamically unloaded.
+ * dynamically unloaded, and using the bdb FS can potentially segfault
+ * or invoke other undefined behavior if this function is not called
+ * with an appropriate pool (such as the pool the module was loaded into)
+ * when loaded dynamically.
  *
  * If this function is called multiple times before the pool passed to
  * the first call is destroyed or cleared, the later calls will have
@@ -585,6 +588,17 @@ svn_string_t *svn_fs_unparse_id(const svn_fs_id_t *id,
  * Transaction names are guaranteed to contain only letters (upper-
  * and lower-case), digits, `-', and `.', from the ASCII character
  * set.
+ *
+ * The Subversion filesystem will make a best effort to not reuse
+ * transaction names.  The Berkeley DB backend generates transaction
+ * names using a sequence, or a counter, which is stored in the BDB
+ * database.  Each new transaction increments the counter.  The
+ * current value of the counter is not serialized into a filesystem
+ * dump file, so dumping and restoring the repository will reset the
+ * sequence and reuse transaction names.  The FSFS backend generates a
+ * transaction name using the hostname, process ID and current time in
+ * microseconds since 00:00:00 January 1, 1970 UTC.  So it is
+ * extremely unlikely that a transaction name will be reused.
  *
  * @defgroup svn_fs_txns filesystem transactions
  * @{
@@ -1190,10 +1204,10 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
-                                      const char *path,
-                                      apr_hash_t *mergeinhash,
-                                      apr_pool_t *pool);
+svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
+                                     const char *path,
+                                     apr_hash_t *mergeinhash,
+                                     apr_pool_t *pool);
 
 /** Retrieve merge info for multiple nodes.
  *
@@ -1204,18 +1218,38 @@ svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
  *
  * @a paths indicate the paths you are requesting information for
  *
- * When @a include_parents is @c TRUE, include inherited merge info
- * from parent directories of @a paths.
+ * @a inherit indicates whether explicit, explicit or inherited, or
+ * only inherited merge info for @paths is retrieved.
  *
  * Do any necessary temporary allocation in @a pool.
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_fs_get_merge_info(apr_hash_t **minfohash,
-                                   svn_fs_root_t *root,
-                                   const apr_array_header_t *paths,
-                                   svn_boolean_t include_parents,
-                                   apr_pool_t *pool);
+svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
+                                  svn_fs_root_t *root,
+                                  const apr_array_header_t *paths,
+                                  svn_mergeinfo_inheritance_t inherit,
+                                  apr_pool_t *pool);
+
+/** Retrieve combined mergeinfo for multiple nodes, and their children.
+ *
+ * @a mergeinfo is filled with mergeinfo for each of the @a paths and
+ * their children, stored as a mergeinfo hash.  It will never be @c NULL,
+ * but may be empty.
+ *
+ * @a root indicate the revision root to use when looking up paths.
+ *
+ * @a paths indicate the paths you are requesting information for.
+ *
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
+                              svn_fs_root_t *root,
+                              const apr_array_header_t *paths,
+                              apr_pool_t *pool);
 
 /** Merge changes between two nodes into a third node.
  *

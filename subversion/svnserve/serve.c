@@ -1305,7 +1305,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  const char *target, *depth_word;
+  const char *target, *full_path, *depth_word;
   svn_boolean_t recurse;
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
@@ -1321,7 +1321,10 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   else
     depth = recurse ? svn_depth_infinity : svn_depth_empty;
 
-  SVN_ERR(trivial_auth_request(conn, pool, b));
+  full_path = svn_path_join(b->fs_path->data, target, pool);
+  /* Check authorization and authenticate the user if necessary. */
+  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read, full_path, FALSE));
+  
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
@@ -1427,6 +1430,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     depth = recurse ? svn_depth_infinity : svn_depth_empty;
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
+
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
@@ -1452,11 +1456,12 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_hash_t *mergeinfo;
   int i;
   apr_hash_index_t *hi;
-  const char *path, *info;
-  svn_boolean_t include_parents;
+  const char *path, *info, *inherit_word;
+  svn_mergeinfo_inheritance_t inherit;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)b", &paths, &rev, 
-                                 &include_parents));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)w", &paths, &rev, 
+                                 &inherit_word));
+  inherit = svn_inheritance_from_word(inherit_word);
 
   /* Canonicalize the paths which merge info has been requested for. */
   canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
@@ -1472,11 +1477,11 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      }
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_fs_get_merge_info(&mergeinfo, b->repos,
-                                          canonical_paths, rev,
-                                          include_parents,
-                                          authz_check_access_cb_func(b), b,
-                                          pool));
+  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repos,
+                                         canonical_paths, rev,
+                                         inherit,
+                                         authz_check_access_cb_func(b), b,
+                                         pool));
   if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)
     {
       const void *key;
@@ -1498,9 +1503,8 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 /* Send a log entry to the client. */
-static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
-                                 svn_revnum_t rev, const char *author,
-                                 const char *date, const char *message,
+static svn_error_t *log_receiver(void *baton,
+                                 svn_log_entry_t *log_entry,
                                  apr_pool_t *pool)
 {
   log_baton_t *b = baton;
@@ -1513,9 +1517,10 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
   char action[2];
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(!"));
-  if (changed_paths)
+  if (log_entry->changed_paths)
     {
-      for (h = apr_hash_first(pool, changed_paths); h; h = apr_hash_next(h))
+      for (h = apr_hash_first(pool, log_entry->changed_paths); h;
+                                                        h = apr_hash_next(h))
         {
           apr_hash_this(h, &key, NULL, &val);
           path = key;
@@ -1527,8 +1532,12 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
                                          change->copyfrom_rev));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)", rev, author,
-                                 date, message));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)n",
+                                 log_entry->revision,
+                                 log_entry->author,
+                                 log_entry->date,
+                                 log_entry->message,
+                                 log_entry->nbr_children));
   return SVN_NO_ERROR;
 }
 
@@ -1539,19 +1548,29 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
-  svn_boolean_t changed_paths, strict_node;
+  svn_boolean_t changed_paths, strict_node, include_merged_revisions;
+  svn_boolean_t omit_log_text;
   apr_array_header_t *paths, *full_paths;
   svn_ra_svn_item_t *elt;
   int i;
-  apr_uint64_t limit;
+  apr_uint64_t limit, include_merged_revs_param, omit_log_text_param;
   log_baton_t lb;
 
-  /* Parse the arguments.  The usual optional element pattern "(?n)"
-     isn't used for the limit argument because pre-1.3 clients don't
-     know to send it. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n", &paths,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?BB", &paths,
                                  &start_rev, &end_rev, &changed_paths,
-                                 &strict_node, &limit));
+                                 &strict_node, &limit,
+                                 &include_merged_revs_param,
+                                 &omit_log_text_param));
+
+  if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    include_merged_revisions = FALSE;
+  else
+    include_merged_revisions = include_merged_revs_param;
+
+  if (omit_log_text_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    omit_log_text = FALSE;
+  else
+    omit_log_text = omit_log_text_param;
 
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is 
@@ -1578,8 +1597,9 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path->data;
   lb.conn = conn;
-  err = svn_repos_get_logs3(b->repos, full_paths, start_rev, end_rev,
+  err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
+                            include_merged_revisions, omit_log_text,
                             authz_check_access_cb_func(b), b, log_receiver,
                             &lb, pool);
 

@@ -29,7 +29,7 @@
 #include "svn_time.h"
 #include "svn_path.h"
 #include "svn_config.h"
-#include "svn_sorts.h"
+#include "svn_pools.h"
 #include "client.h"
 #include "mergeinfo.h"
 
@@ -67,9 +67,10 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
-  const char *URL, *anchor, *target;
+  const char *URL, *anchor, *target, *source_root;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
+  svn_node_kind_t switch_url_kind;
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access, *dir_access;
   const char *diff3_cmd;
@@ -79,6 +80,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
+  const char *preserved_exts_str;
+  apr_array_header_t *preserved_exts;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config, 
                                                  SVN_CONFIG_CATEGORY_CONFIG,  
                                                  APR_HASH_KEY_STRING)
@@ -92,6 +95,14 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
                               SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
+
+  /* See which files the user wants to preserve the extension of when
+     conflict files are made. */
+  svn_config_get(cfg, &preserved_exts_str, SVN_CONFIG_SECTION_MISCELLANY,
+                 SVN_CONFIG_OPTION_PRESERVED_CF_EXTS, "");
+  preserved_exts = *preserved_exts_str 
+    ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, pool)
+    : NULL;
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert(path);
@@ -125,6 +136,31 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                                ctx, pool));
   SVN_ERR(svn_client__get_revision_number
           (&revnum, ra_session, revision, path, pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
+  
+  /* Disallow a switch operation to change the repository root of the target. */
+  if (! svn_path_is_ancestor(source_root, switch_url))
+    return svn_error_createf 
+      (SVN_ERR_WC_INVALID_SWITCH, NULL,
+       _("'%s'\n"
+         "is not the same repository as\n"
+         "'%s'"), switch_url, source_root);
+
+  /* Check to make sure that the switch target actually exists. */
+  SVN_ERR(svn_ra_reparent(ra_session, source_root, pool));
+  SVN_ERR(svn_ra_check_path(ra_session, 
+                            svn_path_is_child(source_root, switch_url, pool),
+                            revnum,
+                            &switch_url_kind,
+                            pool));
+
+  if (switch_url_kind == svn_node_none)
+    return svn_error_createf
+      (SVN_ERR_WC_INVALID_SWITCH, NULL,
+       _("Destination does not exist: '%s'"), switch_url);
+
+  SVN_ERR(svn_ra_reparent(ra_session, URL, pool));
+
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
@@ -133,7 +169,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
-                                    diff3_cmd,
+                                    diff3_cmd, preserved_exts,
                                     &switch_editor, &switch_edit_baton,
                                     traversal_info, pool));
 
@@ -175,11 +211,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     {
       /* Check if any mergeinfo on PATH or any its children elides as a
          result of the switch. */
-      apr_hash_t *children_with_mergeinfo_hash = apr_hash_make(pool);
+      apr_hash_t *children_with_mergeinfo = apr_hash_make(pool);
       svn_wc_adm_access_t *path_adm_access;
       SVN_ERR(svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path,
                                         pool));
-      err = svn_client__get_prop_from_wc(children_with_mergeinfo_hash,
+      err = svn_client__get_prop_from_wc(children_with_mergeinfo,
                                          SVN_PROP_MERGE_INFO, path, FALSE,
                                          entry, path_adm_access, TRUE, ctx,
                                          pool);
@@ -194,29 +230,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
         }
       else
         {
-          int i;
-          apr_array_header_t *children_with_mergeinfo =
-            svn_sort__hash(children_with_mergeinfo_hash,
-                           svn_sort_compare_items_as_paths, pool);
-
-          /* children_with_mergeinfo is sorted in depth first order.
-             To minimize svn_client__elide_mergeinfo()'s crawls up the
-             working copy from each child, run through the array backwards,
-             effectively doing a right-left post-order traversal. */
-          for (i = children_with_mergeinfo->nelts -1; i >= 0; i--)
-            {
-              const svn_wc_entry_t *child_entry;
-              const char *child_wcpath;
-              svn_sort__item_t *item =
-                &APR_ARRAY_IDX(children_with_mergeinfo, i,
-                               svn_sort__item_t);
-              child_wcpath = item->key;
-              SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath,
-                                              adm_access, FALSE, pool));
-              SVN_ERR(svn_client__elide_mergeinfo(child_wcpath, NULL,
-                                                  child_entry, adm_access, ctx,
-                                                  pool));
-            }
+          SVN_ERR(svn_client__elide_mergeinfo_for_tree(children_with_mergeinfo,
+                                                       adm_access, ctx, pool));
         }
     }
 

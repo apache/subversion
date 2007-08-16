@@ -1,5 +1,5 @@
 Version 1.4.4
-(?? May 2007, from /branches/1.4.x)
+(30 May 2007, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.4
 
  User-visible changes:
@@ -7,6 +7,7 @@ http://svn.collab.net/repos/svn/tags/1.4.4
     * fixed: 'svn up' of replaced file without history fails (issue #2618)
     * fixed: 'svn export' succeeds on non-existent URL (r23191, -3, -5, -200)
     * fixed: 'svn diff' fails writing large hunks to Win console (issue #1789)
+    * fixed: 'svn merge' shows 'G' notifications for unchanged files (r24483)
     * fixed: svnsync cannot sync unreadable modified dir copies (issue #2705)
     * fixed: ra_dav litters empty transactions if initial setup fails (r23594)
     * fixed: inconsistent expansion of revision number keywords (issue #1743)
@@ -17,6 +18,8 @@ http://svn.collab.net/repos/svn/tags/1.4.4
     * fixed: 'svnadmin load' invents svn:date if none exists (issue #2729)
     * fixed: svnserve can't commit locked file if root unwritable (issue #2700)
     * fixed: 'svnadmin dump' output invalid for non-ASCII paths (issue #2641)
+    * fixed: security flaw in 'svn prop*' commands [CVE-2007-2448] 
+          (r25095, -099, -104, -105, -10)
 
   - Client and Server:
     * fixed: hang during character translation (r23491, r23492)
@@ -34,7 +37,7 @@ http://svn.collab.net/repos/svn/tags/1.4.4
      - fixed: ra_do_{update,switch,status} don't work with Perl delta editors
            (r20667, r22311)
  * SWIG/python bindings:
-     - fixed: memory leak whenever C APIs returned errors (r21453, r23468)
+     - fixed: memory leak whenever C APIs returned errors (r23521)
  * SWIG/ruby bindings:
      - fixed: typos in method Svn::Wc#merge_prop_diffs and docs (r23405, -6)
 

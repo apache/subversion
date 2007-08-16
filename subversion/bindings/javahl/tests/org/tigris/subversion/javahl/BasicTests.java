@@ -628,7 +628,8 @@ public class BasicTests extends SVNTests
         client.propertyCreate(itemPath, "cqcq", "qrz", false, false);
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
 
-        client.properties(itemPath, null, null, false, callback);
+        client.properties(itemPath, null, null, Depth.fromRecurse(false),
+                          callback);
         Map propMap = callback.getProperties(itemPath);
         Iterator it = propMap.keySet().iterator();
 
@@ -748,6 +749,9 @@ public class BasicTests extends SVNTests
         throws SubversionException, IOException
     {
         OneTest thisTest = new OneTest();
+        // Test that getCopySource properly returns null here
+        assertNull(client.getCopySource(thisTest.getWCPath(), Revision.HEAD));
+
         WC wc = thisTest.getWc();
         final Revision firstRevision = Revision.getInstance(1);
         final Revision pegRevision = null;  // Defaults to Revision.HEAD.
@@ -2108,6 +2112,9 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
+        // test that getMergeInfo returns null
+        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A").toString(), Revision.HEAD));
+
         // modify file A/mu
         File mu = new File(thisTest.getWorkingCopy(), "A/mu");
         PrintWriter muPW = new PrintWriter(new FileOutputStream(mu, true));
@@ -2138,16 +2145,40 @@ public class BasicTests extends SVNTests
                                    "log msg", true),
                      4);
 
+        // Add a "begin merge" notification handler.
+        final Revision[] actualRange = new Revision[2];
+        Notify2 notify = new Notify2()
+        {
+            public void onNotify(NotifyInformation info)
+            {
+                if (info.getAction() == NotifyAction.merge_begin)
+                {
+                    RevisionRange r = info.getMergeRange();
+                    actualRange[0] = r.getFromRevision();
+                    actualRange[1] = r.getToRevision();
+                }
+            }
+        };
+        client.notification2(notify);
+
         // merge changes in A to branches/A
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
         // test --dry-run
         client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD,
                      branchPath, false, true, false, true);
+        assertEquals("Notification of beginning of merge reported incorrect " +
+                     "start revision", new Revision.Number(3), actualRange[0]);
+        assertEquals("Notification of beginning of merge reported incorrect " +
+                     "end revision", new Revision.Number(4), actualRange[1]);
 
         // now do the real merge
         client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD,
                      branchPath, false, true, false, false);
+        assertEquals("Notification of beginning of merge reported incorrect " +
+                     "start revision", new Revision.Number(3), actualRange[0]);
+        assertEquals("Notification of beginning of merge reported incorrect " +
+                     "end revision", new Revision.Number(4), actualRange[1]);
 
         // commit the changes so that we can verify merge
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
@@ -2317,7 +2348,8 @@ public class BasicTests extends SVNTests
     {
         // build the test setup
         OneTest thisTest = new OneTest();
-        Notify2 notify = new Notify2(){
+        Notify2 notify = new Notify2()
+        {
             public void onNotify(NotifyInformation info)
             {
                 client.isAdminDirectory(".svn");
@@ -2333,7 +2365,8 @@ public class BasicTests extends SVNTests
     {
         // build the test setup
         OneTest thisTest = new OneTest();
-        Notify2 notify = new Notify2(){
+        Notify2 notify = new Notify2()
+        {
             public void onNotify(NotifyInformation info)
             {
                 try

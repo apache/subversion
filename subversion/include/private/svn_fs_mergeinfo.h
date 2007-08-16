@@ -1,5 +1,5 @@
 /*
- * svn_fs_merge_info.h: Declarations for the APIs of libsvn_fs_util to
+ * svn_fs_mergeinfo.h: Declarations for the APIs of libsvn_fs_util to
  * be consumed by only fs_* libs.
  *
  * ====================================================================
@@ -51,16 +51,27 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn,
 /* Get the merge info for the set of PATHS (an array of
    absolute-in-the-fs paths) under ROOT and return it in *MERGEINFO,
    mapping char * paths to char * strings with mergeinfo, allocated in
-   POOL.  If INCLUDE_PARENTS is TRUE elide for mergeinfo.  If a path
-   has no mergeinfo, just return no info for that path.  Return an
-   error if the mergeinfo store does not exist or doesn't use the
-   'mergeinfo' schema.  */
+   POOL.  INHERIT indicates whether to get explicit, explicit or inherited,
+   or only inherited merge info for PATHS.  If a path has no mergeinfo,
+   just return no info for that path.  Return an error if the mergeinfo
+   store does not exist or doesn't use the 'mergeinfo' schema.  */
 svn_error_t *
-svn_fs_mergeinfo__get_merge_info(apr_hash_t **mergeinfo,
+svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
                                  svn_fs_root_t *root,
                                  const apr_array_header_t *paths,
-                                 svn_boolean_t include_parents,
+                                 svn_mergeinfo_inheritance_t inherit,
                                  apr_pool_t *pool);
+
+/* Get the combined mergeinfo for the tree under each one of PATHS
+   (an array of absolute-in-the-fs paths) under ROOT, and return it
+   in *MERGEINFO, mapping char * paths to mergeinfo hashs.  The resulting
+   mergeinfo also includes elided mergeinfo for each one of PATHS.  This
+   function conforms to the get_mergeinfo_for_tree() interface.  */
+svn_error_t *
+svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
+                                         svn_fs_root_t *root,
+                                         const apr_array_header_t *paths,
+                                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

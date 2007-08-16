@@ -1201,10 +1201,10 @@ svn_client_switch(svn_revnum_t *result_rev,
  * ### important for the sparse-directories work, so leaving it
  * ### for now.
  * 
- * @a path's parent must be under revision control already, but @a 
- * path is not.  If @a recursive is set, then assuming @a path is a 
- * directory, all of its contents will be scheduled for addition as 
- * well.
+ * @a path's parent must be under revision control already (unless
+ * @a add_parents is true), but @a path is not.  If @a recursive is 
+ * set, then assuming @a path is a directory, all of its contents will
+ * be scheduled for addition as well.
  *
  * If @a force is not set and @a path is already under version
  * control, return the error @c SVN_ERR_ENTRY_EXISTS.  If @a force is
@@ -1220,12 +1220,31 @@ svn_client_switch(svn_revnum_t *result_rev,
  * If @a no_ignore is false, don't add files or directories that match
  * ignore patterns.
  *
+ * If @a add_parents is true, recurse up @a path's directory and look for
+ * a versioned directory.  If found, add all intermediate paths between it
+ * and @a path.  If not found, return @c SVN_ERR_CLIENT_NO_VERSIONED_PARENTS.
+ *
  * @par Important:
  * This is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
  * can be removed with svn_client_revert().
  *
- * @since New in 1.3.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_add4(const char *path,
+                svn_boolean_t recursive,
+                svn_boolean_t force,
+                svn_boolean_t no_ignore,
+                svn_boolean_t add_parents,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_add4(), but with @a add_parents always set to
+ * false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_client_add3(const char *path,
@@ -1711,6 +1730,12 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each target.
  *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a targets will also be returned.
+ *
+ * If @a omit_log_text is set, the contents of the log message will not
+ * be returned.
+ *
  * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
  * return the error @c SVN_ERR_CLIENT_BAD_REVISION.
  *
@@ -1726,6 +1751,30 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
+ * @since New in 1.5.
+ */
+
+svn_error_t *
+svn_client_log4(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                svn_boolean_t omit_log_text,
+                svn_log_message_receiver2_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_log4(), but using @c svn_log_message_receiver_t
+ * instead of @c svn_log_message_receiver2_t.  Also, @a
+ * include_merged_revisions and @a omit_log_text are set to @c FALSE
+ *
+ * @deprecated Provided for compatibility with the 1.4 API.
  * @since New in 1.4.
  */
 svn_error_t *
@@ -2524,11 +2573,33 @@ svn_client_revert(const apr_array_header_t *paths,
  * @{
  */
 
+/**
+ * Similar to svn_client_resolved2(), but without automatic conflict
+ * resolution support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+svn_error_t *
+svn_client_resolved(const char *path,
+                    svn_boolean_t recursive,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
 /** Remove the 'conflicted' state on a working copy @a path.  This will
  * not semantically resolve conflicts;  it just allows @a path to be
  * committed in the future.  The implementation details are opaque.
  * If @a recursive is set, recurse below @a path, looking for conflicts 
  * to resolve.
+ *
+ * @a accept_ is the argument used to facilitate automatic conflict resolution.
+ * If @a accept_ is svn_accept_left, the contents of the conflicted file will
+ * be replaced with the prestine contents of the pre-modification base file
+ * contents.  If @a accept_ is svn_accept_right, the contents of the conflicted
+ * file will be replaced with the post-conflict base file contents.  If @a
+ * accept_ is svn_accept_working, the contents of the conflicted file will be
+ * the content of the pre-conflict working copy file.  If @a accept_ is
+ * svn_accept_default, conflict resolution will be handled just like before
+ * automatic conflict resolution was availble.
  *
  * ### TODO(sd): I don't see any reason to change this recurse parameter
  * ### to a depth, but making a note to re-check this logic later.
@@ -2536,12 +2607,15 @@ svn_client_revert(const apr_array_header_t *paths,
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-null,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
-svn_client_resolved(const char *path,
-                    svn_boolean_t recursive,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_resolved2(const char *path,
+                     svn_boolean_t recursive,
+                     svn_accept_t accept_,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 
 /** @} */
@@ -3083,15 +3157,15 @@ svn_client_revprop_get(const char *propname,
  * baton cached in @a ctx for authentication if contacting the
  * repository.
  *
- * If @a recurse is false, or @a target is a file, @a *props will contain 
- * only a single element.  Otherwise, it will contain one element for each
- * versioned entry below (and including) @a target.
- *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth right now; it's not exactly part of the
- * ### sparse-directories feature, although it's related.  Usually
- * ### you would just name the target carefully... Is there a
- * ### situation where depth support would be useful here?
+ * If @a depth is @c svn_depth_empty, list only the properties of
+ * @a path_or_url itself.  If @a depth is @c svn_depth_files, and
+ * @a path_or_url is a directory, list the properties of @a path_or_url
+ * and its file entries.  If @c svn_depth_immediates, list the properties
+ * of its immediate file and directory entries.  If @c svn_depth_infinity,
+ * list the properties of its file entries and recurse (with
+ * @c svn_depth_infinity) on directory entries.  @c svn_depth_unknown is
+ * equivalent to @c svn_depth_empty.  All other values produce undefined
+ * results.
  *
  * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
@@ -3101,7 +3175,7 @@ svn_error_t *
 svn_client_proplist3(const char *target,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
+                     svn_depth_t depth,
                      svn_proplist_receiver_t receiver,
                      void *receiver_baton,
                      svn_client_ctx_t *ctx,
@@ -3110,7 +3184,9 @@ svn_client_proplist3(const char *target,
 /**
  * Similar to svn_client_proplist3(), except the properties are returned 
  * as an array of @c svn_client_proplist_item_t * structures, instead of
- * by invoking the receiver function.
+ * by invoking the receiver function, and @a recurse is used instead of
+ * a @c svn_depth_t parameter (FALSE corresponds to @c svn_depth_empty,
+ * and TRUE to @c svn_depth_infinity).
  *
  * @since New in 1.2.
  *

@@ -18,7 +18,6 @@
 
 package org.tigris.subversion.javahl;
 
-import java.io.File;
 import java.io.OutputStream;
 
 import java.util.Map;
@@ -52,96 +51,12 @@ public class SVNClient implements SVNClientInterface
         // Ensure that Subversion's config file area and templates exist.
         try
         {
-            setConfigDirectory(determineInitialConfigDir());
+            setConfigDirectory(null);
         }
         catch (ClientException suppressed)
         {
             // Not an exception-worthy problem, continue on.
         }
-    }
-
-    /**
-     * Attempt to determine an initial configuration directory,
-     * <code>%APPDATA%\Subversion</code> on Windows and
-     * <code>~/.subversion</code> on other operating systems.
-     *
-     * @return The initial configuration directory, or
-     * <code>null</code> to use the library default.  Note that native
-     * library versions older than 1.4 may segfault if we return
-     * <code>null</code>.
-     */
-    protected String determineInitialConfigDir()
-    {
-        String path;
-        if (isOSWindows())
-        {
-            // On Windows, use the %APPDATA%\Subversion directory.
-            path = getEnv("APPDATA");
-            if (path == null)
-            {
-                path = getUserHomeDirectory();
-                if (path != null)
-                {
-                    path = new File(path, "Application Data").getPath();
-                }
-            }
-
-            if (path != null)
-            {
-                path = new File(path, "Subversion").getAbsolutePath();
-            }
-        }
-        else
-        {
-            // Everywhere else, use the ~/.subversion directory.
-            path = getUserHomeDirectory();
-            if (path != null)
-            {
-                path = new File(path, ".subversion").getAbsolutePath();
-            }
-        }
-        return path;
-    }
-
-    /**
-     * @return The absolute path to the current user's home directory,
-     * or <code>null</code> if it cannot be determined.
-     */
-    private static String getUserHomeDirectory()
-    {
-        // ### LATER: Wrap the svn_user_get_homedir() API and try it
-        // ### first.
-        String path = System.getProperty("user.home");
-        return (path != null ? path : getEnv("HOME"));
-    }
-
-    /**
-     * @param envVar The name of the environment variable to retrieve.
-     * @return The named environment variable, or <code>null</code> if
-     * it cannot be retrieved.
-     */
-    private static final String getEnv(String envVar)
-    {
-        try
-        {
-            return System.getenv(envVar);
-        }
-        catch (Throwable jreComplaint)
-        {
-            // As an example, Sun JRE 1.4.2_12-b03 throws
-            // java.lang.Error, with the message "getenv no longer
-            // supported, use properties and -D instead: HOME".
-            return null;
-        }
-    }
-
-    /**
-     * @return Whether the current operating system is Windows.
-     */
-    private static final boolean isOSWindows()
-    {
-        String opSys = System.getProperty("os.name");
-        return (opSys.toLowerCase().indexOf("windows") >= 0);
     }
 
     /**
@@ -437,7 +352,7 @@ public class SVNClient implements SVNClientInterface
         MyLogMessageCallback callback = new MyLogMessageCallback();
 
         logMessages(path, revisionEnd, revisionStart, revisionEnd,
-                    stopOnCopy, discoverPath, limit, callback);
+                    stopOnCopy, discoverPath, false, false, limit, callback);
 
         return callback.getMessages();
     }
@@ -451,6 +366,9 @@ public class SVNClient implements SVNClientInterface
      * @param stopOnCopy    do not continue on copy operations
      * @param discoverPath  returns the paths of the changed items in the
      *                      returned objects
+     * @param includeMergedRevisions include log messages for revisions which
+     *                               were merged.
+     * @param omitLogText   supress log message text.
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @return array of LogMessages
@@ -462,6 +380,8 @@ public class SVNClient implements SVNClientInterface
                                    Revision revisionEnd,
                                    boolean stopOnCopy,
                                    boolean discoverPath,
+                                   boolean includeMergedRevisions,
+                                   boolean omitLogText,
                                    long limit,
                                    LogMessageCallback callback)
             throws ClientException;
@@ -612,8 +532,27 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    public native void add(String path, boolean recurse, boolean force)
-            throws ClientException;
+    public void add(String path, boolean recurse, boolean force)
+            throws ClientException
+    {
+        add(path, recurse, force, false, false);
+    }
+
+    /**
+     * Adds a file to the repository.
+     * @param path      path to be added.
+     * @param recurse   recurse into subdirectories
+     * @param force     if adding a directory and recurse true and path is a
+     *                  directory, all not already managed files are added.
+     * @param noIgnores if false, don't add files or directories matching
+     *                  ignore patterns
+     * @param addParents add any intermediate parents to the working copy
+     * @throws ClientException
+     * @since 1.5
+     */
+    public native void add(String path, boolean recurse, boolean force,
+                           boolean noIgnores, boolean addParents)
+        throws ClientException;
 
     /**
      * Updates the directory or file from repository
@@ -1079,7 +1018,13 @@ public class SVNClient implements SVNClientInterface
     {
         for (int i = 0; i < revisions.length; i++)
         {
-            this.merge(path, pegRevision, revisions[i].getFromRevision(),
+            Revision from = revisions[i].getFromRevision();
+            if (from instanceof Revision.Number)
+            {
+                long revNum = ((Revision.Number) from).getNumber();
+                from = new Revision.Number(revNum - 1);
+            }
+            this.merge(path, pegRevision, from,
                        revisions[i].getToRevision(), localPath, force, depth,
                        ignoreAncestry, dryRun);
         }
@@ -1302,7 +1247,8 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
-        properties(path, revision, pegRevision, false, callback);
+        properties(path, revision, pegRevision, Depth.fromRecurse(false),
+                   callback);
 
         Map propMap = callback.getProperties(path);
         if (propMap == null)
@@ -1328,12 +1274,12 @@ public class SVNClient implements SVNClientInterface
      * @param path        the path of the item
      * @param revision    the revision of the item
      * @param pegRevision the revision to interpret path
-     * @param recurse     get properties from subdirectories also
+     * @param depth       the depth to recurse into subdirectories
      * @param callback    the callback to use to return the properties
      * @since 1.5
      */
     public native void properties(String path, Revision revision,
-                                  Revision pegRevision, boolean recurse,
+                                  Revision pegRevision, int depth,
                                   ProplistCallback callback)
             throws ClientException;
 
@@ -1704,9 +1650,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * Set directory for the configuration information
-     * @param configDir     path of the directory
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.setConfigDirectory(String)
      */
     public native void setConfigDirectory(String configDir)
             throws ClientException;
@@ -1893,12 +1837,6 @@ public class SVNClient implements SVNClientInterface
             throws SubversionException;
 
     /**
-     * Internal method to initialize the native layer. Only to be called by
-     * NativeResources.loadNativeLibrary
-     */
-    static native void initNative();
-
-    /**
      * A private log message callback implementation used by thin wrappers.
      * Instances of this class are not thread-safe.
      */
@@ -1910,7 +1848,8 @@ public class SVNClient implements SVNClientInterface
                                   long revision,
                                   String author,
                                   long timeMicros,
-                                  String message)
+                                  String message,
+                                  long numberChildren)
         {
             LogMessage msg = new LogMessage(changedPaths,
                                             revision,

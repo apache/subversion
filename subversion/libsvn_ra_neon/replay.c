@@ -22,7 +22,7 @@
 
 #include "../libsvn_ra/ra_loader.h"
 
-#include "ra_dav.h"
+#include "ra_neon.h"
 
 typedef struct {
   /* The underlying editor and baton we're replaying into. */
@@ -78,7 +78,7 @@ push_dir(replay_baton_t *rb, void *baton, const char *path, apr_pool_t *pool)
   di->file_pool = svn_pool_create(pool);
 }
 
-static const svn_ra_dav__xml_elm_t editor_report_elements[] =
+static const svn_ra_neon__xml_elm_t editor_report_elements[] =
 {
   { SVN_XML_NAMESPACE, "editor-report",    ELEM_editor_report, 0 },
   { SVN_XML_NAMESPACE, "target-revision",  ELEM_target_revision, 0 },
@@ -102,8 +102,8 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
 {
   replay_baton_t *rb = baton;
 
-  const svn_ra_dav__xml_elm_t *elm
-    = svn_ra_dav__lookup_xml_elem(editor_report_elements, nspace, elt_name);
+  const svn_ra_neon__xml_elm_t *elm
+    = svn_ra_neon__lookup_xml_elem(editor_report_elements, nspace, elt_name);
 
   if (! elm)
     {
@@ -356,8 +356,8 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
 {
   replay_baton_t *rb = baton;
 
-  const svn_ra_dav__xml_elm_t *elm
-    = svn_ra_dav__lookup_xml_elem(editor_report_elements, nspace, elt_name);
+  const svn_ra_neon__xml_elm_t *elm
+    = svn_ra_neon__lookup_xml_elem(editor_report_elements, nspace, elt_name);
 
   if (! elm)
     return SVN_NO_ERROR;
@@ -446,15 +446,15 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
 }
 
 svn_error_t *
-svn_ra_dav__replay(svn_ra_session_t *session,
-                   svn_revnum_t revision,
-                   svn_revnum_t low_water_mark,
-                   svn_boolean_t send_deltas,
-                   const svn_delta_editor_t *editor,
-                   void *edit_baton,
-                   apr_pool_t *pool)
+svn_ra_neon__replay(svn_ra_session_t *session,
+                    svn_revnum_t revision,
+                    svn_revnum_t low_water_mark,
+                    svn_boolean_t send_deltas,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
+                    apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session->priv;
+  svn_ra_neon__session_t *ras = session->priv;
   replay_baton_t rb;
 
   const char *body
@@ -475,14 +475,14 @@ svn_ra_dav__replay(svn_ra_session_t *session,
   rb.prop_pool = svn_pool_create(pool);
   rb.prop_accum = svn_stringbuf_create("", rb.prop_pool);
 
-  return svn_ra_dav__parsed_request(ras, "REPORT", ras->url->data, body,
-                                    NULL, NULL,
-                                    start_element,
-                                    cdata_handler,
-                                    end_element,
-                                    &rb,
-                                    NULL, /* extra headers */
-                                    NULL, /* status code */
-                                    FALSE, /* spool response */
-                                    pool);
+  return svn_ra_neon__parsed_request(ras, "REPORT", ras->url->data, body,
+                                     NULL, NULL,
+                                     start_element,
+                                     cdata_handler,
+                                     end_element,
+                                     &rb,
+                                     NULL, /* extra headers */
+                                     NULL, /* status code */
+                                     FALSE, /* spool response */
+                                     pool);
 }

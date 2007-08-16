@@ -45,5 +45,5 @@ Pool::~Pool()
   JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
   JNIUtil::setRequestPool(NULL);
   if (m_pool)
-    svn_pool_destroy (m_pool);
+    svn_pool_destroy(m_pool);
 }

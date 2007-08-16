@@ -1015,7 +1015,7 @@ print_tree(svn_fs_root_t *root,
   SVN_ERR(check_cancel(NULL));
 
   /* Print the indentation. */
-  if(!full_paths)
+  if (!full_paths)
     for (i = 0; i < indentation; i++)
       SVN_ERR(svn_cmdline_fputs(" ", stdout, pool));
 

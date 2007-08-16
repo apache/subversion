@@ -27,17 +27,22 @@ public interface LogMessageCallback
     /**
      * The method will be called for every log message.
      *
-     * @param changedPaths the paths that were changed
-     * @param revision     the revision of the commit
-     * @param author       the author of the commit
-     * @param timeMicros   the time of the commit measured in the
-     *                     number of microseconds since 00:00:00
-     *                     January 1, 1970 UTC
-     * @param message      the log message for the commit
+     * @param changedPaths   the paths that were changed
+     * @param revision       the revision of the commit
+     * @param author         the author of the commit
+     * @param timeMicros     the time of the commit measured in the
+     *                       number of microseconds since 00:00:00
+     *                       January 1, 1970 UTC
+     * @param message        the log message for the commit
+     * @param numberChildren when merge sensitive option was requested
+     *                       the number of child entries.  The next
+     *                       calls to the function will be the child
+     *                       entries
      */
     public void singleMessage(ChangePath[] changedPaths,
                               long revision,
                               String author,
                               long timeMicros,
-                              String message);
+                              String message,
+                              long numberChildren);
 }

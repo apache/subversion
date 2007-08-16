@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -104,12 +104,12 @@ typedef struct svn_ra__vtable_t {
                           svn_revnum_t revision,
                           apr_uint32_t dirent_fields,
                           apr_pool_t *pool);
-  svn_error_t *(*get_merge_info)(svn_ra_session_t *session,
-                                 apr_hash_t **mergeinfo,
-                                 const apr_array_header_t *paths,
-                                 svn_revnum_t revision,
-                                 svn_boolean_t include_parents,
-                                 apr_pool_t *pool);
+  svn_error_t *(*get_mergeinfo)(svn_ra_session_t *session,
+                                apr_hash_t **mergeinfo,
+                                const apr_array_header_t *paths,
+                                svn_revnum_t revision,
+                                svn_mergeinfo_inheritance_t inherit,
+                                apr_pool_t *pool);
   svn_error_t *(*do_update)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
                             void **report_baton,
@@ -157,7 +157,9 @@ typedef struct svn_ra__vtable_t {
                           int limit,
                           svn_boolean_t discover_changed_paths,
                           svn_boolean_t strict_node_history,
-                          svn_log_message_receiver_t receiver,
+                          svn_boolean_t include_merged_revisions,
+                          svn_boolean_t omit_log_text,
+                          svn_log_message_receiver2_t receiver,
                           void *receiver_baton,
                           apr_pool_t *pool);
   svn_error_t *(*check_path)(svn_ra_session_t *session,
@@ -252,7 +254,7 @@ svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
 svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
                               const svn_ra__vtable_t **vtable,
                               apr_pool_t *pool);
-svn_error_t *svn_ra_dav__init(const svn_version_t *loader_version,
+svn_error_t *svn_ra_neon__init(const svn_version_t *loader_version,
                               const svn_ra__vtable_t **vtable,
                               apr_pool_t *pool);
 svn_error_t *svn_ra_serf__init(const svn_version_t *loader_version,

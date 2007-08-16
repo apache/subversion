@@ -147,7 +147,8 @@ merge info inheritance and elision, specifically:</p>
 
  <li>Merge rev N to PATH with switched CHILD with no explicit merge info:
    CHILD does not inherit merge info from its working copy ancestors.  CHILD
-   gets merge info for rev N plus any inherited mergeinfo from the repository.
+   gets merge info for rev N plus any inherited mergeinfo from the
+   repository (<i>unimplemented</i>).
    </li>
 
  <li>Elision: Merge info on switched paths never elides.</li>
@@ -174,6 +175,89 @@ inheritance, changes to merge info on a directory affects merge info
 on any child paths.</p>
 
 </div>  <!-- prop-change -->
+
+<div class="h2" id="mergeinfo-elision">
+<h2>Merge Info Elision</h2>
+
+<p>Merge info set on a working copy "child" path as a result of a merge,
+switch, or update, may fully/partially elide to the path's nearest working
+copy or repository ancestor with fully/partially equivalent merge info.
+This elision is done as part of the merge/switch/update:</p>
+
+<div class="h3" id="full-elision">
+<h3>Full Elision</h3>
+
+<ul>
+ <li><b>Simple Equivalency</b>: The merge info on a child path and the merge
+ info on its nearest ancestor both map the same set of source paths to the
+ same revision ranges.  The "same" source path is taken to mean that the only
+ differences between the two are relative path differences which are exactly
+ the same as the relative path differences between the child and the ancestor,
+ e.g.:<pre>
+  Properties on '/A_COPY_2':
+    svn:mergeinfo : /A:4-9
+  /A_COPY:3
+  Properties on '/A_COPY_2/B/E':
+    svn:mergeinfo : /A/B/E:4-9
+  /A_COPY/B/E:3</pre>
+  The merge info on 'A_COPY_2/B/E' elides to 'A_COPY_2' because the only
+  differences between the merge source paths on each is 'B/E' which is the same
+  as the relative path difference between 'A_COPY_2/B/E' and 'A_COPY_2'.
+ </li>
+</ul>
+
+<ul><li><b>Semantic Equivalency</b>: Excepting paths <i>unique</i> to the child
+ or ancestor which map to empty revision ranges, the merge info between the
+ child and ancestor is otherwise equivalent per the definition of simple
+ equivalency, e.g.:<pre>
+  Properties on '/A_COPY_2':
+    svn:mergeinfo : /A:4-9
+  /A_COPY:
+  Properties on '/A_COPY_2/B/E':
+    svn:mergeinfo : /A/B/E:4-9
+
+  Properties on '/A_COPY_2':
+    svn:mergeinfo : /A:4-9
+  Properties on '/A_COPY_2/B/E':
+    svn:mergeinfo : /A/B/E:4-9
+  /A_COPY/B/E:</pre>
+  In both of the above examples the merge info on 'A_COPY_2/B/E' elides to
+  'A_COPY_2'.
+ </li>
+</ul>
+
+<ul><li><b>Empty Revision Range Equivalency</b>: If the merge info on a path is
+ made up entirely of paths mapped to empty revision ranges and the path has no
+ ancestor with merge info then the merge info fully elides.
+ </li>
+</ul>
+
+</div>  <!-- full-elision -->
+
+<div class="h3" id="partial-elision">
+<h3>Partial Elision</h3>
+
+<ul>
+ <li><b>Partial Equivalency</b>: Only the merge source paths <i>unique</i> to
+ the child which map to empty revision ranges will elide if the merge info
+ between the  child and ancestor is otherwise non-equivalent, e.g.:<pre>
+  Properties on '/A_COPY_2':
+    svn:mergeinfo : /A:4-6
+  Properties on '/A_COPY_2/B/E':
+    svn:mergeinfo : /A/B/E:5
+  /A_COPY/B/E:</pre>
+  The empty revision range merge info from 'A_COPY/B/E' on 'A_COPY_2/B/E'
+  elides, leaving:<pre>
+  Properties on '/A_COPY_2':
+    svn:mergeinfo : /A:4-6
+  Properties on '/A_COPY_2/B/E':
+    svn:mergeinfo : /A/B/E:5</pre>
+</li>
+</ul>
+
+</div>  <!-- partial-elision -->
+
+</div>  <!-- mergeinfo-elision -->
 
 <div class="h2" id="merge-history">
 <h2>Merge History</h2>
@@ -262,13 +346,14 @@ by these commands may be added at some point in the future (e.g. for
 use by third-party clients like <a href="http://tortoisesvn.tigris.org/"
 >TortoiseSVN</a>).</p>
 
-<p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
-single-character shortcut (<code>-g</code>), will be introduced for the 
-toggle merge information.  Using it will enable these commands to show the
-additional information gleaned from parsing and processing the merge info
-on the targets in question.  This switch will also work with
-<code>--xml</code> to include additional merge information.  The new
-functionality added by <code>--merge-sensitive</code> is as follows.</p>
+<p>A new switch, <code>--use-merge-history</code>, along with a
+corresponding single-character shortcut (<code>-g</code>), will be
+introduced for the toggle merge information.  Using it will enable these
+commands to show the additional information gleaned from parsing and
+processing the merge info on the targets in question.  This switch will
+also work with <code>--xml</code> to include additional merge
+information.  The new functionality added by
+<code>--use-merge-history</code> is as follows.</p>
 
 <dl>
   <dt><code>svn log</code></dt>
@@ -286,45 +371,45 @@ functionality added by <code>--merge-sensitive</code> is as follows.</p>
 
   <p>For instance, if Alice was the original author of r12, Bob was the
   orginial author of r14, and Chuck merged them both r12 and r14 as part
-  of r24, the output of <code>svn log --merge-sensitive</code>
+  of r24, the output of <code>svn log --use-merge-history</code>
   will look like this:</p>
   <pre>
 ------------------------------------------------------------------------
-r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 2 lines
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
  
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
-r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 2 lines
+r14 | bob | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
-r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r24
 
 Fix frapnalyzer bug in frobnicator.
   </pre>
 
-  <p>Using the same example, the output of <code>svn log --merge-sensitive
-  --verbose</code> will look like:</p>
+  <p>Using the same example, the output of <code>svn log
+  --use-merge-history --verbose</code> will look like:</p>
 
   <pre>
 ------------------------------------------------------------------------
-r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 2 lines
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/death-ray.c
    M /trunk/frobnicator/frapnalyzer.c
  
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
-r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 2 lines
+r14 | bob | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/death-ray.c
 Result of a merge from: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
-r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/frobnicator/frapnalyzer.c
    M /trunk/death-ray.c
@@ -334,30 +419,30 @@ Fix frapnalyzer bug in frobnicator.
   </pre>
 
   <p>If r12 was itself a merge of r9 and r10, <code>svn log
-  --merge-sensitive</code> for r24 will look like this:</p>
+  --use-merge-history</code> for r24 will look like this:</p>
 
   <pre>
 ------------------------------------------------------------------------
-r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 2 lines
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
  
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
-r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 2 lines
+r14 | bob | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
-r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r24
 
 Fix frapnalyzer bug in frobnicator.
 ------------------------------------------------------------------------
-r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 2 lines
+r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r12, r24
 
 Fix frapnalyzer documentation.
 ------------------------------------------------------------------------
-r9  | bob   | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 2 lines
+r9 | bob | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Result of a merge from: r12, r24
 
 Whitespace fixes.  No functional change.
@@ -368,6 +453,11 @@ Whitespace fixes.  No functional change.
   messages will be in revision number order, but changes will be presented in
   the order they were actually made.</p>
   
+  <p>Output for <code>svn log -g --xml</code> will exploit the tree structure
+  of XML to include child messages as subelements of the corresponding parent
+  log messages.  Consumers can use the location of a particular log message in
+  the tree to determine its ancestry.</p>
+
   </dd>
 
   <dt><code>svn blame</code></dt>
@@ -378,7 +468,7 @@ Whitespace fixes.  No functional change.
 </dl>
 
 <p>For commits which remove merge info (e.g. reverts),
-<code>--merge-sensitive</code> will trace back to the original author.  For
+<code>--use-merge-history</code> will trace back to the original author.  For
 example if Alice makes a commit to code previously modified by Bob (committed
 with no merge history), and Alice's commit is subsequently reverted by Chris,
 we should show Bob as the author.  If Bob's commit was itself the result of a
@@ -399,7 +489,8 @@ merge, we should recurse until we find a commit which did not add merge info
 been suggested:</p>
 
 <ul>
-  <li>A configuration option to always enable <code>--merge-sensitive</code>.
+  <li>A configuration option to always enable
+  <code>--use-merge-history</code>.
   </li>
 </ul>
 

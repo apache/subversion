@@ -211,7 +211,6 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
 {
     svn_ra_serf__connection_t *conn = data;
     svn_ra_serf__session_t *session = conn->session;
-    apr_port_t port;
     svn_error_t *error;
     void *creds;
 
@@ -908,6 +907,11 @@ handle_response(serf_request_t *request,
 
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
+    {
+      return status;
+    }
+  if (!sl.version && (APR_STATUS_IS_EOF(status) ||
+                      APR_STATUS_IS_EAGAIN(status)))
     {
       return status;
     }

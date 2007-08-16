@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -48,9 +48,9 @@ static svn_error_t *compat_open(void **session_baton,
   /* Here, we should be calling svn_ra_create_callbacks to initialize
    * the svn_ra_callbacks2_t structure.  However, doing that
    * introduces a circular dependancy between libsvn_ra and
-   * libsvn_ra_{local,dav,svn}, which include wrapper_template.h.  In
-   * turn, circular dependancies break the build on win32 (and
-   * possibly other systems).
+   * libsvn_ra_{local,neon,serf,svn}, which include
+   * wrapper_template.h.  In turn, circular dependancies break the
+   * build on win32 (and possibly other systems).
    *
    * In order to avoid this happening at all, the code of
    * svn_ra_create_callbacks is duplicated here.  This is evil, but
@@ -351,9 +351,18 @@ static svn_error_t *compat_get_log(void *session_baton,
                                    void *receiver_baton,
                                    apr_pool_t *pool)
 {
+  svn_log_message_receiver2_t receiver2;
+  void *receiver2_baton;
+
+  svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
+                               receiver, receiver_baton,
+                               pool);
+
   return VTBL.get_log(session_baton, paths, start, end, 0, /* limit */
                       discover_changed_paths, strict_node_history,
-                      receiver, receiver_baton, pool);
+                      FALSE, /* include_merged_revisions */
+                      FALSE, /* omit_log_text */
+                      receiver2, receiver2_baton, pool);
 }
 
 static svn_error_t *compat_check_path(void *session_baton,

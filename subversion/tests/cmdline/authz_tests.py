@@ -22,51 +22,16 @@ import os
 # Our testing module
 import svntest
 
+from svntest.main import skip_test_when_no_authz_available
+from svntest.main import write_restrictive_svnserve_conf 
+from svntest.main import write_authz_file
 
 # (abbreviation)
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 
-######################################################################
-# Utilities
-#
-
-def write_restrictive_svnserve_conf(repo_dir):
-  "Create a restrictive authz file ( no anynomous access )."
-  
-  fp = open(svntest.main.get_svnserve_conf_file_path(repo_dir), 'w')
-  fp.write("[general]\nanon-access = none\nauth-access = write\n"
-           "authz-db = authz\n")
-  if svntest.main.enable_sasl == 1:
-    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
-  else:
-    fp.write("password-db = passwd\n")
-  fp.close()
-
-def write_authz_file(sbox, rules, sections=None):
-  """Write an authz file to SBOX, appropriate for the RA method used,
-with authorizations rules RULES mapping paths to strings containing
-the rules. You can add sections SECTIONS (ex. groups, aliases...) with 
-an appropriate list of mappings.
-"""
-  fp = open(sbox.authz_file, 'w')
-  if sbox.repo_url.startswith("http"):
-    prefix = sbox.name + ":"
-  else:
-    prefix = ""
-  if sections:
-    for p, r in sections.items():
-      fp.write("[%s]\n%s\n" % (p, r))  
-
-  for p, r in rules.items():
-    fp.write("[%s%s]\n%s\n" % (prefix, p, r))
-  fp.close()
-
-def skip_test_when_no_authz_available():
-  "skip this test when authz is not available"
-  if svntest.main.test_area_url.startswith('file://'):
-    raise svntest.Skip
-    
 ######################################################################
 # Tests
 #
@@ -845,6 +810,38 @@ def authz_locking(sbox):
                                         None, None,
                                         mu_path)
   
+# test for issue #2712: if anon-access == read, svnserve should also check
+# authz to determine whether a checkout/update is actually allowed for
+# anonymous users, and, if not, attempt authentication.
+def authz_svnserve_anon_access_read(sbox):
+  "authz issue #2712"
+
+  sbox.build(create_wc = False)
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  B_path = os.path.join(sbox.wc_dir, 'A', 'B')
+  B_url = sbox.repo_url + '/A/B'
+  D_path = os.path.join(sbox.wc_dir, 'A', 'D')
+  D_url = sbox.repo_url + '/A/D'
+
+  # We want a svnserve.conf with anon-access = read.
+  write_restrictive_svnserve_conf(sbox.repo_dir, "read")
+
+  # Give jrandom read access to /A/B.  Anonymous users can only
+  # access /A/D.
+  write_authz_file(sbox, { "/A/B" : "jrandom = r",
+                           "/A/D" : "* = r" })
+
+  # Perform a checkout of /A/B, expecting to see no errors.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     B_url, B_path)
+
+  # Anonymous users should be able to check out /A/D.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     D_url, D_path)
 
 ########################################################################
 # Run the tests
@@ -863,6 +860,8 @@ test_list = [ None,
               authz_aliases,
               authz_validate,
               authz_locking,
+              SkipUnless(authz_svnserve_anon_access_read,
+                         svntest.main.is_ra_type_svn),
              ]
 
 if __name__ == '__main__':

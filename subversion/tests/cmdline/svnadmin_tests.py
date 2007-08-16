@@ -259,6 +259,8 @@ def empty_date(sbox):
   # Verify that the revision still lacks the svn:date property.
   svntest.actions.run_and_verify_svn(None, [], [], "propget",
                                      "--revprop", "-r1", "svn:date",
+                                     "--username", svntest.main.wc_author,
+                                     "--password", svntest.main.wc_passwd,
                                      sbox.wc_dir)
 
 #----------------------------------------------------------------------
@@ -338,15 +340,15 @@ def hotcopy_dot(sbox):
   backup_dir, backup_url = sbox.add_repo_path('backup')
   os.mkdir(backup_dir)
   cwd = os.getcwd()
-  try:
-    os.chdir(backup_dir)
-    output, errput = svntest.main.run_svnadmin("hotcopy",
-                                               os.path.join(cwd, sbox.repo_dir),
-                                               '.')
-    if errput:
-      raise svntest.Failure
-  finally:
-    os.chdir(cwd)
+
+  os.chdir(backup_dir)
+  output, errput = svntest.main.run_svnadmin("hotcopy",
+                                             os.path.join(cwd, sbox.repo_dir),
+                                             '.')
+  if errput:
+    raise svntest.Failure
+
+  os.chdir(cwd)
 
   origout, origerr = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
   backout, backerr = svntest.main.run_svnadmin("dump", backup_dir, '--quiet')

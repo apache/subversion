@@ -90,7 +90,7 @@ txn_body_lock(void *baton, trail_t *trail)
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
   if (kind == svn_node_dir)
-    return svn_fs__err_not_file(trail->fs, args->path);
+    return SVN_FS__ERR_NOT_FILE(trail->fs, args->path);
 
   /* While our locking implementation easily supports the locking of
      nonexistent paths, we deliberately choose not to allow such madness. */
@@ -101,7 +101,7 @@ txn_body_lock(void *baton, trail_t *trail)
 
   /* There better be a username attached to the fs. */
   if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
-    return svn_fs__err_no_user(trail->fs);
+    return SVN_FS__ERR_NO_USER(trail->fs);
   else
     fs_username = trail->fs->access_ctx->username; /* for convenience */
 
@@ -168,7 +168,7 @@ txn_body_lock(void *baton, trail_t *trail)
       if (! args->steal_lock)
         {
           /* Sorry, the path is already locked. */
-          return svn_fs__err_path_already_locked(trail->fs,
+          return SVN_FS__ERR_PATH_ALREADY_LOCKED(trail->fs,
                                                       existing_lock);
         }
       else
@@ -272,18 +272,18 @@ txn_body_unlock(void *baton, trail_t *trail)
       if (args->token == NULL)
         return svn_fs_base__err_no_lock_token(trail->fs, args->path);
       else if (strcmp(lock_token, args->token) != 0)
-        return svn_fs__err_no_such_lock(trail->fs, args->path);
+        return SVN_FS__ERR_NO_SUCH_LOCK(trail->fs, args->path);
 
       SVN_ERR(svn_fs_bdb__lock_get(&lock, trail->fs, lock_token, 
                                    trail, trail->pool));
 
       /* There better be a username attached to the fs. */
       if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
-        return svn_fs__err_no_user(trail->fs);
+        return SVN_FS__ERR_NO_USER(trail->fs);
 
       /* And that username better be the same as the lock's owner. */
       if (strcmp(trail->fs->access_ctx->username, lock->owner) != 0)
-        return svn_fs__err_lock_owner_mismatch
+        return SVN_FS__ERR_LOCK_OWNER_MISMATCH
           (trail->fs,
            trail->fs->access_ctx->username,
            lock->owner);

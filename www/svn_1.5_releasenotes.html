@@ -30,6 +30,7 @@
   <li>Cancellation improvements</li>
   <li>Changelist support</li>
   <li>FSFS sharding</li>
+  <li>Command-line client improvements</li>
   <li>JavaHL bindings improvements</li>
   <li>Many improved APIs</li>
   <li>More than XXX new bug fixes</li>
@@ -150,7 +151,8 @@ activated using the SVNMasterURI directive in httpd.conf.</p>
 <h3>Cyrus SASL support for ra_svn and <tt>svnserve</tt> (<em>client
 and server</em>)</h3>
 
-<p>XXX</p>
+<p>XXX: Described <a
+href="http://svn.collab.net/repos/svn/trunk/notes/sasl.txt">here</a>.</p>
 
 </div> <!-- cyrus-sasl -->
 
@@ -167,7 +169,9 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
 <h3>FSFS sharding</h3>
 
 <p>XXX: Useful for file systems which don't perform well with a large
-number of files in a directory.  <a
+number of files in a directory -- see blog entry <a
+href="http://www.farside.org.uk/200704/tree_structured_fsfs">here</a>.
+<a
 href="http://svn.collab.net/repos/svn/trunk/tools/server-side/fsfs-reshard.py"
 >Migration script</a> provided.</p>
 
@@ -194,6 +198,45 @@ href="http://svn.collab.net/repos/svn/trunk/tools/server-side/fsfs-reshard.py"
 
 </div>  <!-- cancellation-improvements -->
 
+<div class="h3" id="cmdline" title="cmdline">
+<h3>Command-line client improvements (<em>client</em>)</h3>
+
+<ul>
+  <li>A <code>--use-merge-history</code> option to adhere to Merge
+    Tracking meta data has been added to the following sub-commands:
+    <ul>
+      <!-- li>blame</li -->
+      <li>log</li>
+      <li>merge</li>
+    </ul>
+  </li>
+
+  <li>A <code>--parents</code> option to create intermediate
+    directories has been added to the following sub-commands:
+    <ul>
+      <li>add</li>
+      <li>copy</li>
+      <li>move</li>
+      <li>mkdir</li>
+    </ul>
+  </li>
+
+  <!-- ### Anticipated addition(s):
+  <li><code>--merged-from</code> and <code>--merged-to</code> options
+    to report on merge info have been added to the <code>info</code>
+    sub-command.</li>
+
+  <li>An <code>--accept=orig|mine|repo</code> option to select which
+    version of a path to retain has been added to the
+    <code>resolved</code> sub-command.</li>
+  -->
+
+  <li>A <code>--keep-local</code> option to retain paths locally has
+    been added to the <code>delete</code> sub-command.</li>
+</ul>
+
+</div>  <!-- cmdline -->
+
 <div class="h3" id="javahl-improvements" title="javahl-improvements">
 <h3>Javahl bindings improvements</h3>
 
@@ -210,6 +253,9 @@ href="http://svn.collab.net/repos/svn/trunk/tools/server-side/fsfs-reshard.py"
 <ul>
   <li>XXX: Enumerate specific new API additions (e.g. merge info
     retrieval?)</li>
+
+  <li>APIs backing the new <a href="#cmdline">Command-line client
+    improvements</a> section have been added.</li>
 
   <li>Many APIs have been revised to newer versions.</li>
 </ul>

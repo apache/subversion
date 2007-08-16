@@ -25,6 +25,7 @@ from svntest import SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -32,6 +33,9 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Utilities
 #
+
+def is_non_posix_os_or_cygwin_platform():
+  return (not svntest.main.is_posix_os()) or sys.platform == 'cygwin'
 
 def get_standard_state(wc_dir):
   """Return a status list reflecting the local mods made by
@@ -1201,7 +1205,7 @@ def commit_rmd_and_deleted_file(sbox):
 
 #----------------------------------------------------------------------
 
-# Issue #644 which failed over ra_dav.
+# Issue #644 which failed over ra_neon.
 def commit_add_file_twice(sbox):
   "issue 644 attempt to add a file twice"
 
@@ -1277,20 +1281,17 @@ def commit_from_long_dir(sbox):
   # random behaviour, but still caused the test to fail
   extra_name = 'xx'
 
-  try:
-    os.chdir(wc_dir)
-    os.mkdir(extra_name)
-    os.chdir(extra_name)
+  os.chdir(wc_dir)
+  os.mkdir(extra_name)
+  os.chdir(extra_name)
 
-    svntest.actions.run_and_verify_commit(abs_wc_dir,
-                                          expected_output,
-                                          None,
-                                          None,
-                                          None, None,
-                                          None, None,
-                                          abs_wc_dir)
-  finally:
-    os.chdir(was_dir)
+  svntest.actions.run_and_verify_commit(abs_wc_dir,
+                                        expected_output,
+                                        None,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        abs_wc_dir)
   
 #----------------------------------------------------------------------
 
@@ -1348,21 +1349,20 @@ def commit_current_dir(sbox):
   svntest.main.run_svn(None, 'propset', 'pname', 'pval', wc_dir)
 
   was_cwd = os.getcwd()
-  try:
-    os.chdir(wc_dir)
 
-    expected_output = svntest.wc.State('.', {
-      '.' : Item(verb='Sending'),
-      })
-    svntest.actions.run_and_verify_commit('.',
-                                          expected_output,
-                                          None,
-                                          None,
-                                          None, None,
-                                          None, None,
-                                          '.')
-  finally:
-    os.chdir(was_cwd)
+  os.chdir(wc_dir)
+
+  expected_output = svntest.wc.State('.', {
+    '.' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit('.',
+                                        expected_output,
+                                        None,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        '.')
+  os.chdir(was_cwd)
 
   # I can't get the status check to work as part of run_and_verify_commit.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1657,7 +1657,7 @@ def commit_nonrecursive(sbox):
                                         os.path.join(wc_dir, fileC_path))
 
 #----------------------------------------------------------------------
-# Regression for #1017: ra_dav was allowing the deletion of out-of-date
+# Regression for #1017: ra_neon was allowing the deletion of out-of-date
 # files or dirs, which majorly violates Subversion's semantics.
 
 
@@ -1770,22 +1770,17 @@ def from_wc_top_with_bad_editor(sbox):
   svntest.actions.run_and_verify_svn("Unexpected failure from propset.",
                                      SVNAnyOutput, [],
                                      'pset', 'fish', 'food', wc_dir)
-  was_cwd = os.getcwd()
-  try:
-    os.chdir(wc_dir)
-    out, err = svntest.actions.run_and_verify_svn(
-      "Commit succeeded when should have failed.",
-      None, SVNAnyOutput,
-      'ci', '--editor-cmd', 'no_such-editor')
+  os.chdir(wc_dir)
+  out, err = svntest.actions.run_and_verify_svn(
+    "Commit succeeded when should have failed.",
+    None, SVNAnyOutput,
+    'ci', '--editor-cmd', 'no_such-editor')
 
-    err = string.join(map(string.strip, err), ' ')
-    if not (re.match(".*no_such-editor.*", err)
-            and re.match(".*Commit failed.*", err)):
-      print "Commit failed, but not in the way expected."
-      raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
+  err = string.join(map(string.strip, err), ' ')
+  if not (re.match(".*no_such-editor.*", err)
+          and re.match(".*Commit failed.*", err)):
+    print "Commit failed, but not in the way expected."
+    raise svntest.Failure
   
 
 def mods_in_schedule_delete(sbox):
@@ -2415,7 +2410,7 @@ test_list = [ None,
               commit_with_bad_log_message,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
-              Skip(tab_test, (os.name != 'posix' or sys.platform == 'cygwin')),
+              Skip(tab_test, is_non_posix_os_or_cygwin_platform),
               local_mods_are_not_commits,
               post_commit_hook_test,
               commit_same_folder_in_targets,

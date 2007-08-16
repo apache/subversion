@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,11 +17,11 @@
 ######################################################################
 
 # General modules
-import re, os
+import re, os, sys
 
 # Our testing module
 import svntest
-from svntest import SVNAnyOutput
+from svntest import wc, SVNAnyOutput
 
 
 ######################################################################
@@ -207,6 +207,11 @@ def parse_log_output(log_lines):
 
      'paths'    ===>  list of tuples of the form (X, PATH), where X is the
   first column of verbose output, and PATH is the affected path.
+
+  If LOG_LINES contains merge result information, then the hash also contains
+
+     'merges'   ===> list of merging revisions that resulted in this log
+  being part of the list of messages.
      """
 
   # Here's some log output to look at while writing this function:
@@ -254,6 +259,7 @@ def parse_log_output(log_lines):
 
     match = header_re.search(this_line)
     if match and match.groups():
+      is_result = 0
       this_item = {}
       this_item['revision'] = int(match.group(1))
       this_item['author']   = match.group(2)
@@ -262,14 +268,35 @@ def parse_log_output(log_lines):
       this_item['lines']    = lines
 
       # Parse verbose output, starting with "Changed paths"
-      if log_lines.pop(0).strip() == 'Changed paths:':
+      next_line = log_lines.pop(0)
+      if next_line.strip() == 'Changed paths:':
         paths = []
         path_line = log_lines.pop(0).strip()
-        while path_line != '':
+
+        # Stop on either a blank line or a "Result of a merge..." line
+        while path_line != '' and path_line[0:6] != 'Result':
           paths.append( (path_line[0], path_line[2:]) )
           path_line = log_lines.pop(0).strip()
 
         this_item['paths'] = paths
+
+        if path_line[0:6] == 'Result':
+          is_result = 1
+          result_line = path_line
+
+      elif next_line[0:6] == 'Result':
+        is_result = 1
+        result_line = next_line.strip()
+
+      # Parse output of "Result of a merge..." line
+      if is_result:
+        merges = []
+        for rev_str in result_line[24:].split(','):
+          merges.append(int(rev_str.strip()[1:]))
+        this_item['merges'] = merges
+
+        # Eat blank line
+        log_lines.pop(0)
 
       # Accumulate the log message
       msg = ''
@@ -281,6 +308,7 @@ def parse_log_output(log_lines):
         this_item['msg'] = msg
         chain.append(this_item)
     else:  # if didn't see separator now, then something's wrong
+      print this_line
       raise SVNLogParseError, "trailing garbage after log message"
 
   return chain
@@ -396,17 +424,12 @@ def plain_log(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log')
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log')
 
-    log_chain = parse_log_output(output)
-    check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
-    
-  finally:
-    os.chdir(was_cwd)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
 
 
 #----------------------------------------------------------------------
@@ -415,38 +438,33 @@ def versioned_log_message(sbox):
 
   sbox.build()
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    iota_path = os.path.join('iota')
-    mu_path = os.path.join('A', 'mu')
-    log_path = os.path.join('A', 'D', 'H', 'omega')
-    
-    svntest.main.file_append(iota_path, "2")
-    
-    # try to check in a change using a versioned file as your log entry.
-    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                       'ci', '-F', log_path)
+  iota_path = os.path.join('iota')
+  mu_path = os.path.join('A', 'mu')
+  log_path = os.path.join('A', 'D', 'H', 'omega')
 
-    # force it.  should not produce any errors.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-F', log_path, '--force-log')
+  svntest.main.file_append(iota_path, "2")
 
-    svntest.main.file_append(mu_path, "2")
+  # try to check in a change using a versioned file as your log entry.
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                     'ci', '-F', log_path)
 
-    # try the same thing, but specifying the file to commit explicitly.
-    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                       'ci', '-F', log_path, mu_path)
+  # force it.  should not produce any errors.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-F', log_path, '--force-log')
 
-    # force it...  should succeed.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci',
-                                       '-F', log_path,
-                                       '--force-log', mu_path)
+  svntest.main.file_append(mu_path, "2")
 
-  finally:
-    os.chdir(was_cwd)
+  # try the same thing, but specifying the file to commit explicitly.
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                     'ci', '-F', log_path, mu_path)
+
+  # force it...  should succeed.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci',
+                                     '-F', log_path,
+                                     '--force-log', mu_path)
 
 
 #----------------------------------------------------------------------
@@ -505,33 +523,24 @@ def log_with_path_args(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    output, err = svntest.actions.run_and_verify_svn(
-      None, None, [],
-      'log', sbox.repo_url, 'A/D/G', 'A/D/H')
+  output, err = svntest.actions.run_and_verify_svn(
+    None, None, [],
+    'log', sbox.repo_url, 'A/D/G', 'A/D/H')
 
-    log_chain = parse_log_output(output)
-    check_log_chain(log_chain, [8, 6, 5, 3, 1])
-
-  finally:
-    os.chdir(was_cwd)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [8, 6, 5, 3, 1])
 
 #----------------------------------------------------------------------
 def dynamic_revision(sbox):
   "'svn log -r COMMITTED' of dynamic/local WC rev"
 
   guarantee_repos_and_wc(sbox)
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    for rev in ('HEAD', 'BASE', 'COMMITTED', 'PREV'):
-      svntest.actions.run_and_verify_svn(None, None, [], 'log', '-r', rev)
-  finally:
-    os.chdir(was_cwd)
+  for rev in ('HEAD', 'BASE', 'COMMITTED', 'PREV'):
+    svntest.actions.run_and_verify_svn(None, None, [], 'log', '-r', rev)
 
 #----------------------------------------------------------------------
 def log_wc_with_peg_revision(sbox):
@@ -678,15 +687,11 @@ V 27
 PROPS-END
 """
 
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
-  URL = sbox.repo_url
-
   # load dumpfile with control character into repos to get
   # a log with control char content
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  svntest.actions.load_repo(sbox, dump_str=dump_str)
+
+  URL = sbox.repo_url
 
   # run log
   output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
@@ -819,6 +824,201 @@ def log_verbose(sbox):
   check_log_chain(log_chain, range(max_revision, 1 - 1, -1), path_counts)
 
 
+def log_parser(sbox):
+  "meta-test for the log parser"
+
+  logs = ['''------------------------------------------------------------------------
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
+Changed paths:
+   M /trunk/death-ray.c
+   M /trunk/frobnicator/frapnalyzer.c
+ 
+Merge r12 and r14 from branch to trunk.
+------------------------------------------------------------------------
+r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
+Changed paths:
+   M /trunk/death-ray.c
+Result of a merge from: r24
+
+Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
+------------------------------------------------------------------------
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
+Changed paths:
+   M /trunk/frobnicator/frapnalyzer.c
+   M /trunk/death-ray.c
+Result of a merge from: r24
+
+Fix frapnalyzer bug in frobnicator.
+------------------------------------------------------------------------''',
+  '''------------------------------------------------------------------------
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
+ 
+Merge r12 and r14 from branch to trunk.
+------------------------------------------------------------------------
+r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r24
+
+Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
+------------------------------------------------------------------------
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r24
+
+Fix frapnalyzer bug in frobnicator.
+------------------------------------------------------------------------
+r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r12, r24
+
+Fix frapnalyzer documentation.
+------------------------------------------------------------------------
+r9 | bob   | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r12, r24
+
+Whitespace fixes.  No functional change.
+------------------------------------------------------------------------''',
+  '''------------------------------------------------------------------------
+r5 | kfogel | Tue 6 Nov 2001 17:18:19 | 1 line
+
+Log message for revision 5.
+------------------------------------------------------------------------
+r4 | kfogel | Tue 6 Nov 2001 17:18:18 | 3 lines
+
+Log message for revision 4
+but with multiple lines
+to test the code.
+------------------------------------------------------------------------
+r3 | kfogel | Tue 6 Nov 2001 17:18:17 | 1 line
+
+Log message for revision 3.
+------------------------------------------------------------------------''',
+  ]  # end of log list
+
+  for log in logs:
+    log_chain = parse_log_output([line+"\n" for line in log.split("\n")])
+
+
+def check_merge_results(log_chain, expected_merges):
+  '''Check LOG_CHAIN to see if the log information contains 'Result of Merge'
+  informaiton indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
+  whose key is the merged revision, and whose value is the merging revision.'''
+
+  for rev in expected_merges.keys():
+    try:
+      log = [x for x in log_chain if x['revision'] == rev][0]
+      actual = log['merges']
+      expected = expected_merges[rev]
+
+      if actual != expected:
+        raise SVNUnexpectedLogs(("Merging revisions in rev %d not correct; " +
+                                 "expecting %s, found %s") % 
+                                (rev, str(expected), str(actual)), log_chain)
+    except IndexError:
+      raise SVNUnexpectedLogs("Merged revision '%d' missing" % rev, log_chain)
+
+
+def merge_sensitive_log_single_revision(sbox):
+  "test sensitive log on a single revision"
+
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
+
+  # Paths we care about
+  wc_dir = sbox.wc_dir
+  TRUNK_path = os.path.join(wc_dir, "trunk")
+  BRANCH_B_path = os.path.join(wc_dir, "branches", "b")
+
+  # Run the merge sensitive log, and compare results
+  saved_cwd = os.getcwd()
+
+  os.chdir(TRUNK_path)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r14')
+
+  log_chain = parse_log_output(output)
+  expected_merges = {
+    13 : [14], 12 : [14], 11 : [14, 12],
+    }
+  check_merge_results(log_chain, expected_merges)
+
+  os.chdir(saved_cwd)
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r12', BRANCH_B_path)
+  log_chain = parse_log_output(output)
+  expected_merges = {
+      11 : [12],
+    }
+  check_merge_results(log_chain, expected_merges)
+
+
+def merge_sensitive_log_branching_revision(sbox):
+  "test 'svn log -g' on a branching revision"
+
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
+
+  # Paths we care about
+  wc_dir = sbox.wc_dir
+  BRANCH_B_path = os.path.join(wc_dir, "branches", "b")
+  TRUNK_path = os.path.join(wc_dir, "trunk")
+
+  # Run log on a copying revision
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r10', BRANCH_B_path)
+
+  # Parse and check output.  There should be no extra revisions.
+  logchain = parse_log_output(output)
+  if len(logchain) != 1 or logchain[0]['revision'] != 10:
+    raise SVNUnexpectedLogs("Expecting only r10", logchain)
+
+  # Run log on a non-copying revision that adds mergeinfo
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r6', TRUNK_path)
+
+  # Parse and check output.  There should be one extra revision.
+  logchain = parse_log_output(output)
+  if len(logchain) != 2 or (logchain[0]['revision'] != 6
+                            or logchain[1]['revision'] != 4):
+    raise SVNUnexpectedLogs("Expecting both r6 and r4", logchain)
+
+  
+def log_single_change(sbox):
+  "test log -c for a single change"
+
+  guarantee_repos_and_wc(sbox)
+  repo_url = sbox.repo_url
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
+                                                   '-c', 4, repo_url)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [4])
+
+def log_changes_range(sbox):
+  "test log -c on range of changes"
+
+  guarantee_repos_and_wc(sbox)
+  repo_url = sbox.repo_url
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-c', '2:5', repo_url)
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2, 3, 4, 5])
+
+def log_changes_list(sbox):
+  "test log -c on comma-separated list of changes"
+
+  guarantee_repos_and_wc(sbox)
+  repo_url = sbox.repo_url
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-c', '2,5,7', repo_url)
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2, 5, 7])
+
+
 ########################################################################
 # Run the tests
 
@@ -840,6 +1040,12 @@ test_list = [ None,
               log_limit,
               log_base_peg,
               log_verbose,
+              log_parser,
+              merge_sensitive_log_single_revision,
+              XFail(merge_sensitive_log_branching_revision),
+              XFail(log_single_change),
+              XFail(log_changes_range),
+              XFail(log_changes_list),
              ]
 
 if __name__ == '__main__':

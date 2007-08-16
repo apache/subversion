@@ -111,8 +111,8 @@ svn_error_t *load_configs(svn_config_t **cfg,
                           const char *base,
                           apr_pool_t *pool);
 
-/* Initialize the Cyrus SASL library. */
-svn_error_t *cyrus_init(void);
+/* Initialize the Cyrus SASL library. POOL is used for allocations. */
+svn_error_t *cyrus_init(apr_pool_t *pool);
 
 /* Authenticate using Cyrus SASL. */
 svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn, 

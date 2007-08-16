@@ -1699,24 +1699,18 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = Svn::Client::Context.new
     setup_auth_baton(ctx.auth_baton)
-    ctx.add_simple_provider
+    ctx.send(method)
     assert_raises(Svn::Error::RaNotAuthorized) do
-      assert_equal(src, ctx.cat(svnserve_uri))
+      ctx.cat(svnserve_uri)
     end
-
-    ctx = Svn::Client::Context.new
-    setup_auth_baton(ctx.auth_baton)
-    ctx.add_simple_provider
-    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
-      cred.username = @author
-      cred.password = @password
-      cred.may_save = true
-    end
-    assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
 
     ctx = Svn::Client::Context.new
     setup_auth_baton(ctx.auth_baton)
     ctx.send(method)
+    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
+      cred.username = @author
+      cred.password = @password
+    end
     assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
   end
 
@@ -1724,14 +1718,16 @@ class SvnClientTest < Test::Unit::TestCase
     assert_simple_provider(:add_simple_provider)
   end
 
-  def test_windows_simple_provider
-    return unless Svn::Core.respond_to?(:auth_get_windows_simple_provider)
-    assert_simple_provider(:add_windows_simple_provider)
+  if Svn::Core.respond_to?(:auth_get_windows_simple_provider)
+    def test_windows_simple_provider
+      assert_simple_provider(:add_windows_simple_provider)
+    end
   end
 
-  def test_keychain_simple_provider
-    return unless Svn::Core.respond_to?(:auth_get_keychain_simple_provider)
-    assert_simple_provider(:add_keychain_simple_provider)
+  if Svn::Core.respond_to?(:auth_get_keychain_simple_provider)
+    def test_keychain_simple_provider
+      assert_simple_provider(:add_keychain_simple_provider)
+    end
   end
 
   def test_username_provider

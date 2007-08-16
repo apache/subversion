@@ -22,7 +22,7 @@ Example configuration:
 Participants:
   Slave  -> slave.example.com  (there can be many!)
   Master -> master.example.com (there can only be one!)
-  A WebDAV client (ra_dav, ra_serf, other WebDAV clients)
+  A WebDAV client (ra_neon, ra_serf, other WebDAV clients)
 
 Each client does:
 

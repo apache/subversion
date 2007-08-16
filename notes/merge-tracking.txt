@@ -17,30 +17,17 @@ history index).
   '-r 2:3,9:12').  Client tools will use this to best support
   cherry-picking.  Command-line client UI to follow post-1.5.
 
-  * Write libsvn_client API.  (lundblad)
+  * Write libsvn_client API.
 
   * Write corresponding JavaHL bindings.  (dlr/markphip)
 
 * Provide a libsvn_client API capable of listing "all unmerged
   revisions".  Client tools will use this to allow the user to select
-  the revisions to merge (e.g. a la 'svn merge --show-available [URL]').
+  the revisions to merge via 'svn log --merges-available-from=[URL]'.
   (kamesh)
 
   * Always recurse (in case child merge info differs), but support the
     --depth option.
-
-  * Need new RA call.
-
-* Allow for merge info which contains empty merge info for a path,
-  necessary for override of merge info by child paths which would
-  otherwise inherit merge info from their parents which they don't
-  reflect.
-
-  * FIXME: The code path from client to FS allows such values to
-    make it all the way through to the FS, but empty merge info for a
-    path are not making it into the merge info index in a meaningful
-    fashion yet (the "mergeinfo" table isn't getting updated, only the
-    "mergeinfo_changed" table).  (dlr)
 
 * Handle notifications resulting from a merge.  (sussman)
 
@@ -60,12 +47,10 @@ history index).
 
   * Handle skips.
 
-    * If all changes in a merge are skipped, no merge info should be
-      recorded for the target.
-
     * If only some changes are skipped, merge info should be recorded
-      for the target, and recorded as empty (or with no modifications,
-      if there is pre-existing merge info) for the skipped items.
+      for the target (implemented r25085), and recorded as empty (or
+      with no modifications, if there is pre-existing merge info) for
+      the skipped items.
 
   * Handle conflicts.
 
@@ -100,13 +85,12 @@ history index).
 
   * Improve merge algorithm used for target trees with child paths
     that contain differing merge info, per Peter Lundblad's
-    suggestions. (lundblad)
+    suggestions.  See the following thread:
+    http://subversion.tigris.org/servlets/BrowseList?list=dev&by=thread&from=565086
 
 * Treat all revisions from a 'copy' source as merge info for the
   destination.  This equates to turning all those revs into actual
   merge info (target merge info = source revs + source merge info).
-
-  * Update func and/or design spec.
 
   * Handle WC -> WC 'copy'/'move' operations.  (dlr)
     http://subversion.tigris.org/merge-tracking/func-spec.html#wc-wc-copy-move
@@ -119,8 +103,11 @@ history index).
 * Account for merge info differences for switched directories when
   gathering and setting merge info.  (pburba)
 
+* Merging to out of date target can lead to corrupt merge info,
+  issue #2786.
+
 * Support --depth option for merge: Limit search for children with merge
-  info to depth and set appropriate merge info at depth.  (pburba)
+  info to depth and set appropriate merge info at depth.
 
 * Handle sparsely-populated directories, or portions of a tree not
   checked out due to lack of authorization.
@@ -167,9 +154,31 @@ Implement auditing/reporting and other high-level features.
 
   * Write up outcome in func-spec.html.
 
-* Add commutative author and revision reporting to 'svn log' and 'svn blame'.
-  The 'svn log' portion is currently being implemented on the
-  merge-sensitive-log branch.  (hwright)
+* Account for reflected revisions when performing cyclic merges.  For
+  example: trunk is branched, then modified, and the branch is brought
+  up to date with trunk in a manner which requires some conflict
+  resolution (e.g. additional changes on top of the revisions merged),
+  then the branch is modified, then the branch is merged to the trunk.
+  To avoid repeated merging of changes to trunk, only the modification
+  to the branch should be applied to trunk.  That is, both the changes
+  from the conflict resolution performed after the merge from trunk to
+  branch (but not the revisions from the merge itself), plus the
+  additional change on the branch, should be merged back to trunk.
+
+  To accomplish this, we need to be able to be able to:
+
+  * Identify revisions which are commits of merges.
+
+  * For those revisions, differentiate between changes from revisions
+    already reflected by (e.g. present in) the target, and additional
+    changes which were not part of a merge.
+
+  Typically, VC systems handle this by having two parents for a change
+  set, and applying graph algorithms to handle the mechanics of
+  determining what to merge. See the following thread for more details:
+  http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=127570
+
+* Add commutative author and revision reporting to 'svn blame'. (hwright)
 
 * Improve heuristics for grokking the source URL parameter to the
   'svn merge -cN URL' command.  See the comments inlined into the

@@ -2,7 +2,7 @@
  * mergeinfo.c : entry point for mergeinfo RA functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,6 +21,7 @@
 
 #include "svn_ra.h"
 #include "svn_xml.h"
+#include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_private_config.h"
 #include "svn_mergeinfo.h"
@@ -64,24 +65,24 @@ start_element(svn_ra_serf__xml_parser_t *parser,
   mergeinfo_state_e state;
 
   state = parser->state->current_state;
-  if (state == NONE && strcmp(name.name, "merge-info-report") == 0)
+  if (state == NONE && strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_REPORT);
     }
   else if (state == MERGE_INFO_REPORT &&
-           strcmp(name.name, "merge-info-item") == 0)
+           strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_ITEM);
       mergeinfo_ctx->curr_path = NULL;
       svn_stringbuf_setempty(mergeinfo_ctx->curr_info);
     }
   else if (state == MERGE_INFO_ITEM &&
-           strcmp(name.name, "merge-info-path") == 0)
+           strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_PATH);
     }
   else if (state == MERGE_INFO_ITEM &&
-           strcmp(name.name, "merge-info-info") == 0)
+           strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_INFO);
     }
@@ -98,30 +99,31 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
   state = parser->state->current_state;
 
   if (state == MERGE_INFO_REPORT &&
-      strcmp(name.name, "merge-info-report") == 0)
+      strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == MERGE_INFO_ITEM 
-           && strcmp(name.name, "merge-info-item") == 0)
+           && strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
       if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path)
         {
           apr_hash_t *path_mergeinfo;
-          SVN_ERR(svn_mergeinfo_parse(mergeinfo_ctx->curr_info->data,
-                                      &path_mergeinfo, mergeinfo_ctx->pool));
+          SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, 
+                                      mergeinfo_ctx->curr_info->data, 
+                                      mergeinfo_ctx->pool));
           apr_hash_set(mergeinfo_ctx->result, mergeinfo_ctx->curr_path,
                        APR_HASH_KEY_STRING, path_mergeinfo);
         }
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == MERGE_INFO_PATH 
-           && strcmp(name.name, "merge-info-path") == 0)
+           && strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == MERGE_INFO_INFO 
-           && strcmp(name.name, "merge-info-info") == 0)
+           && strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -155,21 +157,22 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
   return SVN_NO_ERROR;
 }
 
-/* Request a merge-info-report from the URL attached to SESSION,
+/* Request a mergeinfo-report from the URL attached to SESSION,
    and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
-svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
-                            apr_hash_t **mergeinfo,
-                            const apr_array_header_t *paths,
-                            svn_revnum_t revision,
-                            svn_boolean_t include_parents,
-                            apr_pool_t *pool)
+svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
+                           apr_hash_t **mergeinfo,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t revision,
+                           svn_mergeinfo_inheritance_t inherit,
+                           apr_pool_t *pool)
 {
   svn_error_t *err;
-  static const char minfo_request_head[]
-    = "<S:merge-info-report xmlns:S=\"" SVN_XML_NAMESPACE "\">";
+  static const char minfo_request_head[] =
+    "<S:" SVN_DAV__MERGEINFO_REPORT " xmlns:S=\"" SVN_XML_NAMESPACE "\">";
 
-  static const char minfo_request_tail[] = "</S:merge-info-report>";
+  static const char minfo_request_tail[] =
+    "</S:" SVN_DAV__MERGEINFO_REPORT ">";
   int i;
 
   mergeinfo_context_t *mergeinfo_ctx;
@@ -192,15 +195,12 @@ svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
   serf_bucket_aggregate_append(buckets, tmp);
 
   svn_ra_serf__add_tag_buckets(buckets,
-                               "S:revision", apr_ltoa(pool, revision),
+                               "S:" SVN_DAV__REVISION,
+                               apr_ltoa(pool, revision),
                                session->bkt_alloc);
-
-  if (include_parents)
-    {
-      svn_ra_serf__add_tag_buckets(buckets, "S:include-parents", 
-                                   NULL, session->bkt_alloc);
-    }
-
+  svn_ra_serf__add_tag_buckets(buckets, "S:" SVN_DAV__INHERIT,
+                               svn_inheritance_to_word(inherit),
+                               session->bkt_alloc);
   if (paths)
     {
       for (i = 0; i < paths->nelts; i++)
@@ -208,7 +208,7 @@ svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
           const char *this_path =
             apr_xml_quote_string(pool, APR_ARRAY_IDX(paths, i, const char *),
                                  0);
-          svn_ra_serf__add_tag_buckets(buckets, "S:path", 
+          svn_ra_serf__add_tag_buckets(buckets, "S:" SVN_DAV__PATH, 
                                        this_path, session->bkt_alloc);
         }
     }
@@ -245,7 +245,7 @@ svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_wait(&mergeinfo_ctx->done, session, pool);
   /* If the server responds with HTTP_NOT_IMPLEMENTED (which ra_serf
      translates into a Subversion error), assume its mod_dav_svn is
-     too old to understand the get-merge-info REPORT.
+     too old to understand the mergeinfo-report REPORT.
 
      ### It would be less expensive if we knew the server's
      ### capabilities *before* sending our REPORT. */

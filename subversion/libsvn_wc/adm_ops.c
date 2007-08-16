@@ -89,9 +89,10 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                                 &write_required,
                                 svn_wc_adm_access_pool(dirpath)));
 
-  if (depth == svn_depth_files
-      || depth == svn_depth_immediates
-      || depth == svn_depth_infinity)
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
+  if (depth > svn_depth_empty)
     {
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
@@ -135,9 +136,15 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
             }
       
           /* If a directory and recursive... */
-          else if ((depth == svn_depth_infinity)
+          else if ((depth == svn_depth_infinity
+                    || depth == svn_depth_immediates)
                    && (current_entry->kind == svn_node_dir))
             {
+              svn_depth_t depth_below_here = depth;
+
+              if (depth == svn_depth_immediates)
+                depth_below_here = svn_depth_empty;
+
               /* If the directory is 'missing', remove it.  This is safe as 
                  long as this function is only called as a helper to 
                  svn_wc__do_update_cleanup, since the update will already have 
@@ -170,7 +177,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                   SVN_ERR(tweak_entries
                           (child_access, child_url, repos, new_rev,
                            notify_func, notify_baton, remove_missing_dirs,
-                           depth, exclude_paths, subpool));
+                           depth_below_here, exclude_paths, subpool));
                 }
             }
         }
@@ -2229,16 +2236,26 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       
   if (is_file)
     {
+      svn_node_kind_t kind;
+      svn_boolean_t wc_special, local_special;
       svn_boolean_t text_modified_p;
       full_path = svn_path_join(full_path, name, pool);
 
-      /* Check for local mods. before removing entry */
-      SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
-                                     FALSE, adm_access, pool));
-      if (text_modified_p && instant_error)
-        return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
-                                 _("File '%s' has local modifications"),
-                                 svn_path_local_style(full_path, pool));
+      /* Only check if the file was modified when it wasn't overwritten with a 
+         special file */
+      SVN_ERR(svn_wc__get_special(&wc_special, full_path, adm_access, pool));
+      SVN_ERR(svn_io_check_special_path(full_path, &kind, &local_special, 
+                                        pool));
+      if (wc_special || ! local_special)
+        {
+          /* Check for local mods. before removing entry */
+          SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
+                  FALSE, adm_access, pool));
+          if (text_modified_p && instant_error)
+            return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
+                   _("File '%s' has local modifications"),
+                   svn_path_local_style(full_path, pool));
+        }
 
       /* Remove the wcprops. */
       SVN_ERR(svn_wc__remove_wcprops(adm_access, name, FALSE, pool));
@@ -2275,7 +2292,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
          it has local mods. */
       if (destroy_wf)
         {
-          if (text_modified_p)  /* Don't kill local mods. */
+          /* Don't kill local mods. */
+          if (text_modified_p || (! wc_special && local_special))
             return svn_error_create(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL, NULL);
           else  /* The working file is still present; remove it. */
             SVN_ERR(remove_file_if_present(full_path, pool));
@@ -2481,7 +2499,11 @@ attempt_deletion(const char *parent_dir,
 
 /* Conflict resolution involves removing the conflict files, if they exist,
    and clearing the conflict filenames from the entry.  The latter needs to
-   be done whether or not the conflict files exist.
+   be done whether or not the conflict files exist.  If @a accept is anything
+   but svn_accept_default, automatically resolve the
+   conflict with the respective temporary file contents.
+
+   @since 1.5 Automatic Conflict Resolution (Issue 2784)
 
    PATH is the path to the item to be resolved, BASE_NAME is the basename
    of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
@@ -2494,6 +2516,7 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
+                          svn_accept_t accept_,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           apr_pool_t *pool)
@@ -2501,6 +2524,34 @@ resolve_conflict_on_entry(const char *path,
   svn_boolean_t was_present, need_feedback = FALSE;
   apr_uint64_t modify_flags = 0;
   svn_wc_entry_t *entry = svn_wc_entry_dup(orig_entry, pool);
+  const char *auto_resolve_src;
+
+  /* Handle automatic conflict resolution before the temporary files are
+   * deleted, if necessary. */
+  switch (accept_)
+    {
+      case svn_accept_left:
+        auto_resolve_src = entry->conflict_old;
+        break;
+      case svn_accept_working:
+        auto_resolve_src = entry->conflict_wrk;
+        break;
+      case svn_accept_right:
+        auto_resolve_src = entry->conflict_new;
+        break;
+      case svn_accept_default:
+        auto_resolve_src = NULL;
+        break;
+      case svn_accept_invalid:
+        return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                _("Invalid 'accept' argument"));
+    }
+
+    if (auto_resolve_src)
+      SVN_ERR(svn_io_copy_file(
+        svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
+                      pool),
+        path, TRUE, pool));
 
   /* Yes indeed, being able to map a function over a list would be nice. */
   if (resolve_text && entry->conflict_old)
@@ -2576,6 +2627,8 @@ struct resolve_callback_baton
   svn_boolean_t resolve_text;
   /* TRUE if property conflicts are to be resolved. */
   svn_boolean_t resolve_props;
+  /* The type of automatic conflict resolution to perform */
+  svn_accept_t accept_;
   /* An access baton for the tree, with write access */
   svn_wc_adm_access_t *adm_access;
   /* Notification function and baton */
@@ -2610,8 +2663,8 @@ resolve_found_entry_callback(const char *path,
   
   return resolve_conflict_on_entry(path, entry, adm_access, base_name,
                                    baton->resolve_text, baton->resolve_props,
-                                   baton->notify_func, baton->notify_baton,
-                                   pool);
+                                   baton->accept_, baton->notify_func,
+                                   baton->notify_baton, pool);
 }
 
 static const svn_wc_entry_callbacks_t 
@@ -2651,6 +2704,25 @@ svn_wc_resolved_conflict2(const char *path,
                           svn_boolean_t resolve_props,
                           svn_boolean_t recurse,
                           svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *pool)
+{
+  return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
+                                   resolve_props, recurse, svn_accept_default,
+                                   notify_func, notify_baton, cancel_func,
+                                   cancel_baton, pool);
+}
+
+svn_error_t *
+svn_wc_resolved_conflict3(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t resolve_text,
+                          svn_boolean_t resolve_props,
+                          svn_boolean_t recurse,
+                          svn_accept_t accept_,
+                          svn_wc_notify_func2_t notify_func,
                           void *notify_baton,                         
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
@@ -2663,6 +2735,7 @@ svn_wc_resolved_conflict2(const char *path,
   baton->adm_access = adm_access;
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
+  baton->accept_ = accept_;
 
   if (! recurse)
     {
