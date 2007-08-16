@@ -699,27 +699,28 @@ svn_client_blame4(const char *target,
   for (; walk; walk = walk->next)
     {
       apr_off_t line_no;
+      svn_revnum_t merged_rev;
+      const char *merged_author, *merged_date;
+
+      if (walk->merged_rev)
+        {
+          merged_rev = walk->merged_rev->revision;
+          merged_author = walk->merged_rev->author;
+          merged_date = walk->merged_rev->date;
+        }
+      else
+        {
+          merged_rev = SVN_INVALID_REVNUM;
+          merged_author = NULL;
+          merged_date = NULL;
+        }
+
       for (line_no = walk->start;
            !walk->next || line_no < walk->next->start;
            ++line_no)
         {
           svn_boolean_t eof;
           svn_stringbuf_t *sb;
-          svn_revnum_t merged_rev;
-          const char *merged_author, *merged_date;
-
-          if (walk->merged_rev)
-            {
-              merged_rev = walk->merged_rev->revision;
-              merged_author = walk->merged_rev->author;
-              merged_date = walk->merged_rev->date;
-            }
-          else
-            {
-              merged_rev = SVN_INVALID_REVNUM;
-              merged_author = NULL;
-              merged_date = NULL;
-            }
 
           apr_pool_clear(iterpool);
           SVN_ERR(svn_stream_readline(stream, &sb, "\n", &eof, iterpool));
