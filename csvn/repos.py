@@ -228,6 +228,30 @@ class RemoteRepository(object):
     def _abs_copyfrom_path(self, path):
         return self.url.join(RepositoryURI(path, False))
 
+    def revprop_list(self, revnum=None):
+        """Returns a hash of the revision properties of REVNUM. If REVNUM is
+        not provided, it defaults to the head revision."""
+        rev = svn_opt_revision_t()
+        if revnum is not None:
+            rev.kind = svn_opt_revision_number
+            rev.value.number = revnum
+        else:
+            rev.kind = svn_opt_revision_head
+        
+        props = _types.Hash(POINTER(svn_string_t), None,
+                   wrapper=_types.SvnStringPtr)
+                   
+        set_rev = svn_revnum_t()
+        
+        svn_client_revprop_list(props.byref(),
+                        self.url,
+                        byref(rev),
+                        byref(set_rev),
+                        self.client,
+                        self.iterpool)
+                        
+        return props
+
 class LocalRepository(object):
     """A client which accesses the repository directly. This class
        may allow you to perform some administrative actions which

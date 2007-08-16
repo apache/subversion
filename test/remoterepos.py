@@ -35,6 +35,18 @@ class RemoteRepositoryTestCase(unittest.TestCase):
         self.assertEqual(svn_node_dir, self.repos.check_path("trunk/dir", 6))
         self.assertEqual(svn_node_none, self.repos.check_path("trunk/dir", 7))
         self.assertEqual(svn_node_none, self.repos.check_path("does_not_compute"))
+        
+    def test_revprop_list(self):
+        # Test argument-free case
+        props = self.repos.revprop_list()
+        self.assertEqual(props["svn:log"], "Restore information deleted in rev 8\n")
+        self.assertEqual(props["svn:author"], "bruce")
+        self.assertEqual(props["svn:date"], "2007-08-02T18:24:16.960652Z")
+        # Test with revnum argument
+        props = self.repos.revprop_list(4)
+        self.assertEqual(props["svn:log"], "Add important new file. This marks the 1.0 release.\n\n")
+        self.assertEqual(props["svn:author"], "clark")
+        self.assertEqual(props["svn:date"], "2007-08-02T17:38:08.361367Z")
 
 def suite():
     return unittest.makeSuite(RemoteRepositoryTestCase, 'test')
