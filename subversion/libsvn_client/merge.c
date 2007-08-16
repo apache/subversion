@@ -2783,7 +2783,7 @@ get_sw_mergeinfo_paths(apr_array_header_t *children_sw_or_with_mergeinfo,
    first order. For each such child, call do_merge() or do_single_file_merge()
    with the appropriate arguments (based on the type of child).  Use
    PARENT_ENTRY and ADM_ACCESS to fill CHILDREN_SW_OR_WITH_MERGEINFO.
-   Cascade PARENT_WC_URL, REVISION1, REVISION2, DEPTH,
+   Cascade PARENT_MERGE_SOURCE_URL, REVISION1, REVISION2, DEPTH,
    IGNORE_ANCESTRY, ADM_ACCESS, and MERGE_CMD_BATON to do_merge() and
    do_single_file_merge().  All allocation occurs in POOL.
    
@@ -2793,7 +2793,7 @@ get_sw_mergeinfo_paths(apr_array_header_t *children_sw_or_with_mergeinfo,
 static svn_error_t *
 discover_and_merge_children(apr_array_header_t **children_sw_or_with_mergeinfo,
                             const svn_wc_entry_t *parent_entry,
-                            const char *parent_wc_url,
+                            const char *parent_merge_source_url,
                             const svn_opt_revision_t *revision1,
                             const svn_opt_revision_t *revision2,
                             svn_depth_t depth,
@@ -2826,7 +2826,8 @@ discover_and_merge_children(apr_array_header_t **children_sw_or_with_mergeinfo,
                                       FALSE, pool));
       child_repos_path = child_wcpath +
         (merge_target_len ? merge_target_len + 1 : 0);
-      child_url = svn_path_join(parent_wc_url, child_repos_path, pool);
+      child_url = svn_path_join(parent_merge_source_url, 
+                                child_repos_path, pool);
       if (child_entry->kind == svn_node_file)
         {
           SVN_ERR(do_single_file_merge(child_url, revision1,
