@@ -245,7 +245,7 @@ end_207_element(void *baton, int state,
       b->contains_error |= b->propstat_has_error;
       svn_stringbuf_appendcstr(b->description,
                                apr_psprintf(b->req->pool,
-                                            "Error setting property '%s': ",
+                                            _("Error setting property '%s': "),
                                             b->propname->data));
       svn_stringbuf_appendstr(b->description,
                               b->propstat_description);
