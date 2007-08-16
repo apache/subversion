@@ -60,17 +60,17 @@ svn_error_t *svn_fs__check_fs(svn_fs_t *fs);
 
 /* Build a detailed `file already exists' message for PATH in ROOT.
    ROOT is of type svn_fs_root_t *. */
-#define SVN_FS__ALREADY_EXISTS(root, path) (                                   \
+#define SVN_FS__ALREADY_EXISTS(root, path_str) (                               \
   root->is_txn_root ?                                                          \
     svn_error_createf                                                          \
       (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
        _("File already exists: filesystem '%s', transaction '%s', path '%s'"), \
-       root->fs->path, root->txn, path)                                        \
+       root->fs->path, root->txn, path_str)                                    \
   :                                                                            \
     svn_error_createf                                                          \
       (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
        _("File already exists: filesystem '%s', revision %ld, path '%s'"),     \
-       root->fs->path, root->rev, path)                                        \
+       root->fs->path, root->rev, path_str)                                    \
   )
 
 /* ROOT is of type svn_fs_root_t *. */
