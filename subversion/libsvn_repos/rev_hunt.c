@@ -848,6 +848,9 @@ get_merged_path_revisions(apr_array_header_t *path_revisions,
                                                    svn_merge_range_t *);
 
           /* Search and find revisions to add to the PATH_REVISIONS list. */
+          /* TODO: A trace through this area of the code reveals that we are
+             searching the same path/revision range pairs multiple times.  Is
+             it possible to shortcircuit subsequent searches somehow? */
           err = find_interesting_revisions(path_revisions, repos, path,
                                            range->start, range->end,
                                            TRUE, TRUE, authz_read_func,

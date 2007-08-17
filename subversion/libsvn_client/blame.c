@@ -645,6 +645,11 @@ svn_client_blame4(const char *target,
 
   if (include_merged_revisions)
     {
+      /* TODO: This could be done a bit more efficiently.  Instead of calling
+         svn_ra_get_file_revs2() repeatedly, we could call it once, and use
+         the merged_revision flag to the callback to determine which revisions
+         to treat as members of the original line of history, and which ones
+         to use as merged revisions. */
       frbm.start_rev = start_revnum;
       frbm.end_rev = end_revnum;
       frbm.target = target;
