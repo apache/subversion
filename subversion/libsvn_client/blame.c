@@ -565,6 +565,7 @@ normalize_blames(struct blame_chain *chain,
                                          walk->next->start);
           walk_merged->next = tmp;
           walk_merged = walk_merged->next;
+          walk = walk->next;
         }
     }
 
@@ -577,6 +578,7 @@ normalize_blames(struct blame_chain *chain,
                                            walk_merged->next->start);
           walk->next = tmp;
           walk = walk->next;
+          walk_merged = walk_merged->next;
         }
     }
 }
