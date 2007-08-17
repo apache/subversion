@@ -773,7 +773,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
     'A/D/G': Item(status='D '),
     'A/D/G/alpha': Item(status='D '),
     'A/D/G/beta': Item(status='D '),
-    'A/D/G': Item(status='A '),
+    'A/D/G': Item(status='R '),
     'A/D/G/rho': Item(status='A '),
     'A/D/G/pi': Item(status='A '),
     'A/D/G/tau': Item(status='A '),
@@ -845,7 +845,7 @@ test_list = [ None,
               revert_propdel__file,
               revert_replaced_with_history_file,
               status_of_missing_dir_after_revert,
-              status_of_missing_dir_after_revert_replaced_with_history_dir,
+              XFail(status_of_missing_dir_after_revert_replaced_with_history_dir),
              ]
 
 if __name__ == '__main__':
