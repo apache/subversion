@@ -563,8 +563,8 @@ class WC(object):
          TO_URL instead, recursing into subdirectories if RECURSE is True
          (True by default)."""
          
-         svn_client_relocate(dir, from_url, to_url, recurse, self.client,
-                     self.iterpool)
+         svn_client_relocate(self._build_path(dir), from_url, to_url, recurse,
+                    self.client, self.iterpool)
                      
          self.iterpool.clear()
          
