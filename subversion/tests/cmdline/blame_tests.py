@@ -497,6 +497,35 @@ def blame_merge_info(sbox):
   parse_and_verify_blame(output, expected_blame, 1)
 
 
+def blame_merge_out_of_range(sbox):
+  "don't look for merged files out of range"
+
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
+
+  wc_dir = sbox.wc_dir
+  upsilon_path = os.path.join(wc_dir, 'trunk', 'A', 'upsilon')
+
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'blame', '-g', upsilon_path)
+  expected_blame = [
+      { 'revision' : 4,
+        'author' : 'jrandom',
+        'merge_revision' : None,
+        'merge_author' : None,
+        'text' : "This is the file 'upsilon'.\n",
+      },
+      { 'revision' : 14,
+        'author': 'jrandom',
+        'merge_revision' : 11,
+        'merge_author' : 'jrandom',
+        'text' : "There is also the file 'xi'.\n",
+      },
+    ]
+  parse_and_verify_blame(output, expected_blame, 1)
+
+
 ########################################################################
 # Run the tests
 
@@ -513,6 +542,7 @@ test_list = [ None,
               blame_ignore_whitespace,
               blame_ignore_eolstyle,
               blame_merge_info,
+              blame_merge_out_of_range,
              ]
 
 if __name__ == '__main__':

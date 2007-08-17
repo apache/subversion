@@ -843,14 +843,22 @@ get_merged_path_revisions(apr_array_header_t *path_revisions,
 
       for (i = 0; i < rangelist->nelts; i++)
         {
+          svn_error_t *err;
           svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                    svn_merge_range_t *);
 
           /* Search and find revisions to add to the PATH_REVISIONS list. */
-          SVN_ERR(find_interesting_revisions(path_revisions, repos, path,
-                                             range->start, range->end,
-                                             TRUE, TRUE, authz_read_func,
-                                             authz_read_baton, pool));
+          err = find_interesting_revisions(path_revisions, repos, path,
+                                           range->start, range->end,
+                                           TRUE, TRUE, authz_read_func,
+                                           authz_read_baton, pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_FS_NOT_FILE)
+                svn_error_clear(err);
+              else
+                return err;
+            }
         }
     }
 
@@ -876,14 +884,23 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
   apr_pool_t *iter_pool, *last_pool;
   svn_fs_history_t *history;
   svn_fs_root_t *root;
-  
+  svn_node_kind_t kind;
+  svn_revnum_t rev;
+ 
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */
   iter_pool = svn_pool_create(pool);
   last_pool = svn_pool_create(pool);
 
-  /* Open a history object. */
+  /* The path had better be a file in this revision. */
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, last_pool));
+  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+  if (kind != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file in revision %ld"),
+       path, end);
+
+  /* Open a history object. */
   SVN_ERR(svn_fs_node_history(&history, root, path, last_pool));
   
   while (1)
@@ -1026,27 +1043,14 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   apr_array_header_t *path_revisions = apr_array_make(pool, 0,
                                                 sizeof(struct path_revision *));
   apr_hash_t *last_props;
-  svn_fs_root_t *root, *last_root;
+  svn_fs_root_t *last_root;
   const char *last_path;
   int i;
-  svn_node_kind_t kind;
 
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */
   iter_pool = svn_pool_create(pool);
   last_pool = svn_pool_create(pool);
-
-  /* Open revision root for path@end. */
-  /* ### Can we use last_pool for this? How long does the history
-     object need the root? */
-  SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, pool));
-
-  /* The path had better be a file in this revision. This avoids calling
-     the callback before reporting an uglier error below. */
-  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
-  if (kind != svn_node_file)
-    return svn_error_createf
-      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path);
 
   /* Get the revisions we are interested in. */
   SVN_ERR(find_interesting_revisions(path_revisions, repos, path, start, end,
@@ -1075,6 +1079,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
       apr_hash_t *rev_props;
       apr_hash_t *props;
       apr_array_header_t *prop_diffs;
+      svn_fs_root_t *root;
       svn_txdelta_stream_t *delta_stream;
       svn_txdelta_window_handler_t delta_handler = NULL;
       void *delta_baton = NULL;
