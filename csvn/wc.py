@@ -585,3 +585,22 @@ class WC(object):
         svn_client_switch(byref(result_rev),
                   self._build_path(path), url, byref(revision),
                   recurse, self.client, self.pool)
+    
+    def lock(self, paths, comment=NULL, steal_lock=False):
+        """Lock the list of WC targets PATHS. If COMMENT is provided, it is
+        used as the comment for the lock. If STEAL_LOCK is True (False by
+        default), the lock will be created even if the file is already locked.
+        
+        Alternately, PATHS may be a list of URL targets. In this case, the
+        locks are created directly in the repository."""
+        targets = _types.Array(c_char_p, paths)
+        svn_client_lock(targets, comment, steal_lock, self.client, self.pool)
+        
+    def unlock(self, paths, break_lock=False):
+        """Unlock the list of WC targets PATHS. If BREAK_LOCK is True (False
+        by default), the locks willbe broken in the repository as well.
+        
+        Alternately, PATHS may be alist of URL targets. In this case, the
+        locks are destroyed in the repository."""
+        targets = _types.Array(c_char_p, paths)
+        svn_client_unlock(targets, break_lock, self.client, self.pool)

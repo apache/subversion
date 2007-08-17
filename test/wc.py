@@ -155,6 +155,28 @@ class WCTestCase(unittest.TestCase):
         self.wc.switch("trunk", os.path.join(repo_url,"tags"))
         if os.path.exists(os.path.join(wc_location,"trunk","README.txt")):
             self.fail("Switch did not happen")
+            
+    def test_lock(self):
+        self.wc.lock([os.path.join(wc_location,"trunk","README.txt")],
+                        "Test lock")
+        self.wc.info(path="trunk/README.txt",
+            info_func=self._info_reciever)
+        if not self.last_info.lock:
+            self.fail("Lock not aquired")
+            
+    def test_unlock(self):
+        self.wc.lock([os.path.join(wc_location,"trunk","README.txt")],
+                        "Test lock")
+        self.wc.info(path="trunk/README.txt",
+            info_func=self._info_reciever)
+        if not self.last_info.lock:
+            self.fail("Lock not aquired")
+        self.wc.unlock([os.path.join(wc_location,"trunk","README.txt")])
+        
+        self.wc.info(path="trunk/README.txt",
+            info_func=self._info_reciever)
+        if self.last_info.lock:
+            self.fail("Lock not released")
         
 
 def suite():
