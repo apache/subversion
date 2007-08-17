@@ -7215,7 +7215,8 @@ def merge_loses_mergeinfo(sbox):
 def single_file_replace_style_merge_capability(sbox):
   "replace-style merge capability for a single file"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2853. ##
+  # Test for issue #2853, do_single_file_merge() lacks "Replace-style
+  # merge" capability
 
   sbox.build()
   wc_dir = sbox.wc_dir
