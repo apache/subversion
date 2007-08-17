@@ -5,6 +5,7 @@ import tempfile
 from csvn.core import *
 from urllib import pathname2url
 from csvn.repos import LocalRepository, RemoteRepository
+from stat import *
 
 repos_location = os.path.join(tempfile.gettempdir(), "svn_test_repos")
 repos_url = "file://"+pathname2url(repos_location)
@@ -53,7 +54,25 @@ class RemoteRepositoryTestCase(unittest.TestCase):
         self.assertEqual(self.repos.revprop_get("svn:log"), "Restore information deleted in rev 8\n")
         # With revnum
         self.assertEqual(self.repos.revprop_get("svn:date", 4), "2007-08-02T17:38:08.361367Z")
-
+            
+    def test_revprop_set(self):
+        # For revprops to be changeable, we need to have a hook.
+        # We'll make a hook that accepts anything
+        hook = os.path.join(repos_location, "hooks", "pre-revprop-change")
+        f = open(hook, "w")
+        f.write("#!/bin/sh\nexit 0;")
+        f.close()
+        os.chmod(hook, S_IRWXU)
+        
+        revnum = self.repos.revprop_set("svn:log", "Changed log")
+        self.assertEqual(revnum, 9)
+        self.assertEqual(self.repos.revprop_get("svn:log"), "Changed log")
+            
+        # Test with revnum argument also
+        revnum = self.repos.revprop_set("svn:log", "Another changed log", 4)
+        self.assertEqual(revnum, 4)
+        self.assertEqual(self.repos.revprop_get("svn:log", 4), "Another changed log")
+        
 def suite():
     return unittest.makeSuite(RemoteRepositoryTestCase, 'test')
 

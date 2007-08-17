@@ -256,6 +256,35 @@ class RemoteRepository(object):
         """Returns the value of PROPNAME at REVNUM. If REVNUM is not
         provided, it defaults to the head revision."""
         return self.revprop_list(revnum)[propname]
+        
+    def revprop_set(self, propname, propval=NULL, revnum=None, force=False):
+        """Set PROPNAME to PROPVAL for REVNUM. If REVNUM is not given, it
+        defaults to the head revision. Returns the actual revision number
+        effected.
+        
+        If PROPVAL is not provided, the property will be deleted.
+        
+        If FORCE is True (False by default), newlines will be allowed in the
+        author property.
+        
+        Be careful, this is a lossy operation."""
+        rev = svn_opt_revision_t()
+        if revnum is not None:
+            rev.kind = svn_opt_revision_number
+            rev.value.number = revnum
+        else:
+            rev.kind = svn_opt_revision_head
+            
+        set_rev = svn_revnum_t()
+        
+        svn_client_revprop_set(propname,
+                svn_string_create(propval, self.iterpool), self.url,
+                byref(rev), byref(set_rev), force, self.client,
+                self.iterpool)
+                
+        self.iterpool.clear()
+        
+        return set_rev.value
 
 class LocalRepository(object):
     """A client which accesses the repository directly. This class
