@@ -769,7 +769,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                         wc_dir)
 
   # now rollback to r1, thereby reinstating the old 'G'
-  ### Eventually, expected status for 'A/D/G' should be 'R '
+  ### Eventually, expected output for 'A/D/G' should be 'R '
   ### (replaced) instead of 'A ' (added).  See issue #571 for details.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G': Item(status='D '),
