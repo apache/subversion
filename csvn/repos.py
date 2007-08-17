@@ -251,6 +251,11 @@ class RemoteRepository(object):
                         self.iterpool)
                         
         return props
+        
+    def revprop_get(self, propname, revnum=None):
+        """Returns the value of PROPNAME at REVNUM. If REVNUM is not
+        provided, it defaults to the head revision."""
+        return self.revprop_list(revnum)[propname]
 
 class LocalRepository(object):
     """A client which accesses the repository directly. This class

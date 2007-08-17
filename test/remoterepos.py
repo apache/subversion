@@ -47,6 +47,12 @@ class RemoteRepositoryTestCase(unittest.TestCase):
         self.assertEqual(props["svn:log"], "Add important new file. This marks the 1.0 release.\n\n")
         self.assertEqual(props["svn:author"], "clark")
         self.assertEqual(props["svn:date"], "2007-08-02T17:38:08.361367Z")
+            
+    def test_revprop_get(self):
+        # Test without revnum
+        self.assertEqual(self.repos.revprop_get("svn:log"), "Restore information deleted in rev 8\n")
+        # With revnum
+        self.assertEqual(self.repos.revprop_get("svn:date", 4), "2007-08-02T17:38:08.361367Z")
 
 def suite():
     return unittest.makeSuite(RemoteRepositoryTestCase, 'test')
