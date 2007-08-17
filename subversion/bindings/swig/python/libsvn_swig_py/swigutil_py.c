@@ -2860,6 +2860,81 @@ finished:
   return err;
 }
 
+/* svn_ra_callbacks_t */
+static void
+ra_callbacks_progress_func(apr_off_t progress,
+                           apr_off_t total,
+                           void *baton,
+                           apr_pool_t *pool)
+{
+  PyObject *callbacks = (PyObject *)baton;
+  PyObject *py_callback, *py_progress, *py_total, *result;
+
+  py_progress = py_total = NULL;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_callback = PyObject_GetAttrString(callbacks,
+                                       (char *)"progress_func");
+  if (py_callback == NULL)
+    {
+      /* Ouch, no way to pass on exceptions! */
+      /* err = callback_exception_error(); */
+      goto finished;
+    }
+  else if (py_callback == Py_None)
+    {
+      goto finished;
+    }
+
+  /* Create PyLongs for progress and total up-front, rather than
+     passing them directly, so we don't have to worry about the size
+     (if apr_off_t is 4 bytes, we'd better use the l specifier; if 8
+     bytes, better use L...) */
+  if ((py_progress = PyLong_FromLongLong(progress)) == NULL)
+    {
+      /* Ouch, no way to pass on exceptions! */
+      /* err = callback_exception_error(); */
+      goto finished;
+    }
+  if ((py_total = PyLong_FromLongLong(total)) == NULL)
+    {
+      /* Ouch, no way to pass on exceptions! */
+      /* err = callback_exception_error(); */
+      goto finished;
+    }
+  if ((result = PyObject_CallFunction(py_callback,
+                                      (char *)"OOO&", py_progress, py_total,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      /* Ouch, no way to pass on exceptions! */
+      /* err = callback_exception_error(); */
+    }
+
+  Py_XDECREF(result);
+finished:
+  Py_XDECREF(py_callback);
+  Py_XDECREF(py_progress);
+  Py_XDECREF(py_total);
+  svn_swig_py_release_py_lock();
+  /* Sure hope nothing went wrong... */
+  /* return err; */
+}
+
+/* svn_ra_callbacks_t */
+static svn_error_t *
+ra_callbacks_cancel_func(void *baton)
+{
+  PyObject *callbacks = (PyObject *)baton;
+  PyObject *py_callback;
+
+  svn_swig_py_acquire_py_lock();
+  py_callback = PyObject_GetAttrString(callbacks,
+                                       (char *)"cancel_func");
+  svn_swig_py_release_py_lock();
+  return svn_swig_py_cancel_func(py_callback);
+}
+
 void
 svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                void **baton,
@@ -2895,6 +2970,9 @@ svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
   (*callbacks)->set_wc_prop = ra_callbacks_set_wc_prop;
   (*callbacks)->push_wc_prop = ra_callbacks_push_wc_prop;
   (*callbacks)->invalidate_wc_props = ra_callbacks_invalidate_wc_props;
+  (*callbacks)->progress_func = ra_callbacks_progress_func;
+  (*callbacks)->progress_baton = py_callbacks;
+  (*callbacks)->cancel_func = ra_callbacks_cancel_func;
 
   *baton = py_callbacks;
 }
