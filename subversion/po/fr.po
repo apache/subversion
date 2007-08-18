@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-08-17 09:26+0200\n"
+"POT-Creation-Date: 2007-08-18 06:00+0200\n"
 "PO-Revision-Date: 2007-08-17 09:16+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
@@ -993,25 +993,25 @@ msgstr "Le répertoire '%s' ne peut être fermé"
 msgid "Error during recursive add of '%s'"
 msgstr "Erreur lors de l'ajout récursif de '%s'"
 
-#: libsvn_client/blame.c:368 libsvn_client/blame.c:838
+#: libsvn_client/blame.c:437 libsvn_client/blame.c:1108
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
 msgstr "Blame non calculable sur le fichier binaire '%s'"
 
-#: libsvn_client/blame.c:522
+#: libsvn_client/blame.c:673
 msgid "blame of the WORKING revision is not supported"
 msgstr "blame de la révision courante non supporté"
 
-#: libsvn_client/blame.c:535
+#: libsvn_client/blame.c:686
 msgid "Start revision must precede end revision"
 msgstr "La révision de début doit précéder la révision de fin"
 
-#: libsvn_client/blame.c:725 libsvn_client/cat.c:205
+#: libsvn_client/blame.c:995 libsvn_client/cat.c:205
 #, c-format
 msgid "URL '%s' refers to a directory"
 msgstr "L'URL '%s' référence un répertoire"
 
-#: libsvn_client/blame.c:798
+#: libsvn_client/blame.c:1068
 #, c-format
 msgid "Revision action '%c' for revision %ld of '%s' lacks a prior revision"
 msgstr ""
@@ -1066,14 +1066,14 @@ msgstr "Nouveau nom d'entrée requis lors de l'importation d'un fichier"
 msgid "'%s' does not exist"
 msgstr "'%s' n'existe pas"
 
-#: libsvn_client/commit.c:623 libsvn_client/copy.c:386 svnlook/main.c:1223
+#: libsvn_client/commit.c:623 libsvn_client/copy.c:476 svnlook/main.c:1223
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "Le chemin '%s' n'existe pas"
 
-#: libsvn_client/commit.c:758 libsvn_client/copy.c:395
-#: libsvn_client/copy.c:790 libsvn_client/copy.c:1119
-#: libsvn_client/copy.c:1551
+#: libsvn_client/commit.c:758 libsvn_client/copy.c:485
+#: libsvn_client/copy.c:880 libsvn_client/copy.c:1209
+#: libsvn_client/copy.c:1641
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "Le chemin '%s' existe déjà"
@@ -1083,15 +1083,15 @@ msgstr "Le chemin '%s' existe déjà"
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "'%s' est un nom réservé et ne peut être importé"
 
-#: libsvn_client/commit.c:905 libsvn_client/copy.c:973
+#: libsvn_client/commit.c:905 libsvn_client/copy.c:1063
 msgid "Commit failed (details follow):"
 msgstr "Échec de la propagation (commit), détails : "
 
-#: libsvn_client/commit.c:913 libsvn_client/copy.c:981
+#: libsvn_client/commit.c:913 libsvn_client/copy.c:1071
 msgid "Commit succeeded, but other errors follow:"
 msgstr "Succès de la propagation (commit), mais erreurs : "
 
-#: libsvn_client/commit.c:920 libsvn_client/copy.c:988
+#: libsvn_client/commit.c:920 libsvn_client/copy.c:1078
 msgid "Error unlocking locked dirs (details follow):"
 msgstr "Erreur en déverrouillant des répertoires verrouillés, détails :"
 
@@ -1101,7 +1101,7 @@ msgstr ""
 "Erreur en incrémentant les révisions après la propagation (post-commit), "
 "détails :"
 
-#: libsvn_client/commit.c:942 libsvn_client/copy.c:999
+#: libsvn_client/commit.c:942 libsvn_client/copy.c:1089
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "Erreur lors du nettoyage d'après-propagation (post-commit), détails :"
 
@@ -1193,13 +1193,13 @@ msgstr ""
 "Les propriétés standards ne peuvent être définies explicitement comme des "
 "propriétés de révision"
 
-#: libsvn_client/copy.c:411 libsvn_client/copy.c:1567
+#: libsvn_client/copy.c:501 libsvn_client/copy.c:1657
 #: libsvn_client/update.c:103
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "Le chemin '%s' n'est pas un répertoire"
 
-#: libsvn_client/copy.c:656
+#: libsvn_client/copy.c:746
 #, c-format
 msgid ""
 "Source and dest appear not to be in the same repository (src: '%s'; dst: '%"
@@ -1207,68 +1207,68 @@ msgid ""
 msgstr ""
 "Source et destination ne sont pas dans le même dépôt (src = '%s', dst = '%s')"
 
-#: libsvn_client/copy.c:771
+#: libsvn_client/copy.c:861
 #, c-format
 msgid "Cannot move URL '%s' into itself"
 msgstr "L'URL '%s' ne peut être déplacée (move) dans elle-même"
 
-#: libsvn_client/copy.c:780 libsvn_client/prop_commands.c:229
+#: libsvn_client/copy.c:870 libsvn_client/prop_commands.c:229
 #, c-format
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "Le chemin '%s' n'existe pas à la révision %ld"
 
-#: libsvn_client/copy.c:1392
+#: libsvn_client/copy.c:1482
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr ""
 "L'URL source '%s' est dans un dépôt distant ; laissée comme une copie "
 "disjointe"
 
-#: libsvn_client/copy.c:1538
+#: libsvn_client/copy.c:1628
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "Chemin '%s' non trouvé à la révision %ld"
 
-#: libsvn_client/copy.c:1543
+#: libsvn_client/copy.c:1633
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "Chemin '%s' non trouvé à la révision de tête"
 
-#: libsvn_client/copy.c:1593
+#: libsvn_client/copy.c:1683
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "L'entrée pour '%s' existe (mais la copie locale manque)"
 
-#: libsvn_client/copy.c:1688 libsvn_client/log.c:320
+#: libsvn_client/copy.c:1778 libsvn_client/log.c:320
 msgid "Revision type requires a working copy path, not a URL"
 msgstr ""
 "Type de révision qui requiert un chemin dans une copie locale, pas une URL"
 
-#: libsvn_client/copy.c:1723
+#: libsvn_client/copy.c:1813
 msgid "Cannot mix repository and working copy sources"
 msgstr "Impossible de mélanger des sources du dépôt et de la copie de travail"
 
-#: libsvn_client/copy.c:1765
+#: libsvn_client/copy.c:1855
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "Le chemin '%s' ne peut être copié dans son propre enfant '%s'"
 
-#: libsvn_client/copy.c:1785
+#: libsvn_client/copy.c:1875
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "Le chemin '%s' ne peut être déplacé dans lui-même"
 
-#: libsvn_client/copy.c:1794
+#: libsvn_client/copy.c:1884
 msgid "Moves between the working copy and the repository are not supported"
 msgstr ""
 "Les déplacements (move) entre copie de travail et dépôt ne sont pas supportés"
 
-#: libsvn_client/copy.c:1852
+#: libsvn_client/copy.c:1942
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' ne semble pas avoir d'URL associée"
 
-#: libsvn_client/copy.c:2204 svn/move-cmd.c:60
+#: libsvn_client/copy.c:2294 svn/move-cmd.c:60
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "L'opération 'move' n'accepte d'autre révision que HEAD"
 
@@ -1427,7 +1427,7 @@ msgid "'%s' is not locked"
 msgstr "'%s' n'est pas verrouillé"
 
 #: libsvn_client/locking_commands.c:406 libsvn_fs/fs-loader.c:1007
-#: libsvn_ra/ra_loader.c:944
+#: libsvn_ra/ra_loader.c:966
 msgid "Lock comment contains illegal characters"
 msgstr "Le commentaire du verrou (lock) contient des caractères incorrects"
 
@@ -1608,7 +1608,7 @@ msgid "Unrecognized revision type requested for '%s'"
 msgstr "Type de révision demandé inconnu pour '%s'"
 
 #: libsvn_client/switch.c:146 libsvn_ra_local/ra_plugin.c:108
-#: libsvn_ra_local/ra_plugin.c:597 libsvn_wc/update_editor.c:2695
+#: libsvn_ra_local/ra_plugin.c:599 libsvn_wc/update_editor.c:2695
 #, c-format
 msgid ""
 "'%s'\n"
@@ -1716,8 +1716,8 @@ msgstr "Argument '%s' invalide dans les options de diff"
 msgid "Failed to delete mmap '%s'"
 msgstr "Échec à l'effacement du placement mémoire (mmap) '%s'"
 
-#: libsvn_fs/fs-loader.c:104 libsvn_ra/ra_loader.c:170
-#: libsvn_ra/ra_loader.c:183
+#: libsvn_fs/fs-loader.c:104 libsvn_ra/ra_loader.c:171
+#: libsvn_ra/ra_loader.c:184
 #, c-format
 msgid "'%s' does not define '%s()'"
 msgstr "'%s' ne définit pas '%s()'"
@@ -2364,7 +2364,6 @@ msgstr ""
 
 #: libsvn_fs_base/tree.c:3675 libsvn_fs_base/tree.c:3680
 #: libsvn_fs_fs/tree.c:2596 libsvn_fs_fs/tree.c:2601
-#: libsvn_repos/rev_hunt.c:818
 #, c-format
 msgid "'%s' is not a file"
 msgstr "'%s' n'est pas un fichier"
@@ -2555,8 +2554,8 @@ msgstr "Dernière ligne du fichier de révision plus longue que 64 caractères"
 msgid "Final line in revision file missing space"
 msgstr "Il manque espace à la dernière ligne du fichier de révision"
 
-#: libsvn_fs_fs/fs_fs.c:1758 libsvn_fs_fs/fs_fs.c:1830 libsvn_repos/log.c:1287
-#: libsvn_repos/log.c:1291
+#: libsvn_fs_fs/fs_fs.c:1758 libsvn_fs_fs/fs_fs.c:1830 libsvn_repos/log.c:1358
+#: libsvn_repos/log.c:1362
 #, c-format
 msgid "No such revision %ld"
 msgstr "Pas de révision %ld"
@@ -2717,54 +2716,54 @@ msgstr "Format du schéma de suivi des fusions non défini"
 msgid "Merge Tracking schema format %d not recognized"
 msgstr "Format du schéma de suivi des fusions %d non reconnu"
 
-#: libsvn_ra/ra_loader.c:225
+#: libsvn_ra/ra_loader.c:226
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr ""
 "Problème de version de module RA pour '%s': %d.%d.%d%s trouvé, %d.%d.%d%s "
 "attendu"
 
-#: libsvn_ra/ra_loader.c:401 libsvn_ra_serf/serf.c:135
+#: libsvn_ra/ra_loader.c:402 libsvn_ra_serf/serf.c:135
 #: libsvn_ra_serf/serf.c:212
 #, c-format
 msgid "Illegal repository URL '%s'"
 msgstr "URL de dépôt svn illégale '%s'"
 
-#: libsvn_ra/ra_loader.c:415
+#: libsvn_ra/ra_loader.c:416
 msgid "Invalid config: unknown HTTP library"
 msgstr "Configuration invalide : librairie HTTP inconnue"
 
-#: libsvn_ra/ra_loader.c:452
+#: libsvn_ra/ra_loader.c:453
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "Schéma d'URL non reconnu pour '%s'"
 
-#: libsvn_ra/ra_loader.c:503
+#: libsvn_ra/ra_loader.c:504
 #, c-format
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr "'%s' n'est pas dans le même dépôt que '%s'"
 
-#: libsvn_ra/ra_loader.c:1026
+#: libsvn_ra/ra_loader.c:1048
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - gère le schéma d'URL '%s'\n"
 
-#: libsvn_ra/ra_loader.c:1112
+#: libsvn_ra/ra_loader.c:1134
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "Schéma d'URL non reconnu '%s'"
 
 #. ----------------------------------------------------------------
 #. * The RA vtable routines *
-#: libsvn_ra_local/ra_plugin.c:250
+#: libsvn_ra_local/ra_plugin.c:252
 msgid "Module for accessing a repository on local disk."
 msgstr "Module d'accès à un dépôt sur un disque local."
 
-#: libsvn_ra_local/ra_plugin.c:290
+#: libsvn_ra_local/ra_plugin.c:292
 msgid "Unable to open an ra_local session to URL"
 msgstr "Impossible d'ouvrir une session ra_local pour l'URL"
 
-#: libsvn_ra_local/ra_plugin.c:1441
+#: libsvn_ra_local/ra_plugin.c:1443
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr "Version %d du chargeur RA (accès dépôt) non supporté pour ra_local"
@@ -2907,15 +2906,15 @@ msgstr "Encodage XML inconnu : '%s'"
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr "La gestion de la réponse au REPORT n'a pas clos le baton d'édition"
 
-#: libsvn_ra_neon/file_revs.c:275
+#: libsvn_ra_neon/file_revs.c:285
 msgid "Failed to write full amount to stream"
 msgstr "Échec à l'écriture du tout dans le flux"
 
-#: libsvn_ra_neon/file_revs.c:353
+#: libsvn_ra_neon/file_revs.c:371
 msgid "'get-file-revs' REPORT not implemented"
 msgstr "REPORT 'get-file-revs' non implémenté"
 
-#: libsvn_ra_neon/file_revs.c:360
+#: libsvn_ra_neon/file_revs.c:378
 msgid "The file-revs report didn't contain any revisions"
 msgstr "REPORT 'file-revs' ne contient aucune révision"
 
@@ -3435,67 +3434,67 @@ msgstr "'get-locations' non implémenté"
 msgid "Location entry not a list"
 msgstr "L'entrée 'location' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1441
+#: libsvn_ra_svn/client.c:1445
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' non implémenté"
 
-#: libsvn_ra_svn/client.c:1454
+#: libsvn_ra_svn/client.c:1458
 msgid "Revision entry not a list"
 msgstr "L'entrée 'revision' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1467 libsvn_ra_svn/client.c:1492
+#: libsvn_ra_svn/client.c:1475 libsvn_ra_svn/client.c:1500
 msgid "Text delta chunk not a string"
 msgstr "La différence de texte n'est pas une chaîne de caractères"
 
-#: libsvn_ra_svn/client.c:1504
+#: libsvn_ra_svn/client.c:1512
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "La commande 'get-file-revs' n'a retourné aucune révision"
 
-#: libsvn_ra_svn/client.c:1552
+#: libsvn_ra_svn/client.c:1560
 msgid "Server doesn't support the lock command"
 msgstr "Commande lock non supportée par le serveur"
 
-#: libsvn_ra_svn/client.c:1616
+#: libsvn_ra_svn/client.c:1624
 msgid "Server doesn't support the unlock command"
 msgstr "Commande unlock non supportée par le serveur"
 
-#: libsvn_ra_svn/client.c:1713
+#: libsvn_ra_svn/client.c:1721
 msgid "Lock response not a list"
 msgstr "La réponse au verrouillage (lock) n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1727
+#: libsvn_ra_svn/client.c:1735
 msgid "Unknown status for lock command"
 msgstr "État inconnu pour la commande de verrouillage (lock)"
 
-#: libsvn_ra_svn/client.c:1749
+#: libsvn_ra_svn/client.c:1757
 msgid "Didn't receive end marker for lock responses"
 msgstr "Aucun marqueur de fin reçu dans les réponses aux verrouillages"
 
-#: libsvn_ra_svn/client.c:1836
+#: libsvn_ra_svn/client.c:1844
 msgid "Unlock response not a list"
 msgstr "La réponse au déverrouillage n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1850
+#: libsvn_ra_svn/client.c:1858
 msgid "Unknown status for unlock command"
 msgstr "État inconnu pour la commande de déverrouillage (unlock)"
 
-#: libsvn_ra_svn/client.c:1871
+#: libsvn_ra_svn/client.c:1879
 msgid "Didn't receive end marker for unlock responses"
 msgstr "Aucun marqueur de fin reçu dans les réponses aux déverrouillages"
 
-#: libsvn_ra_svn/client.c:1895 libsvn_ra_svn/client.c:1923
+#: libsvn_ra_svn/client.c:1903 libsvn_ra_svn/client.c:1931
 msgid "Server doesn't support the get-lock command"
 msgstr "Le serveur ne supporte pas la commande 'get-lock'"
 
-#: libsvn_ra_svn/client.c:1936
+#: libsvn_ra_svn/client.c:1944
 msgid "Lock element not a list"
 msgstr "L'élément 'lock' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1959
+#: libsvn_ra_svn/client.c:1967
 msgid "Server doesn't support the replay command"
 msgstr "Le serveur ne supporte pas la commande 'replay'"
 
-#: libsvn_ra_svn/client.c:2024
+#: libsvn_ra_svn/client.c:2032
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Version %d du chargeur RA (accès dépôt) non supporté pour ra_svn"
@@ -4058,24 +4057,29 @@ msgstr "Échec de la création du dépôt"
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
 msgstr "Format de stockage attendu '%d' ou '%d'; format trouvé '%d'"
 
-#: libsvn_repos/rev_hunt.c:65
+#: libsvn_repos/rev_hunt.c:78
 #, c-format
 msgid "Failed to find time on revision %ld"
 msgstr "Impossible de trouver l'heure de la révision %ld"
 
-#: libsvn_repos/rev_hunt.c:220 libsvn_repos/rev_hunt.c:335
+#: libsvn_repos/rev_hunt.c:233 libsvn_repos/rev_hunt.c:348
 #, c-format
 msgid "Invalid start revision %ld"
 msgstr "Révision de départ %ld invalide"
 
-#: libsvn_repos/rev_hunt.c:224 libsvn_repos/rev_hunt.c:339
+#: libsvn_repos/rev_hunt.c:237 libsvn_repos/rev_hunt.c:352
 #, c-format
 msgid "Invalid end revision %ld"
 msgstr "Révision de fin %ld invalide"
 
-#: libsvn_repos/rev_hunt.c:528
+#: libsvn_repos/rev_hunt.c:541
 msgid "Unreadable path encountered; access denied"
 msgstr "Chemin illisible rencontré, accès refusé"
+
+#: libsvn_repos/rev_hunt.c:903
+#, c-format
+msgid "'%s' is not a file in revision %ld"
+msgstr "'%s' n'est pas un fichier à la révision %ld"
 
 #: libsvn_subr/cmdline.c:493
 #, c-format
@@ -4746,6 +4750,12 @@ msgstr "Phrase de passe pour '%s' : "
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "Le fichier '%s' a des sauts de ligne incohérents"
+
+#. Human explanatory part, generated by apr_strftime as "Sat, 01 Jan 2000"
+#: libsvn_subr/time.c:81
+# Hmmm... what about "%x" (preferred date representation in locale) instead?
+msgid " (%a, %d %b %Y)"
+msgstr " (%a %d %b %Y)"
 
 #: libsvn_subr/utf.c:195
 msgid "Can't lock charset translation mutex"
@@ -5744,16 +5754,16 @@ msgstr "Impossible de créer des répertoires"
 msgid "Cannot find a URL for '%s'"
 msgstr "Impossible de trouver une URL pour '%s'"
 
-#: svn/blame-cmd.c:192 svn/list-cmd.c:233
+#: svn/blame-cmd.c:240 svn/list-cmd.c:233
 msgid "'verbose' option invalid in XML mode"
 msgstr "Option 'verbose' invalide en mode XML"
 
-#: svn/blame-cmd.c:204 svn/info-cmd.c:498 svn/list-cmd.c:245
+#: svn/blame-cmd.c:252 svn/info-cmd.c:498 svn/list-cmd.c:245
 #: svn/status-cmd.c:276
 msgid "'incremental' option only valid in XML mode"
 msgstr "Option 'incremental' valide seulement en mode XML"
 
-#: svn/blame-cmd.c:266
+#: svn/blame-cmd.c:315
 #, c-format
 msgid "Skipping binary file: '%s'\n"
 msgstr "Omission du fichier binaire : '%s'\n"
