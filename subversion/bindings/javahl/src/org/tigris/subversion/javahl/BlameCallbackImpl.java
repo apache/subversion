@@ -44,30 +44,30 @@ public class BlameCallbackImpl implements BlameCallback, BlameCallback2
         addBlameLine(new BlameLine(revision, author, changed, line));
     }
 
-	public void singleLine(Date date, long revision, String author,
-			Date merged_date, long merged_revision, String merged_author,
-			String merged_path, String line)
+    public void singleLine(Date date, long revision, String author,
+                           Date merged_date, long merged_revision,
+                           String merged_author, String merged_path,
+                           String line)
     {
-        addBlameLine(new BlameLine(
-        		getRevision(revision, merged_revision),
-        		getAuthor(author, merged_author),
-        		getDate(date, merged_date),
-        		line));
+        addBlameLine(new BlameLine(getRevision(revision, merged_revision),
+                                   getAuthor(author, merged_author),
+                                   getDate(date, merged_date),
+                                   line));
     }
 
     private Date getDate(Date date, Date merged_date) {
-		return (merged_date == null ? date : merged_date);
-	}
+        return (merged_date == null ? date : merged_date);
+    }
 
-	private String getAuthor(String author, String merged_author) {
-		return (merged_author == null ? author : merged_author);
-	}
+    private String getAuthor(String author, String merged_author) {
+        return (merged_author == null ? author : merged_author);
+    }
 
-	private long getRevision(long revision, long merged_revision) {
-		return (merged_revision == -1 ? revision : merged_revision);
-	}
+    private long getRevision(long revision, long merged_revision) {
+        return (merged_revision == -1 ? revision : merged_revision);
+    }
 
-	/**
+    /**
      * Retrieve the number of line of blame information
      * @return number of lines of blame information
      */
