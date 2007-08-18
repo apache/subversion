@@ -513,10 +513,42 @@ Whitespace fixes.  No functional change.
   </dd>
 
   <dt><code>svn blame</code></dt>
-  <dd>Reuse the existing author and revision columns.  Instead of listing
+  <dd>
+  <p>Reuse the existing author and revision columns.  Instead of listing
   the merging author and revision, list the original author and revision of
   that line.  Unlike other commands, we do not need to worry about multiple
-  source revisions, because each line can have at most one author.</dd>
+  source revisions, because each line can have at most one author.</p>
+  
+  <p>The output of <code>svn blame</code> may be the following:</p>
+  <pre>
+     2    alice   This is the file 'iota'.
+    14    bob     'A' has changed a bit, with 'upsilon', and 'xi'.  
+  </pre>
+  
+  <p>Using the <code>-g</code> switch will show the author who most recently
+  changed the line, independent of which branch it was changed on (so long as
+  the changes have been merged).  If Chuck made changes to the file in r11,
+  which was then merged in r14, the output of <code>svn blame -g</code> for the
+  same file may look like this:</p>
+  <pre>
+     2    alice   This is the file 'iota'.
+    11    chuck   'A' has changed a bit, with 'upsilon', and 'xi'.  
+  </pre>
+
+  <p>The <code>--verbose</code> flag also triggers additional information.
+  In addition to the date of the revision, <code>--verbose</code>, in
+  combination with <code>-g</code>, also displays the the original path, relative
+  to the repository root, where the modifications were made.  Given the above
+  example, <code>svn blame -g --verbose</code> will be something like this:</p>
+  <pre>
+     2    alice   2007-06-07 10:16:49 -0500 (Thu, 07 Jun 2007) /trunk/iota       This is the file 'iota'.
+    11    chuck   2007-06-07 12:29:48 -0500 (Thu, 07 Jun 2007) /branches/a/iota  'A' has changed a bit, with 'upsilon', and 'xi'.  
+  </pre>
+
+  <p>The output of <code>svn blame -g --xml</code> is not limited by size, and
+  will include all available information.</p>
+
+  </dd>
 </dl>
 
 <p>For commits which remove merge info (e.g. reverts),
