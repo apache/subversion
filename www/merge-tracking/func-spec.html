@@ -114,11 +114,12 @@ implementation supports two modes:</p>
   <li>A compatibility mode, which neither contacts the repository, nor
     does any merge info propogation (unless a copy source's merge info
     has been locally modified, in which its value is propogated the as
-    any Subversion revision property).</li>
+    any Subversion revision property).  (<i>unimplemented</i>, start with
+    copy test #31)</li>
 
   <li>A mode which requires repository access (e.g. isn't offline),
     but which propogates all merge info from source path to
-    destination (<i>unimplemented</i>, start with copy test #31).</li>
+    destination.</li>
 </ul>
 
 <p>This behavior is comparable to the difference between <code>svn
