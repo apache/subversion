@@ -814,7 +814,6 @@ get_merged_path_revisions(apr_array_header_t *path_revisions,
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *curr_mergeinfo, *prev_mergeinfo, *deleted, *changed;
   apr_hash_index_t *hi;
-  svn_revnum_t start;
 
   /* First, figure out if old_path_rev is a merging revision or not. */
   SVN_ERR(svn_repos__get_path_mergeinfo(&curr_mergeinfo, repos->fs,
@@ -888,7 +887,6 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
   svn_fs_history_t *history;
   svn_fs_root_t *root;
   svn_node_kind_t kind;
-  svn_revnum_t rev;
  
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */
