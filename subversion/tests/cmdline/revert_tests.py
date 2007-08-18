@@ -769,6 +769,8 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                         wc_dir)
 
   # now rollback to r1, thereby reinstating the old 'G'
+  ### Eventually, expected output for 'A/D/G' should be 'R '
+  ### (replaced) instead of 'A ' (added).  See issue #571 for details.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G': Item(status='D '),
     'A/D/G/alpha': Item(status='D '),
@@ -845,7 +847,7 @@ test_list = [ None,
               revert_propdel__file,
               revert_replaced_with_history_file,
               status_of_missing_dir_after_revert,
-              status_of_missing_dir_after_revert_replaced_with_history_dir,
+              XFail(status_of_missing_dir_after_revert_replaced_with_history_dir),
              ]
 
 if __name__ == '__main__':
