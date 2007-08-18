@@ -169,6 +169,7 @@
     SWIG_fail;
   }
 }
+
 #endif
 
 #ifdef SWIGRUBY
@@ -288,6 +289,13 @@
 }
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in) apr_hash_t *path_revs
+{
+  $1 = svn_swig_py_path_revs_hash_from_dict($input, _global_pool);
+}
+#endif
+
 /* =======================================================================
    %typemap(argout) apr_array_header_t **
 */
@@ -306,6 +314,12 @@
   apr_array_header_t **regular_props,
   apr_array_header_t **propdiffs
 };
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
+  %append_output(svn_swig_py_proparray_to_dict(*$1));
+}
 #endif
 
 /* -----------------------------------------------------------------------

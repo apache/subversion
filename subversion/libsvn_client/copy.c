@@ -59,6 +59,103 @@
  */
 
 
+/* Obtain the implied mergeinfo of repository-relative path PATH in
+   *IMPLIED_MERGEINFO (e.g. every revision of the node at PATH since
+   it last appeared).  REL_PATH corresponds to PATH, but is relative
+   to RA_SESSION. */
+static svn_error_t *
+get_implied_mergeinfo(svn_ra_session_t *ra_session,
+                      apr_hash_t **implied_mergeinfo,
+                      const char *rel_path,
+                      const char *path,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
+{
+  svn_revnum_t oldest_rev;
+  svn_merge_range_t *range;
+  apr_array_header_t *rangelist;
+
+  *implied_mergeinfo = apr_hash_make(pool);
+
+  SVN_ERR(svn_client__oldest_rev_at_path(&oldest_rev, ra_session, rel_path,
+                                         rev, pool));
+  if (oldest_rev == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
+
+  range = apr_palloc(pool, sizeof(*range));
+  range->start = oldest_rev - 1;
+  range->end = rev;
+  rangelist = apr_array_make(pool, 1, sizeof(range));
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
+  apr_hash_set(*implied_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+
+  return SVN_NO_ERROR;
+}
+
+/* Obtain the implied mergeinfo and the existing mergeinfo of the
+   source path, combine them and return the result in
+   *TARGET_MERGEINFO.  SRC_REL_PATH corresponds to SRC_PATH_OR_URL,
+   but is relative to RA_SESSION. */
+static svn_error_t *
+calculate_target_mergeinfo(svn_ra_session_t *ra_session,
+                           apr_hash_t **target_mergeinfo,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *src_path_or_url,
+                           const char *src_rel_path,
+                           svn_revnum_t src_revnum,
+                           apr_pool_t *pool)
+{
+  const char *src_path;
+  apr_hash_t *src_mergeinfo;
+
+  /* Find src path relative to the repository root. */
+  SVN_ERR(svn_client__path_relative_to_root(&src_path, src_path_or_url,
+                                            NULL, ra_session, adm_access,
+                                            pool));
+
+  /* Obtain any implied and/or existing (explicit) mergeinfo. */
+  SVN_ERR(get_implied_mergeinfo(ra_session, target_mergeinfo,
+                                src_rel_path, src_path, src_revnum, pool));
+  SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
+                                          src_path, src_revnum,
+                                          svn_mergeinfo_inherited, pool));
+
+  /* Combine and return all mergeinfo. */
+  if (src_mergeinfo)
+    {
+      return svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo, pool);
+    }
+  else
+    {
+      return SVN_NO_ERROR;
+    }
+}
+
+/* Extend the mergeinfo for the single WC path TARGET_WCPATH, adding
+   MERGEINFO to any mergeinfo pre-existing in the WC. */
+static svn_error_t *
+extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
+                    apr_hash_t *mergeinfo, svn_wc_adm_access_t *adm_access,
+                    svn_client_ctx_t *ctx, apr_pool_t *pool)
+{
+  apr_hash_t *wc_mergeinfo;
+
+  /* Get a fresh copy of the pre-existing state of the WC's mergeinfo
+     updating it. */
+  SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry, target_wcpath,
+                                      FALSE, adm_access, ctx, pool));
+
+  /* Combine the provided mergeinfo with any mergeinfo from the WC. */
+  if (wc_mergeinfo)
+    SVN_ERR(svn_mergeinfo_merge(&wc_mergeinfo, mergeinfo,
+                                pool));
+  else
+    wc_mergeinfo = mergeinfo;
+
+  return svn_client__record_wc_mergeinfo(target_wcpath, wc_mergeinfo,
+                                         adm_access, pool);
+}
+
 /* Find the longest common ancestor for all the SRCs and DSTs in COPY_PAIRS.
    If SRC_ANCESTOR or DST_ANCESTOR is NULL, nothing will be returned in it.
    COMMON_ANCESTOR will be the common ancestor of both the SRC_ANCESTOR and
@@ -340,7 +437,7 @@ typedef struct
   svn_boolean_t resurrection;
   svn_boolean_t dir_add;
 
-  /* The complete merge info for the source of the copy (both implied
+  /* The complete mergeinfo for the source of the copy (both implied
      and explicit). */
   svn_string_t *mergeinfo;
 } path_driver_info_t;
@@ -360,103 +457,6 @@ struct path_driver_cb_baton
   /* Whether the operation is a move or copy. */
   svn_boolean_t is_move;
 };
-
-/* Obtain the implied merge info of repository-relative path PATH in
-   *IMPLIED_MERGEINFO (e.g. every revision of the node at PATH since
-   it last appeared).  REL_PATH corresponds to PATH, but is relative
-   to RA_SESSION. */
-static svn_error_t *
-get_implied_mergeinfo(svn_ra_session_t *ra_session,
-                      apr_hash_t **implied_mergeinfo,
-                      const char *rel_path,
-                      const char *path,
-                      svn_revnum_t rev,
-                      apr_pool_t *pool)
-{
-  svn_revnum_t oldest_rev;
-  svn_merge_range_t *range;
-  apr_array_header_t *rangelist;
-
-  *implied_mergeinfo = apr_hash_make(pool);
-
-  SVN_ERR(svn_client__oldest_rev_at_path(&oldest_rev, ra_session, rel_path,
-                                         rev, pool));
-  if (oldest_rev == SVN_INVALID_REVNUM)
-    return SVN_NO_ERROR;
-
-  range = apr_palloc(pool, sizeof(*range));
-  range->start = oldest_rev;
-  range->end = rev;
-  rangelist = apr_array_make(pool, 1, sizeof(range));
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-  apr_hash_set(*implied_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
-
-  return SVN_NO_ERROR;
-}
-
-/* Obtain the implied merge info and the existing merge info of the
-   source path, combine them and return the result in
-   *TARGET_MERGEINFO.  SRC_REL_PATH corresponds to SRC_PATH_OR_URL,
-   but is relative to RA_SESSION. */
-static svn_error_t *
-calculate_target_mergeinfo(svn_ra_session_t *ra_session,
-                           apr_hash_t **target_mergeinfo,
-                           svn_wc_adm_access_t *adm_access,
-                           const char *src_path_or_url,
-                           const char *src_rel_path,
-                           svn_revnum_t src_revnum,
-                           apr_pool_t *pool)
-{
-  const char *src_path;
-  apr_hash_t *src_mergeinfo;
-
-  /* Find src path relative to the repository root. */
-  SVN_ERR(svn_client__path_relative_to_root(&src_path, src_path_or_url,
-                                            NULL, ra_session, adm_access,
-                                            pool));
-
-  /* Obtain any implied and/or existing (explicit) merge info. */
-  SVN_ERR(get_implied_mergeinfo(ra_session, target_mergeinfo,
-                                src_rel_path, src_path, src_revnum, pool));
-  SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
-                                          src_path, src_revnum,
-                                          svn_mergeinfo_inherited, pool));
-
-  /* Combine and return all merge info. */
-  if (src_mergeinfo)
-    {
-      return svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo, pool);
-    }
-  else
-    {
-      return SVN_NO_ERROR;
-    }
-}
-
-/* Extend the merge info for the single WC path TARGET_WCPATH, adding
-   MERGEINFO to any merge info pre-existing in the WC. */
-static svn_error_t *
-extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
-                    apr_hash_t *mergeinfo, svn_wc_adm_access_t *adm_access,
-                    svn_client_ctx_t *ctx, apr_pool_t *pool)
-{
-  apr_hash_t *wc_mergeinfo;
-
-  /* Get a fresh copy of the pre-existing state of the WC's merge info
-     updating it. */
-  SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry, target_wcpath,
-                                      adm_access, ctx, pool));
-
-  /* Combine the provided merge info with any merge info from the WC. */
-  if (wc_mergeinfo)
-    SVN_ERR(svn_mergeinfo_merge(&wc_mergeinfo, mergeinfo,
-                                pool));
-  else
-    wc_mergeinfo = mergeinfo;
-
-  return svn_client__record_wc_mergeinfo(target_wcpath, wc_mergeinfo,
-                                         adm_access, pool);
-}
 
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
@@ -1230,7 +1230,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
 
-      /* Set the merge info for the destination to the combined merge
+      /* Set the mergeinfo for the destination to the combined merge
          info known to the WC and the repository. */
       item->outgoing_prop_changes = apr_array_make(pool, 1,
                                                    sizeof(svn_prop_t *));
@@ -1243,7 +1243,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                          pool));
       SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
       SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry,
-                                          pair->src, adm_access, ctx,
+                                          pair->src, FALSE, adm_access, ctx,
                                           pool));
       if (wc_mergeinfo)
         SVN_ERR(svn_mergeinfo_merge(&mergeinfo, wc_mergeinfo, pool));
@@ -1366,7 +1366,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                               ctx->cancel_func, ctx->cancel_baton, 
                               ctx->notify_func2, ctx->notify_baton2, pool));
 
-          /* ### Recording of implied merge info should really occur
+          /* ### Recording of implied mergeinfo should really occur
              ### *before* the notification callback is invoked by
              ### svn_wc_add2(), but can't occur before we add the new
              ### source path. */
@@ -1942,10 +1942,13 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                        subpool);
     }
 
-  if (commit_info)
-    *commit_info_p = svn_commit_info_dup(commit_info, pool);
-  else
-    *commit_info_p = commit_info;
+  if (commit_info_p != NULL)
+    {
+      if (commit_info)
+        *commit_info_p = svn_commit_info_dup(commit_info, pool);
+      else
+        *commit_info_p = commit_info;
+    }
 
   svn_pool_destroy(subpool);
   return err;
@@ -2094,11 +2097,14 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                        ctx,
                        subpool);
     }
-  
-  if (commit_info)
-    *commit_info_p = svn_commit_info_dup(commit_info, pool);
-  else
-    *commit_info_p = commit_info;
+ 
+  if (commit_info_p != NULL)
+    {
+      if (commit_info)
+        *commit_info_p = svn_commit_info_dup(commit_info, pool);
+      else
+        *commit_info_p = commit_info;
+    }
 
   svn_pool_destroy(subpool);
   return err;

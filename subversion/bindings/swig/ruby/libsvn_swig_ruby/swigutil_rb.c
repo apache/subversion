@@ -2,7 +2,9 @@
 /* Tell swigutil_rb.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_RB_C
 
-#include "rubyhead.swg"
+#ifdef WIN32
+#  include "ruby/rubyhead.swg"
+#endif
 #include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
 #include <st.h>
@@ -661,7 +663,7 @@ static int
 rb_set_pool_for_hash_callback(VALUE key, VALUE value,
                               struct rb_set_pool_for_hash_arg *arg)
 {
-  if (rb_set_pool_if_swig_type_object(value, arg->pool))
+  if (svn_swig_rb_set_pool(value, arg->pool))
     arg->set = TRUE;
   return ST_CONTINUE;
 }
@@ -678,7 +680,7 @@ svn_swig_rb_set_pool(VALUE target, VALUE pool)
     svn_boolean_t set = FALSE;
 
     for (i = 0; i < RARRAY(target)->len; i++) {
-      if (rb_set_pool_if_swig_type_object(RARRAY(target)->ptr[i], pool))
+      if (svn_swig_rb_set_pool(RARRAY(target)->ptr[i], pool))
         set = TRUE;
     }
     return set;
@@ -849,6 +851,25 @@ svn_swig_rb_to_depth(VALUE value)
              "'%s' must be DEPTH_STRING (e.g. \"infinity\" or :infinity) "
              "or Svn::Core::DEPTH_*",
              r2c_inspect(value));
+  }
+}
+
+svn_mergeinfo_inheritance_t
+svn_swig_rb_to_mergeinfo_inheritance(VALUE value)
+{
+  if (NIL_P(value)) {
+    return svn_mergeinfo_inherited;
+  } else if (RTEST(rb_obj_is_kind_of(value, rb_cString)) ||
+             RTEST(rb_obj_is_kind_of(value, rb_cSymbol))) {
+    value = rb_funcall(value, id_to_s, 0);
+    return svn_inheritance_from_word(StringValueCStr(value));
+  } else if (RTEST(rb_obj_is_kind_of(value, rb_cInteger))) {
+    return NUM2INT(value);
+  } else {
+    rb_raise(rb_eArgError,
+       "'%s' must be MERGEINFO_STRING (e.g. \"explicit\" or :explicit) "
+       "or Svn::Core::MERGEINFO_*",
+       r2c_inspect(value));
   }
 }
 
@@ -2126,6 +2147,34 @@ svn_swig_rb_notify_func2(void *baton,
 
   if (!NIL_P(proc))
     invoke_callback((VALUE)(&cbb), rb_pool);
+}
+
+svn_error_t *
+svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
+                           const svn_wc_conflict_description_t *description,
+                           void *baton,
+                           apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool, rb_result;
+  
+  *result = svn_wc_conflict_result_conflicted;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+  if (!NIL_P(proc)) {
+    callback_baton_t cbb;
+
+    cbb.receiver = proc;
+    cbb.message = id_call;
+    cbb.args = rb_ary_new3(1,
+             c2r_swig_type((void *)description,
+                           (void *)"const svn_wc_conflict_description_t *"));
+    rb_result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+    r2c_swig_type2(rb_result, "svn_wc_conflict_result_t *", &result);
+  }
+  
+  return err;
 }
 
 svn_error_t *

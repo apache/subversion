@@ -21,8 +21,9 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include <apr_uri.h>
+
 #include <ne_alloc.h>
-#include <ne_uri.h>
 #include <ne_compress.h>
 #include <ne_basic.h>
 
@@ -82,21 +83,28 @@ static const svn_ra_neon__xml_elm_t multistatus_elements[] =
       SVN_RA_NEON__XML_CDATA },
     { "DAV:", "status", ELEM_status, SVN_RA_NEON__XML_CDATA },
     { "DAV:", "href", ELEM_href, SVN_RA_NEON__XML_CDATA },
+    { "DAV:", "propstat", ELEM_propstat, SVN_RA_NEON__XML_CDATA },
+    { "DAV:", "prop", ELEM_prop, SVN_RA_NEON__XML_CDATA },
 
-    /* We start out basic and are not interested in propstat */
+    /* We start out basic and are not interested in other elements */
     { "", "", ELEM_unknown, 0 },
 
+    { NULL }
   };
 
 
-static const int multistatus_nesting_table[][4] =
+static const int multistatus_nesting_table[][5] =
   { { ELEM_root, ELEM_multistatus, SVN_RA_NEON__XML_INVALID },
     { ELEM_multistatus, ELEM_response, ELEM_responsedescription,
       SVN_RA_NEON__XML_DECLINE },
     { ELEM_responsedescription, SVN_RA_NEON__XML_INVALID },
-    { ELEM_response, ELEM_href, ELEM_status, SVN_RA_NEON__XML_DECLINE },
+    { ELEM_response, ELEM_href, ELEM_status, ELEM_propstat,
+      SVN_RA_NEON__XML_DECLINE },
     { ELEM_status, SVN_RA_NEON__XML_INVALID },
     { ELEM_href, SVN_RA_NEON__XML_INVALID },
+    { ELEM_propstat, ELEM_prop, ELEM_status, ELEM_responsedescription,
+      SVN_RA_NEON__XML_INVALID },
+    { ELEM_prop, SVN_RA_NEON__XML_DECLINE },
     { SVN_RA_NEON__XML_DECLINE },
   };
 
@@ -108,7 +116,7 @@ validate_element(int parent, int child)
   int j = 0;
 
   while (parent != multistatus_nesting_table[i][0]
-         && multistatus_nesting_table[i][0] > 0)
+         && (multistatus_nesting_table[i][0] > 0 || i == 0))
     i++;
 
   if (parent == multistatus_nesting_table[i][0])
@@ -123,6 +131,11 @@ typedef struct
 {
   svn_stringbuf_t *want_cdata;
   svn_stringbuf_t *cdata;
+
+  svn_boolean_t in_propstat;
+  svn_boolean_t propstat_has_error;
+  svn_stringbuf_t *propname;
+  svn_stringbuf_t *propstat_description;
 
   svn_ra_neon__request_t *req;
   svn_stringbuf_t *description;
@@ -139,8 +152,30 @@ start_207_element(int *elem, void *baton, int parent,
   *elem = elm ? validate_element(parent, elm->id) : SVN_RA_NEON__XML_DECLINE;
 
 
+  if (parent == ELEM_prop)
+    {
+      svn_stringbuf_setempty(b->propname);
+      if (strcmp(nspace, SVN_DAV_PROP_NS_DAV) == 0)
+        svn_stringbuf_set(b->propname, SVN_PROP_PREFIX);
+      else if (strcmp(nspace, "DAV:") == 0)
+        svn_stringbuf_set(b->propname, "DAV:");
+
+      svn_stringbuf_appendcstr(b->propname, name);
+    }
+
   if (*elem < 1) /* ! > 0 */
     return SVN_NO_ERROR;
+
+  switch (*elem)
+    {
+    case ELEM_propstat:
+      b->in_propstat = TRUE;
+      b->propstat_has_error = FALSE;
+      break;
+
+    default:
+      break;
+    }
 
   /* We're guaranteed to have ELM now: SVN_RA_NEON__XML_DECLINE < 1 */
   if (elm->flags & SVN_RA_NEON__XML_CDATA)
@@ -162,13 +197,26 @@ end_207_element(void *baton, int state,
     {
     case ELEM_multistatus:
       if (b->contains_error)
-        return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                _("The request response contained at least "
-                                  "one error"));
+                {
+          if (svn_stringbuf_isempty(b->description))
+            return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                    _("The request response contained at least "
+                                      "one error"));
+          else
+            return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                    b->description->data);
+        }
       break;
 
     case ELEM_responsedescription:
-      b->description = svn_stringbuf_dup(b->cdata, b->req->pool);
+      if (b->in_propstat)
+        svn_stringbuf_set(b->propstat_description, b->cdata->data);
+      else
+        {
+          if (! svn_stringbuf_isempty(b->description))
+            svn_stringbuf_appendcstr(b->description, "\n");
+          svn_stringbuf_appendstr(b->description, b->cdata);
+        }
       break;
 
     case ELEM_status:
@@ -178,7 +226,11 @@ end_207_element(void *baton, int state,
         if (ne_parse_statusline(b->cdata->data, &status) == 0)
           {
             /*### I wanted ||=, but I guess the end result is the same */
-            b->contains_error |= (status.klass != 2);
+            if (! b->in_propstat)
+              b->contains_error |= (status.klass != 2);
+            else
+              b->propstat_has_error = (status.klass != 2);
+
             free(status.reason_phrase);
           }
         else
@@ -186,6 +238,17 @@ end_207_element(void *baton, int state,
                                   _("The response contains a non-conforming "
                                     "HTTP status line"));
       }
+      break;
+
+    case ELEM_propstat:
+      b->in_propstat = FALSE;
+      b->contains_error |= b->propstat_has_error;
+      svn_stringbuf_appendcstr(b->description,
+                               apr_psprintf(b->req->pool,
+                                            _("Error setting property '%s': "),
+                                            b->propname->data));
+      svn_stringbuf_appendstr(b->description,
+                              b->propstat_description);
 
     default:
       /* do nothing */
@@ -209,6 +272,13 @@ multistatus_parser_create(svn_ra_neon__request_t *req)
                                    start_207_element,
                                    svn_ra_neon__xml_collect_cdata,
                                    end_207_element, b);
+  b->cdata = svn_stringbuf_create("", req->pool);
+  b->description = svn_stringbuf_create("", req->pool);
+  b->req = req;
+
+  b->propname = svn_stringbuf_create("", req->pool);
+  b->propstat_description = svn_stringbuf_create("", req->pool);
+
   return multistatus_parser;
 }
 
@@ -427,10 +497,10 @@ svn_ra_neon__xml_collect_cdata(void *baton, int state,
 
 
 
-void svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src)
+svn_error_t *
+svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src,
+                       apr_pool_t *pool)
 {
-  ne_uri parsed_url;
-
   /* parse the PATH element out of the URL and store it.
 
      ### do we want to verify the rest matches the current session?
@@ -438,9 +508,20 @@ void svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src)
      Note: mod_dav does not (currently) use an absolute URL, but simply a
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
-  (void) ne_uri_parse(src, &parsed_url);
-  svn_stringbuf_set(dst, parsed_url.path);
-  ne_uri_free(&parsed_url);
+
+  apr_uri_t uri;
+  apr_status_t apr_status
+    = apr_uri_parse(pool, src, &uri);
+
+  if (apr_status != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_status,
+                              _("Unable to parse URL '%s'"),
+                              src);
+
+  svn_stringbuf_setempty(dst);
+  svn_stringbuf_appendcstr(dst, uri.path);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

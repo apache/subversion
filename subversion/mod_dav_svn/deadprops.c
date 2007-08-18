@@ -172,8 +172,8 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
         /* Tell the logging subsystem about the revprop change. */
         apr_table_set(db->resource->info->r->subprocess_env, "SVN-ACTION",
                       apr_psprintf(db->resource->pool,
-                                   "revprop-change r%" SVN_REVNUM_T_FMT 
-                                   " '%s'", db->resource->info->root.rev,
+                                   "revprop-change r%ld '%s'", 
+                                   db->resource->info->root.rev,
                                    svn_path_uri_encode(propname,
                                                        db->resource->pool)));
       }

@@ -42,19 +42,15 @@
 
 /*** Getting misc. information ***/
 
-/* A log callback conforming to the svn_log_message_receiver_t
+/* A log callback conforming to the svn_log_message_receiver2_t
    interface for obtaining the last revision of a node at a path and
    storing it in *BATON (an svn_revnum_t). */
 static svn_error_t *
 revnum_receiver(void *baton,
-                apr_hash_t *changed_paths,
-                svn_revnum_t revision,
-                const char *author,
-                const char *date,
-                const char *message,
+                svn_log_entry_t *log_entry,
                 apr_pool_t *pool)
 {
-  *((svn_revnum_t *) baton) = revision;
+  *((svn_revnum_t *) baton) = log_entry->revision;
   return SVN_NO_ERROR;
 }
 
@@ -72,8 +68,10 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
 
   /* Trace back in history to find the revision at which this node
      was created (copied or added). */
-  err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
-                       revnum_receiver, oldest_rev, pool);
+  err = svn_ra_get_log2(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
+                        FALSE, TRUE, revnum_receiver, oldest_rev, pool);
+  /* ### This function really shouldn't even be called on schedule-add
+     ### WC paths.  FIXME: Adjust copy.c and merge.c accordingly... */
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
               err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
     {

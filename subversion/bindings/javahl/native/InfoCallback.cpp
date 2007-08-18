@@ -118,7 +118,7 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
                              "ZILjava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
-                             "Ljava/lang/String;)V");
+                             "Ljava/lang/String;Ljava/lang/String;JJ)V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
@@ -131,8 +131,6 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jlong jrev = info->rev;
-  jint jnodeKind = EnumMapper::mapNodeKind(info->kind);
   jstring jreposRootUrl = JNIUtil::makeJString(info->repos_root_URL);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
@@ -140,9 +138,6 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
   jstring jreportUUID = JNIUtil::makeJString(info->repos_UUID);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
-
-  jlong jlastChangedRev = info->last_changed_rev;
-  jlong jlastChangedDate = info->last_changed_date;
 
   jstring jlastChangedAuthor =
     JNIUtil::makeJString(info->last_changed_author);
@@ -153,12 +148,9 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jboolean jhasWcInfo = info->has_wc_info ? JNI_TRUE:JNI_FALSE;
-  jint jschedule = EnumMapper::mapScheduleKind(info->schedule);
   jstring jcopyFromUrl = JNIUtil::makeJString(info->copyfrom_url);
-  jlong jcopyFromRev = info->copyfrom_rev;
-  jlong jtextTime = info->text_time;
-  jlong jpropTime = info->prop_time;
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   jstring jchecksum = JNIUtil::makeJString(info->checksum);
   if (JNIUtil::isJavaExceptionThrown())
@@ -180,14 +172,29 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jobject jinfo2 = env->NewObject(clazz, mid, jpath, jurl, jrev, jnodeKind,
+  jstring jchangelist = JNIUtil::makeJString(info->changelist);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jlong jworkingSize = info->working_size == SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN
+    ? -1 : (jlong) info->working_size;
+  jlong jreposSize = info->size == SVN_INFO_SIZE_UNKNOWN
+    ? -1 : (jlong) info->size;
+
+  jobject jinfo2 = env->NewObject(clazz, mid, jpath, jurl, (jlong) info->rev,
+                                  EnumMapper::mapNodeKind(info->kind),
                                   jreposRootUrl, jreportUUID,
-                                  jlastChangedRev, jlastChangedDate,
-                                  jlastChangedAuthor, jlock, jhasWcInfo,
-                                  jschedule, jcopyFromUrl, jcopyFromRev,
-                                  jtextTime, jpropTime, jchecksum,
+                                  (jlong) info->last_changed_rev,
+                                  (jlong) info->last_changed_date,
+                                  jlastChangedAuthor, jlock,
+                                  info->has_wc_info ? JNI_TRUE : JNI_FALSE,
+                                  EnumMapper::mapScheduleKind(info->schedule),
+                                  jcopyFromUrl, (jlong) info->copyfrom_rev,
+                                  (jlong) info->text_time,
+                                  (jlong) info->prop_time, jchecksum,
                                   jconflictOld, jconflictNew, jconflictWrk,
-                                  jprejfile);
+                                  jprejfile, jchangelist,
+                                  jworkingSize, jreposSize);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -236,6 +243,10 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
     return NULL;
 
   env->DeleteLocalRef(jprejfile);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  env->DeleteLocalRef(jchangelist);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

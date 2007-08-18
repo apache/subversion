@@ -37,7 +37,7 @@ svn_client_resolved(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  return svn_client_resolved2(path, recursive, svn_accept_default, ctx, pool);
+  return svn_client_resolved2(path, recursive, svn_accept_none, ctx, pool);
 }
 
 svn_error_t *

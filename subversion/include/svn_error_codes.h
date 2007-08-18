@@ -404,6 +404,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 26,
              "Changelist doesn't match")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+             SVN_ERR_WC_CATEGORY_START + 27,
+             "Conflict resolution failed")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -819,6 +824,11 @@ SVN_ERROR_START
              SVN_ERR_AUTHN_CATEGORY_START + 3,
              "All authentication providers exhausted")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_AUTHN_FAILED,
+             SVN_ERR_AUTHN_CATEGORY_START + 4,
+             "Authentication failed")
+
   /* authorization errors */
 
   SVN_ERRDEF(SVN_ERR_AUTHZ_ROOT_UNREADABLE,
@@ -965,6 +975,7 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 14,
              "Operation does not support multiple sources")
 
+  /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_CLIENT_NO_VERSIONED_PARENT,
              SVN_ERR_CLIENT_CATEGORY_START + 15,
              "No versioned parent directories")
@@ -1056,6 +1067,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_MERGE_INFO_PARSE_ERROR,
              SVN_ERR_MISC_CATEGORY_START + 20,
              "Merge info parse error")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_CEASE_INVOCATION,
+             SVN_ERR_MISC_CATEGORY_START + 21,
+             "Cease invocation of this API")
 
   /* command-line client errors */
 

@@ -1717,6 +1717,7 @@ test_list = [ None,
               forced_switch_failures,
               switch_scheduled_add,
               mergeinfo_switch_elision,
+              switch_with_obstructing_local_adds,
              ]
 
 if __name__ == '__main__':

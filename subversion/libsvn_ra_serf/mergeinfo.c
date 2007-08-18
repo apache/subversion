@@ -45,14 +45,17 @@ typedef enum {
 /* Baton for accumulating mergeinfo.  RESULT stores the final
    mergeinfo hash result we are going to hand back to the caller of
    get_mergeinfo.  curr_path and curr_info contain the value of the
-   CDATA from the merge info items as we get them from the server.  */
+   CDATA from the mergeinfo items as we get them from the server.  */
 
 typedef struct {
   apr_pool_t *pool;
-  const char *curr_path;
+  svn_stringbuf_t *curr_path;
   svn_stringbuf_t *curr_info;
   apr_hash_t *result;
   svn_boolean_t done;
+  const apr_array_header_t *paths;
+  svn_revnum_t revision;
+  svn_mergeinfo_inheritance_t inherit;
 } mergeinfo_context_t;
 
 static svn_error_t *
@@ -73,7 +76,7 @@ start_element(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_INFO_ITEM);
-      mergeinfo_ctx->curr_path = NULL;
+      svn_stringbuf_setempty(mergeinfo_ctx->curr_path);
       svn_stringbuf_setempty(mergeinfo_ctx->curr_info);
     }
   else if (state == MERGE_INFO_ITEM &&
@@ -106,13 +109,16 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
   else if (state == MERGE_INFO_ITEM 
            && strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
-      if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path)
+      if (mergeinfo_ctx->curr_info->len && mergeinfo_ctx->curr_path->len)
         {
           apr_hash_t *path_mergeinfo;
-          SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, 
-                                      mergeinfo_ctx->curr_info->data, 
+          SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo,
+                                      mergeinfo_ctx->curr_info->data,
                                       mergeinfo_ctx->pool));
-          apr_hash_set(mergeinfo_ctx->result, mergeinfo_ctx->curr_path,
+          apr_hash_set(mergeinfo_ctx->result,
+                       apr_pstrmemdup(mergeinfo_ctx->pool,
+                                      mergeinfo_ctx->curr_path->data,
+                                      mergeinfo_ctx->curr_path->len),
                        APR_HASH_KEY_STRING, path_mergeinfo);
         }
       svn_ra_serf__xml_pop_state(parser);
@@ -142,7 +148,8 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
   switch (state)
     {
     case MERGE_INFO_PATH:
-      mergeinfo_ctx->curr_path = apr_pstrndup(mergeinfo_ctx->pool, data, len);
+      if (mergeinfo_ctx->curr_path)
+        svn_stringbuf_appendbytes(mergeinfo_ctx->curr_path, data, len);
       break;
 
     case MERGE_INFO_INFO:
@@ -157,6 +164,54 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
   return SVN_NO_ERROR;
 }
 
+#define MINFO_REQ_HEAD "<S:" SVN_DAV__MERGEINFO_REPORT " xmlns:S=\"" SVN_XML_NAMESPACE "\">"
+#define MINFO_REQ_TAIL "</S:" SVN_DAV__MERGEINFO_REPORT ">"
+
+static serf_bucket_t *
+create_mergeinfo_body(void *baton,
+                      serf_bucket_alloc_t *alloc,
+                      apr_pool_t *pool)
+{
+  mergeinfo_context_t *mergeinfo_ctx = baton;
+  serf_bucket_t *body_bkt, *tmp_bkt;
+  int i;
+
+  body_bkt = serf_bucket_aggregate_create(alloc);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(MINFO_REQ_HEAD,
+                                          sizeof(MINFO_REQ_HEAD) - 1,
+                                          alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  svn_ra_serf__add_tag_buckets(body_bkt,
+                               "S:" SVN_DAV__REVISION,
+                               apr_ltoa(pool, mergeinfo_ctx->revision),
+                               alloc);
+  svn_ra_serf__add_tag_buckets(body_bkt, "S:" SVN_DAV__INHERIT,
+                               svn_inheritance_to_word(mergeinfo_ctx->inherit),
+                               alloc);
+  if (mergeinfo_ctx->paths)
+    {
+      for (i = 0; i < mergeinfo_ctx->paths->nelts; i++)
+        {
+          const char *this_path =
+            apr_xml_quote_string(pool, 
+                                 APR_ARRAY_IDX(mergeinfo_ctx->paths, 
+                                               i, const char *),
+                                 0);
+          svn_ra_serf__add_tag_buckets(body_bkt, "S:" SVN_DAV__PATH, 
+                                       this_path, alloc);
+        }
+    }
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(MINFO_REQ_TAIL,
+                                          sizeof(MINFO_REQ_TAIL) - 1,
+                                          alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  return body_bkt;
+}
+
 /* Request a mergeinfo-report from the URL attached to SESSION,
    and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
@@ -168,65 +223,31 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
-  static const char minfo_request_head[] =
-    "<S:" SVN_DAV__MERGEINFO_REPORT " xmlns:S=\"" SVN_XML_NAMESPACE "\">";
-
-  static const char minfo_request_tail[] =
-    "</S:" SVN_DAV__MERGEINFO_REPORT ">";
-  int i;
 
   mergeinfo_context_t *mergeinfo_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets, *tmp;
 
   mergeinfo_ctx = apr_pcalloc(pool, sizeof(*mergeinfo_ctx));
   mergeinfo_ctx->pool = pool;
+  mergeinfo_ctx->curr_path = svn_stringbuf_create("", pool);
   mergeinfo_ctx->curr_info = svn_stringbuf_create("", pool);
   mergeinfo_ctx->done = FALSE;
   mergeinfo_ctx->result = apr_hash_make(pool);
-
-  buckets = serf_bucket_aggregate_create(session->bkt_alloc);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(minfo_request_head,
-                                      sizeof(minfo_request_head)-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:" SVN_DAV__REVISION,
-                               apr_ltoa(pool, revision),
-                               session->bkt_alloc);
-  svn_ra_serf__add_tag_buckets(buckets, "S:" SVN_DAV__INHERIT,
-                               svn_inheritance_to_word(inherit),
-                               session->bkt_alloc);
-  if (paths)
-    {
-      for (i = 0; i < paths->nelts; i++)
-        {
-          const char *this_path =
-            apr_xml_quote_string(pool, APR_ARRAY_IDX(paths, i, const char *),
-                                 0);
-          svn_ra_serf__add_tag_buckets(buckets, "S:" SVN_DAV__PATH, 
-                                       this_path, session->bkt_alloc);
-        }
-    }
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(minfo_request_tail,
-                                      sizeof(minfo_request_tail) - 1,
-                                      session->bkt_alloc);
-
-  serf_bucket_aggregate_append(buckets, tmp);
+  mergeinfo_ctx->paths = paths;
+  mergeinfo_ctx->revision = revision;
+  mergeinfo_ctx->inherit = inherit;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
   handler->method = "REPORT";
   handler->path = session->repos_url_str;
-  handler->body_buckets = buckets;
-  handler->body_type = "text/xml";
   handler->conn = session->conns[0];
   handler->session = session;
+  handler->body_delegate = create_mergeinfo_body;
+  handler->body_delegate_baton = mergeinfo_ctx;
+  handler->body_type = "text/xml";
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 

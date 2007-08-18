@@ -45,20 +45,6 @@ class Generator(generator.swig.Generator):
     else:
       run("%s -o %s -co %s" % (self.swig_path, out, path))
 
-    # Fix generated SWIG files to never use "long long", which is not portable
-    if path == "python/python.swg":
-      python_swg = open(out).read()
-      file = open(out, "w")
-      file.write("""
-      %fragment("SWIG_AsVal_" {long long},"header") {
-      }
-      %fragment("SWIG_Check_" {long long},"header") {
-      }
-      %fragment("SWIG_From_" {long long},"header") {
-      }\n""")
-      file.write(python_swg)
-      file.close()
-
   def _skip_checkout(self, path):
     """Should we skip this checkout?"""
     return (path == "ruby/rubytracking.swg" and self.version() < 103026 or

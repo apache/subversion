@@ -1055,6 +1055,18 @@ pre-revprop-change hook script and (if appropriate) making it executable."""
   hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
   main.create_python_hook_script (hook_path, 'import sys; sys.exit(0)')
 
+def disable_revprop_changes(repo_dir, message):
+  """Disable revprop changes in a repository REPO_DIR by creating a
+pre-revprop-change hook script like enable_revprop_changes, except that
+the hook prints MESSAGE to stderr and exits non-zero.  MESSAGE is printed
+very simply, and should have no newlines or quotes."""
+
+  hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
+  main.create_python_hook_script (hook_path,
+                                  'import sys\n'
+                                  'sys.stderr.write("%s")\n'
+                                  'sys.exit(1)\n' % (message,))
+
 def create_failing_post_commit_hook(repo_dir):
   """Disable commits in a repository REPOS_DIR by creating a post-commit hook
 script which always reports errors."""
@@ -1063,6 +1075,17 @@ script which always reports errors."""
   main.create_python_hook_script (hook_path, 'import sys; '
     'sys.stderr.write("Post-commit hook failed"); '
     'sys.exit(1)')
+
+# set_prop can be used for binary properties are values like '*' which are not
+# handled correctly when specified on the command line.
+def set_prop(expected_err, name, value, path, valp):
+  """Set a property with value from a file"""
+  valf = open(valp, 'wb')
+  valf.seek(0)
+  valf.truncate(0)
+  valf.write(value)
+  valf.flush()
+  main.run_svn(expected_err, 'propset', '-F', valp, name, path)
 
 def check_prop(name, path, exp_out):
   """Verify that property NAME on PATH has a value of EXP_OUT"""

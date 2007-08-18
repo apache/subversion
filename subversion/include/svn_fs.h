@@ -1060,7 +1060,7 @@ svn_error_t *svn_fs_node_created_rev(svn_revnum_t *revision,
 
 /** Set @a *created_path to the path at which @a path under @a root was
  * created.  Use @a pool for all allocations.  Callers may use this
- * function in conjunction with svn_fs_node_created_rev() perform a
+ * function in conjunction with svn_fs_node_created_rev() to perform a
  * reverse lookup of the mapping of (path, revision) -> node-id that
  * svn_fs_node_id() performs.
  */
@@ -1192,13 +1192,13 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
                                  const char *path,
                                  apr_pool_t *pool);
 
-/** Change a node's merge info
+/** Change a node's mergeinfo
  *
  * - @a root and @a path indicate the node whose property should change.
  *   @a root must be the root of a transaction, not the root of a
  *   revision.
  * - @a mergeinhash is the new value of the mergeinfo for PATH, or NULL if
- *   the merge info for that path should be removed altogether.
+ *   the mergeinfo for that path should be removed altogether.
  *
  * Do any necessary temporary allocation in @a pool.
  *
@@ -1209,9 +1209,9 @@ svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
                                      apr_hash_t *mergeinhash,
                                      apr_pool_t *pool);
 
-/** Retrieve merge info for multiple nodes.
+/** Retrieve mergeinfo for multiple nodes.
  *
- * @a minfohash is filled with merge info for each of the @a paths,
+ * @a minfohash is filled with mergeinfo for each of the @a paths,
  * stored as a string.  It will never be @c NULL, but may be empty.
  *
  * @a root indicates the revision root to use when looking up paths.
@@ -1219,7 +1219,7 @@ svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
  * @a paths indicate the paths you are requesting information for
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited merge info for @paths is retrieved.
+ * only inherited mergeinfo for @paths is retrieved.
  *
  * Do any necessary temporary allocation in @a pool.
  *
@@ -1231,6 +1231,21 @@ svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                                   svn_mergeinfo_inheritance_t inherit,
                                   apr_pool_t *pool);
 
+/**
+ * Optionally filter paths which are discoved to have mergeinfo.
+ *
+ * Set @a *omit to @c TRUE if @a path with @a path_mergeinfo should be omitted
+ * from mergeinfo returned, or @c FALSE if not.  Use @a pool for allocations.
+ *
+ * @since New in 1.5.
+ */
+typedef svn_error_t *(*svn_fs_mergeinfo_filter_func_t)
+  (void *baton,
+   svn_boolean_t *omit,
+   const char *path,
+   apr_hash_t *path_mergeinfo,
+   apr_pool_t *pool);
+
 /** Retrieve combined mergeinfo for multiple nodes, and their children.
  *
  * @a mergeinfo is filled with mergeinfo for each of the @a paths and
@@ -1241,6 +1256,9 @@ svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
  *
  * @a paths indicate the paths you are requesting information for.
  *
+ * If @a filter_func is not @c NULL, use it to potentially filter each path
+ * for which mergeinfo is found.
+ *
  * Do any necessary temporary allocation in @a pool.
  *
  * @since New in 1.5.
@@ -1249,6 +1267,8 @@ svn_error_t *
 svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                               svn_fs_root_t *root,
                               const apr_array_header_t *paths,
+                              svn_fs_mergeinfo_filter_func_t filter_func,
+                              void *filter_func_baton,
                               apr_pool_t *pool);
 
 /** Merge changes between two nodes into a third node.

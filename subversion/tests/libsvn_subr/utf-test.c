@@ -18,6 +18,8 @@
 
 #include "../svn_test.h"
 #include "../../libsvn_subr/utf_impl.h"
+#include "svn_utf.h"
+#include "svn_pools.h"
 
 /* Random number seed.  Yes, it's global, just pretend you can't see it. */
 static apr_uint32_t diff_diff3_seed;
@@ -222,6 +224,102 @@ utf_validate2(const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* Test conversion from different codepages to utf8. */
+static svn_error_t *
+test_utf_cstring_to_utf8_ex2(const char **msg,
+                             svn_boolean_t msg_only,
+                             svn_test_opts_t *opts,
+                             apr_pool_t *pool)
+{
+  apr_size_t i;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  struct data {
+      const char *string;
+      const char *expected_result;
+      const char *from_page;
+  } tests[] = {
+      {"ascii text\n", "ascii text\n", "unexistant-page"},
+      {"Edelwei\xdf", "Edelwei\xc3\x9f", "ISO-8859-1"}
+  };
+
+  *msg = "test svn_utf_cstring_to_utf8_ex2";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+    {
+      const char *dest;
+
+      svn_pool_clear(subpool);
+
+      SVN_ERR(svn_utf_cstring_to_utf8_ex2(&dest, tests[i].string,
+                                          tests[i].from_page, pool)); 
+
+      if (strcmp(dest, tests[i].expected_result))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, NULL,
+             "svn_utf_cstring_to_utf8_ex2 ('%s', '%s') returned ('%s') "
+             "instead of ('%s')",
+             tests[i].string, tests[i].from_page,
+             dest,
+             tests[i].expected_result);
+        }
+    }
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+/* Test conversion to different codepages from utf8. */
+static svn_error_t *
+test_utf_cstring_from_utf8_ex2(const char **msg,
+                               svn_boolean_t msg_only,
+                               svn_test_opts_t *opts,
+                               apr_pool_t *pool)
+{
+  apr_size_t i;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  struct data {
+      const char *string;
+      const char *expected_result;
+      const char *to_page;
+  } tests[] = {
+      {"ascii text\n", "ascii text\n", "unexistant-page"},
+      {"Edelwei\xc3\x9f", "Edelwei\xdf", "ISO-8859-1"}
+  };
+
+  *msg = "test svn_utf_cstring_from_utf8_ex2";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+    {
+      const char *dest;
+
+      svn_pool_clear(subpool);
+
+      SVN_ERR(svn_utf_cstring_from_utf8_ex2(&dest, tests[i].string,
+                                            tests[i].to_page, pool)); 
+
+      if (strcmp(dest, tests[i].expected_result))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, NULL,
+             "svn_utf_cstring_from_utf8_ex2 ('%s', '%s') returned ('%s') "
+             "instead of ('%s')",
+             tests[i].string, tests[i].to_page,
+             dest,
+             tests[i].expected_result);
+        }
+    }
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -230,5 +328,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS(utf_validate),
     SVN_TEST_PASS(utf_validate2),
+    SVN_TEST_PASS(test_utf_cstring_to_utf8_ex2),
+    SVN_TEST_PASS(test_utf_cstring_from_utf8_ex2),
     SVN_TEST_NULL
   };

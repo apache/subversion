@@ -155,9 +155,15 @@ typedef long int svn_revnum_t;
 /** Convert null-terminated C string @a str to a revision number. */
 #define SVN_STR_TO_REV(str) ((svn_revnum_t) atol(str))
 
-/** In printf()-style functions, format revision numbers using this.
- * Do not use this macro within the Subversion project source code, because
- * the language translation tools have trouble parsing it. */
+/** Originally intended to be used in printf()-style functions to format
+ * revision numbers.  Deprecated due to incompatibilities with language
+ * translation tools (e.g. gettext).
+ *
+ * New code should use a bare "%ld" format specifier for formatting revision
+ * numbers.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ */
 #define SVN_REVNUM_T_FMT "ld"
 
 
@@ -209,7 +215,7 @@ typedef enum
   svn_accept_invalid = -1,
 
   /* Resolve the conflict as usual */
-  svn_accept_default,
+  svn_accept_none,
 
   /* Resolve the conflict with the pre-conflict base file */
   svn_accept_left,
@@ -299,6 +305,20 @@ svn_depth_from_word(const char *word);
  */
 #define SVN_DEPTH_FROM_RECURSE(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_files)
+
+
+/* Return an @c svn_depth_t depth based on boolean @a recurse.
+ * Use this only for the status command, as it has a unique interpretation
+ * of recursion.
+ *
+ * @note New code should never need to use this, it is called only
+ * from pre-depth APIs, for compatibility.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_DEPTH_FROM_RECURSE_STATUS(recurse) \
+  ((recurse) ? svn_depth_infinity : svn_depth_immediates)
+
 
 /* Return a recursion boolean based on @a depth.
  *

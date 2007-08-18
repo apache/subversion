@@ -26,6 +26,7 @@ from svntest.actions import SVNExpectedStdout, SVNExpectedStderr
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -443,13 +444,6 @@ def verify_windows_paths_in_repos(sbox):
 def recover_fsfs(sbox):
   "recover a repository (FSFS only)"
 
-  # Ideally, we'd include a variant of this in a Skip() condition, except
-  # that Skip() evaluates its value at construction, rather than accepting
-  # a lambda to evaluate later.  This pragma isn't available at test
-  # construction time.
-  if not svntest.main.is_fs_type_fsfs():
-    raise svntest.Skip
-
   # Set up a repository containing the greek tree.
   sbox.build(create_wc = False)
 
@@ -549,7 +543,7 @@ test_list = [ None,
               hotcopy_format,
               setrevprop,
               verify_windows_paths_in_repos,
-              recover_fsfs,
+              SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
               basic_move,
               move_plus_copy,
               move_plus_delete,

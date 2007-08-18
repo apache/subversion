@@ -21,6 +21,7 @@
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_string.h"
@@ -37,7 +38,7 @@
    each revision are in chronological order.  That is if revision A >
    revision B, then A's datestamp is younger then B's datestamp.
 
-   If some moron comes along and sets a bogus datestamp, this routine
+   If someone comes along and sets a bogus datestamp, this routine
    might not work right.
 
    ### todo:  you know, we *could* have svn_fs_change_rev_prop() do
@@ -251,6 +252,7 @@ svn_repos_history2(svn_fs_t *fs,
          get rid of the old history until we use it to get the new, so
          we alternate back and forth between our subpools.  */
       apr_pool_t *tmppool;
+      svn_error_t *err;
 
       SVN_ERR(svn_fs_history_prev(&history, history, cross_copies, newpool));
 
@@ -281,8 +283,19 @@ svn_repos_history2(svn_fs_t *fs,
         }
       
       /* Call the user-provided callback function. */
-      SVN_ERR(history_func(history_baton, history_path, 
-                           history_rev, newpool));
+      err = history_func(history_baton, history_path, history_rev, newpool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_CEASE_INVOCATION)
+            {
+              svn_error_clear(err);
+              goto cleanup;
+            }
+          else
+            {
+              return err;
+            }
+        }
 
       /* We're done with the old history item, so we can clear its
          pool, and then toggle our notion of "the old pool". */
@@ -293,6 +306,7 @@ svn_repos_history2(svn_fs_t *fs,
     }
   while (history); /* shouldn't hit this */
 
+ cleanup:
   svn_pool_destroy(oldpool);
   svn_pool_destroy(newpool);
   return SVN_NO_ERROR;

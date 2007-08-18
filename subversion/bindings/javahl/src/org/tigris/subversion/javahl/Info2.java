@@ -144,6 +144,29 @@ public class Info2 implements java.io.Serializable
     private String prejfile;
 
     /**
+     * The name of the changelist.
+     * @since 1.5
+     */
+    private String changelistName;
+
+    /**
+     * The size of the file after being translated into its local
+     * representation, or <code>-1</code> if unknown.  Not applicable
+     * for directories.
+     * @since 1.5
+     */
+    private long workingSize;
+
+    /**
+     * The size of the file in the repository (untranslated,
+     * e.g. without adjustment of line endings and keyword
+     * expansion). Only applicable for file -- not directory -- URLs.
+     * For working copy paths, size will be <code>-1</code>.
+     * @since New in 1.5.
+     */
+    private long reposSize;
+
+    /**
      * constructor to build the object by native code. See fields for
      * parameters
      * @param path
@@ -173,7 +196,8 @@ public class Info2 implements java.io.Serializable
           String lastChangedAuthor, Lock lock, boolean hasWcInfo, int schedule,
           String copyFromUrl, long copyFromRev, long textTime, long propTime,
           String checksum, String conflictOld, String conflictNew,
-          String conflictWrk, String prejfile)
+          String conflictWrk, String prejfile, String changelistName,
+          long workingSize, long reposSize)
     {
         this.path = path;
         this.url = url;
@@ -196,6 +220,9 @@ public class Info2 implements java.io.Serializable
         this.conflictNew = conflictNew;
         this.conflictWrk = conflictWrk;
         this.prejfile = prejfile;
+        this.changelistName = changelistName;
+        this.workingSize = workingSize;
+        this.reposSize = reposSize;
     }
 
     /**
@@ -375,5 +402,45 @@ public class Info2 implements java.io.Serializable
     public String getPrejfile()
     {
         return prejfile;
+    }
+
+    /**
+     * @return The name of the changelist.
+     * @since 1.5
+     */
+    public String getChangelistName()
+    {
+        return changelistName;
+    }
+
+    /**
+     * @return The size of the file after being translated into its
+     * local representation, or <code>-1</code> if unknown.  Not
+     * applicable for directories.
+     * @since 1.5
+     */
+    public long getWorkingSize()
+    {
+        return workingSize;
+    }
+
+    /**
+     * @return The size of the file in the repository (untranslated,
+     * e.g. without adjustment of line endings and keyword
+     * expansion). Only applicable for file -- not directory -- URLs.
+     * For working copy paths, size will be <code>-1</code>.
+     * @since New in 1.5.
+     */
+    public long getReposSize()
+    {
+        return reposSize;
+    }
+
+    /**
+     * @return A string representation of this info.
+     */
+    public String toString()
+    {
+        return getUrl();
     }
 }

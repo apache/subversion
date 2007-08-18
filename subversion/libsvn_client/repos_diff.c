@@ -899,6 +899,57 @@ close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+/* An editor function.  */
+static svn_error_t *
+absent_directory(const char *path,
+                 void *parent_baton,
+                 apr_pool_t *pool)
+{
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+
+  if (eb->notify_func)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(svn_path_join(pb->wcpath,
+                                             svn_path_basename(path, pool),
+                                             pool),
+                               svn_wc_notify_skip, pool);
+      notify->kind = svn_node_dir;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_missing;
+      (*eb->notify_func)(eb->notify_baton, notify, pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* An editor function.  */
+static svn_error_t *
+absent_file(const char *path,
+            void *parent_baton,
+            apr_pool_t *pool)
+{
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  
+  if (eb->notify_func)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(svn_path_join(pb->wcpath,
+                                             svn_path_basename(path, pool),
+                                             pool),
+                               svn_wc_notify_skip, pool);
+      notify->kind = svn_node_file;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_missing;
+      (*eb->notify_func)(eb->notify_baton, notify, pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Create a repository diff editor and baton.  */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
@@ -948,6 +999,8 @@ svn_client__get_diff_editor(const char *target,
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_edit = close_edit;
+  tree_editor->absent_directory = absent_directory;
+  tree_editor->absent_file = absent_file;
 
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,

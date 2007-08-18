@@ -47,6 +47,7 @@ extern "C" {
 #include "JNICriticalSection.h"
 #include "JNIThreadData.h"
 #include "JNIStringHolder.h"
+#include "Pool.h"
 
 // Static members of JNIUtil are allocated here.
 apr_pool_t *JNIUtil::g_pool = NULL;
@@ -478,6 +479,36 @@ bool JNIUtil::isJavaExceptionThrown()
   return false;
 }
 
+const char *
+JNIUtil::thrownExceptionToCString()
+{
+  const char *msg;
+  JNIEnv *env = getEnv();
+  if (env->ExceptionCheck())
+    {
+      jthrowable t = env->ExceptionOccurred();
+      static jmethodID getMessage = 0;
+      if (getMessage == 0)
+        {
+          jclass clazz = env->FindClass("java/lang/Throwable");
+          getMessage = env->GetMethodID(clazz, "getMessage",
+                                        "(V)Ljava/lang/String;");
+          env->DeleteLocalRef(clazz);
+        }
+      jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
+      const char *tmp = env->GetStringUTFChars(jmsg, NULL);
+      // ### Is it wise to use a request pool in this utility function?
+      msg = (const char *) apr_pstrdup(getRequestPool()->pool(), tmp);
+      env->ReleaseStringUTFChars(jmsg, tmp);
+      // ### Conditionally add t.printStackTrace() to msg?
+    }
+  else
+    {
+      msg = NULL;
+    }
+  return msg;
+}
+
 /**
  * Create a Java string from a native UTF-8 string.
  * @param txt   native UTF-8 string
@@ -494,24 +525,22 @@ jstring JNIUtil::makeJString(const char *txt)
   return env->NewStringUTF(txt);
 }
 
-/**
- * Set the flag that an exception has been thrown
- */
-void JNIUtil::setExceptionThrown()
+void
+JNIUtil::setExceptionThrown(bool flag)
 {
   if (g_inInit)
     {
       // During global initialization, store any errors that occur
       // in a global variable (since thread-local storage may not
       // yet be available).
-      g_initException = true;
+      g_initException = flag;
     }
   else
     {
       // When global initialization is complete, thread-local
       // storage should be available, so store the error there.
       JNIThreadData *data = JNIThreadData::getThreadData();
-      data->m_exceptionThrown = true;
+      data->m_exceptionThrown = flag;
     }
 }
 

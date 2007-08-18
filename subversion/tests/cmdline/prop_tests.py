@@ -741,6 +741,18 @@ def revprop_change(sbox):
 
   sbox.build()
 
+  # First test the error when no revprop-change hook exists.
+  svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change',
+                                     'propset', '--revprop', '-r', '0',
+                                     'cash-sound', 'cha-ching!', sbox.wc_dir)
+
+  # Now test error output from revprop-change hook.
+  message = 'revprop_change test'
+  svntest.actions.disable_revprop_changes(sbox.repo_dir, message)
+  svntest.actions.run_and_verify_svn(None, None, '.*' + message,
+                                     'propset', '--revprop', '-r', '0',
+                                     'cash-sound', 'cha-ching!', sbox.wc_dir)
+
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 

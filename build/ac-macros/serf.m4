@@ -21,13 +21,13 @@ AC_DEFUN(SVN_LIB_SERF,
       CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$serf_prefix/include/serf-0"
       AC_CHECK_HEADERS(serf.h,[
         save_ldflags="$LDFLAGS"
-        LDFLAGS="-L$serf_prefix/lib"
+        LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
         AC_CHECK_LIB(serf-0, serf_context_create,[serf_found="yes"])
         LDFLAGS="$save_ldflags"])
       CPPFLAGS="$save_cppflags"
     fi
   ], [
-       if test -d "$srcdir/serf" -a "$svn_lib_neon" = "no"; then
+       if test -d "$srcdir/serf"; then
          serf_found=reconfig
        fi
      ])

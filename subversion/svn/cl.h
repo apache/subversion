@@ -60,7 +60,6 @@ typedef enum {
   svn_cl__ignore_ancestry_opt,
   svn_cl__ignore_externals_opt,
   svn_cl__incremental_opt,
-  svn_cl__limit_opt,
   svn_cl__merge_cmd_opt,
   svn_cl__native_eol_opt,
   svn_cl__new_cmd_opt,
@@ -144,7 +143,7 @@ typedef struct svn_cl__opt_state_t
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* external editor command. */
-  svn_boolean_t record_only;     /* whether to record merge info */
+  svn_boolean_t record_only;     /* whether to record mergeinfo */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
@@ -160,7 +159,7 @@ typedef struct svn_cl__opt_state_t
   apr_hash_t *revprop_table;     /* table with revision properties to set */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
-  svn_accept_t accept_;          /* automatically resolve conflict */
+  svn_accept_t accept_which;     /* automatically resolve conflict */
 
 } svn_cl__opt_state_t;
 
@@ -244,6 +243,27 @@ svn_error_t *svn_cl__check_cancel(void *baton);
 
 
 
+/* Various conflict-resolution callbacks. */
+
+/* A mindless implementation of svn_wc_conflict_resolver_func_t that
+ * does absolutely nothing to resolve conflicts. */
+svn_error_t *svn_cl__ignore_conflicts(
+    svn_wc_conflict_result_t *result,
+    const svn_wc_conflict_description_t *description,
+    void *baton,
+    apr_pool_t *pool);
+
+/* A conflict-resolution callback which prompts the user to choose
+   one of the 3 fulltexts, edit the merged file on the spot, or just
+   skip the conflict (to be resolved later). */
+svn_error_t *svn_cl__interactive_conflict_handler(
+                          svn_wc_conflict_result_t *result,
+                          const svn_wc_conflict_description_t *desc,
+                          void *baton,
+                          apr_pool_t *pool);
+
+
+
 /*** Command-line output functions -- printing to the user. ***/
 
 /* Print out commit information found in COMMIT_INFO to the console.
@@ -310,6 +330,16 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
                             svn_boolean_t names_only,
                             apr_pool_t *pool);
 
+/* Output a commit xml element to OUTSTR.  IF OUTSTR is NULL, allocate it
+   first from pool, otherwise appen the xml to it.  If AUTHOR or DATE is
+   NULL, it will be omitted. */
+void
+svn_cl__print_xml_commit(svn_stringbuf_t **outstr,
+                         svn_revnum_t revision,
+                         const char *author,
+                         const char *date,
+                         apr_pool_t *pool);
+
 /* Do the following things that are commonly required before accessing revision
    properties.  Ensure that REVISION is specified explicitly and is not
    relative to a working-copy item.  Ensure that exactly one target is
@@ -349,16 +379,33 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
 
    If return error, *EDITED_CONTENTS is not touched. */
 svn_error_t *
-svn_cl__edit_externally(svn_string_t **edited_contents,
-                        const char **tmpfile_left,
-                        const char *editor_cmd,
-                        const char *base_dir,
-                        const svn_string_t *contents,
-                        const char *prefix,
-                        apr_hash_t *config,
-                        svn_boolean_t as_text,
-                        const char *encoding,
-                        apr_pool_t *pool);
+svn_cl__edit_string_externally(svn_string_t **edited_contents,
+                               const char **tmpfile_left,
+                               const char *editor_cmd,
+                               const char *base_dir,
+                               const svn_string_t *contents,
+                               const char *prefix,
+                               apr_hash_t *config,
+                               svn_boolean_t as_text,
+                               const char *encoding,
+                               apr_pool_t *pool);
+
+
+/* Search for a text editor command in standard environment variables,
+   and invoke it to edit PATH.  Use POOL for all allocations.
+
+   If EDITOR_CMD is not NULL, it is the name of the external editor
+   command to use, overriding anything else that might determine the
+   editor.
+
+   CONFIG is a hash of svn_config_t * items keyed on a configuration
+   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.  */
+svn_error_t *
+svn_cl__edit_file_externally(const char *path,
+                             const char *editor_cmd,
+                             apr_hash_t *config,
+                             apr_pool_t *pool);
+
 
 
 

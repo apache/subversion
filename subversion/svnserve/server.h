@@ -46,7 +46,6 @@ typedef struct server_baton_t {
 #ifdef SVN_HAVE_SASL
   svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication */
 #endif
-  int protocol_version;
   apr_pool_t *pool;
 } server_baton_t;
 

@@ -151,12 +151,12 @@ svn_error_t *svn_fs_base__set_txn_base(svn_fs_t *fs,
    Return SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
    transaction that has already been committed.  */
 svn_error_t *
-svn_fs_base__set_txn_merge_info(svn_fs_t *fs,
-                                const char *txn_name,
-                                const char *path,
-                                const svn_string_t *value,
-                                trail_t *trail,
-                                apr_pool_t *pool);
+svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
+                               const char *txn_name,
+                               const char *path,
+                               const svn_string_t *value,
+                               trail_t *trail,
+                               apr_pool_t *pool);
 
 /* Set a property NAME to VALUE on transaction TXN_NAME in FS as part
    of TRAIL.  Use POOL for any necessary allocations.
@@ -214,7 +214,10 @@ svn_error_t *svn_fs_base__txn_proplist(apr_hash_t **table_p,
                                        svn_fs_txn_t *txn,
                                        apr_pool_t *pool);
 
-/* Helper func:  variant of __txn_proplist that uses an existing trail. */
+/* Helper func:  variant of __txn_proplist that uses an existing TRAIL. 
+ * TXN_ID identifies the transaction.
+ * *TABLE_P will be non-null upon success. 
+ */
 svn_error_t *svn_fs_base__txn_proplist_in_trail(apr_hash_t **table_p,
                                                 const char *txn_id,
                                                 trail_t *trail);

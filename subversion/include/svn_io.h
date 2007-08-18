@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -112,8 +112,8 @@ svn_error_t *svn_io_check_resolved_path(const char *path,
                                         apr_pool_t *pool);
 
 
-/** Open a new file (for writing) with a unique name based on utf-8
- * encoded @a path, in the same directory as @a path.  The file handle is
+/** Open a new file (for reading and writing) with a unique name based on
+ * utf-8 encoded @a path, in the same directory as @a path.  The file handle is
  * returned in @a *f, and the name, which ends with @a suffix, is returned
  * in @a *unique_name_p, also utf8-encoded.  Either @a f or @a unique_name_p
  * may be @c NULL.
@@ -807,6 +807,9 @@ svn_error_t *svn_io_get_dir_filenames(apr_hash_t **dirents,
  *
  * @note The `.' and `..' directories normally returned by
  * apr_dir_read() are NOT returned in the hash.
+ *
+ * @note The kind field in the @a dirents is set according to the mapping
+ *       as documented for svn_io_check_path()
  *
  * @since New in 1.3.
  */

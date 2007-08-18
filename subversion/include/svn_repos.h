@@ -1028,6 +1028,9 @@ svn_repos_deleted_rev(svn_fs_t *fs,
  * baton given to svn_repos_history().  @a pool is provided for the
  * convenience of the implementor, who should not expect it to live
  * longer than a single callback call.
+ *
+ * Signal to callback driver to stop processing/invoking this callback
+ * by returning the @c SVN_ERR_CEASE_INVOCATION error code.
  */
 typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
                                                  const char *path,
@@ -1037,7 +1040,8 @@ typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
 /**
  * Call @a history_func (with @a history_baton) for each interesting
  * history location in the lifetime of @a path in @a fs, from the
- * youngest of @a end and @a start to the oldest.  Only cross
+ * youngest of @a end and @a start to the oldest.  Stop processing if
+ * @a history_func returns @c SVN_ERR_CEASE_INVOCATION.  Only cross
  * filesystem copy history if @a cross_copies is @c TRUE.  And do all
  * of this in @a pool.
  *
@@ -1251,24 +1255,24 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /* ---------------------------------------------------------------*/
 
-/* Retrieving merge info. */
+/* Retrieving mergeinfo. */
 
 /**
  * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
  * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
  * (from @a paths) to textual (@c char *) representations of merge
  * info (as managed by svn_mergeinfo.h), or @c NULL if there is no
- * merge info visible or available.
+ * mergeinfo visible or available.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited merge info for @paths is fetched.
+ * only inherited mergeinfo for @paths is fetched.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
  * of each path which mergeinfo was requested for (from @a paths).
- * Silently omit unreadable paths from the request for merge info.
+ * Silently omit unreadable paths from the request for mergeinfo.
  *
  * Use @a pool for temporary allocations.
  *
