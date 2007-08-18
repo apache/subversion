@@ -19,4 +19,5 @@ attlist.entry &=
   attribute line-number { xsd:integer { minInclusive = "1" } }
 
 ## The merged commit
-merged = element merged { commit }
+merged = element merged { attlist.merged, commit }
+attlist.merged &= attribute path { string }

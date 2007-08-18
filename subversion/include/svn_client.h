@@ -619,18 +619,21 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)
  * @{
  */
 
-/** Callback type used by svn_client_blame() to notify the caller
+/** Callback type used by svn_client_blame4() to notify the caller
  * that line @a line_no of the blamed file was last changed in
  * @a revision by @a author on @a date, and that the contents were
  * @a line.
+ *
+ * If svn_client_blame4() was called with @a include_merged_revisions set to
+ * TRUE, @a merged_revision, @a merged_author, @a merged_date, and
+ * @a merged_path will be set, otherwise they will be NULL.  @a merged_path
+ * will be set to the absolute repository path.
  *  
  * All allocations should be performed in @a pool.
  *
  * @note If there is no blame information for this line, @a revision will be
  * invalid and @a author and @a date will be NULL.
  *
- * @note If merge information is not requested, @a merged_revision will be
- * invalid and  @a merged_author and @a merged_date will be NULL.
  *
  * @since New in 1.5.
  */
@@ -643,12 +646,13 @@ typedef svn_error_t *(*svn_client_blame_receiver2_t)
    svn_revnum_t merged_revision,
    const char *merged_author,
    const char *merged_date,
+   const char *merged_path,
    const char *line,
    apr_pool_t *pool);
 
 /**
- * Similar to @c svn_cliemt_blame_receiver2_t, but without @a merged_revision,
- * @a merged_author, or @a merged_date members.
+ * Similar to @c svn_client_blame_receiver2_t, but without @a merged_revision,
+ * @a merged_author, @a merged_date, or @a merged_path members.
  *
  * @note New in 1.4 is that the line is defined to contain only the line
  * content (and no [partial] EOLs; which was undefined in older versions).

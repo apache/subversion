@@ -51,6 +51,7 @@ blame_receiver_xml(void *baton,
                    svn_revnum_t merged_revision,
                    const char *merged_author,
                    const char *merged_date,
+                   const char *merged_path,
                    const char *line,
                    apr_pool_t *pool)
 {
@@ -73,7 +74,8 @@ blame_receiver_xml(void *baton,
   if (opt_state->use_merge_history && SVN_IS_VALID_REVNUM(merged_revision))
     {
       /* "<merged>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "merged", NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "merged",
+                            "path", merged_path, NULL);
 
       svn_cl__print_xml_commit(&sb, merged_revision, merged_author,
                                merged_date, pool);
@@ -98,6 +100,7 @@ print_line_info(svn_stream_t *out,
                 svn_revnum_t revision,
                 const char *author,
                 const char *date,
+                const char *path,
                 svn_boolean_t verbose,
                 apr_pool_t *pool)
 {
@@ -122,9 +125,12 @@ print_line_info(svn_stream_t *out,
              abbreviations for the month and weekday names.  Else, the
              line contents will be misaligned. */
           time_stdout = "                                           -";
-      return svn_stream_printf(out, pool, "%s %10s %s ", rev_str, 
-                               author ? author : "         -",
-                               time_stdout);
+      SVN_ERR(svn_stream_printf(out, pool, "%s %10s %s ", rev_str, 
+                                author ? author : "         -",
+                                time_stdout));
+
+      if (path)
+        SVN_ERR(svn_stream_printf(out, pool, "%-16s ", path));
     }
   else
     {
@@ -132,6 +138,7 @@ print_line_info(svn_stream_t *out,
                                author ? author : "         -");
     }
 
+  return SVN_NO_ERROR;
 }
 
 /* This implements the svn_client_blame_receiver2_t interface. */
@@ -144,6 +151,7 @@ blame_receiver(void *baton,
                svn_revnum_t merged_revision,
                const char *merged_author,
                const char *merged_date,
+               const char *merged_path,
                const char *line,
                apr_pool_t *pool)
 {
@@ -153,10 +161,10 @@ blame_receiver(void *baton,
  
   if (opt_state->use_merge_history)
     SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
-                            opt_state->verbose, pool));
+                            merged_path, opt_state->verbose, pool));
   else
-    SVN_ERR(print_line_info(out, revision, author, date, opt_state->verbose,
-                            pool));
+    SVN_ERR(print_line_info(out, revision, author, date, NULL,
+                            opt_state->verbose, pool));
 
   return svn_stream_printf(out, pool, "%s%s", line, APR_EOL_STR);
 }

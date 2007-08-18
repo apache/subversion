@@ -39,7 +39,7 @@ struct rev
   svn_revnum_t revision; /* the revision number */
   const char *author;    /* the author of the revision */
   const char *date;      /* the date of the revision */
-  /* Only used by the pre-1.1 code. */
+  /* Only used by the pre-1.1 code. (path is also used for merge reporting) */
   const char *path;      /* the absolute repository path */
   struct rev *next;      /* the next revision */
 };
@@ -559,6 +559,9 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
         frb->rev->date = NULL;
     }
 
+  if (frb->include_merged_revisions)
+    frb->rev->path = apr_pstrdup(frb->mainpool, path);
+
   return SVN_NO_ERROR;
 }
 
@@ -763,19 +766,21 @@ svn_client_blame4(const char *target,
     {
       apr_off_t line_no;
       svn_revnum_t merged_rev;
-      const char *merged_author, *merged_date;
+      const char *merged_author, *merged_date, *merged_path;
 
       if (walk_merged)
         {
           merged_rev = walk_merged->rev->revision;
           merged_author = walk_merged->rev->author;
           merged_date = walk_merged->rev->date;
+          merged_path = walk_merged->rev->path;
         }
       else
         {
           merged_rev = SVN_INVALID_REVNUM;
           merged_author = NULL;
           merged_date = NULL;
+          merged_path = NULL;
         }
 
       for (line_no = walk->start;
@@ -793,7 +798,7 @@ svn_client_blame4(const char *target,
             SVN_ERR(receiver(receiver_baton, line_no, walk->rev->revision,
                              walk->rev->author, walk->rev->date,
                              merged_rev, merged_author, merged_date,
-                             sb->data, iterpool));
+                             merged_path, sb->data, iterpool));
           if (eof) break;
         }
 
@@ -834,6 +839,7 @@ blame_wrapper_receiver(void *baton,
                        svn_revnum_t merged_revision,
                        const char *merged_author,
                        const char *merged_date,
+                       const char *merged_path,
                        const char *line,
                        apr_pool_t *pool)
 {
