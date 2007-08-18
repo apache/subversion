@@ -39,7 +39,7 @@ struct rev
   svn_revnum_t revision; /* the revision number */
   const char *author;    /* the author of the revision */
   const char *date;      /* the date of the revision */
-  /* Only used by the pre-1.1 code. (path is also used for merge reporting) */
+  /* Used for merge reporting, and by the pre-1.1 code. */
   const char *path;      /* the absolute repository path */
   struct rev *next;      /* the next revision */
 };
