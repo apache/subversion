@@ -1,7 +1,7 @@
 /* repos.h : interface to Subversion repository, private to libsvn_repos
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -256,6 +256,24 @@ svn_error_t *
 svn_repos__change_txn_props(svn_fs_txn_t *txn,
                             apr_hash_t *txnprop_table,
                             apr_pool_t *pool);
+
+/* Get the mergeinfo for PATH in REPOS as REVNUM and store it in MERGEINFO. */
+svn_error_t *
+svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
+                              svn_fs_t *fs,
+                              const char *path,
+                              svn_revnum_t revnum,
+                              apr_pool_t *pool);
+
+/* Determine whether or not PATH  in ROOT is a branching copy.  PATH_MERGEINFO
+   should be the the mergeinfo for PATH in ROOT.  If PATH_MERGEINFO is NULL, it
+   will be fetched internally.  The result is returned in *IS_BRANCHING. */
+svn_error_t *
+svn_repos__is_branching_copy(svn_boolean_t *is_branching,
+                             svn_fs_root_t *root,
+                             const char *path,
+                             apr_hash_t *path_mergeinfo,
+                             apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
