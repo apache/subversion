@@ -89,6 +89,9 @@ struct file_rev_baton {
   struct blame_chain *merged_chain;  /* the merged blame chain. */ 
   /* name of file containing the previous merged revision of the file */
   const char *last_original_filename;
+  /* pools for files which may need to persist for more than one rev. */
+  apr_pool_t *filepool;
+  apr_pool_t *prevfilepool;
 };
 
 /* The baton used by the txdelta window handler. */
@@ -373,12 +376,20 @@ window_handler(svn_txdelta_window_t *window, void *baton)
          blame info to the chain for the original line of history. */
       if (! frb->merged_revision)
         {
+          apr_pool_t *tmppool;
+
           SVN_ERR(add_file_blame(frb->last_original_filename,
                                  dbaton->filename, frb->chain, frb->rev,
                                  frb->diff_options, frb->currpool));
 
-          /* This filename could be around for a while, potentially. */
-          frb->last_original_filename = apr_pstrdup(frb->chain->pool, 
+          /* This filename could be around for a while, potentially, so
+             use the longer lifetime pool, and switch it with the previous one*/
+          svn_pool_clear(frb->prevfilepool);
+          tmppool = frb->filepool;
+          frb->filepool = frb->prevfilepool;
+          frb->prevfilepool = tmppool;
+
+          frb->last_original_filename = apr_pstrdup(frb->filepool, 
                                                     dbaton->filename);
         }
     }
@@ -443,6 +454,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   svn_stream_t *last_stream;
   svn_stream_t *cur_stream;
   struct delta_baton *delta_baton;
+  apr_pool_t *filepool;
 
   /* Clear the current pool. */
   svn_pool_clear(frb->currpool);
@@ -489,11 +501,16 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     delta_baton->source_file = NULL;
   last_stream = svn_stream_from_aprfile(delta_baton->source_file, pool);
 
+  if (frb->include_merged_revisions && !frb->merged_revision)
+    filepool = frb->filepool;
+  else
+    filepool = frb->currpool;
+
   SVN_ERR(svn_io_open_unique_file2(&delta_baton->file,
                                    &delta_baton->filename,
                                    frb->tmp_path,
-                                   ".tmp", svn_io_file_del_none /*on_pool_cleanup*/,
-                                   frb->currpool));
+                                   ".tmp", svn_io_file_del_on_pool_cleanup,
+                                   filepool));
   cur_stream = svn_stream_from_aprfile(delta_baton->file, frb->currpool);
 
   /* Get window handler for applying delta. */
@@ -695,6 +712,11 @@ svn_client_blame4(const char *target,
      the lifetime of the pool provided by get_file_revs. */
   frb.lastpool = svn_pool_create(pool);
   frb.currpool = svn_pool_create(pool);
+  if (include_merged_revisions)
+    {
+      frb.filepool = svn_pool_create(pool);
+      frb.prevfilepool = svn_pool_create(pool);
+    }
 
   /* Collect all blame information.
      We need to ensure that we get one revision before the start_rev,
@@ -786,6 +808,11 @@ svn_client_blame4(const char *target,
 
   svn_pool_destroy(frb.lastpool);
   svn_pool_destroy(frb.currpool);
+  if (include_merged_revisions)
+    {
+      svn_pool_destroy(frb.filepool);
+      svn_pool_destroy(frb.prevfilepool);
+    }
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
