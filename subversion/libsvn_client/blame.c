@@ -78,11 +78,17 @@ struct file_rev_baton {
   struct rev *rev;     /* the rev for which blame is being assigned
                           during a diff */
   struct blame_chain *chain;      /* the original blame chain. */
-  struct blame_chain *merged_chain;  /* the merged blame chain. */ 
   const char *tmp_path; /* temp file name to feed svn_io_open_unique_file */
   apr_pool_t *mainpool;  /* lives during the whole sequence of calls */
   apr_pool_t *lastpool;  /* pool used during previous call */
   apr_pool_t *currpool;  /* pool used during this call */
+
+  /* These are used for tracking merged revisions. */
+  svn_boolean_t include_merged_revisions;
+  svn_boolean_t merged_revision;
+  struct blame_chain *merged_chain;  /* the merged blame chain. */ 
+  /* name of file containing the previous merged revision of the file */
+  const char *last_original_filename;
 };
 
 /* The baton used by the txdelta window handler. */
@@ -342,6 +348,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct delta_baton *dbaton = baton;
   struct file_rev_baton *frb = dbaton->file_rev_baton;
+  struct blame_chain *chain;
 
   /* Call the wrapped handler first. */
   SVN_ERR(dbaton->wrapped_handler(window, dbaton->wrapped_baton));
@@ -358,9 +365,31 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     SVN_ERR(svn_io_file_close(dbaton->source_file, frb->currpool));
   SVN_ERR(svn_io_file_close(dbaton->file, frb->currpool));
 
+  if (frb->include_merged_revisions)
+    {
+      chain = frb->merged_chain;
+
+      /* If the current revision is not a merged one, we need to add its
+         blame info to the chain for the original line of history. */
+      if (! frb->merged_revision)
+        {
+          SVN_ERR(add_file_blame(frb->last_original_filename,
+                                 dbaton->filename, frb->chain, frb->rev,
+                                 frb->diff_options, frb->currpool));
+
+          /* This filename could be around for a while, potentially. */
+          frb->last_original_filename = apr_pstrdup(frb->chain->pool, 
+                                                    dbaton->filename);
+        }
+    }
+  else
+    {
+      chain = frb->chain;
+    }
+
   /* Process this file. */
   SVN_ERR(add_file_blame(frb->last_filename,
-                         dbaton->filename, frb->chain, frb->rev,
+                         dbaton->filename, chain, frb->rev,
                          frb->diff_options, frb->currpool));
 
   /* Prepare for next revision. */
@@ -446,6 +475,8 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   if (!content_delta_handler)
     return SVN_NO_ERROR;
 
+  frb->merged_revision = merged_revision;
+
   /* Create delta baton. */
   delta_baton = apr_palloc(frb->currpool, sizeof(*delta_baton));
 
@@ -461,7 +492,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   SVN_ERR(svn_io_open_unique_file2(&delta_baton->file,
                                    &delta_baton->filename,
                                    frb->tmp_path,
-                                   ".tmp", svn_io_file_del_on_pool_cleanup,
+                                   ".tmp", svn_io_file_del_none /*on_pool_cleanup*/,
                                    frb->currpool));
   cur_stream = svn_stream_from_aprfile(delta_baton->file, frb->currpool);
 
@@ -601,7 +632,7 @@ svn_client_blame4(const char *target,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  struct file_rev_baton frb, frbm;
+  struct file_rev_baton frb;
   svn_ra_session_t *ra_session;
   const char *url;
   svn_revnum_t start_revnum, end_revnum;
@@ -640,11 +671,20 @@ svn_client_blame4(const char *target,
   frb.ctx = ctx;
   frb.diff_options = diff_options;
   frb.ignore_mime_type = ignore_mime_type;
+  frb.include_merged_revisions = include_merged_revisions;
   frb.last_filename = NULL;
+  frb.last_original_filename = NULL;
   frb.chain = apr_palloc(pool, sizeof(*frb.chain));
   frb.chain->blame = NULL;
   frb.chain->avail = NULL;
   frb.chain->pool = pool;
+  if (include_merged_revisions)
+    {
+      frb.merged_chain = apr_palloc(pool, sizeof(*frb.merged_chain));
+      frb.merged_chain->blame = NULL;
+      frb.merged_chain->avail = NULL;
+      frb.merged_chain->pool = pool;
+    }
 
   SVN_ERR(svn_io_temp_dir(&frb.tmp_path, pool));
   frb.tmp_path = svn_path_join(frb.tmp_path, "tmp", pool),
@@ -662,7 +702,8 @@ svn_client_blame4(const char *target,
      revision. */
   err = svn_ra_get_file_revs2(ra_session, "",
                               start_revnum - (start_revnum > 0 ? 1 : 0),
-                              end_revnum, FALSE, file_rev_handler, &frb, pool);
+                              end_revnum, include_merged_revisions,
+                              file_rev_handler, &frb, pool);
   
   /* Fall back if it wasn't supported by the server.  Servers earlier
      than 1.1 need this. */
@@ -673,49 +714,6 @@ svn_client_blame4(const char *target,
     }
 
   SVN_ERR(err);
-
-  if (include_merged_revisions)
-    {
-      /* TODO: This could be done a bit more efficiently.  Instead of calling
-         svn_ra_get_file_revs2() repeatedly, we could call it once, and use
-         the merged_revision flag to the callback to determine which revisions
-         to treat as members of the original line of history, and which ones
-         to use as merged revisions. */
-      frbm.start_rev = start_revnum;
-      frbm.end_rev = end_revnum;
-      frbm.target = target;
-      frbm.ctx = ctx;
-      frbm.diff_options = diff_options;
-      frbm.ignore_mime_type = ignore_mime_type;
-      frbm.last_filename = NULL;
-      frbm.chain = apr_palloc(pool, sizeof(*frbm.chain));
-      frbm.chain->blame = NULL;
-      frbm.chain->avail = NULL;
-      frbm.chain->pool = pool;
-
-      SVN_ERR(svn_io_temp_dir(&frb.tmp_path, pool));
-      frbm.tmp_path = svn_path_join(frb.tmp_path, "tmp", pool),
-
-      frbm.mainpool = pool;
-      /* The callback will flip the following two pools, because it needs
-         information from the previous call.  Obviously, it can't rely on
-         the lifetime of the pool provided by get_file_revs. */
-      frbm.lastpool = svn_pool_create(pool);
-      frbm.currpool = svn_pool_create(pool);
-
-      /* Collect all blame information.
-         We need to ensure that we get one revision before the start_rev,
-         if available so that we can know what was actually changed in the start
-         revision. */
-      SVN_ERR(svn_ra_get_file_revs2(ra_session, "",
-                                    start_revnum - (start_revnum > 0 ? 1 : 0),
-                                    end_revnum, TRUE,
-                                    file_rev_handler, &frbm, pool));
-
-      normalize_blames(frb.chain, frbm.chain, pool);
-
-      walk_merged = frbm.chain->blame;
-    }
 
   /* Report the blame to the caller. */
 
@@ -730,6 +728,13 @@ svn_client_blame4(const char *target,
                            APR_OS_DEFAULT, pool));
   stream = svn_subst_stream_translated(svn_stream_from_aprfile(file, pool),
                                        "\n", TRUE, NULL, FALSE, pool);
+
+  /* Perform optional merged chain normalization. */
+  if (include_merged_revisions)
+    {
+      normalize_blames(frb.chain, frb.merged_chain, pool);
+      walk_merged = frb.merged_chain->blame;
+    }
 
   /* Process each blame item. */
   for (walk = frb.chain->blame; walk; walk = walk->next)
@@ -781,11 +786,6 @@ svn_client_blame4(const char *target,
 
   svn_pool_destroy(frb.lastpool);
   svn_pool_destroy(frb.currpool);
-  if (include_merged_revisions)
-    {
-      svn_pool_destroy(frbm.lastpool);
-      svn_pool_destroy(frbm.currpool);
-    }
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

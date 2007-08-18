@@ -508,12 +508,13 @@ def blame_merge_out_of_range(sbox):
   upsilon_path = os.path.join(wc_dir, 'trunk', 'A', 'upsilon')
 
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'blame', '-g', upsilon_path)
+                                                     'blame', '-g',
+                                                     upsilon_path)
   expected_blame = [
-      { 'revision' : 4,
+      { 'revision' : 14,
         'author' : 'jrandom',
-        'merge_revision' : None,
-        'merge_author' : None,
+        'merge_revision' : 4,
+        'merge_author' : 'jrandom',
         'text' : "This is the file 'upsilon'.\n",
       },
       { 'revision' : 14,
