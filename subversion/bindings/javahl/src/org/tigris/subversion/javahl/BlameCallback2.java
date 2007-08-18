@@ -23,6 +23,8 @@ import java.util.Date;
 /**
  * This interface is used to receive every single line for a file on a
  * the SVNClientInterface.blame call.
+ *
+ * @since 1.5
  */
 public interface BlameCallback2
 {
@@ -34,7 +36,7 @@ public interface BlameCallback2
      * @param merged_date       the date of the last merged change.
      * @param merged_revision   the revision of the last merged change.
      * @param merged_author     the author of the last merged change.
-     * @param merged_author     the path of the last merged change.
+     * @param merged_path       the path of the last merged change.
      * @param line              the line in the file
      */
     public void singleLine(Date date, long revision, String author,
