@@ -1326,6 +1326,8 @@ public interface SVNClientInterface
      * @param revisionStart the first revision to show
      * @param revisionEnd   the last revision to show
      * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param includeMergedRevisions whether or not to include extra merge
+     *                      information
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
@@ -1334,7 +1336,8 @@ public interface SVNClientInterface
 
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
-               BlameCallback callback) throws ClientException;
+               boolean includeMergedRevisions,
+               BlameCallback2 callback) throws ClientException;
 
     /**
      * Set directory for the configuration information, taking the

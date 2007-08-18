@@ -1956,6 +1956,8 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param revisionStart the first revision to show
      * @param revisionEnd   the last revision to show
      * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param includeMergedRevisions whether or not to include extra merge
+     *                      information
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
@@ -1967,13 +1969,14 @@ public class SVNClientSynchronized implements SVNClientInterface
                       Revision revisionStart,
                       Revision revisionEnd,
                       boolean ignoreMimeType,
-                      BlameCallback callback)
+                      boolean includeMergedRevisions,
+                      BlameCallback2 callback)
             throws ClientException
     {
         synchronized(clazz)
         {
             worker.blame(path, pegRevision, revisionStart, revisionEnd,
-                         ignoreMimeType, callback);
+                         ignoreMimeType, includeMergedRevisions, callback);
         }
     }
 
