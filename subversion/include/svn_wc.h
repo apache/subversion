@@ -2488,6 +2488,11 @@ svn_error_t *svn_wc_delete(const char *path,
  * ### Update: see "###" comment in svn_wc_add_repos_file()'s doc
  * string about this.
  *
+ * @note Since 1.5, this API may fold the schedule of @a path with that
+ *       of the parent, when adding with history.  This may cause the
+ *       target not to show up with a schedule 'Add'.  This is not
+ *       a bug, but rather the solution to one (see issue #1962).
+ *
  * @since New in 1.2.
  */
 svn_error_t *svn_wc_add2(const char *path,
@@ -2551,7 +2556,12 @@ svn_error_t *svn_wc_add(const char *path,
  * etc, etc.  So another part of the Ideal Plan is that that
  * functionality of svn_wc_add() would move into a separate function.
  *
- * @since New in 1.4
+ * @note Since 1.5, this API may fold the schedule of @a path with that
+ *       of the parent, when adding with history.  This may cause the
+ *       target not to show up with a schedule 'Add'.  This is not
+ *       a bug, but rather the solution to one (see issue #1962).
+ *
+* @since New in 1.4
  */
 svn_error_t *svn_wc_add_repos_file2(const char *dst_path,
                                     svn_wc_adm_access_t *adm_access,

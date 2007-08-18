@@ -253,6 +253,25 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        void *conflict_baton,
                        apr_pool_t *pool);
 
+
+/* Determine the schedule for an entry to be added.
+ *
+ * Unfortunately, that schedule isn't always 'A', because
+ * copying of parents might imply the existence of an entry in the
+ * repository. These items *don't* have the 'A'dded schedule, but
+ * rather the ' ' (normal) schedule.
+ *
+ * This routine determines which it should be.
+ */
+svn_error_t *
+svn_wc__schedule_for_added_entry(svn_wc_schedule_t *schedule,
+                                 svn_wc_adm_access_t *adm_access,
+                                 const char *dst_path,
+                                 const char *copyfrom_url,
+                                 svn_revnum_t copyfrom_rev,
+                                 apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
