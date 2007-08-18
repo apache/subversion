@@ -29,16 +29,11 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 # Helper function to validate the output of a particular run of blame.
-def parse_and_verify_blame(output, expected_blame, with_merge=0):
+def parse_and_verify_blame(output, expected_blame):
   "tokenize and validate the output of blame"
 
   max_split = 2
   keys = ['revision', 'author', 'text']
-
-  if with_merge:
-    max_split = 4
-    keys.append('merge_author')
-    keys.append('merge_revision')
 
   results = []
 
@@ -57,20 +52,7 @@ def parse_and_verify_blame(output, expected_blame, with_merge=0):
     else:
       this_line['author'] = tokens[1]
       
-    if with_merge:
-      if tokens[2] == '-':
-        this_line['merge_revision'] = None
-      else:
-        this_line['merge_revision'] = int(tokens[2])
-
-      if tokens[3] == '-':
-        this_line['merge_author'] = None
-      else:
-        this_line['merge_author'] = tokens[3]
-
-      this_line['text'] = tokens[4]
-    else:
-      this_line['text'] = tokens[2]
+    this_line['text'] = tokens[2]
 
     results.append(this_line)
 
@@ -483,18 +465,14 @@ def blame_merge_info(sbox):
   expected_blame = [
       { 'revision' : 2,
         'author' : 'jrandom',
-        'merge_revision' : None,
-        'merge_author' : None,
         'text' : "This is the file 'iota'.\n",
       },
-      { 'revision' : 14,
-        'author': 'jrandom',
-        'merge_revision' : 11,
-        'merge_author' : 'jrandom',
+      { 'revision' : 11,
+        'author' : 'jrandom',
         'text' : "'A' has changed a bit, with 'upsilon', and 'xi'.\n",
       },
     ]
-  parse_and_verify_blame(output, expected_blame, 1)
+  parse_and_verify_blame(output, expected_blame)
 
 
 def blame_merge_out_of_range(sbox):
@@ -511,20 +489,16 @@ def blame_merge_out_of_range(sbox):
                                                      'blame', '-g',
                                                      upsilon_path)
   expected_blame = [
-      { 'revision' : 14,
+      { 'revision' : 4,
         'author' : 'jrandom',
-        'merge_revision' : 4,
-        'merge_author' : 'jrandom',
         'text' : "This is the file 'upsilon'.\n",
       },
-      { 'revision' : 14,
+      { 'revision' : 11,
         'author': 'jrandom',
-        'merge_revision' : 11,
-        'merge_author' : 'jrandom',
         'text' : "There is also the file 'xi'.\n",
       },
     ]
-  parse_and_verify_blame(output, expected_blame, 1)
+  parse_and_verify_blame(output, expected_blame)
 
 
 ########################################################################

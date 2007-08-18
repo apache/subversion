@@ -765,7 +765,7 @@ svn_client_blame4(const char *target,
       svn_revnum_t merged_rev;
       const char *merged_author, *merged_date;
 
-      if (walk_merged && walk_merged->rev->revision != walk->rev->revision)
+      if (walk_merged)
         {
           merged_rev = walk_merged->rev->revision;
           merged_author = walk_merged->rev->author;

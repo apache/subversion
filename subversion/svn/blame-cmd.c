@@ -151,15 +151,12 @@ blame_receiver(void *baton,
     ((blame_baton_t *) baton)->opt_state;
   svn_stream_t *out = ((blame_baton_t *)baton)->out;
  
-  SVN_ERR(print_line_info(out, revision, author, date, opt_state->verbose,
-                          pool));
-
   if (opt_state->use_merge_history)
-    {
-      SVN_ERR(svn_stream_printf(out, pool, " "));
-      SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
-                              opt_state->verbose, pool));
-    }
+    SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
+                            opt_state->verbose, pool));
+  else
+    SVN_ERR(print_line_info(out, revision, author, date, opt_state->verbose,
+                            pool));
 
   return svn_stream_printf(out, pool, "%s%s", line, APR_EOL_STR);
 }
