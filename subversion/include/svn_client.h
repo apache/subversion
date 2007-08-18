@@ -1916,7 +1916,7 @@ svn_client_log(const apr_array_header_t *targets,
  *
  * Use @a pool for any temporary allocation.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_client_blame4(const char *path_or_url,
