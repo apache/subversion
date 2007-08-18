@@ -287,7 +287,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_wc_adm_open3(&dst_access, NULL, dst_parent, TRUE, 0,
                            ctx->cancel_func, ctx->cancel_baton, pool));
                               
-  for ( i = 0; i < copy_pairs->nelts; i++)
+  for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_wc_adm_access_t *src_access;
       const char *src_parent;
@@ -364,7 +364,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err = SVN_NO_ERROR;
 
-  for ( i = 0; i < copy_pairs->nelts; i++)
+  for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_wc_adm_access_t *src_access, *dst_access;
       const char *src_parent;
@@ -791,7 +791,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
      If it is, and the parent of DST_URL is the current TOP_URL, then we
      need to reparent the session one directory higher, the parent of 
      the DST_URL. */
-  for (i = 0; i < copy_pairs->nelts; i++ )
+  for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
@@ -1785,7 +1785,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
 
-      for ( i = 0; i < sources->nelts; i++)
+      for (i = 0; i < sources->nelts; i++)
         {
           svn_client_copy_source_t *source = APR_ARRAY_IDX(sources, i,
                                                svn_client_copy_source_t *);
@@ -1842,7 +1842,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
 
-      for ( i = 0; i < copy_pairs->nelts; i++ )
+      for (i = 0; i < copy_pairs->nelts; i++ )
         {
           svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                             svn_client__copy_pair_t *);
@@ -1864,7 +1864,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
     {
       if (srcs_are_urls == dst_is_url)
         {
-          for ( i = 0; i < copy_pairs->nelts; i++)
+          for (i = 0; i < copy_pairs->nelts; i++)
             {
               svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                 svn_client__copy_pair_t *);
@@ -1898,7 +1898,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
           /* Check to see if any revision is something other than 
              svn_opt_revision_unspecified or svn_opt_revision_working. */
-          for ( i = 0; i < copy_pairs->nelts; i++)
+          for (i = 0; i < copy_pairs->nelts; i++)
             {
               svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                 svn_client__copy_pair_t *);
@@ -1915,7 +1915,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
             {
               apr_pool_t *iterpool = svn_pool_create(pool);
 
-              for ( i = 0; i < copy_pairs->nelts; i++)
+              for (i = 0; i < copy_pairs->nelts; i++)
                 {
                   svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
