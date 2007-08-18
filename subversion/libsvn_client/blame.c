@@ -613,7 +613,7 @@ normalize_blames(struct blame_chain *chain,
       while (walk->next != NULL)
         {
           struct blame *tmp = blame_create(chain_merged, walk_merged->rev,
-                                         walk->next->start);
+                                           walk->next->start);
           walk_merged->next = tmp;
           walk_merged = walk_merged->next;
           walk = walk->next;
