@@ -1966,7 +1966,8 @@ public class SVNClient implements SVNClientInterface
 
         public void singleLine(Date date, long revision, String author,
                                Date merged_date, long merged_revision,
-                               String merged_author, String line)
+                               String merged_author, String merged_path,
+                               String line)
         {
             oldCallback.singleLine(date, revision, author, line);
         }

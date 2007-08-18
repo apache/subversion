@@ -31,12 +31,14 @@ public interface BlameCallback2
      * @param changed           the date of the last change.
      * @param revision          the revision of the last change.
      * @param author            the author of the last change.
-     * @param merged_date       the date of the last change.
-     * @param merged_revision   the revision of the last change.
-     * @param mergedauthor      the author of the last change.
+     * @param merged_date       the date of the last merged change.
+     * @param merged_revision   the revision of the last merged change.
+     * @param merged_author     the author of the last merged change.
+     * @param merged_author     the path of the last merged change.
      * @param line              the line in the file
      */
     public void singleLine(Date date, long revision, String author,
                            Date merged_date, long merged_revision,
-                           String merged_author, String line);
+                           String merged_author, String merged_path,
+                           String line);
 }

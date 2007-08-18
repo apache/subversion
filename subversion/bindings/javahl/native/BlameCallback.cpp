@@ -48,13 +48,15 @@ BlameCallback::callback(void *baton,
                         svn_revnum_t merged_revision,
                         const char *merged_author,
                         const char *merged_date,
+                        const char *merged_path,
                         const char *line,
                         apr_pool_t *pool)
 {
   if (baton)
     return ((BlameCallback *)baton)->singleLine(revision, author, date,
                                                 merged_revision, merged_author,
-                                                merged_date, line, pool);
+                                                merged_date, merged_path, line,
+                                                pool);
 
   return SVN_NO_ERROR;
 }
@@ -74,7 +76,8 @@ svn_error_t *
 BlameCallback::singleLine(svn_revnum_t revision, const char *author,
                           const char *date, svn_revnum_t mergedRevision,
                           const char *mergedAuthor, const char *mergedDate,
-                          const char *line, apr_pool_t *pool)
+                          const char *mergedPath, const char *line,
+                          apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -90,7 +93,7 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
       mid = env->GetMethodID(clazz, "singleLine",
                              "(Ljava/util/Date;JLjava/lang/String;"
                              "Ljava/util/Date;JLjava/lang/String;"
-                             "Ljava/lang/String;)V");
+                             "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         return SVN_NO_ERROR;
 
@@ -134,6 +137,10 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
         return SVN_NO_ERROR;
     }
 
+  jstring jmergedPath = JNIUtil::makeJString(mergedPath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
   jstring jline = JNIUtil::makeJString(line);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
@@ -141,20 +148,32 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
   // call the Java method
   env->CallVoidMethod(m_callback, mid, jdate, (jlong)revision, jauthor,
                       jmergedDate, (jlong)mergedRevision, jmergedAuthor,
-                      jline);
+                      jmergedPath, jline);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
   // cleanup the temporary Java objects
-  env->DeleteLocalRef(jline);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
   env->DeleteLocalRef(jauthor);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
   env->DeleteLocalRef(jdate);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  env->DeleteLocalRef(jmergedAuthor);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  env->DeleteLocalRef(jmergedDate);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  env->DeleteLocalRef(jmergedPath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  env->DeleteLocalRef(jline);
   // No need to check for an exception here, because we return anyway.
 
   return SVN_NO_ERROR;
