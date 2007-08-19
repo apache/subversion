@@ -1838,6 +1838,10 @@ abort_edit(void *edit_baton,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__simple_request_context_t *delete_ctx;
 
+  /* If an activity wasn't even created, don't bother trying to delete it. */
+  if (! ctx->activity_url)
+    return SVN_NO_ERROR;
+
   /* DELETE our aborted activity */
   handler = apr_pcalloc(pool, sizeof(*handler));
   handler->method = "DELETE";
@@ -1856,7 +1860,7 @@ abort_edit(void *edit_baton,
                                         pool));
 
   /* 204 if deleted, 
-     403 if DELETE was forbidden (indicates MKACTIVITY was forbidded too,
+     403 if DELETE was forbidden (indicates MKACTIVITY was forbidden too),
      404 if the activity wasn't found. */
   if (delete_ctx->status != 204 &&
       delete_ctx->status != 403 &&
