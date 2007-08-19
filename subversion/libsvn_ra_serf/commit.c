@@ -971,6 +971,7 @@ open_root(void *edit_baton,
   const char *vcc_url;
   apr_hash_t *props;
   apr_hash_index_t *hi;
+  svn_error_t *err;
 
   /* Create a UUID for this commit. */
   ctx->uuid = svn_uuid_generate(ctx->pool);
@@ -979,9 +980,17 @@ open_root(void *edit_baton,
                                   ctx->session->conns[0],
                                   ctx->session->repos_url.path, ctx->pool);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(
+  err = svn_ra_serf__context_run_wait(
                                 svn_ra_serf__get_options_done_ptr(opt_ctx),
-                                ctx->session, ctx->pool));
+                                ctx->session, ctx->pool);
+  if (svn_ra_serf__get_options_error(opt_ctx) || 
+      svn_ra_serf__get_options_parser_error(opt_ctx))
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_ra_serf__get_options_error(opt_ctx));
+      SVN_ERR(svn_ra_serf__get_options_parser_error(opt_ctx));
+    }
+  SVN_ERR(err);
 
   activity_str = svn_ra_serf__options_get_activity_collection(opt_ctx);
 
