@@ -4185,23 +4185,21 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
     })
   expected_status = wc.State(short_copy_of_B_path, {
     ''           : Item(status=' M', wc_rev=4),
-    'F/E'        : Item(status=' M', wc_rev=4),
+    'F/E'        : Item(status='  ', wc_rev=4),
     'F/E/alpha'  : Item(status='M ', wc_rev=4),
     'F/E/beta'   : Item(status='  ', wc_rev=4),
-    'F/E1'       : Item(status=' M', wc_rev=4),
+    'F/E1'       : Item(status='  ', wc_rev=4),
     'F/E1/alpha' : Item(status='  ', wc_rev=4),
     'F/E1/beta'  : Item(status='  ', wc_rev=4),
     'lambda'     : Item(status='  ', wc_rev=4),
     'F'          : Item(status='  ', wc_rev=4),
     })
   expected_disk = wc.State('', {
-    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3,5'}),
-    'F/E'        : Item(props={SVN_PROP_MERGE_INFO :
-                               '/A/B/E:1\n/A/B/F/E:5\n'}),
+    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5'}),
+    'F/E'        : Item(),
     'F/E/alpha'  : Item(new_content_for_alpha),
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
-    'F/E1'       : Item(props={SVN_PROP_MERGE_INFO :
-                               '/A/B/E:1\n/A/B/F/E:1-2\n/A/B/F/E1:5\n'}),
+    'F/E1'       : Item(),
     'F/E1/alpha' : Item("This is the file 'alpha'.\n"),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
@@ -4228,8 +4226,6 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   # Commit the result of the merge, creating revision 6.
   expected_output = svntest.wc.State(copy_of_B_path, {
     ''          : Item(verb='Sending'),
-    'F/E'       : Item(verb='Sending'),
-    'F/E1'      : Item(verb='Sending'),
     'F/E/alpha' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(short_copy_of_B_path, expected_output,
@@ -4257,7 +4253,6 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
     'beta'  : Item(status='  ', wc_rev=6),
     })
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1\n/A/B/F/E:5\n'}),
     'alpha'   : Item(new_content_for_alpha),
     'beta'    : Item("This is the file 'beta'.\n"),
     })
@@ -4324,12 +4319,8 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
       'alpha' : Item(status='M ', wc_rev=4),
       'beta'  : Item(status='  ', wc_rev=4),
       })
-    if path == 'E':
-      mergeinfo = '/A/B/E:1\n/A/B/F/E:5\n'
-    else:
-      mergeinfo = '/A/B/E:1\n/A/B/F/E:1-2,5\n'
     expected_disk = wc.State('', {
-      ''        : Item(props={SVN_PROP_MERGE_INFO : mergeinfo}),
+      ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F/E:5'}),
       'alpha'   : Item(new_content_for_alpha1),
       'beta'    : Item("This is the file 'beta'.\n"),
       })
@@ -4402,14 +4393,13 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
     'F'          : Item(status='  ', wc_rev=8)
     })
   expected_disk = wc.State('', {
-    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3,5-8'}),
-    'F/E'        : Item(props={SVN_PROP_MERGE_INFO :
-                               '/A/B/E:1\n/A/B/F/E:5-8\n'}),
+    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5-8'}),
+    'F/E'        : Item(),
     'F/E/alpha'  : Item(new_content_for_alpha),
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
     'F/E1'       : Item(props={SVN_PROP_MERGE_INFO :
-                               '/A/B/E:1\n/A/B/F/E:1-2,5\n/A/B/F/E1:5-8\n'}),
+                                             '/A/B/F/E:5\n/A/B/F/E1:5-8\n'}),
     'F/E1/alpha' : Item(new_content_for_alpha1),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'lambda'     : Item("This is the file 'lambda'.\n")
@@ -4574,7 +4564,7 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
     'umlaut'  : Item(status='A ', copied='+', wc_rev='-'),
     })
 
-  merged_rangelist = "1,3-%d" % rev_to_merge_to_copy_of_D
+  merged_rangelist = "3-%d" % rev_to_merge_to_copy_of_D
 
 
   expected_disk = wc.State('', {
@@ -6644,7 +6634,7 @@ def detect_copy_src_for_target_with_multiple_ancestors(sbox):
 
   expected_status.tweak('A/copy-of-B/C',  status=' M')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  svntest.actions.run_and_verify_svn(None, ["/A/C:1-2\n"], [],
+  svntest.actions.run_and_verify_svn(None, ["/A/C:2\n"], [],
                                      'propget', SVN_PROP_MERGE_INFO,
                                      A_copy_of_B_C_path)
 
