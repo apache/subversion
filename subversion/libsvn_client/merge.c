@@ -2800,8 +2800,8 @@ guess_child_merge_src_url(svn_stringbuf_t **child_merge_src_url,
 {
   const char *copyfrom_path;
   svn_revnum_t copyfrom_rev;
-  *child_merge_src_url = svn_stringbuf_create("", pool);
   svn_opt_revision_t target_revision;
+  *child_merge_src_url = svn_stringbuf_create("", pool);
   target_revision.kind = svn_opt_revision_working;
   SVN_ERR(svn_client__get_copy_source(child_path,
                                       &target_revision,
