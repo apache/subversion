@@ -29,6 +29,7 @@
 #include "Revision.h"
 #include "Notify.h"
 #include "Notify2.h"
+#include "ConflictResolverCallback.h"
 #include "ProgressListener.h"
 #include "CommitMessage.h"
 #include "Prompter.h"
@@ -352,6 +353,25 @@ Java_org_tigris_subversion_javahl_SVNClient_notification2
 }
 
 JNIEXPORT void JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_setConflictResolver
+(JNIEnv *env, jobject jthis, jobject jconflictResolver)
+{
+  JNIEntry(SVNClient, setConflictResolver);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+  ConflictResolverCallback *listener =
+    ConflictResolverCallback::makeCConflictResolverCallback(jconflictResolver);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->setConflictResolver(listener);
+}
+
+JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_setProgressListener
 (JNIEnv *env, jobject jthis, jobject jprogressListener)
 {
@@ -652,7 +672,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doExport
 JNIEXPORT jlong JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_doSwitch
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jobject jrevision,
- jint jdepth, jboolean jallowUnverObstructions)
+ jint jdepth, jboolean jignoreExternals, jboolean jallowUnverObstructions)
 {
   JNIEntry(SVNClient, doSwitch);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -675,6 +695,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doSwitch
 
   return cl->doSwitch(path, url, revision,
                       (svn_depth_t)jdepth,
+                      jignoreExternals ? true : false,
                       jallowUnverObstructions ? true : false);
 }
 
@@ -1310,7 +1331,7 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_blame
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jignoreMimeType,
- jobject jblameCallback)
+ jboolean jincludeMergedRevisions, jobject jblameCallback)
 {
   JNIEntry(SVNClient, blame);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1337,7 +1358,8 @@ Java_org_tigris_subversion_javahl_SVNClient_blame
 
   BlameCallback callback(jblameCallback);
   cl->blame(path, pegRevision, revisionStart, revisionEnd,
-            jignoreMimeType ? true : false, &callback);
+            jignoreMimeType ? true : false,
+            jincludeMergedRevisions ? true : false, &callback);
 }
 
 JNIEXPORT void JNICALL

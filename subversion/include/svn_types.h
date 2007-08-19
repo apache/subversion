@@ -155,9 +155,15 @@ typedef long int svn_revnum_t;
 /** Convert null-terminated C string @a str to a revision number. */
 #define SVN_STR_TO_REV(str) ((svn_revnum_t) atol(str))
 
-/** In printf()-style functions, format revision numbers using this.
- * Do not use this macro within the Subversion project source code, because
- * the language translation tools have trouble parsing it. */
+/** Originally intended to be used in printf()-style functions to format
+ * revision numbers.  Deprecated due to incompatibilities with language
+ * translation tools (e.g. gettext).
+ *
+ * New code should use a bare "%ld" format specifier for formatting revision
+ * numbers.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ */
 #define SVN_REVNUM_T_FMT "ld"
 
 
@@ -198,6 +204,37 @@ enum svn_recurse_kind
   svn_nonrecursive = 1,
   svn_recursive
 };
+
+/** The concept of automatic conflict resolution.
+ *
+ * @since New in 1.5.
+ */
+typedef enum
+{
+  /* Invalid accept flag */
+  svn_accept_invalid = -1,
+
+  /* Resolve the conflict as usual */
+  svn_accept_none,
+
+  /* Resolve the conflict with the pre-conflict base file */
+  svn_accept_left,
+
+  /* Resolve the conflict with the pre-conflict working copy file */
+  svn_accept_working,
+
+  /* Resolve the conflict with the post-conflict base file */
+  svn_accept_right,
+
+} svn_accept_t;
+
+/** Return the appropriate accept for @a accept_str.  @a word is as
+ * returned from svn_accept_to_word().
+ *
+ * @since New in 1.5.
+ */
+svn_accept_t
+svn_accept_from_word(const char *word);
 
 /** The concept of depth for directories.
  * 
@@ -268,6 +305,20 @@ svn_depth_from_word(const char *word);
  */
 #define SVN_DEPTH_FROM_RECURSE(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_files)
+
+
+/* Return an @c svn_depth_t depth based on boolean @a recurse.
+ * Use this only for the status command, as it has a unique interpretation
+ * of recursion.
+ *
+ * @note New code should never need to use this, it is called only
+ * from pre-depth APIs, for compatibility.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_DEPTH_FROM_RECURSE_STATUS(recurse) \
+  ((recurse) ? svn_depth_infinity : svn_depth_immediates)
+
 
 /* Return a recursion boolean based on @a depth.
  *
@@ -805,6 +856,45 @@ typedef struct svn_merge_range_t
  */
 svn_merge_range_t *
 svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
+
+/**
+ * The three ways to request mergeinfo affecting a given path.
+ *
+ * @since New in 1.5.
+ */
+typedef enum
+{
+  /* Explicit mergeinfo only */
+  svn_mergeinfo_explicit,
+
+  /* Explicit mergeinfo, or if that doesn't exist, the inherited mergeinfo
+     from a target's nearest ancestor */
+  svn_mergeinfo_inherited,
+
+  /* Mergeinfo on target's nearest ancestor, regardless of whether target
+     has explict mergeinfo */
+  svn_mergeinfo_nearest_ancestor
+} svn_mergeinfo_inheritance_t;
+
+/** Return a constant string expressing @a inherit as an English word,
+ * i.e., "explicit" (default), "inherited", or "nearest_ancestor".
+ * The string is not localized, as it may be used for client<->server
+ * communications.
+ *
+ * @since New in 1.5.
+ */
+const char *
+svn_inheritance_to_word(svn_mergeinfo_inheritance_t inherit);
+
+
+/** Return the appropriate @c svn_mergeinfo_inheritance_t for @a word.
+ * @a word is as returned from svn_inheritance_to_word().  Defaults to
+ * @c svn_mergeinfo_explicit.
+ *
+ * @since New in 1.5.
+ */
+svn_mergeinfo_inheritance_t
+svn_inheritance_from_word(const char *word);
 
 #ifdef __cplusplus
 }

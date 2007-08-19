@@ -290,6 +290,8 @@ cdata_lock(svn_ra_serf__xml_parser_t *parser,
   lock_state_e state;
   lock_prop_info_t *info;
 
+  UNUSED_CTX(lock_ctx);
+
   state = parser->state->current_state;
   info = parser->state->private;
 
@@ -484,6 +486,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   lock_info_t *lock_ctx;
   const char *req_url;
   svn_error_t *err;
+  int status_code;
 
   req_url = svn_path_url_add_component(session->repos_url.path, path, pool);
 
@@ -510,7 +513,8 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   parser_ctx->end = end_lock;
   parser_ctx->cdata = cdata_lock;
   parser_ctx->done = &lock_ctx->done;
-  
+  parser_ctx->status_code = &status_code;
+
   handler->body_delegate = create_getlock_body;
   handler->body_delegate_baton = lock_ctx;
 
@@ -519,7 +523,18 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
       
   svn_ra_serf__request_create(handler);
   err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool);
+  if (lock_ctx->error || parser_ctx->error)
+    {
+      svn_error_clear(err);
+      SVN_ERR(lock_ctx->error);
+      SVN_ERR(parser_ctx->error);
+    }
 
+  if (status_code == 404) 
+    {
+      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                              _("Malformed URL for repository"));
+    }
   if (err)
     {
       /* TODO Shh.  We're telling a white lie for now. */
@@ -555,7 +570,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_info_t *lock_ctx;
       const void *key;
       void *val;
-      svn_error_t *error;
+      svn_error_t *err;
 
       apr_pool_clear(subpool);
 
@@ -600,12 +615,16 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       handler->response_baton = parser_ctx;
       
       svn_ra_serf__request_create(handler);
-      error = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
-      SVN_ERR(lock_ctx->error);
-      SVN_ERR(parser_ctx->error);
-      if (error)
+      err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
+      if (lock_ctx->error || parser_ctx->error)
         {
-          return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, error,
+          svn_error_clear(err);
+          SVN_ERR(lock_ctx->error);
+          SVN_ERR(parser_ctx->error);
+        }
+      if (err)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
                                   _("Lock request failed"));
         }
 
@@ -684,8 +703,13 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
                                       path);
 
               if (lock_func)
-                SVN_ERR(lock_func(lock_baton, path, FALSE, NULL, err, subpool));
-
+                {
+                  svn_error_t *err2;
+                  err2 = lock_func(lock_baton, path, FALSE, NULL, err, subpool);
+                  svn_error_clear(err);
+                  if (err2)
+                    return err2;
+                }
               continue;
             }
         }

@@ -331,7 +331,7 @@ class SVNUnexpectedLogs(svntest.Failure):
       chain_data = list(self.chain)
       for i in range(0, len(self.chain)):
         chain_data[i] = self.chain[i][self.field_selector]
-      msg = msg + ': %s list was %s' % (self.field_selector, chain_data)
+      msg = msg + ': Actual %s list was %s' % (self.field_selector, chain_data)
     return msg
 
 
@@ -424,17 +424,12 @@ def plain_log(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log')
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log')
 
-    log_chain = parse_log_output(output)
-    check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
-    
-  finally:
-    os.chdir(was_cwd)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
 
 
 #----------------------------------------------------------------------
@@ -443,38 +438,33 @@ def versioned_log_message(sbox):
 
   sbox.build()
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    iota_path = os.path.join('iota')
-    mu_path = os.path.join('A', 'mu')
-    log_path = os.path.join('A', 'D', 'H', 'omega')
-    
-    svntest.main.file_append(iota_path, "2")
-    
-    # try to check in a change using a versioned file as your log entry.
-    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                       'ci', '-F', log_path)
+  iota_path = os.path.join('iota')
+  mu_path = os.path.join('A', 'mu')
+  log_path = os.path.join('A', 'D', 'H', 'omega')
 
-    # force it.  should not produce any errors.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-F', log_path, '--force-log')
+  svntest.main.file_append(iota_path, "2")
 
-    svntest.main.file_append(mu_path, "2")
+  # try to check in a change using a versioned file as your log entry.
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                     'ci', '-F', log_path)
 
-    # try the same thing, but specifying the file to commit explicitly.
-    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                       'ci', '-F', log_path, mu_path)
+  # force it.  should not produce any errors.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-F', log_path, '--force-log')
 
-    # force it...  should succeed.
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci',
-                                       '-F', log_path,
-                                       '--force-log', mu_path)
+  svntest.main.file_append(mu_path, "2")
 
-  finally:
-    os.chdir(was_cwd)
+  # try the same thing, but specifying the file to commit explicitly.
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                     'ci', '-F', log_path, mu_path)
+
+  # force it...  should succeed.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci',
+                                     '-F', log_path,
+                                     '--force-log', mu_path)
 
 
 #----------------------------------------------------------------------
@@ -533,33 +523,24 @@ def log_with_path_args(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    output, err = svntest.actions.run_and_verify_svn(
-      None, None, [],
-      'log', sbox.repo_url, 'A/D/G', 'A/D/H')
+  output, err = svntest.actions.run_and_verify_svn(
+    None, None, [],
+    'log', sbox.repo_url, 'A/D/G', 'A/D/H')
 
-    log_chain = parse_log_output(output)
-    check_log_chain(log_chain, [8, 6, 5, 3, 1])
-
-  finally:
-    os.chdir(was_cwd)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [8, 6, 5, 3, 1])
 
 #----------------------------------------------------------------------
 def dynamic_revision(sbox):
   "'svn log -r COMMITTED' of dynamic/local WC rev"
 
   guarantee_repos_and_wc(sbox)
-  was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  try:
-    for rev in ('HEAD', 'BASE', 'COMMITTED', 'PREV'):
-      svntest.actions.run_and_verify_svn(None, None, [], 'log', '-r', rev)
-  finally:
-    os.chdir(was_cwd)
+  for rev in ('HEAD', 'BASE', 'COMMITTED', 'PREV'):
+    svntest.actions.run_and_verify_svn(None, None, [], 'log', '-r', rev)
 
 #----------------------------------------------------------------------
 def log_wc_with_peg_revision(sbox):
@@ -706,15 +687,11 @@ V 27
 PROPS-END
 """
 
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
-  URL = sbox.repo_url
-
   # load dumpfile with control character into repos to get
   # a log with control char content
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  svntest.actions.load_repo(sbox, dump_str=dump_str)
+
+  URL = sbox.repo_url
 
   # run log
   output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
@@ -795,8 +772,9 @@ def log_limit(sbox):
   log_chain = parse_log_output(out)
   check_log_chain(log_chain, [3, 6])
 
+  # Use -l instead of --limit to test both option forms.
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'log', '--limit', '2',
+                                                'log', '-l', '2',
                                                 '--revision', '1',
                                                 sbox.repo_url,
                                                 'A/B')
@@ -924,10 +902,20 @@ def check_merge_results(log_chain, expected_merges):
   informaiton indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
   whose key is the merged revision, and whose value is the merging revision.'''
 
-  for rev in expected_merges.keys():
+  # Check to see if the number and values of the revisions is correct
+  for log in log_chain:
+    if log['revision'] not in expected_merges:
+      raise SVNUnexpectedLogs("Found unexpected revision %d" %
+                              log['revision'], log_chain)
+
+  # Check to see that each rev in expected_merges contains the correct data
+  for rev in expected_merges:
     try:
       log = [x for x in log_chain if x['revision'] == rev][0]
-      actual = log['merges']
+      if 'merges' in log.keys():
+        actual = log['merges']
+      else:
+        actual = []
       expected = expected_merges[rev]
 
       if actual != expected:
@@ -941,20 +929,9 @@ def check_merge_results(log_chain, expected_merges):
 def merge_sensitive_log_single_revision(sbox):
   "test sensitive log on a single revision"
 
-  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                          'mergetracking_data')
-  dump_str = svntest.main.file_read(os.path.join(data_dir,
-                                                 "basic-merge.dump"),
-                                    "rb")
-
-  # Create a virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
-  # Load the mergetracking dumpfile into the repos, and check it out the repo
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     "co", sbox.repo_url, sbox.wc_dir)
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
 
   # Paths we care about
   wc_dir = sbox.wc_dir
@@ -963,26 +940,69 @@ def merge_sensitive_log_single_revision(sbox):
 
   # Run the merge sensitive log, and compare results
   saved_cwd = os.getcwd()
-  try:
-    os.chdir(TRUNK_path)
-    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                     '-g', '-r14')
 
-    log_chain = parse_log_output(output)
-    expected_merges = {
-      13 : [14], 12 : [14], 11 : [14, 12],
-      }
-    check_merge_results(log_chain, expected_merges)
+  os.chdir(TRUNK_path)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r14')
 
-  finally:
-    os.chdir(saved_cwd)
+  log_chain = parse_log_output(output)
+  expected_merges = {
+    14: [], 13 : [14], 12 : [14], 11 : [14, 12],
+    }
+  check_merge_results(log_chain, expected_merges)
+
+  os.chdir(saved_cwd)
 
   output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
                                                    '-g', '-r12', BRANCH_B_path)
   log_chain = parse_log_output(output)
   expected_merges = {
-      11 : [12],
+      12: [], 11 : [12],
     }
+  check_merge_results(log_chain, expected_merges)
+
+
+def merge_sensitive_log_branching_revision(sbox):
+  "test 'svn log -g' on a branching revision"
+
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
+
+  # Paths we care about
+  wc_dir = sbox.wc_dir
+  BRANCH_B_path = os.path.join(wc_dir, "branches", "b")
+
+  # Run log on a copying revision
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r10', BRANCH_B_path)
+
+  # Parse and check output.  There should be no extra revisions.
+  log_chain = parse_log_output(output)
+  expected_merges = {
+    10: [],
+  }
+  check_merge_results(log_chain, expected_merges)
+
+
+def merge_sensitive_log_non_branching_revision(sbox):
+  "test 'svn log -g' on a non-branching revision"
+
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
+
+  TRUNK_path = os.path.join(sbox.wc_dir, "trunk")
+
+  # Run log on a non-copying revision that adds mergeinfo
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', '-r6', TRUNK_path)
+
+  # Parse and check output.  There should be one extra revision.
+  log_chain = parse_log_output(output)
+  expected_merges = {
+    6: [], 4 : [6],
+  }
   check_merge_results(log_chain, expected_merges)
 
   
@@ -1045,6 +1065,8 @@ test_list = [ None,
               log_verbose,
               log_parser,
               merge_sensitive_log_single_revision,
+              merge_sensitive_log_branching_revision,
+              merge_sensitive_log_non_branching_revision,
               XFail(log_single_change),
               XFail(log_changes_range),
               XFail(log_changes_list),

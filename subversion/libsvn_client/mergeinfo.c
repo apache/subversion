@@ -38,15 +38,16 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 apr_hash_t **target_mergeinfo,
                                 const char *rel_path,
                                 svn_revnum_t rev,
+                                svn_mergeinfo_inheritance_t inherit,
                                 apr_pool_t *pool)
 {
   apr_hash_t *repos_mergeinfo;
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
-  SVN_ERR(svn_ra_get_mergeinfo(ra_session, &repos_mergeinfo, rel_paths,
-                                rev, TRUE, pool));
+  SVN_ERR(svn_ra_get_mergeinfo(ra_session, &repos_mergeinfo, rel_paths, rev,
+                               inherit, pool));
 
-  /* Grab only the merge info provided for REL_PATH. */
+  /* Grab only the mergeinfo provided for REL_PATH. */
   if (repos_mergeinfo)
     *target_mergeinfo = apr_hash_get(repos_mergeinfo, rel_path,
                                      APR_HASH_KEY_STRING);
@@ -60,6 +61,7 @@ svn_error_t *
 svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
                             const svn_wc_entry_t *entry,
                             const char *wcpath,
+                            svn_boolean_t pristine,
                             svn_wc_adm_access_t *adm_access,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
@@ -71,7 +73,7 @@ svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
      ### DannyB thinks that later we'll need behavior more like
      ### svn_client__get_prop_from_wc(). */
   SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGE_INFO,
-                                       wcpath, FALSE, entry, adm_access,
+                                       wcpath, pristine, entry, adm_access,
                                        FALSE, ctx, pool));
   propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
   if (propval)
@@ -90,11 +92,11 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
 {
   svn_string_t *mergeinfo_str;
 
-  /* Convert the merge info (if any) into text for storage as a
+  /* Convert the mergeinfo (if any) into text for storage as a
      property value. */
   if (mergeinfo)
     {
-      /* The WC will contain merge info. */
+      /* The WC will contain mergeinfo. */
       SVN_ERR(svn_mergeinfo__to_string(&mergeinfo_str, mergeinfo, pool));
     }
   else
@@ -102,7 +104,7 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
       mergeinfo_str = NULL;
     }
   
-  /* Record the new merge info in the WC. */
+  /* Record the new mergeinfo in the WC. */
   /* ### Later, we'll want behavior more analogous to
      ### svn_client__get_prop_from_wc(). */
   return svn_wc_prop_set2(SVN_PROP_MERGE_INFO, mergeinfo_str, wcpath,

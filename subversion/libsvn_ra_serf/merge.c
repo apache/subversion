@@ -131,7 +131,6 @@ start_merge(svn_ra_serf__xml_parser_t *parser,
             const char **attrs)
 {
   svn_ra_serf__merge_context_t *ctx = userData;
-  apr_pool_t *pool;
   merge_state_e state;
   merge_info_t *info;
 
@@ -373,6 +372,8 @@ cdata_merge(svn_ra_serf__xml_parser_t *parser,
   svn_ra_serf__merge_context_t *ctx = userData;
   merge_state_e state;
   merge_info_t *info;
+
+  UNUSED_CTX(ctx);
 
   state = parser->state->current_state;
   info = parser->state->private;

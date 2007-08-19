@@ -75,6 +75,9 @@ typedef struct {
   /* True iff client requested all data inline in the report. */
   svn_boolean_t send_all;
 
+  /* Actual depth used in the response. */
+  svn_depth_t depth;
+
   /* SVNDIFF version to send to client.  */
   int svndiff_version;
 } update_ctx_t;
@@ -499,7 +502,8 @@ maybe_start_update_report(update_ctx_t *uc)
                                 "<S:update-report xmlns:S=\""
                                 SVN_XML_NAMESPACE "\" "
                                 "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
-                                "xmlns:D=\"DAV:\" %s>" DEBUG_CR,
+                                "xmlns:D=\"DAV:\" depth=\"%s\" %s>" DEBUG_CR,
+                                svn_depth_to_word(uc->depth),
                                 uc->send_all ? "send-all=\"true\"" : ""));
       
       uc->started_update = TRUE;
@@ -916,8 +920,9 @@ dav_svn__update_report(const dav_resource *resource,
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = "";
   svn_boolean_t text_deltas = TRUE;
-  svn_depth_t depth = svn_depth_unknown;
+  svn_depth_t requested_depth = svn_depth_unknown;
   svn_boolean_t saw_depth = FALSE;
+  svn_boolean_t saw_recursive = FALSE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
   dav_svn__authz_read_baton arb;
@@ -1022,7 +1027,7 @@ dav_svn__update_report(const dav_resource *resource,
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          depth = svn_depth_from_word(cdata);
+          requested_depth = svn_depth_from_word(cdata);
           saw_depth = TRUE;
         }
       if ((child->ns == ns && strcmp(child->name, "recursive") == 0)
@@ -1032,9 +1037,9 @@ dav_svn__update_report(const dav_resource *resource,
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
           if (strcmp(cdata, "no") == 0)
-            depth = svn_depth_files;
+            requested_depth = svn_depth_files;
           else
-            depth = svn_depth_infinity;
+            requested_depth = svn_depth_infinity;
           /* Note that even modern, depth-aware clients still transmit
              "no" for "recursive" (along with "files" for "depth") in
              the svn_depth_files case, and transmit "no" in the
@@ -1048,6 +1053,7 @@ dav_svn__update_report(const dav_resource *resource,
              When both "depth" and "recursive" are sent, we don't
              bother to check if they're mutually consistent, we just
              let depth dominate. */  
+          saw_recursive = TRUE;
         }
       if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
         {
@@ -1075,6 +1081,9 @@ dav_svn__update_report(const dav_resource *resource,
         }
     }
           
+  if (!saw_depth && !saw_recursive && (requested_depth == svn_depth_unknown))
+    requested_depth = svn_depth_infinity;
+
   /* If the client never sent a <src-path> element, it's old and
      sending a style of report that we no longer allow. */
   if (! src_path)
@@ -1145,6 +1154,10 @@ dav_svn__update_report(const dav_resource *resource,
   if (! uc.send_all)
     text_deltas = FALSE;
 
+  /* Stash away the depth value we determined. */
+  uc.depth = (requested_depth == svn_depth_unknown ? svn_depth_infinity 
+                                                   : requested_depth);
+
   /* When we call svn_repos_finish_report, it will ultimately run
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
      case of an update or status, these paths should be identical.  In
@@ -1170,7 +1183,7 @@ dav_svn__update_report(const dav_resource *resource,
                                       src_path, target,
                                       dst_path,
                                       text_deltas,
-                                      depth,
+                                      requested_depth,
                                       ignore_ancestry,
                                       editor, &uc,
                                       dav_svn__authz_read_func(&arb),
@@ -1198,6 +1211,7 @@ dav_svn__update_report(const dav_resource *resource,
             const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
             apr_xml_attr *this_attr = child->attr;
+            svn_depth_t depth = svn_depth_unknown;
 
             entry_counter++;
 
@@ -1299,15 +1313,13 @@ dav_svn__update_report(const dav_resource *resource,
         /* diff/merge don't ask for inline text-deltas. */
         if (!uc.send_all && strcmp(spath, dst_path) == 0)
           action = apr_psprintf(resource->pool,
-                                "diff-or-merge '%s' r%" SVN_REVNUM_T_FMT
-                                 ":%" SVN_REVNUM_T_FMT,
+                                "diff-or-merge '%s' r%ld:%ld",
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
                                 revnum);
         else
           action = apr_psprintf(resource->pool,
-                                "%s '%s@%" SVN_REVNUM_T_FMT "'"
-                                 " '%s@%" SVN_REVNUM_T_FMT "'",
+                                "%s '%s@%ld' '%s@%ld'",
                                 (uc.send_all ? "switch" : "diff-or-merge"),
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
@@ -1322,20 +1334,22 @@ dav_svn__update_report(const dav_resource *resource,
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
           action = apr_psprintf(resource->pool,
-                                "checkout-or-export '%s' r%" SVN_REVNUM_T_FMT,
+                                "checkout-or-export '%s' r%ld",
                                 svn_path_uri_encode(spath, resource->pool),
                                 revnum);
         else
           {
             if (text_deltas)
               action = apr_psprintf(resource->pool,
-                                    "update '%s' r%" SVN_REVNUM_T_FMT,
-                                    svn_path_uri_encode(spath, resource->pool),
+                                    "update '%s' r%ld",
+                                    svn_path_uri_encode(spath, 
+                                                        resource->pool),
                                     revnum);
             else
               action = apr_psprintf(resource->pool,
-                                    "remote-status '%s' r%" SVN_REVNUM_T_FMT,
-                                    svn_path_uri_encode(spath, resource->pool),
+                                    "remote-status '%s' r%ld",
+                                    svn_path_uri_encode(spath, 
+                                                        resource->pool),
                                     revnum);
           }
       }
@@ -1372,7 +1386,7 @@ dav_svn__update_report(const dav_resource *resource,
                                     resource->pool)))
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Failed checking destination path kind.",
+                                      "Failed checking destination path kind",
                                       resource->pool);
           goto cleanup;
         }
@@ -1397,7 +1411,8 @@ dav_svn__update_report(const dav_resource *resource,
           goto cleanup;
         }
 
-      serr = dav_svn__send_xml(uc.bb, uc.output, "<S:resource-walk>" DEBUG_CR);
+      serr = dav_svn__send_xml(uc.bb, uc.output, 
+                               "<S:resource-walk>" DEBUG_CR);
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1417,7 +1432,7 @@ dav_svn__update_report(const dav_resource *resource,
                                   editor, &uc,
                                   dav_svn__authz_read_func(&arb),
                                   &arb, FALSE /* text-deltas */,
-                                  depth,
+                                  requested_depth,
                                   TRUE /* entryprops */, 
                                   FALSE /* ignore-ancestry */,
                                   resource->pool);
@@ -1425,7 +1440,8 @@ dav_svn__update_report(const dav_resource *resource,
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Resource walk failed.", resource->pool);
+                                      "Resource walk failed.", 
+                                      resource->pool);
           goto cleanup;
         }
           
@@ -1444,8 +1460,8 @@ dav_svn__update_report(const dav_resource *resource,
      started in the first place. */
   if (uc.started_update)
     {
-      serr = dav_svn__send_xml(uc.bb, uc.output, "</S:update-report>" DEBUG_CR);
-      if (serr)
+      if ((serr = dav_svn__send_xml(uc.bb, uc.output, 
+                                    "</S:update-report>" DEBUG_CR)))
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                       "Unable to complete update report.",

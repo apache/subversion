@@ -22,8 +22,10 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 #include <apr_thread_mutex.h>
+#include <apr_network_io.h>
 
 #include "svn_fs.h"
+#include "private/svn_fs_private.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,6 +34,32 @@ extern "C" {
 
 /*** The filesystem structure.  ***/
 
+/* Following are defines that specify the textual elements of the
+   native filesystem directories and revision files. */
+
+/* Names of special files in the fs_fs filesystem. */
+#define PATH_FORMAT        "format"        /* Contains format number */
+#define PATH_UUID          "uuid"          /* Contains UUID */
+#define PATH_CURRENT       "current"       /* Youngest revision */
+#define PATH_LOCK_FILE     "write-lock"    /* Revision lock file */
+#define PATH_REVS_DIR      "revs"          /* Directory of revisions */
+#define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
+#define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
+#define PATH_TXN_CURRENT   "transaction-current" /* File with next txn key */
+#define PATH_LOCKS_DIR     "locks"         /* Directory of locks */
+
+/* Names of special files and file extensions for transactions */
+#define PATH_CHANGES       "changes"       /* Records changes made so far */
+#define PATH_TXN_PROPS     "props"         /* Transaction properties */
+#define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
+#define PATH_REV           "rev"           /* Proto rev file */
+#define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
+#define PATH_TXN_MERGEINFO "mergeinfo"     /* Transaction mergeinfo props */
+#define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
+#define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
+#define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
+#define PATH_EXT_PROPS     ".props"        /* Extension for node props */
+
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
@@ -39,6 +67,10 @@ extern "C" {
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
+
+/* The minimum format number that supports transaction ID generation
+   using a transaction sequence in the transaction-current file. */
+#define SVN_FS_FS__MIN_TXN_CURRENT_FORMAT 3
 
 /* The minimum format number that supports the "layout" filesystem
    format option. */
@@ -62,10 +94,13 @@ typedef struct fs_fs_shared_txn_data_t
      transaction. */
   struct fs_fs_shared_txn_data_t *next;
 
-  /* This transaction's ID.  This is in the form <rev>-<uniqueifier>,
-     where <uniqueifier> runs from 0-99999 (see create_txn_dir() in
-     fs_fs.c). */
-  char txn_id[18];
+  /* This transaction's ID.  For repositories whose format is less
+     than SVN_FS_FS__MIN_TXN_CURRENT_FORMAT, the ID is in the form
+     <rev>-<uniqueifier>, where <uniqueifier> runs from 0-99999 (see
+     create_txn_dir_pre_1_5() in fs_fs.c).  For newer repositories,
+     the form is <rev>-<200 digit base 36 number> (see
+     create_txn_dir() in fs_fs.c). */
+  char txn_id[SVN_FS__TXN_MAX_LEN+1];
 
   /* Whether the transaction's prototype revision file is locked for
      writing by any thread in this process (including the current

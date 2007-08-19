@@ -30,26 +30,31 @@ def _usage_exit():
   print "Usage: python win-tests.py [option] [test-path]"
   print
   print "Valid options:"
-  print "  -r, --release        : test the Release configuration"
-  print "  -d, --debug          : test the Debug configuration (default)"
-  print "  --bin=PATH           : use the svn binaries installed in PATH"
-  print "  -u URL, --url=URL    : run ra_dav or ra_svn tests against URL; will"
-  print "                         start svnserve for ra_svn tests"
-  print "  -v, --verbose        : talk more"
-  print "  -f, --fs-type=type   : filesystem type to use (fsfs is default)"
-  print "  -c, --cleanup        : cleanup after running a test"
+  print "  -r, --release          : test the Release configuration"
+  print "  -d, --debug            : test the Debug configuration (default)"
+  print "  --bin=PATH             : use the svn binaries installed in PATH"
+  print "  -u URL, --url=URL      : run ra_dav or ra_svn tests against URL;"
+  print "                           will start svnserve for ra_svn tests"
+  print "  -v, --verbose          : talk more"
+  print "  -f, --fs-type=type     : filesystem type to use (fsfs is default)"
+  print "  -c, --cleanup          : cleanup after running a test"
 
-  print "  --svnserve-args=list : comma-separated list of arguments for"
-  print "                         svnserve"
-  print "                         default is '-d,-r,<test-path-root>'"
-  print "  --asp.net-hack       : use '_svn' instead of '.svn' for the admin"
-  print "                         dir name"
-  print "  --httpd-dir          : location where Apache HTTPD is installed"
-  print "  --httpd-port         : port for Apache HTTPD; random port number"
-  print "                         will be used, if not specified"
-  print "  --list               : print test doc strings only"
-  print "  --enable-sasl        : enable Cyrus SASL authentication for"
-  print "                         svnserve"
+  print "  --svnserve-args=list   : comma-separated list of arguments for"
+  print "                           svnserve"
+  print "                           default is '-d,-r,<test-path-root>'"
+  print "  --asp.net-hack         : use '_svn' instead of '.svn' for the admin"
+  print "                           dir name"
+  print "  --httpd-dir            : location where Apache HTTPD is installed"
+  print "  --httpd-port           : port for Apache HTTPD; random port number"
+  print "                           will be used, if not specified"
+  print "  --http-library         : dav library to use, neon (default) or serf"
+  print "  --list                 : print test doc strings only"
+  print "  --enable-sasl          : enable Cyrus SASL authentication for"
+  print "                           svnserve"
+  print "  -p, --parallel         : run multiple tests in parallel"
+  print "  --server-minor-version : the minor version of the server being"
+  print "                           tested"
+
   sys.exit(0)
 
 CMDLINE_TEST_SCRIPT_PATH = 'subversion/tests/cmdline/'
@@ -75,11 +80,11 @@ for section in gen_obj.sections.values():
     dll_basename = section.name + "-" + str(gen_obj.version) + ".dll"
     svn_dlls.append(os.path.join("subversion", section.name, dll_basename))
 
-opts, args = my_getopt(sys.argv[1:], 'hrdvcu:f:',
+opts, args = my_getopt(sys.argv[1:], 'hrdvcpu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
-                        'httpd-dir=', 'httpd-port=', 'help', 'list',
-                        'enable-sasl', 'bin='])
+                        'httpd-dir=', 'httpd-port=', 'http-library=', 'help',
+                        'list', 'enable-sasl', 'bin=', 'parallel'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -92,9 +97,12 @@ run_svnserve = None
 svnserve_args = None
 run_httpd = None
 httpd_port = None
+http_library = 'neon'
 list_tests = None
 enable_sasl = None
 svn_bin = None
+parallel = None
+server_minor_version = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -121,13 +129,19 @@ for opt, val in opts:
     run_httpd = 1
   elif opt == '--httpd-port':
     httpd_port = int(val)
+  elif opt == '--http-library':
+    http_library = val
   elif opt == '--list':
     list_tests = 1
   elif opt == '--enable-sasl':
     enable_sasl = 1
     base_url = "svn://localhost/"
+  elif opt == '--server-minor-version':
+    server_minor_version = val
   elif opt == '--bin':
     svn_bin = val
+  elif opt in ('-p', '--parallel'):
+    parallel = 1
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -326,7 +340,7 @@ class Svnserve:
     print 'Svnserve.stop not implemented'
 
 class Httpd:
-  "Run httpd for ra_dav tests"
+  "Run httpd for DAV tests"
   def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
@@ -504,8 +518,10 @@ sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
-                           base_url, fs_type, 1, cleanup, 
-                           enable_sasl, list_tests, svn_bin)
+                           base_url, fs_type, http_library,
+                           server_minor_version, 1, cleanup,
+                           enable_sasl, parallel, list_tests, 
+                           svn_bin)
 old_cwd = os.getcwd()
 try:
   os.chdir(abs_builddir)

@@ -555,7 +555,7 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
                            svn_repos_t *repos,
                            const apr_array_header_t *paths,
                            svn_revnum_t rev,
-                           svn_boolean_t include_parents,
+                           svn_mergeinfo_inheritance_t inherit,
                            svn_repos_authz_func_t authz_read_func,
                            void *authz_read_baton,
                            apr_pool_t *pool)
@@ -605,8 +605,8 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
      us to protect the name of where a change was merged from, but not
      the change itself. */
   if (readable_paths->nelts > 0)
-    SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths,
-                                 include_parents, pool));
+    SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
+                                 pool));
   else
     *mergeinfo = NULL;
 

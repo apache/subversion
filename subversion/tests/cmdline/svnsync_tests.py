@@ -22,8 +22,8 @@ import sys, os
 # Our testing module
 import svntest
 
-from authz_tests import write_restrictive_svnserve_conf, \
-                        skip_test_when_no_authz_available
+from authz_tests import write_restrictive_svnserve_conf
+                        
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -257,8 +257,6 @@ def detect_meddling(sbox):
 def basic_authz(sbox):
   "verify that unreadable content is not synced"
 
-  skip_test_when_no_authz_available()
-
   sbox.build("svnsync-basic-authz")
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
@@ -297,8 +295,6 @@ def basic_authz(sbox):
 
 def copy_from_unreadable_dir(sbox):
   "verify that copies from unreadable dirs work"
-
-  skip_test_when_no_authz_available()
 
   sbox.build("svnsync-copy-from-unreadable-dir")
 
@@ -422,8 +418,6 @@ def copy_from_unreadable_dir(sbox):
 def copy_with_mod_from_unreadable_dir(sbox):
   "verify copies with mods from unreadable dirs"
 
-  skip_test_when_no_authz_available()
-
   sbox.build("svnsync-copy-with-mod-from-unreadable-dir")
 
   # Make a copy of the B directory.
@@ -543,8 +537,6 @@ def copy_with_mod_from_unreadable_dir(sbox):
 # Issue 2705.
 def copy_with_mod_from_unreadable_dir_and_copy(sbox):
   "verify copies with mods from unreadable dirs +copy"
-
-  skip_test_when_no_authz_available()
 
   sbox.build("svnsync-copy-with-mod-from-unreadable-dir-and-copy")
 
@@ -671,10 +663,12 @@ test_list = [ None,
               file_dir_file,
               copy_parent_modify_prop,
               detect_meddling,
-              basic_authz,
-              copy_from_unreadable_dir,
-              copy_with_mod_from_unreadable_dir,
-              copy_with_mod_from_unreadable_dir_and_copy,
+              Skip(basic_authz, svntest.main.is_ra_type_file),
+              Skip(copy_from_unreadable_dir, svntest.main.is_ra_type_file),
+              Skip(copy_with_mod_from_unreadable_dir, 
+                   svntest.main.is_ra_type_file),
+              Skip(copy_with_mod_from_unreadable_dir_and_copy,
+                   svntest.main.is_ra_type_file),
               url_encoding,
               no_author,
              ]

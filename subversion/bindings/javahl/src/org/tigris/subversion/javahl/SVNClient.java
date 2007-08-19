@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Date;
 
 /**
  * This is the main interface class.  All subversion commandline client
@@ -461,6 +462,12 @@ public class SVNClient implements SVNClientInterface
     public native void notification2(Notify2 notify);
 
     /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface#setConflictResolver(ConflictResolverCallback)
+     * @since 1.5
+     */
+    public native void setConflictResolver(ConflictResolverCallback listener);
+
+    /**
      * Set the progress callback.
      *
      * @param listener The progress callback.
@@ -845,17 +852,11 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * Update local copy to mirror a new url.
-     * @param path      the working copy path
-     * @param url       the new url for the working copy
-     * @param revision  the new base revision of working copy
-     * @param depth     how deep to traverse into subdirectories
-     * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.doSwitch(String, String, Revision, int, boolean, boolean)
      * @since 1.5
      */
     public native long doSwitch(String path, String url, Revision revision,
-                                int depth,
+                                int depth, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
@@ -871,7 +872,8 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse)
             throws ClientException
     {
-        return doSwitch(path, url, revision, Depth.fromRecurse(recurse), false);
+        return doSwitch(path, url, revision, Depth.fromRecurse(recurse),
+                        false, false);
     }
 
     /**
@@ -1578,7 +1580,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         BlameCallbackImpl callback = new BlameCallbackImpl();
-        blame(path, revisionEnd, revisionStart, revisionEnd, false, callback);
+        blame(path, revisionEnd, revisionStart, revisionEnd, callback);
 
         StringBuffer sb = new StringBuffer();
         for (int i = 0; i < callback.numberOfLines(); i++)
@@ -1607,7 +1609,7 @@ public class SVNClient implements SVNClientInterface
                       Revision revisionEnd, BlameCallback callback)
             throws ClientException
     {
-        blame(path, revisionEnd, revisionStart, revisionEnd, false, callback);
+        blame(path, revisionEnd, revisionStart, revisionEnd, callback);
     }
 
     /**
@@ -1627,7 +1629,8 @@ public class SVNClient implements SVNClientInterface
                       BlameCallback callback)
             throws ClientException
     {
-        blame(path, pegRevision, revisionStart, revisionEnd, false, callback);
+        BlameCallbackWrapper cw = new BlameCallbackWrapper(callback);
+        blame(path, pegRevision, revisionStart, revisionEnd, false, false, cw);
     }
 
     /**
@@ -1638,6 +1641,8 @@ public class SVNClient implements SVNClientInterface
      * @param revisionStart the first revision to show
      * @param revisionEnd   the last revision to show
      * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param includeMergedRevisions whether or not to include extra merge
+     *                      information
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
@@ -1646,7 +1651,8 @@ public class SVNClient implements SVNClientInterface
     public native void blame(String path, Revision pegRevision,
                              Revision revisionStart,
                              Revision revisionEnd, boolean ignoreMimeType,
-                             BlameCallback callback)
+                             boolean includeMergedRevisions,
+                             BlameCallback2 callback)
             throws ClientException;
 
     /**
@@ -1943,6 +1949,27 @@ public class SVNClient implements SVNClientInterface
         public DirEntry[] getDirEntryArray()
         {
             return (DirEntry[]) dirents.toArray(new DirEntry[dirents.size()]);
+        }
+    }
+
+    /**
+     * A private wrapper for compatibility of blame implementations.
+     */
+    private class BlameCallbackWrapper implements BlameCallback2
+    {
+        private BlameCallback oldCallback;
+
+        public BlameCallbackWrapper(BlameCallback callback)
+        {
+            oldCallback = callback;
+        }
+
+        public void singleLine(Date date, long revision, String author,
+                               Date merged_date, long merged_revision,
+                               String merged_author, String merged_path,
+                               String line)
+        {
+            oldCallback.singleLine(date, revision, author, line);
         }
     }
 }

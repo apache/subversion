@@ -49,7 +49,7 @@ ra_serf_version(void)
 }
 
 #define RA_SERF_DESCRIPTION \
-    N_("Access repository via WebDAV protocol through serf.")
+    N_("Module for accessing a repository via WebDAV protocol using serf.")
 
 static const char *
 ra_serf_get_description(void)
@@ -121,14 +121,21 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_pool_create(&serf_sess->pool, pool);
   serf_sess->bkt_alloc = serf_bucket_allocator_create(serf_sess->pool, NULL,
                                                       NULL);
-  serf_sess->cached_props = apr_hash_make(pool);
+  serf_sess->cached_props = apr_hash_make(serf_sess->pool);
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
 
   /* todo: reuse serf context across sessions */
-  serf_sess->context = serf_context_create(pool);
+  serf_sess->context = serf_context_create(serf_sess->pool);
 
-  apr_uri_parse(serf_sess->pool, repos_URL, &url);
+  status = apr_uri_parse(serf_sess->pool, repos_URL, &url);
+  if (status)
+    {
+      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                               _("Illegal repository URL '%s'"), 
+                               repos_URL);
+    }
+
   serf_sess->repos_url = url;
   serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
 
@@ -138,16 +145,17 @@ svn_ra_serf__open(svn_ra_session_t *session,
     }
   serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
 
-  SVN_ERR(load_config(serf_sess, config, pool));
+  SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 
   /* register cleanups */
   apr_pool_cleanup_register(serf_sess->pool, serf_sess,
                             svn_ra_serf__cleanup_serf_session,
                             apr_pool_cleanup_null);
 
-  serf_sess->conns = apr_palloc(pool, sizeof(*serf_sess->conns) * 4);
+  serf_sess->conns = apr_palloc(serf_sess->pool, sizeof(*serf_sess->conns) * 4);
 
-  serf_sess->conns[0] = apr_pcalloc(pool, sizeof(*serf_sess->conns[0]));
+  serf_sess->conns[0] = apr_pcalloc(serf_sess->pool,
+                                    sizeof(*serf_sess->conns[0]));
   serf_sess->conns[0]->bkt_alloc =
           serf_bucket_allocator_create(serf_sess->pool, NULL, NULL);
   serf_sess->conns[0]->session = serf_sess;
@@ -155,12 +163,12 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   /* fetch the DNS record for this host */
   status = apr_sockaddr_info_get(&serf_sess->conns[0]->address, url.hostname,
-                                 APR_UNSPEC, url.port, 0, pool);
+                                 APR_UNSPEC, url.port, 0, serf_sess->pool);
   if (status)
     {
-      return svn_error_createf(status, NULL,
-                               _("Could not lookup hostname: %s://%s"),
-                               url.scheme, url.hostname);
+      return svn_error_wrap_apr(status,
+                                _("Could not lookup hostname `%s'"),
+                                url.hostname);
     }
 
   serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
@@ -188,6 +196,7 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_uri_t new_url;
+  apr_status_t status;
 
   /* If it's the URL we already have, wave our hands and do nothing. */
   if (strcmp(session->repos_url_str, url) == 0)
@@ -196,7 +205,12 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
     }
 
   /* Do we need to check that it's the same host and port? */
-  apr_uri_parse(session->pool, url, &new_url);
+  status = apr_uri_parse(session->pool, url, &new_url);
+  if (status)
+    {
+      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                               _("Illegal repository URL '%s'"), url);
+    }
 
   session->repos_url.path = new_url.path;
   session->repos_url_str = apr_pstrdup(pool, url);
@@ -368,7 +382,10 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
                                  NULL, session->pool);
     }
 
-  SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
+  if (prop_ctx)
+    {
+      SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
+    }
 
   *ret_path = path;
   *ret_prop_ctx = prop_ctx;
@@ -395,7 +412,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
                            session, rel_path,
                            revision, check_path_props, pool));
 
-  if (svn_ra_serf__propfind_status_code(prop_ctx) == 404)
+  if (prop_ctx && (svn_ra_serf__propfind_status_code(prop_ctx) == 404))
     {
       *kind = svn_node_none;
     }
@@ -603,8 +620,11 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
                                  path, revision, "1", all_props, TRUE,
                                  NULL, session->pool);
-      
-      SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
+
+      if (prop_ctx)
+        {
+          SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
+        }
 
       /* We're going to create two hashes to help the walker along.
        * We're going to return the 2nd one back to the caller as it
@@ -664,19 +684,22 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
+  const char *root_url;
 
   props = apr_hash_make(pool);
 
+  SVN_ERR(svn_ra_serf__get_repos_root(ra_session, &root_url, pool));
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      session->repos_url.path,
-                                      SVN_INVALID_REVNUM, "0",
+                                      root_url, SVN_INVALID_REVNUM, "0",
                                       uuid_props, pool));
-  *uuid = svn_ra_serf__get_prop(props, session->repos_url.path,
+  *uuid = svn_ra_serf__get_prop(props, root_url,
                                 SVN_DAV_PROP_NS_DAV, "repository-uuid");
 
   if (!*uuid)
     {
-      abort();
+      return svn_error_create(APR_EGENERAL, NULL,
+                              _("The UUID property was not found on the "
+                                "resource or any of its parents"));
     }
 
   return SVN_NO_ERROR;

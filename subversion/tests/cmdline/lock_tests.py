@@ -22,11 +22,9 @@ import re, os, stat
 # Our testing module
 import svntest
 
-# A helper function for examining svn:needs-lock
-from prop_tests import check_prop
-
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -368,15 +366,22 @@ def enforce_lock(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
+  # Set some binary properties.
+  propval_path = os.path.join(wc_dir, 'propval.tmp')
+
   # svn:needs-lock value should be forced to a '*'
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '', lambda_path)
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '      ', mu_path)
+  svntest.actions.set_prop(None, 'svn:needs-lock', 'foo', iota_path,
+                           propval_path)
+  svntest.actions.set_prop(None, 'svn:needs-lock', '*', lambda_path,
+                           propval_path)
+  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  svntest.actions.set_prop(expected_err, 'svn:needs-lock', '      ', 
+                           mu_path, propval_path)
 
   # Check svn:needs-lock
-  check_prop('svn:needs-lock', iota_path, ['*'])
-  check_prop('svn:needs-lock', lambda_path, ['*'])
-  check_prop('svn:needs-lock', mu_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', iota_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', lambda_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', mu_path, ['*'])
 
   svntest.main.run_svn(None, 'commit',
                        '--username', svntest.main.wc_author,
@@ -1040,11 +1045,13 @@ def lock_and_exebit1(sbox):
   wc_dir = sbox.wc_dir
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  
-  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+
+  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
                                      'svn:needs-lock', ' ', gamma_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+  expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
                                      'svn:executable', ' ', gamma_path)
   
   # commit
@@ -1122,11 +1129,13 @@ def lock_and_exebit2(sbox):
   wc_dir = sbox.wc_dir
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  
-  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+
+  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
                                      'svn:needs-lock', ' ', gamma_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+  expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
                                      'svn:executable', ' ', gamma_path)
   
   # commit
@@ -1522,6 +1531,37 @@ def examine_lock_encoded_recurse(sbox):
                                         svntest.main.wc_author,
                                         svntest.main.wc_passwd)
 
+# Trying to unlock someone else's lock with --force should fail.
+def unlocked_lock_of_other_user(sbox):
+  "unlock file locked by other user"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # lock a file with user jrandom
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', pi_path)
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # now try to unlock with user jconstant, should fail.
+  if sbox.repo_url.startswith("http"):
+    expected_err = ".*403 Forbidden.*"
+  else:
+    expected_err = "svn: warning: User '%s' is trying to use a lock owned by "\
+                   "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
+  svntest.actions.run_and_verify_svn(None, [], expected_err, 'unlock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     pi_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -1552,8 +1592,8 @@ test_list = [ None,
               lock_several_files,
               lock_switched_files,
               lock_uri_encoded,
-              Skip(lock_and_exebit1, (os.name != 'posix')),
-              Skip(lock_and_exebit2, (os.name != 'posix')),
+              SkipUnless(lock_and_exebit1, svntest.main.is_posix_os),
+              SkipUnless(lock_and_exebit2, svntest.main.is_posix_os),
               commit_xml_unsafe_file_unlock,
               repos_lock_with_info,
               unlock_already_unlocked_files,
@@ -1561,6 +1601,7 @@ test_list = [ None,
               ls_url_encoded,
               unlock_wrong_token,
               examine_lock_encoded_recurse,
+              unlocked_lock_of_other_user,
             ]
 
 if __name__ == '__main__':

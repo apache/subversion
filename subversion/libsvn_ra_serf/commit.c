@@ -140,6 +140,9 @@ typedef struct dir_context_t {
   /* How many pending changes we have left in this directory. */
   unsigned int ref_count;
 
+  /* Is this directory being added?  (Otherwise, just opened.) */
+  svn_boolean_t added;
+
   /* Our parent */
   struct dir_context_t *parent_dir;
 
@@ -165,6 +168,9 @@ typedef struct {
 
   /* The root commit we're in progress for. */
   commit_context_t *commit;
+
+  /* Is this file being added?  (Otherwise, just opened.) */
+  svn_boolean_t added;
 
   dir_context_t *parent_dir;
 
@@ -286,6 +292,7 @@ checkout_dir(dir_context_t *dir)
 {
   checkout_context_t *checkout_ctx;
   svn_ra_serf__handler_t *handler;
+  svn_error_t *err;
 
   if (dir->checkout)
     {
@@ -353,9 +360,17 @@ checkout_dir(dir_context_t *dir)
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&checkout_ctx->progress.done,
-                                        dir->commit->session,
-                                        dir->pool));
+  err = svn_ra_serf__context_run_wait(&checkout_ctx->progress.done,
+                                      dir->commit->session,
+                                      dir->pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_CONFLICT)
+        SVN_ERR_W(err, apr_psprintf(dir->pool, 
+                  _("Your file or directory '%s' is probably out-of-date"),
+                  svn_path_local_style(dir->name, dir->pool)));
+      return err;
+    }
 
   if (checkout_ctx->progress.status != 201)
     {
@@ -507,7 +522,8 @@ proppatch_walker(void *baton,
   serf_bucket_t *tmp_bkt;
   serf_bucket_alloc_t *alloc;
   svn_boolean_t binary_prop;
- 
+  char *prop_name;
+
   if (svn_xml_is_xml_safe(val->data, val->len))
     {
       binary_prop = FALSE;
@@ -517,6 +533,14 @@ proppatch_walker(void *baton,
       binary_prop = TRUE;
     }
 
+  /* Use the namespace prefix instead of adding the xmlns attribute to support 
+     property names containing ':' */
+  if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
+    prop_name = apr_pstrcat(pool, "S:", name, NULL);
+  else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    prop_name = apr_pstrcat(pool, "C:", name, NULL);
+  name_len = strlen(prop_name);
+
   alloc = body_bkt->allocator;
 
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<",
@@ -524,28 +548,20 @@ proppatch_walker(void *baton,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(name, name_len, alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(" xmlns=\"",
-                                          sizeof(" xmlns=\"") - 1,
-                                          alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(ns, ns_len, alloc);
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(prop_name, name_len, alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
   if (binary_prop == TRUE)
     {
       tmp_bkt =
-          SERF_BUCKET_SIMPLE_STRING_LEN("\" V:encoding=\"base64",
-                                        sizeof("\" V:encoding=\"base64") - 1,
+          SERF_BUCKET_SIMPLE_STRING_LEN(" V:encoding=\"base64\"",
+                                        sizeof(" V:encoding=\"base64\"") - 1,
                                         alloc);
       serf_bucket_aggregate_append(body_bkt, tmp_bkt);
     }
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
-                                          sizeof("\">") - 1,
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(">",
+                                          sizeof(">") - 1,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
@@ -568,7 +584,7 @@ proppatch_walker(void *baton,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(name, name_len, alloc);
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(prop_name, name_len, alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(">",
@@ -606,7 +622,11 @@ setup_proppatch_headers(serf_bucket_t *headers,
   return APR_SUCCESS;
 }
 
-#define PROPPATCH_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:propertyupdate xmlns:D=\"DAV:\" xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\">"
+#define PROPPATCH_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?>"\
+                         "<D:propertyupdate xmlns:D=\"DAV:\" "\
+                         "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "\
+                         "xmlns:C=\"" SVN_DAV_PROP_NS_CUSTOM "\" "\
+                         "xmlns:S=\"" SVN_DAV_PROP_NS_SVN "\">"
 
 #define PROPPATCH_TRAILER "</D:propertyupdate>"
 
@@ -751,6 +771,14 @@ create_put_body(void *baton,
   apr_file_seek(ctx->svndiff, APR_SET, &offset);
 
   return serf_bucket_file_create(ctx->svndiff, alloc);
+}
+
+static serf_bucket_t *
+create_empty_put_body(void *baton,
+                      serf_bucket_alloc_t *alloc,
+                      apr_pool_t *pool)
+{
+  return SERF_BUCKET_SIMPLE_STRING("", alloc);
 }
 
 static apr_status_t
@@ -943,6 +971,7 @@ open_root(void *edit_baton,
   const char *vcc_url;
   apr_hash_t *props;
   apr_hash_index_t *hi;
+  svn_error_t *err;
 
   /* Create a UUID for this commit. */
   ctx->uuid = svn_uuid_generate(ctx->pool);
@@ -951,9 +980,17 @@ open_root(void *edit_baton,
                                   ctx->session->conns[0],
                                   ctx->session->repos_url.path, ctx->pool);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(
+  err = svn_ra_serf__context_run_wait(
                                 svn_ra_serf__get_options_done_ptr(opt_ctx),
-                                ctx->session, ctx->pool));
+                                ctx->session, ctx->pool);
+  if (svn_ra_serf__get_options_error(opt_ctx) || 
+      svn_ra_serf__get_options_parser_error(opt_ctx))
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_ra_serf__get_options_error(opt_ctx));
+      SVN_ERR(svn_ra_serf__get_options_parser_error(opt_ctx));
+    }
+  SVN_ERR(err);
 
   activity_str = svn_ra_serf__options_get_activity_collection(opt_ctx);
 
@@ -985,7 +1022,12 @@ open_root(void *edit_baton,
 
   if (mkact_ctx->status != 201)
     {
-      abort();
+      return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                               _("%s of '%s': %d %s (%s://%s)"),
+                               handler->method, handler->path, 
+                               mkact_ctx->status, mkact_ctx->reason,
+                               ctx->session->repos_url.scheme,
+                               ctx->session->repos_url.hostinfo);
     }
 
   SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
@@ -1134,7 +1176,11 @@ delete_entry(const char *path,
       return err;
     }
 
-  if (delete_ctx->progress.status != 204)
+  /* 204 No Content: item successfully deleted
+     404 Not found:  ignored, the item might have been deleted in this 
+                     transaction. */
+  if (delete_ctx->progress.status != 204 &&
+      delete_ctx->progress.status != 404)
     {
       return return_response_err(handler, &delete_ctx->progress);
     }
@@ -1158,6 +1204,7 @@ add_directory(const char *path,
   dir_context_t *dir;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__simple_request_context_t *add_dir_ctx;
+  apr_status_t status;
 
   /* Ensure our parent is checked out. */
   SVN_ERR(checkout_dir(parent));
@@ -1169,6 +1216,7 @@ add_directory(const char *path,
   dir->parent_dir = parent;
   dir->commit = parent->commit;
 
+  dir->added = TRUE;
   dir->base_revision = SVN_INVALID_REVNUM;
   dir->copy_revision = copyfrom_revision;
   dir->copy_path = copyfrom_path;
@@ -1203,7 +1251,13 @@ add_directory(const char *path,
 
       props = apr_hash_make(dir->pool);
 
-      apr_uri_parse(dir->pool, dir->copy_path, &uri);
+      status = apr_uri_parse(dir->pool, dir->copy_path, &uri);
+      if (status)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("Unable to parse URL '%s'"),
+                                   dir->copy_path);
+        }
 
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path,
                                          dir->commit->session,
@@ -1237,8 +1291,11 @@ add_directory(const char *path,
       
   SVN_ERR(svn_ra_serf__context_run_wait(&add_dir_ctx->done,
                                         dir->commit->session, dir->pool));
-      
-  if (add_dir_ctx->status != 201)
+
+  /* 201 Created:    item was successfully copied
+     204 No Content: item successfully replaced an existing target */
+  if (add_dir_ctx->status != 201 && 
+      add_dir_ctx->status != 204)
     {
       SVN_ERR(add_dir_ctx->server_error.error);
       return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
@@ -1269,6 +1326,7 @@ open_directory(const char *path,
   dir->parent_dir = parent;
   dir->commit = parent->commit;
 
+  dir->added = FALSE;
   dir->base_revision = base_revision;
   dir->name = path;
   dir->changed_props = apr_hash_make(dir->pool);
@@ -1389,6 +1447,7 @@ add_file(const char *path,
   
   new_file->name = path;
 
+  new_file->added = TRUE;
   new_file->base_revision = SVN_INVALID_REVNUM;
   new_file->copy_path = copy_path;
   new_file->copy_revision = copy_revision;
@@ -1396,11 +1455,14 @@ add_file(const char *path,
   new_file->changed_props = apr_hash_make(new_file->pool);
   new_file->removed_props = apr_hash_make(new_file->pool);
 
-  /* Ensure that the file doesn't exist by doing a HEAD on the resource -
-   * only if we haven't deleted it in this commit already.
+  /* Ensure that the file doesn't exist by doing a HEAD on the
+   * resource, but only if we haven't deleted it in this commit
+   * already, or if the parent directory was also added (without
+   * history) in this commit.
    */
-  if (!apr_hash_get(dir->commit->deleted_entries,
-                    new_file->name, APR_HASH_KEY_STRING))
+  if (! ((dir->added && !dir->copy_path) ||
+         apr_hash_get(dir->commit->deleted_entries,
+                      new_file->name, APR_HASH_KEY_STRING)))
     {
       svn_ra_serf__simple_request_context_t *head_ctx;
       svn_ra_serf__handler_t *handler;
@@ -1465,6 +1527,7 @@ open_file(const char *path,
   /* TODO: Remove directory names? */
   new_file->name = path;
 
+  new_file->added = FALSE;
   new_file->base_revision = base_revision;
 
   new_file->changed_props = apr_hash_make(new_file->pool);
@@ -1559,6 +1622,8 @@ close_file(void *file_baton,
            apr_pool_t *pool)
 {
   file_context_t *ctx = file_baton;
+  svn_boolean_t put_empty_file = FALSE;
+  apr_status_t status;
 
   ctx->result_checksum = text_checksum;
 
@@ -1572,7 +1637,13 @@ close_file(void *file_baton,
 
       props = apr_hash_make(pool);
 
-      apr_uri_parse(pool, ctx->copy_path, &uri);
+      status = apr_uri_parse(pool, ctx->copy_path, &uri);
+      if (status)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("Unable to parse URL '%s'"),
+                                   ctx->copy_path);
+        }
 
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path,
                                          ctx->commit->session,
@@ -1619,8 +1690,14 @@ close_file(void *file_baton,
         }
     }
 
+  /* If we got no stream of changes, but this is an added-without-history
+   * file, make a note that we'll be PUTting a zero-byte file to the server.
+   */
+  if ((!ctx->stream) && ctx->added && (!ctx->copy_path))
+    put_empty_file = TRUE;
+
   /* If we had a stream of changes, push them to the server... */
-  if (ctx->stream)
+  if (ctx->stream || put_empty_file)
     {
       svn_ra_serf__handler_t *handler;
       svn_ra_serf__simple_request_context_t *put_ctx;
@@ -1636,9 +1713,18 @@ close_file(void *file_baton,
       handler->response_handler = svn_ra_serf__handle_status_only;
       handler->response_baton = put_ctx;
 
-      handler->body_delegate = create_put_body;
-      handler->body_delegate_baton = ctx;
-      handler->body_type = "application/vnd.svn-svndiff";
+      if (put_empty_file)
+        {
+          handler->body_delegate = create_empty_put_body;
+          handler->body_delegate_baton = ctx;
+          handler->body_type = "text/plain";
+        }
+      else
+        {
+          handler->body_delegate = create_put_body;
+          handler->body_delegate_baton = ctx;
+          handler->body_type = "application/vnd.svn-svndiff";
+        }
 
       handler->header_delegate = setup_put_headers;
       handler->header_delegate_baton = ctx;
@@ -1752,6 +1838,10 @@ abort_edit(void *edit_baton,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__simple_request_context_t *delete_ctx;
 
+  /* If an activity wasn't even created, don't bother trying to delete it. */
+  if (! ctx->activity_url)
+    return SVN_NO_ERROR;
+
   /* DELETE our aborted activity */
   handler = apr_pcalloc(pool, sizeof(*handler));
   handler->method = "DELETE";
@@ -1769,7 +1859,13 @@ abort_edit(void *edit_baton,
   SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
                                         pool));
 
-  if (delete_ctx->status != 204)
+  /* 204 if deleted, 
+     403 if DELETE was forbidden (indicates MKACTIVITY was forbidden too),
+     404 if the activity wasn't found. */
+  if (delete_ctx->status != 204 &&
+      delete_ctx->status != 403 &&
+      delete_ctx->status != 404 
+      )
     {
       abort();
     }

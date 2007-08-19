@@ -160,24 +160,11 @@ print_info_xml(void *baton,
       || SVN_IS_VALID_REVNUM(info->last_changed_rev)
       || info->last_changed_date)
     {
-      /* "<commit ...>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "commit",
-                            "revision", apr_psprintf(pool, "%ld",
-                                                     info->last_changed_rev),
-                            NULL);
-
-      /* "<author> xx </author>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "author",
-                               info->last_changed_author);
-
-      /* "<date> xx </date>" */
-      if (info->last_changed_date)
-        svn_cl__xml_tagged_cdata(&sb, pool, "date",
-                                 svn_time_to_cstring
-                                 (info->last_changed_date, pool));
-
-      /* "</commit>" */
-      svn_xml_make_close_tag(&sb, pool, "commit");
+      svn_cl__print_xml_commit(&sb, info->last_changed_rev,
+                               info->last_changed_author,
+                               svn_time_to_cstring(info->last_changed_date,
+                                                   pool),
+                               pool);
     }
 
   if (info->conflict_old || info->conflict_wrk

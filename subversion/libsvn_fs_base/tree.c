@@ -302,16 +302,11 @@ txn_body_txn_root(void *baton,
   /* Look for special txn props that represent the 'flags' behavior of
      the transaction. */
   SVN_ERR(svn_fs_base__txn_proplist_in_trail(&txnprops, svn_txn_id, trail));
-  if (txnprops)
-    {
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
-                       APR_HASH_KEY_STRING))
-        flags |= SVN_FS_TXN_CHECK_OOD;
+  if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
+    flags |= SVN_FS_TXN_CHECK_OOD;
 
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
-                       APR_HASH_KEY_STRING))
-        flags |= SVN_FS_TXN_CHECK_LOCKS;
-    }
+  if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS, APR_HASH_KEY_STRING))
+    flags |= SVN_FS_TXN_CHECK_LOCKS;
 
   root = make_txn_root(fs, svn_txn_id, txn->base_rev, flags, trail->pool);
 
@@ -379,46 +374,6 @@ svn_fs_base__revision_root(svn_fs_root_t **root_p,
   *root_p = root;
   return SVN_NO_ERROR;
 }
-
-
-
-/* Constructing nice error messages for roots.  */
-
-/* Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
-   for PATH in ROOT. */
-#define NOT_FOUND(r, p) (                                \
-  r->is_txn_root ?                                       \
-    svn_error_createf                                    \
-      (SVN_ERR_FS_NOT_FOUND, 0,                          \
-       _("File not found: transaction '%s', path '%s'"), \
-       r->txn, p)                                        \
-  :                                                      \
-    svn_error_createf                                    \
-      (SVN_ERR_FS_NOT_FOUND, 0,                          \
-       _("File not found: revision %ld, path '%s'"),     \
-       r->rev, p)                                        \
-  )
-
-
-/* Build a detailed `file already exists' message for PATH in ROOT.  */
-#define ALREADY_EXISTS(r, p) (                                                 \
-  r->is_txn_root ?                                                             \
-    svn_error_createf                                                          \
-      (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
-       _("File already exists: filesystem '%s', transaction '%s', path '%s'"), \
-       r->fs->path, r->txn, p)                                                 \
-  :                                                                            \
-    svn_error_createf                                                          \
-      (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
-       _("File already exists: filesystem '%s', revision %ld, path '%s'"),     \
-       r->fs->path, r->rev, p)                                                 \
-  )
-
-
-#define NOT_TXN(r)                                 \
-  svn_error_create                                 \
-    (SVN_ERR_FS_NOT_TXN_ROOT, NULL,                \
-     _("Root object must be a transaction root"))
 
 
 
@@ -757,7 +712,7 @@ open_path(parent_path_t **parent_path_p,
                 {
                   /* Build a better error message than svn_fs_base__dag_open
                      can provide, giving the root and full path name.  */
-                  return NOT_FOUND(root, path);
+                  return SVN_FS__NOT_FOUND(root, path);
                 }
             }
 
@@ -1240,44 +1195,44 @@ base_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
-/* The input for txn_body_change_merge_info(). */
-struct change_merge_info_args
+/* The input for txn_body_change_mergeinfo(). */
+struct change_mergeinfo_args
 {
   svn_fs_root_t *root;
   const char *path;
   const svn_string_t *value;
 };
 
-/* Set the merge info on the transaction in BATON (expected to be of
-   type "struct change_merge_info_args").  Conforms to the callback
+/* Set the mergeinfo on the transaction in BATON (expected to be of
+   type "struct change_mergeinfo_args").  Conforms to the callback
    API used by svn_fs_base__retry_txn(). */
 static svn_error_t *
-txn_body_change_merge_info(void *baton,
-                           trail_t *trail)
+txn_body_change_mergeinfo(void *baton,
+                          trail_t *trail)
 {
-  struct change_merge_info_args *args = baton;
-  SVN_ERR(svn_fs_base__set_txn_merge_info(args->root->fs, args->root->txn, 
-                                          args->path, args->value,
-                                          trail, trail->pool));
+  struct change_mergeinfo_args *args = baton;
+  SVN_ERR(svn_fs_base__set_txn_mergeinfo(args->root->fs, args->root->txn, 
+                                         args->path, args->value,
+                                         trail, trail->pool));
   return SVN_NO_ERROR;
 }
 
-/* Change the merge info for the specified PATH to MERGE_INFO.  */
+/* Change the mergeinfo for the specified PATH to MERGE_INFO.  */
 static svn_error_t *
-base_change_merge_info(svn_fs_root_t *root,
-                       const char *path,
-                       apr_hash_t *merge_info,
-                       apr_pool_t *pool)
+base_change_mergeinfo(svn_fs_root_t *root,
+                      const char *path,
+                      apr_hash_t *mergeinfo,
+                      apr_pool_t *pool)
 {
-  struct change_merge_info_args args;
+  struct change_mergeinfo_args args;
 
   if (! root->is_txn_root)
-    return NOT_TXN(root);
+    return SVN_FS__NOT_TXN(root);
   args.root = root;
   args.path = path;
-  SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &args.value, merge_info,
+  SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &args.value, mergeinfo,
                                    pool));
-  return svn_fs_base__retry_txn(root->fs, txn_body_change_merge_info, &args,
+  return svn_fs_base__retry_txn(root->fs, txn_body_change_mergeinfo, &args,
                                 pool);
 }
 
@@ -1290,7 +1245,7 @@ struct change_node_prop_args {
 
 
 static svn_error_t *
-change_txn_merge_info(struct change_node_prop_args *args, trail_t *trail)
+change_txn_mergeinfo(struct change_node_prop_args *args, trail_t *trail)
 {
   const char *txn_id = args->root->txn;
 
@@ -1300,8 +1255,8 @@ change_txn_merge_info(struct change_node_prop_args *args, trail_t *trail)
      absolute. */
   const char *canon_path = svn_fs__canonicalize_abspath(args->path, 
                                                              trail->pool);
-  SVN_ERR(svn_fs_base__set_txn_merge_info(args->root->fs, txn_id, canon_path,
-                                          args->value, trail, trail->pool));
+  SVN_ERR(svn_fs_base__set_txn_mergeinfo(args->root->fs, txn_id, canon_path,
+                                         args->value, trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -1339,7 +1294,7 @@ txn_body_change_node_prop(void *baton,
     proplist = apr_hash_make(trail->pool);
 
   if (strcmp(args->name, SVN_PROP_MERGE_INFO) == 0)
-    SVN_ERR(change_txn_merge_info(args, trail));
+    SVN_ERR(change_txn_mergeinfo(args, trail));
 
   /* Set the property. */
   apr_hash_set(proplist, args->name, APR_HASH_KEY_STRING, args->value);
@@ -1351,7 +1306,8 @@ txn_body_change_node_prop(void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(args->root->fs, txn_id,
                      args->path, svn_fs_base__dag_get_id(parent_path->node),
-                     svn_fs_path_change_modify, 0, 1, trail, trail->pool));
+                     svn_fs_path_change_modify, FALSE, TRUE, trail, 
+                     trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -1367,7 +1323,7 @@ base_change_node_prop(svn_fs_root_t *root,
   struct change_node_prop_args args;
 
   if (! root->is_txn_root)
-    return NOT_TXN(root);
+    return SVN_FS__NOT_TXN(root);
 
   args.root  = root;
   args.path  = path;
@@ -1447,6 +1403,7 @@ struct dir_entries_args
 };
 
 
+/* *(BATON->table_p) will never be NULL on successful return */
 static svn_error_t *
 txn_body_dir_entries(void *baton,
                      trail_t *trail)
@@ -1475,6 +1432,7 @@ base_dir_entries(apr_hash_t **table_p,
   struct dir_entries_args args;
   apr_hash_t *table;
   svn_fs_t *fs = root->fs;
+  apr_hash_index_t *hi;
 
   args.table_p = &table;
   args.root    = root;
@@ -1483,28 +1441,20 @@ base_dir_entries(apr_hash_t **table_p,
                                  pool));
 
   /* Add in the kind data. */
-  if (table)
+  for (hi = apr_hash_first(pool, table); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_index_t *hi;
-      for (hi = apr_hash_first(pool, table); hi; hi = apr_hash_next(hi))
-        {
-          svn_fs_dirent_t *entry;
-          struct node_kind_args nk_args;
-          void *val;
+      svn_fs_dirent_t *entry;
+      struct node_kind_args nk_args;
+      void *val;
 
-          /* KEY will be the entry name in ancestor (about which we
-             simple don't care), VAL the dirent. */
-          apr_hash_this(hi, NULL, NULL, &val);
-          entry = val;
-          nk_args.id = entry->id;
-          SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_node_kind, &nk_args,
-                                         pool));
-          entry->kind = nk_args.kind;
-        }
-    }
-  else
-    {
-      table = apr_hash_make(pool);
+      /* KEY will be the entry name in ancestor (about which we
+         simple don't care), VAL the dirent. */
+      apr_hash_this(hi, NULL, NULL, &val);
+      entry = val;
+      nk_args.id = entry->id;
+      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_node_kind, &nk_args,
+                                     pool));
+      entry->kind = nk_args.kind;
     }
 
   *table_p = table;
@@ -2582,7 +2532,7 @@ base_merge(const char **conflict_p,
   svn_fs_t *fs;
 
   if (! target_root->is_txn_root)
-    return NOT_TXN(target_root);
+    return SVN_FS__NOT_TXN(target_root);
 
   /* Paranoia. */
   fs = ancestor_root->fs;
@@ -2697,7 +2647,7 @@ txn_body_make_dir(void *baton,
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
   if (parent_path->node)
-    return ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path);
 
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we
@@ -2722,7 +2672,7 @@ txn_body_make_dir(void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_base__dag_get_id(sub_dir),
-                     svn_fs_path_change_add, 0, 0, trail, trail->pool));
+                     svn_fs_path_change_add, FALSE, FALSE, trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -2736,7 +2686,7 @@ base_make_dir(svn_fs_root_t *root,
   struct make_dir_args args;
 
   if (! root->is_txn_root)
-    return NOT_TXN(root);
+    return SVN_FS__NOT_TXN(root);
 
   args.root = root;
   args.path = path;
@@ -2765,7 +2715,7 @@ txn_body_delete(void *baton,
   const char *txn_id = root->txn;
 
   if (! root->is_txn_root)
-    return NOT_TXN(root);
+    return SVN_FS__NOT_TXN(root);
 
   SVN_ERR(open_path(&parent_path, root, path, 0, txn_id, 
                     trail, trail->pool));
@@ -2793,7 +2743,8 @@ txn_body_delete(void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_base__dag_get_id(parent_path->node),
-                     svn_fs_path_change_delete, 0, 0, trail, trail->pool));
+                     svn_fs_path_change_delete, FALSE, FALSE, trail,
+                     trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -2890,7 +2841,7 @@ txn_body_copy(void *baton,
       SVN_ERR(get_dag(&new_node, to_root, to_path, trail, trail->pool));
       SVN_ERR(add_change(to_root->fs, txn_id, to_path,
                          svn_fs_base__dag_get_id(new_node),
-                         kind, 0, 0, trail, trail->pool));
+                         kind, FALSE, FALSE, trail, trail->pool));
     }
   else
     {
@@ -2957,7 +2908,7 @@ copy_helper(svn_fs_root_t *from_root,
        from_root->fs->path, to_root->fs->path);
 
   if (! to_root->is_txn_root)
-    return NOT_TXN(to_root);
+    return SVN_FS__NOT_TXN(to_root);
 
   if (from_root->is_txn_root)
     return svn_error_create
@@ -3104,7 +3055,7 @@ txn_body_make_file(void *baton,
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
   if (parent_path->node)
-    return ALREADY_EXISTS(root, path);
+    return SVN_FS__ALREADY_EXISTS(root, path);
 
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we
@@ -3128,7 +3079,7 @@ txn_body_make_file(void *baton,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_base__dag_get_id(child),
-                     svn_fs_path_change_add, 0, 0, trail, trail->pool));
+                     svn_fs_path_change_add, TRUE, FALSE, trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -3491,7 +3442,8 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(tb->root->fs, txn_id, tb->path,
                      svn_fs_base__dag_get_id(tb->node),
-                     svn_fs_path_change_modify, 1, 0, trail, trail->pool));
+                     svn_fs_path_change_modify, TRUE, FALSE, trail, 
+                     trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -3644,7 +3596,8 @@ txn_body_apply_text(void *baton, trail_t *trail)
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(tb->root->fs, txn_id, tb->path,
                      svn_fs_base__dag_get_id(tb->node),
-                     svn_fs_path_change_modify, 1, 0, trail, trail->pool));
+                     svn_fs_path_change_modify, TRUE, FALSE, trail, 
+                     trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -3864,7 +3817,7 @@ base_node_history(svn_fs_history_t **history_p,
   /* And we require that the path exist in the root. */
   SVN_ERR(base_check_path(&kind, root, path, pool));
   if (kind == svn_node_none)
-    return NOT_FOUND(root, path);
+    return SVN_FS__NOT_FOUND(root, path);
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history(root->fs,
@@ -4399,7 +4352,7 @@ static root_vtable_t root_vtable = {
   base_contents_changed,
   base_get_file_delta_stream,
   base_merge,
-  base_change_merge_info,
+  base_change_mergeinfo,
   svn_fs_mergeinfo__get_mergeinfo,
   svn_fs_mergeinfo__get_mergeinfo_for_tree
 };

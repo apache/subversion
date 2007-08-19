@@ -39,6 +39,7 @@ repository) is:
       <revnum>        File containing rev-props for <revnum>
   transactions        Subdirectory containing transactions
     <txnid>.txn       Directory containing transaction <txnid>
+  transaction-current File containing the next transaction key
   locks               Subdirectory containing locks
     <partial-digest>  Subdirectory named for first 3 letters of an MD5 digest
       <digest>        File containing locks/children for path with <digest>
@@ -63,6 +64,13 @@ is also locked during a revprop propchange while the revprop file is
 read in, mutated, and written out again.  Note that readers are never
 blocked by any operation - writers must ensure that the filesystem is
 always in a consistent state.
+
+The "transaction-current" is a file with a single line of text that
+contains only a base-36 number.  The current value will be used in the
+next transaction name, along with the revision number the transaction
+is based on.  This sequence number ensures that transaction names are
+not reused, even if the transaction is aborted and a new transaction
+based on the same revision is begun.
 
 Filesystem formats
 ------------------
@@ -96,7 +104,10 @@ Format 2: (understood by Subversion 1.4+)
 
 Format 3: (understood by Subversion 1.5+)
   Delta representations in revision files may contain either svndiff0
-  or svndiff1 data.  The 'layout' format option is permitted.
+  or svndiff1 data.  The 'layout' format option is permitted.  To
+  prevent transaction name reuse, transaction names are generated
+  using a transaction sequence number stored in a transaction-current
+  file.
 
 Filesystem format options
 -------------------------

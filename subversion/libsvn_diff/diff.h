@@ -26,6 +26,7 @@
 #include "svn_diff.h"
 #include "svn_types.h"
 
+#define SVN_DIFF__UNIFIED_CONTEXT_SIZE 3
 
 typedef struct svn_diff__node_t svn_diff__node_t;
 typedef struct svn_diff__tree_t svn_diff__tree_t;
@@ -69,17 +70,28 @@ struct svn_diff__lcs_t
 };
 
 
+/* State used when normalizing whitespace and EOL styles. */
+typedef enum svn_diff__normalize_state_t
+{
+  /* Initial state; not in a sequence of whitespace. */
+  svn_diff__normalize_state_normal,
+  /* We're in a sequence of whitespace characters.  Only entered if
+     we ignore whitespace. */
+  svn_diff__normalize_state_whitespace,
+  /* The previous character was CR. */
+  svn_diff__normalize_state_cr
+} svn_diff__normalize_state_t;
+
+
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
 	      apr_pool_t *pool);
 
-			    
 
 /*
  * Support functions to build a tree of token positions
  */
-
 void
 svn_diff__tree_create(svn_diff__tree_t **tree, apr_pool_t *pool);
 
@@ -111,12 +123,30 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
                            apr_pool_t *pool);
 
 
-/**
+/*
  * Return an adler32 checksum based on CHECKSUM, updated with
  * DATA of size LEN.
  */
 apr_uint32_t
 svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_size_t len);
+
+
+/* Normalize the characters pointed to by BUF of length *LENGTHP, starting
+ * in state *STATEP according to the OPTIONS.
+ * Adjust *LENGTHP and *STATEP to be the length of the normalized buffer and
+ * the final state, respectively.
+ * Normalized data is written to the memory at *TGT. BUF and TGT may point
+ * to the same memory area.  The memory area pointed to by *TGT should be
+ * large enough to hold *LENGTHP bytes.
+ * When on return *TGT is not equal to the value passed in, it points somewhere
+ * into the memory region designated by BUF and *LENGTHP.
+ */
+void
+svn_diff__normalize_buffer(char **tgt,
+                           apr_off_t *lengthp,
+                           svn_diff__normalize_state_t *statep,
+                           const char *buf,
+                           const svn_diff_file_options_t *opts);
 
 
 #endif /* DIFF_H */

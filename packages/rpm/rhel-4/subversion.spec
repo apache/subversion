@@ -105,6 +105,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jun 30 2007 David Summers <david@summersoft.fay.ar.us> r25592
+- [RHEL5] Added RHEL5 SPEC file.
+
 * Fri Jul 07 2006 David Summers <david@summersoft.fay.ar.us> r20468
 - [RH8,RH9,RHEL3,RHEL4] Updated to APR/APR-UTIL 0.9.12.
   RHEL3 requires httpd-2.0.46-56.ent.centos.2.1 or higher which includes
@@ -522,11 +525,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 
 %if %{make_ra_svn_bdb_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
-killall lt-svnserve || true
-sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-make svncheck CLEANUP=true FS_TYPE=bdb
-killall lt-svnserve
+make svnserveautocheck CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
@@ -544,18 +543,12 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 
 %if %{make_ra_svn_fsfs_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
-killall lt-svnserve || true
-sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-make svncheck CLEANUP=true FS_TYPE=fsfs
-killall lt-svnserve
+make svnserveautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
 %if %{make_ra_dav_fsfs_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-killall httpd || true
-sleep 1
 make davautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
@@ -581,9 +574,10 @@ make install-swig-pl DESTDIR=$RPM_BUILD_ROOT
 # Clean up unneeded files for package installation
 rm -rf $RPM_BUILD_ROOT/%{_libdir}/perl5/%{perl_version}
 
-# Set up tools package files.
+# Set up contrib and tools package files.
 mkdir -p $RPM_BUILD_ROOT/%{_libdir}/subversion
 cp -r tools $RPM_BUILD_ROOT/%{_libdir}/subversion
+cp -r contrib $RPM_BUILD_ROOT/%{_libdir}/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
@@ -658,3 +652,4 @@ rm -rf $RPM_BUILD_ROOT
 %files tools
 %defattr(-,root,root)
 %{_libdir}/subversion/tools
+%{_libdir}/subversion/contrib

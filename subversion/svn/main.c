@@ -184,7 +184,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "property set to 'native'.\n"
                        "                             "
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
-  {"limit",         svn_cl__limit_opt, 1,
+  {"limit",         'l', 1,
                     N_("maximum number of log entries")},
   {"no-unlock",     svn_cl__no_unlock_opt, 0,
                     N_("don't unlock the targets")},
@@ -205,9 +205,14 @@ const apr_getopt_option_t svn_cl__options[] =
   {"parents",       svn_cl__parents_opt, 0,
                     N_("make intermediate directories")},
   {"use-merge-history", 'g', 0,
-                    N_("use/display additional information from merge "
+                    N_("use/display additional information from merge\n"
+                       "                             "
                        "history")},
-  {0,               0, 0, 0}
+  {"accept", svn_cl__accept_opt, 1,
+                    N_("specify automatic conflict resolution source\n"
+                       "                            "
+                       "('left', 'right', or 'working')")},
+  {0,               0, 0, 0},
 };
 
 
@@ -261,7 +266,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  If specified, REV determines in which revision the target is first\n"
      "  looked up.\n"),
-    {'r', 'v', svn_cl__incremental_opt, svn_cl__xml_opt, 'x',
+    {'r', 'v', 'g', svn_cl__incremental_opt, svn_cl__xml_opt, 'x',
      svn_cl__force_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "cat", svn_cl__cat, {0}, N_
@@ -359,7 +364,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  1. Each item specified by a PATH is scheduled for deletion upon\n"
      "    the next commit.  Files, and directories that have not been\n"
      "    committed, are immediately removed from the working copy\n"
-     "    unless --keep-local option is given.\n"
+     "    unless the --keep-local option is given.\n"
      "    PATHs that are, or contain, unversioned or modified items will\n"
      "    not be removed unless the --force option is given.\n"
      "\n"
@@ -436,8 +441,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  If PATH is omitted '.' is assumed.\n"
      "  Parent directories are created as necessary in the repository.\n"
      "  If PATH is a directory, the contents of the directory are added\n"
-     "  directly under URL.\n"),
-    {'q', 'N', svn_cl__depth_opt, svn_cl__autoprops_opt,
+     "  directly under URL.\n"
+     "  Unversionable items such as device files and pipes are ignored\n"
+     "  if --force is specified.\n"),
+    {'q', 'N', svn_cl__depth_opt, svn_cl__autoprops_opt, svn_cl__force_opt,
      svn_cl__no_autoprops_opt, SVN_CL__LOG_MSG_OPTIONS,
      svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
@@ -514,13 +521,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', svn_cl__targets_opt, svn_cl__stop_on_copy_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__limit_opt, svn_cl__changelist_opt} },
+     svn_cl__config_dir_opt, 'l', svn_cl__changelist_opt} },
 
   { "merge", svn_cl__merge, {0}, N_
     ("Apply the differences between two sources to a working copy path.\n"
      "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
      "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-     "       3. merge [-c M | -r N:M] [SOURCE[@REV] [WCPATH]]\n"
+     "       3. merge [-c M | -r N:M | -g] [SOURCE[@REV] [WCPATH]]\n"
      "\n"
      "  1. In the first form, the source URLs are specified at revisions\n"
      "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -532,14 +539,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  3. In the third form, SOURCE can be a URL, or working copy item\n"
      "     in which case the corresponding URL is used.  If not specified,\n"
-     "     the copy source URL of SOURCE is used. If the WCPATH cannot be\n"
+     "     the copy source URL of SOURCE is used.  If the WCPATH cannot be\n"
      "     determined automatically, an error is displayed asking for an\n"
-     "     explicit SOURCE. This URL in revision REV is compared as it\n"
+     "     explicit SOURCE.  This URL in revision REV is compared as it\n"
      "     existed between revisions N and M.  If REV is not specified, HEAD\n"
-     "     is assumed. The '-c M' option is equivalent to '-r N:M' where\n"
-     "     N = M-1.  Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n"
-     "     If a revision range is not specified, it is assumed to be\n"
-     "     -r OLDEST_REV_OF_SOURCE_AT_URL:HEAD.\n"
+     "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
+     "     does the reverse: '-r M:<M-1>'.  -g is a shorthand for the\n"
+     "     revision range -r OLDEST_REV_OF_SOURCE_AT_URL:HEAD.\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"
      "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
@@ -604,10 +610,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  1. Edits versioned prop in working copy or repository.\n"
      "  2. Edits unversioned remote prop on repos revision.\n"
-     "     TARGET only determines which repository to access.\n"),
+     "     TARGET only determines which repository to access.\n"
+     "\n"
+     "See 'svn help propset' for more on property setting.\n"),
     {'r', svn_cl__revprop_opt, SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
-     svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
-     svn_cl__config_dir_opt} },
+     svn_cl__force_opt, svn_cl__config_dir_opt} },
 #endif
 
   { "propget", svn_cl__propget, {"pget", "pg"}, N_
@@ -665,7 +672,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      LastChangedRevision\n"
      "      Id                       - A compressed summary of the previous\n"
      "                                   4 keywords.\n"
-     "    svn:executable - If present, make the file executable.\n"
+     "    svn:executable - If present, make the file executable.  Use\n"
+     "      'svn propdel svn:executable PATH...' to clear.\n"
      "    svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'.\n"
      "    svn:mime-type  - The mimetype of the file.  Used to determine\n"
      "      whether to merge the file, and how to serve it from Apache.\n"
@@ -678,7 +686,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "        foo/bar -r 1234 http://example.com/repos/zag\n"
      "    svn:needs-lock - If present, indicates that the file should be locked\n"
      "      before it is modified.  Makes the working copy file read-only\n"
-     "      when it is not locked.\n"
+     "      when it is not locked.  Use 'svn propdel svn:needs-lock PATH...'\n"
+     "      to clear.\n"
+     "\n"
      "  The svn:keywords, svn:executable, svn:eol-style, svn:mime-type and\n"
      "  svn:needs-lock properties cannot be set on a directory.  A non-recursive\n"
      "  attempt will fail, and a recursive attempt will set the property\n"
@@ -696,7 +706,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  remove conflict markers; it merely removes the conflict-related\n"
      "  artifact files and allows PATH to be committed again.\n"),
     {svn_cl__targets_opt, 'R', svn_cl__depth_opt, 'q',
-     svn_cl__config_dir_opt} },
+     svn_cl__config_dir_opt, svn_cl__accept_opt} },
 
   { "revert", svn_cl__revert, {0}, N_
     ("Restore pristine working copy file (undo most local edits).\n"
@@ -810,7 +820,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  are applied to the obstructing path.\n"),
     { 'r', 'N', svn_cl__depth_opt, 'q', svn_cl__merge_cmd_opt,
       svn_cl__relocate_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
-      svn_cl__force_opt} },
+      svn_cl__ignore_externals_opt, svn_cl__force_opt} },
 
   { "unlock", svn_cl__unlock, {0}, N_
     ("Unlock working copy paths or URLs.\n"
@@ -963,6 +973,7 @@ main(int argc, const char *argv[])
   svn_config_t *cfg;
   svn_boolean_t used_change_arg = FALSE;
   svn_boolean_t descend = TRUE;
+  svn_boolean_t interactive_conflicts = FALSE;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -1005,6 +1016,7 @@ main(int argc, const char *argv[])
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
   opt_state.depth = svn_depth_unknown;
+  opt_state.accept_which = svn_accept_none;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -1040,7 +1052,7 @@ main(int argc, const char *argv[])
       APR_ARRAY_PUSH(received_opts, int) = opt_id;
 
       switch (opt_id) {
-      case svn_cl__limit_opt:
+      case 'l':
         {
           char *end;
           opt_state.limit = strtol(opt_arg, &end, 10);
@@ -1381,6 +1393,21 @@ main(int argc, const char *argv[])
       case 'g':
         opt_state.use_merge_history = TRUE;
         break;
+      case svn_cl__accept_opt:
+        opt_state.accept_which = svn_accept_from_word(opt_arg);
+
+        /* We need to make sure that the value passed to the accept flag
+         * was one of the available options.  Since svn_accept_invalid is what
+         * gets set when one of the three expected are not passed, checking
+         * for this as part of the command line parsing makes sense. */
+        if (opt_state.accept_which == svn_accept_invalid)
+          {
+            return svn_cmdline_handle_exit_error
+            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("'%s' is not a valid accept value; try "
+                                 "'left', 'right', or 'working'"),
+                               opt_arg), pool, "svn: ");
+          }
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -1562,6 +1589,17 @@ main(int argc, const char *argv[])
         }
     }
 
+  if (subcommand->cmd_func == svn_cl__switch)
+    {
+      if ((opt_state.depth != svn_depth_unknown) && opt_state.relocate)
+        {
+          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                 _("--relocate and --depth are mutually "
+                                   "exclusive"));
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        }
+    }
+
   /* Only a few commands can accept a revision range; the rest can take at
      most one revision number. */
   if (subcommand->cmd_func != svn_cl__blame
@@ -1580,7 +1618,7 @@ main(int argc, const char *argv[])
   if (descend == FALSE)
     {
       if (subcommand->cmd_func == svn_cl__status)
-        opt_state.depth = svn_depth_immediates;
+        opt_state.depth = SVN_DEPTH_FROM_RECURSE_STATUS(FALSE);
       else
         opt_state.depth = SVN_DEPTH_FROM_RECURSE(FALSE);
     }
@@ -1684,6 +1722,26 @@ main(int argc, const char *argv[])
     svn_handle_error2(err, stderr, TRUE, "svn: ");
 
   ctx->auth_baton = ab;
+
+  /* Set up conflict resolution callback. */
+  if ((err = svn_config_get_bool(cfg, &interactive_conflicts,
+                                 SVN_CONFIG_SECTION_MISCELLANY,
+                                 SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
+                                 TRUE)))  /* ### interactivity on by default.
+                                                 we can change this. */
+    svn_handle_error2(err, stderr, TRUE, "svn: ");
+
+  if (interactive_conflicts
+      && (! opt_state.non_interactive ))
+    {
+      ctx->conflict_func = svn_cl__interactive_conflict_handler;
+      ctx->conflict_baton = NULL;
+    }
+  else
+    {
+      ctx->conflict_func = NULL;
+      ctx->conflict_baton = NULL;
+    }
 
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func)(os, &command_baton, pool);

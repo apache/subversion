@@ -95,8 +95,8 @@ function get_prog_name() {
   return 1
 }
 
-# dont assume sbin is in the PATH
-PATH="/usr/sbin:/usr/local/sbin:$PATH"
+# Don't assume sbin is in the PATH.
+PATH="$PATH:/usr/sbin:/usr/local/sbin"
 
 # Remove any proxy environmental variables that affect wget or curl.
 # We don't need a proxy to connect to localhost and having the proxy
@@ -133,12 +133,19 @@ MOD_AUTHZ_SVN="$ABS_BUILDDIR/subversion/mod_authz_svn/.libs/mod_authz_svn.so"
 [ -r "$MOD_DAV_SVN" ] \
   || fail "dav_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_dav/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
+export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
+
+case "`uname`" in
+  Darwin*) LDD='otool -L'
+    ;;
+  *) LDD='ldd'
+    ;;
+esac
 
 CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
-ldd "$CLIENT_CMD" | grep -q 'not found' \
+$LDD "$CLIENT_CMD" | grep -q 'not found' \
   && fail "Subversion client couldn't be fully linked at run-time"
-"$CLIENT_CMD" --version | egrep -q '^[*] ra_(dav|serf)' \
+"$CLIENT_CMD" --version | egrep -q '^[*] ra_(neon|serf)' \
   || fail "Subversion client couldn't find and/or load ra_dav library"
 
 httpd="$($APXS -q PROGNAME)"
@@ -192,7 +199,8 @@ HTTPD_PORT=$(($RANDOM+1024))
 HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
 HTTPD_CFG="$HTTPD_ROOT/cfg"
 HTTPD_PID="$HTTPD_ROOT/pid"
-HTTPD_LOG="$HTTPD_ROOT/log"
+HTTPD_ACCESS_LOG="$HTTPD_ROOT/access_log"
+HTTPD_ERROR_LOG="$HTTPD_ROOT/error_log"
 HTTPD_MIME_TYPES="$HTTPD_ROOT/mime.types"
 BASE_URL="http://localhost:$HTTPD_PORT"
 HTTPD_USERS="$HTTPD_ROOT/users"
@@ -227,7 +235,9 @@ Group               $(groups | awk '{print $1}')
 Listen              localhost:$HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
-ErrorLog            "$HTTPD_LOG"
+LogFormat           "%h %l %u %t \"%r\" %>s %b" common
+CustomLog           "$HTTPD_ACCESS_LOG" common
+ErrorLog            "$HTTPD_ERROR_LOG"
 LogLevel            Debug
 ServerRoot          "$HTTPD_ROOT"
 DocumentRoot        "$HTTPD_ROOT"
@@ -330,8 +340,11 @@ say "Finished testing..."
 
 kill $(cat "$HTTPD_PID")
 
+query 'Browse server access log' n \
+  && less "$HTTPD_ACCESS_LOG"
+
 query 'Browse server error log' n \
-  && less "$HTTPD_LOG"
+  && less "$HTTPD_ERROR_LOG"
 
 query 'Delete HTTPD root directory' y \
   && rm -fr "$HTTPD_ROOT/"

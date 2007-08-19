@@ -792,6 +792,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   ssl-client-cert-file       PKCS#12 format client certificate file"
                                                                              NL
         "###   ssl-client-cert-password   Client Key password, if needed."   NL
+        "###   http-library               Which library to use for http/https"
+                                                                             NL
+        "###                              connections (neon or serf)"        NL
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL
         "### of 0, i.e. zero, causes a builtin default to be used."          NL
@@ -983,6 +986,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### for 'svn add' and 'svn import', it defaults to 'no'."           NL
         "### Automatic properties are defined in the section 'auto-props'."  NL
         "# enable-auto-props = yes"                                          NL
+        "### Set interactive-conflicts to 'no' to disable interactive"       NL
+        "### confict resolution prompting.  It defaults to 'yes'."           NL
+        "# interactive-conflicts = no"                                       NL
         ""                                                                   NL
         "### Section for configuring automatic properties."                  NL
         "[auto-props]"                                                       NL

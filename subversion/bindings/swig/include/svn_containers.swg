@@ -155,9 +155,21 @@
 
 #ifdef SWIGPYTHON
 %typemap(in) apr_hash_t *PROPHASH
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
 {
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+
   $1 = svn_swig_py_prophash_from_dict($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
 }
+
 #endif
 
 #ifdef SWIGRUBY
@@ -186,14 +198,9 @@
   apr_hash_t *target_props,
   apr_hash_t *source_props,
   apr_hash_t *hash,
-  apr_hash_t *props
-};
-#endif
-
-#if defined(SWIGRUBY)
-%apply apr_hash_t *PROPHASH {
+  apr_hash_t *props,
   apr_hash_t *revprop_table
-}
+};
 #endif
 
 /* -----------------------------------------------------------------------
@@ -282,6 +289,13 @@
 }
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in) apr_hash_t *path_revs
+{
+  $1 = svn_swig_py_path_revs_hash_from_dict($input, _global_pool);
+}
+#endif
+
 /* =======================================================================
    %typemap(argout) apr_array_header_t **
 */
@@ -300,6 +314,12 @@
   apr_array_header_t **regular_props,
   apr_array_header_t **propdiffs
 };
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
+  %append_output(svn_swig_py_proparray_to_dict(*$1));
+}
 #endif
 
 /* -----------------------------------------------------------------------

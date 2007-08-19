@@ -22,7 +22,6 @@ import os
 # Our testing module
 import svntest
 
-from svntest.main import skip_test_when_no_authz_available
 from svntest.main import write_restrictive_svnserve_conf 
 from svntest.main import write_authz_file
 
@@ -30,6 +29,7 @@ from svntest.main import write_authz_file
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 
 ######################################################################
 # Tests
@@ -43,8 +43,6 @@ Skip = svntest.testcase.Skip
 
 def authz_open_root(sbox):
   "authz issue #2486 - open root"
-  
-  skip_test_when_no_authz_available()
   
   sbox.build()
   
@@ -80,8 +78,6 @@ def authz_open_root(sbox):
 def authz_open_directory(sbox):
   "authz issue #2486 - open directory"
   
-  skip_test_when_no_authz_available()
-  
   sbox.build()
   
   write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
@@ -116,8 +112,6 @@ def authz_open_directory(sbox):
 def broken_authz_file(sbox):
   "broken authz files cause errors"
 
-  skip_test_when_no_authz_available()
-
   sbox.build(create_wc = False)
   
   # No characters but 'r', 'w', and whitespace are allowed as a value
@@ -141,8 +135,6 @@ def broken_authz_file(sbox):
 def authz_read_access(sbox):
   "test authz for read operations"
   
-  skip_test_when_no_authz_available()
-
   sbox.build(create_wc = False)
 
   root_url = sbox.repo_url
@@ -288,8 +280,6 @@ def authz_read_access(sbox):
 def authz_write_access(sbox):
   "test authz for write operations"
   
-  skip_test_when_no_authz_available()
-  
   sbox.build(create_wc = False)
   
   write_restrictive_svnserve_conf(sbox.repo_dir)
@@ -399,8 +389,6 @@ def authz_write_access(sbox):
 def authz_checkout_test(sbox):
   "test authz for checkout"
 
-  skip_test_when_no_authz_available()
-
   sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
@@ -438,8 +426,6 @@ def authz_checkout_test(sbox):
 
 def authz_checkout_and_update_test(sbox):
   "test authz for checkout and update"
-
-  skip_test_when_no_authz_available()
 
   sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
@@ -498,8 +484,6 @@ def authz_checkout_and_update_test(sbox):
 def authz_partial_export_test(sbox):
   "test authz for export with unreadable subfolder"
 
-  skip_test_when_no_authz_available()
-
   sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
@@ -534,8 +518,6 @@ def authz_partial_export_test(sbox):
 
 def authz_log_and_tracing_test(sbox):
   "test authz for log and tracing path changes"
-
-  skip_test_when_no_authz_available()
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -637,8 +619,6 @@ def authz_log_and_tracing_test(sbox):
 def authz_aliases(sbox):
   "test authz for aliases"
 
-  skip_test_when_no_authz_available()
-
   sbox.build(create_wc = False)
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
@@ -677,8 +657,6 @@ def authz_aliases(sbox):
 
 def authz_validate(sbox):
   "test the authz validation rules"
-
-  skip_test_when_no_authz_available()
 
   sbox.build(create_wc = False)
 
@@ -745,8 +723,6 @@ users = @devs1, @devs2, user1, user2""" })
 # test locking/unlocking with authz
 def authz_locking(sbox):
   "test authz for locking"
-
-  skip_test_when_no_authz_available()
 
   sbox.build()
 
@@ -815,9 +791,6 @@ def authz_locking(sbox):
 def authz_svnserve_anon_access_read(sbox):
   "authz issue #2712"
 
-  if not svntest.main.is_ra_type_svn():
-    raise svntest.Skip
-
   sbox.build(create_wc = False)
   svntest.main.safe_rmtree(sbox.wc_dir)
   B_path = os.path.join(sbox.wc_dir, 'A', 'B')
@@ -850,19 +823,22 @@ def authz_svnserve_anon_access_read(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              authz_open_root,
-              XFail(authz_open_directory, svntest.main.is_ra_type_dav),
-              broken_authz_file,
-              authz_read_access,
-              authz_write_access,
-              authz_checkout_test,
-              authz_log_and_tracing_test,
-              authz_checkout_and_update_test,
-              authz_partial_export_test,
-              authz_aliases,
-              authz_validate,
-              authz_locking,
-              authz_svnserve_anon_access_read,
+              Skip(authz_open_root, svntest.main.is_ra_type_file),
+              XFail(Skip(authz_open_directory, svntest.main.is_ra_type_file),
+                    svntest.main.is_ra_type_dav),
+              Skip(broken_authz_file, svntest.main.is_ra_type_file),
+              Skip(authz_read_access, svntest.main.is_ra_type_file),
+              Skip(authz_write_access, svntest.main.is_ra_type_file),
+              Skip(authz_checkout_test, svntest.main.is_ra_type_file),
+              Skip(authz_log_and_tracing_test, svntest.main.is_ra_type_file),
+              Skip(authz_checkout_and_update_test, 
+                   svntest.main.is_ra_type_file),
+              Skip(authz_partial_export_test, svntest.main.is_ra_type_file),
+              Skip(authz_aliases, svntest.main.is_ra_type_file),
+              Skip(authz_validate, svntest.main.is_ra_type_file),
+              Skip(authz_locking, svntest.main.is_ra_type_file),
+              SkipUnless(authz_svnserve_anon_access_read,
+                         svntest.main.is_ra_type_svn),
              ]
 
 if __name__ == '__main__':

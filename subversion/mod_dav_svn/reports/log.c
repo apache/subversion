@@ -66,7 +66,7 @@ maybe_send_header(struct log_receiver_baton *lrb)
 }
 
 
-/* This implements `svn_log_message_receiver_t'.
+/* This implements `svn_log_message_receiver2_t'.
    BATON is a `struct log_receiver_baton *'.  */
 static svn_error_t *
 log_receiver(void *baton,
@@ -339,17 +339,23 @@ dav_svn__log_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   action = apr_psprintf(resource->pool,
-                        "log '%s' r%" SVN_REVNUM_T_FMT ":%" SVN_REVNUM_T_FMT,
+                        "log '%s' r%ld:%ld",
                         comma_separated_paths->data, start, end);
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
 
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
-  if (((apr_err = ap_fflush(output, lrb.bb))) && (! derr))
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade.",
-                                resource->pool);
+  if (!lrb.needs_header)
+    {
+       apr_err = ap_fflush(output, lrb.bb);
+       if (!derr && apr_err)
+         {
+           derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                       HTTP_INTERNAL_SERVER_ERROR,
+                                       "Error flushing brigade.",
+                                       resource->pool);
+         }
+    }
   return derr;
 }

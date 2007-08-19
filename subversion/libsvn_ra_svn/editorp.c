@@ -1,5 +1,5 @@
 /*
- * editorp.c :  Pipelined variation of the ra_svn editor
+ * editorp.c :  Driving and consuming an editor across an svn connection
  *
  * ====================================================================
  * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
@@ -389,11 +389,11 @@ static svn_error_t *ra_svn_abort_edit(void *edit_baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-void svn_ra_svn__get_editorp(const svn_delta_editor_t **editor,
-                             void **edit_baton, svn_ra_svn_conn_t *conn,
-                             apr_pool_t *pool,
-                             svn_ra_svn_edit_callback callback,
-                             void *callback_baton)
+void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
+                           void **edit_baton, svn_ra_svn_conn_t *conn,
+                           apr_pool_t *pool,
+                           svn_ra_svn_edit_callback callback,
+                           void *callback_baton)
 {
   svn_delta_editor_t *ra_svn_editor = svn_delta_default_editor(pool);
   ra_svn_edit_baton_t *eb;
@@ -850,12 +850,12 @@ static svn_error_t *blocked_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
-                                       apr_pool_t *pool,
-                                       const svn_delta_editor_t *editor,
-                                       void *edit_baton,
-                                       svn_boolean_t *aborted,
-                                       svn_boolean_t for_replay)
+svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const svn_delta_editor_t *editor,
+                                      void *edit_baton,
+                                      svn_boolean_t *aborted,
+                                      svn_boolean_t for_replay)
 {
   ra_svn_driver_state_t state;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -923,4 +923,17 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
 
   apr_pool_destroy(subpool);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                     const svn_delta_editor_t *editor,
+                                     void *edit_baton,
+                                     svn_boolean_t *aborted)
+{
+  return svn_ra_svn_drive_editor2(conn,
+                                  pool,
+                                  editor,
+                                  edit_baton,
+                                  aborted,
+                                  FALSE);
 }

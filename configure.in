@@ -69,7 +69,7 @@ SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
-NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3"
+NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4"
 NEON_RECOMMENDED_VER=0.25.5
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
@@ -383,9 +383,9 @@ if test "$svn_lib_berkeley_db" = "yes"; then
 fi
   
 if test "$svn_lib_neon" = "yes"; then
-  BUILD_RULES="$BUILD_RULES dav-lib"
-  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-ramod-lib/install-ramod-lib install-dav-lib/'`"
-  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-dav-lib"
+  BUILD_RULES="$BUILD_RULES neon-lib"
+  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-ramod-lib/install-ramod-lib install-neon-lib/'`"
+  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-neon-lib"
 fi
 
 if test "$svn_lib_serf" = "yes"; then
@@ -608,7 +608,7 @@ AC_HELP_STRING([--enable-dso], [Turn on DSO loading of RA libraries]),
 if test "$enable_shared" = "no" || test "$enable_dso" != "yes"; then
   ### We want ra_local first to handle the following scenario:
   ### user has neon and db3 in /usr/local, and db4 in
-  ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_dav.la comes before 
+  ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_neon.la comes before 
   ### libsvn_fs.la then libtool ends up linking libsvn_fs to the db3
   ### in /usr/local/lib
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
@@ -623,11 +623,11 @@ if test "$enable_shared" = "no" || test "$enable_dso" != "yes"; then
   svn_ra_lib_link="$svn_ra_lib_link \$(RA_SVN_LINK)"
 
   if test "$svn_lib_neon" = "yes"; then
-    AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
-          [Defined if libsvn_client should link against libsvn_ra_dav])
-    svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_DAV_DEPS)"
-    svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-dav-lib"
-    svn_ra_lib_link="$svn_ra_lib_link \$(RA_DAV_LINK)"
+    AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_NEON, 1,
+          [Defined if libsvn_client should link against libsvn_ra_neon])
+    svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_NEON_DEPS)"
+    svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-neon-lib"
+    svn_ra_lib_link="$svn_ra_lib_link \$(RA_NEON_LINK)"
   fi
 
   if test "$svn_lib_serf" = "yes"; then

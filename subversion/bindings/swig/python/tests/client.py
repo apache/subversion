@@ -211,6 +211,61 @@ class SubversionClientTestCase(unittest.TestCase):
       """Test svn_client_open_ra_session()."""
       client.open_ra_session(REPOS_URL, self.client_ctx)
 
+
+  def test_info_file(self):
+    """Test svn_client_info on working copy file and remote files."""
+
+    # This test requires a file /trunk/README.txt of size 8 bytes
+    # in the repository. 
+    rev = core.svn_opt_revision_t()
+    rev.kind = core.svn_opt_revision_head
+    wc_path = core.svn_path_canonicalize(tempfile.mktemp())
+
+    client.checkout2(REPOS_URL, wc_path, rev, rev, True, True, 
+                     self.client_ctx)
+    adm_access = wc.adm_open3(None, wc_path, True, -1, None)
+
+    try:
+      # Test 1: Run info -r BASE. We expect the size value to be filled in.
+      rev.kind = core.svn_opt_revision_base
+      readme_path = '%s/trunk/README.txt' % wc_path
+      readme_url = '%s/trunk/README.txt' % REPOS_URL
+      client.info(readme_path, rev, rev, self.info_receiver,
+                  False, self.client_ctx)
+
+      self.assertEqual(self.path, os.path.basename(readme_path))
+      self.info.assert_valid()
+      self.assertEqual(self.info.working_size, client.SWIG_SVN_INFO_SIZE_UNKNOWN)
+      self.assertEqual(self.info.size, 8)
+
+      # Test 2: Run info (revision unspecified). We expect the working_size value
+      # to be filled in.
+      rev.kind = core.svn_opt_revision_unspecified
+      client.info(readme_path, rev, rev, self.info_receiver,
+                  False, self.client_ctx)
+
+      self.assertEqual(self.path, readme_path)
+      self.info.assert_valid()
+      self.assertEqual(self.info.size, client.SWIG_SVN_INFO_SIZE_UNKNOWN)
+      # README.txt contains one EOL char, so on Windows it will be expanded from 
+      # LF to CRLF hence the working_size will be 9 instead of 8.
+      if os.name == 'nt':
+        self.assertEqual(self.info.working_size, 9)
+      else:
+        self.assertEqual(self.info.working_size, 8)
+
+      # Test 3: Run info on the repository URL of README.txt. We expect the size
+      # value to be filled in.
+      rev.kind = core.svn_opt_revision_head
+      client.info(readme_url, rev, rev, self.info_receiver,
+                  False, self.client_ctx)
+      self.info.assert_valid()
+      self.assertEqual(self.info.working_size, client.SWIG_SVN_INFO_SIZE_UNKNOWN)
+      self.assertEqual(self.info.size, 8)
+    finally:
+      wc.adm_close(adm_access)
+      core.svn_io_remove_dir(wc_path)
+
 def suite():
     return unittest.makeSuite(SubversionClientTestCase, 'test',
                               suiteClass=SubversionRepositoryTestSetup)

@@ -496,9 +496,9 @@ module Svn
         Fs.closest_copy(self, path)
       end
 
-      def merge_info(paths, include_parents=true)
+      def merge_info(paths, inherit=nil)
         paths = [paths] unless paths.is_a?(Array)
-        Fs.get_mergeinfo(self, paths, include_parents)
+        Fs.get_mergeinfo(self, paths, inherit)
       end
       alias_method :mergeinfo, :merge_info
 

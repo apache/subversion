@@ -619,20 +619,47 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)
  * @{
  */
 
-/** Callback type used by svn_client_blame() to notify the caller
+/** Callback type used by svn_client_blame4() to notify the caller
  * that line @a line_no of the blamed file was last changed in
  * @a revision by @a author on @a date, and that the contents were
  * @a line.
+ *
+ * If svn_client_blame4() was called with @a include_merged_revisions set to
+ * TRUE, @a merged_revision, @a merged_author, @a merged_date, and
+ * @a merged_path will be set, otherwise they will be NULL.  @a merged_path
+ * will be set to the absolute repository path.
  *  
  * All allocations should be performed in @a pool.
  *
  * @note If there is no blame information for this line, @a revision will be
  * invalid and @a author and @a date will be NULL.
  *
+ *
+ * @since New in 1.5.
+ */
+typedef svn_error_t *(*svn_client_blame_receiver2_t)
+  (void *baton,
+   apr_int64_t line_no,
+   svn_revnum_t revision,
+   const char *author,
+   const char *date,
+   svn_revnum_t merged_revision,
+   const char *merged_author,
+   const char *merged_date,
+   const char *merged_path,
+   const char *line,
+   apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_client_blame_receiver2_t, but without @a merged_revision,
+ * @a merged_author, @a merged_date, or @a merged_path members.
+ *
  * @note New in 1.4 is that the line is defined to contain only the line
  * content (and no [partial] EOLs; which was undefined in older versions).
  * Using this callback with svn_client_blame() or svn_client_blame2()
  * will still give you the old behaviour.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 typedef svn_error_t *(*svn_client_blame_receiver_t)
   (void *baton,
@@ -684,7 +711,8 @@ typedef enum svn_client_diff_summarize_kind_t
  */
 typedef struct svn_client_diff_summarize_t
 {
-  /** Path relative to the target. */
+  /** Path relative to the target.  If the target is a file, path is
+   * the empty string. */
   const char *path;
 
   /** Change kind */
@@ -724,24 +752,9 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
    apr_pool_t *pool);
 
 
-/** A callback used in svn_client_merge3() for resolving merge
- * conflicts to content or properties during the application of a tree
- * delta.
- *
- * All allocations should be performed in @a pool.
- *
- * @a baton is a closure object; it should be provided by the implementation,
- * and passed by the caller.
- *
- * @since New in 1.5.
- */
-typedef svn_error_t *(*svn_client_conflict_resolver_func_t)
-  (const char *path,
-   void *baton,
-   apr_pool_t *pool);
- 
 
 /** @} */
+
 
 /**
  * Client context
@@ -839,8 +852,10 @@ typedef struct svn_client_ctx_t
    * @since New in 1.5. */
   apr_hash_t *revprop_table;
 
-  /* @since New in 1.5. */
-  svn_client_conflict_resolver_func_t conflict_resolver_func;
+  /** Conflict resolution callback and baton, if available.
+   * @since New in 1.5. */
+  svn_wc_conflict_resolver_func_t conflict_func;
+  void *conflict_baton;
 
 } svn_client_ctx_t;
 
@@ -1140,6 +1155,9 @@ svn_client_update(svn_revnum_t *result_rev,
  * ### TODO(sd): But, I think the svn_depth_immediates behavior is not
  * ### actually implemented yet.
  *
+ * If @a ignore_externals is set, don't process externals definitions
+ * as part of this operation.
+ *
  * If @a allow_unver_obstructions is true then the switch tolerates
  * existing unversioned items that obstruct added paths from @a URL.  Only
  * obstructions of the same type (file or dir) as the added item are
@@ -1163,6 +1181,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    const char *url,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
+                   svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
@@ -1170,9 +1189,10 @@ svn_client_switch2(svn_revnum_t *result_rev,
 
 /**
  * Similar to svn_client_switch2() but with @a allow_unver_obstructions
- * always set to false, and @a depth set according to @a recurse: if
- * @a recurse is true, set @a depth to @c svn_depth_infinity, if @a
- * recurse is false, set @a depth to @c svn_depth_files.
+ * and @a ignore_externals always set to false, and @a depth set according
+ * to @a recurse: if @a recurse is true, set @a depth to
+ * @c svn_depth_infinity, if @a recurse is false, set @a depth to
+ * @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -1431,28 +1451,28 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  */
 
 /** Import file or directory @a path into repository directory @a url at
- * head, authenticating with the authentication baton cached in @a ctx, 
- * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message 
- * for the (implied) commit.  Set @a *commit_info_p to the results of the 
+ * head, authenticating with the authentication baton cached in @a ctx,
+ * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message
+ * for the (implied) commit.  Set @a *commit_info_p to the results of the
  * commit, allocated in @a pool.  If some components of @a url do not exist
  * then create parent directories as necessary.
  *
  * If @a path is a directory, the contents of that directory are
  * imported directly into the directory identified by @a url.  Note that the
- * directory @a path itself is not imported -- that is, the basename of 
+ * directory @a path itself is not imported -- that is, the basename of
  * @a path is not part of the import.
  *
  * If @a path is a file, then the dirname of @a url is the directory
  * receiving the import.  The basename of @a url is the filename in the
  * repository.  In this case if @a url already exists, return error.
  *
- * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with 
- * @a ctx->notify_baton2 as the import progresses, with any of the following 
+ * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with
+ * @a ctx->notify_baton2 as the import progresses, with any of the following
  * actions: @c svn_wc_notify_commit_added,
  * @c svn_wc_notify_commit_postfix_txdelta.
  *
- * Use @a pool for any temporary allocation.  
- * 
+ * Use @a pool for any temporary allocation.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1465,8 +1485,11 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * Use @a nonrecursive to indicate that imported directories should not
  * recurse into any subdirectories they may have.
  *
- * If @a no_ignore is false, don't add files or directories that match
+ * If @a no_ignore is @c FALSE, don't add files or directories that match
  * ignore patterns.
+ *
+ * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
+ * node type is unknown, such as device files and pipes.
  *
  * ### kff todo: This import is similar to cvs import, in that it does
  * not change the source tree into a working copy.  However, this
@@ -1475,7 +1498,24 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * option. However, doing so is a bit involved, and we don't need it
  * right now.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_client_import3(svn_commit_info_t **commit_info_p,
+                                const char *path,
+                                const char *url,
+                                svn_boolean_t nonrecursive,
+                                svn_boolean_t no_ignore,
+                                svn_boolean_t ignore_unknown_node_types,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_import3(), but with @a ignore_unknown_node_types
+ * always set to @c FALSE.
+ *
  * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API
  */
 svn_error_t *svn_client_import2(svn_commit_info_t **commit_info_p,
                                 const char *path,
@@ -1871,7 +1911,31 @@ svn_client_log(const apr_array_header_t *targets,
  * Use @a diff_options to determine how to compare different revisions of the
  * target.
  *
+ * If @a include_merged_revisions is TRUE, also return data based upon
+ * revisions which have been merged to @a path_or_url.
+ *
  * Use @a pool for any temporary allocation.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_blame4(const char *path_or_url,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_boolean_t include_merged_revisions,
+                  svn_client_blame_receiver2_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_blame4(), but with @a include_merged_revisions set
+ * to FALSE, and using a @c svn_client_blame_receiver2_t as the receiver.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  *
  * @since New in 1.4.
  */
@@ -2319,7 +2383,7 @@ svn_client_diff_summarize_peg(const char *path,
  * path.
  *
  * If @a record_only is true, the merge isn't actually performed, but
- * the merge info for the revisions which would've been merged is
+ * the mergeinfo for the revisions which would've been merged is
  * recorded in the working copy (and must be subsequently committed
  * back to the repository).
  *
@@ -2460,15 +2524,15 @@ svn_client_merge_peg(const char *source,
                      apr_pool_t *pool);
 
 /**
- * Retrieve the merge info for @a path_or_url in @a *mergeinfo,
+ * Retrieve the mergeinfo for @a path_or_url in @a *mergeinfo,
  * storing a mapping of repository-relative paths to @c
  * apr_array_header_t *'s of @c svn_merge_range_t *'s, or @c NULL if
- * there is no merge info.
+ * there is no mergeinfo.
  *
  * @a path_or_url is a WC path or repository URL.  If @a path_or_url
  * is a WC path, @a revision is ignored in preference to @a
  * path_or_url's @c WORKING revision.  If @a path_or_url is a URL, @a
- * revision is the revision at which to get its merge info.  @a
+ * revision is the revision at which to get its mergeinfo.  @a
  * mergeinfo is allocated in @a pool.
  *
  * @since New in 1.5.
@@ -2573,11 +2637,33 @@ svn_client_revert(const apr_array_header_t *paths,
  * @{
  */
 
+/**
+ * Similar to svn_client_resolved2(), but without automatic conflict
+ * resolution support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+svn_error_t *
+svn_client_resolved(const char *path,
+                    svn_boolean_t recursive,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
 /** Remove the 'conflicted' state on a working copy @a path.  This will
  * not semantically resolve conflicts;  it just allows @a path to be
  * committed in the future.  The implementation details are opaque.
  * If @a recursive is set, recurse below @a path, looking for conflicts 
  * to resolve.
+ *
+ * @a accept_ is the argument used to facilitate automatic conflict resolution.
+ * If @a accept_ is svn_accept_left, the contents of the conflicted file will
+ * be replaced with the prestine contents of the pre-modification base file
+ * contents.  If @a accept_ is svn_accept_right, the contents of the conflicted
+ * file will be replaced with the post-conflict base file contents.  If @a
+ * accept_ is svn_accept_working, the contents of the conflicted file will be
+ * the content of the pre-conflict working copy file.  If @a accept_ is
+ * svn_accept_default, conflict resolution will be handled just like before
+ * automatic conflict resolution was availble.
  *
  * ### TODO(sd): I don't see any reason to change this recurse parameter
  * ### to a depth, but making a note to re-check this logic later.
@@ -2585,12 +2671,15 @@ svn_client_revert(const apr_array_header_t *paths,
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-null,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
-svn_client_resolved(const char *path,
-                    svn_boolean_t recursive,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_resolved2(const char *path,
+                     svn_boolean_t recursive,
+                     svn_accept_t accept_,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 
 /** @} */
@@ -3732,6 +3821,13 @@ svn_client_unlock(const apr_array_header_t *targets,
  * @{
  */
 
+/** The value of the size in the repository is unknown (because the info
+ * was fetched for a local path, not an URL).
+ *
+ * @since New in 1.5
+ */
+#define SVN_INFO_SIZE_UNKNOWN ((apr_size_t) -1)
+
 /**
  * A structure which describes various system-generated metadata about
  * a working-copy path or URL.
@@ -3796,7 +3892,24 @@ typedef struct svn_info_t
   /* @since New in 1.5. */
   const char *changelist;
   svn_depth_t depth;
+  
+  /** 
+   * The size of the file after being translated into its local
+   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN if
+   * unknown.  Not applicable for directories.
+   * @since New in 1.5.
+   */
+  apr_size_t working_size;
   /** @} */
+
+  /**
+   * The size of the file in the repository (untranslated,
+   * e.g. without adjustment of line endings and keyword
+   * expansion). Only applicable for file -- not directory -- URLs.
+   * For working copy paths, size will be @c SVN_INFO_SIZE_UNKNOWN.
+   * @since New in 1.5.
+   */
+  apr_size_t size;
 
 } svn_info_t;
 

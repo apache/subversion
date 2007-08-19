@@ -169,7 +169,15 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 4,
              "Bogus mime-type")
 
-  /* UNUSED error slot:                  + 5 */
+  /** @since New in 1.5.
+   *
+   * Note that there was an unused slot sitting here at
+   * SVN_ERR_BAD_CATEGORY_START + 5, so error codes after this aren't
+   * necessarily "New in 1.5" just because they come later.
+   */
+  SVN_ERRDEF(SVN_ERR_BAD_PROPERTY_VALUE,
+             SVN_ERR_BAD_CATEGORY_START + 5,
+             "Wrong or unexpected property value")
 
   SVN_ERRDEF(SVN_ERR_BAD_VERSION_FILE_FORMAT,
              SVN_ERR_BAD_CATEGORY_START + 6,
@@ -396,6 +404,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 26,
              "Changelist doesn't match")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+             SVN_ERR_WC_CATEGORY_START + 27,
+             "Conflict resolution failed")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -602,6 +615,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 44,
              "Representation is being written")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_TXN_NAME_TOO_LONG,
+             SVN_ERR_FS_CATEGORY_START + 45,
+             "The generated transaction name is too long")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -806,6 +824,11 @@ SVN_ERROR_START
              SVN_ERR_AUTHN_CATEGORY_START + 3,
              "All authentication providers exhausted")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_AUTHN_FAILED,
+             SVN_ERR_AUTHN_CATEGORY_START + 4,
+             "Authentication failed")
+
   /* authorization errors */
 
   SVN_ERRDEF(SVN_ERR_AUTHZ_ROOT_UNREADABLE,
@@ -952,6 +975,7 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 14,
              "Operation does not support multiple sources")
 
+  /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_CLIENT_NO_VERSIONED_PARENT,
              SVN_ERR_CLIENT_CATEGORY_START + 15,
              "No versioned parent directories")
@@ -1034,14 +1058,20 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 18,
              "No auth file path available")
   
-  SVN_ERRDEF(SVN_ERR_MERGE_INFO_PARSE_ERROR,
-             SVN_ERR_MISC_CATEGORY_START + 19,
-             "Merge info parse error")
-
   /** @since New in 1.1. */
   SVN_ERRDEF(SVN_ERR_VERSION_MISMATCH,
              SVN_ERR_MISC_CATEGORY_START + 19,
              "Incompatible library version")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_MERGE_INFO_PARSE_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 20,
+             "Merge info parse error")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_CEASE_INVOCATION,
+             SVN_ERR_MISC_CATEGORY_START + 21,
+             "Cease invocation of this API")
 
   /* command-line client errors */
 

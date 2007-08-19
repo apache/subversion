@@ -208,12 +208,24 @@ SVN_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_py_proparray_from_dict(PyObject *dict,
                                                     apr_pool_t *pool);
 
+/* helper function to convert a 'apr_array_header_t *' of 'svn_prop_t 
+   to a Python dictionary mapping strings to strings. */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *svn_swig_py_proparray_to_dict(const apr_array_header_t *array);
+
 /* helper function to convert a Python dictionary mapping strings to
    strings into an apr_hash_t mapping const char *'s to svn_string_t's,
    allocated in POOL. */
 SVN_SWIG_SWIGUTIL_EXPORT
 apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
                                            apr_pool_t *pool);
+
+/* helper function to convert a Python dictionary mapping strings to
+   integers into an apr_hash_t mapping const char *'s to revnums,
+   allocated in POOL. */
+SVN_SWIG_SWIGUTIL_EXPORT
+apr_hash_t *svn_swig_py_path_revs_hash_from_dict(PyObject *dict,
+                                                 apr_pool_t *pool);
 
 /* helper function to convert a Python sequence of strings into an
    'apr_array_header_t *' of 'const char *' objects.  Note that the
@@ -417,6 +429,15 @@ svn_error_t *svn_swig_py_ra_file_rev_handler_func(
                     svn_txdelta_window_handler_t *delta_handler,
                     void **delta_baton,
                     apr_array_header_t *prop_diffs,
+                    apr_pool_t *pool);
+
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_py_ra_lock_callback(
+                    void *baton,
+                    const char *path,
+                    svn_boolean_t do_lock,
+                    const svn_lock_t *lock,
+                    svn_error_t *ra_err,
                     apr_pool_t *pool);
 
 SVN_SWIG_SWIGUTIL_EXPORT

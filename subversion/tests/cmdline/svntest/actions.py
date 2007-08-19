@@ -64,8 +64,7 @@ def do_sleep_for_timestamps():
   os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'yes'
 
 def setup_pristine_repository():
-  """Create the pristine repository, 'svn import' the greek tree and 
-  checkout the pristine working copy"""
+  """Create the pristine repository and 'svn import' the greek tree"""
 
   # these directories don't exist out of the box, so we may have to create them
   if not os.path.exists(main.general_wc_dir):
@@ -251,6 +250,24 @@ def run_and_verify_dump(repo_dir):
     raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
 
   return output
+
+
+def load_repo(sbox, dumpfile_path = None, dump_str = None):
+  "Loads the dumpfile into sbox"
+  if not dump_str:
+    dump_str = main.file_read(dumpfile_path, "rb")
+
+  # Create a virgin repos and working copy
+  main.safe_rmtree(sbox.repo_dir, 1)
+  main.safe_rmtree(sbox.wc_dir, 1)
+  main.create_repos(sbox.repo_dir)
+
+  # Load the mergetracking dumpfile into the repos, and check it out the repo
+  run_and_verify_load(sbox.repo_dir, dump_str)
+  run_and_verify_svn(None, None, [], "co", sbox.repo_url, sbox.wc_dir)
+
+  return dump_str
+
 
 ######################################################################
 # Subversion Actions
@@ -1038,6 +1055,18 @@ pre-revprop-change hook script and (if appropriate) making it executable."""
   hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
   main.create_python_hook_script (hook_path, 'import sys; sys.exit(0)')
 
+def disable_revprop_changes(repo_dir, message):
+  """Disable revprop changes in a repository REPO_DIR by creating a
+pre-revprop-change hook script like enable_revprop_changes, except that
+the hook prints MESSAGE to stderr and exits non-zero.  MESSAGE is printed
+very simply, and should have no newlines or quotes."""
+
+  hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
+  main.create_python_hook_script (hook_path,
+                                  'import sys\n'
+                                  'sys.stderr.write("%s")\n'
+                                  'sys.exit(1)\n' % (message,))
+
 def create_failing_post_commit_hook(repo_dir):
   """Disable commits in a repository REPOS_DIR by creating a post-commit hook
 script which always reports errors."""
@@ -1046,4 +1075,28 @@ script which always reports errors."""
   main.create_python_hook_script (hook_path, 'import sys; '
     'sys.stderr.write("Post-commit hook failed"); '
     'sys.exit(1)')
+
+# set_prop can be used for binary properties are values like '*' which are not
+# handled correctly when specified on the command line.
+def set_prop(expected_err, name, value, path, valp):
+  """Set a property with value from a file"""
+  valf = open(valp, 'wb')
+  valf.seek(0)
+  valf.truncate(0)
+  valf.write(value)
+  valf.flush()
+  main.run_svn(expected_err, 'propset', '-F', valp, name, path)
+
+def check_prop(name, path, exp_out):
+  """Verify that property NAME on PATH has a value of EXP_OUT"""
+  # Not using run_svn because binary_mode must be set
+  out, err = main.run_command(main.svn_binary, None, 1, 'pg', '--strict',
+                              name, path, '--config-dir',
+                              main.default_config_dir)
+  if out != exp_out:
+    print "svn pg --strict", name, "output does not match expected."
+    print "Expected standard output: ", exp_out, "\n"
+    print "Actual standard output: ", out, "\n"
+    raise Failure
+
 ### End of file.

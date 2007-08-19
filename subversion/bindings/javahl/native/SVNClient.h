@@ -32,6 +32,7 @@
 class Revision;
 class Notify;
 class Notify2;
+class ConflictResolverCallback;
 class ProgressListener;
 class Targets;
 class JNIByteArray;
@@ -71,7 +72,8 @@ class SVNClient :public SVNBase
 
   void blame(const char *path, Revision &pegRevision,
              Revision &revisionStart, Revision &revisionEnd,
-             bool ignoreMimeType, BlameCallback *callback);
+             bool ignoreMimeType, bool includeMergedRevisions,
+             BlameCallback *callback);
   void relocate(const char *from, const char *to, const char *path,
                 bool recurse);
   jbyteArray fileContent(const char *path, Revision &revision,
@@ -95,7 +97,8 @@ class SVNClient :public SVNBase
   void doImport(const char *path, const char *url, const char *message,
                 bool recurse);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
-                 svn_depth_t depth, bool allowUnverObstructions);
+                 svn_depth_t depth, bool ignoreExternals,
+                 bool allowUnverObstructions);
   jlong doExport(const char *srcPath, const char *destPath,
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,
@@ -120,6 +123,7 @@ class SVNClient :public SVNBase
               bool keep_local);
   void notification(Notify *notify);
   void notification2(Notify2 *notify2);
+  void setConflictResolver(ConflictResolverCallback *conflictResolver);
   void setProgressListener(ProgressListener *progressListener);
   jlong checkout(const char *moduleName, const char *destPath,
                  Revision &revision, Revision &pegRevsion, svn_depth_t depth,
@@ -202,6 +206,7 @@ class SVNClient :public SVNBase
     
   Notify *m_notify;
   Notify2 *m_notify2;
+  ConflictResolverCallback *m_conflictResolver;
   ProgressListener *m_progressListener;
   Prompter *m_prompter;
   Path m_lastPath;

@@ -35,7 +35,8 @@ Valid options:
                                 'PREV'       revision just before COMMITTED
   -q [--quiet]             : print as little as possible
   -v [--verbose]           : print extra information
-  -g [--use-merge-history] : use/display additional information from merge history
+  -g [--use-merge-history] : use/display additional information from merge
+                             history
   --targets ARG            : pass contents of file ARG as additional args
   --stop-on-copy           : do not cross copies while traversing history
   --incremental            : give output suitable for concatenation
@@ -45,7 +46,7 @@ Valid options:
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
   --config-dir ARG         : read user configuration files from directory ARG
-  --limit ARG              : maximum number of log entries
+  -l [--limit] ARG         : maximum number of log entries
   --changelist ARG         : operate only on members of changelist ARG
 
 switch (sw): Update the working copy to a different URL.
@@ -92,5 +93,6 @@ Valid options:
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
   --config-dir ARG         : read user configuration files from directory ARG
+  --ignore-externals       : ignore externals definitions
   --force                  : force operation to run
 

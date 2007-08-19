@@ -405,7 +405,7 @@ svn_client_status2(svn_revnum_t *result_rev,
 {
   return svn_client_status3(result_rev, path, revision,
                             status_func, status_baton,
-                            SVN_DEPTH_FROM_RECURSE(recurse),
+                            SVN_DEPTH_FROM_RECURSE_STATUS(recurse),
                             get_all, update,
                             no_ignore, ignore_externals,
                             ctx, pool);

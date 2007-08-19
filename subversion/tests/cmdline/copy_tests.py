@@ -27,6 +27,7 @@ from svntest.main import SVN_PROP_MERGE_INFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -359,7 +360,7 @@ def basic_copy_and_move_files(sbox):
 #----------------------------------------------------------------------
 
 # This test passes over ra_local certainly; we're adding it because at
-# one time it failed over ra_dav.  Specifically, it failed when
+# one time it failed over ra_neon.  Specifically, it failed when
 # mod_dav_svn first started sending vsn-rsc-urls as "CR/path", and was
 # sending bogus CR/paths for items within copied subtrees.
 
@@ -622,7 +623,7 @@ def no_wc_copy_overwrites(sbox):
 # Takes out working-copy locks for A/B2 and child A/B2/E. At one stage
 # during issue 749 the second lock cause an already-locked error.
 def copy_modify_commit(sbox):
-  "copy and tree and modify before commit"
+  "copy a tree and modify before commit"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1171,16 +1172,16 @@ def wc_copy_parent_into_child(sbox):
   # lock the non-working copy parent directory.
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  try:
-    svntest.actions.run_and_verify_svn(None,
-                                       ['\n', 'Committed revision 2.\n'], [],
-                                       'cp',
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
-                                       '-m', 'a larger can',
-                                       '.', F_B_url)
-  finally:
-    os.chdir(was_cwd)
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 2.\n'], [],
+                                     'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'a larger can',
+                                     '.', F_B_url)
+
+  os.chdir(was_cwd)
 
   # Do an update to verify the copy worked
   expected_output = svntest.wc.State(wc_dir, {
@@ -1224,7 +1225,7 @@ def wc_copy_parent_into_child(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
-# Issue 1419: at one point ra_dav->get_uuid() was failing on a
+# Issue 1419: at one point ra_neon->get_uuid() was failing on a
 # non-existent public URL, which prevented us from resurrecting files
 # (svn cp -rOLD URL wc).
 
@@ -1510,7 +1511,7 @@ def double_uri_escaping_1814(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-m', 'r2',
                                      orig_url, new_url)
 
-  # This had failed with ra_dav because "foo bar" would be double-encoded
+  # This had failed with ra_neon because "foo bar" would be double-encoded
   # "foo bar" ==> "foo%20bar" ==> "foo%2520bar"
   svntest.actions.run_and_verify_svn(None, None, [], 'ls', ('-r'+str(orig_rev)),
                                      '-R', base_url)
@@ -1912,13 +1913,12 @@ def force_move(sbox):
                 ]
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  try:
-    svntest.actions.run_and_verify_svn(None, move_output,
-                                       [],
-                                       'move',
-                                       file_name, "dest")
-  finally:
-    os.chdir(was_cwd)
+
+  svntest.actions.run_and_verify_svn(None, move_output,
+                                     [],
+                                     'move',
+                                     file_name, "dest")
+  os.chdir(was_cwd)
 
   # check for the new content
   file_handle = file(os.path.join(wc_dir, "dest"), "r")
@@ -2851,11 +2851,8 @@ def move_to_relative_paths(sbox):
 
   current_dir = os.getcwd()
   os.chdir(E_path)
-  
-  try:
-    svntest.main.run_svn(None, 'mv', 'beta', rel_path)
-  finally:
-    os.chdir(current_dir)
+  svntest.main.run_svn(None, 'mv', 'beta', rel_path)
+  os.chdir(current_dir)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -2876,11 +2873,8 @@ def move_from_relative_paths(sbox):
 
   current_dir = os.getcwd()
   os.chdir(F_path)
-  
-  try:
-    svntest.main.run_svn(None, 'mv', beta_rel_path, '.')
-  finally:
-    os.chdir(current_dir)
+  svntest.main.run_svn(None, 'mv', beta_rel_path, '.')
+  os.chdir(current_dir)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -2901,11 +2895,8 @@ def copy_to_relative_paths(sbox):
 
   current_dir = os.getcwd()
   os.chdir(E_path)
-  
-  try:
-    svntest.main.run_svn(None, 'cp', 'beta', rel_path)
-  finally:
-    os.chdir(current_dir)
+  svntest.main.run_svn(None, 'cp', 'beta', rel_path)
+  os.chdir(current_dir)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -2925,11 +2916,8 @@ def copy_from_relative_paths(sbox):
 
   current_dir = os.getcwd()
   os.chdir(F_path)
-  
-  try:
-    svntest.main.run_svn(None, 'cp', beta_rel_path, '.')
-  finally:
-    os.chdir(current_dir)
+  svntest.main.run_svn(None, 'cp', beta_rel_path, '.')
+  os.chdir(current_dir)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -3702,7 +3690,8 @@ test_list = [ None,
               copy_files_with_properties,
               copy_delete_commit,
               mv_and_revert_directory,
-              Skip(copy_preserve_executable_bit, (os.name != 'posix')),
+              SkipUnless(copy_preserve_executable_bit,
+                         svntest.main.is_posix_os),
               wc_to_repos,
               repos_to_wc,
               copy_to_root,

@@ -572,7 +572,7 @@ log_do_merge(struct log_runner *loggy,
                                left, right, name, loggy->adm_access,
                                left_label, right_label, target_label,
                                FALSE, loggy->diff3_cmd, NULL, NULL,
-                               loggy->pool);
+                               NULL, NULL, loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);

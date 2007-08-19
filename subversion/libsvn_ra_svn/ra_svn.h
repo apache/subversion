@@ -86,7 +86,6 @@ struct svn_ra_svn_conn_st {
 struct svn_ra_svn__session_baton_t {
   apr_pool_t *pool;
   svn_ra_svn_conn_t *conn;
-  int protocol_version;
   svn_boolean_t is_tunneled;
   const char *user;
   const char *hostname; /* The remote hostname. */
@@ -110,21 +109,6 @@ void svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
 /* Return true if there is input waiting on conn. */
 svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool);
-
-/* Pipelined implementation of editor; the real functions defer to
- * these if the connection has the edit-pipeline capability. */
-void svn_ra_svn__get_editorp(const svn_delta_editor_t **editor,
-                             void **edit_baton, svn_ra_svn_conn_t *conn,
-                             apr_pool_t *pool,
-                             svn_ra_svn_edit_callback callback,
-                             void *callback_baton);
-
-svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
-                                       apr_pool_t *pool,
-                                       const svn_delta_editor_t *editor,
-                                       void *edit_baton,
-                                       svn_boolean_t *aborted,
-                                       svn_boolean_t for_replay);
 
 /* CRAM-MD5 client implementation. */
 svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -178,14 +162,13 @@ svn_boolean_t svn_ra_svn__stream_pending(svn_ra_svn__stream_t *stream);
 
 /* Respond to an auth request and perform authentication.  Use the Cyrus
  * SASL library for mechanism negotiation and for creating authentication
- * tokens.  REALM may be NULL for the initial authentication exchange of
- * protocol version 1. */
+ * tokens. */
 svn_error_t *
 svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
                           apr_array_header_t *mechlist,
                           const char *realm, apr_pool_t *pool);
 
-/* Same as svn_ra_svn__do_sasl_auth, but uses the built-in implementation of
+/* Same as svn_ra_svn__do_cyrus_auth, but uses the built-in implementation of
  * the CRAM-MD5, ANONYMOUS and EXTERNAL mechanisms.  Return the error
  * SVN_ERR_RA_SVN_NO_MECHANSIMS if we cannot negotiate an authentication
  * mechanism with the server. */
@@ -195,13 +178,11 @@ svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
                              const char *realm, apr_pool_t *pool);
 
 /* Having picked a mechanism, start authentication by writing out an
- * auth response.  If COMPAT is true, also write out a version number
- * and capability list.  MECH_ARG may be NULL for mechanisms with no
+ * auth response.  MECH_ARG may be NULL for mechanisms with no
  * initial client response. */
 svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn, 
                                        apr_pool_t *pool,
-                                       const char *mech, const char *mech_arg,
-                                       svn_boolean_t compat);
+                                       const char *mech, const char *mech_arg);
 
 /* Initialize the SASL library. */
 svn_error_t *svn_ra_svn__sasl_init(void);

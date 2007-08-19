@@ -25,13 +25,17 @@ from svntest import SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
-
+server_has_revprop_commit = svntest.main.server_has_revprop_commit
 
 ######################################################################
 # Utilities
 #
+
+def is_non_posix_os_or_cygwin_platform():
+  return (not svntest.main.is_posix_os()) or sys.platform == 'cygwin'
 
 def get_standard_state(wc_dir):
   """Return a status list reflecting the local mods made by
@@ -1201,7 +1205,7 @@ def commit_rmd_and_deleted_file(sbox):
 
 #----------------------------------------------------------------------
 
-# Issue #644 which failed over ra_dav.
+# Issue #644 which failed over ra_neon.
 def commit_add_file_twice(sbox):
   "issue 644 attempt to add a file twice"
 
@@ -1277,20 +1281,17 @@ def commit_from_long_dir(sbox):
   # random behaviour, but still caused the test to fail
   extra_name = 'xx'
 
-  try:
-    os.chdir(wc_dir)
-    os.mkdir(extra_name)
-    os.chdir(extra_name)
+  os.chdir(wc_dir)
+  os.mkdir(extra_name)
+  os.chdir(extra_name)
 
-    svntest.actions.run_and_verify_commit(abs_wc_dir,
-                                          expected_output,
-                                          None,
-                                          None,
-                                          None, None,
-                                          None, None,
-                                          abs_wc_dir)
-  finally:
-    os.chdir(was_dir)
+  svntest.actions.run_and_verify_commit(abs_wc_dir,
+                                        expected_output,
+                                        None,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        abs_wc_dir)
   
 #----------------------------------------------------------------------
 
@@ -1348,21 +1349,20 @@ def commit_current_dir(sbox):
   svntest.main.run_svn(None, 'propset', 'pname', 'pval', wc_dir)
 
   was_cwd = os.getcwd()
-  try:
-    os.chdir(wc_dir)
 
-    expected_output = svntest.wc.State('.', {
-      '.' : Item(verb='Sending'),
-      })
-    svntest.actions.run_and_verify_commit('.',
-                                          expected_output,
-                                          None,
-                                          None,
-                                          None, None,
-                                          None, None,
-                                          '.')
-  finally:
-    os.chdir(was_cwd)
+  os.chdir(wc_dir)
+
+  expected_output = svntest.wc.State('.', {
+    '.' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit('.',
+                                        expected_output,
+                                        None,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        '.')
+  os.chdir(was_cwd)
 
   # I can't get the status check to work as part of run_and_verify_commit.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1657,7 +1657,7 @@ def commit_nonrecursive(sbox):
                                         os.path.join(wc_dir, fileC_path))
 
 #----------------------------------------------------------------------
-# Regression for #1017: ra_dav was allowing the deletion of out-of-date
+# Regression for #1017: ra_neon was allowing the deletion of out-of-date
 # files or dirs, which majorly violates Subversion's semantics.
 
 
@@ -1770,22 +1770,17 @@ def from_wc_top_with_bad_editor(sbox):
   svntest.actions.run_and_verify_svn("Unexpected failure from propset.",
                                      SVNAnyOutput, [],
                                      'pset', 'fish', 'food', wc_dir)
-  was_cwd = os.getcwd()
-  try:
-    os.chdir(wc_dir)
-    out, err = svntest.actions.run_and_verify_svn(
-      "Commit succeeded when should have failed.",
-      None, SVNAnyOutput,
-      'ci', '--editor-cmd', 'no_such-editor')
+  os.chdir(wc_dir)
+  out, err = svntest.actions.run_and_verify_svn(
+    "Commit succeeded when should have failed.",
+    None, SVNAnyOutput,
+    'ci', '--editor-cmd', 'no_such-editor')
 
-    err = string.join(map(string.strip, err), ' ')
-    if not (re.match(".*no_such-editor.*", err)
-            and re.match(".*Commit failed.*", err)):
-      print "Commit failed, but not in the way expected."
-      raise svntest.Failure
-
-  finally:
-    os.chdir(was_cwd)
+  err = string.join(map(string.strip, err), ' ')
+  if not (re.match(".*no_such-editor.*", err)
+          and re.match(".*Commit failed.*", err)):
+    print "Commit failed, but not in the way expected."
+    raise svntest.Failure
   
 
 def mods_in_schedule_delete(sbox):
@@ -1917,6 +1912,16 @@ def local_mods_are_not_commits(sbox):
                                      os.path.join(wc_dir, 'A', 'mu'),
                                      os.path.join(wc_dir, 'A', 'yu'))
 
+# Helper for hook tests: returns the "hook failed" line, with precise
+# wording that changed with Subversion 1.5.
+def hook_failure_message(hookname):
+  if svntest.main.server_minor_version < 5:
+    return "'%s' hook failed with error output:\n" % hookname
+  else:
+    return "'%s' hook failed (exited with a " \
+           "non-zero exitcode of 1).  The following error output " \
+           "was produced by the hook:\n" % hookname
+    
 
 #----------------------------------------------------------------------
 # Test if the post-commit error message is returned back to the svn
@@ -1945,9 +1950,7 @@ def post_commit_hook_test(sbox):
                       "Transmitting file data .\n",
                       "Committed revision 2.\n",
                       "\n",
-                      "Warning: 'post-commit' hook failed (exited with a "
-                      "non-zero exitcode of 1).  The following error output "
-                      "was produced by the hook:\n",
+                      "Warning: " + hook_failure_message('post-commit'),
                       "Post-commit hook failed\n",
                     ]
 
@@ -2325,9 +2328,7 @@ sys.exit(1)"""
   # contain source code file and line numbers.
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: 'start-commit' hook failed "
-                      "(exited with a non-zero exitcode of 1).  "
-                      "The following error output was produced by the hook:\n",
+  expected_stderr = [ "svn: " + hook_failure_message('start-commit'),
                       "Start-commit hook failed\n"
                     ]
   svntest.actions.compare_and_display_lines('Start-commit hook test',  
@@ -2370,9 +2371,7 @@ sys.exit(1)"""
   # contain source code file and line numbers.
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: 'pre-commit' hook failed "
-                      "(exited with a non-zero exitcode of 1).  "
-                      "The following error output was produced by the hook:\n",
+  expected_stderr = [ "svn: " + hook_failure_message('pre-commit'),
                       "Pre-commit hook failed\n"
                     ]
   svntest.actions.compare_and_display_lines('Pre-commit hook test',  
@@ -2415,23 +2414,25 @@ test_list = [ None,
               commit_with_bad_log_message,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
-              Skip(tab_test, (os.name != 'posix' or sys.platform == 'cygwin')),
+              Skip(tab_test, is_non_posix_os_or_cygwin_platform),
               local_mods_are_not_commits,
               post_commit_hook_test,
               commit_same_folder_in_targets,
               commit_inconsistent_eol,
-              mkdir_with_revprop,
-              delete_with_revprop,
-              commit_with_revprop,
-              import_with_revprop,
-              copy_R2R_with_revprop,
-              copy_WC2R_with_revprop,
-              move_R2R_with_revprop,
-              propedit_with_revprop,
-              set_multiple_props_with_revprop,
-              use_empty_value_in_revprop_pair,
-              no_equals_in_revprop_pair,
-              set_invalid_revprops,
+              SkipUnless(mkdir_with_revprop, server_has_revprop_commit),
+              SkipUnless(delete_with_revprop, server_has_revprop_commit),
+              SkipUnless(commit_with_revprop, server_has_revprop_commit),
+              SkipUnless(import_with_revprop, server_has_revprop_commit),
+              SkipUnless(copy_R2R_with_revprop, server_has_revprop_commit),
+              SkipUnless(copy_WC2R_with_revprop, server_has_revprop_commit),
+              SkipUnless(move_R2R_with_revprop, server_has_revprop_commit),
+              SkipUnless(propedit_with_revprop, server_has_revprop_commit),
+              SkipUnless(set_multiple_props_with_revprop,
+                         server_has_revprop_commit),
+              SkipUnless(use_empty_value_in_revprop_pair,
+                         server_has_revprop_commit),
+              SkipUnless(no_equals_in_revprop_pair, server_has_revprop_commit),
+              SkipUnless(set_invalid_revprops, server_has_revprop_commit),
               start_commit_hook_test,
               pre_commit_hook_test,
              ]

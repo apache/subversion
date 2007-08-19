@@ -351,7 +351,7 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal([trunk_uri], merge_info.keys)
     trunk_merge_info = merge_info[trunk_uri]
     assert_equal([branch_uri], trunk_merge_info.keys)
-    assert_equal([[2, 2]],
+    assert_equal([[1, 2]],
                  trunk_merge_info[branch_uri].collect {|range| range.to_a})
 
     ctx.rm(branch_path)
@@ -365,7 +365,7 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal([trunk_uri], merge_info.keys)
     trunk_merge_info = merge_info[trunk_uri]
     assert_equal([branch_uri], trunk_merge_info.keys)
-    assert_equal([[2, 2], [4, 4]],
+    assert_equal([[1, 2], [3, 4]],
                  trunk_merge_info[branch_uri].collect {|range| range.to_a})
   end
 end

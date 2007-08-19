@@ -221,7 +221,8 @@ svn_fs_type(const char **fs_type, const char *path, apr_pool_t *pool)
   apr_file_t *file;
   apr_size_t len;
 
-  /* Read the fsap-name file to get the FSAP name, or assume the default. */
+  /* Read the fsap-name file to get the FSAP name, or assume the (old)
+     default. */
   filename = svn_path_join(path, FS_TYPE_FILENAME, pool);
   err = svn_io_file_open(&file, filename, APR_READ|APR_BUFFERED, 0, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -322,12 +323,12 @@ default_warning_func(void *baton, svn_error_t *err)
   abort();
 }
 
+/* This API is publicly deprecated, but we continue to use it
+   internally to properly allocate svn_fs_t structures. */
 svn_fs_t *
 svn_fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
 {
-  svn_fs_t *fs;
-
-  fs = apr_palloc(pool, sizeof(*fs));
+  svn_fs_t *fs = apr_palloc(pool, sizeof(*fs));
   fs->pool = pool;
   fs->path = NULL;
   fs->warning = default_warning_func;
@@ -374,7 +375,7 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   err2 = release_fs_mutex();
   if (err)
     {
-     svn_error_clear(err2);
+      svn_error_clear(err2);
       return err;
     }
   return err2;
@@ -810,20 +811,23 @@ svn_error_t *
 svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
-                     svn_boolean_t include_parents,
+                     svn_mergeinfo_inheritance_t inherit,
                      apr_pool_t *pool)
 {
-  return root->vtable->get_mergeinfo(minfohash, root, paths, include_parents,
-                                     pool);
+  return root->vtable->get_mergeinfo(minfohash, root, paths, inherit, pool);
 }
 
 svn_error_t *
 svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                               svn_fs_root_t *root,
                               const apr_array_header_t *paths,
+                              svn_fs_mergeinfo_filter_func_t filter_func,
+                              void *filter_func_baton,
                               apr_pool_t *pool)
 {
   return root->vtable->get_mergeinfo_for_tree(mergeinfo, root, paths,
+                                              filter_func,
+                                              filter_func_baton,
                                               pool);
 }
 

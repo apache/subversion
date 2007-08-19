@@ -17,6 +17,7 @@
  */
 
 #include <assert.h>
+#include <stdlib.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>
@@ -32,6 +33,7 @@
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
@@ -100,6 +102,9 @@ static const apr_getopt_option_t options_table[] =
 
   {"help",              'h', 0,
    N_("show help on a subcommand")},
+
+  {"limit",             'l', 1,
+   N_("maximum number of history entries")},
 
   {"no-diff-added",     svnlook__no_diff_added, 0,
    N_("do not print differences for added files")},
@@ -178,7 +183,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
    N_("usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n\n"
       "Print information about the history of a path in the repository (or\n"
       "the root directory if no path is supplied).\n"),
-   {'r', svnlook__show_ids} },
+   {'r', svnlook__show_ids, 'l'} },
 
   {"info", subcommand_info, {0},
    N_("usage: svnlook info REPOS_PATH\n\n"
@@ -238,6 +243,7 @@ struct svnlook_opt_state
   const char *txn;
   svn_boolean_t version;          /* --version */
   svn_boolean_t show_ids;         /* --show-ids */
+  apr_size_t limit;               /* --limit */
   svn_boolean_t help;             /* --help */
   svn_boolean_t no_diff_deleted;  /* --no-diff-deleted */
   svn_boolean_t no_diff_added;    /* --no-diff-added */
@@ -256,6 +262,7 @@ typedef struct svnlook_ctxt_t
   svn_fs_t *fs;
   svn_boolean_t is_revision;
   svn_boolean_t show_ids;
+  apr_size_t limit;
   svn_boolean_t no_diff_deleted;
   svn_boolean_t no_diff_added;
   svn_boolean_t diff_copy_from;
@@ -1015,7 +1022,7 @@ print_tree(svn_fs_root_t *root,
   SVN_ERR(check_cancel(NULL));
 
   /* Print the indentation. */
-  if(!full_paths)
+  if (!full_paths)
     for (i = 0; i < indentation; i++)
       SVN_ERR(svn_cmdline_fputs(" ", stdout, pool));
 
@@ -1326,7 +1333,9 @@ do_diff(svnlook_ctxt_t *c, apr_pool_t *pool)
 struct print_history_baton
 {
   svn_fs_t *fs;
-  svn_boolean_t show_ids;
+  svn_boolean_t show_ids;    /* whether to show node IDs */
+  apr_size_t limit;          /* max number of history items */
+  apr_size_t count;          /* number of history items processed */
 };
 
 /* Implements svn_repos_history_func_t interface.  Print the history
@@ -1359,6 +1368,15 @@ print_history(void *baton,
       SVN_ERR(svn_cmdline_printf(pool, "%8ld   %s\n", revision, path));
     }
 
+  if (phb->limit > 0)
+    {
+      phb->count++;
+      if (phb->count >= phb->limit)
+        /* Not L10N'd, since this error is supressed by the caller. */
+        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL,
+                                "History item limit reached");
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1369,12 +1387,11 @@ print_history(void *baton,
 static svn_error_t *
 do_history(svnlook_ctxt_t *c, 
            const char *path, 
-           svn_boolean_t show_ids,
            apr_pool_t *pool)
 {
   struct print_history_baton args;
 
-  if (show_ids)
+  if (c->show_ids)
     {
       SVN_ERR(svn_cmdline_printf(pool, _("REVISION   PATH <ID>\n"
                                          "--------   ---------\n")));
@@ -1389,9 +1406,11 @@ do_history(svnlook_ctxt_t *c,
      (prior to the user-supplied revision, of course), across all
      copies. */
   args.fs = c->fs;
-  args.show_ids = show_ids;
+  args.show_ids = c->show_ids;
+  args.limit = c->limit;
+  args.count = 0;
   SVN_ERR(svn_repos_history2(c->fs, path, print_history, &args,
-                             NULL, NULL, 0, c->rev_id, 1, pool));
+                             NULL, NULL, 0, c->rev_id, TRUE, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1569,6 +1588,7 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
   baton->fs = svn_repos_fs(baton->repos);
   svn_fs_set_warning_func(baton->fs, warning_func, NULL);
   baton->show_ids = opt_state->show_ids;
+  baton->limit = opt_state->limit;
   baton->no_diff_deleted = opt_state->no_diff_deleted;
   baton->no_diff_added = opt_state->no_diff_added;
   baton->diff_copy_from = opt_state->diff_copy_from;
@@ -1712,7 +1732,7 @@ subcommand_history(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     path = opt_state->arg1;
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
-  SVN_ERR(do_history(c, path, opt_state->show_ids, pool));
+  SVN_ERR(do_history(c, path, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1999,6 +2019,25 @@ main(int argc, const char *argv[])
 
         case svnlook__show_ids:
           opt_state.show_ids = TRUE;
+          break;
+
+        case 'l':
+          {
+            char *end;
+            opt_state.limit = strtol(opt_arg, &end, 10);
+            if (end == opt_arg || *end != '\0')
+              {
+                err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                       _("Non-numeric limit argument given"));
+                return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
+              }
+            if (opt_state.limit <= 0)
+              {
+                err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                    _("Argument to --limit must be positive"));
+                return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
+              }
+          }
           break;
 
         case svnlook__no_diff_deleted:

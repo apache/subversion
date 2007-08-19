@@ -17,6 +17,7 @@
  */
 
 
+
 
 #include <limits.h> /* for UINT_MAX */
 
@@ -392,8 +393,6 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 static svn_error_t *trivial_auth_request(svn_ra_svn_conn_t *conn,
                                          apr_pool_t *pool, server_baton_t *b)
 {
-  if (b->protocol_version < 2)
-    return SVN_NO_ERROR;
   return svn_ra_svn_write_cmd_response(conn, pool, "()c", "");
 }
 
@@ -487,7 +486,7 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
 #ifdef SVN_HAVE_SASL
           || b->use_sasl
 #endif
-      ) && b->protocol_version >= 2)
+      ))
     SVN_ERR(auth_request(conn, pool, b, req, TRUE));
 
   /* Now that an authentication has been done get the new take of
@@ -1319,7 +1318,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+    depth = SVN_DEPTH_FROM_RECURSE(recurse);
 
   full_path = svn_path_join(b->fs_path->data, target, pool);
   /* Check authorization and authenticate the user if necessary. */
@@ -1352,7 +1351,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+    depth = SVN_DEPTH_FROM_RECURSE(recurse);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
@@ -1427,9 +1426,9 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+    depth = SVN_DEPTH_FROM_RECURSE(recurse);
 
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read, target, FALSE));
+  SVN_ERR(trivial_auth_request(conn, pool, b));
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
@@ -1442,13 +1441,13 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 /* Regardless of whether a client's capabilities indicate an
-   understanding of this command (by way of SVN_RA_SVN_CAP_MERGE_INFO),
+   understanding of this command (by way of SVN_RA_SVN_CAP_MERGEINFO),
    we provide a response.
 
    ASSUMPTION: When performing a 'merge' with two URLs at different
    revisions, the client will call this command more than once. */
-static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                   apr_array_header_t *params, void *baton)
+static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                  apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1456,13 +1455,14 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_hash_t *mergeinfo;
   int i;
   apr_hash_index_t *hi;
-  const char *path, *info;
-  svn_boolean_t include_parents;
+  const char *path, *info, *inherit_word;
+  svn_mergeinfo_inheritance_t inherit;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)b", &paths, &rev, 
-                                 &include_parents));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)w", &paths, &rev, 
+                                 &inherit_word));
+  inherit = svn_inheritance_from_word(inherit_word);
 
-  /* Canonicalize the paths which merge info has been requested for. */
+  /* Canonicalize the paths which mergeinfo has been requested for. */
   canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
      {
@@ -1478,7 +1478,7 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repos,
                                          canonical_paths, rev,
-                                         include_parents,
+                                         inherit,
                                          authz_check_access_cb_func(b), b,
                                          pool));
   if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)
@@ -1786,6 +1786,7 @@ static svn_error_t *svndiff_close_handler(void *baton)
 /* This implements the svn_repos_file_rev_handler_t interface. */
 static svn_error_t *file_rev_handler(void *baton, const char *path,
                                      svn_revnum_t rev, apr_hash_t *rev_props,
+                                     svn_boolean_t merged_revision,
                                      svn_txdelta_window_handler_t *d_handler,
                                      void **d_baton,
                                      apr_array_header_t *prop_diffs,
@@ -1799,7 +1800,7 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
   SVN_ERR(svn_ra_svn_write_proplist(frb->conn, pool, rev_props));
   SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)(!"));
   SVN_ERR(write_prop_diffs(frb->conn, pool, prop_diffs));
-  SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)"));
+  SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)b", merged_revision));
 
   /* Store the pool for the delta stream. */
   frb->pool = pool;
@@ -1811,7 +1812,10 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
       svn_stream_set_write(stream, svndiff_handler);
       svn_stream_set_close(stream, svndiff_close_handler);
 
-      svn_txdelta_to_svndiff(stream, pool, d_handler, d_baton);
+      if (svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
+        svn_txdelta_to_svndiff2(d_handler, d_baton, stream, 1, pool);
+      else
+        svn_txdelta_to_svndiff2(d_handler, d_baton, stream, 0, pool);
     }
   else
     SVN_ERR(svn_ra_svn_write_cstring(frb->conn, pool, ""));
@@ -1828,20 +1832,29 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t start_rev, end_rev;
   const char *path;
   const char *full_path;
+  apr_uint64_t include_merged_revs_param;
+  svn_boolean_t include_merged_revisions;
   
   /* Parse arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)",
-                                 &path, &start_rev, &end_rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)?B",
+                                 &path, &start_rev, &end_rev,
+                                 &include_merged_revs_param));
   path = svn_path_canonicalize(path, pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
   full_path = svn_path_join(b->fs_path->data, path, pool);
 
+  if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    include_merged_revisions = FALSE;
+  else
+    include_merged_revisions = include_merged_revs_param;
+
   frb.conn = conn;
   frb.pool = NULL;
 
-  err = svn_repos_get_file_revs(b->repos, full_path, start_rev, end_rev,
-                                authz_check_access_cb_func(b), b,
-                                file_rev_handler, &frb, pool);
+  err = svn_repos_get_file_revs2(b->repos, full_path, start_rev, end_rev,
+                                 include_merged_revisions,
+                                 authz_check_access_cb_func(b), b,
+                                 file_rev_handler, &frb, pool);
   write_err = svn_ra_svn_write_word(conn, pool, "done");
   if (write_err)
     {
@@ -2189,7 +2202,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "switch",          switch_cmd },
   { "status",          status },
   { "diff",            diff },
-  { "get-merge-info",  get_merge_info },
+  { "get-mergeinfo",   get_mergeinfo },
   { "log",             log_cmd },
   { "check-path",      check_path },
   { "stat",            stat },
@@ -2360,11 +2373,9 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 {
   svn_error_t *err, *io_err;
   apr_uint64_t ver;
-  const char *mech, *mecharg, *uuid, *client_url;
+  const char *uuid, *client_url;
   apr_array_header_t *caplist;
   server_baton_t b;
-  svn_boolean_t success;
-  svn_ra_svn_item_t *item, *first;
 
   b.tunnel = params->tunnel;
   b.tunnel_user = get_tunnel_user(params, pool);
@@ -2376,79 +2387,47 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.realm = NULL;
   b.pool = pool;
 
-  /* Send greeting.   When we drop support for version 1, we can
-   * start sending an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
-                                 (apr_uint64_t) 1, (apr_uint64_t) 2));
-  SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(wwwww))",
-                                 SVN_RA_SVN_CAP_EDIT_PIPELINE, 
-                                 SVN_RA_SVN_CAP_SVNDIFF1,
-                                 SVN_RA_SVN_CAP_ABSENT_ENTRIES,
-                                 SVN_RA_SVN_CAP_COMMIT_REVPROPS,
-                                 SVN_RA_SVN_CAP_MERGE_INFO));
+  /* Send greeting.  We don't support version 1 any more, so we can
+   * send an empty mechlist. */
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwww)",
+                                        (apr_uint64_t) 2, (apr_uint64_t) 2,
+                                        SVN_RA_SVN_CAP_EDIT_PIPELINE, 
+                                        SVN_RA_SVN_CAP_SVNDIFF1,
+                                        SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                        SVN_RA_SVN_CAP_COMMIT_REVPROPS,
+                                        SVN_RA_SVN_CAP_MERGEINFO));
 
-  /* Read client response.  Because the client response form changed
-   * between version 1 and version 2, we have to do some of this by
-   * hand until we punt support for version 1. */
-  SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
-  if (item->kind != SVN_RA_SVN_LIST || item->u.list->nelts < 2)
+  /* Read client response, which we assume to be in version 2 format:
+   * version, capability list, and client URL; then we do an auth
+   * request. */
+  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nlc",
+                                &ver, &caplist, &client_url));
+  if (ver != 2)
     return SVN_NO_ERROR;
-  first = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn_item_t);
-  if (first->kind != SVN_RA_SVN_NUMBER)
+
+  client_url = svn_path_canonicalize(client_url, pool);
+  SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
+
+  /* All released versions of Subversion support edit-pipeline,
+   * so we do not accept connections from clients that do not. */
+  if (! svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EDIT_PIPELINE))
     return SVN_NO_ERROR;
-  b.protocol_version = (int) first->u.number;
-  if (b.protocol_version == 1)
+
+  err = find_repos(client_url, params->root, &b, pool);
+  if (!err)
     {
-      /* Version 1: auth exchange is mixed with client version and
-       * capability list, and happens before the client URL is received. */
-      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nw(?c)l",
-                                     &ver, &mech, &mecharg, &caplist));
-      SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
-      SVN_ERR(auth(conn, pool, mech, mecharg, &b, READ_ACCESS, FALSE,
-                   &success));
-      if (!success)
-        return svn_ra_svn_flush(conn, pool);
-      SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "c", &client_url));
-      client_url = svn_path_canonicalize(client_url, pool);
-      err = find_repos(client_url, params->root, &b, pool);
-      if (!err && current_access(&b) == NO_ACCESS)
+      SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
+      if (current_access(&b) == NO_ACCESS)
         err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                "Not authorized for access");
-      if (err)
-        {
-          io_err = svn_ra_svn_write_cmd_failure(conn, pool, err);
-          svn_error_clear(err);
-          SVN_ERR(io_err);
-          return svn_ra_svn_flush(conn, pool);
-        }
     }
-  else if (b.protocol_version == 2)
+  if (err)
     {
-      /* Version 2: client sends version, capability list, and client
-       * URL, and then we do an auth request. */
-      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nlc", &ver,
-                                     &caplist, &client_url));
-      client_url = svn_path_canonicalize(client_url, pool);
-      SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
-      err = find_repos(client_url, params->root, &b, pool);
-      if (!err)
-        {
-          SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
-          if (current_access(&b) == NO_ACCESS)
-            err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                   "Not authorized for access");
-        }
-      if (err)
-        {
-          io_err = svn_ra_svn_write_cmd_failure(conn, pool, err);
-          svn_error_clear(err);
-          SVN_ERR(io_err);
-          return svn_ra_svn_flush(conn, pool);
-        }
+      io_err = svn_ra_svn_write_cmd_failure(conn, pool, err);
+      svn_error_clear(err);
+      SVN_ERR(io_err);
+      return svn_ra_svn_flush(conn, pool);
     }
-  else
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "cc", uuid, b.repos_url));

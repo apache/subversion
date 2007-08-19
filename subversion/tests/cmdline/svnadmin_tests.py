@@ -26,6 +26,7 @@ from svntest.actions import SVNExpectedStdout, SVNExpectedStderr
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -340,15 +341,15 @@ def hotcopy_dot(sbox):
   backup_dir, backup_url = sbox.add_repo_path('backup')
   os.mkdir(backup_dir)
   cwd = os.getcwd()
-  try:
-    os.chdir(backup_dir)
-    output, errput = svntest.main.run_svnadmin("hotcopy",
-                                               os.path.join(cwd, sbox.repo_dir),
-                                               '.')
-    if errput:
-      raise svntest.Failure
-  finally:
-    os.chdir(cwd)
+
+  os.chdir(backup_dir)
+  output, errput = svntest.main.run_svnadmin("hotcopy",
+                                             os.path.join(cwd, sbox.repo_dir),
+                                             '.')
+  if errput:
+    raise svntest.Failure
+
+  os.chdir(cwd)
 
   origout, origerr = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
   backout, backerr = svntest.main.run_svnadmin("dump", backup_dir, '--quiet')
@@ -442,13 +443,6 @@ def verify_windows_paths_in_repos(sbox):
 def recover_fsfs(sbox):
   "recover a repository (FSFS only)"
 
-  # Ideally, we'd include a variant of this in a Skip() condition, except
-  # that Skip() evaluates its value at construction, rather than accepting
-  # a lambda to evaluate later.  This pragma isn't available at test
-  # construction time.
-  if not svntest.main.is_fs_type_fsfs():
-    raise svntest.Skip
-
   # Set up a repository containing the greek tree.
   sbox.build(create_wc = False)
 
@@ -486,7 +480,7 @@ test_list = [ None,
               hotcopy_format,
               setrevprop,
               verify_windows_paths_in_repos,
-              recover_fsfs,
+              SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
              ]
 
 if __name__ == '__main__':

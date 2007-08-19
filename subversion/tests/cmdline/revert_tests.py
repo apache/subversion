@@ -151,78 +151,73 @@ def revert_from_wc_root(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  saved_dir = os.getcwd()
 
-  try:
-    os.chdir(wc_dir)
+  os.chdir(wc_dir)
 
-    # Mostly taken from basic_revert
-    # Modify some files and props.
-    beta_path = os.path.join('A', 'B', 'E', 'beta')
-    gamma_path = os.path.join('A', 'D', 'gamma')
-    iota_path = 'iota'
-    rho_path = os.path.join('A', 'D', 'G', 'rho')
-    zeta_path = os.path.join('A', 'D', 'H', 'zeta')
-    svntest.main.file_append(beta_path, "Added some text to 'beta'.\n")
-    svntest.main.file_append(iota_path, "Added some text to 'iota'.\n")
-    svntest.main.file_append(rho_path, "Added some text to 'rho'.\n")
-    svntest.main.file_append(zeta_path, "Added some text to 'zeta'.\n")
+  # Mostly taken from basic_revert
+  # Modify some files and props.
+  beta_path = os.path.join('A', 'B', 'E', 'beta')
+  gamma_path = os.path.join('A', 'D', 'gamma')
+  iota_path = 'iota'
+  rho_path = os.path.join('A', 'D', 'G', 'rho')
+  zeta_path = os.path.join('A', 'D', 'H', 'zeta')
+  svntest.main.file_append(beta_path, "Added some text to 'beta'.\n")
+  svntest.main.file_append(iota_path, "Added some text to 'iota'.\n")
+  svntest.main.file_append(rho_path, "Added some text to 'rho'.\n")
+  svntest.main.file_append(zeta_path, "Added some text to 'zeta'.\n")
 
-    svntest.actions.run_and_verify_svn("Add command", None, [],
-                                       'add', zeta_path)
-    svntest.actions.run_and_verify_svn("Add prop command", None, [],
-                                       'ps', 'random-prop', 'propvalue',
-                                       gamma_path)
-    svntest.actions.run_and_verify_svn("Add prop command", None, [],
-                                       'ps', 'random-prop', 'propvalue',
-                                       iota_path)
-    svntest.actions.run_and_verify_svn("Add prop command", None, [],
-                                       'ps', 'random-prop', 'propvalue',
-                                       '.')
-    svntest.actions.run_and_verify_svn("Add prop command", None, [],
-                                       'ps', 'random-prop', 'propvalue',
-                                       'A')
+  svntest.actions.run_and_verify_svn("Add command", None, [],
+                                     'add', zeta_path)
+  svntest.actions.run_and_verify_svn("Add prop command", None, [],
+                                     'ps', 'random-prop', 'propvalue',
+                                     gamma_path)
+  svntest.actions.run_and_verify_svn("Add prop command", None, [],
+                                     'ps', 'random-prop', 'propvalue',
+                                     iota_path)
+  svntest.actions.run_and_verify_svn("Add prop command", None, [],
+                                     'ps', 'random-prop', 'propvalue',
+                                     '.')
+  svntest.actions.run_and_verify_svn("Add prop command", None, [],
+                                     'ps', 'random-prop', 'propvalue',
+                                     'A')
 
-    # Verify modified status.
-    expected_output = svntest.actions.get_virginal_state('', 1)
-    expected_output.tweak('A/B/E/beta', 'A/D/G/rho', status='M ')
-    expected_output.tweak('iota', status='MM')
-    expected_output.tweak('', 'A/D/gamma', 'A', status=' M')
-    expected_output.add({
-      'A/D/H/zeta' : Item(status='A ', wc_rev=0),
-      })
+  # Verify modified status.
+  expected_output = svntest.actions.get_virginal_state('', 1)
+  expected_output.tweak('A/B/E/beta', 'A/D/G/rho', status='M ')
+  expected_output.tweak('iota', status='MM')
+  expected_output.tweak('', 'A/D/gamma', 'A', status=' M')
+  expected_output.add({
+    'A/D/H/zeta' : Item(status='A ', wc_rev=0),
+    })
 
-    svntest.actions.run_and_verify_status('', expected_output)
+  svntest.actions.run_and_verify_status('', expected_output)
 
-    # Run revert
-    svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                       'revert', beta_path)
+  # Run revert
+  svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                     'revert', beta_path)
 
-    svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                       'revert', gamma_path)
+  svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                     'revert', gamma_path)
 
-    svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                       'revert', iota_path)
+  svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                     'revert', iota_path)
 
-    svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                       'revert', rho_path)
+  svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                     'revert', rho_path)
 
-    svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                       'revert', zeta_path)
+  svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                     'revert', zeta_path)
 
-    svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                       'revert', '.')
+  svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                     'revert', '.')
 
-    svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                       'revert', 'A')
+  svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                     'revert', 'A')
 
-    # Verify unmodified status.
-    expected_output = svntest.actions.get_virginal_state('', 1)
+  # Verify unmodified status.
+  expected_output = svntest.actions.get_virginal_state('', 1)
 
-    svntest.actions.run_and_verify_status('', expected_output)
-
-  finally:
-    os.chdir(saved_dir)
+  svntest.actions.run_and_verify_status('', expected_output)
 
 
 def revert_reexpand_keyword(sbox):
@@ -705,6 +700,130 @@ def revert_replaced_with_history_file(sbox):
   # Verify the content of 'mu'
   svntest.actions.run_and_verify_svn(None, text_r1, [], 'cat', mu_path)
 
+#----------------------------------------------------------------------
+# Test for issue #2804.
+def status_of_missing_dir_after_revert(sbox):
+  "status after schedule-delete, revert, and local rm"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_D_G_path = os.path.join(wc_dir, "A", "D", "G")
+
+  svntest.actions.run_and_verify_svn(None, None, [], "rm", A_D_G_path)
+  expected_output = re.escape("Reverted '" + A_D_G_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     A_D_G_path)
+
+  expected_output = svntest.actions.UnorderedOutput(
+    ["D      " + os.path.join(A_D_G_path, "pi") + "\n",
+     "D      " + os.path.join(A_D_G_path, "rho") + "\n",
+     "D      " + os.path.join(A_D_G_path, "tau") + "\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     "status", wc_dir)
+
+  svntest.main.safe_rmtree(A_D_G_path)
+
+  expected_output = svntest.actions.UnorderedOutput(
+    ["!      " + A_D_G_path + "\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
+                                     wc_dir)
+
+#----------------------------------------------------------------------
+# Test for issue #2804 with replaced directory
+def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
+  "status after replace+, revert, and local rm"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # delete A/D/G and commit
+  G_path = os.path.join(wc_dir, "A", "D", "G")
+  svntest.actions.run_and_verify_svn(None, None, [], "rm", G_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G': Item(verb='Deleting'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # copy A/D/G from A/B/E and commit
+  E_path = os.path.join(wc_dir, "A", "B", "E")
+  svntest.actions.run_and_verify_svn(None, None, [], "cp", E_path, G_path)
+  expected_status.add({
+    'A/D/G' : Item(status='  ', wc_rev='3'),
+    'A/D/G/alpha' : Item(status='  ', wc_rev='3'),
+    'A/D/G/beta' : Item(status='  ', wc_rev='3')
+    })
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G': Item(verb='Adding'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # now rollback to r1, thereby reinstating the old 'G'
+  ### Eventually, expected output for 'A/D/G' should be 'R '
+  ### (replaced) instead of 'A ' (added).  See issue #571 for details.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G': Item(status='D '),
+    'A/D/G/alpha': Item(status='D '),
+    'A/D/G/beta': Item(status='D '),
+    'A/D/G': Item(status='A '),
+    'A/D/G/rho': Item(status='A '),
+    'A/D/G/pi': Item(status='A '),
+    'A/D/G/tau': Item(status='A '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G', status='R ', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/rho', status='A ', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/pi',  status='A ', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/tau', status='A ', copied='+', wc_rev='-')
+  expected_status.add({
+    'A/D/G/alpha' : Item(status='D ', copied='+', wc_rev='-'),
+    'A/D/G/beta' : Item(status='D ', copied='+', wc_rev='-')
+    })
+  expected_skip = wc.State(wc_dir, { })
+  expected_disk   = svntest.main.greek_state.copy()
+  svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
+                                       sbox.repo_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       dry_run = 0)
+
+  # now test if the revert works ok
+  expected_output = svntest.actions.UnorderedOutput(
+   ["Reverted '" + G_path + "'\n",
+    "Reverted '" + os.path.join(G_path, 'pi') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'rho') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'tau') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'alpha') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'beta') + "'\n"])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
+                                     G_path)
+
+  expected_output = svntest.actions.UnorderedOutput(
+    ["?      " + os.path.join(G_path, "pi") + "\n",
+     "?      " + os.path.join(G_path, "rho") + "\n",
+     "?      " + os.path.join(G_path, "tau") + "\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     "status", wc_dir)
+
+  svntest.main.safe_rmtree(G_path)
+
+  expected_output = svntest.actions.UnorderedOutput(
+    ["!      " + G_path + "\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
+                                     wc_dir)
 
 ########################################################################
 # Run the tests
@@ -727,6 +846,8 @@ test_list = [ None,
               revert_propdel__dir,
               revert_propdel__file,
               revert_replaced_with_history_file,
+              status_of_missing_dir_after_revert,
+              status_of_missing_dir_after_revert_replaced_with_history_dir,
              ]
 
 if __name__ == '__main__':

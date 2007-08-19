@@ -1533,19 +1533,19 @@ def mergeinfo_switch_elision(sbox):
     })
   expected_skip = svntest.wc.State(short_B_COPY_1_path, { })
   saved_cwd = os.getcwd()
-  try:
-    os.chdir(svntest.main.work_dir)
-    svntest.actions.run_and_verify_merge(short_B_COPY_1_path, '2', '4',
-                                         sbox.repo_url + \
-                                         '/A/B',
-                                         expected_output,
-                                         expected_merge_disk,
-                                         expected_merge_status,
-                                         expected_skip,
-                                         None, None, None, None,
-                                         None, 1)
-  finally:
-    os.chdir(saved_cwd)
+
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_B_COPY_1_path, '2', '4',
+                                       sbox.repo_url + \
+                                       '/A/B',
+                                       expected_output,
+                                       expected_merge_disk,
+                                       expected_merge_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
+  os.chdir(saved_cwd)
 
   # r5 - Commit the merge into A/B_COPY_1/E
   expected_output = svntest.wc.State(
@@ -1580,19 +1580,19 @@ def mergeinfo_switch_elision(sbox):
     })
   expected_skip = svntest.wc.State(short_E_COPY_2_path, { })
   saved_cwd = os.getcwd()
-  try:
-    os.chdir(svntest.main.work_dir)
-    svntest.actions.run_and_verify_merge(short_E_COPY_2_path, '2', '4',
-                                         sbox.repo_url + \
-                                         '/A/B/E',
-                                         expected_output,
-                                         expected_merge_disk,
-                                         expected_merge_status,
-                                         expected_skip,
-                                         None, None, None, None,
-                                         None, 1)
-  finally:
-    os.chdir(saved_cwd)
+
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_E_COPY_2_path, '2', '4',
+                                       sbox.repo_url + \
+                                       '/A/B/E',
+                                       expected_output,
+                                       expected_merge_disk,
+                                       expected_merge_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
+  os.chdir(saved_cwd)
 
   # Switch A/B_COPY_2 to URL of A/B_COPY_1.  The local mergeinfo for r1,3-4
   # on A/B_COPY_2/E is identical to the mergeinfo added to A/B_COPY_2 as a
@@ -1717,6 +1717,7 @@ test_list = [ None,
               forced_switch_failures,
               switch_scheduled_add,
               mergeinfo_switch_elision,
+              switch_with_obstructing_local_adds,
              ]
 
 if __name__ == '__main__':

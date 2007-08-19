@@ -147,7 +147,8 @@ svn_ra_local__get_file_revs(svn_ra_session_t *session,
                             const char *path,
                             svn_revnum_t start,
                             svn_revnum_t end,
-                            svn_ra_file_rev_handler_t handler,
+                            svn_boolean_t include_merged_revisions,
+                            svn_file_rev_handler_t handler,
                             void *handler_baton,
                             apr_pool_t *pool)
 {
@@ -157,8 +158,9 @@ svn_ra_local__get_file_revs(svn_ra_session_t *session,
   /* Concatenate paths */
   abs_path = svn_path_join(abs_path, path, pool);
 
-  return svn_repos_get_file_revs(sbaton->repos, abs_path, start, end, NULL,
-                                 NULL, handler, handler_baton, pool);
+  return svn_repos_get_file_revs2(sbaton->repos, abs_path, start, end, 
+                                  include_merged_revisions, NULL, NULL,
+                                  handler, handler_baton, pool);
 }
 
 /* Pool cleanup handler: Ensure that the access descriptor of the filesystem
@@ -644,15 +646,14 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             apr_hash_t **mergeinfo,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
-                            svn_boolean_t include_parents,
+                            svn_mergeinfo_inheritance_t inherit,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
   apr_hash_t *tmp_mergeinfo;
 
   SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_mergeinfo, baton->repos, paths,
-                                     revision, include_parents,
-                                     NULL, NULL, pool));
+                                     revision, inherit, NULL, NULL, pool));
   if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
     {
       const void *key;

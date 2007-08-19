@@ -790,8 +790,8 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * svn_merge_range_t * elements), or @c NULL if there is no merge
  * info available.  Allocate the returned values in @a pool.
  *
- * When @a include_parents is @c TRUE, include inherited merge info
- * from parent directories of @a paths.
+ * @a inherit indicates whether explicit, explicit or inherited, or
+ * only inherited mergeinfo for @paths is retrieved.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
@@ -801,7 +801,7 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   apr_hash_t **mergeoutput,
                                   const apr_array_header_t *paths,
                                   svn_revnum_t revision,
-                                  svn_boolean_t include_parents,
+                                  svn_mergeinfo_inheritance_t inherit,
                                   apr_pool_t *pool);
 
 /**
@@ -1305,11 +1305,30 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
  * empty file.  In the following calls, the delta will be against the
  * fulltext contents for the previous call.
  *
+ * If @a include_merged_revisions is TRUE, revisions which a included as a
+ * result of a merge between @a start and @a end will be included.
+ *
  * @note This functionality is not available in pre-1.1 servers.  If the
  * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
  * returned.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
+                                   const char *path,
+                                   svn_revnum_t start,
+                                   svn_revnum_t end,
+                                   svn_boolean_t include_merged_revisions,
+                                   svn_file_rev_handler_t handler,
+                                   void *handler_baton,
+                                   apr_pool_t *pool);
+
+/**
+ * Similiar to svn_ra_get_file_revs2(), but with @a include_merged_revisions
+ * set to FALSE.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
                                   const char *path,
@@ -1480,7 +1499,7 @@ svn_error_t *svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
  */
 typedef struct svn_ra_plugin_t
 {
-  /** The proper name of the RA library, (like "ra_dav" or "ra_local") */
+  /** The proper name of the RA library, (like "ra_neon" or "ra_local") */
   const char *name;         
   
   /** Short doc string printed out by `svn --version` */
@@ -1751,7 +1770,7 @@ typedef svn_error_t *(*svn_ra_init_func_t)(int abi_version,
 
 /* Public RA implementations. */
 
-/** Initialize libsvn_ra_dav.
+/** Initialize libsvn_ra_neon.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API. */
 svn_error_t * svn_ra_dav_init(int abi_version,

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -112,8 +112,8 @@ svn_error_t *svn_io_check_resolved_path(const char *path,
                                         apr_pool_t *pool);
 
 
-/** Open a new file (for writing) with a unique name based on utf-8
- * encoded @a path, in the same directory as @a path.  The file handle is
+/** Open a new file (for reading and writing) with a unique name based on
+ * utf-8 encoded @a path, in the same directory as @a path.  The file handle is
  * returned in @a *f, and the name, which ends with @a suffix, is returned
  * in @a *unique_name_p, also utf8-encoded.  Either @a f or @a unique_name_p
  * may be @c NULL.
@@ -663,7 +663,7 @@ svn_error_t *svn_stream_printf(svn_stream_t *stream,
                                apr_pool_t *pool,
                                const char *fmt,
                                ...)
-       __attribute__ ((format(printf, 3, 4)));
+       __attribute__((format(printf, 3, 4)));
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
  * apr_psprintf() using memory from @a pool.  The resulting string
@@ -679,7 +679,7 @@ svn_error_t *svn_stream_printf_from_utf8(svn_stream_t *stream,
                                          apr_pool_t *pool,
                                          const char *fmt,
                                          ...)
-       __attribute__ ((format(printf, 4, 5)));
+       __attribute__((format(printf, 4, 5)));
 
 /** Allocate @a *stringbuf in @a pool, and read into it one line (terminated
  * by @a eol) from @a stream. The line-terminator is read from the stream,
@@ -807,6 +807,9 @@ svn_error_t *svn_io_get_dir_filenames(apr_hash_t **dirents,
  *
  * @note The `.' and `..' directories normally returned by
  * apr_dir_read() are NOT returned in the hash.
+ *
+ * @note The kind field in the @a dirents is set according to the mapping
+ *       as documented for svn_io_check_path()
  *
  * @since New in 1.3.
  */

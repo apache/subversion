@@ -2119,19 +2119,42 @@ svn_wc_revert2(const char *path,
            || entry->schedule == svn_wc_schedule_replace)
     {
       /* Revert the prop and text mods (if any). */
-      if (entry->kind == svn_node_file)
-        SVN_ERR(revert_admin_things(parent_access, bname,
-                                    entry, &reverted,
-                                    use_commit_times, pool));
+      switch (entry->kind)
+        {
+        case svn_node_file:
+          SVN_ERR(revert_admin_things(parent_access, bname, entry,
+                                      &reverted, use_commit_times, pool));
+          break;
 
-      if (entry->kind == svn_node_dir)
-        SVN_ERR(revert_admin_things(dir_access, SVN_WC_ENTRY_THIS_DIR, entry,
-                                    &reverted, use_commit_times, pool));
+        case svn_node_dir:
+          SVN_ERR(revert_admin_things(dir_access, SVN_WC_ENTRY_THIS_DIR, entry,
+                                      &reverted, use_commit_times, pool));
 
-      /* Force recursion on replaced directories. */
-      if ((entry->kind == svn_node_dir)
-          && (entry->schedule == svn_wc_schedule_replace))
-        recursive = TRUE;
+          /* Also revert the entry in the parent (issue #2804). */
+          if (reverted && bname)
+            {
+              svn_boolean_t dummy_reverted;
+              svn_wc_entry_t *entry_in_parent;
+              apr_hash_t *entries;
+
+              SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
+                                          pool));
+              entry_in_parent = apr_hash_get(entries, bname,
+                                             APR_HASH_KEY_STRING);
+              SVN_ERR(revert_admin_things(parent_access, bname,
+                                          entry_in_parent, &dummy_reverted,
+                                          use_commit_times, pool));
+            }
+
+          /* Force recursion on replaced directories. */
+          if (entry->schedule == svn_wc_schedule_replace)
+            recursive = TRUE;
+          break;
+
+        default:
+          /* No op? */
+          break;
+        }
     }
 
   /* If PATH was reverted, tell our client that. */
@@ -2499,7 +2522,11 @@ attempt_deletion(const char *parent_dir,
 
 /* Conflict resolution involves removing the conflict files, if they exist,
    and clearing the conflict filenames from the entry.  The latter needs to
-   be done whether or not the conflict files exist.
+   be done whether or not the conflict files exist.  If @a accept is anything
+   but svn_accept_default, automatically resolve the
+   conflict with the respective temporary file contents.
+
+   @since 1.5 Automatic Conflict Resolution (Issue 2784)
 
    PATH is the path to the item to be resolved, BASE_NAME is the basename
    of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
@@ -2512,6 +2539,7 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
+                          svn_accept_t accept_which,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           apr_pool_t *pool)
@@ -2519,6 +2547,34 @@ resolve_conflict_on_entry(const char *path,
   svn_boolean_t was_present, need_feedback = FALSE;
   apr_uint64_t modify_flags = 0;
   svn_wc_entry_t *entry = svn_wc_entry_dup(orig_entry, pool);
+  const char *auto_resolve_src;
+
+  /* Handle automatic conflict resolution before the temporary files are
+   * deleted, if necessary. */
+  switch (accept_which)
+    {
+      case svn_accept_left:
+        auto_resolve_src = entry->conflict_old;
+        break;
+      case svn_accept_working:
+        auto_resolve_src = entry->conflict_wrk;
+        break;
+      case svn_accept_right:
+        auto_resolve_src = entry->conflict_new;
+        break;
+      case svn_accept_none:
+        auto_resolve_src = NULL;
+        break;
+      case svn_accept_invalid:
+        return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                _("Invalid 'accept' argument"));
+    }
+
+    if (auto_resolve_src)
+      SVN_ERR(svn_io_copy_file(
+        svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
+                      pool),
+        path, TRUE, pool));
 
   /* Yes indeed, being able to map a function over a list would be nice. */
   if (resolve_text && entry->conflict_old)
@@ -2594,6 +2650,8 @@ struct resolve_callback_baton
   svn_boolean_t resolve_text;
   /* TRUE if property conflicts are to be resolved. */
   svn_boolean_t resolve_props;
+  /* The type of automatic conflict resolution to perform */
+  svn_accept_t accept_;
   /* An access baton for the tree, with write access */
   svn_wc_adm_access_t *adm_access;
   /* Notification function and baton */
@@ -2628,8 +2686,8 @@ resolve_found_entry_callback(const char *path,
   
   return resolve_conflict_on_entry(path, entry, adm_access, base_name,
                                    baton->resolve_text, baton->resolve_props,
-                                   baton->notify_func, baton->notify_baton,
-                                   pool);
+                                   baton->accept_, baton->notify_func,
+                                   baton->notify_baton, pool);
 }
 
 static const svn_wc_entry_callbacks_t 
@@ -2669,6 +2727,25 @@ svn_wc_resolved_conflict2(const char *path,
                           svn_boolean_t resolve_props,
                           svn_boolean_t recurse,
                           svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *pool)
+{
+  return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
+                                   resolve_props, recurse, svn_accept_none,
+                                   notify_func, notify_baton, cancel_func,
+                                   cancel_baton, pool);
+}
+
+svn_error_t *
+svn_wc_resolved_conflict3(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t resolve_text,
+                          svn_boolean_t resolve_props,
+                          svn_boolean_t recurse,
+                          svn_accept_t accept_,
+                          svn_wc_notify_func2_t notify_func,
                           void *notify_baton,                         
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
@@ -2681,6 +2758,7 @@ svn_wc_resolved_conflict2(const char *path,
   baton->adm_access = adm_access;
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
+  baton->accept_ = accept_;
 
   if (! recurse)
     {

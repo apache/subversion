@@ -30,6 +30,10 @@ def parse_args(args)
   options.rss_path = nil
   options.rss_uri = nil
   options.multi_project = false
+  options.show_path = false
+  options.trunk_path = "trunk"
+  options.branches_path = "branches"
+  options.tags_path = "tags"
   options.name = nil
   options.use_utf7 = false
   options.server = "localhost"
@@ -87,6 +91,26 @@ def parse_args(args)
 
     opts.on("--name=NAME", "Use NAME as repository name") do |name|
       options.name = name
+    end
+
+    opts.on("--[no-]show-path",
+            "Show commit target path") do |bool|
+      options.show_path = bool
+    end
+
+    opts.on("--trunk-path=PATH",
+            "Treat PATH as trunk path (#{options.trunk_path})") do |path|
+      options.trunk_path = path
+    end
+
+    opts.on("--branches-path=PATH",
+            "Treat PATH as branches path (#{options.branches_path})") do |path|
+      options.branches_path = path
+    end
+
+    opts.on("--tags-path=PATH",
+            "Treat PATH as tags path (#{options.tags_path})") do |path|
+      options.tags_path = path
     end
 
     opts.on("-rURI", "--repository-uri=URI",
@@ -188,7 +212,7 @@ def parse(argv=ARGV)
   [repos, revision, to, options]
 end
 
-def make_body(info, params)
+def make_body(info, options)
   body = ""
   body << "#{info.author}\t#{format_time(info.date)}\n"
   body << "\n"
@@ -208,7 +232,7 @@ def make_body(info, params)
     body << "    #{line}"
   end
   body << "\n"
-  body << change_info(info, params[:repository_uri], params[:add_diff])
+  body << change_info(info, options.repository_uri, options.add_diff)
   body
 end
 
@@ -369,7 +393,7 @@ CONTENT
   end
 end
 
-def make_header(to, from, info, params, body_encoding, body_encoding_bit)
+def make_header(to, from, info, options, body_encoding, body_encoding_bit)
   headers = []
   headers << x_author(info)
   headers << x_revision(info)
@@ -380,39 +404,58 @@ def make_header(to, from, info, params, body_encoding, body_encoding_bit)
   headers << "Content-Transfer-Encoding: #{body_encoding_bit}"
   headers << "From: #{from}"
   headers << "To: #{to.join(', ')}"
-  headers << "Subject: #{make_subject(params[:name], info, params)}"
+  headers << "Subject: #{make_subject(options.name, info, options)}"
   headers << "Date: #{Time.now.rfc2822}"
   headers.find_all do |header|
     /\A\s*\z/ !~ header
   end.join("\n")
 end
 
-def detect_project(info, params)
-  return nil unless params[:multi_project]
+def detect_project(info, options)
+  return nil unless options.multi_project
   project = nil
-  [
-   :added_files, :deleted_files, :updated_files, :copied_files,
-   :added_dirs, :deleted_dirs, :updated_dirs, :copied_dirs,
-  ].each do |targets|
-    info.send(targets).each do |path, from_path, |
-      [path, from_path].compact.each do |target_path|
-        first_component = target_path.split("/", 2)[0]
-        project ||= first_component
-        return nil if project != first_component
-      end
+  info.paths.each do |path, from_path,|
+    [path, from_path].compact.each do |target_path|
+      first_component = target_path.split("/", 2)[0]
+      project ||= first_component
+      return nil if project != first_component
     end
   end
   project
 end
 
-def make_subject(name, info, params)
+def affected_paths(project, info, options)
+  paths = []
+  [nil, :branches_path, :tags_path].each do |target|
+    prefix = [project]
+    prefix << options.send(target) if target
+    prefix = prefix.compact.join("/")
+    sub_paths = info.sub_paths(prefix)
+    if target.nil?
+      sub_paths = sub_paths.find_all do |sub_path|
+        sub_path == options.trunk_path
+      end
+    end
+    paths.concat(sub_paths)
+  end
+  paths.uniq
+end
+
+def make_subject(name, info, options)
   subject = ""
-  project = detect_project(info, params)
+  project = detect_project(info, options)
   subject << "#{name} " if name
+  revision_info = "r#{info.revision}"
+  if options.show_path
+    _affected_paths = affected_paths(project, info, options)
+    unless _affected_paths.empty?
+      revision_info = "(#{_affected_paths.join(',')}) #{revision_info}"
+    end
+  end
   if project
-    subject << "[#{project} r#{info.revision}] "
+    subject << "[#{project} #{revision_info}] "
   else
-    subject << "r#{info.revision}: "
+    subject << "#{revision_info}: "
   end
   subject << info.log.lstrip.to_a.first.to_s.chomp
   NKF.nkf("-WM", subject)
@@ -469,10 +512,10 @@ def truncate_body(body, max_size, use_utf7)
   truncated_body
 end
 
-def make_mail(to, from, info, params)
-  utf8_body = make_body(info, params)
+def make_mail(to, from, info, options)
+  utf8_body = make_body(info, options)
   utf7_body = nil
-  utf7_body = utf8_to_utf7(utf8_body) if params[:use_utf7]
+  utf7_body = utf8_to_utf7(utf8_body) if options.use_utf7
   if utf7_body
     body = utf7_body
     encoding = "utf-7"
@@ -483,12 +526,12 @@ def make_mail(to, from, info, params)
     bit = "8bit"
   end
 
-  max_size = params[:max_size]
+  max_size = options.max_size
   if limited_size?(max_size)
     body = truncate_body(body, max_size, !utf7_body.nil?)
   end
 
-  make_header(to, from, info, params, encoding, bit) + "\n" + body
+  make_header(to, from, info, options, encoding, bit) + "\n" + body
 end
 
 def sendmail(to, from, mail, server=nil, port=nil)
@@ -574,15 +617,7 @@ def main
   from = options.from
   from ||= "#{info.author}@#{options.from_domain}".sub(/@\z/, '')
   to = [to, *options.to].compact
-  params = {
-    :repository_uri => options.repository_uri,
-    :name => options.name,
-    :add_diff => options.add_diff,
-    :use_utf7 => options.use_utf7,
-    :max_size => options.max_size,
-    :multi_project => options.multi_project,
-  }
-  sendmail(to, from, make_mail(to, from, info, params),
+  sendmail(to, from, make_mail(to, from, info, options),
            options.server, options.port)
 
   if options.repository_uri and

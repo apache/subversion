@@ -606,81 +606,90 @@ def depth_update_to_more_depth(sbox):
   "gradually update an empty wc to depth=infinity"
 
   wc_dir, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox, empty=True)
-  was_cwd = os.getcwd()
+
   os.chdir(wc_dir)
-  try:
-    # Run 'svn up --depth=files' in a depth-empty working copy.
-    expected_output = svntest.wc.State('', {
-      'iota'              : Item(status='A '),
-      })
-    expected_status = svntest.wc.State('', {
-      '' : Item(status='  ', wc_rev=1),
-      'iota' : Item(status='  ', wc_rev=1),
-      })
-    expected_disk = svntest.wc.State('', {
-      'iota' : Item("This is the file 'iota'.\n"),
-      })
-    svntest.actions.run_and_verify_update('',
-                                          expected_output,
-                                          expected_disk,
-                                          expected_status,
-                                          None, None,
-                                          None, None, None, None,
-                                          '--depth', 'files')
 
-    # Run 'svn up --depth=immediates' in the now depth-files working copy.
-    expected_output = svntest.wc.State('', {
-      'A'              : Item(status='A '),
-      })
-    expected_status = svntest.wc.State('', {
-      '' : Item(status='  ', wc_rev=1),
-      'iota' : Item(status='  ', wc_rev=1),
-      'A' : Item(status='  ', wc_rev=1),
-      })
-    expected_disk = svntest.wc.State('', {
-      'iota' : Item("This is the file 'iota'.\n"),
-      'A'    : Item(),
-      })
-    svntest.actions.run_and_verify_update('',
-                                          expected_output,
-                                          expected_disk,
-                                          expected_status,
-                                          None, None,
-                                          None, None, None, None,
-                                          '--depth', 'immediates')
+  # Run 'svn up --depth=files' in a depth-empty working copy.
+  expected_output = svntest.wc.State('', {
+    'iota'              : Item(status='A '),
+    })
+  expected_status = svntest.wc.State('', {
+    '' : Item(status='  ', wc_rev=1),
+    'iota' : Item(status='  ', wc_rev=1),
+    })
+  expected_disk = svntest.wc.State('', {
+    'iota' : Item("This is the file 'iota'.\n"),
+    })
+  svntest.actions.run_and_verify_update('',
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--depth', 'files')
+  svntest.actions.run_and_verify_svn(None, "Depth: files", [], "info")
 
-    # Run 'svn up --depth=infinity' in the now depth-immediates working copy.
-    expected_output = svntest.wc.State('', {
-      'A/mu'           : Item(status='A '),
-      'A/B'            : Item(status='A '),
-      'A/B/lambda'     : Item(status='A '),
-      'A/B/E'          : Item(status='A '),
-      'A/B/E/alpha'    : Item(status='A '),
-      'A/B/E/beta'     : Item(status='A '),
-      'A/B/F'          : Item(status='A '),
-      'A/C'            : Item(status='A '),
-      'A/D'            : Item(status='A '),
-      'A/D/gamma'      : Item(status='A '),
-      'A/D/G'          : Item(status='A '),
-      'A/D/G/pi'       : Item(status='A '),
-      'A/D/G/rho'      : Item(status='A '),
-      'A/D/G/tau'      : Item(status='A '),
-      'A/D/H'          : Item(status='A '),
-      'A/D/H/chi'      : Item(status='A '),
-      'A/D/H/psi'      : Item(status='A '),
-      'A/D/H/omega'    : Item(status='A ')
-      })
-    expected_disk = svntest.main.greek_state.copy()
-    expected_status = svntest.actions.get_virginal_state('', 1)
-    svntest.actions.run_and_verify_update('',
-                                          expected_output,
-                                          expected_disk,
-                                          expected_status,
-                                          None, None,
-                                          None, None, None, None,
-                                          '--depth', 'infinity')
-  finally:
-    os.chdir(was_cwd)
+  # Run 'svn up --depth=immediates' in the now depth-files working copy.
+  expected_output = svntest.wc.State('', {
+    'A'              : Item(status='A '),
+    })
+  expected_status = svntest.wc.State('', {
+    '' : Item(status='  ', wc_rev=1),
+    'iota' : Item(status='  ', wc_rev=1),
+    'A' : Item(status='  ', wc_rev=1),
+    })
+  expected_disk = svntest.wc.State('', {
+    'iota' : Item("This is the file 'iota'.\n"),
+    'A'    : Item(),
+    })
+  svntest.actions.run_and_verify_update('',
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--depth', 'immediates')
+  svntest.actions.run_and_verify_svn(None, "Depth: immediates", [], "info")
+  svntest.actions.run_and_verify_svn(None, "Depth: empty", [], "info", "A")
+
+  # Run 'svn up --depth=infinity' in the now depth-immediates working copy.
+  expected_output = svntest.wc.State('', {
+    'A/mu'           : Item(status='A '),
+    'A/B'            : Item(status='A '),
+    'A/B/lambda'     : Item(status='A '),
+    'A/B/E'          : Item(status='A '),
+    'A/B/E/alpha'    : Item(status='A '),
+    'A/B/E/beta'     : Item(status='A '),
+    'A/B/F'          : Item(status='A '),
+    'A/C'            : Item(status='A '),
+    'A/D'            : Item(status='A '),
+    'A/D/gamma'      : Item(status='A '),
+    'A/D/G'          : Item(status='A '),
+    'A/D/G/pi'       : Item(status='A '),
+    'A/D/G/rho'      : Item(status='A '),
+    'A/D/G/tau'      : Item(status='A '),
+    'A/D/H'          : Item(status='A '),
+    'A/D/H/chi'      : Item(status='A '),
+    'A/D/H/psi'      : Item(status='A '),
+    'A/D/H/omega'    : Item(status='A ')
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state('', 1)
+  svntest.actions.run_and_verify_update('',
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--depth', 'infinity')
+  # svn info doesn't print a 'Depth:' line for infinity, so we verify
+  # that no such line is present in the output.
+  output1, err = svntest.actions.run_and_verify_svn(None, None, [], "info")
+  output2, err = svntest.actions.run_and_verify_svn(None, None, [], "info", "A")
+  for line in output1 + output2:
+    if line.startswith("Depth:"):
+      raise svntest.Failure("Non-infinity depth detected after an upgrade \
+                             to depth-infinity")
 
 #----------------------------------------------------------------------
 
@@ -703,7 +712,7 @@ test_list = [ None,
               XFail(depth_immediates_receive_delete),
               depth_update_to_more_depth,
               depth_immediates_subdir_propset_1,
-              XFail(depth_immediates_subdir_propset_2),
+              depth_immediates_subdir_propset_2,
             ]
 
 if __name__ == "__main__":

@@ -15,22 +15,19 @@ AC_DEFUN(SVN_LIB_SERF,
     if test "$withval" = "yes" ; then
       AC_MSG_ERROR([--with-serf requires an argument.])
     else
-      if test "$svn_lib_neon" = "yes"; then
-        AC_MSG_ERROR([neon and serf can't be used at the same time.])
-      fi
       AC_MSG_NOTICE([serf library configuration])
       serf_prefix=$withval
       save_cppflags="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"
       CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$serf_prefix/include/serf-0"
       AC_CHECK_HEADERS(serf.h,[
         save_ldflags="$LDFLAGS"
-        LDFLAGS="-L$serf_prefix/lib"
+        LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
         AC_CHECK_LIB(serf-0, serf_context_create,[serf_found="yes"])
         LDFLAGS="$save_ldflags"])
       CPPFLAGS="$save_cppflags"
     fi
   ], [
-       if test -d "$srcdir/serf" -a "$svn_lib_neon" = "no"; then
+       if test -d "$srcdir/serf"; then
          serf_found=reconfig
        fi
      ])

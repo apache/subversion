@@ -2,7 +2,7 @@
  * property.c : property routines for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,6 +22,8 @@
 
 #include "svn_path.h"
 #include "svn_base64.h"
+
+#include "svn_private_config.h"
 
 #include "ra_serf.h"
 
@@ -345,7 +347,10 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
             }
           else
             {
-              abort();
+              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
+                                       NULL,
+                                       _("Got unrecognized encoding '%s'"),
+                                       info->encoding);
             }
         }
 
@@ -392,6 +397,8 @@ cdata_propfind(svn_ra_serf__xml_parser_t *parser,
   svn_ra_serf__propfind_context_t *ctx = userData;
   prop_state_e state;
   prop_info_t *info;
+
+  UNUSED_CTX(ctx);
 
   state = parser->state->current_state;
   info = parser->state->private;
@@ -488,12 +495,13 @@ check_cache(apr_hash_t *ret_props,
 
 /*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
- * serf context for the properties listed in FIND_PROPS at URL for
+ * serf context for the properties listed in LOOKUP_PROPS at URL for
  * DEPTH ("0","1","infinity").
  *
- * This function will not block waiting for the response.  Instead, the
- * caller is expected to call context_run and wait for the PROP_CTX->done
- * flag to be set.
+ * This function will not block waiting for the response.  If the
+ * request can be satisfied from a local cache, set PROP_CTX to NULL
+ * as a signal to callers of that fact.  Otherwise, callers are 
+ * expected to call svn_ra_serf__wait_for_props().
  */
 svn_error_t *
 svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
@@ -597,7 +605,11 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
   svn_error_t *err;
 
   err = svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
-  SVN_ERR(prop_ctx->parser_ctx->error);
+  if (prop_ctx->parser_ctx->error)
+    {
+      svn_error_clear(err);
+      SVN_ERR(prop_ctx->parser_ctx->error);
+    }
   return err;
 }
 
@@ -748,6 +760,7 @@ set_bare_props(svn_ra_serf__prop_set_t setprop, void *baton,
 
   return setprop(baton, prop_name, val, pool);
 }
+
 svn_error_t *
 svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
                              const char *ns, apr_ssize_t ns_len,

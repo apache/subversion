@@ -64,8 +64,9 @@ svn_cl__resolved(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));    
-      err = svn_client_resolved(target,
+      err = svn_client_resolved2(target,
                                 SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                                opt_state->accept_which,
                                 ctx,
                                 subpool);
       if (err)

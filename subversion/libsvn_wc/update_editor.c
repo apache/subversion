@@ -120,6 +120,11 @@ struct edit_baton
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 
+  /* This editor will invoke a interactive conflict-resolution
+     callback, if available. */
+  svn_wc_conflict_resolver_func_t conflict_func;
+  void *conflict_baton;
+
   /* Paths that were skipped during the edit, and therefore shouldn't have
      their revision/url info updated at the end.
      The keys are pathnames and the values unspecified. */
@@ -445,6 +450,13 @@ complete_directory(struct edit_baton *eb,
                              _("No '.' entry in: '%s'"),
                              svn_path_local_style(path, pool));
   entry->incomplete = FALSE;
+
+  /* After a depth upgrade the entry must reflect the new depth.
+     Upgrading to infinity changes the depth of *all* directories,
+     upgrading to something else only changes the root dir. */
+  if (eb->depth == svn_depth_infinity
+      || (is_root_dir && eb->depth > entry->depth))
+    entry->depth = eb->depth;
 
   /* Remove any deleted or missing entries. */
   subpool = svn_pool_create(pool);
@@ -873,6 +885,46 @@ accumulate_wcprops(svn_stringbuf_t *log_accum,
   return SVN_NO_ERROR;
 }
       
+
+/* Check that when ADD_PATH is joined to BASE_PATH, the resulting path
+ * is still under BASE_PATH in the local filesystem.  If not, return
+ * SVN_ERR_WC_OBSTRUCTED_UPDATE; else return success.
+ * 
+ * This is to prevent the situation where the repository contains,
+ * say, "..\nastyfile".  Although that's perfectly legal on some
+ * systems, when checked out onto Win32 it would cause "nastyfile" to
+ * be created in the parent of the current edit directory.
+ * 
+ * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
+ */
+static svn_error_t *
+check_path_under_root(const char *base_path,
+                      const char *add_path,
+                      apr_pool_t *pool)
+{
+  char *newpath;
+  apr_status_t retval;
+
+  retval = apr_filepath_merge
+    (&newpath, base_path, add_path,
+     APR_FILEPATH_NOTABOVEROOT | APR_FILEPATH_SECUREROOTTEST,
+     pool);
+
+  if (retval != APR_SUCCESS)
+    {
+      return svn_error_createf
+        (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+         _("Path '%s' is not in the working copy"),
+         /* Not using newpath here because it might be NULL or
+            undefined, since apr_filepath_merge() returned error.
+            (Pity we can't pass NULL for &newpath in the first place,
+            but the APR docs don't bless that.) */
+         svn_path_local_style(svn_path_join(base_path, add_path, pool), pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** The callbacks we'll plug into an svn_delta_editor_t structure. ***/
 
@@ -1113,6 +1165,8 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
+  SVN_ERR(check_path_under_root(pb->path, svn_path_basename(path, pool),
+                                pool));
   return do_entry_deletion(pb->edit_baton, pb->path, path, &pb->log_number,
                            pool);
 }
@@ -1140,6 +1194,7 @@ add_directory(const char *path,
       || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM(copyfrom_revision))))
     abort();
 
+  SVN_ERR(check_path_under_root(pb->path, db->name, pool));
   SVN_ERR(svn_io_check_path(db->path, &kind, db->pool));
 
   /* The path can exist, but it must be a directory... */
@@ -1352,6 +1407,8 @@ open_directory(const char *path,
 
   db = make_dir_baton(path, eb, pb, FALSE, pool);
   *child_baton = db;
+
+  SVN_ERR(check_path_under_root(pb->path, db->name, pool));
 
   /* Skip this directory if it has property conflicts. */
   SVN_ERR(svn_wc_entry(&entry, db->path, eb->adm_access, FALSE, pool));
@@ -1669,6 +1726,8 @@ add_or_open_file(const char *path,
      kind.  see issuezilla task #398. */
 
   fb = make_file_baton(pb, path, adding, pool);
+
+  SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
 
   /* It is interesting to note: everything below is just validation. We
      aren't actually doing any "work" or fetching any persistent data. */
@@ -2341,7 +2400,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                        adm_access,
                        oldrev_str, newrev_str, mine_str,
                        FALSE, eb->diff3_cmd, NULL, fb->propchanges,
-                       pool));
+                       eb->conflict_func, eb->conflict_baton, pool));
 
               /* If we created a temporary left merge file, get rid of it. */
               if (merge_left != fb->text_base_path)
@@ -2610,6 +2669,8 @@ make_editor(svn_revnum_t *target_revision,
             void *notify_baton,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
+            svn_wc_conflict_resolver_func_t conflict_func,
+            void *conflict_baton,
             const char *diff3_cmd,
             apr_array_header_t *preserved_exts,
             const svn_delta_editor_t **editor,
@@ -2652,6 +2713,8 @@ make_editor(svn_revnum_t *target_revision,
   eb->diff3_cmd                = diff3_cmd;
   eb->cancel_func              = cancel_func;
   eb->cancel_baton             = cancel_baton;
+  eb->conflict_func            = conflict_func;
+  eb->conflict_baton           = conflict_baton;
   eb->allow_unver_obstructions = allow_unver_obstructions;
   eb->skipped_paths            = apr_hash_make(subpool);
   eb->ext_patterns             = preserved_exts;
@@ -2696,6 +2759,8 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           void *notify_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
                           const char *diff3_cmd,
                           apr_array_header_t *preserved_exts,
                           const svn_delta_editor_t **editor,
@@ -2706,8 +2771,9 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
                      target, use_commit_times, NULL, depth,
                      allow_unver_obstructions, notify_func, notify_baton,
-                     cancel_func, cancel_baton, diff3_cmd, preserved_exts, 
-                     editor, edit_baton, traversal_info, pool);
+                     cancel_func, cancel_baton, conflict_func, conflict_baton,
+                     diff3_cmd, preserved_exts, editor, edit_baton,
+                     traversal_info, pool);
 }
 
 
@@ -2731,7 +2797,7 @@ svn_wc_get_update_editor2(svn_revnum_t *target_revision,
                                    use_commit_times,
                                    SVN_DEPTH_FROM_RECURSE(recurse),
                                    FALSE, notify_func, notify_baton,
-                                   cancel_func, cancel_baton,
+                                   cancel_func, cancel_baton, NULL, NULL,
                                    diff3_cmd, NULL, editor, edit_baton,
                                    traversal_info, pool);
 }
@@ -2760,9 +2826,9 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
                                    use_commit_times,
                                    SVN_DEPTH_FROM_RECURSE(recurse),
                                    FALSE, svn_wc__compat_call_notify_func, nb,
-                                   cancel_func, cancel_baton, diff3_cmd,
-                                   NULL, editor, edit_baton, traversal_info, 
-                                   pool);
+                                   cancel_func, cancel_baton, NULL, NULL,
+                                   diff3_cmd, NULL, editor, edit_baton,
+                                   traversal_info, pool);
 }
 
 svn_error_t *
@@ -2789,7 +2855,9 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
                      target, use_commit_times, switch_url, depth,
                      allow_unver_obstructions, notify_func, notify_baton,
-                     cancel_func, cancel_baton, diff3_cmd, preserved_exts, 
+                     cancel_func, cancel_baton,
+                     NULL, NULL, /* TODO: add conflict callback here  */
+                     diff3_cmd, preserved_exts,
                      editor, edit_baton, traversal_info, pool);
 }
 
@@ -3243,8 +3311,12 @@ svn_wc_add_repos_file2(const char *dst_path,
           apr_hash_t *empty_hash = apr_hash_make(pool);
           const char *propfile_path;
 
-          SVN_ERR(svn_wc__prop_path(&propfile_path, base_name,
-                                           svn_node_file, TRUE, pool));
+          SVN_ERR(svn_wc_create_tmp_file2(NULL,
+                                          &propfile_path,
+                                          full_path,
+                                          svn_io_file_del_none,
+                                          pool));
+          propfile_path = svn_path_is_child(full_path, propfile_path, pool);
 
           SVN_ERR(svn_wc__save_prop_file(svn_path_join(full_path,
                                                        propfile_path,

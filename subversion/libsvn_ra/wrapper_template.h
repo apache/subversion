@@ -48,9 +48,9 @@ static svn_error_t *compat_open(void **session_baton,
   /* Here, we should be calling svn_ra_create_callbacks to initialize
    * the svn_ra_callbacks2_t structure.  However, doing that
    * introduces a circular dependancy between libsvn_ra and
-   * libsvn_ra_{local,dav,svn}, which include wrapper_template.h.  In
-   * turn, circular dependancies break the build on win32 (and
-   * possibly other systems).
+   * libsvn_ra_{local,neon,serf,svn}, which include
+   * wrapper_template.h.  In turn, circular dependancies break the
+   * build on win32 (and possibly other systems).
    *
    * In order to avoid this happening at all, the code of
    * svn_ra_create_callbacks is duplicated here.  This is evil, but
@@ -306,7 +306,7 @@ static svn_error_t *compat_do_status(void *session_baton,
 {
   const svn_ra_reporter3_t *reporter3;
   void *baton3;
-  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE(recurse);
+  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE_STATUS(recurse);
   
   SVN_ERR(VTBL.do_status(session_baton, &reporter3, &baton3, status_target,
                          revision, depth, editor, status_baton, pool));
@@ -407,8 +407,16 @@ static svn_error_t *compat_get_file_revs(void *session_baton,
                                          void *handler_baton,
                                          apr_pool_t *pool)
 {
-  return VTBL.get_file_revs(session_baton, path, start, end, handler,
-                            handler_baton, pool);
+  svn_file_rev_handler_t handler2;
+  void *handler2_baton;
+
+  svn_compat_wrap_file_rev_handler(&handler2, &handler2_baton,
+                                   handler, handler_baton,
+                                   pool);
+
+  return VTBL.get_file_revs(session_baton, path, start, end,
+                            FALSE, /* include merged revisions */
+                            handler2, handler2_baton, pool);
 }
 
 static const svn_version_t *compat_get_version(void)

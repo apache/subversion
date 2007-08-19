@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_subst.h"
 #include "svn_props.h"
+#include "svn_string.h"
 #include "svn_opt.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
@@ -192,3 +193,32 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
 
     return SVN_NO_ERROR;
 }
+
+
+void
+svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
+                               apr_pool_t *pool)
+{
+  svn_stringbuf_t *propbuf;
+
+  if (!svn_prop_is_boolean(propname))
+    return;
+
+  propbuf = svn_stringbuf_create(propval, pool);
+  svn_stringbuf_strip_whitespace(propbuf);
+
+  if (propbuf->data[0] == '\0'
+      || strcmp(propbuf->data, "no") == 0
+      || strcmp(propbuf->data, "off") == 0
+      || strcmp(propbuf->data, "false") == 0)
+    {
+      svn_error_t *err = svn_error_createf
+        (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
+         _("To turn off the %s property, use 'svn propdel';\n"
+           "setting the property to '%s' will not turn it off."),
+           propname, propval);
+      svn_handle_warning(stderr, err);
+      svn_error_clear(err);
+    }
+}
+

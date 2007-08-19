@@ -15,7 +15,8 @@ Contents
    2. User Interface
    3. Examples
    4. Implementation Strategy
-   5. Current Status
+   5. Compatability Matters
+   6. Current Status
 
 1. Design
 =========
@@ -392,84 +393,10 @@ Contents
    an older client causes the server to behave as if "depth=files"
    had been transmitted.
 
-   Work remaining, in no particular order:
+   Work remaining:
 
-      * Although the client will transmit the old "recursive=no" flag
-        in both the svn_depth_files and svn_depth_empty case, there is
-        still no code on the client side to deal with the unwanted
-        data the server will send down (some files in the
-        "client wants svn_depth_empty but server only knows recursive=no" 
-        case, and both some files and some empty directories in the
-        "client wants svn_depth_immediates but server only knows recursive=no" 
-        case).  This is the "legacy servers will send back a bunch of
-        information the client doesn't want" scenario described in the
-        'Implementation' section above.  Even though implementing it
-        won't shorten the wall clock time of operations by much, it
-        would still make the client behave "correctly" (if slowly)
-        even against old servers.  Therefore, it's still needed.
+   The list of outstanding issues is shown by this issue tracker query
+   of Summary prefixed with [sparse-directories]:
 
-        COMPLICATION: the editor vtable's delete_entry() function is
-        path-kind ignorant, which means that client-side editors
-        trying to compensate for over-informative server-side editor
-        drivers don't have enough information to correctly distinguish
-        whether a deletion of an immediate child should be allowed to
-        pass thru when using svn_depth_files.
+<http://subversion.tigris.org/issues/buglist.cgi?component=subversion&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&short_desc=%5Bsparse-directories%5D&short_desc_type=casesubstring>
 
-      * There's no interface for getting rid of stuff once you've
-        brought it into your working copy -- no "exclusion" interface,
-        in other words.  So you can do this:
-
-           $ svn co --depth=empty http://.../repos/greek-tree/
-           $ cd greek-tree
-           $ svn up A
-
-        ...and that will get you A/ at depth-infinity.  But once you
-        no longer need A/, there's no way to do:
-
-           $ svn exclude A    ## or whatever the command is named
-
-        In fact, you can't yet even do:
-
-           $ svn up --depth=empty A
-
-        ...to at least "fold up" A/ and save the disk space.
-
-      * Throughout the code, "### TODO(sd)" comments mark questions
-        related to sparse directories.  There are about 60 of them.
-        Some are trivial, some are not.  We should review them.
-
-      * Certain APIs need to behave specially when passed
-        svn_depth_unknown: they need to treat it as meaning "go get
-        the depth from the working copy, and either use it directly or
-        calculate the appropriate depth based on it".
-
-        Most APIs that need to do this do it, but some still need to
-        be tweaked:
-
-           svn_client_diff4()
-           svn_client_diff_summarize2()
-           svn_client_diff_summarize_peg2()
-           svn_client_diff_peg3()
-
-      * We need tests for 'svn status --depth' and 'svn switch --depth'.
-
-      * Some APIs still take recurse booleans.  It's not clear to me
-        that all of these should be switched to depth, but the
-        question needs some more consideration:
-
-           svn_client_import2()   # Note: takes 'nonrecursive' right now
-           svn_client_revert()    # Any point taking depth?
-           svn_client_commit4()   # Is manual control of depth needed here?
-           svn_client_propset3()  # Is manual control of depth needed here?
-           svn_client_propget3()  # Is manual control of depth needed here?
-           svn_client_resolved()  # Is manual control of depth needed here?
-           svn_client_relocate()  # I don't think this needs to take depth.
-           svn_client_info()      # I don't think this needs to take depth.
-           svn_client_add3()      # I don't think this needs to take depth.
-
-           svn_wc_revert2()            # Really not sure about this one.
-           svn_wc_resolved_conflict2() # Really not sure about this one.
-           svn_wc_queue_committed()    # Really not sure about this one.
-           svn_wc_process_committed4() # Really not sure about this one.
-           svn_wc_diff3()              # Maybe should be depth.  Maybe.
-           svn_wc_relocate2()          # Why does it even take recurse??

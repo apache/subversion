@@ -108,7 +108,7 @@ typedef struct svn_ra__vtable_t {
                                 apr_hash_t **mergeinfo,
                                 const apr_array_header_t *paths,
                                 svn_revnum_t revision,
-                                svn_boolean_t include_parents,
+                                svn_mergeinfo_inheritance_t inherit,
                                 apr_pool_t *pool);
   svn_error_t *(*do_update)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
@@ -188,7 +188,8 @@ typedef struct svn_ra__vtable_t {
                                 const char *path,
                                 svn_revnum_t start,
                                 svn_revnum_t end,
-                                svn_ra_file_rev_handler_t handler,
+                                svn_boolean_t include_merged_revisions,
+                                svn_file_rev_handler_t handler,
                                 void *handler_baton,
                                 apr_pool_t *pool);
   svn_error_t *(*lock)(svn_ra_session_t *session,
@@ -254,7 +255,7 @@ svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
 svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
                               const svn_ra__vtable_t **vtable,
                               apr_pool_t *pool);
-svn_error_t *svn_ra_dav__init(const svn_version_t *loader_version,
+svn_error_t *svn_ra_neon__init(const svn_version_t *loader_version,
                               const svn_ra__vtable_t **vtable,
                               apr_pool_t *pool);
 svn_error_t *svn_ra_serf__init(const svn_version_t *loader_version,

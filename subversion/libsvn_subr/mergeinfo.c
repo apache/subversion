@@ -38,7 +38,7 @@ static svn_boolean_t
 combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
                svn_merge_range_t *in2)
 {
-  if (in1->start <= in2->end + 1 && in2->start <= in1->end + 1)
+  if (in1->start <= in2->end && in2->start <= in1->end)
     {
       (*output)->start = MIN(in1->start, in2->start);
       (*output)->end = MAX(in1->end, in2->end);
@@ -48,7 +48,7 @@ combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
 }
 
 static svn_error_t *
-parse_revision(const char **input, const char *end, svn_revnum_t *revision)
+parse_revision(const char **input, svn_revnum_t *revision)
 {
   const char *curr = *input;
   char *endptr;
@@ -130,12 +130,12 @@ parse_revlist(const char **input, const char *end,
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
       svn_revnum_t firstrev;
 
-      SVN_ERR(parse_revision(&curr, end, &firstrev));
+      SVN_ERR(parse_revision(&curr, &firstrev));
       if (*curr != '-' && *curr != '\n' && *curr != ',' && curr != end)
         return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                  _("Invalid character '%c' found in revision "
                                    "list"), *curr);
-      mrange->start = firstrev;
+      mrange->start = firstrev - 1;
       mrange->end = firstrev;
 
       if (*curr == '-')
@@ -143,7 +143,7 @@ parse_revlist(const char **input, const char *end,
           svn_revnum_t secondrev;
 
           curr++;
-          SVN_ERR(parse_revision(&curr, end, &secondrev));
+          SVN_ERR(parse_revision(&curr, &secondrev));
           mrange->end = secondrev;
         }
 
@@ -295,7 +295,8 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
 static svn_boolean_t
 range_intersect(svn_merge_range_t *first, svn_merge_range_t *second)
 {
-  return (first->start <= second->end) && (second->start <= first->end);
+  return (first->start + 1 <= second->end)
+    && (second->start + 1 <= first->end);
 }
 
 static svn_boolean_t
@@ -405,7 +406,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                 {
                   /* Retain the range that falls before the eraser start. */
                   tmp_range.start = elt1->start;
-                  tmp_range.end = elt2->start - 1;
+                  tmp_range.end = elt2->start;
                 }
               else
                 {
@@ -435,7 +436,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                                          *output, pool);
                 }
 
-              wboardelt.start = elt2->end + 1;
+              wboardelt.start = elt2->end;
               wboardelt.end = elt1->end;
             }
           else
@@ -565,7 +566,7 @@ svn_rangelist_count_revs(apr_array_header_t *rangelist)
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                svn_merge_range_t *);
-      nbr_revs += range->end - range->start + 1;
+      nbr_revs += range->end - range->start;
     }
 
   return nbr_revs;
@@ -584,7 +585,7 @@ svn_rangelist_to_revs(apr_array_header_t **revs,
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                svn_merge_range_t *);
-      svn_revnum_t rev = range->start;
+      svn_revnum_t rev = range->start + 1;
 
       while (rev <= range->end)
         {
@@ -779,10 +780,10 @@ static svn_error_t *
 svn_range_to_stringbuf(svn_stringbuf_t **result, svn_merge_range_t *range,
                        apr_pool_t *pool)
 {
-  if (range->start == range->end)
-    *result = svn_stringbuf_createf(pool, "%ld", range->start);
+  if (range->start == range->end - 1)
+    *result = svn_stringbuf_createf(pool, "%ld", range->end);
   else
-    *result = svn_stringbuf_createf(pool, "%ld-%ld",range->start,
+    *result = svn_stringbuf_createf(pool, "%ld-%ld", range->start + 1,
                                     range->end);
   return SVN_NO_ERROR;
 }

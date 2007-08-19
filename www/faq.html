@@ -135,6 +135,9 @@ to FSFS or from FSFS to BDB?</a></li>
 <li><a href="#binary-files">How does Subversion handle binary files?</a></li>
 <li><a href="#terse-diff">How can I make <tt>svn diff</tt> show me
     just the names of the changed files, not their contents?</a></li>
+<li>
+  <a href="#sorry-no-globbing">How can I use wildcards or globbing to move many files at once?</a>
+</li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -236,6 +239,10 @@ a <tt>file:</tt> URL?</a></li>
     operations involving a lot of data over SSL, I get the error
     <tt>SSL negotiation failed: SSL error: decryption failed or bad
     record mac</tt>.</a></li>
+<li><a href="#broken-subclipse">I get an error that says "This client is too
+    old".</a></li>
+<li><a href="#switch-problems">Why doesn't <tt>svn switch</tt> work
+    in some cases?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -599,7 +606,7 @@ other resources available:</p>
        Subversion Users mailing list</a> (<a
        href="mailto:users@subversion.tigris.org"
        >users@subversion.tigris.org</a>)
-       &mdash; note that the list is <a href="#moderated">moderated</a>, so
+       &mdash; note that the list is <a href="#moderation">moderated</a>, so
        there may be a delay before your post shows up</li>
   <li><a href="http://svn.haxx.se/users/">The Subversion Users list
        archives</a></li>
@@ -1893,6 +1900,10 @@ int main(void)
 by user 'joe'.  Then in the post-commit hook, add a line to run the
 binary.</p>
 
+<p>If you have problems getting the hook to work, see <a
+href="#hook-debugging">"Why aren't my repository hooks
+working?"</a>.</p>
+
 <p>Also, you'll probably want to prevent apache from exporting the
 .svn/ directories in the live working copy.  Add this to your
 <tt>httpd.conf</tt>:</p>
@@ -2107,6 +2118,73 @@ Version 1.4 of the <tt>svn diff</tt> command will have a "--summarize"
 option.
 </div>
 
+<div class="h3" id="sorry-no-globbing" title="sorry-no-globbing">
+<h3>How can I use wildcards or globbing to move many files at once?</h3>
+<p>
+You want to do something like
+</p>
+<pre>
+svn mv svn://server/trunk/stuff/* svn://server/trunk/some-other-dir
+</pre>
+<p>
+but it fails with 
+</p>
+<pre>
+svn: Path 'svn://server/trunk/stuff/*' does not exist in revision 123
+</pre>
+<p>
+... or some other inscrutable error message.
+</p>
+
+<p>
+The short, unhappy answer is: there's no built-in way to do this; many
+commands, like <tt>mv</tt>, refuse to take an arbitrary number of
+arguments ... and in any case, Subversion doesn't expand wildcards like
+"*" the way the shell does.
+</p>
+
+<p>
+If you happen to have a working copy that contains all the source
+files as well as the destination directory, then you can exploit your
+shell's wildcard feature to do the move, like this (for Bash):
+</p>
+<pre>
+  for i in stuff/*; do svn mv $i some-other-dir; done
+  svn ci -m "moved all the stuff into some other dir"
+</pre>
+
+<p>
+In any case, you can always accumulate a list of the names of the
+source files, and then run "svn mv" on each item in that list, like
+this:
+</p>
+<pre>
+        s=svn://server/trunk/stuff/
+        svn ls "$s"  | \
+        while read f
+           do svn mv "$s/$f" svn://server/trunk/some-other-dir -m "Moved just one file"
+        done
+</pre>
+<p>
+Note, however, that this will generate one commit per source file;
+that's in contrast to the above method (using a working copy) which
+generates just one commit total.
+</p>
+
+<p>
+There is a program called "svnmucc" or "mucc" depending upon which
+version of Subversion you have, whose source is distributed with
+Subversion (in ...<tt>/contrib/client-side/mucc/mucc.c</tt> for
+Subversion 1.4 or earlier, in
+...<tt>/contrib/client-side/svnmucc/svnmucc.c</tt> for Subversion 1.5
+or later), that appears to solve this problem for you.
+</p>
+
+<p>
+Rumor has it that with release 1.5, Subversion will in fact allow you
+to "cp" and "mv" multiple files at once.
+</p>
+</div>
 
 </div>
 
@@ -2971,13 +3049,18 @@ working copy.</p>
 
 <p>Calm down, take a deep breath.</p>
 
-<p>On UNIX, notice that the directory which contains the cached
-passwords (usually ~/.subversion/auth/) has permissions
-of 700, meaning only you can read them.</p>
-
 <p>On Windows 2000 or later, svn 1.2 and above uses standard 
 Windows APIs to encrypt the data, so only the user can decrypt the 
 cached password.</p>
+
+<p>On Mac OS X, svn 1.4 and later uses the system Keychain
+facility to encrypt/store your svn password.</p>
+
+<p>On UNIX/Linux, there are no standard system encryption facilities,
+so the password is stored in ~/.subversion/auth/.  Notice, however,
+that the directory which contains the cached passwords (usually
+~/.subversion/auth/) has permissions of 700, meaning only you can read
+them.</p>
 
 <p>Trust your OS to protect data on disk.</p>
 
@@ -3307,9 +3390,6 @@ insecure.</p>
 an older version (or possibly upgrading to a newer version) is known
 to fix this issue.</p>
 
-
-</div>
-
 </div>
 
 <div class="h3" id="broken-subclipse" title="broken-subclipse">
@@ -3334,6 +3414,147 @@ your older command-line client.)
 The fix is simply to upgrade your command-line client to 1.4 or newer.
 
 </div>
+
+
+<div class="h3" id="switch-problems" title="switch-problems">
+<h3>Why doesn't <tt>svn switch</tt> work in some cases?</h3>
+
+<p>In some cases where there are unversioned (and maybe ignored) items
+in the working copy, <tt>svn switch</tt> can get an error.  The switch
+stops, leaving the working copy half-switched.</p>
+
+<p>Unfortunately, if you take the wrong corrective action you can end
+up with an unusable working copy.  Sometimes with these situations,
+the user is directed to do <tt>svn cleanup</tt>.  But the <tt>svn
+cleanup</tt> may also encounter an error.  See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2505">issue
+#2505</a>.</p>
+
+<p>The user can manually remove the directories or files causing
+the problem, and then run <tt>svn cleanup</tt>, and continue the switch, to
+recover from this situation.</p>
+
+<p>Note that a switch from a <i>pristine</i> clean checkout always
+works without error.  There are three ways of working if you are using
+<tt>svn switch</tt> as part of your development process:</p>
+
+<ol>
+
+<li>Fully clean your working copy of unversioned (including ignored)
+files before switching. <br/><b>WARNING! This deletes all unversioned
+dirs/files. Be VERY sure that you do not need anything that will be
+removed.</b>
+
+<blockquote>
+<div><pre><code>
+# Check and delete svn unversioned files: 
+svn status --no-ignore | grep ^[I?]" | sed 's/^[I?]//'
+svn status --no-ignore | grep "^[I?]" | sed 's/^[I?]//' |xargs rm -rf
+</code></pre></div>
+</blockquote>
+
+</li>
+
+<li>Keep a <i>pristine</i> clean checkout. Update that, then copy it,
+and switch the copy when a switch to another branch is desired.</li>
+
+<li>Live dangerously :).
+ Switch between branches without cleaning up BUT if you encounter a switch error
+ know that you have to recover from this properly.
+ Delete the unversioned files and the directory that the error was reported on.
+ Then "svn cleanup" if needed and then resume the switch.
+ Unless you delete <em>all</em> unversioned files, you may have to repeat this
+ process multiple times.</li>
+
+</ol>
+
+<p>Some examples are detailed 
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2505">here in issue 2505</a>.
+The problem is that the svn client plays it 
+safe and doesn't want to delete anything unversioned. 
+</p>
+
+<p>Two specific examples are detailed here to illustrate a problem like this.
+There are also other svn switch errors, not covered here, which you
+  can avoid by switching only from a <em>pristine</em> checkout.</p>
+
+<ol>
+
+<li>If any directory has been moved or renamed between the branches, then
+anything unversioned will cause a problem.
+In this case, you'll see this error:
+<br/>
+<blockquote>
+<div><pre><code>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Won't delete locally modified directory '&lt;dir&gt;'
+svn: Left locally modified or unversioned files
+</code></pre></div>
+</blockquote>
+<p>Removing all unversioned files, and continuing the switch will recover from this.</p>
+</li>
+
+<li>If a temporary build file has ever been added and removed, then a switch
+in a repository with that unversioned file (likely after a build) fails. 
+You'll see the same error:
+
+<blockquote>
+<div><pre><code>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Won't delete locally modified directory '&lt;dir&gt;'
+svn: Left locally modified or unversioned files
+</code></pre></div>
+</blockquote>
+
+<p>In this case, just removing the unversioned items will not recover.
+A cleanup fails, but svnswitch directs you to run "svn cleanup".</p>
+
+<blockquote>
+<div><pre><code>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Directory '&lt;dir&gt;/.svn' containing working copy admin area is missing
+wc/$ svn cleanup
+svn: '&lt;dir&gt;' is not a working copy directory
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Working copy '.' locked
+svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)
+</code></pre></div>
+</blockquote>
+
+<p>Removing the directory (and all other unversioned files, to prevent
+ "switch" from breaking on a similar error repeatedly), and continuing the switch
+ will recover from this.</p>
+</li>
+
+</ol>
+
+<p>The TortoiseSVN cleanup error is a bit different.  You might encounter this:
+</p>
+<blockquote>
+<div><pre><code>
+Subversion reported an error while doing a cleanup!
+&lt;dir&gt;/&lt;anotherdir&gt; is not a working copy directory
+</code></pre></div>
+</blockquote>
+
+<p>In each case here, the "svn switch" breaks leaving you with a half-switched 
+working copy. "svn status" will show items with S for switched items (different
+ from top directory), ! for directories with problems, and ~ for the files that are
+ the problem (and with maybe L for locked). Like this:</p>
+<blockquote>
+<div><pre><code>
+wc/$ svn status 
+!      .
+!      &lt;dir&gt;
+    S  &lt;switched_things&gt;
+~      &lt;dir&gt;/&lt;thing_that_is_now_unversioned&gt;
+</code></pre></div>
+</blockquote>
+
+</div>
+
+</div>
+
 
 <div class="h2" id="developer-questions" title="developer-questions">
 <h2>Developer questions:</h2>

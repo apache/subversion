@@ -137,19 +137,10 @@ typedef svn_error_t *(*svn_repos_authz_callback_t)
    apr_pool_t *pool);
 
 /**
- * A callback function type for use in svn_repos_get_file_revs().
- * @a baton is provided by the caller, @a path is the pathname of the file
- * in revision @a rev and @a rev_props are the revision properties.
- * If @a delta_handler and @a delta_baton are non-NULL, they may be set to a
- * handler/baton which will be called with the delta between the previous
- * revision and this one after the return of this callback.  They may be
- * left as NULL/NULL.
- * @a prop_diffs is an array of svn_prop_t elements indicating the property
- * delta for this and the previous revision.
- * @a pool may be used for temporary allocations, but you can't rely
- * on objects allocated to live outside of this particular call and the
- * immediately following calls to @a *delta_handler if any.
+ * Similar to @c svn_file_rev_handler_t, but without the @a
+ * result_of_merge parameter.
  *
+ * @deprecated Provided for backward compatibility with 1.4 API.
  * @since New in 1.1.
  */
 typedef svn_error_t *(*svn_repos_file_rev_handler_t)
@@ -1005,6 +996,9 @@ svn_repos_deleted_rev(svn_fs_t *fs,
  * baton given to svn_repos_history().  @a pool is provided for the
  * convenience of the implementor, who should not expect it to live
  * longer than a single callback call.
+ *
+ * Signal to callback driver to stop processing/invoking this callback
+ * by returning the @c SVN_ERR_CEASE_INVOCATION error code.
  */
 typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
                                                  const char *path,
@@ -1014,7 +1008,8 @@ typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
 /**
  * Call @a history_func (with @a history_baton) for each interesting
  * history location in the lifetime of @a path in @a fs, from the
- * youngest of @a end and @a start to the oldest.  Only cross
+ * youngest of @a end and @a start to the oldest.  Stop processing if
+ * @a history_func returns @c SVN_ERR_CEASE_INVOCATION.  Only cross
  * filesystem copy history if @a cross_copies is @c TRUE.  And do all
  * of this in @a pool.
  *
@@ -1228,24 +1223,24 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /* ---------------------------------------------------------------*/
 
-/* Retrieving merge info. */
+/* Retrieving mergeinfo. */
 
 /**
  * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
  * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
  * (from @a paths) to textual (@c char *) representations of merge
  * info (as managed by svn_mergeinfo.h), or @c NULL if there is no
- * merge info visible or available.
+ * mergeinfo visible or available.
  *
- * When @a include_parents is @c TRUE, include inherited merge info
- * from parent directories of @a paths.
+ * @a inherit indicates whether explicit, explicit or inherited, or
+ * only inherited mergeinfo for @paths is fetched.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
  * of each path which mergeinfo was requested for (from @a paths).
- * Silently omit unreadable paths from the request for merge info.
+ * Silently omit unreadable paths from the request for mergeinfo.
  *
  * Use @a pool for temporary allocations.
  *
@@ -1256,7 +1251,7 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
                            svn_repos_t *repos,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
-                           svn_boolean_t include_parents,
+                           svn_mergeinfo_inheritance_t inherit,
                            svn_repos_authz_func_t authz_read_func,
                            void *authz_read_baton,
                            apr_pool_t *pool);
@@ -1293,6 +1288,27 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
  * will be provided as a text delta against the empty file.  In the following
  * calls, the delta will be against the contents for the previous call.
  *
+ * If @a include_merged_revisions is TRUE, revisions which a included as a
+ * result of a merge between @a start and @a end will be included.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_get_file_revs2(svn_repos_t *repos,
+                                      const char *path,
+                                      svn_revnum_t start,
+                                      svn_revnum_t end,
+                                      svn_boolean_t include_merged_revisions,
+                                      svn_repos_authz_func_t authz_read_func,
+                                      void *authz_read_baton,
+                                      svn_file_rev_handler_t handler,
+                                      void *handler_baton,
+                                      apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_file_revs2(), with @a include_merged_revisions
+ * set to FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  * @since New in 1.1.
  */
 svn_error_t *svn_repos_get_file_revs(svn_repos_t *repos,
@@ -2213,7 +2229,7 @@ svn_repos_revision_access_level_t;
  * @since New in 1.5.
  */
 svn_error_t *
-svn_repos_check_revision_access(svn_repos_revision_access_level_t *access,
+svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
                                 svn_repos_t *repos,
                                 svn_revnum_t revision,
                                 svn_repos_authz_func_t authz_read_func,

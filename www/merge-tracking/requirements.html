@@ -38,7 +38,7 @@ href="../user-classifications.html#program">SCM automation</a>.</p>
       <li><a href="#rename-tracking">Handle Renames</a></li>
       <li><a href="#manual-merge">Record Manual Merge</a></li>
       <li><a href="#rollback-merge">Rollback Merge</a></li>
-      <li><a href="#revision-blocking">Block/Unblock Change Set</a></li>
+      <li><a href="#revision-blocking">Block/Unblock Changeset</a></li>
       <li><a href="#properties">Properties</a></li>
       <li><a href="#merge-previews">Preview</a></li>
       <li><a href="#automated-merge">SCM Automation</a></li>
@@ -50,11 +50,11 @@ href="../user-classifications.html#program">SCM automation</a>.</p>
   <li>
     <a href="#auditing">Auditing</a>
     <ul>
-      <li><a href="#change-set-availability">Change Set Merge
+      <li><a href="#change-set-availability">Changeset Merge
       Availability</a></li>
-      <li><a href="#find-change-set">Find Change Set</a></li>
+      <li><a href="#find-change-set">Find Changeset</a></li>
       <li><a href="#commutative-author-and-rev">Commutative Author and
-      Revision Reporting for Merged Change Sets</a></li>
+      Revision Reporting for Merged Changesets</a></li>
       <!-- ### Need to explicitly call out renames? -->
     </ul>
   </li>
@@ -95,14 +95,14 @@ already solved, what they're calling <em>star-merge</em>.</p>
 <div class="h4" id="cherry-picking">
 <h4>Cherry Picking</h4>
 
-<p>Merge of one or more individual change sets, or changes from a
-change set (e.g. to two out of three files), from branch A into branch
+<p>Merge of one or more individual changesets, or changes from a
+changeset (e.g. to two out of three files), from branch A into branch
 B (as opposed to merge of all previously unmerged changes).</p>
 
 <p>This sometimes involves manual adjustment of a change merged from
 branch A into a WC for branch B before the change is committed to the
 repository, or <a href="#manual-merge">manual application</a> of a
-change set from branch A to the WC (e.g. not using <code>svn
+changeset from branch A to the WC (e.g. not using <code>svn
 merge</code>).  Regardless of the merge method used, Subversion must
 provide a way to <a href="#manual-merge">indicate that the change(s)
 have been merged</a> into branch B.</p>
@@ -113,7 +113,7 @@ branch B by copying the trunk you should be able to both forward port
 changes made on B into trunk and backport changes made on trunk into B
 without confusing the merge tracking algorithm.</p>
 
-<p>Use may be predicated on information from the <em>Show Change Sets
+<p>Use may be predicated on information from the <em>Show Changesets
 Available for Merge</em> feature (<a href="#auditing">Auditing</a>
 section).</p>
 
@@ -155,13 +155,13 @@ tracking.</p>
 <div class="h4" id="manual-merge">
 <h4>Record Manual Merge</h4>
 
-<p>Allow change sets to be marked as merged, effectively a way to
+<p>Allow changesets to be marked as merged, effectively a way to
 manipulate the merge memory on target for a given merge source.  This
-is related to the <a href="#revision-blocking">revision blocking</a>
-concept.</p>
+is related to -- but not semantically equivalent to -- the <a
+href="#revision-blocking">revision blocking</a> concept.</p>
 
 <p>Fundamentally, the use case is to support merge tracking of a
-change set which is sufficiently different when ported to a different
+changeset which is sufficiently different when ported to a different
 branch that use of <code>svn merge</code> is no longer appropriate.
 Examples scenarios include:</p>
 
@@ -170,14 +170,14 @@ Examples scenarios include:</p>
   with its incarnation on the source branch, yet is conceptually
   equivalent.</li>
 
-  <li>Only a subset of a change set warrants application.</li>
+  <li>Only a subset of a changeset warrants application.</li>
 
   <li>The branch content has drifted far enough apart to make
   automatic merging impossible (e.g. excessive merge conflicts are
   generated).</li>
 </ul>
 
-<p>Use may be predicated on information from the <em>Show Change Sets
+<p>Use may be predicated on information from the <em>Show Changesets
 Available for Merge</em> feature (<a href="#auditing">Auditing</a>
 section).  Use supports <a href="#cherry-picking"><i>Cherry
 Picking</i></a>.</p>
@@ -191,17 +191,20 @@ Picking</i></a>.</p>
 both <a href="#repeated-merge">automated</a> and <a
 href="#manual-merge">manual</a> merges.</p>
 
-<p>Use may be predicated on information from the <em>Show Change Sets
-Available for Merge</em> and <em>Show Change Sets Already Merged</em>
+<p>Use may be predicated on information from the <em>Show Changesets
+Available for Merge</em> and <em>Show Changesets Already Merged</em>
 features (<a href="#auditing">Auditing</a> section).</p>
 
 </div>  <!-- rollback-merge -->
 
 <div class="h4" id="revision-blocking">
-<h4>Block/Unblock Change Set</h4>
+<h4>Block/Unblock Changeset</h4>
 
-<p>Protect revisions which should never be merged from accidental
-merging.</p>
+<p>Protect revisions of a source which should never be merged from
+accidental merging.</p>
+
+<p>This includes both blocking merging of specific revisions into a
+path, and blocking merging of a specific revision to any path.</p>
 
 </div>  <!-- revision-blocking -->
 
@@ -269,20 +272,20 @@ of the original revisions should show that they went to the release
 line as well as the backport branch.</p>
 
 <div class="h4" id="change-set-availability">
-<h4>Change Set Merge Availability</h4>
+<h4>Changeset Merge Availability</h4>
 
 <dl>
-  <dt>Show Change Sets Available for Merge</dt>
+  <dt>Show Changesets Available for Merge</dt>
   <dd>Support query of any path (file, directory, or symlink) to find
   out what changes (revisions) for a merge source haven't been merged
   under it.  For files, "under" just means "into".</dd>
 
-  <dt>Show Change Sets Already Merged</dt>
+  <dt>Show Changesets Already Merged</dt>
   <dd>Support query any path (file, directory, or symlink) to find out
   what changes (revisions) have been merged under it.  For files,
   "under" just means "into".</dd>
 
-  <dt>Show Change Sets Blocked from Merging</dt>
+  <dt>Show Changesets Blocked from Merging</dt>
   <dd>If you've <a href="#revision-blocking">blocked</a> some set
   of revisions from being merged from branch B into some destination
   (e.g. trunk), you should be able to discover which revisions have
@@ -291,17 +294,17 @@ line as well as the backport branch.</p>
 
 </div>  <!-- change-set-availability -->
 
-<div class="h4" id="find-change-set">
-<h4>Find Change Set</h4>
+<div class="h4" id="find-changeset">
+<h4>Find Changeset</h4>
 
 <dl>
-  <dt><em>Merged From</em> info for Change Set and/or Path</dt>
+  <dt><em>Merged From</em> info for Changeset and/or Path</dt>
   <dd>If you merged rN from branch A into branch B in rM, it should be
   possible to query rM -- or branch B at or after rM, but before it's
   been moved or deleted -- to ask what sources it has been merged
   from, and the answer set should contain A at rN.</dd>
 
-  <dt><em>Merged To</em> info for Change Set and/or Path</dt>
+  <dt><em>Merged To</em> info for Changeset and/or Path</dt>
   <dd>If you merge rN from branch A into branch B in rM, it should be
   possible to query rN -- or branch A at or after rN, but before it's
   been moved or deleted -- to ask what destinations it has been merged
@@ -320,13 +323,13 @@ allow retrieval of a log of changes to merge tracking information.
 This log should list both when the merges were applied, and when the
 merge meta data was updated.</p>
 
-</div>  <!-- find-change-set -->
+</div>  <!-- find-changeset -->
 
 <div class="h4" id="commutative-author-and-rev">
-<h4>Commutative Author and Revision Reporting for Merged Change Sets</h4>
+<h4>Commutative Author and Revision Reporting for Merged Changesets</h4>
 
 <p>The ability to report either/both the actual committer and revision
-number of a change set, and/or the original author and revision
+number of a changeset, and/or the original author and revision
 number.  This applies to any operations which report an author,
 including:</p>
 

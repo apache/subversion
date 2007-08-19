@@ -2,7 +2,7 @@
  * file_revs.c: handle the file-revs-report request and response
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -124,12 +124,13 @@ delta_window_handler(svn_txdelta_window_t *window, void *baton)
 }
 
 
-/* This implements the svn_repos_file_rev_handler_t interface. */
+/* This implements the svn_repos_file_rev_handler2_t interface. */
 static svn_error_t *
 file_rev_handler(void *baton,
                  const char *path,
                  svn_revnum_t revnum,
                  apr_hash_t *rev_props,
+                 svn_boolean_t merged_revision,
                  svn_txdelta_window_handler_t *window_handler,
                  void **window_baton,
                  apr_array_header_t *props,
@@ -179,6 +180,14 @@ file_rev_handler(void *baton,
         }
     }
 
+  /* Send whether this was the result of a merge or not. */
+  if (merged_revision)
+    {
+     SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
+                                "<S:merged-revision/>"));
+    }
+
+
   /* Maybe send text delta. */
   if (window_handler)
     {
@@ -223,6 +232,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   /* These get determined from the request document. */
   svn_revnum_t start = SVN_INVALID_REVNUM;
   svn_revnum_t end = SVN_INVALID_REVNUM;
+  svn_boolean_t include_merged_revisions = FALSE;    /* off by default */
 
   /* Construct the authz read check baton. */
   arb.r = resource->info->r;
@@ -253,6 +263,8 @@ dav_svn__file_revs_report(const dav_resource *resource,
         start = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "end-revision") == 0)
         end = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
+      else if (strcmp(child->name, "include-merged-revisions") == 0)
+        include_merged_revisions = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "path") == 0)
         {
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
@@ -273,10 +285,10 @@ dav_svn__file_revs_report(const dav_resource *resource,
   /* file_rev_handler will send header first time it is called. */
 
   /* Get the revisions and send them. */
-  serr = svn_repos_get_file_revs(resource->info->repos->repos,
-                                 path, start, end,
-                                 dav_svn__authz_read_func(&arb), &arb,
-                                 file_rev_handler, &frb, resource->pool);
+  serr = svn_repos_get_file_revs2(resource->info->repos->repos,
+                                  path, start, end, include_merged_revisions,
+                                  dav_svn__authz_read_func(&arb), &arb,
+                                  file_rev_handler, &frb, resource->pool);
 
   if (serr)
     {
@@ -311,8 +323,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(resource->pool, "blame '%s' r%" SVN_REVNUM_T_FMT
-                                             ":%" SVN_REVNUM_T_FMT,
+                apr_psprintf(resource->pool, "blame '%s' r%ld:%ld",
                              svn_path_uri_encode(path, resource->pool),
                              start, end));
 

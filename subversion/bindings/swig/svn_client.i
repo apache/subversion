@@ -361,6 +361,10 @@ _svn_client_commit4(svn_commit_info_t **commit_info_p,
                     apr_pool_t *pool);
 #endif
 
+/* Ugliness because the constant is typedefed and SWIG ignores it
+   as a result. */
+%constant apr_size_t SWIG_SVN_INFO_SIZE_UNKNOWN = -1;
+
 #ifdef SWIGPYTHON
 
 /* provide Python with access to some thunks. */

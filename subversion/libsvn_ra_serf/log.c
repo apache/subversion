@@ -80,6 +80,7 @@ typedef struct {
 
   /* are we done? */
   svn_boolean_t done;
+  int status_code;
 
   /* log receiver function and baton */
   svn_log_message_receiver2_t receiver;
@@ -331,6 +332,8 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
   log_state_e state;
   log_info_t *info;
 
+  UNUSED_CTX(log_ctx);
+
   state = parser->state->current_state;
   info = parser->state->private;
 
@@ -340,6 +343,7 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
       case CREATOR:
       case DATE:
       case COMMENT:
+      case NBR_CHILDREN:
       case ADDED_PATH:
       case REPLACED_PATH:
       case DELETED_PATH:
@@ -376,6 +380,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   apr_hash_t *props;
   svn_revnum_t peg_rev;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
+  svn_error_t *err;
 
   log_ctx = apr_pcalloc(pool, sizeof(*log_ctx));
   log_ctx->pool = pool;
@@ -467,29 +472,39 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                      session, session->conns[0],
                                      session->repos_url.path, pool));
 
-  /* At this point, we may have a deleted file.  So, we'll match ra_dav's
+  /* At this point, we may have a deleted file.  So, we'll match ra_neon's
    * behavior and use the larger of start or end as our 'peg' rev.
    */
   peg_rev = (start > end) ? start : end;
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      vcc_url, peg_rev, "0",
-                                      checked_in_props, pool));
-
-  baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
-                                           "DAV:", "href");
-
-  if (!baseline_url)
+  if (peg_rev != SVN_INVALID_REVNUM)
     {
-      abort();
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          vcc_url, peg_rev, "0",
+                                          baseline_props, pool));
+
+      basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
+                                               "DAV:", "baseline-collection");
     }
+  else
+    {
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          vcc_url, peg_rev, "0",
+                                          checked_in_props, pool));
+      baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
+                                               "DAV:", "checked-in");
+      if (!baseline_url)
+        {
+          abort();
+        }
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      baseline_url, peg_rev, "0",
-                                      baseline_props, pool));
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          baseline_url, peg_rev, "0",
+                                          baseline_props, pool));
 
-  basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, peg_rev,
-                                           "DAV:", "baseline-collection");
+      basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, peg_rev,
+                                               "DAV:", "baseline-collection");
+    }
 
   if (!basecoll_url)
     {
@@ -515,13 +530,20 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   parser_ctx->end = end_log;
   parser_ctx->cdata = cdata_log;
   parser_ctx->done = &log_ctx->done;
+  parser_ctx->status_code = &log_ctx->status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&log_ctx->done, session, pool));
+  err = svn_ra_serf__context_run_wait(&log_ctx->done, session, pool);
 
-  return SVN_NO_ERROR;
+  if (parser_ctx->error)
+    {
+      svn_error_clear(err);
+      SVN_ERR(parser_ctx->error);
+    }
+
+  return err;
 }
