@@ -70,6 +70,9 @@ struct svn_ra_serf__options_context_t {
   /* Return error code */
   svn_error_t *error;
 
+  /* HTTP Status code */
+  int status_code;
+
   /* are we done? */
   svn_boolean_t done;
 
@@ -260,6 +263,7 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   parser_ctx->end = end_options;
   parser_ctx->cdata = cdata_options;
   parser_ctx->done = &new_ctx->done;
+  parser_ctx->status_code = &new_ctx->status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
