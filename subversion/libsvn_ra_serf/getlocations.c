@@ -186,6 +186,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
+  svn_error_t *err;
   apr_hash_t *props;
   const char *vcc_url, *relative_url, *basecoll_url, *req_url;
   int i;
@@ -280,14 +281,13 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool));
-
-  if (loc_ctx->status_code == 404)
+  err = svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool);
+  if (loc_ctx->error || parser_ctx->error)
     {
-      /* TODO Teach the parser to handle our custom error message. */
-      return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
-                              _("File doesn't exist on HEAD"));
+      svn_error_clear(err);
+      SVN_ERR(loc_ctx->error);
+      SVN_ERR(parser_ctx->error);
     }
 
-  return loc_ctx->error;
+  return SVN_NO_ERROR;
 }
