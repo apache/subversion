@@ -85,6 +85,7 @@ struct svn_ra_serf__options_context_t {
 
   serf_response_acceptor_t acceptor;
   serf_response_handler_t handler;
+  svn_ra_serf__xml_parser_t *parser_ctx;
 
 };
 
@@ -227,6 +228,18 @@ svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx
 }
 
 svn_error_t *
+svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx)
+{
+  return ctx->error;
+}
+
+svn_error_t *
+svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx)
+{
+  return ctx->parser_ctx->error;
+}
+
+svn_error_t *
 svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 svn_ra_serf__session_t *session,
                                 svn_ra_serf__connection_t *conn,
@@ -269,6 +282,8 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   handler->response_baton = parser_ctx;
 
   svn_ra_serf__request_create(handler);
+
+  new_ctx->parser_ctx = parser_ctx;
 
   *opt_ctx = new_ctx;
 
