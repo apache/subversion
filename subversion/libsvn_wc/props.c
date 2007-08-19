@@ -2498,10 +2498,10 @@ parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
 
       if (! r_part_2)  /* "rN" */
         {
-          if (strlen(r_part_1) < 2)
+          if (strlen(r_part_1) < 3)
             return FALSE;
           else
-            item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 1);
+            item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 2);
         }
       else             /* "r N" */
         {
