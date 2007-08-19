@@ -61,7 +61,7 @@ function query() {
   echo -n "$SCRIPT: $1 (y/n)? [$2] "
   read -n 1 -t 32
   echo
-  [ "${REPLY:-$2}" == 'y' ]
+  [ "${REPLY:-$2}" = 'y' ]
 }
 
 function get_loadmodule_config() {
@@ -299,16 +299,22 @@ if [ $? -ne 0 ]; then
     fail "Neither curl or wget found."
   fi
   HTTP_FETCH=curl
-  HTTP_FETCH_OUTPUT="-s -o"
+  HTTP_FETCH_OUTPUT='-s -o'
 fi
 $HTTP_FETCH $HTTP_FETCH_OUTPUT "$HTTPD_CFG-copy" "$BASE_URL/cfg"
 diff -q "$HTTPD_CFG" "$HTTPD_CFG-copy" > /dev/null \
   || fail "HTTPD doesn't operate according to the generated configuration"
 rm "$HTTPD_CFG-copy"
 
-say "HTTPD is good, starting the tests..."
+say "HTTPD is good"
 
-if [ $# == 0 ]; then
+if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
+  exit
+fi
+
+say "starting the tests..."
+
+if [ $# = 0 ]; then
   time make check "BASE_URL=$BASE_URL"
   r=$?
 else

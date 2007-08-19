@@ -1,5 +1,6 @@
-import unittest, os, tempfile, shutil, types, setup_path
+import unittest, os, tempfile, shutil, types, setup_path, binascii
 from svn import core, repos, wc, client
+from svn import delta, ra
 from libsvn.core import SubversionException
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
@@ -120,11 +121,33 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.assert_(wc.check_wc(self.path) > 0)
 
   def test_get_ancestry(self):
-      self.assertEqual([REPOS_URL, 12], 
+      self.assertEqual([REPOS_URL, 13],
                        wc.get_ancestry(self.path, self.wc))
 
   def test_status(self):
       wc.status2(self.path, self.wc)
+
+  def test_status_editor(self):
+      paths = []
+      def status_func(target, status):
+        self.assert_(target.startswith(self.path))
+        paths.append(target)
+
+      (anchor_access, target_access,
+       target) = wc.adm_open_anchor(self.path, False, -1, None)
+      (editor, edit_baton, set_locks_baton,
+       edit_revision) = wc.get_status_editor2(anchor_access,
+                                              self.path,
+                                              None,  # SvnConfig
+                                              True,  # recursive
+                                              False, # get_all
+                                              False, # no_ignore
+                                              status_func,
+                                              None,  # cancel_func
+                                              None,  # traversal_info
+                                              )
+      editor.close_edit(edit_baton)
+      self.assert_(len(paths) > 0)
 
   def test_is_normal_prop(self):
       self.failIf(wc.is_normal_prop('svn:wc:foo:bar'))
@@ -157,6 +180,71 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
   def test_get_ignores(self):
       self.assert_(isinstance(wc.get_ignores(None, self.wc), list))
+
+  def test_commit(self):
+    # Replace README.txt's contents, using binary mode so we know the
+    # exact contents even on Windows, and therefore the MD5 checksum.
+    readme_path = '%s/trunk/README.txt' % self.path
+    fp = open(readme_path, 'wb')
+    fp.write('hello\n')
+    fp.close()
+
+    # Setup ra_ctx.
+    ra.initialize()
+    callbacks = ra.callbacks2_t()
+    ra_ctx = ra.open2(REPOS_URL, callbacks, None, None)
+
+    # Get commit editor.
+    commit_info = [None]
+    def commit_cb(_commit_info, pool):
+      commit_info[0] = _commit_info
+    (editor, edit_baton) = ra.get_commit_editor2(ra_ctx, 'log message',
+                                                 commit_cb,
+                                                 None,
+                                                 False)
+
+    # Drive the commit.
+    checksum = [None]
+    def driver_cb(parent, path, pool):
+      baton = editor.open_file(path, parent, -1, pool)
+      adm_access = wc.adm_probe_retrieve(self.wc, readme_path, pool)
+      (_, checksum[0]) = wc.transmit_text_deltas2(readme_path, adm_access,
+                                                  False, editor, baton, pool)
+      return baton
+    try:
+      delta.path_driver(editor, edit_baton, -1, ['trunk/README.txt'],
+                        driver_cb)
+      editor.close_edit(edit_baton)
+    except:
+      try:
+        editor.abort_edit(edit_baton)
+      except:
+        # We already have an exception in progress, not much we can do
+        # about this.
+        pass
+      raise
+    (checksum,) = checksum
+    (commit_info,) = commit_info
+
+    # Assert the commit.
+    self.assertEquals(binascii.b2a_hex(checksum),
+                      'b1946ac92492d2347c6235b4d2611184')
+    self.assertEquals(commit_info.revision, 13)
+
+    # Bump working copy state.
+    wc.process_committed4(readme_path,
+                          wc.adm_retrieve(self.wc,
+                                          os.path.dirname(readme_path)),
+                          False, commit_info.revision, commit_info.date,
+                          commit_info.author, None, False, False, checksum)
+
+    # Assert bumped state.
+    entry = wc.entry(readme_path, self.wc, False)
+    self.assertEquals(entry.revision, commit_info.revision)
+    self.assertEquals(entry.schedule, wc.schedule_normal)
+    self.assertEquals(entry.cmt_rev, commit_info.revision)
+    self.assertEquals(entry.cmt_date,
+                      core.svn_time_from_cstring(commit_info.date))
 
   def tearDown(self):
       wc.adm_close(self.wc)

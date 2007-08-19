@@ -67,6 +67,8 @@ summarize_func(const svn_client_diff_summarize_t *summary,
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
+  /* ### FIXME (issue #2765): Only append summary->path to the
+     ### original path if the original is of kind svn_node_dir. */
   path = svn_path_join(path, summary->path, pool);
 
   /* Convert non-urls to local style, so that things like "" show up as "." */
@@ -98,6 +100,7 @@ svn_cl__diff(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   apr_array_header_t *options;
   apr_array_header_t *targets;
+  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   apr_file_t *outfile, *errfile;
   apr_status_t status;
   const char *old_target, *new_target;
@@ -118,8 +121,32 @@ svn_cl__diff(apr_getopt_t *os,
   if ((status = apr_file_open_stderr(&errfile, pool)))
     return svn_error_wrap_apr(status, _("Can't open stderr"));
 
+  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+     all the targets, we need to build a list of targets made of both
+     ones the user typed, as well as any specified by --changelist.  */
+  if (opt_state->changelist)
+    {
+      SVN_ERR(svn_client_get_changelist(&changelist_targets,
+                                        opt_state->changelist,
+                                        "",
+                                        ((svn_cl__cmd_baton_t *)baton)->ctx,
+                                        pool));
+      if (apr_is_empty_array(changelist_targets))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("no such changelist '%s'"),
+                                 opt_state->changelist);
+    }
+
+  if (opt_state->targets && changelist_targets)
+    combined_targets = apr_array_append(pool, opt_state->targets,
+                                        changelist_targets);
+  else if (opt_state->targets)
+    combined_targets = opt_state->targets;
+  else if (changelist_targets)
+    combined_targets = changelist_targets;
+
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+                                        combined_targets, pool));
 
   if (! opt_state->old_target && ! opt_state->new_target
       && (targets->nelts == 2)

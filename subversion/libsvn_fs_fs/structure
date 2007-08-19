@@ -32,9 +32,11 @@ The layout of the FS directory (the "db" subdirectory of the
 repository) is:
 
   revs                Subdirectory containing revs
-    <revnum>          File containing rev <revnum>
+    <shard>           Shard directory, if sharding is in use (see below)
+      <revnum>        File containing rev <revnum>
   revprops            Subdirectory containing rev-props
-    <revnum>          File containing rev-props for <revnum>
+    <shard>           Shard directory, if sharding is in use (see below)
+      <revnum>        File containing rev-props for <revnum>
   transactions        Subdirectory containing transactions
     <txnid>.txn       Directory containing transaction <txnid>
   locks               Subdirectory containing locks
@@ -75,15 +77,59 @@ version of Subversion.  An absent format file should be interpreted as
 indicating a format 1 filesystem.
 
 The format file is a single line of the form "<format number>\n",
-where the format number has the following meanings:
+followed by any number of lines specifying 'format options' -
+additional information about the filesystem's format.  Each format
+option line is of the form "<option>\n" or "<option> <parameters>\n".
+
+Clients should raise an error if they encounter an option not
+permitted by the format number in use.
+
+The format numbers have the following meanings:
 
 Format 1: (understood by Subversion 1.1+)
   Delta representations in revision files must contain only svndiff0
-  data.
+  data.  No format options are permitted.
 
 Format 2: (understood by Subversion 1.4+)
   Delta representations in revision files may contain either svndiff0
-  or svndiff1 data.
+  or svndiff1 data.  No format options are permitted.
+
+Format 3: (understood by Subversion 1.5+)
+  Delta representations in revision files may contain either svndiff0
+  or svndiff1 data.  The 'layout' format option is permitted.
+
+Filesystem format options
+-------------------------
+
+Currently, the only recognised format option is "layout", which
+specifies the paths that will be used to store the revision files and
+revision property files.
+
+The "layout" option is followed by the name of the filesystem layout
+and any required parameters.  The default layout, if no "layout"
+keyword is specified, is the 'linear' layout.
+
+The known layouts, and the parameters they require, are as follows:
+
+"linear"
+  Revision files and rev-prop files are named after the revision they
+  represent, and are placed directly in the revs/ and revprops/
+  directories.  r1234 will be represented by the revision file
+  revs/1234 and the rev-prop file revprops/1234.
+
+"sharded <max-files-per-directory>"
+  Revision files and rev-prop files are named after the revision they
+  represent, and are placed in a subdirectory of the revs/ and
+  revprops/ directories named according to the 'shard' they belong to.
+
+  Shards are numbered from zero and contain between one and the
+  maximum number of files per directory specified in the layout's
+  parameters.
+
+  For the "sharded 1000" layout, r1234 will be represented by the
+  revision file revs/1/1234 and rev-prop file revprops/1/1234.  The
+  revs/0/ directory will contain revisions 0-999, revs/1/ will contain
+  1000-1999, and so on.
 
 Node-revision IDs
 -----------------

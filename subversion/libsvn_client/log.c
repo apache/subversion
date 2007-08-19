@@ -36,9 +36,239 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_client_private.h"
 
 
-/*** Getting update information ***/
+/*** Getting misc. information ***/
+
+/* A log callback conforming to the svn_log_message_receiver_t
+   interface for obtaining the last revision of a node at a path and
+   storing it in *BATON (an svn_revnum_t). */
+static svn_error_t *
+revnum_receiver(void *baton,
+                apr_hash_t *changed_paths,
+                svn_revnum_t revision,
+                const char *author,
+                const char *date,
+                const char *message,
+                apr_pool_t *pool)
+{
+  *((svn_revnum_t *) baton) = revision;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
+                               svn_ra_session_t *ra_session,
+                               const char *rel_path,
+                               svn_revnum_t rev,
+                               apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
+  *oldest_rev = SVN_INVALID_REVNUM;
+  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
+
+  /* Trace back in history to find the revision at which this node
+     was created (copied or added). */
+  err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
+                       revnum_receiver, oldest_rev, pool);
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+              err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
+    {
+      /* A locally-added but uncommitted versioned resource won't
+         exist in the repository. */
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  return err;
+}
+
+/* The baton for use with copyfrom_info_receiver(). */
+typedef struct
+{
+  const char *target_path;
+  const char *path;
+  svn_revnum_t rev;
+  apr_pool_t *pool;
+} copyfrom_info_t;
+
+/* A log callback conforming to the svn_log_message_receiver_t
+   interface for obtaining the copy source of a node at a path and
+   storing it in *BATON (a struct copyfrom_info_t *). */
+static svn_error_t *
+copyfrom_info_receiver(void *baton,
+                       apr_hash_t *changed_paths,
+                       svn_revnum_t revision,
+                       const char *author,
+                       const char *date,
+                       const char *message,
+                       apr_pool_t *pool)
+{
+  copyfrom_info_t *copyfrom_info = baton;
+  if (copyfrom_info->path)
+    /* The copy source has already been found. */
+    return SVN_NO_ERROR;
+
+  if (changed_paths)
+    {
+      apr_hash_index_t *hi;
+      char *path;
+      svn_log_changed_path_t *changed_path;
+
+      for (hi = apr_hash_first(NULL, changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          void *val;
+          apr_hash_this(hi, (void *) &path, NULL, &val);
+          changed_path = val;
+
+          /* Consider only the path we're interested in. */
+          if (changed_path->copyfrom_path &&
+              SVN_IS_VALID_REVNUM(changed_path->copyfrom_rev) &&
+              svn_path_is_ancestor(path, copyfrom_info->target_path))
+            {
+              /* Copy source found!  Determine path and note revision. */
+              if (strcmp(path, copyfrom_info->target_path) == 0)
+                {
+                  /* We have the details for a direct copy to
+                     copyfrom_info->target_path. */
+                  copyfrom_info->path =
+                    apr_pstrdup(copyfrom_info->pool,
+                                changed_path->copyfrom_path);
+                }
+              else
+                {
+                  /* We have a parent of copyfrom_info->target_path. */
+                  copyfrom_info->path =
+                    apr_pstrcat(copyfrom_info->pool,
+                                changed_path->copyfrom_path,
+                                copyfrom_info->target_path +
+                                strlen(path), NULL);
+                }
+              copyfrom_info->rev = changed_path->copyfrom_rev;
+              break;
+            }
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__get_copy_source(const char *path_or_url,
+                            const svn_opt_revision_t *revision,
+                            const char **copyfrom_path,
+                            svn_revnum_t *copyfrom_rev,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool)
+{
+  svn_error_t *err;
+  copyfrom_info_t copyfrom_info = { NULL, NULL, SVN_INVALID_REVNUM, pool };
+  apr_array_header_t *targets = apr_array_make(pool, 1, sizeof(path_or_url));
+  svn_opt_revision_t oldest_rev;
+
+  oldest_rev.kind = svn_opt_revision_number;
+  oldest_rev.value.number = 1;
+
+  {
+    svn_ra_session_t *ra_session;
+    svn_revnum_t at_rev;
+    const char *at_url;
+    SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
+                                             path_or_url, revision, revision,
+                                             ctx, pool));
+
+    SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
+                                              path_or_url, NULL, ra_session,
+                                              NULL, pool));
+  }
+
+  APR_ARRAY_PUSH(targets, const char *) = path_or_url;
+
+  /* Find the copy source.  Trace back in history to find the revision
+     at which this node was created (copied or added). */
+  err = svn_client_log3(targets, revision, revision, &oldest_rev, 0,
+                        TRUE, TRUE, copyfrom_info_receiver, &copyfrom_info,
+                        ctx, pool);
+  /* ### Reuse ra_session by way of svn_ra_get_log()?
+  err = svn_ra_get_log(ra_session, rel_paths, revision, 1, 0, TRUE, TRUE,
+                       copyfrom_info_receiver, &copyfrom_info, pool);
+  */
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+          err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+        {
+          /* A locally-added but uncommitted versioned resource won't
+             exist in the repository. */
+            svn_error_clear(err);
+            err = SVN_NO_ERROR;
+
+            *copyfrom_path = NULL;
+            *copyfrom_rev = SVN_INVALID_REVNUM;
+        }
+      return err;
+    }
+
+  *copyfrom_path = copyfrom_info.path;
+  *copyfrom_rev = copyfrom_info.rev;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__suggest_merge_sources(const char *path_or_url,
+                                  const svn_opt_revision_t *revision,
+                                  apr_array_header_t **suggestions,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool)
+{
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_rev;
+  apr_hash_t *mergeinfo;
+  apr_hash_index_t *hi;
+
+  *suggestions = apr_array_make(pool, 1, sizeof(const char *));
+
+  /* In our ideal algorithm, the list of recommendations should be
+     ordered by:
+
+     1) The most recent existing merge source.
+     2) The copyfrom source (which will also be listed as a merge
+        source if the copy was made with a 1.5+ client and server).
+     3) All other merge sources, most recent to least recent.
+
+     However, determining the order of application of merge sources
+     requires a new RA API.  Until such an API is available, our
+     algorithm will be:
+
+     1) The copyfrom source.
+     2) All remaining merge sources (unordered). */
+
+  /* ### TODO: Use RA APIs directly to improve efficiency. */
+  SVN_ERR(svn_client__get_copy_source(path_or_url, revision, &copyfrom_path,
+                                      &copyfrom_rev, ctx, pool));
+  if (copyfrom_path)
+    APR_ARRAY_PUSH(*suggestions, const char *) = copyfrom_path;
+
+  SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, revision,
+                                   ctx, pool));
+
+  if (!mergeinfo)
+    return SVN_NO_ERROR;
+
+  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      const char *path;
+      apr_hash_this(hi, (void *) &path, NULL, NULL);
+      if (copyfrom_path == NULL || strcmp(path, copyfrom_path) != 0)
+        {
+          APR_ARRAY_PUSH(*suggestions, const char *) = apr_pstrdup(pool, path);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 
@@ -46,14 +276,16 @@
 
 
 svn_error_t *
-svn_client_log3(const apr_array_header_t *targets,
+svn_client_log4(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
                 const svn_opt_revision_t *start,
                 const svn_opt_revision_t *end,
                 int limit,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
-                svn_log_message_receiver_t receiver,
+                svn_boolean_t include_merged_revisions,
+                svn_boolean_t omit_log_text,
+                svn_log_message_receiver2_t receiver,
                 void *receiver_baton,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
@@ -178,7 +410,8 @@ svn_client_log3(const apr_array_header_t *targets,
      * session, otherwise we use our URL. */
     if (peg_revision->kind == svn_opt_revision_base
         || peg_revision->kind == svn_opt_revision_committed
-        || peg_revision->kind == svn_opt_revision_previous)
+        || peg_revision->kind == svn_opt_revision_previous
+        || peg_revision->kind == svn_opt_revision_working)
       SVN_ERR(svn_path_condense_targets(&target, NULL, targets, TRUE, pool));
     else
       target = url_or_path;
@@ -265,36 +498,65 @@ svn_client_log3(const apr_array_header_t *targets,
               SVN_ERR(svn_client__get_revision_number
                       (&end_revnum, ra_session, end, target, pool));
 
-            err = svn_ra_get_log(ra_session,
-                                 condensed_targets,
-                                 start_revnum,
-                                 end_revnum,
-                                 limit,
-                                 discover_changed_paths,
-                                 strict_node_history,
-                                 receiver,
-                                 receiver_baton,
-                                 pool);
+            err = svn_ra_get_log2(ra_session,
+                                  condensed_targets,
+                                  start_revnum,
+                                  end_revnum,
+                                  limit,
+                                  discover_changed_paths,
+                                  strict_node_history,
+                                  include_merged_revisions,
+                                  omit_log_text,
+                                  receiver,
+                                  receiver_baton,
+                                  pool);
             if (err)
               break;
           }
       }
     else  /* both revisions are static, so no loop needed */
       {
-        err = svn_ra_get_log(ra_session,
-                             condensed_targets,
-                             start_revnum,
-                             end_revnum,
-                             limit,
-                             discover_changed_paths,
-                             strict_node_history,
-                             receiver,
-                             receiver_baton,
-                             pool);
+        err = svn_ra_get_log2(ra_session,
+                              condensed_targets,
+                              start_revnum,
+                              end_revnum,
+                              limit,
+                              discover_changed_paths,
+                              strict_node_history,
+                              include_merged_revisions,
+                              omit_log_text,
+                              receiver,
+                              receiver_baton,
+                              pool);
       }
   
     return err;
   }
+}
+
+svn_error_t *
+svn_client_log3(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_log_message_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  svn_log_message_receiver2_t receiver2;
+  void *receiver2_baton;
+
+  svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
+                               receiver, receiver_baton,
+                               pool);
+
+  return svn_client_log4(targets, peg_revision, start, end, limit,
+                         discover_changed_paths, strict_node_history, FALSE,
+                         FALSE, receiver2, receiver2_baton, ctx, pool);
 }
 
 svn_error_t *

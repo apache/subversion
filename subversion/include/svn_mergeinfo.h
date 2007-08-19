@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -44,13 +44,14 @@ extern "C" {
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_parse(const char *input, apr_hash_t **mergehash,
+svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input, 
                     apr_pool_t *pool);
 
 /** Calculate the delta between two hashes of merge info, @a mergefrom
- * and @a mergeto, and place the result in @a deleted and @a added
- * (neither output argument will ever be @c NULL), stored as the usual
- * mapping of paths to arrays of @c svn_merge_range_t.
+ * and @a mergeto (which may be @c NULL), and place the result in @a
+ * deleted and @a added (neither output argument will ever be @c
+ * NULL), stored as the usual mapping of paths to lists of @c
+ * svn_merge_range_t *'s.
  *
  * @since New in 1.5.
  */
@@ -152,6 +153,25 @@ svn_rangelist_to_stringbuf(svn_stringbuf_t **output,
                            apr_array_header_t *rangeinput,
                            apr_pool_t *pool);
 
+/** Take an array of svn_merge_range_t *'s in @a rangelist, and return the
+ * number of distint revisions included in it.
+ *
+ * @since New in 1.5.
+ */
+apr_uint64_t
+svn_rangelist_count_revs(apr_array_header_t *rangelist);
+
+/** Take an array of @c svn_merge_range_t *'s in @a rangelist, and convert it
+ * to an array of @c svn_revnum_t's in @a revs.  If @a rangelist contains
+ * no elements, return an empty array.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_rangelist_to_revs(apr_array_header_t **revs,
+                      const apr_array_header_t *rangelist,
+                      apr_pool_t *pool);
+
 /** Take a hash of mergeinfo in @a mergeinput, and convert it back to
  * a text format mergeinfo in @a output.  If @a input contains no
  * elements, return the empty string.
@@ -162,16 +182,6 @@ svn_error_t *
 svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, apr_hash_t *mergeinput,
                            apr_pool_t *pool);
 
-/** Take a hash of mergeinfo in @a mergeinput, and convert it back to
- * a text format mergeinfo in @a output.  If @a input contains no
- * elements, return the empty string.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *mergeinput,
-                         apr_pool_t *pool);
-
 /** Take a hash of mergeinfo in @a mergeinput, and sort the rangelists
  * associated with each key.
  * Note: This does not sort the hash, only the range lists in the
@@ -180,6 +190,13 @@ svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *mergeinput,
  */
 svn_error_t *
 svn_mergeinfo_sort(apr_hash_t *mergeinput, apr_pool_t *pool);
+
+/** Return a deep copy of @a mergeinfo, allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+apr_hash_t *
+svn_mergeinfo_dup(apr_hash_t *mergeinfo, apr_pool_t *pool);
 
 /** Return a deep copy of @a rangelist, allocated in @a pool.
  *

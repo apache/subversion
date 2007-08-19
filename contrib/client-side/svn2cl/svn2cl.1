@@ -1,4 +1,4 @@
-.\" Copyright (C) 2005, 2006 Arthur de Jong
+.\" Copyright (C) 2005, 2006, 2007 Arthur de Jong
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -24,10 +24,10 @@
 .\" IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 .\" OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 .\" IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-.TH "svn2cl" "1" "Sep 2006" "Version 0.8" "User Commands"
+.TH "svn2cl" "1" "Apr 2007" "Version 0.9" "User Commands"
 .nh
 .SH "NAME"
-svn2cl \- Create a ChangeLog from a subversion log.
+svn2cl - Create a ChangeLog from a subversion log.
 .SH "SYNOPSIS"
 .B svn2cl
 .RI [ OPTION ]...
@@ -69,7 +69,7 @@ Include the subversion revision number in the ChangeLog.
 If the \-\-html option is specified this is implied, edit \fBsvn2html.css\fP to turn it off.
 
 .TP
-\fB\-\-break-before-msg\fR[=\fINUM\fR]
+\fB\-\-break\-before\-msg\fR[=\fINUM\fR]
 Add a line break (or multiple line breadks) between the paths and the log message.
 If the \-\-html option is specified this option is ignored, edit \fBsvn2html.css\fP to set spacing.
 
@@ -90,6 +90,11 @@ If \fINAME\fR contains two hashes `\fB##\fP' that part will be replaced by the r
 Only the first occurrence of `\fB##\fP' will be replaced.
 .br
 This option is ignored for normal text output.
+
+.TP
+\fB\-\-ignore\-message\-starting\fR=\fISTRING\fR
+Any log messages that start with the specified \fISTRING\fR are ignored and will not show up in the output.
+The STRING comparison is case sensitive.
 
 .TP
 \fB\-o\fR, \fB\-f\fR, \fB\-\-output\fR=\fIFILE\fR, \fB\-\-file\fR=\fIFILE\fR
@@ -130,7 +135,7 @@ See `\fBsvn help log\fP' for more information on these options.
 
 An authors file is basically an XML file that should look something like:
 .ft B
-    <?xml version="1.0" encoding="utf-8"?>
+    <?xml version="1.0" encoding="utf\-8"?>
     <authors>
       <author uid="arthur">
         Arthur de Jong &lt;arthur@ch.tudelft.nl&gt;
@@ -144,7 +149,7 @@ The content from the author tag is substituted for the author name.
 The <author> tag may also contain XML child tags which can be useful for embedding HTML into the result.
 For this to work namespace information should be included for HTML output:
 .ft B
-    <?xml version="1.0" encoding="utf-8"?>
+    <?xml version="1.0" encoding="utf\-8"?>
     <authors xmlns:html="http://www.w3.org/1999/xhtml">
       <author uid="arthur">
         Arthur de Jong &lt;<html:b>arthur@ch.tudelft.nl</html:b>&gt;
@@ -168,7 +173,7 @@ Run svn log recursively on the current directory and generate a text ChangeLog f
 
 Output the changes from the last week, while including revision numbers in the ChangeLog:
 .ft B
-    svn2cl \-i \-r "HEAD:{`date -d '7 days ago' '+%F %T'`}"
+    svn2cl \-i \-r "HEAD:{`date \-d '7 days ago' '+%F %T'`}"
 .ft R
 .br
 (actually subversion will include the first revision before the specified period)
@@ -184,7 +189,7 @@ Group all commits per day into one ChangeLog entry and only include changes from
 .BR `\fBsvn\ help\ log\fP'
 
 .SH "COPYRIGHT"
-Copyright \(co 2005, 2006 Arthur de Jong <arthur@ch.tudelft.nl>.
+Copyright \(co 2005, 2006, 2007 Arthur de Jong <arthur@ch.tudelft.nl>.
 .br
 This is free software; see the license for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

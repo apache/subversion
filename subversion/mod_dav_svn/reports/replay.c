@@ -469,7 +469,7 @@ dav_svn__replay_report(const dav_resource *resource,
                                 "Couldn't retrieve revision root",
                                 resource->pool);
 
-  make_editor(&editor, &edit_baton, bb, output, resource->pool);;
+  make_editor(&editor, &edit_baton, bb, output, resource->pool);
 
   if ((err = svn_repos_replay2(root, base_dir, low_water_mark,
                                send_deltas, editor, edit_baton,

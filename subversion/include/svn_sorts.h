@@ -27,6 +27,15 @@
 #include <apr_tables.h>         /* for apr_array_header_t */
 #include <apr_hash.h>
 
+/* Define a MAX macro if we don't already have one */
+#ifndef MAX
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
+#endif
+
+/* Define a MIN macro if we don't already have one */
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 #ifdef __cplusplus
 extern "C" {

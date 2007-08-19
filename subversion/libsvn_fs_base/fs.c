@@ -1,7 +1,7 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -57,7 +57,8 @@
 #include "bdb/lock-tokens-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
-#include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_mergeinfo.h"
+#include "private/svn_fs_util.h"
 
 
 /* Checking for return values, and reporting errors.  */
@@ -310,7 +311,7 @@ base_bdb_set_errcall(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR(svn_fs_base__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
   bfd->bdb->error_info->user_callback = db_errcall_fcn;
 
   return SVN_NO_ERROR;
@@ -483,7 +484,6 @@ base_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 /* Creating a new filesystem */
 
 static fs_vtable_t fs_vtable = {
-  base_serialized_init,
   svn_fs_base__youngest_rev,
   svn_fs_base__revision_prop,
   svn_fs_base__revision_proplist,
@@ -623,7 +623,8 @@ open_databases(svn_fs_t *fs, svn_boolean_t create,
 
 
 static svn_error_t *
-base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+            apr_pool_t *common_pool)
 {
   int format = SVN_FS_BASE__FORMAT_NUMBER;
   
@@ -645,8 +646,8 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
     (svn_path_join(fs->path, FORMAT_FILE, pool), format, pool);
   if (svn_err) goto error;
 
-  SVN_ERR(svn_fs_merge_info__create_index(path, pool));
-  return SVN_NO_ERROR;
+  SVN_ERR(svn_fs_mergeinfo__create_index(path, pool));
+  return base_serialized_init(fs, common_pool, pool);
 
 error:
   svn_error_clear(cleanup_fs(fs));
@@ -679,7 +680,8 @@ check_format(int format)
 }
 
 static svn_error_t *
-base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+          apr_pool_t *common_pool)
 {
   int format;
 
@@ -706,8 +708,7 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Now we've got a format number no matter what. */
   ((base_fs_data_t *) fs->fsap_data)->format = format;
   SVN_ERR(check_format(format));
-
-  return SVN_NO_ERROR;
+  return base_serialized_init(fs, common_pool, pool);
 
  error:
   svn_error_clear(cleanup_fs(fs));
@@ -750,7 +751,8 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
 }
 
 static svn_error_t *
-base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+                       apr_pool_t *common_pool)
 {
   /* Just stash the path in the fs pointer - it's all we really need. */
   fs->path = apr_pstrdup(fs->pool, path);
@@ -1042,7 +1044,7 @@ base_hotcopy(const char *src_path,
   SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, "DB_CONFIG", pool));
 
   /* Copy the merge tracking info. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, SVN_FS_MERGE_INFO__DB_NAME,
+  SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, SVN_FS_MERGEINFO__DB_NAME,
                                pool));
 
   /* In order to copy the database files safely and atomically, we
@@ -1166,68 +1168,6 @@ base_delete_fs(const char *path,
   return SVN_NO_ERROR;
 }
 
-
-
-/* Miscellany */
-
-const char *
-svn_fs_base__canonicalize_abspath(const char *path, apr_pool_t *pool)
-{
-  char *newpath;
-  int path_len;
-  int path_i = 0, newpath_i = 0;
-  svn_boolean_t eating_slashes = FALSE;
-
-  /* No PATH?  No problem. */
-  if (! path)
-    return NULL;
-  
-  /* Empty PATH?  That's just "/". */
-  if (! *path)
-    return apr_pstrdup(pool, "/");
-
-  /* Now, the fun begins.  Alloc enough room to hold PATH with an
-     added leading '/'. */
-  path_len = strlen(path);
-  newpath = apr_pcalloc(pool, path_len + 2);
-
-  /* No leading slash?  Fix that. */
-  if (*path != '/')
-    {
-      newpath[newpath_i++] = '/';
-    }
-  
-  for (path_i = 0; path_i < path_len; path_i++)
-    {
-      if (path[path_i] == '/')
-        {
-          /* The current character is a '/'.  If we are eating up
-             extra '/' characters, skip this character.  Else, note
-             that we are now eating slashes. */
-          if (eating_slashes)
-            continue;
-          eating_slashes = TRUE;
-        }
-      else
-        {
-          /* The current character is NOT a '/'.  If we were eating
-             slashes, we need not do that any more. */
-          if (eating_slashes)
-            eating_slashes = FALSE;
-        }
-
-      /* Copy the current character into our new buffer. */
-      newpath[newpath_i++] = path[path_i];
-    }
-  
-  /* Did we leave a '/' attached to the end of NEWPATH (other than in
-     the root directory case)? */
-  if ((newpath[newpath_i - 1] == '/') && (newpath_i > 1))
-    newpath[newpath_i - 1] = '\0';
-
-  return newpath;
-}
-
 static const svn_version_t *
 base_version(void)
 {
@@ -1258,7 +1198,7 @@ static fs_library_vtable_t library_vtable = {
 
 svn_error_t *
 svn_fs_base__init(const svn_version_t *loader_version,
-                  fs_library_vtable_t **vtable)
+                  fs_library_vtable_t **vtable, apr_pool_t* common_pool)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -1275,7 +1215,7 @@ svn_fs_base__init(const svn_version_t *loader_version,
                              loader_version->major);
   SVN_ERR(svn_ver_check_list(base_version(), checklist));
   SVN_ERR(check_bdb_version());
-  SVN_ERR(svn_fs_bdb__init());
+  SVN_ERR(svn_fs_bdb__init(common_pool));
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;

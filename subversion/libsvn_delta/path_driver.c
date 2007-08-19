@@ -2,7 +2,7 @@
  * path_driver.c -- drive an editor across a set of paths
  * 
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -138,13 +138,16 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
   int i = 0;
   void *parent_db = NULL, *db = NULL;
   const char *path;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  dir_stack_t *item = apr_pcalloc(subpool, sizeof(*item));
+  apr_pool_t *subpool, *iterpool;
+  dir_stack_t *item;
 
   /* Do nothing if there are no paths. */
   if (! paths->nelts)
     return SVN_NO_ERROR;
+
+  subpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(pool);
+  item = apr_pcalloc(subpool, sizeof(*item));
 
   /* Sort the paths in a depth-first directory-ish order. */
   qsort(paths->elts, paths->nelts, paths->elt_size, svn_sort_compare_paths);

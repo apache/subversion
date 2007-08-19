@@ -98,7 +98,7 @@ class Stream:
     ### what to do with the amount written? (the result value)
     svn_stream_write(self._stream, buf)
 
-def secs_from_timestr(svn_datetime, pool):
+def secs_from_timestr(svn_datetime, pool=None):
   """Convert a Subversion datetime string into seconds since the Epoch."""
   aprtime = svn_time_from_cstring(svn_datetime, pool)
 

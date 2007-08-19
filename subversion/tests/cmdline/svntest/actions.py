@@ -467,7 +467,8 @@ def run_and_verify_merge(dir, rev1, rev2, url,
                          check_props = 0,
                          dry_run = 1,
                          *args):
-  """Run 'svn merge -rREV1:REV2 URL DIR'."""
+  """Run 'svn merge -rREV1:REV2 URL DIR', leaving off the '-r'
+  argument if both REV1 and REV2 are None."""
   if args:
     run_and_verify_merge2(dir, rev1, rev2, url, None, output_tree, disk_tree,
                           status_tree, skip_tree, error_re_string,
@@ -493,7 +494,8 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   """Run 'svn merge URL1@REV1 URL2@REV2 DIR' if URL2 is not None
   (for a three-way merge between URLs and WC).
 
-  If URL2 is None, run 'svn merge -rREV1:REV2 URL1 DIR'.
+  If URL2 is None, run 'svn merge -rREV1:REV2 URL1 DIR'.  If both REV1
+  and REV2 are None, leave off the '-r' argument.
 
   If ERROR_RE_STRING, the merge must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
@@ -524,11 +526,15 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   if isinstance(skip_tree, wc.State):
     skip_tree = skip_tree.old_tree()
 
+  merge_command = [ "merge" ]
   if url2:
-    merge_command = ("merge", url1 + "@" + str(rev1),url2 + "@" + str(rev2),
-                     dir)
+    merge_command.extend((url1 + "@" + str(rev1), url2 + "@" + str(rev2)))
   else:
-    merge_command = ("merge", "-r", str(rev1) + ":" + str(rev2), url1, dir)
+    if not (rev1 is None and rev2 is None):
+      merge_command.append("-r" + str(rev1) + ":" + str(rev2))
+    merge_command.append(url1)
+  merge_command.append(dir)
+  merge_command = tuple(merge_command)
 
   if dry_run:
     pre_disk = tree.build_tree_from_wc(dir)

@@ -230,10 +230,15 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
              'licenses/bdb': File('%(@berkeley-db)s/LICENSE'),
              'licenses/neon': File('%(@neon)s/src/COPYING.LIB'),
              'licenses/zlib': File('%(@zlib)s/README'),
-             'licenses/apr-util': File('%(@apr-util)s/LICENSE'),
-             'licenses/apr-iconv': File('%(@apr-iconv)s/LICENSE'),
-             'licenses/apr': File('%(@apr)s/LICENSE'),
-             'licenses/httpd': File('%(@httpd)s/LICENSE'),
+             'licenses/apr-util': (File('%(@apr-util)s/LICENSE'),
+                                   File('%(@apr-util)s/NOTICE'),
+                                   ),
+             'licenses/apr-iconv': (File('%(@apr-iconv)s/LICENSE'),
+                                    File('%(@apr-iconv)s/NOTICE'),
+                                    ),
+             'licenses/apr': (File('%(@apr)s/LICENSE'),
+                              File('%(@apr)s/NOTICE'),
+                              ),
              'licenses/openssl': File('%(@openssl)s/LICENSE'),
              'licenses/svn' : File('%(srcdir)s/COPYING'),
 
@@ -259,6 +264,24 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                         InstallJar('svnjavahl.jar',
                                    '%(bindsrc)s/java/javahl/classes'),
                         ),
+
+             'ruby': None,
+             'ruby/lib': None,
+             'ruby/lib/svn': FileGlob('%(bindsrc)s/swig/ruby/svn/*.rb'),
+             'ruby/ext': None,
+             'ruby/ext/svn': None,
+             'ruby/ext/svn/ext':
+               (FileGlob('%(binddir)s/swig/ruby/*.dll'),
+                FileGlob('%(binddir)s/swig/ruby/*.pdb'),
+                FileGlob('%(binddir)s/swig/ruby/libsvn_swig_ruby/*.dll'),
+                FileGlob('%(binddir)s/swig/ruby/libsvn_swig_ruby/*.pdb'),
+                FileGlob('%(blddir)s/libsvn_*/*.dll'),
+                File('%(@berkeley-db)s/bin/libdb%(bdbver)s.dll'),
+                File('%(@sqlite)s/bin/sqlite3.dll'),
+                OptFile('%(@libintl)s/bin/intl3_svn.dll'),
+                File('%(@apr)s/%(aprrel)s/libapr.dll'),
+                File('%(@apr-iconv)s/%(aprrel)s/libapriconv.dll'),
+                File('%(@apr-util)s/%(aprrel)s/libaprutil.dll')),
 
              'share': None,
              'share/locale': InstallMoFiles('%(srcdir)s/%(svnrel)s/mo'),
@@ -399,7 +422,18 @@ def _make_dist(cfg):
     _make_zip('_pdb',    ('',), '-i "*.pdb"')
     _make_zip('_pl',     ('/README.txt', '/perl'), xpdb)
     _make_zip('_py',     ('/README.txt', '/python'), xpdb)
+    _make_zip('_rb',     ('/README.txt', '/ruby', '/licenses', '/share/locale'),
+              xpdb)
 
+    _stdout.write('make_dist: Creating ruby gem\n')
+    gem_script = os.path.join(_scriptdir, 'make_gem.rb')
+    rubycmd = '"%s" "%s" --output-dir="%s"' % (cfg.get('tools', 'ruby'),
+              gem_script, _distdir)
+    rubycmd += ' "' + distdir + '\\README.txt"'
+    rubycmd += ' "' + distdir + '\\ruby"'
+    rubycmd += ' "' + distdir + '\\licenses"'
+    rubycmd += ' "' + distdir + '\\share"'
+    _system(rubycmd)
   except:
     traceback.print_exc(None, _stderr)
     _exit(1)

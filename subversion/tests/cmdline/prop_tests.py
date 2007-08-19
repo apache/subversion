@@ -987,6 +987,23 @@ def binary_props(sbox):
 
 #----------------------------------------------------------------------
 
+# Ensure that each line of output contains the corresponding string of
+# expected_out, and that errput is empty.
+def verify_output(expected_out, output, errput):
+  if errput != []:
+    print 'Error: stderr:'
+    print errput
+    raise svntest.Failure
+  output.sort()
+  ln = 0
+  for line in output:
+    if ((line.find(expected_out[ln]) == -1) or
+        (line != '' and expected_out[ln] == '')):
+      print 'Error: expected keywords: ', expected_out
+      print '       actual full output:', output
+      raise svntest.Failure
+    ln = ln + 1
+
 def recursive_base_wc_ops(sbox):
   "recursive property operations in BASE and WC"
 
@@ -1012,23 +1029,6 @@ def recursive_base_wc_ops(sbox):
   svntest.main.run_svn(None, 'propset', 'p', 'new-del', fp_del)
   svntest.main.run_svn(None, 'propset', 'p', 'new-keep',fp_keep)
   svntest.main.run_svn(None, 'del', '--force', fp_del)
-
-  # Ensure that each line of output contains the corresponding string of
-  # expected_out, and that errput is empty.
-  def verify_output(expected_out, output, errput):
-    if errput != []:
-      print 'Error: stderr:'
-      print errput
-      raise svntest.Failure
-    output.sort()
-    ln = 0
-    for line in output:
-      if ((line.find(expected_out[ln]) == -1) or
-          (line != '' and expected_out[ln] == '')):
-        print 'Error: expected keywords: ', expected_out
-        print '       actual full output:', output
-        raise svntest.Failure
-      ln = ln + 1
 
   # Test recursive proplist
   output, errput = svntest.main.run_svn(None, 'proplist', '-R', '-v', wc_dir,
@@ -1095,23 +1095,6 @@ def url_props_ops(sbox):
 
   # Commit again
   svntest.main.run_svn(None, 'ci', '-m', 'logmsg', sbox.wc_dir)
-
-  # Ensure that each line of output contains the corresponding string of
-  # expected_out, and that errput is empty.
-  def verify_output(expected_out, output, errput):
-    if errput != []:
-      print 'Error: stderr:'
-      print errput
-      raise svntest.Failure
-    output.sort()
-    ln = 0
-    for line in output:
-      if ((line.find(expected_out[ln]) == -1) or
-          (line != '' and expected_out[ln] == '')):
-        print 'Error: expected keywords: ', expected_out
-        print '       actual full output:', output
-        raise svntest.Failure
-      ln = ln + 1
 
   # Test propget
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
@@ -1244,6 +1227,127 @@ def update_props_on_wc_root(sbox):
                                         expected_status,
                                         None, None, None, None, None, 1)
 
+# test for issue 2743
+def props_on_replaced_file(sbox):
+  """test properties on replaced files"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add some properties to iota
+  iota_path = os.path.join(wc_dir, "iota")
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo', iota_path)
+  svntest.main.run_svn(None, 'propset', 'blue', 'lagoon', iota_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+
+  # replace iota_path
+  svntest.main.run_svn(None, 'rm', iota_path)
+  svntest.main.file_append(iota_path, "some mod")
+  svntest.main.run_svn(None, 'add', iota_path)
+
+  # check that the replaced file has no properties
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents="some mod")
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+
+  # now add a new property to iota
+  svntest.main.run_svn(None, 'propset', 'red', 'mojo', iota_path)
+  svntest.main.run_svn(None, 'propset', 'groovy', 'baby', iota_path)
+
+  # What we expect the disk tree to look like:
+  expected_disk.tweak('iota', props={'red' : 'mojo', 'groovy' : 'baby'})
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+
+#----------------------------------------------------------------------
+
+def depthy_wc_proplist(sbox):
+  """test proplist at various depths on a wc"""
+  # Bootstrap.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(A_path, 'mu')
+  
+  # Set up properties.
+  svntest.main.run_svn(None, 'propset', 'p', 'prop1', wc_dir)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop2', iota_path)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop3', A_path)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop4', mu_path)
+
+  # Commit.
+  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+  
+  # Test depth-empty proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'empty',
+                                        '-v', wc_dir) 
+  verify_output([ 'prop1', 'Properties on ' ],
+                output, errput)
+
+  # Test depth-files proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'files',
+                                        '-v', wc_dir) 
+  verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
+                output, errput)
+
+  # Test depth-immediates proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
+                                        'immediates', '-v', wc_dir) 
+  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
+                output, errput)
+
+  # Test depth-infinity proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
+                                        'infinity', '-v', wc_dir) 
+  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
+                output, errput)
+
+#----------------------------------------------------------------------
+
+def depthy_url_proplist(sbox):
+  """test proplist at various depths on a url"""
+  # Bootstrap.
+  sbox.build()
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(A_path, 'mu')
+  
+  # Set up properties.
+  svntest.main.run_svn(None, 'propset', 'p', 'prop1', wc_dir)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop2', iota_path)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop3', A_path)
+  svntest.main.run_svn(None, 'propset', 'p', 'prop4', mu_path)
+
+  # Test depth-empty proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'empty',
+                                        '-v', repo_url) 
+  verify_output([ 'prop1', 'Properties on ' ],
+                output, errput)
+
+  # Test depth-files proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'files',
+                                        '-v', repo_url) 
+  verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
+                output, errput)
+
+  # Test depth-immediates proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
+                                        'immediates', '-v', repo_url) 
+  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
+                output, errput)
+
+  # Test depth-infinity proplist.
+  output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
+                                        'infinity', '-v', repo_url) 
+  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
+                output, errput)
+  
 ########################################################################
 # Run the tests
 
@@ -1269,7 +1373,10 @@ test_list = [ None,
               recursive_base_wc_ops,
               url_props_ops,
               removal_schedule_added_props,
-              update_props_on_wc_root
+              update_props_on_wc_root,
+              props_on_replaced_file,
+              depthy_wc_proplist,
+              depthy_url_proplist,
              ]
 
 if __name__ == '__main__':

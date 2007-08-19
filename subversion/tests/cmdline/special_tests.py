@@ -473,8 +473,8 @@ def checkout_repo_with_symlinks(sbox):
   # Load the dumpfile into the repos.
   data_dir = os.path.join(os.path.dirname(sys.argv[0]),
                           'special_tests_data')
-  dump_str = file(os.path.join(data_dir,
-                               "symlink.dump"), "rb").read()
+  dump_str = svntest.main.file_read(os.path.join(data_dir,
+                                                 "symlink.dump"), "rb")
   svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
   
   expected_output = svntest.wc.State(sbox.wc_dir, {
@@ -544,8 +544,8 @@ def checkout_repo_with_unknown_special_type(sbox):
   # Load the dumpfile into the repos.
   data_dir = os.path.join(os.path.dirname(sys.argv[0]),
                           'special_tests_data')
-  dump_str = file(os.path.join(data_dir,
-                               "bad-special-type.dump"), "rb").read()
+  dump_str = svntest.main.file_read(os.path.join(data_dir,
+                                                 "bad-special-type.dump"), "rb")
   svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
@@ -558,6 +558,68 @@ def checkout_repo_with_unknown_special_type(sbox):
                                           sbox.wc_dir,
                                           expected_output,
                                           expected_wc)
+
+def replace_symlink_with_dir(sbox):
+  "replace a special file with a directory"
+
+  wc_dir = sbox.wc_dir
+  from_path = os.path.join(wc_dir, 'from')
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.safe_rmtree(sbox.wc_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  # Load the dumpfile into the repos.
+  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                          'special_tests_data')
+  dump_str = svntest.main.file_read(os.path.join(data_dir,
+                                                 "symlink.dump"), "rb")
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  svntest.main.run_svn(1, 'co', sbox.repo_url, wc_dir)
+                                                    
+  # Now replace the symlink with a directory and try to commit, we
+  # should get an error
+  os.remove(from_path);
+  os.mkdir(from_path);
+  
+  # Does status show the obstruction?
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn(None, [ "~      from\n" ], [], 'st')
+
+  # The commit shouldn't do anything.
+  # I'd expect a failed commit here, but replacing a file locally with a 
+  # directory seems to make svn think the file is unchanged.
+  os.chdir(was_cwd)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
+                                                    'log msg', wc_dir)
+  if not (stdout_lines == [] or stderr_lines == []):
+    raise svntest.Failure
+
+# test for issue #1808: svn up deletes local symlink that obstructs
+# versioned file
+def update_obstructing_symlink(sbox):
+  "symlink obstructs incoming delete"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_url = sbox.repo_url + '/A/mu'
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # delete A/mu and replace it with a symlink
+  svntest.main.run_svn(None, 'rm', mu_path)
+  os.symlink(iota_path, mu_path)
+ 
+  svntest.main.run_svn(None, 'rm', mu_url, '-m', 'log msg')
+
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # check that the symlink is still there
+  target = os.readlink(mu_path)
+  if target != iota_path: 
+    raise svntest.Failure
 
 
 ########################################################################
@@ -577,6 +639,8 @@ test_list = [ None,
               checkout_repo_with_symlinks,
               XFail(Skip(diff_symlink_to_dir, (os.name != 'posix'))),
               checkout_repo_with_unknown_special_type,
+              replace_symlink_with_dir,
+              Skip(update_obstructing_symlink, (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':

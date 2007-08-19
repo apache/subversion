@@ -70,11 +70,7 @@ maybe_send_header(struct log_receiver_baton *lrb)
    BATON is a `struct log_receiver_baton *'.  */
 static svn_error_t *
 log_receiver(void *baton,
-             apr_hash_t *changed_paths,
-             svn_revnum_t rev,
-             const char *author,
-             const char *date,
-             const char *msg,
+             svn_log_entry_t *log_entry,
              apr_pool_t *pool)
 {
   struct log_receiver_baton *lrb = baton;
@@ -83,34 +79,40 @@ log_receiver(void *baton,
 
   SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                             "<S:log-item>" DEBUG_CR "<D:version-name>%ld"
-                            "</D:version-name>" DEBUG_CR, rev));
+                            "</D:version-name>" DEBUG_CR, log_entry->revision));
 
-  if (author)
+  if (log_entry->author)
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                               "<D:creator-displayname>%s"
                               "</D:creator-displayname>" DEBUG_CR,
-                              apr_xml_quote_string(pool, author, 0)));
+                              apr_xml_quote_string(pool, log_entry->author, 0)));
 
   /* ### this should be DAV:creation-date, but we need to format
      ### that date a bit differently */
-  if (date)
+  if (log_entry->date)
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                               "<S:date>%s</S:date>" DEBUG_CR,
-                              apr_xml_quote_string(pool, date, 0)));
+                              apr_xml_quote_string(pool, log_entry->date, 0)));
 
-  if (msg)
+  if (log_entry->message)
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                               "<D:comment>%s</D:comment>" DEBUG_CR,
                               apr_xml_quote_string
-                              (pool, svn_xml_fuzzy_escape(msg, pool), 0)));
+                              (pool, svn_xml_fuzzy_escape(log_entry->message,
+                                                          pool), 0)));
 
+  if (log_entry->nbr_children)
+    SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
+                              "<S:nbr-children>%" APR_INT64_T_FMT 
+                              "</S:nbr-children>" DEBUG_CR,
+                              log_entry->nbr_children));
 
-  if (changed_paths)
+  if (log_entry->changed_paths)
     {
       apr_hash_index_t *hi;
       char *path;
 
-      for (hi = apr_hash_first(pool, changed_paths);
+      for (hi = apr_hash_first(pool, log_entry->changed_paths);
            hi != NULL;
            hi = apr_hash_next(hi))
         {
@@ -216,8 +218,10 @@ dav_svn__log_report(const dav_resource *resource,
   /* These get determined from the request document. */
   svn_revnum_t start = SVN_INVALID_REVNUM;   /* defaults to HEAD */
   svn_revnum_t end = SVN_INVALID_REVNUM;     /* defaults to HEAD */
-  svn_boolean_t discover_changed_paths = FALSE;  /* off by default */
-  svn_boolean_t strict_node_history = FALSE;     /* off by default */
+  svn_boolean_t discover_changed_paths = FALSE;      /* off by default */
+  svn_boolean_t strict_node_history = FALSE;         /* off by default */
+  svn_boolean_t include_merged_revisions = FALSE;    /* off by default */
+  svn_boolean_t omit_log_text = FALSE;
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 1, sizeof(const char *));
   svn_stringbuf_t *comma_separated_paths =
@@ -253,6 +257,10 @@ dav_svn__log_report(const dav_resource *resource,
         discover_changed_paths = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "strict-node-history") == 0)
         strict_node_history = TRUE; /* presence indicates positivity */
+      else if (strcmp(child->name, "include-merged-revisions") == 0)
+        include_merged_revisions = TRUE; /* presence indicates positivity */
+      else if (strcmp(child->name, "omit-log-text") == 0)
+        omit_log_text = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "path") == 0)
         {
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
@@ -289,13 +297,15 @@ dav_svn__log_report(const dav_resource *resource,
      flag in our log_receiver_baton structure). */
 
   /* Send zero or more log items. */
-  serr = svn_repos_get_logs3(repos->repos,
+  serr = svn_repos_get_logs4(repos->repos,
                              paths,
                              start,
                              end,
                              limit,
                              discover_changed_paths,
                              strict_node_history,
+                             include_merged_revisions,
+                             omit_log_text,
                              dav_svn__authz_read_func(&arb),
                              &arb,
                              log_receiver,

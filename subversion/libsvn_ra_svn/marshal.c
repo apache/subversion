@@ -693,6 +693,15 @@ static svn_error_t *vparse_tuple(apr_array_header_t *items, apr_pool_t *pool,
           else
             break;
         }
+      else if (**fmt == 'B' && elt->kind == SVN_RA_SVN_WORD)
+        {
+          if (strcmp(elt->u.word, "true") == 0)
+            *va_arg(*ap, apr_uint64_t *) = TRUE;
+          else if (strcmp(elt->u.word, "false") == 0)
+            *va_arg(*ap, apr_uint64_t *) = FALSE;
+          else
+            break;
+        }
       else if (**fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
         *va_arg(*ap, apr_array_header_t **) = elt->u.list;
       else if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
@@ -727,6 +736,7 @@ static svn_error_t *vparse_tuple(apr_array_header_t *items, apr_pool_t *pool,
             case 'l':
               *va_arg(*ap, apr_array_header_t **) = NULL;
               break;
+            case 'B':
             case 'n':
               *va_arg(*ap, apr_uint64_t *) = SVN_RA_SVN_UNSPECIFIED_NUMBER;
               break;

@@ -41,15 +41,9 @@
 #include "svn_mergeinfo.h"
 #include "svn_user.h"
 
+#include "private/svn_repos_private.h"
+
 #include "server.h"
-
-/* Set DEPTH based on boolean RECURSE, but only if DEPTH was unset.
- * This is for old clients that send only recurse, not depth.
- */
-#define MAYBE_UNFOLD_TO_DEPTH(recurse, depth)                       \
-    if ((depth) == svn_depth_unknown)                               \
-      (depth) = ((recurse) ? svn_depth_infinity : svn_depth_empty)
-
 
 typedef struct {
   apr_pool_t *pool;
@@ -627,9 +621,9 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_CMD_ERR(svn_repos_begin_report2(&report_baton, rev, b->repos,
+  SVN_CMD_ERR(svn_repos__begin_report(&report_baton, rev, b->repos,
                                       b->fs_path->data, target, tgt_path,
-                                      text_deltas, ignore_ancestry,
+                                      text_deltas, depth, ignore_ancestry,
                                       editor, edit_baton,
                                       authz_check_access_cb_func(b),
                                       b, pool));
@@ -1311,23 +1305,29 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  const char *target, *depth_word;
+  const char *target, *full_path, *depth_word;
   svn_boolean_t recurse;
-  /* Default to unknown.  Old clients won't send depth, but later
-     MAYBE_UNFOLD_TO_DEPTH() will DTRT with that anyway. */
+  /* Default to unknown.  Old clients won't send depth, but we'll
+     handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?w", &rev, &target,
                                  &recurse, &depth_word));
   target = svn_path_canonicalize(target, pool);
+
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
-  SVN_ERR(trivial_auth_request(conn, pool, b));
+  else
+    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+
+  full_path = svn_path_join(b->fs_path->data, target, pool);
+  /* Check authorization and authenticate the user if necessary. */
+  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read, full_path, FALSE));
+  
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
-  MAYBE_UNFOLD_TO_DEPTH(recurse, depth);
   return accept_report(conn, pool, b, rev, target, NULL, TRUE, depth, FALSE);
 }
 
@@ -1339,8 +1339,8 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *target, *depth_word;
   const char *switch_url, *switch_path;
   svn_boolean_t recurse;
-  /* Default to unknown.  Old clients won't send depth, but later
-     MAYBE_UNFOLD_TO_DEPTH() will DTRT with that anyway. */
+  /* Default to unknown.  Old clients won't send depth, but we'll
+     handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
@@ -1348,8 +1348,12 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  &recurse, &switch_url, &depth_word));
   target = svn_path_canonicalize(target, pool);
   switch_url = svn_path_canonicalize(switch_url, pool);
+
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
+  else
+    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
@@ -1357,7 +1361,6 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           svn_path_uri_decode(switch_url, pool),
                           &switch_path));
 
-  MAYBE_UNFOLD_TO_DEPTH(recurse, depth);
   return accept_report(conn, pool, b, rev, target, switch_path, TRUE,
                        depth, TRUE);
 }
@@ -1369,21 +1372,24 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *target, *depth_word;
   svn_boolean_t recurse;
-  /* Default to unknown.  Old clients won't send depth, but later
-     MAYBE_UNFOLD_TO_DEPTH() will DTRT with that anyway. */
+  /* Default to unknown.  Old clients won't send depth, but we'll
+     handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb?(?r)?w",
                                  &target, &recurse, &rev, &depth_word));
   target = svn_path_canonicalize(target, pool);
+
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
+  else
+    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
-  MAYBE_UNFOLD_TO_DEPTH(recurse, depth);
   return accept_report(conn, pool, b, rev, target, NULL, FALSE, depth, FALSE);
 }
 
@@ -1395,8 +1401,8 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *target, *versus_url, *versus_path, *depth_word;
   svn_boolean_t recurse, ignore_ancestry;
   svn_boolean_t text_deltas;
-  /* Default to unknown.  Old clients won't send depth, but later
-     MAYBE_UNFOLD_TO_DEPTH() will DTRT with that anyway. */
+  /* Default to unknown.  Old clients won't send depth, but we'll
+     handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
@@ -1417,16 +1423,20 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   target = svn_path_canonicalize(target, pool);
   versus_url = svn_path_canonicalize(versus_url, pool);
+
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
-  SVN_ERR(trivial_auth_request(conn, pool, b));
+  else
+    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+
+  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read, target, FALSE));
+
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           svn_path_uri_decode(versus_url, pool),
                           &versus_path));
 
-  MAYBE_UNFOLD_TO_DEPTH(recurse, depth);
   return accept_report(conn, pool, b, rev, target, versus_path,
                        text_deltas, depth, ignore_ancestry);
 }
@@ -1466,11 +1476,11 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      }
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_fs_get_merge_info(&mergeinfo, b->repos,
-                                          canonical_paths, rev,
-                                          include_parents,
-                                          authz_check_access_cb_func(b), b,
-                                          pool));
+  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repos,
+                                         canonical_paths, rev,
+                                         include_parents,
+                                         authz_check_access_cb_func(b), b,
+                                         pool));
   if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)
     {
       const void *key;
@@ -1492,9 +1502,8 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 /* Send a log entry to the client. */
-static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
-                                 svn_revnum_t rev, const char *author,
-                                 const char *date, const char *message,
+static svn_error_t *log_receiver(void *baton,
+                                 svn_log_entry_t *log_entry,
                                  apr_pool_t *pool)
 {
   log_baton_t *b = baton;
@@ -1507,9 +1516,10 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
   char action[2];
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(!"));
-  if (changed_paths)
+  if (log_entry->changed_paths)
     {
-      for (h = apr_hash_first(pool, changed_paths); h; h = apr_hash_next(h))
+      for (h = apr_hash_first(pool, log_entry->changed_paths); h;
+                                                        h = apr_hash_next(h))
         {
           apr_hash_this(h, &key, NULL, &val);
           path = key;
@@ -1521,8 +1531,12 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
                                          change->copyfrom_rev));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)", rev, author,
-                                 date, message));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)n",
+                                 log_entry->revision,
+                                 log_entry->author,
+                                 log_entry->date,
+                                 log_entry->message,
+                                 log_entry->nbr_children));
   return SVN_NO_ERROR;
 }
 
@@ -1533,19 +1547,29 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
-  svn_boolean_t changed_paths, strict_node;
+  svn_boolean_t changed_paths, strict_node, include_merged_revisions;
+  svn_boolean_t omit_log_text;
   apr_array_header_t *paths, *full_paths;
   svn_ra_svn_item_t *elt;
   int i;
-  apr_uint64_t limit;
+  apr_uint64_t limit, include_merged_revs_param, omit_log_text_param;
   log_baton_t lb;
 
-  /* Parse the arguments.  The usual optional element pattern "(?n)"
-     isn't used for the limit argument because pre-1.3 clients don't
-     know to send it. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n", &paths,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?BB", &paths,
                                  &start_rev, &end_rev, &changed_paths,
-                                 &strict_node, &limit));
+                                 &strict_node, &limit,
+                                 &include_merged_revs_param,
+                                 &omit_log_text_param));
+
+  if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    include_merged_revisions = FALSE;
+  else
+    include_merged_revisions = include_merged_revs_param;
+
+  if (omit_log_text_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    omit_log_text = FALSE;
+  else
+    omit_log_text = omit_log_text_param;
 
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is 
@@ -1572,8 +1596,9 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path->data;
   lb.conn = conn;
-  err = svn_repos_get_logs3(b->repos, full_paths, start_rev, end_rev,
+  err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
+                            include_merged_revisions, omit_log_text,
                             authz_check_access_cb_func(b), b, log_receiver,
                             &lb, pool);
 

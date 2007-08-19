@@ -338,10 +338,14 @@ second place for auth-request point as noted below.
   log
     params:   ( ( target-path:string ... ) [ start-rev:number ]
                 [ end-rev:number ] changed-paths:bool strict-node:bool
-                ? limit:number )
+                ? limit:number 
+                ? include-merged-revisions:bool omit-log-text:bool )
     Before sending response, server sends log entries, ending with "done".
+    If a client does not want to specify a limit, it should send 0 as the
+    limit parameter.
     log-entry: ( ( change:changed-path-entry ... ) rev:number
-                 [ author:string ] [ date:string ] [ message:string ] )
+                 [ author:string ] [ date:string ] [ message:string ] 
+                 ? nbr-children:number )
              | done
     changed-path-entry: ( path:string A|D|R|M [ copy-path:string ]
                           [ copy-rev:number ] )

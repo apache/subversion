@@ -274,9 +274,6 @@ typedef struct {
   svn_boolean_t ignore_ancestry;
   svn_boolean_t text_deltas;
 
-  /* What depth was requested? */
-  svn_depth_t depth;
-
   apr_hash_t *lock_path_tokens;
 
   /* Our master update editor and baton. */
@@ -1871,22 +1868,19 @@ set_path(void *report_baton,
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
-  /* ### TODO(sd): Or should this be 'if (depth != report->depth) ...' ? */
-  if (depth != svn_depth_infinity)
-    {
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"",
-                                          sizeof(" depth=\"")-1,
-                                          report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-
-      tmp = SERF_BUCKET_SIMPLE_STRING(svn_depth_to_word(depth),
+  /* Depth. */
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"",
+                                      sizeof(" depth=\"")-1,
                                       report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
-                                          report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-    }
+  serf_bucket_aggregate_append(report->buckets, tmp);
+  
+  tmp = SERF_BUCKET_SIMPLE_STRING(svn_depth_to_word(depth),
+                                  report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+  
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
 
   if (start_empty)
     {
@@ -1994,22 +1988,19 @@ link_path(void *report_baton,
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
-  /* ### TODO(sd): Or should this be 'if (depth != report->depth) ...' ? */
-  if (depth != svn_depth_infinity)
-    {
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"",
-                                          sizeof(" depth=\"")-1,
-                                          report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-
-      tmp = SERF_BUCKET_SIMPLE_STRING(svn_depth_to_word(depth),
+  /* Depth. */
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"",
+                                      sizeof(" depth=\"")-1,
                                       report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
+  serf_bucket_aggregate_append(report->buckets, tmp);
 
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
-                                          report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-    }
+  tmp = SERF_BUCKET_SIMPLE_STRING(svn_depth_to_word(depth),
+                                  report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
 
   if (start_empty)
     {
@@ -2124,6 +2115,7 @@ finish_report(void *report_baton,
       sess->conns[i]->hostinfo = sess->conns[0]->hostinfo;
       sess->conns[i]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[i]->using_compression = sess->conns[0]->using_compression;
+      sess->conns[i]->last_status_code = -1;
       sess->conns[i]->ssl_context = NULL;
       sess->conns[i]->session = sess;
       sess->conns[i]->auth_header = sess->auth_header;
@@ -2328,7 +2320,6 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->sess = ra_session->priv;
   report->conn = report->sess->conns[0];
   report->target_rev = revision;
-  report->depth = depth;
   report->ignore_ancestry = ignore_ancestry;
   report->text_deltas = text_deltas;
   report->lock_path_tokens = apr_hash_make(pool);
@@ -2421,7 +2412,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
     }
 
   svn_ra_serf__add_tag_buckets(report->buckets,
-                               "S:depth", apr_itoa(pool, depth),
+                               "S:depth", svn_depth_to_word(depth),
                                report->sess->bkt_alloc);
 
   return SVN_NO_ERROR;

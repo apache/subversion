@@ -62,10 +62,6 @@
 %hash_argout_typemap(cfg_hash, svn_config_t *)
 #endif
 
-#ifdef SWIGRUBY
-%hash_argout_typemap(MERGEHASH, svn_merge_range_t *)
-#endif
-
 /* -----------------------------------------------------------------------
    Output of apr_hash_t * <const char *, svn_string_t *>
    (commonly used for property name and value pairs)
@@ -152,15 +148,6 @@
    %typemap(in) apr_hash_t *
 */
 
-#ifdef SWIGRUBY
-%define %hash_in_typemap(ParamName, ValueType)
-%typemap(in) apr_hash_t *ParamName {
-  $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, #ValueType, _global_pool);
-}
-%enddef
-%hash_in_typemap(MERGEINFO, svn_mergeinfo_t *)
-#endif
-
 /* -----------------------------------------------------------------------
    Input of apr_hash_t * <const char *, svn_string_t *>
    (commonly used for property name and value pairs)
@@ -182,8 +169,8 @@
     svn_swig_rb_push_pool(rb_pool);
   }
   $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
+  _global_pool = NULL;
   if (!NIL_P(rb_pool)) {
-    _global_pool = NULL;
     if (NIL_P($1)) {
       svn_swig_rb_destroy_pool(rb_pool);
     } else {
@@ -236,8 +223,26 @@
   $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
 }
 %typemap(in) apr_hash_t *HASH_CSTRING_MAYBENULL {
-  $1 = (NIL_P($input)) ? NULL : 
+  VALUE rb_pool = Qnil;
+  if (!_global_pool) {
+    svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &_global_pool);
+    svn_swig_rb_push_pool(rb_pool);
+  }
+  $1 = (NIL_P($input)) ? NULL :
     svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+  _global_pool = NULL;
+  if (!NIL_P(rb_pool)) {
+    if (NIL_P($1)) {
+      svn_swig_rb_destroy_pool(rb_pool);
+    } else {
+      svn_swig_rb_set_pool_for_no_swig_type($input, rb_pool);
+    }
+    svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
+  }
+}
+
+%typemap(out) apr_hash_t *HASH_CSTRING_MAYBENULL {
+  $result = $1 ? svn_swig_rb_apr_hash_to_hash_string($1) : Qnil;
 }
 #endif
 
@@ -286,7 +291,7 @@
 */
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
-  %append_output(svn_swig_rb_apr_array_to_array_prop(*$1));
+  %append_output(svn_swig_rb_prop_apr_array_to_hash_prop(*$1));
 }
 
 %apply apr_array_header_t **OUTPUT_OF_PROP {
@@ -391,12 +396,18 @@
 
 /* svn_delta_path_driver() mutates its 'paths' argument (by sorting it),
    despite the fact that it is notionally an input parameter - hence, the
-   lack of 'const' in that one case. */
+   lack of 'const' in that one case. 
+   
+   svn_wc_get_update_editor3() and svn_wc_get_switch_editor3() aren't changing 
+   their 'preserved_exts' argument, but it is forwarded to 
+   svn_cstring_match_glob_list which also doesn't modify it, but does not have 
+   const in its prototype.  */
 %apply const apr_array_header_t *STRINGLIST {
   const apr_array_header_t *args,
   const apr_array_header_t *diff_options,
   apr_array_header_t *paths,
-  const apr_array_header_t *targets
+  const apr_array_header_t *targets,
+  apr_array_header_t *preserved_exts
 };
 
 /* -----------------------------------------------------------------------
@@ -438,11 +449,19 @@
 }
 #endif
 
+/* -----------------------------------------------------------------------
+   An array of svn_prop_t.
+*/
+
 #ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *proplist
+%typemap(in) apr_array_header_t *ROW_PROP_LIST
 {
-  $1 = svn_swig_rb_array_to_apr_array_prop($input, _global_pool);
+  $1 = svn_swig_rb_to_apr_array_row_prop($input, _global_pool);
 }
+
+%apply apr_array_header_t *ROW_PROP_LIST {
+  apr_array_header_t *proplist
+};
 #endif
 
 /* -----------------------------------------------------------------------
@@ -462,7 +481,7 @@
 
 %typemap(out) apr_array_header_t *PROP_LIST
 {
-  %append_output(svn_swig_rb_apr_array_to_array_prop($1));
+  %append_output(svn_swig_rb_prop_apr_array_to_hash_prop($1));
 }
 
 %typemap(in) apr_array_header_t *PROP_LIST_MAY_BE_NULL
@@ -480,7 +499,7 @@
 
 %typemap(out) apr_array_header_t *PROP_LIST_MAY_BE_NULL
 {
-  %append_output($1 ? svn_swig_rb_apr_array_to_array_prop($1) : Qnil);
+  %append_output($1 ? svn_swig_rb_prop_apr_array_to_hash_prop($1) : Qnil);
 }
 
 %apply apr_array_header_t *PROP_LIST {
@@ -515,6 +534,15 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   Input of apr_array_header_t * <svn_client_copy_source_t *>
+*/
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *SOURCES {
+  $1 = svn_swig_rb_array_to_apr_array_copy_source($input, _global_pool);
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Input of
    apr_hash_t * <const char *, apr_array_header_t * <svn_merge_range_t *>>
 */
@@ -524,6 +552,12 @@
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
+}
+#endif
+
+#ifdef SWIGRUBY
+%typemap(in) apr_hash_t *MERGEINFO {
+  $1 = svn_swig_rb_hash_to_apr_hash_merge_range($input, _global_pool);
 }
 #endif
 
@@ -543,3 +577,61 @@
   }
 }
 #endif
+
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **MERGEHASH
+{
+  %append_output(svn_swig_rb_apr_hash_to_hash_merge_range(*$1));
+}
+
+%typemap(in) apr_hash_t **MERGEHASH_INOUT ($*1_ltype temp)
+{
+  $1 = &temp;
+  *$1 = svn_swig_rb_hash_to_apr_hash_merge_range($input, _global_pool);
+}
+
+%typemap(argout) apr_hash_t **MERGEHASH_INOUT = apr_hash_t **MERGEHASH;
+#endif
+
+/* -----------------------------------------------------------------------
+   Output of
+   apr_hash_t * <const char *,
+                 apr_hash_t * <const char *,
+                               array_header_t * <svn_merge_range_t *>>>
+*/
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **HASH_OF_MERGE_INFO_HASH
+{
+  %append_output(svn_swig_rb_apr_hash_to_hash_merge_range_hash(*$1));
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Output of apr_array_header_t * <svn_merge_range_t *>
+*/
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **RANGELIST {
+  %append_output
+    (svn_swig_py_rangelist_to_list(*$1, $descriptor(svn_merge_range_t *),
+                                   _global_py_pool));
+
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+#ifdef SWIGRUBY
+%typemap(argout) apr_array_header_t **RANGELIST {
+  %append_output(svn_swig_rb_apr_array_to_array_merge_range(*$1));
+}
+
+%typemap(in) apr_array_header_t **RANGELIST_INOUT ($*1_ltype temp)
+{
+  $1 = &temp;
+  *$1 = svn_swig_rb_array_to_apr_array_merge_range($input, _global_pool);
+}
+
+%typemap(argout) apr_array_header_t **RANGELIST_INOUT =
+   apr_array_header_t **RANGELIST;
+#endif
+

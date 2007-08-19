@@ -2,7 +2,7 @@
  * mergeinfo.c:  Merge info parsing and handling
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,6 +16,7 @@
  * ====================================================================
  */
 #include <assert.h>
+#include <ctype.h>
 
 #include "svn_types.h"
 #include "svn_ctype.h"
@@ -25,17 +26,8 @@
 #include "svn_error_codes.h"
 #include "svn_string.h"
 #include "svn_mergeinfo.h"
+#include "private/svn_mergeinfo_private.h"
 #include "svn_private_config.h"
-
-/* Define a MAX macro if we don't already have one */
-#ifndef MAX
-#define MAX(a, b) ((a) < (b) ? (b) : (a))
-#endif
-
-/* Define a MIN macro if we don't already have one */
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
 
 /* Attempt to combine two ranges, IN1 and IN2, and put the result in
    OUTPUT.  Return whether they could be combined. 
@@ -63,8 +55,9 @@ parse_revision(const char **input, const char *end, svn_revnum_t *revision)
   svn_revnum_t result = strtol(curr, &endptr, 10);
 
   if (curr == endptr)
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            _("Invalid revision number"));
+    return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                             _("Invalid revision number found parsing '%s'"),
+                             curr);
 
   *revision = result;
 
@@ -120,19 +113,28 @@ parse_revlist(const char **input, const char *end,
   const char *curr = *input;
   svn_merge_range_t *lastrange = NULL;
 
-  if (curr == end)
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            _("No revision list found "));
+  /* Eat any leading horizontal white-space before the rangelist. */
+  while (curr < end && *curr != '\n' && isspace(*curr))
+    curr++;
 
-  while (curr < end)
+  if (*curr == '\n' || curr == end)
     {
+      /* Empty range list. */
+      *input = curr;
+      return SVN_NO_ERROR;
+    }
+
+  while (curr < end && *curr != '\n')
+    {
+      /* Parse individual revisions or revision ranges. */
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
       svn_revnum_t firstrev;
 
       SVN_ERR(parse_revision(&curr, end, &firstrev));
       if (*curr != '-' && *curr != '\n' && *curr != ',' && curr != end)
-        return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                                _("Invalid character found in revision list"));
+        return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                                 _("Invalid character '%c' found in revision "
+                                   "list"), *curr);
       mrange->start = firstrev;
       mrange->end = firstrev;
 
@@ -145,7 +147,6 @@ parse_revlist(const char **input, const char *end,
           mrange->end = secondrev;
         }
 
-      /* XXX: Watch empty revision list problem */
       if (*curr == '\n' || curr == end)
         {
           combine_with_lastrange(&lastrange, mrange, FALSE, revlist, pool);
@@ -159,14 +160,16 @@ parse_revlist(const char **input, const char *end,
         }
       else
         {
-          return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                                  _("Invalid character found in revision list"));
+          return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                                   _("Invalid character '%c' found in "
+                                     "range list"), *curr);
         }
 
     }
   if (*curr != '\n')
     return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            _("Revision list parsing ended before hitting newline"));
+                            _("Range list parsing ended before hitting "
+                              "newline"));
   *input = curr;
   return SVN_NO_ERROR;
 }
@@ -191,8 +194,9 @@ parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
   SVN_ERR(parse_revlist(input, end, revlist, pool));
 
   if (*input != end && *(*input) != '\n')
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            _("Could not find end of line in revision line"));
+    return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                             _("Could not find end of line in range list line "
+                               "in '%s'"), *input);
 
   if (*input != end)
     *input = *input + 1;
@@ -217,11 +221,12 @@ parse_top(const char **input, const char *end, apr_hash_t *hash,
 
 /* Parse mergeinfo.  */
 svn_error_t *
-svn_mergeinfo_parse(const char *input, apr_hash_t **hash,
+svn_mergeinfo_parse(apr_hash_t **mergehash, 
+                    const char *input, 
                     apr_pool_t *pool)
 {
-  *hash = apr_hash_make(pool);
-  return parse_top(&input, input + strlen(input), *hash, pool);
+  *mergehash = apr_hash_make(pool);
+  return parse_top(&input, input + strlen(input), *mergehash, pool);
 }
 
 
@@ -410,7 +415,8 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.end = elt1->end;
                 }
 
-              combine_with_lastrange(&lastrange, &tmp_range, TRUE, *output, pool);
+              combine_with_lastrange(&lastrange, &tmp_range, TRUE, 
+                                     *output, pool);
             }
 
           /* Set up the rest of the whiteboard range for further
@@ -425,7 +431,8 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.start = elt1->start;
                   tmp_range.end = elt2->end;
                   
-                  combine_with_lastrange(&lastrange, &tmp_range, TRUE, *output, pool);
+                  combine_with_lastrange(&lastrange, &tmp_range, TRUE, 
+                                         *output, pool);
                 }
 
               wboardelt.start = elt2->end + 1;
@@ -548,6 +555,47 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
   return SVN_NO_ERROR;
 }
 
+apr_uint64_t
+svn_rangelist_count_revs(apr_array_header_t *rangelist)
+{
+  apr_uint64_t nbr_revs = 0;
+  int i;
+
+  for (i = 0; i < rangelist->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                               svn_merge_range_t *);
+      nbr_revs += range->end - range->start + 1;
+    }
+
+  return nbr_revs;
+}
+
+svn_error_t *
+svn_rangelist_to_revs(apr_array_header_t **revs,
+                      const apr_array_header_t *rangelist,
+                      apr_pool_t *pool)
+{
+  int i;
+
+  *revs = apr_array_make(pool, rangelist->nelts, sizeof(svn_revnum_t));
+
+  for (i = 0; i < rangelist->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                               svn_merge_range_t *);
+      svn_revnum_t rev = range->start;
+
+      while (rev <= range->end)
+        {
+          APR_ARRAY_PUSH(*revs, svn_revnum_t) = rev;
+          rev += 1;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Record deletions and additions of entire range lists (by path
    presence), and delegate to svn_rangelist_diff() for delta
    calculations on a specific path. */
@@ -618,9 +666,47 @@ svn_error_t *
 svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
                    apr_hash_t *from, apr_hash_t *to, apr_pool_t *pool)
 {
-  *deleted = apr_hash_make(pool);
-  *added = apr_hash_make(pool);
-  SVN_ERR(walk_mergeinfo_hash_for_diff(from, to, *deleted, *added, pool));
+  if (from && to == NULL)
+    {
+      *deleted = svn_mergeinfo_dup(from, pool);
+      *added = apr_hash_make(pool);
+    }
+  else if (from == NULL && to)
+    {
+      *deleted = apr_hash_make(pool);
+      *added = svn_mergeinfo_dup(to, pool);
+    }
+  else
+    {
+      *deleted = apr_hash_make(pool);
+      *added = apr_hash_make(pool);
+
+      if (from && to)
+        {
+          SVN_ERR(walk_mergeinfo_hash_for_diff(from, to, *deleted, *added,
+                                               pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_mergeinfo__equals(svn_boolean_t *is_equal,
+                      apr_hash_t *info1, 
+                      apr_hash_t *info2,
+                      apr_pool_t *pool)
+{
+  if (apr_hash_count(info1) == apr_hash_count(info2))
+    {
+      apr_hash_t *deleted, *added;
+      SVN_ERR(svn_mergeinfo_diff(&deleted, &added, info1, info2, pool));
+      *is_equal = apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0;
+    }
+  else
+    {
+      *is_equal = FALSE;
+    }
   return SVN_NO_ERROR;
 }
 
@@ -772,9 +858,16 @@ svn_error_t *
 svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *input,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *mergeinfo_buf;
-  SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
-  *output = svn_string_create_from_buf(mergeinfo_buf, pool);
+  if (apr_hash_count(input) > 0)
+    {
+      svn_stringbuf_t *mergeinfo_buf;
+      SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
+      *output = svn_string_create_from_buf(mergeinfo_buf, pool);
+    }
+  else
+    {
+      *output = svn_string_create("", pool);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -796,6 +889,25 @@ svn_mergeinfo_sort(apr_hash_t *input, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+apr_hash_t *
+svn_mergeinfo_dup(apr_hash_t *mergeinfo, apr_pool_t *pool)
+{
+  apr_hash_t *new_mergeinfo = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+  const void *path;
+  apr_ssize_t pathlen;
+  void *rangelist;
+
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &path, &pathlen, &rangelist);
+      apr_hash_set(new_mergeinfo, apr_pstrmemdup(pool, path, pathlen), pathlen,
+                   svn_rangelist_dup((apr_array_header_t *) rangelist, pool));
+    }
+
+  return new_mergeinfo;
+}
+
 apr_array_header_t *
 svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool)
 {
@@ -805,9 +917,9 @@ svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool)
 
   for (i = 0; i < rangelist->nelts; i++)
     {
-      svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
-      *range = *APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-      APR_ARRAY_PUSH(new_rl, svn_merge_range_t *) = range;
+      APR_ARRAY_PUSH(new_rl, svn_merge_range_t *) =
+        svn_merge_range_dup(APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *),
+                            pool);
     }
 
   return new_rl;

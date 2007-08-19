@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2005-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -617,6 +617,9 @@ open_root(void *edit_baton,
   dir_baton->edit_baton = edit_baton;
   *root_baton = dir_baton;
 
+  SVN_ERR(svn_cmdline_printf(pool, _("Transmitting file data ")));
+  SVN_ERR(svn_cmdline_fflush(stdout));
+
   return SVN_NO_ERROR;
 }
 
@@ -737,6 +740,10 @@ apply_textdelta(void *file_baton,
 {
   node_baton_t *fb = file_baton;
   edit_baton_t *eb = fb->edit_baton;
+
+  SVN_ERR(svn_cmdline_printf(pool, _(".")));
+  SVN_ERR(svn_cmdline_fflush(stdout));
+
   return eb->wrapped_editor->apply_textdelta(fb->wrapped_node_baton,
                                              base_checksum, pool,
                                              handler, handler_baton);
@@ -837,6 +844,8 @@ close_edit(void *edit_baton,
                                             &baton));
       SVN_ERR(eb->wrapped_editor->close_directory(baton, pool));
     }
+
+  SVN_ERR(svn_cmdline_printf(pool, _("\n")));
 
   return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
 }
@@ -1171,6 +1180,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
                                      NULL, subpool));
     }
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -1468,19 +1478,13 @@ main(int argc, const char *argv[])
 
   err = check_lib_versions();
   if (err)
-    {
-      svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error(err, NULL, "svnsync: ");
 
   pool = svn_pool_create(NULL);
 
   err = svn_ra_initialize(pool);
   if (err)
-    {
-      svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
 
   memset(&opt_baton, 0, sizeof(opt_baton));
 
@@ -1737,10 +1741,8 @@ main(int argc, const char *argv[])
           err = svn_error_quick_wrap(err, 
                                      _("Try 'svnsync help' for more info"));
         }
-      svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-      svn_error_clear(err);
 
-      return EXIT_FAILURE;
+      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
     }
 
   svn_pool_destroy(pool);

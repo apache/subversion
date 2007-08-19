@@ -37,13 +37,15 @@ def usage_and_exit(errmsg=None):
     too."""
     cmd = os.path.basename(sys.argv[0])
     stream = errmsg and sys.stderr or sys.stdout
-    stream.write("""Usage: 1. %s REPOS-PATH replace OLDAUTHOR NEWAUTHOR
-       2. %s REPOS-PATH revision REV NEWAUTHOR
+    stream.write("""Usage: 1. %s REPOS-PATH replace OLDAUTHOR [NEWAUTHOR]
+       2. %s REPOS-PATH revision REV [NEWAUTHOR]
 
 Change the svn:author property for one or more revisions of the
 repository located at REPOS-PATH.  If in "replace" mode, any instance
 of an author named OLDAUTHOR is changed to NEWAUTHOR.  If in "revision"
 mode, simply change the author of the single revision REV to NEWAUTHOR.
+In either mode, if NEWAUTHOR is not provided, the existing author will
+be deleted.
 
 WARNING: Changing revision properties is not a versioned event, and
          this script will bypass the repository's hook subsystem (so
@@ -64,7 +66,10 @@ def fetch_rev_author(fs_obj, revision):
 def tweak_rev_author(fs_obj, revision, author):
     """Change the value of the svn:author property for REVISION in
     repository filesystem FS_OBJ in AUTHOR."""
-    print "Tweaking author for revision %d..." % (revision),
+    if author is None:
+        print "Deleting author for revision %d..." % (revision),
+    else:
+        print "Tweaking author for revision %d..." % (revision),
     try:
         fs.svn_fs_change_rev_prop(fs_obj, revision,
                                   core.SVN_PROP_REVISION_AUTHOR, author)
@@ -81,7 +86,7 @@ def get_fs_obj(repos_path):
 
 def main():
     argc = len(sys.argv)
-    if argc != 5:
+    if argc < 4 or argc > 5:
         usage_and_exit("Not enough arguments provided.")
     try:
         repos_path = core.svn_path_canonicalize(sys.argv[1])
@@ -89,7 +94,10 @@ def main():
         repos_path = os.path.normpath(sys.argv[1])
         if repos_path[-1] == '/' and len(repos_path) > 1:
             repos_path = repos_path[:-1]
-    author = sys.argv[4]
+    try:
+        author = sys.argv[4]
+    except IndexError:
+        author = None
     mode = sys.argv[2]
     try:
         if mode == "replace":

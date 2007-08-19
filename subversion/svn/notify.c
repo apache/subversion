@@ -410,6 +410,17 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       svn_error_clear(n->err);
       break;
 
+    case svn_wc_notify_merge_begin:
+      if (n->merge_range->start == n->merge_range->end)
+        err = svn_cmdline_printf(pool, _("--- Merging r%ld:\n"),
+                                 n->merge_range->start);
+      else
+        err = svn_cmdline_printf(pool, _("--- Merging r%ld through r%ld:\n"),
+                                 n->merge_range->start, n->merge_range->end);
+      if (err)
+        goto print_error;
+      break;
+
     default:
       break;
     }

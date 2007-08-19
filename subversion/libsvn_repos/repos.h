@@ -54,7 +54,7 @@ extern "C" {
 #define SVN_REPOS__FORMAT      "format"     /* Stores the current version
                                                of the repository. */
 #define SVN_REPOS__DB_DIR      "db"         /* Where Berkeley lives. */
-#define SVN_REPOS__DAV_DIR     "dav"        /* DAV sandbox. */
+#define SVN_REPOS__DAV_DIR     "dav"        /* DAV sandbox, for pre-1.5 */
 #define SVN_REPOS__LOCK_DIR    "locks"      /* Lock files live here. */
 #define SVN_REPOS__HOOK_DIR    "hooks"      /* Hook programs. */
 #define SVN_REPOS__CONF_DIR    "conf"       /* Configuration files. */
@@ -99,9 +99,6 @@ struct svn_repos_t
 
   /* The path to the repository's top-level directory. */
   char *path;
-
-  /* The path to the repository's dav directory. */
-  char *dav_path;
 
   /* The path to the repository's conf directory. */
   char *conf_path;

@@ -553,7 +553,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * baton (e.g. a URL, a location in the OS filesystem).
  *
  * Since every call requires a parent directory baton, including
- * add_directory and open_directory, where do we ever get our
+ * @c add_directory and @c open_directory, where do we ever get our
  * initial directory baton, to get things started?  The @c open_root
  * function returns a baton for the top directory of the change.  In
  * general, the producer needs to invoke the editor's @c open_root
@@ -576,7 +576,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  *    - @c open_directory (@a root, "foo") --- yielding a baton @a f for `foo'
  *
  *    - @c open_directory (@a f, "foo/bar") --- yielding a baton @a b for 
- *    `foo/bar'
+ *      `foo/bar'
  *
  *    - @c add_file (@a b, "foo/bar/baz.c")
  *   
@@ -630,8 +630,8 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  *
  * 5. When the producer calls @c open_file or @c add_file, either:
  * 
- *    (a) The producer must follow with the changes to the file
- *    (@c change_file_prop and/or @c apply_textdelta, as applicable)
+ *    (a) The producer must follow with any changes to the file
+ *    (@c change_file_prop and/or @c apply_textdelta, as applicable),
  *    followed by a @c close_file call, before issuing any other file
  *    or directory calls, or
  *
@@ -701,11 +701,11 @@ typedef struct svn_delta_editor_t
 
   /** Set @a *root_baton to a baton for the top directory of the change.
    * (This is the top of the subtree being changed, not necessarily
-   * the root of the filesystem.)  Like any other directory baton, the
-   * producer should call @c close_directory on @a root_baton when they're
-   * done.  And like other @c open_* calls, the @a base_revision here is
-   * the current revision of the directory (before getting bumped up
-   * to the new target revision set with @c set_target_revision).
+   * the root of the filesystem.)  As with any other directory baton, the
+   * producer should call @c close_directory on @a root_baton when done.
+   * And as with other @c open_* calls, the @a base_revision here is the
+   * current revision of the directory (before getting bumped up to the
+   * new target revision set with @c set_target_revision).
    *
    * Allocations for the returned @a root_baton should be performed in
    * @a dir_pool. It is also typical to (possibly) save this pool for later

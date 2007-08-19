@@ -130,6 +130,7 @@
   svn_ra_plugin_t **,
   const svn_ra_reporter_t **,
   const svn_ra_reporter2_t **,
+  const svn_ra_reporter3_t **,
   svn_ra_session_t **,
   void **delta_baton,
   void **report_baton,
@@ -319,13 +320,18 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in) const char* MAY_BE_NULL
+%typemap(in) const char *MAY_BE_NULL
 {
   if (NIL_P($input)) {
     $1 = NULL;
   } else {
     $1 = StringValuePtr($input);
   }
+}
+
+%typemap(in) const char *NOT_NULL
+{
+  $1 = StringValueCStr($input);
 }
 
 %typemap(out) const char *
@@ -680,19 +686,6 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 /* -----------------------------------------------------------------------
-   Callback: svn_client_list_func_t
-   svn_client_list()
-*/
-
-#ifdef SWIGPERL
-%typemap(in) (svn_client_list_func_t list_func,
-                     void *baton) {
-    $1 = svn_swig_pl_thunk_list_receiver;
-    $2 = (void *)$input;
-}
-#endif
-
-/* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
    svn_client_log()
    svn_ra get_log()
@@ -993,8 +986,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPYTHON
 %typemap(argout) unsigned char digest[ANY]
 {
-  %append_output(PyString_FromString(svn_md5_digest_to_cstring($1,
-                                                               _global_pool)));
+  %append_output(PyString_FromStringAndSize((char *)$1, APR_MD5_DIGESTSIZE));
 }
 #endif
 

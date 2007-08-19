@@ -1,7 +1,7 @@
 /* fs-test.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -4428,10 +4428,10 @@ closest_copy_test(const char **msg,
 
 /* Test getting mergeinfo */
 static svn_error_t *
-get_merge_info(const char **msg,
-             svn_boolean_t msg_only,
-             svn_test_opts_t *opts,
-             apr_pool_t *pool)
+get_mergeinfo(const char **msg,
+              svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
+              apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
@@ -4469,8 +4469,8 @@ get_merge_info(const char **msg,
   /* Create the greek tree. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   
-  SVN_ERR(svn_mergeinfo_parse("/A/E: 1-5", &mergeinfo, pool));
-  SVN_ERR(svn_fs_change_merge_info(txn_root, "/A/B", mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, "/A/E: 1-5", pool));
+  SVN_ERR(svn_fs_change_mergeinfo(txn_root, "/A/B", mergeinfo, pool));
 
   /* Commit it. */
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, pool));
@@ -4489,10 +4489,10 @@ get_merge_info(const char **msg,
 
   paths = apr_array_make(pool, 1, sizeof (const char *));
   APR_ARRAY_PUSH(paths, const char *) = "/A/E";
-  SVN_ERR(svn_fs_get_merge_info(&result, revision_root, paths, TRUE, pool));
+  SVN_ERR(svn_fs_get_mergeinfo(&result, revision_root, paths, TRUE, pool));
   paths = apr_array_make(pool, 1, sizeof (const char *));
   APR_ARRAY_PUSH(paths, const char *) = "/A/B/E";
-  SVN_ERR(svn_fs_get_merge_info(&result, revision_root, paths, TRUE, pool));
+  SVN_ERR(svn_fs_get_mergeinfo(&result, revision_root, paths, TRUE, pool));
   return SVN_NO_ERROR;
 }
 
@@ -4616,7 +4616,7 @@ unordered_txn_dirprops(const char **msg,
   /* Commit the second one first. */
   SVN_ERR(test_commit_txn(&new_rev, txn2, NULL, pool));
   
-  /* Then commit the first -- but expect an conflict due to the
+  /* Then commit the first -- but expect a conflict due to the
      propchanges made by the other txn. */
   SVN_ERR(test_commit_txn(&not_rev, txn, "/A/B", pool));
   SVN_ERR(svn_fs_abort_txn(txn, pool));
@@ -4653,7 +4653,7 @@ unordered_txn_dirprops(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(get_merge_info),
+    SVN_TEST_PASS(get_mergeinfo),
     SVN_TEST_PASS(trivial_transaction),
     SVN_TEST_PASS(reopen_trivial_transaction),
     SVN_TEST_PASS(create_file_transaction),

@@ -34,6 +34,8 @@
 #include "svn_xml.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -164,6 +166,7 @@ svn_cl__propget(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
+  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   svn_stream_t *out;
   int i;
 
@@ -172,11 +175,34 @@ svn_cl__propget(apr_getopt_t *os,
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
   pname = APR_ARRAY_IDX(args, 0, const char *);
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
-  
-  /* suck up all the remaining arguments into a targets array */
+
+  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+     all the remaining targets, we need to build a list of targets made of both
+     ones the user typed, as well as any specified by --changelist.  */
+  if (opt_state->changelist)
+    {
+      SVN_ERR(svn_client_get_changelist(&changelist_targets,
+                                        opt_state->changelist,
+                                        "",
+                                        ctx,
+                                        pool));
+      if (apr_is_empty_array(changelist_targets))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("no such changelist '%s'"),
+                                 opt_state->changelist);
+    }
+
+  if (opt_state->targets && changelist_targets)
+    combined_targets = apr_array_append(pool, opt_state->targets,
+                                        changelist_targets);
+  else if (opt_state->targets)
+    combined_targets = opt_state->targets;
+  else if (changelist_targets)
+    combined_targets = changelist_targets;
+
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
-  
+                                        combined_targets, pool));
+
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 

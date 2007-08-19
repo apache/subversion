@@ -90,6 +90,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
+#define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 /** @} */
@@ -118,7 +119,7 @@ typedef struct svn_config_t svn_config_t;
 /*** Configuration Default Values ***/
 
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
-   "*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#* .DS_Store"
+   "*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#* .DS_Store .*.swp"
 
 #define SVN_CONFIG_TRUE  "true"
 #define SVN_CONFIG_FALSE "false"

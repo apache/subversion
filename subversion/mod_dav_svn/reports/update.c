@@ -35,6 +35,8 @@
 #include "svn_dav.h"
 #include "svn_props.h"
 
+#include "private/svn_repos_private.h"
+
 #include "../dav_svn.h"
 
 
@@ -915,6 +917,7 @@ dav_svn__update_report(const dav_resource *resource,
   const char *target = "";
   svn_boolean_t text_deltas = TRUE;
   svn_depth_t depth = svn_depth_unknown;
+  svn_boolean_t saw_depth = FALSE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
   dav_svn__authz_read_baton arb;
@@ -1020,20 +1023,21 @@ dav_svn__update_report(const dav_resource *resource,
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
           depth = svn_depth_from_word(cdata);
+          saw_depth = TRUE;
         }
-      if (child->ns == ns && strcmp(child->name, "recursive") == 0)
+      if ((child->ns == ns && strcmp(child->name, "recursive") == 0)
+          && (! saw_depth))
         {
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          if ((depth == svn_depth_unknown) && (strcmp(cdata, "no") == 0))
+          if (strcmp(cdata, "no") == 0)
             depth = svn_depth_files;
-          /* The "yes" case is handled later, by checking if depth is
-             still svn_depth_unknown.  
-
-             Also, note that even modern, depth-aware clients still
-             transmit "no" for "recursive" (along with "files" for
-             "depth") in the svn_depth_files case and the
+          else
+            depth = svn_depth_infinity;
+          /* Note that even modern, depth-aware clients still transmit
+             "no" for "recursive" (along with "files" for "depth") in
+             the svn_depth_files case, and transmit "no" in the
              svn_depth_empty case.  This is because they don't know if
              they're talking to a depth-aware server or not, and they
              don't need to know -- all they have to do is transmit
@@ -1141,12 +1145,6 @@ dav_svn__update_report(const dav_resource *resource,
   if (! uc.send_all)
     text_deltas = FALSE;
 
-  /* If the client did not specify the depth (either via a 'depth'
-     element, for new clients, or via 'recurse' for old clients),
-     then default to infinite depth. */
-  if (depth == svn_depth_unknown)
-    depth = svn_depth_infinity;
-
   /* When we call svn_repos_finish_report, it will ultimately run
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
      case of an update or status, these paths should be identical.  In
@@ -1167,11 +1165,12 @@ dav_svn__update_report(const dav_resource *resource,
   editor->close_file = upd_close_file;
   editor->absent_file = upd_absent_file;
   editor->close_edit = upd_close_edit;
-  if ((serr = svn_repos_begin_report2(&rbaton, revnum,
+  if ((serr = svn_repos__begin_report(&rbaton, revnum,
                                       repos->repos, 
                                       src_path, target,
                                       dst_path,
                                       text_deltas,
+                                      depth,
                                       ignore_ancestry,
                                       editor, &uc,
                                       dav_svn__authz_read_func(&arb),
@@ -1300,14 +1299,14 @@ dav_svn__update_report(const dav_resource *resource,
         /* diff/merge don't ask for inline text-deltas. */
         if (!uc.send_all && strcmp(spath, dst_path) == 0)
           action = apr_psprintf(resource->pool,
-                                "diff-or-merge '%s' r%" SVN_REVNUM_T_FMT \
+                                "diff-or-merge '%s' r%" SVN_REVNUM_T_FMT
                                  ":%" SVN_REVNUM_T_FMT,
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
                                 revnum);
         else
           action = apr_psprintf(resource->pool,
-                                "%s '%s@%" SVN_REVNUM_T_FMT "'" \
+                                "%s '%s@%" SVN_REVNUM_T_FMT "'"
                                  " '%s@%" SVN_REVNUM_T_FMT "'",
                                 (uc.send_all ? "switch" : "diff-or-merge"),
                                 svn_path_uri_encode(spath, resource->pool),

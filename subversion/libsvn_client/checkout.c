@@ -132,12 +132,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
             /* Make the unversioned directory into a versioned one.  */
             SVN_ERR(svn_wc_ensure_adm3(path, uuid, session_url,
                                        repos, revnum, depth, pool));
-            /* Have update fix the incompleteness.  Pass svn_depth_unknown
-               because the newly-created admin area knows the correct
-               depth, and we might as well exercise the code that sniffs it. */
+            /* Have update fix the incompleteness. */
             err = svn_client__update_internal(result_rev, path, revision,
-                                              svn_depth_unknown,
-                                              ignore_externals,
+                                              depth, ignore_externals,
                                               allow_unver_obstructions,
                                               use_sleep, ctx, pool);
             goto done;

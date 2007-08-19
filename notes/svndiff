@@ -16,9 +16,9 @@ the source view, from the portion of the target view which has already
 been reconstructed, or from a block of new data encoded inside the
 window.
 
-An svndiff document begins with four bytes, "SVN" followed by a zero
-byte which represents a version number.  After the header come one or
-more windows, until the document ends.  (So the decoder must have
+An svndiff document begins with four bytes, "SVN" followed by a byte
+which represents a format version number.  After the header come one
+or more windows, until the document ends.  (So the decoder must have
 external context indicating when there is no more svndiff data.)
 
 A window is the concatenation of the following:
@@ -28,7 +28,9 @@ A window is the concatenation of the following:
 	The target view length
 	The length of the instructions section in bytes
 	The length of the new data section in bytes
+	[original length of the instructions section in bytes (version 1)]
 	The window's instructions section
+	[original length of the new data section in bytes (version 1)]
 	The window's new data section
 
 In svndiff version 1, the instructions and new data

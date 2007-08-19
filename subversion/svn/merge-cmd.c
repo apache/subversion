@@ -43,11 +43,36 @@ svn_cl__merge(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  const char *sourcepath1, *sourcepath2, *targetpath;
+  const char *sourcepath1 = NULL, *sourcepath2 = NULL, *targetpath = "";
   svn_boolean_t using_rev_range_syntax = FALSE;
   svn_error_t *err;
-  svn_opt_revision_t peg_revision;
+  svn_opt_revision_t peg_revision1, peg_revision2;
   apr_array_header_t *options;
+
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+                                        opt_state->targets, pool));
+  if (targets->nelts >= 1)
+    {
+      SVN_ERR(svn_opt_parse_path(&peg_revision1, &sourcepath1,
+                                 APR_ARRAY_IDX(targets, 0, const char *),
+                                 pool));
+      if (targets->nelts >= 2)
+        SVN_ERR(svn_opt_parse_path(&peg_revision2, &sourcepath2,
+                                   APR_ARRAY_IDX(targets, 1, const char *),
+                                   pool));
+    }
+
+  /* If an (optional) source, or a source plus WC path is provided,
+     the revision range syntax is in use. */
+  if (targets->nelts <= 1)
+    {
+      using_rev_range_syntax = TRUE;
+    }
+  else if (targets->nelts == 2)
+    {
+      if (svn_path_is_url(sourcepath1) && !svn_path_is_url(sourcepath2))
+        using_rev_range_syntax = TRUE;
+    }
 
   /* If the first opt_state revision is filled in at this point, then
      we know the user must have used the '-r' or '-c' switch. */
@@ -61,32 +86,31 @@ svn_cl__merge(apr_getopt_t *os,
       using_rev_range_syntax = TRUE;
     }
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
-                                        opt_state->targets, pool));
-
   if (using_rev_range_syntax)
     {
-      if (targets->nelts < 1)
+      if (targets->nelts < 1 && !opt_state->use_merge_history)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL, NULL);
       if (targets->nelts > 2)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Too many arguments given"));
 
-      SVN_ERR(svn_opt_parse_path(&peg_revision, &sourcepath1,
-                                 APR_ARRAY_IDX(targets, 0, const char *),
-                                 pool));
-      sourcepath2 = sourcepath1;
-
-      /* Set the default peg revision if one was not specified. */
-      if (peg_revision.kind == svn_opt_revision_unspecified)
-        peg_revision.kind = svn_path_is_url(sourcepath1)
-          ? svn_opt_revision_head : svn_opt_revision_working;
-
-      /* decide where to apply the diffs, defaulting to '.' */
-      if (targets->nelts == 2)
-        targetpath = APR_ARRAY_IDX(targets, 1, const char *);
+      /* Set the default value for unspecified paths and peg revision. */
+      if (targets->nelts == 0)
+        {
+          peg_revision1.kind = svn_opt_revision_head;
+        }
       else
-        targetpath = "";
+        {
+          /* targets->nelts is 1 or 2 here. */
+          sourcepath2 = sourcepath1;
+
+          if (peg_revision1.kind == svn_opt_revision_unspecified)
+            peg_revision1.kind = svn_path_is_url(sourcepath1)
+              ? svn_opt_revision_head : svn_opt_revision_working;
+
+          if (targets->nelts == 2)
+            targetpath = APR_ARRAY_IDX(targets, 1, const char *);
+        }
     }
   else /* using @rev syntax */
     {
@@ -96,14 +120,9 @@ svn_cl__merge(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Too many arguments given"));
 
-      /* the first two paths become the 'sources' */
-      SVN_ERR(svn_opt_parse_path(&opt_state->start_revision, &sourcepath1,
-                                 APR_ARRAY_IDX(targets, 0, const char *),
-                                 pool));
-      SVN_ERR(svn_opt_parse_path(&opt_state->end_revision, &sourcepath2,
-                                 APR_ARRAY_IDX(targets, 1, const char *),
-                                 pool));
-      
+      opt_state->start_revision = peg_revision1;
+      opt_state->end_revision = peg_revision2;
+
       /* Catch 'svn merge wc_path1 wc_path2 [target]' without explicit
          revisions--since it ignores local modifications it may not do what
          the user expects.  Forcing the user to specify a repository
@@ -117,25 +136,46 @@ svn_cl__merge(apr_getopt_t *os,
           (SVN_ERR_CLIENT_BAD_REVISION, 0,
            _("A working copy merge source needs an explicit revision"));
 
-      /* decide where to apply the diffs, defaulting to '.' */
+      /* Default peg revisions to each URL's youngest revision. */
+      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+        opt_state->start_revision.kind = svn_opt_revision_head;
+      if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+        opt_state->end_revision.kind = svn_opt_revision_head;
+
+      /* Decide where to apply the delta (defaulting to "."). */
       if (targets->nelts == 3)
         targetpath = APR_ARRAY_IDX(targets, 2, const char *);
-      else
-        targetpath = "";
     }
 
   /* If no targetpath was specified, see if we can infer it from the
      sourcepaths. */
-  if (! strcmp(targetpath, ""))
+  if (sourcepath1 && sourcepath2 && strcmp(targetpath, "") == 0)
     {
-      char *sp1_basename, *sp2_basename;
-      sp1_basename = svn_path_basename(sourcepath1, pool);
-      sp2_basename = svn_path_basename(sourcepath2, pool);
+      /* If the sourcepath is a URL, it can only refer to a target in the
+         current working directory. 
+         However, if the sourcepath is a local path, it can refer to a target
+         somewhere deeper in the directory structure. */
+      if (svn_path_is_url(sourcepath1)) 
+        {
+          char *sp1_basename, *sp2_basename;
+          sp1_basename = svn_path_basename(sourcepath1, pool);
+          sp2_basename = svn_path_basename(sourcepath2, pool);
 
-      if (! strcmp(sp1_basename, sp2_basename))
+          if (strcmp(sp1_basename, sp2_basename) == 0)
+            {
+              svn_node_kind_t kind;
+              const char *decoded_path = svn_path_uri_decode(sp1_basename, pool);
+              SVN_ERR(svn_io_check_path(decoded_path, &kind, pool));
+              if (kind == svn_node_file) 
+                {
+                  targetpath = decoded_path;
+                }
+            }
+        }
+      else if (strcmp(sourcepath1, sourcepath2) == 0)
         {
           svn_node_kind_t kind;
-          const char *decoded_path = svn_path_uri_decode(sp1_basename, pool);
+          const char *decoded_path = svn_path_uri_decode(sourcepath1, pool);
           SVN_ERR(svn_io_check_path(decoded_path, &kind, pool));
           if (kind == svn_node_file) 
             {
@@ -143,11 +183,6 @@ svn_cl__merge(apr_getopt_t *os,
             }
         }
     }
-
-  if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-    opt_state->start_revision.kind = svn_opt_revision_head;
-  if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-    opt_state->end_revision.kind = svn_opt_revision_head;
 
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
@@ -163,7 +198,7 @@ svn_cl__merge(apr_getopt_t *os,
       err = svn_client_merge_peg3(sourcepath1,
                                   &(opt_state->start_revision),
                                   &(opt_state->end_revision),
-                                  &peg_revision,
+                                  &peg_revision1,
                                   targetpath,
                                   opt_state->depth,
                                   opt_state->ignore_ancestry,

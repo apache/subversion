@@ -2,7 +2,7 @@
  * ra_loader.c:  logic for loading different RA library implementations
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -586,15 +586,15 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                                   path, revision, dirent_fields, pool);
 }
 
-svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,
-                                   apr_hash_t **mergeinfo,
-                                   const apr_array_header_t *paths,
-                                   svn_revnum_t revision,
-                                   svn_boolean_t include_parents,
-                                   apr_pool_t *pool)
+svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
+                                  apr_hash_t **mergeinfo,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t revision,
+                                  svn_boolean_t include_parents,
+                                  apr_pool_t *pool)
 {
-  return session->vtable->get_merge_info(session, mergeinfo, paths,
-                                         revision, include_parents, pool);
+  return session->vtable->get_mergeinfo(session, mergeinfo, paths,
+                                        revision, include_parents, pool);
 }
 
 svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
@@ -777,6 +777,25 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
                          versus_url, diff_editor, diff_baton, pool);
 }
 
+svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
+                             const apr_array_header_t *paths,
+                             svn_revnum_t start,
+                             svn_revnum_t end,
+                             int limit,
+                             svn_boolean_t discover_changed_paths,
+                             svn_boolean_t strict_node_history,
+                             svn_boolean_t include_merged_revisions,
+                             svn_boolean_t omit_log_text,
+                             svn_log_message_receiver2_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool)
+{
+  return session->vtable->get_log(session, paths, start, end, limit,
+                                  discover_changed_paths, strict_node_history,
+                                  include_merged_revisions, omit_log_text,
+                                  receiver, receiver_baton, pool);
+}
+
 svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
                             const apr_array_header_t *paths,
                             svn_revnum_t start,
@@ -788,9 +807,16 @@ svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
                             void *receiver_baton,
                             apr_pool_t *pool)
 {
-  return session->vtable->get_log(session, paths, start, end, limit,
-                                  discover_changed_paths, strict_node_history,
-                                  receiver, receiver_baton, pool);
+  svn_log_message_receiver2_t receiver2;
+  void *receiver2_baton;
+
+  svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
+                               receiver, receiver_baton,
+                               pool);
+
+  return svn_ra_get_log2(session, paths, start, end, limit,
+                         discover_changed_paths, strict_node_history,
+                         FALSE, FALSE, receiver2, receiver2_baton, pool);
 }
 
 svn_error_t *svn_ra_check_path(svn_ra_session_t *session,

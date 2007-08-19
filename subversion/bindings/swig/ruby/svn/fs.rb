@@ -495,6 +495,17 @@ module Svn
       def closest_copy(path)
         Fs.closest_copy(self, path)
       end
+
+      def merge_info(paths, include_parents=true)
+        paths = [paths] unless paths.is_a?(Array)
+        Fs.get_mergeinfo(self, paths, include_parents)
+      end
+      alias_method :mergeinfo, :merge_info
+
+      def change_merge_info(path, info)
+        Fs.change_mergeinfo(self, path, info)
+      end
+      alias_method :change_mergeinfo, :change_merge_info
     end
 
     History = SWIG::TYPE_p_svn_fs_history_t

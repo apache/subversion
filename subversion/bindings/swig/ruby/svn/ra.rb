@@ -59,8 +59,14 @@ module Svn
         [editor, editor_baton]
       end
 
-      def commit_editor2(log_msg, lock_tokens={}, keep_lock=false, &callback)
-        editor, editor_baton = Ra.get_commit_editor2(self, log_msg, callback,
+      def commit_editor2(log_msg_or_rev_props, lock_tokens={},
+                         keep_lock=false, &callback)
+        if log_msg_or_rev_props.is_a?(Hash)
+          rev_props = log_msg_or_rev_props
+        else
+          rev_props = {Svn::Core::PROP_REVISION_LOG => log_msg_or_rev_props}
+        end
+        editor, editor_baton = Ra.get_commit_editor3(self, rev_props, callback,
                                                      lock_tokens, keep_lock)
         editor.baton = editor_baton
         editor
@@ -84,16 +90,15 @@ module Svn
       end
 
       def update(revision_to_update_to, update_target,
-                 editor, editor_baton, recurse=true, &block)
+                 editor, editor_baton, depth=nil, &block)
         editor.baton = editor_baton
         update2(revision_to_update_to, update_target,
-                editor, recurse, &block)
+                editor, depth, &block)
       end
 
-      def update2(revision_to_update_to, update_target, editor, recurse=true)
-        reporter, reporter_baton = Ra.do_update(self, revision_to_update_to,
-                                                update_target, recurse,
-                                                editor)
+      def update2(revision_to_update_to, update_target, editor, depth=nil)
+        reporter, reporter_baton = Ra.do_update2(self, revision_to_update_to,
+                                                 update_target, depth, editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -105,17 +110,17 @@ module Svn
       end
 
       def switch(revision_to_switch_to, switch_target, switch_url,
-                 editor, editor_baton, recurse=true, &block)
+                 editor, editor_baton, depth=nil, &block)
         editor.baton = editor_baton
         switch2(revision_to_switch_to, switch_target, switch_url,
-                editor, recurse, &block)
+                editor, depth, &block)
       end
 
       def switch2(revision_to_switch_to, switch_target, switch_url,
-                  editor, recurse=true)
-        reporter, reporter_baton = Ra.do_switch(self, revision_to_switch_to,
-                                                switch_target, recurse,
-                                                switch_url, editor)
+                  editor, depth=nil)
+        reporter, reporter_baton = Ra.do_switch2(self, revision_to_switch_to,
+                                                 switch_target, depth,
+                                                 switch_url, editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -133,8 +138,8 @@ module Svn
       end
 
       def status2(revision, status_target, editor, recurse=true)
-        reporter, reporter_baton = Ra.do_status(self, status_target,
-                                                revision, recurse, editor)
+        reporter, reporter_baton = Ra.do_status2(self, status_target,
+                                                 revision, recurse, editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -146,10 +151,10 @@ module Svn
       end
 
       def diff(rev, target, versus_url, editor,
-               recurse=true, ignore_ancestry=true, text_deltas=true)
-        args = [self, rev, target, recurse, ignore_ancestry,
+               depth=nil, ignore_ancestry=true, text_deltas=true)
+        args = [self, rev, target, depth, ignore_ancestry,
                 text_deltas, versus_url, editor]
-        reporter, baton = Ra.do_diff2(*args)
+        reporter, baton = Ra.do_diff3(*args)
         reporter.baton = baton
         reporter
       end
@@ -188,6 +193,20 @@ module Svn
       end
 
       def file_revs(path, start_rev, end_rev=nil)
+        args = [path, start_rev, end_rev]
+        if block_given?
+          revs = file_revs2(*args) do |path, rev, rev_props, prop_diffs|
+            yield(path, rev, rev_props, Util.hash_to_prop_array(prop_diffs))
+          end
+        else
+          revs = file_revs2(*args)
+        end
+        revs.collect do |path, rev, rev_props, prop_diffs|
+          [path, rev, rev_props, Util.hash_to_prop_array(prop_diffs)]
+        end
+      end
+
+      def file_revs2(path, start_rev, end_rev=nil)
         end_rev ||= latest_revnum
         revs = []
         handler = Proc.new do |path, rev, rev_props, prop_diffs|
@@ -225,6 +244,19 @@ module Svn
         Ra.reparent(self, url)
       end
 
+      def merge_info(paths, revision=nil, include_parents=true)
+        paths = [paths] unless paths.is_a?(Array)
+        revision ||= Svn::Core::INVALID_REVNUM
+        info = Ra.get_mergeinfo(self, paths, revision, include_parents)
+        unless info.nil?
+          info.each_key do |key|
+            info[key] = Core::MergeInfo.new(info[key])
+          end
+        end
+        info
+      end
+      alias_method :mergeinfo, :merge_info
+
       private
       def props_filter(props)
         date_str = props[Svn::Core::PROP_ENTRY_COMMITTED_DATE]
@@ -236,31 +268,31 @@ module Svn
       end
     end
 
-    class Reporter2
+    class Reporter3
       attr_accessor :baton
+      def set_path(path, revision, depth=nil, start_empty=true,
+                   lock_token=nil)
+        Ra.reporter3_invoke_set_path(self, @baton, path, revision,
+                                     depth, start_empty, lock_token)
+      end
 
-      def set_path(path, revision, start_empty=true, lock_token=nil)
-        Ra.reporter2_invoke_set_path(self, @baton, path, revision,
-                                     start_empty, lock_token)
-      end
-      
       def delete_path(path)
-        Ra.reporter2_invoke_set_path(self, @baton, path)
+        Ra.reporter3_invoke_delete_path(self, @baton, path)
       end
-      
-      def link_path(path, url, revision, start_empty=true, lock_token=nil)
-        Ra.reporter2_invoke_link_path(self, @baton, path, url,
-                                      revision, start_empty, lock_token)
+
+      def link_path(path, url, revision, depth=nil,
+                    start_empty=true, lock_token=nil)
+        Ra.reporter3_invoke_link_path(self, @baton, path, url,
+                                      revision, depth, start_empty, lock_token)
       end
 
       def finish_report
-        Ra.reporter2_invoke_finish_report(self, @baton)
+        Ra.reporter3_invoke_finish_report(self, @baton)
       end
 
       def abort_report
-        Ra.reporter2_invoke_abort_report(self, @baton)
+        Ra.reporter3_invoke_abort_report(self, @baton)
       end
-      
     end
 
     remove_const(:Callbacks)

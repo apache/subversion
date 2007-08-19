@@ -101,6 +101,7 @@ class SvnReposTest < Test::Unit::TestCase
     log3 = "sample log3"
     file = "file"
     src = "source"
+    props = {"myprop" => "value"}
     path = File.join(@wc_path, file)
 
     ctx = make_context(log1)
@@ -115,6 +116,9 @@ class SvnReposTest < Test::Unit::TestCase
 
     ctx = make_context(log3)
     File.open(path, "a") {|f| f.print(src)}
+    props.each do |key, value|
+      ctx.prop_set(key, value, path)
+    end
     info3 = ctx.ci(@wc_path)
     end_rev = info3.revision
 
@@ -151,13 +155,29 @@ class SvnReposTest < Test::Unit::TestCase
                  ],
                  logs)
     revs = []
-    @repos.file_revs(file, start_rev, end_rev) do |path, rev, *rest|
-      revs << [path, rev]
+    args = [file, start_rev, end_rev]
+    @repos.file_revs(*args) do |path, rev, rev_props, prop_diffs|
+      hashed_prop_diffs = {}
+      prop_diffs.each do |prop|
+        hashed_prop_diffs[prop.name] = prop.value
+      end
+      revs << [path, rev, hashed_prop_diffs]
     end
     assert_equal([
-                   ["/#{file}", info1.revision],
-                   ["/#{file}", info2.revision],
-                   ["/#{file}", info3.revision],
+                   ["/#{file}", info1.revision, {}],
+                   ["/#{file}", info2.revision, {}],
+                   ["/#{file}", info3.revision, props],
+                 ],
+                 revs)
+
+    revs = []
+    @repos.file_revs2(*args) do |path, rev, rev_props, prop_diffs|
+      revs << [path, rev, prop_diffs]
+    end
+    assert_equal([
+                   ["/#{file}", info1.revision, {}],
+                   ["/#{file}", info2.revision, {}],
+                   ["/#{file}", info3.revision, props],
                  ],
                  revs)
 

@@ -27,6 +27,7 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
+from svntest.main import SVN_PROP_MERGE_INFO
 
 ### Bummer.  It would be really nice to have easy access to the URL
 ### member of our entries files so that switches could be testing by
@@ -585,9 +586,6 @@ def relocate_deleted_missing_copied(sbox):
   # Commit to verify that copyfrom URLs have been relocated
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H2'       : Item(verb='Adding'),
-    'A/D/H2/chi'   : Item(verb='Adding'),
-    'A/D/H2/omega' : Item(verb='Adding'),
-    'A/D/H2/psi'   : Item(verb='Adding'),
     })
   expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
                         status='  ', wc_rev='3', copied=None)
@@ -1343,12 +1341,12 @@ def switch_with_obstructing_local_adds(sbox):
   expected_disk.add({
     "A/B/F/gamma"     : Item("This is the file 'gamma'.\n"),
     "A/B/F/G"         : Item(),
-    "A/B/F/G/pi"      : Item("""<<<<<<< .mine
-This is the OBSTRUCTING file 'pi'.
-=======
-This is the file 'pi'.
->>>>>>> .r1
-"""),
+    "A/B/F/G/pi"      : Item("\n".join(["<<<<<<< .mine",
+                                        "This is the OBSTRUCTING file 'pi'.",
+                                        "=======",
+                                        "This is the file 'pi'.",
+                                        ">>>>>>> .r1",
+                                        ""])),
     "A/B/F/G/rho"     : Item("This is the file 'rho'.\n"),
     "A/B/F/G/tau"     : Item("This is the file 'tau'.\n"),
     "A/B/F/G/upsilon" : Item("This is the unversioned file 'upsilon'.\n"),
@@ -1426,6 +1424,7 @@ def mergeinfo_switch_elision(sbox):
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
+  lambda_path   = os.path.join(wc_dir, "A", "B_COPY_1", "lambda")
   B_COPY_1_path = os.path.join(wc_dir, "A", "B_COPY_1")
   B_COPY_2_path = os.path.join(wc_dir, "A", "B_COPY_2")
   E_COPY_2_path = os.path.join(wc_dir, "A", "B_COPY_2", "E")
@@ -1525,7 +1524,7 @@ def mergeinfo_switch_elision(sbox):
     'F'       : Item(status='  ', wc_rev=2),
     })
   expected_merge_disk = svntest.wc.State('', {
-    ''        : Item(props={"svn:mergeinfo" : '/A/B:1,3-4'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-4'}),
     'lambda'  : Item("This is the file 'lambda'.\n"),
     'E'       : Item(),
     'E/alpha' : Item("New content"),
@@ -1575,7 +1574,7 @@ def mergeinfo_switch_elision(sbox):
     'beta'  : Item(status='M ', wc_rev=2),
     })
   expected_merge_disk = svntest.wc.State('', {
-    ''        : Item(props={"svn:mergeinfo" : '/A/B/E:1,3-4'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1,3-4'}),
     'alpha' : Item("New content"),
     'beta'  : Item("New content"),
     })
@@ -1610,13 +1609,13 @@ def mergeinfo_switch_elision(sbox):
   expected_disk.tweak("A/B/E/alpha", contents="New content")
   expected_disk.tweak("A/B/E/beta", contents="New content")
   expected_disk.add({
-    "A/B_COPY_1"         : Item(props={'svn:mergeinfo' : '/A/B:1,3-4'}),
+    "A/B_COPY_1"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-4'}),
     "A/B_COPY_1/E"       : Item(),
     "A/B_COPY_1/F"       : Item(),
     "A/B_COPY_1/lambda"  : Item("This is the file 'lambda'.\n"),
     "A/B_COPY_1/E/alpha" : Item("New content"),
     "A/B_COPY_1/E/beta"  : Item("New content"),
-    "A/B_COPY_2"         : Item(props={'svn:mergeinfo' : '/A/B:1,3-4'}),
+    "A/B_COPY_2"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-4'}),
     "A/B_COPY_2/E"       : Item(),
     "A/B_COPY_2/F"       : Item(),
     "A/B_COPY_2/lambda"  : Item("This is the file 'lambda'.\n"),
@@ -1649,6 +1648,47 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status,
                                         None, None, None, None, None, 1)
 
+  # Now check that a switch which reverses and earlier switch and leaves
+  # a path in an unswitched state does elide its mergeinfo.
+  #
+  # Switch A/B_COPY_1/lambda to iota.  Use propset to give A/B_COPY/lambda
+  # the mergeinfo '/A/B/lambda:1,3-4'.  Then switch A/B_COPY_1/lambda back
+  # to A/B_COPY_1/lambda.  The local mergeinfo for r1,3-4 should elide this
+  # time to A/B_COPY_1.
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    "A/B_COPY_1/lambda" : Item(status='U '),
+    })
+  expected_disk.tweak("A/B_COPY_1/lambda",
+                      contents="This is the file 'iota'.\n")
+  expected_status.tweak("A/B_COPY_1/lambda", wc_rev=5, switched='S')
+  svntest.actions.run_and_verify_switch(sbox.wc_dir,
+                                        lambda_path,
+                                        sbox.repo_url + "/iota",
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property '" + SVN_PROP_MERGE_INFO +
+                                      "' set on '" + lambda_path + "'" +
+                                      "\n"], [], 'ps', SVN_PROP_MERGE_INFO,
+                                     '/A/B/lambda:1,3-4', lambda_path)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    "A/B_COPY_1/lambda" : Item(status='U '),
+    })
+  expected_disk.tweak("A/B_COPY_1/lambda",
+                      contents="This is the file 'lambda'.\n")
+  expected_status.tweak("A/B_COPY_1/lambda", switched=None)
+  svntest.actions.run_and_verify_switch(sbox.wc_dir,
+                                        lambda_path,
+                                        sbox.repo_url + "/A/B_COPY_1/lambda",
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -1676,7 +1716,7 @@ test_list = [ None,
               forced_switch,
               forced_switch_failures,
               switch_scheduled_add,
-              XFail(mergeinfo_switch_elision),
+              mergeinfo_switch_elision,
              ]
 
 if __name__ == '__main__':

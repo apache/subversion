@@ -93,12 +93,12 @@ static sasl_callback_t callbacks[] =
   { SASL_CB_LIST_END, NULL, NULL }
 };
 
-static svn_error_t *initialize(void)
+static svn_error_t *initialize(apr_pool_t *pool)
 {
   int result;
   apr_status_t status;
 
-  status = svn_ra_svn__sasl_common_init();
+  status = svn_ra_svn__sasl_common_init(pool);
   if (status)
     return svn_error_wrap_apr(status,
                               _("Could not initialize the SASL library"));
@@ -116,9 +116,9 @@ static svn_error_t *initialize(void)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *cyrus_init(void)
+svn_error_t *cyrus_init(apr_pool_t *pool)
 {
-  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, initialize));
+  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, initialize, pool));
   return SVN_NO_ERROR;
 }
 

@@ -100,13 +100,14 @@ extern "C" {
  *
  * @a global_status must be a pointer to a global, zero-initialized 
  * #svn_atomic_t. @a init_func is a pointer to the function that performs
- * the actual initialization.
+ * the actual initialization, and @a pool is passed on to the init_func
+ * for its use.
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_atomic__init_once(volatile svn_atomic_t *global_status,
-                      svn_error_t *(*init_func)(void));
+                      svn_error_t *(*init_func)(apr_pool_t*), apr_pool_t* pool);
 
 #ifdef __cplusplus
 }

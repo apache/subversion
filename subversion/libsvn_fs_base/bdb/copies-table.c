@@ -47,7 +47,7 @@ svn_fs_bdb__open_copies_table(DB **copies_p,
                        "copies", 0, DB_BTREE,
                        open_flags, 0666));
 
-  /* Create the initial `next-id' table entry.  */
+  /* Create the initial `next-key' table entry.  */
   if (create)
   {
     DBT key, value;
@@ -104,7 +104,7 @@ svn_fs_bdb__reserve_copy_id(const char **id_p,
 
   svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY);
 
-  /* Get the current value associated with the `next-id' key in the
+  /* Get the current value associated with the `next-key' key in the
      copies table.  */
   svn_fs_base__trail_debug(trail, "copies", "get");
   SVN_ERR(BDB_WRAP(fs, _("allocating new copy ID (getting 'next-key')"),

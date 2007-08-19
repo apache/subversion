@@ -64,6 +64,23 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 %typemap(in) (const svn_delta_editor_t *EDITOR, void *BATON) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
+
+%inline %{
+/* helper for invoking txdelta window handler */
+void svn_delta_invoke_window_handler(svn_txdelta_window_handler_t handler,
+                                     void *baton,
+                                     svn_txdelta_window_t *window)
+{
+    handler(window, baton);
+}
+
+%}
+
+void svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
+                                   void **handler_baton,
+                                   SV *callback,
+                                   apr_pool_t *pool);
+
 #endif
 
 #ifdef SWIGRUBY
@@ -128,10 +145,10 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
    handle svn_delta_path_driver().
 */
 
-#ifdef SWIGRUBY
+#ifndef SWIGPERL
 %callback_typemap(svn_delta_path_driver_cb_func_t callback_func,
                   void *callback_baton,
-                  ,
+                  svn_swig_py_delta_path_driver_cb_func,
                   ,
                   svn_swig_rb_delta_path_driver_cb_func)
 #endif
@@ -158,6 +175,34 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 
 
 %include svn_delta_h.swg
+
+#ifdef SWIGRUBY
+%inline %{
+static VALUE
+svn_swig_rb_delta_editor_get_target_revision(VALUE editor)
+{
+  static ID id_target_revision_address = 0;
+  VALUE rb_target_address;
+  svn_revnum_t *target_address;
+
+  if (id_target_revision_address == 0)
+    id_target_revision_address = rb_intern("@target_revision_address");
+
+  if (!RTEST(rb_ivar_defined(editor, id_target_revision_address)))
+    return Qnil;
+
+  rb_target_address = rb_ivar_get(editor, id_target_revision_address);
+  if (NIL_P(rb_target_address))
+    return Qnil;
+
+  target_address = (svn_revnum_t *)(NUM2LONG(rb_target_address));
+  if (!target_address)
+    return Qnil;
+
+  return LONG2NUM(*target_address);
+}
+%}
+#endif
 
 /* -----------------------------------------------------------------------
    handle svn_txdelta_apply_instructions()

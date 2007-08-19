@@ -266,6 +266,7 @@ class SWIGObject(ObjectFile):
     ObjectFile.__init__(self, filename)
     self.lang = lang
     self.lang_abbrev = lang_abbrev[lang]
+    self.source_generated = 1
     ### hmm. this is Makefile-specific
     self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
 

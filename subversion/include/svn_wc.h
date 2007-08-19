@@ -733,7 +733,11 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_changelist_clear,
 
   /** Failed to update a path's changelist association. @since New in 1.5. */
-  svn_wc_notify_changelist_failed
+  svn_wc_notify_changelist_failed,
+
+  /** A merge operation (to path) has begun.  See @c merge_range in
+      @c svn_wc_notify_t.  @since New in 1.5   */
+  svn_wc_notify_merge_begin,
 
 } svn_wc_notify_action_t;
 
@@ -840,6 +844,9 @@ typedef struct svn_wc_notify_t {
   /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
    * cases, it is @c NULL. */
   const char *changelist_name;
+  /** When @c action is @c svn_wc_notify_merge_begin.  In all other
+      cases, it is @c NULL.  */
+  svn_merge_range_t *merge_range;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
@@ -2049,20 +2056,30 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * function, then when the edit drive is completed, @a *edit_revision
  * will contain the revision delivered via that interface.
  *
- * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
- * svn_config_t's.
- *
  * Assuming the target is a directory, then:
  * 
  *   - If @a get_all is false, then only locally-modified entries will be
  *     returned.  If true, then all entries will be returned.
  *
- *   - If @a recurse is false, status structures will be returned only
- *     for the target and its immediate children.  Otherwise, this
- *     operation is fully recursive.
+ *   - If @a depth is @c svn_depth_empty, a status structure will
+ *     be returned for the target only; if @c svn_depth_files, for the
+ *     target and its immediate file children; if
+ *     @c svn_depth_immediates, for the target and its immediate
+ *     children; if @c svn_depth_infinity, for the target and
+ *     everything underneath it, fully recursively.  
+ *
+ *     If @a depth is @c svn_depth_unknown, take depths from the
+ *     working copy and behave as above in each directory's case.
+ *
+ *     If the given @a depth is incompatible with the depth found in a
+ *     working copy directory, the found depth always governs.
  *
  * If @a no_ignore is set, statuses that would typically be ignored
  * will instead be reported.
+ *
+ * @a ignore_patterns is an array of file patterns matching
+ * unversioned files to ignore for the purposes of status reporting,
+ * or @c NULL if the default set of ignorable file patterns should be used.
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton while building 
  * the @a statushash to determine if the client has cancelled the operation.
@@ -2074,7 +2091,34 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       void **set_locks_baton,
+                                       svn_revnum_t *edit_revision,
+                                       svn_wc_adm_access_t *anchor,
+                                       const char *target,
+                                       svn_depth_t depth,
+                                       svn_boolean_t get_all,
+                                       svn_boolean_t no_ignore,
+                                       apr_array_header_t *ignore_patterns,
+                                       svn_wc_status_func2_t status_func,
+                                       void *status_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       svn_wc_traversal_info_t *traversal_info,
+                                       apr_pool_t *pool);
+
+/*
+ * Like svn_wc_get_status_editor3(), but with @ignore_patterns
+ * provided from the corresponding value in @a config, and @a recurse
+ * instead of @a depth.  If @a recurse is true, behave as if for @c
+ * svn_depth_infinity; else if @a recurse is false, behave as if for
+ * @c svn_depth_files.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -2092,7 +2136,6 @@ svn_error_t *svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
                                        void *cancel_baton,
                                        svn_wc_traversal_info_t *traversal_info,
                                        apr_pool_t *pool);
-
 
 /**
  * Same as svn_wc_get_status_editor2(), but with @a set_locks_baton set
@@ -2121,7 +2164,7 @@ svn_error_t *svn_wc_get_status_editor(const svn_delta_editor_t **editor,
  * Associate @a locks, a hash table mapping <tt>const char*</tt>
  * absolute repository paths to <tt>svn_lock_t</tt> objects, with a
  * @a set_locks_baton returned by an earlier call to
- * svn_wc_get_status_editor2().  @a repos_root is the repository root URL.
+ * svn_wc_get_status_editor3().  @a repos_root is the repository root URL.
  * Perform all allocations in @a pool.
  *
  * @note @a locks will not be copied, so it must be valid throughout the
@@ -2799,6 +2842,14 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
+ * @a preserved_exts is an array of filename patterns which, when
+ * matched against the extensions of versioned files, determine for
+ * which such files any related generated conflict files will preserve
+ * the original file's extension as their own.  If a file's extension
+ * does not match any of the patterns in @a preserved_exts (which is
+ * certainly the case if @a preserved_exts is @c NULL or empty),
+ * generated conflict files will carry Subversion's custom extensions.
+ *
  * @a target_revision is a pointer to a revision location which, after
  * successful completion of the drive of this editor, will be
  * populated with the revision to which the working copy was updated.
@@ -2839,6 +2890,7 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
                                        const char *diff3_cmd,
+                                       apr_array_header_t *preserved_exts,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -2847,7 +2899,10 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
 
 /**
  * Similar to svn_wc_get_update_editor3() but with the
- * allow_unver_obstructions parameter always set to false.
+ * @a allow_unver_obstructions parameter always set to false, 
+ * @a preserved_exts set to NULL, and @a depth set according to @a
+ * recurse: if @a recurse is true, pass @c svn_depth_infinity, if
+ * false, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -2916,6 +2971,14 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
+ * @a preserved_exts is an array of filename patterns which, when
+ * matched against the extensions of versioned files, determine for
+ * which such files any related generated conflict files will preserve
+ * the original file's extension as their own.  If a file's extension
+ * does not match any of the patterns in @a preserved_exts (which is
+ * certainly the case if @a preserved_exts is @c NULL or empty),
+ * generated conflict files will carry Subversion's custom extensions.
+ *
  * @a target_revision is a pointer to a revision location which, after
  * successful completion of the drive of this editor, will be
  * populated with the revision to which the working copy was updated.
@@ -2923,6 +2986,8 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * If @a use_commit_times is TRUE, then all edited/added files will
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
+ *
+ * @a depth behaves as for svn_wc_get_update_editor3().
  *
  * If @a allow_unver_obstructions is true, then allow unversioned
  * obstructions when adding a path.
@@ -2934,13 +2999,14 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                        const char *target,
                                        const char *switch_url,
                                        svn_boolean_t use_commit_times,
-                                       svn_boolean_t recurse,
+                                       svn_depth_t depth,
                                        svn_boolean_t allow_unver_obstructions,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
                                        const char *diff3_cmd,
+                                       apr_array_header_t *preserved_exts,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -2948,7 +3014,10 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
 
 /**
  * Similar to svn_wc_get_switch_editor3() but with the
- * allow_unver_obstructions parameter always set to false.
+ * @a allow_unver_obstructions parameter always set to false,
+ * @a preserved_exts set to NULL, and @a depth set according to @a
+ * recurse: if @a recurse is true, pass @c svn_depth_infinity, if
+ * false, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3422,7 +3491,26 @@ typedef enum svn_wc_merge_outcome_t
  *  tracking the two backup files.  If @a dry_run is @c TRUE no files are
  *  changed.  The outcome of the merge is returned in @a *merge_outcome.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
+                           const char *left,
+                           const char *right,
+                           const char *merge_target,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *left_label,
+                           const char *right_label,
+                           const char *target_label,
+                           svn_boolean_t dry_run,
+                           const char *diff3_cmd,
+                           const apr_array_header_t *merge_options,
+                           const apr_array_header_t *prop_diff,
+                           apr_pool_t *pool);
+
+
+/** Similar to svn_wc_merge3(), but with @a prop_diff set to NULL.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
                            const char *left,
@@ -3606,6 +3694,8 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
  *
  * @a adm_access is an access baton for the directory containing
  * @a path.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_wc_relocate3(const char *path,

@@ -32,6 +32,8 @@
 
 #include "dir-delta-editor.h"
 
+/* Used to terminate lines in large multi-line string literals. */
+#define NL APR_EOL_STR
 
 
 
@@ -1229,49 +1231,31 @@ authz(const char **msg,
 
   /* The authz rules for the phase 1 tests. */
   contents =
-    "[greek:/A]"
-    APR_EOL_STR
-    "* = r"
-    APR_EOL_STR
-    "plato = w"
-    APR_EOL_STR
-    APR_EOL_STR
-    "[greek:/iota]"
-    APR_EOL_STR
-    "* ="
-    APR_EOL_STR
-    APR_EOL_STR
-    "[/A/B/lambda]"
-    APR_EOL_STR
-    "plato = r"
-    APR_EOL_STR
-    "* ="
-    APR_EOL_STR
-    APR_EOL_STR
-    "[greek:/A/D]"
-    APR_EOL_STR
-    "plato = r"
-    APR_EOL_STR
-    "* = r"
-    APR_EOL_STR
-    APR_EOL_STR
-    "[greek:/A/D/G]"
-    APR_EOL_STR
-    "plato = r"
-    APR_EOL_STR
-    "* ="
-    APR_EOL_STR
-    APR_EOL_STR
-    "[greek:/A/B/E/beta]"
-    APR_EOL_STR
-    "* ="
-    APR_EOL_STR
-    APR_EOL_STR
-    "[/nowhere]"
-    APR_EOL_STR
-    "nobody = r"
-    APR_EOL_STR
-    APR_EOL_STR;
+    "[greek:/A]"                                                             NL
+    "* = r"                                                                  NL
+    "plato = w"                                                              NL
+    ""                                                                       NL
+    "[greek:/iota]"                                                          NL
+    "* ="                                                                    NL
+    ""                                                                       NL
+    "[/A/B/lambda]"                                                          NL
+    "plato = r"                                                              NL
+    "* ="                                                                    NL
+    ""                                                                       NL
+    "[greek:/A/D]"                                                           NL
+    "plato = r"                                                              NL
+    "* = r"                                                                  NL
+    ""                                                                       NL
+    "[greek:/A/D/G]"                                                         NL
+    "plato = r"                                                              NL
+    "* ="                                                                    NL
+    ""                                                                       NL
+    "[greek:/A/B/E/beta]"                                                    NL
+    "* ="                                                                    NL
+    ""                                                                       NL
+    "[/nowhere]"                                                             NL
+    "nobody = r"                                                             NL
+    ""                                                                       NL;
 
   /* Load the test authz rules. */
   SVN_ERR(authz_get_handle(&authz_cfg, contents, subpool));
@@ -1309,17 +1293,12 @@ authz(const char **msg,
   /* The authz rules for the phase 2 tests, first case (cyclic
      dependency). */
   contents =
-    "[groups]"
-    APR_EOL_STR
-    "slaves = cooks,scribes,@gladiators"
-    APR_EOL_STR
-    "gladiators = equites,thraces,@slaves"
-    APR_EOL_STR
-    APR_EOL_STR
-    "[greek:/A]"
-    APR_EOL_STR
-    "@slaves = r"
-    APR_EOL_STR;
+    "[groups]"                                                               NL
+    "slaves = cooks,scribes,@gladiators"                                     NL
+    "gladiators = equites,thraces,@slaves"                                   NL
+    ""                                                                       NL
+    "[greek:/A]"                                                             NL
+    "@slaves = r"                                                            NL;
 
   /* Load the test authz rules and check that group cycles are
      reported. */
@@ -1334,10 +1313,8 @@ authz(const char **msg,
   /* The authz rules for the phase 2 tests, second case (missing group
      definition). */
   contents =
-    "[greek:/A]"
-    APR_EOL_STR
-    "@senate = r"
-    APR_EOL_STR;
+    "[greek:/A]"                                                             NL
+    "@senate = r"                                                            NL;
 
   /* Check that references to undefined groups are reported. */
   err = authz_get_handle(&authz_cfg, contents, subpool);
@@ -1350,15 +1327,11 @@ authz(const char **msg,
 
   /* The authz rules for the phase 3 tests */
   contents =
-    "[/]"
-    APR_EOL_STR
-    "* = rw"
-    APR_EOL_STR
-    APR_EOL_STR
-    "[greek:/dir2/secret]"
-    APR_EOL_STR
-    "* ="
-    APR_EOL_STR;
+    "[/]"                                                                    NL
+    "* = rw"                                                                 NL
+    ""                                                                       NL
+    "[greek:/dir2/secret]"                                                   NL
+    "* ="                                                                    NL;
 
   /* Load the test authz rules. */
   SVN_ERR(authz_get_handle(&authz_cfg, contents, subpool));
@@ -1404,10 +1377,10 @@ commit_authz_cb(svn_repos_authz_access_t required,
 /* Test that the commit editor is taking authz into account
    properly */
 static svn_error_t *
-commit_editor_authz  (const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
+commit_editor_authz(const char **msg,
+                    svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
+                    apr_pool_t *pool)
 {
   svn_repos_t *repos;
   svn_fs_t *fs;
@@ -1457,38 +1430,26 @@ commit_editor_authz  (const char **msg,
 
   /* Load the authz rules for the greek tree. */
   authz_contents =
-    APR_EOL_STR
-    APR_EOL_STR
-    "[/]"
-    APR_EOL_STR
-    "plato = r"
-    APR_EOL_STR
-    APR_EOL_STR
-    "[/A]"
-    APR_EOL_STR
-    "plato = rw"
-    APR_EOL_STR
-    APR_EOL_STR
-    "[/A/alpha]"
-    APR_EOL_STR
-    "plato = "
-    APR_EOL_STR
-    APR_EOL_STR
-    "[/A/C]"
-    APR_EOL_STR
-    APR_EOL_STR
-    "plato = "
-    APR_EOL_STR
-    APR_EOL_STR
-    "[/A/D]"
-    APR_EOL_STR
-    "plato = rw"
-    APR_EOL_STR
-    APR_EOL_STR
-    "[/A/D/G]"
-    APR_EOL_STR
-    "plato = r"
-    ;
+    ""                                                                       NL
+    ""                                                                       NL
+    "[/]"                                                                    NL
+    "plato = r"                                                              NL
+    ""                                                                       NL
+    "[/A]"                                                                   NL
+    "plato = rw"                                                             NL
+    ""                                                                       NL
+    "[/A/alpha]"                                                             NL
+    "plato = "                                                               NL
+    ""                                                                       NL
+    "[/A/C]"                                                                 NL
+    ""                                                                       NL
+    "plato = "                                                               NL
+    ""                                                                       NL
+    "[/A/D]"                                                                 NL
+    "plato = rw"                                                             NL
+    ""                                                                       NL
+    "[/A/D/G]"                                                               NL
+    "plato = r"; /* No newline at end of file. */
 
   SVN_ERR(authz_get_handle(&authz_file, authz_contents, subpool));
 

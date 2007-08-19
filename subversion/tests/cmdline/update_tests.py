@@ -29,7 +29,8 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
- 
+from svntest.main import SVN_PROP_MERGE_INFO
+
 ######################################################################
 # Tests
 #
@@ -62,9 +63,7 @@ def detect_extra_files(node, extra_files):
       if contents is None:
         return
       else:
-        fp = open(os.path.join(wc_dir, node.path))
-        real_contents = fp.read()  # suck up contents of a test .png file
-        fp.close()
+        real_contents = svntest.main.file_read(os.path.join(wc_dir, node.path))
         if real_contents == contents:
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
@@ -81,14 +80,12 @@ def update_binary_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a binary file to the project.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
-  theta_contents = fp.read()  # suck up contents of a test .png file
-  fp.close()
-
+  theta_contents = svntest.main.file_read(
+    os.path.join(sys.path[0], "theta.bin"), 'rb')
   # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  svntest.main.file_write(theta_path, theta_contents)
-  
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+
   svntest.main.run_svn(None, 'add', theta_path)  
 
   # Created expected output tree for 'svn ci'
@@ -192,9 +189,8 @@ def update_binary_file_2(sbox):
   wc_dir = sbox.wc_dir
 
   # Suck up contents of a test .png file.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
-  theta_contents = fp.read()  
-  fp.close()
+  theta_contents = svntest.main.file_read(
+    os.path.join(sys.path[0], "theta.bin"), 'rb')
 
   # 102400 is svn_txdelta_window_size.  We're going to make sure we
   # have at least 102401 bytes of data in our second binary file (for
@@ -208,9 +204,9 @@ def update_binary_file_2(sbox):
 
   # Write our two files' contents out to disk, in A/theta and A/zeta.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  svntest.main.file_write(theta_path, theta_contents)
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
   zeta_path = os.path.join(wc_dir, 'A', 'zeta')
-  svntest.main.file_write(zeta_path, zeta_contents)
+  svntest.main.file_write(zeta_path, zeta_contents, 'wb')
 
   # Now, `svn add' those two files.
   svntest.main.run_svn(None, 'add', theta_path, zeta_path)  
@@ -546,20 +542,22 @@ def update_to_resolve_text_conflicts(sbox):
   
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu', contents= """This is the file 'mu'.
-<<<<<<< .mine
-Conflicting appended text for mu
-=======
-Original appended text for mu
->>>>>>> .r2
-""")
-  expected_disk.tweak('A/D/G/rho', contents="""This is the file 'rho'.
-<<<<<<< .mine
-Conflicting appended text for rho
-=======
-Original appended text for rho
->>>>>>> .r2
-""")
+  expected_disk.tweak('A/mu',
+                      contents="\n".join(["This is the file 'mu'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for mu",
+                                          "=======",
+                                          "Original appended text for mu",
+                                          ">>>>>>> .r2",
+                                          ""]))
+  expected_disk.tweak('A/D/G/rho',
+                      contents="\n".join(["This is the file 'rho'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for rho",
+                                          "=======",
+                                          "Original appended text for rho",
+                                          ">>>>>>> .r2",
+                                          ""]))
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
@@ -2265,13 +2263,13 @@ def update_wc_with_replaced_file(sbox):
     'iota' : Item(status='C ', wc_rev='2'),
     })
   expected_disk = svntest.main.greek_state.copy()    
-  expected_disk.tweak('iota', contents = 
-    """<<<<<<< .mine
-=======
-This is the file 'iota'.
-New line in 'iota'
->>>>>>> .r2
-""")
+  expected_disk.tweak('iota',
+                      contents="\n".join(["<<<<<<< .mine",
+                                          "=======",
+                                          "This is the file 'iota'.",
+                                          "New line in 'iota'",
+                                          ">>>>>>> .r2",
+                                          ""]))
   conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -2312,14 +2310,14 @@ New line in 'iota'
     'iota' : Item(status='C ', wc_rev='-', copied='+'),
     })
   expected_disk = svntest.main.greek_state.copy()    
-  expected_disk.tweak('iota', contents =
-    """<<<<<<< .mine
-This is the file 'mu'.
-=======
-This is the file 'iota'.
-New line in 'iota'
->>>>>>> .r2
-""")
+  expected_disk.tweak('iota',
+                      contents="\n".join(["<<<<<<< .mine",
+                                          "This is the file 'mu'.",
+                                          "=======",
+                                          "This is the file 'iota'.",
+                                          "New line in 'iota'",
+                                          ">>>>>>> .r2",
+                                          ""]))
   conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -2505,27 +2503,29 @@ def update_with_obstructing_additions(sbox):
     'A/C/nu'        : Item("This is the file 'nu'\n"),
     'A/D/H/I'       : Item(),
     'A/D/H/I/J'     : Item(props={'propname1' : 'propval-WC'}),
-    'A/D/H/I/J/eta' : Item("""<<<<<<< .mine
-This is WC file 'eta'
-=======
-This is REPOS file 'eta'
->>>>>>> .r2
-"""),
+    'A/D/H/I/J/eta' : Item("\n".join(["<<<<<<< .mine",
+                                      "This is WC file 'eta'",
+                                      "=======",
+                                      "This is REPOS file 'eta'",
+                                      ">>>>>>> .r2",
+                                      ""])),
     'A/D/H/I/K'     : Item(props={'propname1' : 'propval-SAME'}),
     'A/D/H/I/K/xi'  : Item("This is the file 'xi'\n"),
     'A/D/H/I/L'     : Item(),
-    'A/D/kappa'     : Item("""<<<<<<< .mine
-This is WC file 'kappa'
-=======
-This is REPOS file 'kappa'
->>>>>>> .r2
-""", props={'propname1' : 'propval-WC'}),
-    'A/D/epsilon'     : Item("""<<<<<<< .mine
-This is WC file 'epsilon'
-=======
-This is REPOS file 'epsilon'
->>>>>>> .r2
-""", props={'propname1' : 'propval-SAME'}),
+    'A/D/kappa'     : Item("\n".join(["<<<<<<< .mine",
+                                      "This is WC file 'kappa'",
+                                      "=======",
+                                      "This is REPOS file 'kappa'",
+                                      ">>>>>>> .r2",
+                                      ""]),
+                           props={'propname1' : 'propval-WC'}),
+    'A/D/epsilon'     : Item("\n".join(["<<<<<<< .mine",
+                                        "This is WC file 'epsilon'",
+                                        "=======",
+                                        "This is REPOS file 'epsilon'",
+                                        ">>>>>>> .r2",
+                                        ""]),
+                             props={'propname1' : 'propval-SAME'}),
     'A/D/zeta'   : Item("This is the file 'zeta'\n",
                         props={'propname1' : 'propval-WC'}),
     })
@@ -2719,20 +2719,23 @@ def update_conflicted(sbox):
     'A/mu': Item(status='CC'),
     'A/D': Item(status=' C'),
     })
-  expected_disk.tweak('iota', contents="""This is the file 'iota'.
-<<<<<<< .mine
-Conflicting appended text for iota
-=======
-Original appended text for iota
->>>>>>> .r2
-""")
-  expected_disk.tweak('A/mu', contents="""This is the file 'mu'.
-<<<<<<< .mine
-Conflicting appended text for mu
-=======
-Original appended text for mu
->>>>>>> .r2
-""", props={'prop': 'conflictval'})
+  expected_disk.tweak('iota',
+                      contents="\n".join(["This is the file 'iota'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for iota",
+                                          "=======",
+                                          "Original appended text for iota",
+                                          ">>>>>>> .r2",
+                                          ""]))
+  expected_disk.tweak('A/mu',
+                      contents="\n".join(["This is the file 'mu'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for mu",
+                                          "=======",
+                                          "Original appended text for mu",
+                                          ">>>>>>> .r2",
+                                          ""]),
+                      props={'prop': 'conflictval'})
   expected_disk.tweak('A/B/lambda', 'A/D', props={'prop': 'conflictval'})
 
   expected_status.tweak(wc_rev=2)
@@ -2797,6 +2800,7 @@ def mergeinfo_update_elision(sbox):
   alpha_COPY_path = os.path.join(wc_dir, "A", "B_COPY", "E", "alpha")
   alpha_path  = os.path.join(wc_dir, "A", "B", "E", "alpha")
   B_COPY_path = os.path.join(wc_dir, "A", "B_COPY")
+  E_COPY_path = os.path.join(wc_dir, "A", "B_COPY", "E")
   beta_path   = os.path.join(wc_dir, "A", "B", "E", "beta")
   lambda_path = os.path.join(wc_dir, "A", "B", "lambda")
 
@@ -2876,7 +2880,7 @@ def mergeinfo_update_elision(sbox):
     'F'       : Item(status='  ', wc_rev=2),
     })
   expected_merge_disk = wc.State('', {
-    ''        : Item(props={"svn:mergeinfo" : '/A/B:1,3-5'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-5'}),
     'lambda'  : Item("New content"),
     'E'       : Item(),
     'E/alpha' : Item("New content"),
@@ -2922,7 +2926,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak(wc_rev=5)
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'A/B_COPY'         : Item(props={'svn:mergeinfo' : '/A/B:1'}),
+    'A/B_COPY'         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1'}),
     'A/B_COPY/lambda'  : Item("This is the file 'lambda'.\n"),
     'A/B_COPY/E'       : Item(),
     'A/B_COPY/E/alpha' : Item("This is the file 'alpha'.\n"),
@@ -2952,7 +2956,8 @@ def mergeinfo_update_elision(sbox):
     # run_and_verify_merge doesn't support merging to a file WCPATH
     # so use run_and_verify_svn.
     svntest.actions.run_and_verify_svn(None,
-                                       ['U    ' + \
+                                       [svntest.main.merge_notify_line(3, 5),
+                                        'U    ' + \
                                         short_alpha_COPY_path + '\n'],
                                        [], 'merge', '-r2:5',
                                        sbox.repo_url + '/A/B/E/alpha',
@@ -2967,7 +2972,7 @@ def mergeinfo_update_elision(sbox):
                                         expected_alpha_status)
 
   svntest.actions.run_and_verify_svn(None, ["/A/B/E/alpha:1,3-5\n"], [],
-                                     'propget', "svn:mergeinfo",
+                                     'propget', SVN_PROP_MERGE_INFO,
                                      alpha_COPY_path)
 
   # Update WC.  The local mergeinfo (r1,3-5) on A/B_COPY/E/alpha is
@@ -2979,7 +2984,7 @@ def mergeinfo_update_elision(sbox):
     'A/B_COPY/E/beta'  : Item(status='U '),
     'A/B_COPY'         : Item(status=' U'),
     })
-  expected_disk.tweak('A/B_COPY', props={'svn:mergeinfo' : '/A/B:1,3-5'})
+  expected_disk.tweak('A/B_COPY', props={SVN_PROP_MERGE_INFO : '/A/B:1,3-5'})
   expected_disk.tweak('A/B_COPY/lambda', contents="New content")
   expected_disk.tweak('A/B_COPY/E/beta', contents="New content")
   expected_disk.tweak('A/B_COPY/E/alpha', contents="New content")
@@ -2990,6 +2995,137 @@ def mergeinfo_update_elision(sbox):
                                         expected_status,
                                         None, None, None,
                                         None, None, 1)
+
+  # Now test that an updated target's mergeinfo can itself elide.
+  # r7 - modify and commit A/B/E/alpha
+  svntest.main.file_write(alpha_path, "More new content")
+  expected_output = wc.State(wc_dir, {'A/B/E/alpha' : Item(verb='Sending')})
+  expected_status.tweak('A/B/E/alpha', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Merge r6:7 into A/B_COPY/E
+  short_E_COPY_path = shorten_path_kludge(E_COPY_path)
+  expected_output = wc.State(short_E_COPY_path, {
+    'alpha' : Item(status='U '),
+    })
+  expected_merge_status = wc.State(short_E_COPY_path, {
+    ''        : Item(status=' M', wc_rev=6),
+    'alpha' : Item(status='M ', wc_rev=6),
+    'beta'  : Item(status='  ', wc_rev=6),
+    })
+  expected_merge_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1,3-5,7'}),
+    'alpha' : Item("More new content"),
+    'beta'  : Item("New content"),
+    })
+  expected_skip = wc.State(short_E_COPY_path, { })
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_E_COPY_path, '6', '7',
+                                         sbox.repo_url + \
+                                         '/A/B/E',
+                                         expected_output,
+                                         expected_merge_disk,
+                                         expected_merge_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
+  # r8 - Commit the merge
+  expected_output = wc.State(wc_dir,
+                             {'A/B_COPY/E'       : Item(verb='Sending'),
+                              'A/B_COPY/E/alpha' : Item(verb='Sending')})
+  expected_status.tweak('A/B_COPY/E', wc_rev=8)
+  expected_status.tweak('A/B_COPY/E/alpha', wc_rev=8)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Update A/COPY_B/E back to r7
+  expected_output = wc.State(wc_dir, {
+    'A/B_COPY/E/alpha' : Item(status='U '),
+    'A/B_COPY/E'       : Item(status=' U'),
+    })
+  expected_status.tweak('A/B_COPY/E', wc_rev=7)
+  expected_status.tweak('A/B_COPY/E/alpha', wc_rev=7)
+  expected_status.tweak('A/B_COPY/E/beta', wc_rev=7)
+  expected_disk.tweak('A/B_COPY',
+                      props={SVN_PROP_MERGE_INFO : '/A/B:1,3-5'})
+  expected_disk.tweak('A/B/E/alpha', contents="More new content")
+  expected_disk.tweak('A/B_COPY/E/alpha', contents="New content")
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '7', E_COPY_path)
+
+  # Merge r6:7 to A/B_COPY
+  short_B_COPY_path = shorten_path_kludge(B_COPY_path)
+  expected_output = wc.State(short_B_COPY_path, {
+    'E/alpha' : Item(status='U '),
+    })
+  expected_merge_status = wc.State(short_B_COPY_path, {
+    ''        : Item(status=' M', wc_rev=6),
+    'lambda'  : Item(status='  ', wc_rev=6),
+    'E'       : Item(status='  ', wc_rev=7),
+    'E/alpha' : Item(status='M ', wc_rev=7),
+    'E/beta'  : Item(status='  ', wc_rev=7),
+    'F'       : Item(status='  ', wc_rev=6),
+    })
+  expected_merge_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-5,7'}),
+    'lambda'  : Item("New content"),
+    'E'       : Item(),
+    'E/alpha' : Item("More new content"),
+    'E/beta'  : Item("New content"),
+    'F'       : Item(),
+    })
+  expected_skip = wc.State(short_B_COPY_path, { })
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_B_COPY_path, '6', '7',
+                                         sbox.repo_url + \
+                                         '/A/B',
+                                         expected_output,
+                                         expected_merge_disk,
+                                         expected_merge_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1,alpha_COPY_path)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Update just A/B_COPY/E.  The mergeinfo (r1,3-5,7) reset on
+  # A/B_COPY/E by the udpate is identical to the local info on
+  # A/B_COPY, so should elide, leaving no mereginfo on E.
+  #expected_output = svntest.wc.State(wc_dir, { })
+  expected_output = wc.State(wc_dir, {
+    'A/B_COPY/E/alpha' : Item(status='G '),
+    'A/B_COPY/E/'      : Item(status=' U'),
+    })
+  expected_status.tweak('A/B_COPY', status=' M', wc_rev=6)
+  expected_status.tweak('A/B_COPY/E', status=' M', wc_rev=8)
+  expected_status.tweak('A/B_COPY/E/alpha', wc_rev=8)
+  expected_status.tweak('A/B_COPY/E/beta', wc_rev=8)
+  expected_disk.tweak('A/B_COPY',
+                      props={SVN_PROP_MERGE_INFO : '/A/B:1,3-5,7'})
+  expected_disk.tweak('A/B_COPY/E', props={})
+  expected_disk.tweak('A/B_COPY/E/alpha', contents="More new content")
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1, E_COPY_path)
 
 #######################################################################
 # Run the tests
@@ -3025,14 +3161,14 @@ test_list = [ None,
               update_xml_unsafe_dir,
               conflict_markers_matching_eol,
               update_eolstyle_handling,
-              XFail(update_copy_of_old_rev),
+              update_copy_of_old_rev,
               forced_update,
               forced_update_failures,
               XFail(update_wc_on_windows_drive),
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
               update_conflicted,
-              XFail(mergeinfo_update_elision),
+              mergeinfo_update_elision,
              ]
 
 if __name__ == '__main__':

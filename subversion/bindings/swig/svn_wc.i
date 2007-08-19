@@ -44,6 +44,11 @@
 %ignore svn_wc_external_item2_dup;
 %ignore svn_wc_revision_status;
 %ignore svn_wc_committed_queue_create;
+%ignore svn_wc_init_traversal_info;
+%ignore svn_wc_entry;
+%ignore svn_wc_notify;
+
+%ignore svn_wc_set_changelist;
 #endif
 
 /* -----------------------------------------------------------------------
@@ -61,6 +66,35 @@
   apr_hash_t *new_props
 };
 
+/*
+   svn_wc_queue_committed()
+   svn_wc_process_committed4()
+   svn_wc_process_committed3()
+   svn_wc_process_committed2()
+   svn_wc_process_committed()
+*/
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *wcprop_changes
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
+{
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+
+  $1 = svn_swig_py_proparray_from_dict($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+
+/* svn_wc_match_ignore_list() */
+%apply const apr_array_header_t *STRINGLIST {
+  apr_array_header_t *list
+};
 
 /* svn_wc_cleanup2() */
 %apply const char *MAY_BE_NULL {
@@ -73,7 +107,6 @@
     const char *rev_author,
     const char *trail_url
 }
-
 
 %hash_argout_typemap(entries, svn_wc_entry_t *)
 %hash_argout_typemap(externals_p, svn_wc_external_item_t *)
@@ -107,23 +140,33 @@
                   )
 #endif
 
-#ifdef SWIGRUBY
+#ifndef SWIGPERL
 %callback_typemap(svn_wc_status_func2_t status_func, void *status_baton,
-                  ,
+                  svn_swig_py_status_func2,
                   ,
                   svn_swig_rb_wc_status_func)
+#endif
 
+#ifdef SWIGRUBY
 %callback_typemap(const svn_wc_diff_callbacks2_t *callbacks,
                   void *callback_baton,
                   ,
                   ,
                   svn_swig_rb_wc_diff_callbacks2())
 
-%callback_typemap(svn_wc_relocation_validator2_t validator,
+%callback_typemap(svn_wc_relocation_validator3_t validator,
                   void *validator_baton,
                   ,
                   ,
-                  svn_swig_rb_wc_relocation_validator2)
+                  svn_swig_rb_wc_relocation_validator3)
+#endif
+
+
+#ifdef SWIGRUBY
+%apply const char *NOT_NULL {
+  const char *changelist,
+  const char *matching_changelist
+};
 #endif
 
 
@@ -146,6 +189,32 @@
 };
 #endif
 
+/*
+   svn_wc_get_update_editor3()
+   svn_wc_get_switch_editor3()
+*/
+#ifdef SWIGRUBY
+%typemap(in) svn_revnum_t *target_revision
+{
+  $1 = apr_palloc(_global_pool, sizeof(svn_revnum_t));
+  *$1 = NUM2LONG($input);
+}
+
+%typemap(argout) svn_revnum_t *target_revision
+{
+  %append_output(LONG2NUM((long)$1));
+}
+#endif
+
+/* svn_wc_notify_t */
+#ifdef SWIGRUBY
+%typemap(out) svn_error_t *err
+{
+  $result = $1 ? svn_swig_rb_svn_error_to_rb_error($1) : Qnil;
+}
+#endif
+
+
 /* ----------------------------------------------------------------------- */
 
 %{
@@ -153,6 +222,29 @@
 %}
 
 %include svn_wc_h.swg
+
+
+#ifdef SWIGRUBY
+%header %{
+#define _svn_wc_set_changelist svn_wc_set_changelist
+%}
+%rename(svn_wc_set_changelist) _svn_wc_set_changelist;
+%apply const char *MAY_BE_NULL {
+  const char *changelist_may_be_null,
+  const char *matching_changelist_may_be_null
+}
+svn_error_t *
+_svn_wc_set_changelist(const apr_array_header_t *paths,
+                       const char *changelist_may_be_null,
+                       const char *matching_changelist_may_be_null,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *pool);
+#endif
+
+
 
 %inline %{
 static svn_error_t *
@@ -223,6 +315,45 @@ struct svn_wc_committed_queue_t
   };
 
   ~svn_wc_committed_queue_t() {
+  };
+}
+
+/* Dummy declaration */
+struct svn_wc_traversal_info_t
+{
+};
+
+%extend svn_wc_traversal_info_t
+{
+  svn_wc_traversal_info_t(apr_pool_t *pool) {
+    return svn_wc_init_traversal_info(pool);
+  };
+
+  ~svn_wc_traversal_info_t() {
+  };
+}
+
+%extend svn_wc_entry_t
+{
+  svn_wc_entry_t(const char *path, svn_wc_adm_access_t *adm_access,
+                 svn_boolean_t show_hidden, apr_pool_t *pool) {
+    const svn_wc_entry_t *self;
+    svn_wc_entry(&self, path, adm_access, show_hidden, pool);
+    return (svn_wc_entry_t *)self;
+  };
+
+  ~svn_wc_entry_t() {
+  };
+}
+
+%extend svn_wc_notify_t
+{
+  svn_wc_notify_t(const char *path, svn_wc_notify_action_t action,
+                  apr_pool_t *pool) {
+    return svn_wc_create_notify(path, action, pool);
+  };
+
+  ~svn_wc_notify_t() {
   };
 }
 #endif

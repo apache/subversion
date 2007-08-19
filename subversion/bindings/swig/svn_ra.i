@@ -77,6 +77,13 @@
                   )
 #endif
 
+#ifdef SWIGRUBY
+%callback_typemap(const svn_ra_reporter3_t *reporter, void *report_baton,
+                  ,
+                  ,
+                  svn_swig_rb_ra_reporter3)
+#endif
+
 #ifndef SWIGPERL
 %callback_typemap(svn_ra_file_rev_handler_t handler, void *handler_baton,
                   svn_swig_py_ra_file_rev_handler_func,
@@ -91,7 +98,11 @@
                   svn_swig_rb_ra_lock_callback)
 #endif
 
-%apply apr_hash_t **MERGEHASH { apr_hash_t **mergeoutput };
+#ifdef SWIGRUBY
+%apply apr_hash_t **HASH_OF_MERGE_INFO_HASH {
+  apr_hash_t **mergeoutput
+};
+#endif
 
 /* ----------------------------------------------------------------------- */
 

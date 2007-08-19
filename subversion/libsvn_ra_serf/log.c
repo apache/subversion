@@ -49,6 +49,7 @@ typedef enum {
   CREATOR,
   DATE,
   COMMENT,
+  NBR_CHILDREN,
   ADDED_PATH,
   REPLACED_PATH,
   DELETED_PATH,
@@ -65,14 +66,8 @@ typedef struct {
   /* Temporary change path - ultimately inserted into changed_paths hash. */
   svn_log_changed_path_t *tmp_path;
 
-  /* Hashtable of paths */
-  apr_hash_t *changed_paths;
-
-  /* Other log fields */
-  svn_revnum_t version;
-  const char *creator;
-  const char *date;
-  const char *comment;
+  /* Log information */
+  svn_log_entry_t *log_entry;
 } log_info_t;
 
 typedef struct {
@@ -87,7 +82,7 @@ typedef struct {
   svn_boolean_t done;
 
   /* log receiver function and baton */
-  svn_log_message_receiver_t receiver;
+  svn_log_message_receiver2_t receiver;
   void *receiver_baton;
 } log_context_t;
 
@@ -104,9 +99,10 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       log_info_t *info;
 
       info = apr_pcalloc(parser->state->pool, sizeof(*info));
+      info->log_entry = svn_log_entry_create(parser->state->pool);
 
       info->pool = parser->state->pool;
-      info->version = SVN_INVALID_REVNUM;
+      info->log_entry->revision = SVN_INVALID_REVNUM;
 
       parser->state->private = info;
     }
@@ -116,9 +112,9 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       log_info_t *info = parser->state->private;
 
-      if (!info->changed_paths)
+      if (!info->log_entry->changed_paths)
         {
-          info->changed_paths = apr_hash_make(info->pool);
+          info->log_entry->changed_paths = apr_hash_make(info->pool);
         }
 
       info->tmp_path = apr_pcalloc(info->pool, sizeof(*info->tmp_path));
@@ -174,6 +170,10 @@ start_log(svn_ra_serf__xml_parser_t *parser,
       else if (strcmp(name.name, "comment") == 0)
         {
           push_state(parser, log_ctx, COMMENT);
+        }
+      else if (strcmp(name.name, "nbr-children") == 0)
+        {
+          push_state(parser, log_ctx, NBR_CHILDREN);
         }
       else if (strcmp(name.name, "added-path") == 0)
         {
@@ -256,11 +256,7 @@ end_log(svn_ra_serf__xml_parser_t *parser,
     {
       /* Give the info to the reporter */
       SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton,
-                                info->changed_paths,
-                                info->version,
-                                info->creator,
-                                info->date,
-                                info->comment,
+                                info->log_entry,
                                 info->pool));
 
       svn_ra_serf__xml_pop_state(parser);
@@ -268,28 +264,38 @@ end_log(svn_ra_serf__xml_parser_t *parser,
   else if (state == VERSION &&
            strcmp(name.name, "version-name") == 0)
     {
-      info->version = SVN_STR_TO_REV(info->tmp);
+      info->log_entry->revision = SVN_STR_TO_REV(info->tmp);
       info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == CREATOR &&
            strcmp(name.name, "creator-displayname") == 0)
     {
-      info->creator = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
+      info->log_entry->author = apr_pstrmemdup(info->pool, info->tmp,
+                                               info->tmp_len);
       info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == DATE &&
            strcmp(name.name, "date") == 0)
     {
-      info->date = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
+      info->log_entry->date = apr_pstrmemdup(info->pool, info->tmp,
+                                             info->tmp_len);
       info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == COMMENT &&
            strcmp(name.name, "comment") == 0)
     {
-      info->comment = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
+      info->log_entry->message = apr_pstrmemdup(info->pool, info->tmp,
+                                                info->tmp_len);
+      info->tmp_len = 0;
+      svn_ra_serf__xml_pop_state(parser);
+    }
+  else if (state == NBR_CHILDREN &&
+           strcmp(name.name, "nbr-children") == 0)
+    {
+      info->log_entry->nbr_children = atol(info->tmp);
       info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -307,7 +313,7 @@ end_log(svn_ra_serf__xml_parser_t *parser,
       path = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
       info->tmp_len = 0;
 
-      apr_hash_set(info->changed_paths, path, APR_HASH_KEY_STRING,
+      apr_hash_set(info->log_entry->changed_paths, path, APR_HASH_KEY_STRING,
                    info->tmp_path);
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -356,7 +362,9 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                      int limit,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
-                     svn_log_message_receiver_t receiver,
+                     svn_boolean_t include_merged_revisions,
+                     svn_boolean_t omit_log_text,
+                     svn_log_message_receiver2_t receiver,
                      void *receiver_baton,
                      apr_pool_t *pool)
 {
@@ -419,6 +427,20 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
     {
       svn_ra_serf__add_tag_buckets(buckets,
                                    "S:strict-node-history", NULL,
+                                   session->bkt_alloc);
+    }
+
+  if (include_merged_revisions)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:include-merged-revisions", NULL,
+                                   session->bkt_alloc);
+    }
+
+  if (omit_log_text)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:omit-log-text", NULL,
                                    session->bkt_alloc);
     }
 

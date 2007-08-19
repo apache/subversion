@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -250,6 +250,63 @@ def basic_mkdir_url(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status)
+
+
+#----------------------------------------------------------------------
+def basic_mkdir_url_with_parents(sbox):
+  "basic mkdir URL, including parent directories"
+
+  sbox.build()
+
+  Y_Z_url = sbox.repo_url + '/Y/Z'
+  svntest.actions.run_and_verify_svn("erroneous mkdir URL URL/subdir",
+                                     [],
+                                     ".*Try 'svn mkdir --parents' instead.*",
+                                     'mkdir', '-m', 'log_msg',
+                                     Y_Z_url)
+
+  svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
+                                     ["\n", "Committed revision 2.\n"], [],
+                                     'mkdir', '-m', 'log_msg',
+                                     '--parents', Y_Z_url)
+
+  expected_output = wc.State(sbox.wc_dir, {
+    'Y'   : Item(status='A '),
+    'Y/Z' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'Y'   : Item(),
+    'Y/Z' : Item()
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
+  expected_status.add({
+    'Y'   : Item(status='  ', wc_rev=2),
+    'Y/Z' : Item(status='  ', wc_rev=2)
+    })
+
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
+#----------------------------------------------------------------------
+def basic_mkdir_wc_with_parents(sbox):
+  "basic mkdir, including parent directories"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  Y_Z_path = os.path.join(wc_dir, 'Y', 'Z')
+
+  svntest.actions.run_and_verify_svn("erroneous mkdir dir/subdir", [],
+                                     ".*Try 'svn mkdir --parents' instead.*",
+                                     'mkdir', Y_Z_path)
+
+  svntest.actions.run_and_verify_svn("mkdir dir/subdir", None, [],
+                                     'mkdir', '--parents', Y_Z_path)
+  
 
 #----------------------------------------------------------------------
 def basic_corruption(sbox):
@@ -528,20 +585,22 @@ def basic_conflict(sbox):
   
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu', contents="""This is the file 'mu'.
-<<<<<<< .mine
-Conflicting appended text for mu
-=======
-Original appended text for mu
->>>>>>> .r2
-""")
-  expected_disk.tweak('A/D/G/rho', contents="""This is the file 'rho'.
-<<<<<<< .mine
-Conflicting appended text for rho
-=======
-Original appended text for rho
->>>>>>> .r2
-""")
+  expected_disk.tweak('A/mu',
+                      contents="\n".join(["This is the file 'mu'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for mu",
+                                          "=======",
+                                          "Original appended text for mu",
+                                          ">>>>>>> .r2",
+                                          ""]))
+  expected_disk.tweak('A/D/G/rho',
+                      contents="\n".join(["This is the file 'rho'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for rho",
+                                          "=======",
+                                          "Original appended text for rho",
+                                          ">>>>>>> .r2",
+                                          ""]))
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, '2')
@@ -1487,6 +1546,61 @@ def basic_add_no_ignores(sbox):
       raise svntest.actions.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
+def basic_add_parents(sbox):
+  'test add --parents'
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  X_path = os.path.join(wc_dir, 'X')
+  Y_path = os.path.join(X_path, 'Y')
+  Z_path = os.path.join(Y_path, 'Z')
+  zeta_path = os.path.join(Z_path, 'zeta')
+  omicron_path = os.path.join(Y_path, 'omicron')
+
+  # Create some unversioned directories
+  os.mkdir(X_path, 0755)
+  os.mkdir(Y_path, 0755)
+  os.mkdir(Z_path, 0755)
+
+  # Create new files
+  z = open(zeta_path, 'w')
+  z.write("This is the file 'zeta'.\n")
+  z.close()
+  o = open(omicron_path, 'w')
+  o.write("This is the file 'omicron'.\n")
+  o.close()
+
+  # Add the file, with it's parents
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', '--parents',
+                                     zeta_path)
+
+  # Build expected state
+  expected_output = wc.State(wc_dir, {
+      'X'            : Item(verb='Adding'),
+      'X/Y'          : Item(verb='Adding'),
+      'X/Y/Z'        : Item(verb='Adding'),
+      'X/Y/Z/zeta'   : Item(verb='Adding'),
+    })
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/zeta'  : Item(status='  ', wc_rev=2),
+    })
+
+  # Commit and verify                                     
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+#----------------------------------------------------------------------
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
 
@@ -1769,6 +1883,116 @@ def windows_paths_in_repos(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', 'log_msg', 
                                     chi_url)
 
+def basic_rm_urls_one_repo(sbox):
+  "remotely remove directories from one repository"
+
+  sbox.build()
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+
+  # Test 1: remotely delete one directory
+  E_url = repo_url + '/A/B/E'
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', 'log_msg', 
+                                     E_url)
+
+  # Create expected trees and update
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E' : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  # Test 2: remotely delete two directories in the same repository
+  F_url = repo_url + '/A/B/F'
+  C_url = repo_url + '/A/C'
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', 'log_msg', 
+                                     F_url, C_url)
+
+  # Create expected output tree for an update of wc_backup.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F' : Item(status='D '),
+    'A/C'   : Item(status='D '),
+    })
+
+  # Create expected disk tree for the update
+  expected_disk.remove('A/B/F', 'A/C')
+
+  # Create expected status tree for the update.
+  expected_status.tweak(wc_rev = 3)
+  expected_status.remove('A/B/F', 'A/C')
+
+  # Do the update and check the results in three ways.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+def basic_rm_urls_multi_repos(sbox):
+  "remotely remove directories from two repositories"
+
+  sbox.build()
+  repo_url = sbox.repo_url
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+
+  # create a second repository and working copy
+  other_repo_dir, other_repo_url = sbox.add_repo_path("other")
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
+  other_wc_dir = sbox.add_wc_path("other")
+  svntest.actions.run_and_verify_svn("Unexpected error during co",
+                                     SVNAnyOutput, [], "co",
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     other_repo_url,
+                                     other_wc_dir)
+
+  # Remotely delete two x two directories in the two repositories
+  F_url = repo_url + '/A/B/F'
+  C_url = repo_url + '/A/C'
+  F2_url = other_repo_url + '/A/B/F'
+  C2_url = other_repo_url + '/A/C'
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', 'log_msg', 
+                                     F_url, C_url, F2_url, C2_url)
+
+  # Check that the two rm's to each of the repositories were handled in one
+  # revision (per repo)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F' : Item(status='D '),
+    'A/C'   : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/F', 'A/C')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/B/F', 'A/C')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  expected_status = svntest.actions.get_virginal_state(other_wc_dir, 2)
+  expected_status.remove('A/B/F', 'A/C')
+  expected_output = svntest.wc.State(other_wc_dir, {
+    'A/B/F' : Item(status='D '),
+    'A/C'   : Item(status='D '),
+    })
+
+  svntest.actions.run_and_verify_update(other_wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -1779,6 +2003,8 @@ test_list = [ None,
               basic_commit,
               basic_update,
               basic_mkdir_url,
+              basic_mkdir_url_with_parents,
+              basic_mkdir_wc_with_parents,
               basic_corruption,
               basic_merging_update,
               basic_conflict,
@@ -1794,6 +2020,7 @@ test_list = [ None,
               nonexistent_repository,
               basic_auth_cache,
               basic_add_ignores,
+              basic_add_parents,
               uri_syntax,
               basic_checkout_file,
               basic_info,
@@ -1806,10 +2033,9 @@ test_list = [ None,
               cat_added_PREV,
               ls_space_in_repo_name,
               delete_keep_local,
-              windows_paths_in_repos
-              ### todo: more tests needed:
-              ### test "svn rm http://some_url"
-              ### not sure this file is the right place, though.
+              windows_paths_in_repos,
+              basic_rm_urls_one_repo,
+              XFail(basic_rm_urls_multi_repos),
              ]
 
 if __name__ == '__main__':

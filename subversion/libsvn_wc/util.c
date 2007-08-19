@@ -29,6 +29,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "wc.h"   /* just for prototypes of things in this .c file */
+#include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
 
@@ -126,6 +127,7 @@ svn_wc_create_notify(const char *path,
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
   ret->changelist_name = NULL;
+  ret->merge_range = NULL;
 
   return ret;
 }
@@ -160,6 +162,8 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify,
     }
   if (ret->changelist_name)
     ret->changelist_name = apr_pstrdup(pool, ret->changelist_name);
+  if (ret->merge_range)
+    ret->merge_range = svn_merge_range_dup(ret->merge_range, pool);
 
   return ret;
 }
@@ -227,4 +231,63 @@ svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
      it. */
 
   return svn_cstring_match_glob_list(str, list);
+}
+
+svn_error_t *
+svn_wc__path_switched(const char *wc_path,
+                      svn_boolean_t *switched,
+                      const svn_wc_entry_t *entry,
+                      apr_pool_t *pool)
+{
+  const char *wc_parent_path, *parent_child_url, *wc_basename;
+  const svn_wc_entry_t *parent_entry;
+  svn_wc_adm_access_t *parent_adm_access;
+  svn_error_t *err;
+
+  SVN_ERR(svn_path_get_absolute(&wc_path, wc_path, pool));
+
+  if (svn_dirent_is_root(wc_path, strlen(wc_path)))
+    {
+      *switched = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  wc_parent_path = svn_path_dirname(wc_path, pool);
+  err = svn_wc_adm_open3(&parent_adm_access, NULL, wc_parent_path, FALSE, 0,
+                         NULL, NULL, pool);
+
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          *switched = FALSE;
+        }
+
+      return err;
+    }
+
+  SVN_ERR(svn_wc__entry_versioned(&parent_entry, wc_parent_path,
+                                  parent_adm_access, FALSE, pool));
+  SVN_ERR(svn_wc_adm_close(parent_adm_access));
+  wc_basename = svn_path_basename(wc_path, pool);
+
+  if (!svn_path_is_uri_safe(wc_basename))
+    wc_basename = svn_path_uri_encode(wc_basename, pool);
+
+  /* Without complete entries (and URLs) for WC_PATH and it's parent
+     we return SVN_ERR_ENTRY_MISSING_URL. */
+  if (!parent_entry->url || !entry->url)
+    {
+      const char *no_url_path = parent_entry->url ? wc_path : wc_parent_path;
+      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL, 
+                               _("Cannot find a URL for '%s'"),
+                               svn_path_local_style(no_url_path, pool));
+    }
+
+  parent_child_url = svn_path_join(parent_entry->url, wc_basename, pool);
+  *switched = strcmp(parent_child_url, entry->url);
+
+  return SVN_NO_ERROR;
 }

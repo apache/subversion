@@ -26,6 +26,7 @@
 #include <http_protocol.h>
 #include <http_log.h>
 #include <ap_config.h>
+#include <ap_provider.h>
 #include <apr_uri.h>
 #include <mod_dav.h>
 #if AP_MODULE_MAGIC_AT_LEAST(20060110,0)
@@ -34,6 +35,7 @@ APR_OPTIONAL_FN_TYPE(ap_satisfies) *ap_satisfies;
 #endif
 
 #include "mod_dav_svn.h"
+#include "mod_authz_svn.h"
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_string.h"
@@ -95,6 +97,48 @@ static const command_rec authz_svn_cmds[] =
     { NULL }
 };
 
+/*
+ * Get the, possibly cached, svn_authz_t for this request.
+ */
+static svn_authz_t *get_access_conf(request_rec *r,
+                                    authz_svn_config_rec *conf)
+{
+    const char *cache_key = NULL;
+    void *user_data = NULL;
+    svn_authz_t *access_conf = NULL;
+    svn_error_t *svn_err;
+    char errbuf[256];
+
+    cache_key = apr_pstrcat(r->pool, "mod_authz_svn:",
+                            conf->access_file, NULL);
+    apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
+    access_conf = user_data;
+    if (access_conf == NULL) {
+        svn_err = svn_repos_authz_read(&access_conf, conf->access_file,
+                                       TRUE, r->connection->pool);
+        if (svn_err) {
+            ap_log_rerror(APLOG_MARK, APLOG_ERR,
+                          /* If it is an error code that APR can make sense
+                             of, then show it, otherwise, pass zero to avoid
+                             putting "APR does not understand this error code"
+                             in the error log. */
+                          ((svn_err->apr_err >= APR_OS_START_USERERR &&
+                            svn_err->apr_err < APR_OS_START_CANONERR) ?
+                          0 : svn_err->apr_err),
+                          r, "Failed to load the AuthzSVNAccessFile: %s",
+                          svn_err_best_message(svn_err,
+                                               errbuf, sizeof(errbuf)));
+            svn_error_clear(svn_err);
+            access_conf = NULL;
+        } else {
+            /* Cache the open repos for the next request on this connection */
+            apr_pool_userdata_set(access_conf, cache_key,
+                                  NULL, r->connection->pool);
+        }
+    }
+    return access_conf;
+}
+
 /* Check if the current request R is allowed.  Upon exit *REPOS_PATH_REF
  * will contain the path and repository name that an operation was requested
  * on in the form 'name:path'.  *DEST_REPOS_PATH_REF will contain the
@@ -121,8 +165,6 @@ static int req_check_access(request_rec *r,
     svn_boolean_t authz_access_granted = FALSE;
     svn_authz_t *access_conf = NULL;
     svn_error_t *svn_err;
-    const char *cache_key;
-    void *user_data;
     char errbuf[256];
 
     switch (r->method_number) {
@@ -239,33 +281,11 @@ static int req_check_access(request_rec *r,
     }
 
     /* Retrieve/cache authorization file */
-    cache_key = apr_pstrcat(r->pool, "mod_authz_svn:", conf->access_file, NULL);
-    apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
-    access_conf = user_data;
-    if (access_conf == NULL) {
-        svn_err = svn_repos_authz_read(&access_conf, conf->access_file,
-                                       TRUE, r->connection->pool);
-        if (svn_err) {
-            ap_log_rerror(APLOG_MARK, APLOG_ERR,
-                          /* If it is an error code that APR can make sense
-                             of, then show it, otherwise, pass zero to avoid
-                             putting "APR does not understand this error code"
-                             in the error log. */
-                          ((svn_err->apr_err >= APR_OS_START_USERERR &&
-                            svn_err->apr_err < APR_OS_START_CANONERR) ?
-                           0 : svn_err->apr_err),
-                          r, "Failed to load the AuthzSVNAccessFile: %s",
-                          svn_err_best_message(svn_err,
-                                               errbuf, sizeof(errbuf)));
-            svn_error_clear(svn_err);
-
+    access_conf = get_access_conf(r,conf);
+    if(access_conf == NULL)
+        {
             return DECLINED;
         }
-
-        /* Cache the open repos for the next request on this connection */
-        apr_pool_userdata_set(access_conf, cache_key,
-                              NULL, r->connection->pool);
-    }
 
     /* Perform authz access control.
      *
@@ -405,6 +425,70 @@ static void log_access_verdict(const char *file, int line,
                         r->method, repos_path);
       }
   }
+}
+
+/*
+ * This function is used as a provider to allow mod_dav_svn to bypass the
+ * generation of an apache request when checking GET access from
+ * "mod_dav_svn/authz.c" .
+ */
+static int subreq_bypass(request_rec *r,
+                         const char *repos_path,
+                         const char *repos_name)
+{
+    svn_error_t *svn_err = NULL;
+    svn_authz_t *access_conf = NULL;
+    authz_svn_config_rec *conf = NULL;
+    svn_boolean_t authz_access_granted = FALSE;
+    char errbuf[256];
+
+    conf = ap_get_module_config(r->per_dir_config,
+                                &authz_svn_module);
+
+    /* If configured properly, this should never be true, but just in case. */
+    if (!conf->anonymous || !conf->access_file) {
+      log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
+      return HTTP_FORBIDDEN;
+    }
+
+    /* Retrieve authorization file */
+    access_conf = get_access_conf(r,conf);
+    if(access_conf == NULL)
+        return HTTP_FORBIDDEN;
+
+    /* Perform authz access control.
+     * See similarly labeled comment in req_check_access.
+     */
+    if (repos_path) {
+        svn_err = svn_repos_authz_check_access(access_conf, repos_name,
+                                               repos_path, r->user,
+                                               svn_authz_none|svn_authz_read,
+                                               &authz_access_granted,
+                                               r->pool);
+        if (svn_err) {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR,
+                        /* If it is an error code that APR can make
+                           sense of, then show it, otherwise, pass
+                           zero to avoid putting "APR does not
+                           understand this error code" in the error
+                           log. */
+                        ((svn_err->apr_err >= APR_OS_START_USERERR &&
+                          svn_err->apr_err < APR_OS_START_CANONERR) ?
+                         0 : svn_err->apr_err),
+                        r, "Failed to perform access control: %s",
+                        svn_err_best_message(svn_err, errbuf, sizeof(errbuf)));
+          svn_error_clear(svn_err);
+          return HTTP_FORBIDDEN;
+        }
+        if (!authz_access_granted) {
+          log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
+          return HTTP_FORBIDDEN;
+        }
+    }
+
+    log_access_verdict(APLOG_MARK, r, 1, repos_path, NULL);
+
+    return OK;
 }
 
 /*
@@ -552,6 +636,11 @@ static void register_hooks(apr_pool_t *p)
 #if AP_MODULE_MAGIC_AT_LEAST(20060110,0)
     ap_hook_optional_fn_retrieve(import_ap_satisfies, NULL, NULL, APR_HOOK_MIDDLE);
 #endif
+    ap_register_provider(p,
+                         AUTHZ_SVN__SUBREQ_BYPASS_PROV_GRP,
+                         AUTHZ_SVN__SUBREQ_BYPASS_PROV_NAME,
+                         AUTHZ_SVN__SUBREQ_BYPASS_PROV_VER,
+                         (void*)subreq_bypass);
 }
 
 module AP_MODULE_DECLARE_DATA authz_svn_module =

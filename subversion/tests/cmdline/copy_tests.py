@@ -23,6 +23,8 @@ import stat, os, re
 import svntest
 from svntest import SVNAnyOutput
 
+from svntest.main import SVN_PROP_MERGE_INFO
+
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
@@ -164,7 +166,7 @@ is only relevant when WC_COPY is true."""
   # Verify both content and props have been copied
   props = { 'phony-prop' : '*' }
   if not wc_copy or contact_repos_for_merge_info:
-    props['svn:mergeinfo'] = '/A/D/G/pi:1-2'
+    props[SVN_PROP_MERGE_INFO] = '/A/D/G/pi:1-2'
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
                       props=props)
@@ -921,7 +923,7 @@ def wc_to_repos(sbox):
                            (H2_url, '/A/D/H:1'),
                            (H2_url + '/beta', '/A/B/E/beta:1')):
     svntest.actions.run_and_verify_svn(None, [merge_info + '\n'], [],
-                                       'propget', 'svn:mergeinfo', dest)
+                                       'propget', SVN_PROP_MERGE_INFO, dest)
 
   # check local property was copied
   svntest.actions.run_and_verify_svn(None, ['bar\n'], [], 'propget', 'foo',
@@ -1052,7 +1054,7 @@ def repos_to_wc(sbox):
   # Validate that the merge info of the copy destination matches the
   # implied merge info from the copy source.
   svntest.actions.run_and_verify_svn(None, ['/A/B:1\n'], [],
-                                     'propget', 'svn:mergeinfo',
+                                     'propget', SVN_PROP_MERGE_INFO,
                                      os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
@@ -2608,6 +2610,93 @@ def copy_move_added_paths(sbox):
     if not os.path.exists(path):
       raise svntest.Failure("Unversioned path '%s' not found." % path)
 
+def copy_added_paths_with_props(sbox):
+  "copy added uncommitted paths with props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new file, schedule it for addition and set properties
+  upsilon_path = os.path.join(wc_dir, 'A', 'D', 'upsilon')
+  svntest.main.file_write(upsilon_path, "This is the file 'upsilon'\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', upsilon_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'foo', 'bar', upsilon_path)
+
+  # Create a dir and schedule it for addition and set properties
+  I_path = os.path.join(wc_dir, 'A', 'D', 'I')
+  os.mkdir(I_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', I_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'foo', 'bar', I_path)
+  
+  # Verify all the adds took place correctly.
+  expected_status_after_adds = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status_after_adds.add({
+    'A/D/upsilon'   : Item(status='A ', wc_rev='0'),
+    'A/D/I'         : Item(status='A ', wc_rev='0'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status_after_adds)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/D/upsilon' : Item(props={'foo' : 'bar'},
+                         contents="This is the file 'upsilon'\n"),
+    'A/D/I'       : Item(props={'foo' : 'bar'}),
+    })
+
+  # Read disk state with props
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+
+  # Compare actual vs. expected disk trees.
+  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+
+  # Copy added dir K to dir A/C
+  I_copy_path = os.path.join(wc_dir, 'A', 'C', 'I')
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     I_path, I_copy_path)
+
+  # Copy added file A/upsilon into dir A/C
+  upsilon_copy_path = os.path.join(wc_dir, 'A', 'C', 'upsilon')
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     upsilon_path, upsilon_copy_path)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/upsilon'     : Item(verb='Adding'),
+    'A/D/I'           : Item(verb='Adding'),
+    'A/C/upsilon'     : Item(verb='Adding'),
+    'A/C/I'           : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/upsilon'     : Item(status='  ', wc_rev=2),
+    'A/D/I'           : Item(status='  ', wc_rev=2),
+    'A/C/upsilon'     : Item(status='  ', wc_rev=2),
+    'A/C/I'           : Item(status='  ', wc_rev=2),
+    })
+
+  # Tweak expected disk tree
+  expected_disk.add({
+    'A/C/upsilon' : Item(props={'foo' : 'bar'},
+                         contents="This is the file 'upsilon'\n"),
+    'A/C/I'       : Item(props={'foo' : 'bar'}),
+    })
+  
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+  # Read disk state with props
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+
+  # Compare actual vs. expected disk trees.
+  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
 
 def copy_added_paths_to_URL(sbox):
   "copy added path to URL"
@@ -2664,7 +2753,7 @@ def copy_added_paths_to_URL(sbox):
   # Validate that the merge info of the copy destination matches the
   # implied merge info from the copy source.
   svntest.actions.run_and_verify_svn(None, ['\n'], [], 'propget',
-                                     'svn:mergeinfo', upsilon_copy_URL)
+                                     SVN_PROP_MERGE_INFO, upsilon_copy_URL)
 
   # Copy added dir A/D/I to URL://A/D/G/I
   I_copy_URL = sbox.repo_url + '/A/D/G/I'
@@ -3233,7 +3322,7 @@ def copy_peg_rev_local_files(sbox):
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
     'sigma' : Item(contents=psi_text,
-                   props={ 'svn:mergeinfo' : '/A/D/H/psi:1' }),
+                   props={ SVN_PROP_MERGE_INFO : '/A/D/H/psi:1' }),
     })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
@@ -3302,7 +3391,7 @@ def copy_peg_rev_local_dirs(sbox):
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
-    'A/J'         : Item(props={ 'svn:mergeinfo' : '/A/B/E:1' }),
+    'A/J'         : Item(props={ SVN_PROP_MERGE_INFO : '/A/B/E:1' }),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
     'A/J/beta'  : Item(contents="This is the file 'beta'.\n"),
     })
@@ -3350,7 +3439,7 @@ def copy_peg_rev_url(sbox):
   # Validate that the merge info of the copy destination matches the
   # implied merge info from the copy source.
   svntest.actions.run_and_verify_svn(None, ['/A/D/H/psi:1\n'], [],
-                                     'propget', 'svn:mergeinfo', sigma_url)
+                                     'propget', SVN_PROP_MERGE_INFO, sigma_url)
 
   # Update to HEAD and verify disk contents
   expected_output = svntest.wc.State(wc_dir, {
@@ -3367,6 +3456,229 @@ def copy_peg_rev_url(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.add({
     'sigma' : Item(status='  ', wc_rev=3)
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+# Test copying an older revision of a wc directory in the wc.
+def old_dir_wc_to_wc(sbox):
+  "copy old revision of wc dir to new dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  E = os.path.join(wc_dir, 'A', 'B', 'E')
+  E2 = os.path.join(wc_dir, 'E2')
+  E_url = sbox.repo_url + '/A/B/E'
+  alpha_url = E_url + '/alpha'
+
+  # delete E/alpha in r2
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', '', alpha_url)
+
+  # delete E in r3
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', '', E_url)
+
+  # Copy an old revision of E into a new path in the WC
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-r1', E, E2)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'E2'      : Item(verb='Adding'),
+    })
+
+  # Created expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'E2' : Item(status='  ', wc_rev=4),
+    'E2/alpha'  : Item(status='  ', wc_rev=4),
+    'E2/beta'  : Item(status='  ', wc_rev=4),
+    })
+  # Commit the one file.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+
+#----------------------------------------------------------------------
+# Test copying and creating parents in the wc
+
+def copy_make_parents_wc_wc(sbox):
+  "svn cp --parents WC_PATH WC_PATH"
+   
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  new_iota_path = os.path.join(wc_dir, 'X', 'Y', 'Z', 'iota')
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
+                                     iota_path, new_iota_path)
+
+  # Create expected output
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'           : Item(verb='Adding'),
+    'X/Y'         : Item(verb='Adding'),
+    'X/Y/Z'       : Item(verb='Adding'),
+    'X/Y/Z/iota'  : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  
+  # Add the moved files
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+#----------------------------------------------------------------------
+# Test copying and creating parents from the repo to the wc
+
+def copy_make_parents_repo_wc(sbox):
+  "svn cp --parents URL WC_PATH"
+   
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_url = sbox.repo_url + '/iota'
+  new_iota_path = os.path.join(wc_dir, 'X', 'Y', 'Z', 'iota')
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
+                                     iota_url, new_iota_path)
+
+  # Create expected output
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'           : Item(verb='Adding'),
+    'X/Y'         : Item(verb='Adding'),
+    'X/Y/Z'       : Item(verb='Adding'),
+    'X/Y/Z/iota'  : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  
+  # Add the moved files
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+
+#----------------------------------------------------------------------
+# Test copying and creating parents from the wc to the repo
+
+def copy_make_parents_wc_repo(sbox):
+  "svn cp --parents WC_PATH URL"
+   
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  new_iota_url = sbox.repo_url + '/X/Y/Z/iota'
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
+                                     '-m', 'log msg',
+                                     iota_path, new_iota_url)
+
+  # Update to HEAD and verify disk contents
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'           : Item(status='A '),
+    'X/Y'         : Item(status='A '),
+    'X/Y/Z'       : Item(status='A '),
+    'X/Y/Z/iota'  : Item(status='A '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'X'           : Item(),
+    'X/Y'         : Item(),
+    'X/Y/Z'       : Item(),
+    'X/Y/Z/iota'  : Item(contents="This is the file 'iota'.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
+#----------------------------------------------------------------------
+# Test copying and creating parents from repo to repo
+
+def copy_make_parents_repo_repo(sbox):
+  "svn cp --parents URL URL"
+   
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_url = sbox.repo_url + '/iota'
+  new_iota_url = sbox.repo_url + '/X/Y/Z/iota'
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
+                                     '-m', 'log msg',
+                                     iota_url, new_iota_url)
+
+  # Update to HEAD and verify disk contents
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'           : Item(status='A '),
+    'X/Y'         : Item(status='A '),
+    'X/Y/Z'       : Item(status='A '),
+    'X/Y/Z/iota'  : Item(status='A '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'X'           : Item(),
+    'X/Y'         : Item(),
+    'X/Y/Z'       : Item(),
+    'X/Y/Z/iota'  : Item(contents="This is the file 'iota'.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -3428,6 +3740,7 @@ test_list = [ None,
               move_file_back_and_forth,
               move_dir_back_and_forth,
               copy_move_added_paths,
+              XFail(copy_added_paths_with_props),
               copy_added_paths_to_URL,
               XFail(move_to_relative_paths, svntest.main.is_os_windows),
               move_from_relative_paths,
@@ -3442,6 +3755,11 @@ test_list = [ None,
               copy_peg_rev_local_files,
               copy_peg_rev_local_dirs,
               copy_peg_rev_url,
+              old_dir_wc_to_wc,
+              copy_make_parents_wc_wc,
+              copy_make_parents_repo_wc,
+              copy_make_parents_wc_repo,
+              copy_make_parents_repo_repo,
              ]
 
 if __name__ == '__main__':

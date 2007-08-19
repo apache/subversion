@@ -2,7 +2,7 @@
  * mkdir-cmd.c -- Subversion mkdir command
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,7 +42,6 @@ svn_cl__mkdir(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_pool_t *subpool = svn_pool_create(pool);
   svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
@@ -70,12 +69,13 @@ svn_cl__mkdir(apr_getopt_t *os,
   else
     {
       SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
-                                         NULL, ctx->config, subpool));
+                                         NULL, ctx->config, pool));
     }
 
   ctx->revprop_table = opt_state->revprop_table;
 
-  err = svn_client_mkdir2(&commit_info, targets, ctx, subpool);
+  err = svn_client_mkdir3(&commit_info, targets, opt_state->parents,
+                          ctx, pool);
 
   if (ctx->log_msg_func3)
     err = svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err);
@@ -85,12 +85,18 @@ svn_cl__mkdir(apr_getopt_t *os,
       if (err->apr_err == APR_EEXIST)
         return svn_error_quick_wrap
           (err, _("Try 'svn add' or 'svn add --non-recursive' instead?"));
+      else if (!(opt_state->parents) &&
+               (APR_STATUS_IS_ENOENT(err->apr_err) || /* in wc */
+                err->apr_err == SVN_ERR_FS_NOT_FOUND || /* ra_local and ra_svn */
+                err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND /* ra_dav */))
+        return svn_error_quick_wrap
+          (err, _("Try 'svn mkdir --parents' instead?"));
       else
         return err;
     }
 
   if (commit_info && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, subpool));
+    SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 
   return SVN_NO_ERROR;
 }

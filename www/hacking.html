@@ -320,6 +320,9 @@ to ask for review on the developer mailing list.</p>
 <li><p><tt>subversion/include/</tt><br />
     Public header files for users of Subversion libraries.</p>
 </li>
+<li><p><tt>subversion/include/private/</tt><br />
+    Private header files shared internally by Subversion libraries.</p>
+</li>
 <li><p><tt>subversion/libsvn_fs/</tt><br />
     The versioning "filesystem" API.</p>
 </li>
@@ -596,7 +599,12 @@ as you might think, and if you'd like to become one of them, then add
      to quote them (e.g. "Can't find '/path/to/repos/userfile'").</p></li>
 
 <li><p>When including path or filenames in the error string, be sure
-     to convert them using 'svn_path_local_style()' before inclusion.</p></li>
+     to convert them using <a
+     href="http://svn.collab.net/svn-doxygen/svn__path_8h.html#a1"
+     ><tt>svn_path_local_style()</tt></a> before inclusion (since
+     paths passed to and from Subversion APIs are assumed to be
+     in <a href="http://svn.collab.net/svn-doxygen/svn__path_8h.html#a0"
+     >canonical form</a>).</p></li>
 
 <li><p>Don't use Subversion-specific abbreviations (e.g. use "repository"
      instead of "repo", "working copy" instead of "wc").</p></li>
@@ -633,6 +641,16 @@ as you might think, and if you'd like to become one of them, then add
 conventions:</p>
 
 <ul>
+<li><p>When using a path or file name as input to most <a
+     href="http://svn.collab.net/svn-doxygen/">Subversion APIs</a>, be
+     sure to convert them to Subversion's internal/canonical form
+     using the <a href="http://svn.collab.net/svn-doxygen/svn__path_8h.html#a0"
+     ><tt>svn_path_internal_style()</tt></a> API.  Alternately, when
+     receiving a path or file name as output from a Subversion API,
+     convert them into the expected form for your platform using the 
+     <a href="http://svn.collab.net/svn-doxygen/svn__path_8h.html#a1"
+     ><tt>svn_path_local_style()</tt></a> API.</p></li>
+
 <li><p>Use only spaces for indenting code, never tabs.  Tab display
       width is not standardized enough, and anyway it's easier to
       manually adjust indentation that uses spaces.</p>
@@ -651,13 +669,13 @@ conventions:</p>
       library-private header file (such as libsvn_wc/wc.h) must be signified
       by two underscores after the library prefix (such as
       svn_wc__ensure_directory).  All declarations private to a single file
-      (such as the static function get_entry_url inside
-      libsvn_wc/update_editor.c) do not require any additional namespace
-      decorations.  Symbols that need to be used outside a library, but
-      still are not public are put in a public header, but use the
-      double underscore notation.  Such symbols may be used by
-      Subversion core code only, and we try to be restrictive
-      regarding the introduction of such entities.</p>
+      (such as the static function get_entry_url inside of
+      <tt>libsvn_wc/update_editor.c</tt>) do not require any
+      additional namespace decorations.  Symbols that need to be used
+      outside a library, but still are not public are put in a shared
+      header file in the <tt>include/private/</tt> directory, and use
+      the double underscore notation.  Such symbols may be used by
+      Subversion core code only.</p>
       
       <p>To recap:</p>
       <pre>
@@ -665,19 +683,26 @@ conventions:</p>
          svn_wc_adm_open()            
          #define SVN_WC_ADM_DIR_NAME ...
          typedef enum svn_wc_schedule_t ...
+
          /* For use within one library only: subversion/libsvn_wc/wc.h */
          svn_wc__ensure_directory()   
          #define SVN_WC__BASE_EXT ... 
          typedef struct svn_wc__compat_notify_baton_t ...
+
          /* For use within one file: subversion/libsvn_wc/update_editor.c */ 
          get_entry_url()
          struct handler_baton {
+
          /* For internal use in svn core code only:
-            subversion/include/svn_types.h */
-         #define SVN__STREAM_CHUNK_SIZE
-         /* subversion/include/svn_error.h */
-         void svn_error__locate(const char *file, long line);
+            subversion/include/private/svn_wc_private.h */
+         svn_wc__entry_versioned()
       </pre>
+
+     <p>Pre-Subversion 1.5, private symbols which needed to be used
+       outside of a library were put into into public header files,
+       using the double underscore notation.  This practice has been
+       abandoned, and any such symbols are legacy, maintained for <a
+       href="#release-numbering">backwards compatibility</a>.</p>
 </li>
 
 <li><p>In text strings that might be printed out (or otherwise made
@@ -1688,21 +1713,33 @@ voted for the change to be merged.</p>
 <div class="h2" id="patches" title="patches">
 <h2>Patch submission guidelines</h2>
 
-<p>Mail patches to dev@subversion.tigris.org, with a subject line
-that contains the word "PATCH" in all uppercase, for example</p>
+<p>Mail patches to dev@subversion.tigris.org, starting the subject
+line with <tt>[PATCH]</tt>.  This helps our patch manager spot patches
+right away.  For example:</p>
 
 <pre>
    Subject: [PATCH] fix for rev printing bug in svn status
 </pre>
 
+<p>If the patch addresses a particular issue, include the issue number
+as well: "<tt>[PATCH]&nbsp;issue&nbsp;#1729: ...</tt>".  Developers
+who are interested in that particular issue will know to read the
+mail.</p>
+
 <p>A patch submission should contain one logical change; please don't
 mix N unrelated changes in one submission&nbsp;&mdash;&nbsp;send N
 separate emails instead.</p>
 
-<p>You can put the patch's log message in the body of the email, or at
-the top of the patch attachment (see below).  Either way, it should
-follow the guidelines given in <a href="#log-messages">Writing
-log messages</a>, and be enclosed in triple square brackets, like so:</p>
+<p>Generate the patch using <tt>svn&nbsp;diff</tt> from the top of a
+Subversion trunk working copy.  If the file you're diffing is not
+under revision control, you can achieve the same effect by using
+<tt>diff&nbsp;-u</tt>.</p>
+
+<p>Please include a log message with your patch.  You can put the log
+message in the body of the email, or at the top of the patch
+attachment (see below).  Either way, it should follow the guidelines
+given in <a href="#log-messages">Writing log messages</a>, and be
+enclosed in triple square brackets, like so:</p>
 
 <pre>
    [[[
@@ -1713,41 +1750,42 @@ log messages</a>, and be enclosed in triple square brackets, like so:</p>
    ]]]
 </pre>
 
-<p>The brackets are not actually part of the log message, they are
+<p>(The brackets are not actually part of the log message, they're
 just a way to clearly mark off the log message from its surrounding
-context.</p>
+context.)</p>
 
-<p>The patch itself should be in unified diff format (e.g., "svn diff"
-or "diff -u").  Send the patch as an attachment, with a mime-type of
-text/x-diff, text/x-patch, or text/plain.  (Most people's mailreaders
+<p>If possible, send the patch as an attachment with a mime-type of
+text/x-diff, text/x-patch, or text/plain.  Most people's mailreaders
 can display those inline, and having the patch as an attachment allows
-them to extract the patch from the message conveniently.)</p>
+them to extract the patch from the message conveniently.  Never send
+patches in archived or compressed form (e.g., tar, gzip, zip, bzip2),
+because that prevents people from reviewing the patch directly in
+their mailreaders.</p>
 
 <p>If you can't attach the patch with one of these mime-types, or if
-the patch is very short, then just include it directly in the body of
-your message.  But if your mailer forces wrapping of long lines, then
-you must attach the patch, otherwise it is likely to get munged.
-Never send patches in archived or compressed form (e.g., tar, gzip,
-zip, bzip2), because that prevents people from reviewing the patch
-directly in their mailreaders.</p>
+the patch is very short, then it's okay to include it directly in the
+body of your message.  But watch out: some mail editors munge inline
+patches by inserting unasked-for line breaks in the middle of long
+lines.  If you think your mail software might do this, then please use
+an attachment instead.</p>
 
 <p>If the patch implements a new feature, make sure to describe the
 feature completely in your mail; if the patch fixes a bug, describe
 the bug in detail and give a reproduction recipe.  An exception to
 these guidelines is when the patch addresses a specific issue in the
-issues database&nbsp;&mdash;&nbsp;in that case, just make sure to
-refer to the issue number in your log message, as described
+issues database&nbsp;&mdash;&nbsp;in that case, just refer to the
+issue number in your log message, as described
 in <a href="#log-messages">Writing log messages</a>.</p>
 
 <p>It is normal for patches to undergo several rounds of feedback and
 change before being applied.  Don't be discouraged if your patch is
 not accepted immediately&nbsp;&mdash;&nbsp;it doesn't mean you goofed,
-it just means that there are a *lot* of eyes looking at every code
-submission, and it's a rare patch that doesn't have at least a little
-room for improvement.  After reading people's responses to your patch,
-make the appropriate changes and resubmit, wait for the next round of
-feedback, and lather, rinse, repeat, until some committer applies
-it.</p>
+it just means that there are a <em>lot</em> of eyes looking at every
+code submission, and it's a rare patch that doesn't have at least a
+little room for improvement.  After reading people's responses to your
+patch, make the appropriate changes and resubmit, wait for the next
+round of feedback, and lather, rinse, repeat, until some committer
+applies it.</p>
 
 <p>If you don't get a response for a while, and don't see the patch
 applied, it may just mean that people are really busy.  Go ahead and

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -783,7 +783,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_pool_t *pool);
 
 /**
- * Fetch the merge info for @a paths at @a rev, and save it to @a
+ * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
  * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
  * (from @a paths) to hashes mapping merged-from paths (of @c char *)
  * to revision range lists (of @c apr_array_header_t * with @c
@@ -797,12 +797,12 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,
-                                   apr_hash_t **mergeoutput,
-                                   const apr_array_header_t *paths,
-                                   svn_revnum_t revision,
-                                   svn_boolean_t include_parents,
-                                   apr_pool_t *pool);
+svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
+                                  apr_hash_t **mergeoutput,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t revision,
+                                  svn_boolean_t include_parents,
+                                  apr_pool_t *pool);
 
 /**
  * Ask the RA layer to update a working copy.
@@ -824,11 +824,9 @@ svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,
  * represented by the @a session's URL).  If @a update_target is the
  * empty string, the entire directory is updated.
  *
- * ### TODO(sd): The recurse parameter should probably become a depth:
+ * Update the target only as deeply as @a depth indicates.
  *
- * If @a recurse is true and the target is a directory, update
- * recursively; otherwise, update just the target and its immediate
- * entries, but not its child directories (if any).
+ * ### TODO(sd): Make sure the behavior described above is what happens.
  *
  * The working copy will be updated to @a revision_to_update_to, or the
  * "latest" revision if this arg is invalid.
@@ -842,6 +840,10 @@ svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,
  * @note The reporter provided by this function does NOT supply copy-
  * from information to the diff editor callbacks.
  *
+ * @note In order to prevent pre-1.5 servers from doing more work than
+ * needed, and sending too much data back, a pre-1.5 'recurse'
+ * directive may be sent to the server, based on @a depth.
+ *
  * @since New in 1.5.
  */
 svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
@@ -849,17 +851,14 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                void **report_baton,
                                svn_revnum_t revision_to_update_to,
                                const char *update_target,
-                               svn_boolean_t recurse,
+                               svn_depth_t depth,
                                const svn_delta_editor_t *update_editor,
                                void *update_baton,
                                apr_pool_t *pool);
 
 /**
- * Similar to @c svn_ra_do_update2, but taking @c svn_ra_reporter2_t
+ * Similar to svn_ra_do_update2(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t.
- *
- * ### TODO(sd): (see svn_ra_do_update2 about possible change of recurse
- * ### to depth as well)
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -895,9 +894,9 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
  * directory represented by the @a session's URL, or empty if the
  * entire directory is meant to be switched.
  *
- * If @a recurse is true and the target is a directory, switch
- * recursively; otherwise, switch just the target and its immediate
- * entries, but not its child directories (if any).
+ * Switch the target only as deeply as @a depth indicates.
+ *
+ * ### TODO(sd): Make sure the behavior described above is what happens.
  *
  * The working copy will be switched to @a revision_to_switch_to, or the
  * "latest" revision if this arg is invalid.
@@ -912,6 +911,10 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
  * @note The reporter provided by this function does NOT supply copy-
  * from information to the diff editor callbacks.
  *
+ * @note In order to prevent pre-1.5 servers from doing more work than
+ * needed, and sending too much data back, a pre-1.5 'recurse'
+ * directive may be sent to the server, based on @a depth.
+ *
  * @since New in 1.5.
  */
 svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
@@ -919,16 +922,16 @@ svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
                                void **report_baton,
                                svn_revnum_t revision_to_switch_to,
                                const char *switch_target,
-                               svn_boolean_t recurse,
+                               svn_depth_t depth,
                                const char *switch_url,
                                const svn_delta_editor_t *switch_editor,
                                void *switch_baton,
                                apr_pool_t *pool);
 
 /**
- * Similar to svn_ra_do_switch2, but taking svn_ra_reporter2_t instead
- * of svn_ra_reporter3_t, and therefore only able to report
- * svn_depth_infinity for depths.
+ * Similar to svn_ra_do_switch2(), but taking @c svn_ra_reporter2_t
+ * instead of @c svn_ra_reporter3_t, and therefore only able to report
+ * @c svn_depth_infinity for depths.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -964,9 +967,9 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
  * represented by the @a session's URL, or empty if the entire directory
  * is meant to be examined.
  *
- * If @a recurse is true and the target is a directory, get status
- * recursively; otherwise, get status for just the target and its
- * immediate entries, but not its child directories (if any).
+ * Get status only as deeply as @a depth indicates.
+ *
+ * ### TODO(sd): Make sure the behavior described above is what happens.
  *
  * The caller may not perform any RA operations using @a session
  * before finishing the report, and may not perform any RA operations
@@ -977,6 +980,10 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
  * @note The reporter provided by this function does NOT supply copy-
  * from information to the diff editor callbacks.
  *
+ * @note In order to prevent pre-1.5 servers from doing more work than
+ * needed, and sending too much data back, a pre-1.5 'recurse'
+ * directive may be sent to the server, based on @a depth.
+ *
  * @since New in 1.5.
  */
 svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
@@ -984,16 +991,16 @@ svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
                                void **report_baton,
                                const char *status_target,
                                svn_revnum_t revision,
-                               svn_boolean_t recurse,
+                               svn_depth_t depth,
                                const svn_delta_editor_t *status_editor,
                                void *status_baton,
                                apr_pool_t *pool);
 
 
 /**
- * Similar to svn_ra_do_status2(), but taking svn_ra_reporter2_t 
- * instead of svn_ra_reporter3_t, and therefore only able to report
- * svn_depth_infinity for depths.
+ * Similar to svn_ra_do_status2(), but taking @c svn_ra_reporter2_t
+ * instead of @c svn_ra_reporter3_t, and therefore only able to report
+ * @c svn_depth_infinity for depths.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -1042,8 +1049,10 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  * and the addition of another, but if this flag is @c TRUE,
  * unrelated items will be diffed as if they were related.
  *
- * ### TODO(sd): document @a depth, when figure out how it should work!
+ * Diff only as deeply as @a depth indicates.
  *
+ * ### TODO(sd): Make sure the behavior described above is what happens.
+ * 
  * The caller may not perform any RA operations using @a session before
  * finishing the report, and may not perform any RA operations using
  * @a session from within the editing operations of @a diff_editor.
@@ -1057,6 +1066,10 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  *
  * @note The reporter provided by this function does NOT supply copy-
  * from information to the diff editor callbacks.
+ *
+ * @note In order to prevent pre-1.5 servers from doing more work than
+ * needed, and sending too much data back, a pre-1.5 'recurse'
+ * directive may be sent to the server, based on @a depth.
  *
  * @since New in 1.5.
  */
@@ -1074,9 +1087,9 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              apr_pool_t *pool);
 
 /**
- * Similar to svn_ra_do_diff3(), but taking svn_ra_reporter2_t instead
- * of svn_ra_reporter3_t, and therefore only able to report
- * svn_depth_infinity for depths.
+ * Similar to svn_ra_do_diff3(), but taking @c svn_ra_reporter2_t
+ * instead of @c svn_ra_reporter3_t, and therefore only able to report
+ * @c svn_depth_infinity for depths.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -1136,6 +1149,12 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  * If @a strict_node_history is set, copy history will not be traversed
  * (if any exists) when harvesting the revision logs for each path.
  *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a targets will also be returned.
+ *
+ * If @a omit_log_text is set, the contents of the log message will not
+ * be returned.
+ *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
  *
@@ -1149,7 +1168,29 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
+ * @since New in 1.5.
+ */
+
+svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
+                             const apr_array_header_t *paths,
+                             svn_revnum_t start,
+                             svn_revnum_t end,
+                             int limit,
+                             svn_boolean_t discover_changed_paths,
+                             svn_boolean_t strict_node_history,
+                             svn_boolean_t include_merged_revisions,
+                             svn_boolean_t omit_log_text,
+                             svn_log_message_receiver2_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_get_log2(), but uses @c svn_log_message_receiver_t
+ * instead of @c svn_log_message_recevier2_t.  Also @a omit_log_text is
+ * always set to @c FALSE.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
                             const apr_array_header_t *paths,

@@ -20,11 +20,13 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <errno.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_uuid.h>
+#include <apr_lib.h>
 #include <apr_md5.h>
 #include <apr_thread_mutex.h>
 
@@ -46,7 +48,8 @@
 #include "fs_fs.h"
 #include "id.h"
 
-#include "private/svn_fs_merge_info.h"
+#include "private/svn_fs_mergeinfo.h"
+#include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -54,6 +57,15 @@
 /* An arbitrary maximum path length, so clients can't run us out of memory
  * by giving us arbitrarily large paths. */
 #define FSFS_MAX_PATH_LEN 4096
+
+/* The default maximum number of files per directory to store in the
+   rev and revprops directory.  The number below is somewhat arbitrary,
+   and can be overriden by defining the macro while compiling; the
+   figure of 1000 is reasonable for VFAT filesystems, which are by far
+   the worst performers in this area. */
+#ifndef SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
+#define SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR 1000
+#endif
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
@@ -160,16 +172,58 @@ path_lock(svn_fs_t *fs, apr_pool_t *pool)
   return svn_path_join(fs->path, PATH_LOCK_FILE, pool);
 }
 
+static const char *
+path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  assert(ffd->max_files_per_dir);
+  return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
+                            apr_psprintf(pool, "%ld",
+                                               rev / ffd->max_files_per_dir),
+                            NULL);
+}
+
 const char *
 svn_fs_fs__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (ffd->max_files_per_dir)
+    {
+      return svn_path_join(path_rev_shard(fs, rev, pool), 
+                           apr_psprintf(pool, "%ld", rev),
+                           pool);
+    }
+
   return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
                             apr_psprintf(pool, "%ld", rev), NULL);
 }
 
 static const char *
+path_revprops_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  assert(ffd->max_files_per_dir);
+  return svn_path_join_many(pool, fs->path, PATH_REVPROPS_DIR,
+                            apr_psprintf(pool, "%ld",
+                                               rev / ffd->max_files_per_dir),
+                            NULL);
+}
+
+static const char *
 path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (ffd->max_files_per_dir)
+    {
+      return svn_path_join(path_revprops_shard(fs, rev, pool), 
+                           apr_psprintf(pool, "%ld", rev),
+                           pool);
+    }
+
   return svn_path_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                             apr_psprintf(pool, "%ld", rev), NULL);
 }
@@ -603,12 +657,44 @@ get_file_offset(apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
 }
 
 
-/* Read the format version from FILE and return it in *PFORMAT.
+/* Check that BUF, a buffer of text from format file PATH, contains
+   only digits, raising error SVN_ERR_BAD_VERSION_FILE_FORMAT if not.
+
+   Uses POOL for temporary allocation. */
+static svn_error_t *
+check_format_file_buffer_numeric(const char *buf, const char *path,
+                                 apr_pool_t *pool)
+{
+  const char *p;
+
+  for (p = buf; *p; p++)
+    if (!apr_isdigit(*p))
+      return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
+        _("Format file '%s' contains an unexpected non-digit"),
+        svn_path_local_style(path, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Read the format number and maximum number of files per directory
+   from PATH and return them in *PFORMAT and *MAX_FILES_PER_DIR
+   respectively.
+
+   *MAX_FILES_PER_DIR is obtained from the 'layout' format option, and
+   will be set to zero if a linear scheme should be used.
+
    Use POOL for temporary allocation. */
 static svn_error_t *
-read_format(int *pformat, const char *file, apr_pool_t *pool)
+read_format(int *pformat, int *max_files_per_dir,
+            const char *path, apr_pool_t *pool)
 {
-  svn_error_t *err = svn_io_read_version_file(pformat, file, pool);
+  svn_error_t *err;
+  apr_file_t *file;
+  char buf[80];
+  apr_size_t len;
+
+  err = svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
+                         APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       /* Treat an absent format file as format 1.  Do not try to
@@ -619,31 +705,126 @@ read_format(int *pformat, const char *file, apr_pool_t *pool)
          http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=97600
          for more. */
       svn_error_clear(err);
-      err = SVN_NO_ERROR;
       *pformat = 1;
+      *max_files_per_dir = 0;
+
+      return SVN_NO_ERROR;
     }
-  return err;
+
+  len = sizeof(buf);
+  err = svn_io_read_length_line(file, buf, &len, pool);
+  if (err && APR_STATUS_IS_EOF(err->apr_err))
+    {
+      /* Return a more useful error message. */
+      svn_error_clear(err);
+      return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
+                               _("Can't read first line of format file '%s'"),
+                               svn_path_local_style(path, pool));
+    }
+  SVN_ERR(err);
+
+  /* Check that the first line contains only digits. */
+  SVN_ERR(check_format_file_buffer_numeric(buf, path, pool));
+  *pformat = atoi(buf);
+
+  /* Set the default values for anything that can be set via an option. */
+  *max_files_per_dir = 0;
+
+  /* Read any options. */
+  while (1)
+    {
+      len = sizeof(buf);
+      err = svn_io_read_length_line(file, buf, &len, pool);
+      if (err && APR_STATUS_IS_EOF(err->apr_err))
+        {
+          /* No more options; that's okay. */
+          svn_error_clear(err);
+          break;
+        }
+      SVN_ERR(err);
+
+      if (*pformat >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT &&
+          strncmp(buf, "layout ", 7) == 0)
+        {
+          if (strcmp(buf+7, "linear") == 0)
+            {
+              *max_files_per_dir = 0;
+              continue;
+            }
+
+          if (strncmp(buf+7, "sharded ", 8) == 0)
+            {
+              /* Check that the argument is numeric. */
+              SVN_ERR(check_format_file_buffer_numeric(buf+15, path, pool));
+              *max_files_per_dir = atoi(buf+15);
+              continue;
+            }
+        }
+
+      return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
+         _("'%s' contains invalid filesystem format option '%s'"),
+         svn_path_local_style(path, pool), buf);
+    }
+
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  return SVN_NO_ERROR;
 }
 
+/* Write the format number and maximum number of files per directory
+   to a new format file in PATH.
+
+   Use POOL for temporary allocation. */
+static svn_error_t *
+write_format(const char *path, int format, int max_files_per_dir,
+             apr_pool_t *pool)
+{
+  /* svn_io_write_version_file() does a load of magic to allow it to
+     replace version files that already exist.  Luckily, we never need to
+     do that. */
+  const char *contents;
+
+  assert (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
+  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
+    {
+      if (max_files_per_dir)
+        contents = apr_psprintf(pool,
+                                "%d\n"
+                                "layout sharded %d\n",
+                                format, max_files_per_dir);
+      else
+        contents = apr_psprintf(pool,
+                                "%d\n"
+                                "layout linear",
+                                format);
+    }
+  else
+    {
+      contents = apr_psprintf(pool, "%d\n", format);
+    }
+
+  /* Create the file */
+  SVN_ERR(svn_io_file_create(path, contents, pool));
+  /* And set the perms to make it read only */
+  SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
-   number is not the same as the format number supported by this
+   number is not the same as a format number supported by this
    Subversion. */
 static svn_error_t *
 check_format(int format)
 {
-  /* We support format 1 and 2 simultaneously */
-  if (format == 1 && SVN_FS_FS__FORMAT_NUMBER == 2)
+  /* We support all formats from 1-current simultaneously */
+  if (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
-  if (format != SVN_FS_FS__FORMAT_NUMBER)
-    {
-      return svn_error_createf 
-        (SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-         _("Expected FS format '%d'; found format '%d'"), 
-         SVN_FS_FS__FORMAT_NUMBER, format);
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+     _("Expected FS format between '1' and '%d'; found format '%d'"), 
+     SVN_FS_FS__FORMAT_NUMBER, format);
 }
 
 svn_error_t *
@@ -651,17 +832,19 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *uuid_file;
-  int format;
+  int format, max_files_per_dir;
   char buf[APR_UUID_FORMATTED_LENGTH + 2];
   apr_size_t limit;
 
   fs->path = apr_pstrdup(fs->pool, path);
 
   /* Read the FS format number. */
-  SVN_ERR(read_format(&format, path_format(fs, pool), pool));
+  SVN_ERR(read_format(&format, &max_files_per_dir,
+                      path_format(fs, pool), pool));
 
   /* Now we've got a format number no matter what. */
   ffd->format = format;
+  ffd->max_files_per_dir = max_files_per_dir;
   SVN_ERR(check_format(format));
 
   /* Read in and cache the repository uuid. */
@@ -677,6 +860,103 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* SVN_ERR-like macros for dealing with ESTALE
+ *
+ * In NFS v3 and under, the server doesn't track opened files.  If you
+ * unlink(2) or rename(2) a file held open by another process *on the
+ * same host*, that host's kernel typically renames the file to
+ * .nfsXXXX and automatically deletes that when it's no longer open,
+ * but this behavior is not required.
+ *
+ * For obvious reasons, this does not work *across hosts*.  No one
+ * knows about the opened file; not the server, and not the deleting
+ * client.  So the file vanishes, and the reader gets stale NFS file
+ * handle.  We have this problem with revprops files and current.
+ *
+ * Wrap opens and reads of such files with SVN_RETRY_ESTALE and closes
+ * with SVN_IGNORE_ESTALE.  Call these macros within a loop of
+ * SVN_ESTALE_RETRY_COUNT iterations (though, realistically, the
+ * second try will succeed).  Make sure you put a break statement
+ * after the close, at the end of your loop.  Immediately after your
+ * loop loop, return err if err.
+ *
+ * You must initialize err to SVN_NO_ERROR, as these macros do not.
+ */
+
+#define SVN_ESTALE_RETRY_COUNT 10
+
+#ifdef ESTALE
+#define SVN_RETRY_ESTALE(err, expr)                   \
+  {                                                   \
+    /* Clear err here (svn_error_clear can safely be passed
+     * SVN_NO_ERROR) rather than after finding ESTALE so we can return
+     * the ESTALE error on the last iteration of the loop. */ \
+    svn_error_clear(err);                             \
+    err = (expr);                                     \
+    if (err)                                          \
+      {                                               \
+        if (APR_TO_OS_ERROR(err->apr_err) == ESTALE)  \
+          continue;                                   \
+        return err;                                   \
+      }                                               \
+  }
+#define SVN_IGNORE_ESTALE(err, expr)                  \
+  {                                                   \
+    svn_error_clear(err);                             \
+    err = (expr);                                     \
+    if (err)                                          \
+      {                                               \
+        if (APR_TO_OS_ERROR(err->apr_err) != ESTALE)  \
+          return err;                                 \
+      }                                               \
+  }
+#else
+#define SVN_RETRY_ESTALE(err, expr)  SVN_ERR(expr)
+#define SVN_IGNORE_ESTALE(err, expr) SVN_ERR(expr)
+#endif
+
+/* Long enough to hold: "<svn_revnum_t> <node id> <copy id>\0"
+ * 19 bytes for svn_revnum_t (room for 32 or 64 bit values)
+ * + 2 spaces
+ * + 26 bytes for each id (these are actually unbounded, so we just
+ *   have to pick something; 2^64 is 13 bytes in base-36)
+ * + 1 terminating null
+ */
+#define CURRENT_BUF_LEN 48
+
+/* Read the 'current' file FNAME and store the contents in *BUF.
+   Allocations are performed in POOL. */
+static svn_error_t *
+read_current(const char *fname, char **buf, apr_pool_t *pool)
+{
+  apr_file_t *revision_file;
+  apr_size_t len;
+  int i;
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_pool_t *iterpool;
+
+  *buf = apr_palloc(pool, CURRENT_BUF_LEN);
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < SVN_ESTALE_RETRY_COUNT; i++)
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_RETRY_ESTALE(err, svn_io_file_open(&revision_file, fname,
+                                             APR_READ | APR_BUFFERED,
+                                             APR_OS_DEFAULT, iterpool));
+
+      len = CURRENT_BUF_LEN;
+      SVN_RETRY_ESTALE(err, svn_io_read_length_line(revision_file,
+                                                    *buf, &len, iterpool));
+      SVN_IGNORE_ESTALE(err, svn_io_file_close(revision_file, iterpool));
+
+      break;
+    }
+  svn_pool_destroy(iterpool);
+
+  return err;
+}
+
 /* Find the youngest revision in a repository at path FS_PATH and
    return it in *YOUNGEST_P.  Perform temporary allocations in
    POOL. */
@@ -685,21 +965,11 @@ get_youngest(svn_revnum_t *youngest_p,
              const char *fs_path,
              apr_pool_t *pool)
 {
-  apr_file_t *current_file;
-  char buf[81];
-  apr_size_t len;
+  char *buf;
 
-  SVN_ERR(svn_io_file_open(&current_file,
-                           svn_path_join(fs_path, PATH_CURRENT, pool),
-                           APR_READ, APR_OS_DEFAULT, pool));
-
-  len = sizeof(buf) - 1;
-  SVN_ERR(svn_io_file_read(current_file, buf, &len, pool));
-  buf[len] = '\0';
+  SVN_ERR(read_current(svn_path_join(fs_path, PATH_CURRENT, pool), &buf, pool));
   
   *youngest_p = SVN_STR_TO_REV(buf);
-  
-  SVN_ERR(svn_io_file_close(current_file, pool));
   
   return SVN_NO_ERROR;
 }
@@ -713,10 +983,10 @@ svn_fs_fs__hotcopy(const char *src_path,
   svn_revnum_t youngest, rev;
   apr_pool_t *iterpool;
   svn_node_kind_t kind;
-  int format;
+  int format, max_files_per_dir;
 
   /* Check format to be sure we know how to hotcopy this FS. */
-  SVN_ERR(read_format(&format,
+  SVN_ERR(read_format(&format, &max_files_per_dir,
                       svn_path_join(src_path, PATH_FORMAT, pool),
                       pool));
   SVN_ERR(check_format(format));
@@ -728,7 +998,7 @@ svn_fs_fs__hotcopy(const char *src_path,
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
   
   /* Copy the merge tracking info. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS_MERGE_INFO__DB_NAME,
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS_MERGEINFO__DB_NAME,
                                pool));
 
   /* Find the youngest revision from this current file. */
@@ -743,7 +1013,22 @@ svn_fs_fs__hotcopy(const char *src_path,
   iterpool = svn_pool_create(pool);
   for (rev = 0; rev <= youngest; rev++)
     {
-      SVN_ERR(svn_io_dir_file_copy(src_subdir, dst_subdir,
+      const char *src_subdir_shard = src_subdir,
+                 *dst_subdir_shard = dst_subdir;
+
+      if (max_files_per_dir)
+        {
+          const char *shard = apr_psprintf(iterpool, "%ld",
+                                           rev / max_files_per_dir);
+          src_subdir_shard = svn_path_join(src_subdir, shard, iterpool);
+          dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
+
+          if (rev % max_files_per_dir == 0)
+            SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
+                                    iterpool));
+        }
+
+      SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
                                    apr_psprintf(iterpool, "%ld", rev),
                                    iterpool));
       svn_pool_clear(iterpool);
@@ -757,8 +1042,24 @@ svn_fs_fs__hotcopy(const char *src_path,
 
   for (rev = 0; rev <= youngest; rev++)
     {
+      const char *src_subdir_shard = src_subdir,
+                 *dst_subdir_shard = dst_subdir;
+
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_io_dir_file_copy(src_subdir, dst_subdir,
+
+      if (max_files_per_dir)
+        {
+          const char *shard = apr_psprintf(iterpool, "%ld",
+                                           rev / max_files_per_dir);
+          src_subdir_shard = svn_path_join(src_subdir, shard, iterpool);
+          dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
+
+          if (rev % max_files_per_dir == 0)
+            SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
+                                    iterpool));
+        }
+
+      SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
                                    apr_psprintf(iterpool, "%ld", rev),
                                    iterpool));
     }
@@ -780,8 +1081,8 @@ svn_fs_fs__hotcopy(const char *src_path,
                                         NULL, pool));
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
-  SVN_ERR(svn_io_write_version_file 
-          (svn_path_join(dst_path, PATH_FORMAT, pool), format, pool));
+  SVN_ERR(write_format(svn_path_join(dst_path, PATH_FORMAT, pool),
+                       format, max_files_per_dir, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1521,24 +1822,47 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
 {
   apr_file_t *revprop_file;
   apr_hash_t *proplist;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
+  int i;
+  apr_pool_t *iterpool;
 
-  err = svn_io_file_open(&revprop_file, path_revprops(fs, rev, pool),
-                         APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < SVN_ESTALE_RETRY_COUNT; i++)
     {
+      svn_pool_clear(iterpool);
+
+      /* Clear err here (svn_error_clear can safely be passed
+       * SVN_NO_ERROR) rather than after finding ESTALE so we can
+       * return the ESTALE error on the last iteration of the loop. */
       svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                               _("No such revision %ld"), rev);
+      err = svn_io_file_open(&revprop_file, path_revprops(fs, rev, iterpool),
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, iterpool);
+      if (err)
+        {
+          if (APR_STATUS_IS_ENOENT(err->apr_err))
+            {
+              svn_error_clear(err);
+              return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                       _("No such revision %ld"), rev);
+            }
+#ifdef ESTALE
+          else if (APR_TO_OS_ERROR(err->apr_err) == ESTALE)
+            continue;
+#endif
+          return err;
+        }
+
+      proplist = apr_hash_make(pool);
+
+      SVN_RETRY_ESTALE(err, svn_hash_read(proplist, revprop_file, pool));
+
+      SVN_IGNORE_ESTALE(err, svn_io_file_close(revprop_file, iterpool));
+
+      break;
     }
-  else if (err)
+  if (err)
     return err;
-
-  proplist = apr_hash_make(pool);
-
-  SVN_ERR(svn_hash_read(proplist, revprop_file, pool));
-
-  SVN_ERR(svn_io_file_close(revprop_file, pool));
+  svn_pool_destroy(iterpool);
 
   *proplist_p = proplist;
 
@@ -3188,7 +3512,7 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
 {
   fs_fs_data_t *ffd; 
 
-  SVN_ERR(svn_fs_fs__check_fs(txn->fs));
+  SVN_ERR(svn_fs__check_fs(txn->fs));
 
   /* Clean out the directory cache. */
   ffd = txn->fs->fsap_data;
@@ -3766,16 +4090,10 @@ get_next_revision_ids(const char **node_id,
                       svn_fs_t *fs,
                       apr_pool_t *pool)
 {
-  apr_file_t *revision_file;
-  char buf[80];
-  apr_size_t len;
+  char *buf;
   char *str, *last_str;
 
-  SVN_ERR(svn_io_file_open(&revision_file, svn_fs_fs__path_current(fs, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  len = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(revision_file, buf, &len, pool));
+  SVN_ERR(read_current(svn_fs_fs__path_current(fs, pool), &buf, pool));
 
   str = apr_strtok(buf, " ", &last_str);
   if (! str)
@@ -3795,8 +4113,6 @@ get_next_revision_ids(const char **node_id,
                             _("Corrupt current file"));
 
   *copy_id = apr_pstrdup(pool, str);
-
-  SVN_ERR(svn_io_file_close(revision_file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -4347,6 +4663,7 @@ static svn_error_t *
 commit_body(void *baton, apr_pool_t *pool)
 {
   struct commit_baton *cb = baton;
+  fs_fs_data_t *ffd = cb->fs->fsap_data;
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
   const svn_fs_id_t *root_id, *new_root_id;
@@ -4358,7 +4675,7 @@ commit_body(void *baton, apr_pool_t *pool)
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
-  svn_boolean_t txn_contains_merge_info = FALSE;
+  apr_hash_t *target_mergeinfo = NULL;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -4401,10 +4718,9 @@ commit_body(void *baton, apr_pool_t *pool)
                      changed_path_offset);
   SVN_ERR(svn_io_file_write_full(proto_file, buf, strlen(buf), NULL,
                                  pool));
-
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
-  
   SVN_ERR(svn_io_file_close(proto_file, pool));
+
   /* We don't unlock the prototype revision file immediately to avoid a
      race with another caller writing to the prototype revision file
      before we commit it. */
@@ -4418,7 +4734,6 @@ commit_body(void *baton, apr_pool_t *pool)
         SVN_ERR(svn_fs_fs__change_txn_prop 
                 (cb->txn, SVN_FS_PROP_TXN_CHECK_OOD,
                  NULL, pool));
-      
       if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
                        APR_HASH_KEY_STRING))
         SVN_ERR(svn_fs_fs__change_txn_prop 
@@ -4427,12 +4742,31 @@ commit_body(void *baton, apr_pool_t *pool)
       if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
                        APR_HASH_KEY_STRING))
         {
-          txn_contains_merge_info = TRUE;
+          SVN_ERR(svn_fs_fs__txn_mergeinfo(&target_mergeinfo, cb->txn, pool));
           SVN_ERR(svn_fs_fs__change_txn_prop
                   (cb->txn, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
                    NULL, pool));
         }
-      
+    }
+
+  /* Create the shard for the rev and revprop file, if we're sharding and
+     this is the first revision of a new shard.  We don't care if this
+     fails because the shard already existed for some reason. */
+  if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
+    {
+      svn_error_t *err;
+      err = svn_io_dir_make(path_rev_shard(cb->fs, new_rev, pool),
+                            APR_OS_DEFAULT, pool);
+      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
+      err = svn_io_dir_make(path_revprops_shard(cb->fs, new_rev, pool),
+                            APR_OS_DEFAULT, pool);
+      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
     }
 
   /* Move the finished rev file into place. */
@@ -4460,9 +4794,10 @@ commit_body(void *baton, apr_pool_t *pool)
   final_revprop = path_revprops(cb->fs, new_rev, pool);
   SVN_ERR(svn_fs_fs__move_into_place(revprop_filename, final_revprop, 
                                      old_rev_filename, pool));
-  
-  SVN_ERR(svn_fs_merge_info__update_index(cb->txn, new_rev,
-                                          txn_contains_merge_info, pool));
+
+  /* Update the merge tracking information index. */
+  SVN_ERR(svn_fs_mergeinfo__update_index(cb->txn, new_rev, target_mergeinfo,
+                                         pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
@@ -4547,15 +4882,41 @@ svn_fs_fs__create(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   int format = SVN_FS_FS__FORMAT_NUMBER;
-  
-  fs->path = apr_pstrdup(pool, path);
+  fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVS_DIR,
-                                                    pool),
-                                      pool));
-  SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVPROPS_DIR,
-                                                    pool),
-                                      pool));
+  fs->path = apr_pstrdup(pool, path);
+  /* See if we had an explicitly requested pre-1.4- or pre-1.5-compatible.  */
+  if (fs->config)
+    {
+      if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
+                                   APR_HASH_KEY_STRING))
+        format = 1;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 2;
+    }
+  ffd->format = format;
+
+  /* Override the default linear layout if this is a new-enough format. */
+  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
+    ffd->max_files_per_dir = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
+
+  if (ffd->max_files_per_dir)
+    {
+      SVN_ERR(svn_io_make_dir_recursively(path_rev_shard(fs, 0, pool),
+                                          pool));
+      SVN_ERR(svn_io_make_dir_recursively(path_revprops_shard(fs, 0, pool),
+                                          pool));
+    }
+  else
+    {
+      SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVS_DIR,
+                                                        pool),
+                                          pool));
+      SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVPROPS_DIR,
+                                                        pool),
+                                          pool));
+    }
   SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_TXNS_DIR,
                                                     pool),
                                       pool));
@@ -4565,19 +4926,14 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, svn_uuid_generate(pool), pool));
 
-  /* See if we had an explicitly requested pre 1.4 compatible.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                                 APR_HASH_KEY_STRING))
-    format = 1;
-  
   SVN_ERR(write_revision_zero(fs));
 
   /* This filesystem is ready.  Stamp it with a format number. */
-  SVN_ERR(svn_io_write_version_file
-          (path_format(fs, pool), format, pool));
-  ((fs_fs_data_t *) fs->fsap_data)->format = format;
+  SVN_ERR(write_format(path_format(fs, pool),
+                       ffd->format, ffd->max_files_per_dir, pool));
 
-  SVN_ERR(svn_fs_merge_info__create_index(path, pool)); 
+  /* ### this should be before the format file */
+  SVN_ERR(svn_fs_mergeinfo__create_index(path, pool));
   return SVN_NO_ERROR;
 }
 
@@ -5064,7 +5420,7 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
 {
   apr_hash_t *table;
 
-  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
   SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
 
   *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
@@ -5109,7 +5465,7 @@ svn_fs_fs__change_rev_prop(svn_fs_t *fs,
 {
   struct change_rev_prop_baton cb;
 
-  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
 
   cb.fs = fs;
   cb.rev = rev;
@@ -5149,7 +5505,7 @@ svn_fs_fs__txn_prop(svn_string_t **value_p,
   apr_hash_t *table;
   svn_fs_t *fs = txn->fs;
 
-  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
   SVN_ERR(svn_fs_fs__txn_proplist(&table, txn, pool));
 
   *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
@@ -5166,7 +5522,7 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
 {
   svn_string_t date;
 
-  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs));
 
   SVN_ERR(svn_fs_fs__create_txn(txn_p, fs, rev, pool));
 

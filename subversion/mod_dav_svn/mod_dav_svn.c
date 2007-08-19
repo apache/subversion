@@ -33,12 +33,16 @@
 #include "mod_dav_svn.h"
 
 #include "dav_svn.h"
+#include "mod_authz_svn.h"
 
 
 /* This is the default "special uri" used for SVN's special resources
    (e.g. working resources, activities) */
 #define SVN_DEFAULT_SPECIAL_URI "!svn"
 
+/* This is the value to be given to SVNPathAuthz to bypass the apache
+ * subreq mechanism and make a call directly to mod_authz_svn. */
+#define PATHAUTHZ_BYPASS_ARG "short_circuit"
 
 /* per-server configuration */
 typedef struct {
@@ -55,6 +59,13 @@ enum conf_flag {
   CONF_FLAG_OFF
 };
 
+/* An enum used for the per directory configuration path_authz_method. */
+enum path_authz_conf {
+  CONF_PATHAUTHZ_DEFAULT,
+  CONF_PATHAUTHZ_ON,
+  CONF_PATHAUTHZ_OFF,
+  CONF_PATHAUTHZ_BYPASS
+};
 
 /* per-dir configuration */
 typedef struct {
@@ -63,10 +74,11 @@ typedef struct {
   const char *xslt_uri;              /* XSL transform URI */
   const char *fs_parent_path;        /* path to parent of SVN FS'es  */
   enum conf_flag autoversioning;  /* whether autoversioning is active */
-  enum conf_flag do_path_authz;   /* whether GET subrequests are active */
+  enum path_authz_conf path_authz_method; /* how GET subrequests are handled */
   enum conf_flag list_parentpath; /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
   const char *master_uri;            /* URI to the master SVN repos */
+  const char *activities_db;         /* path to activities database(s) */
 } dir_conf_t;
 
 
@@ -76,6 +88,8 @@ typedef struct {
 
 extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 
+/* The authz_svn provider for bypassing path authz. */
+static authz_svn__subreq_bypass_func_t pathauthz_bypass_func = NULL;
 
 static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
@@ -156,11 +170,12 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
 
   newconf->fs_path = INHERIT_VALUE(parent, child, fs_path);
   newconf->master_uri = INHERIT_VALUE(parent, child, master_uri);
+  newconf->activities_db = INHERIT_VALUE(parent, child, activities_db);
   newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
   newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
   newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
-  newconf->do_path_authz = INHERIT_VALUE(parent, child, do_path_authz);
+  newconf->path_authz_method = INHERIT_VALUE(parent, child, path_authz_method);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
   /* Prefer our parent's value over our new one - hence the swap. */
   newconf->root_dir = INHERIT_VALUE(child, parent, root_dir);
@@ -192,6 +207,17 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 
 
 static const char *
+SVNActivitiesDB_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  dir_conf_t *conf = config;
+
+  conf->activities_db = apr_pstrdup(cmd->pool, arg1);
+
+  return NULL;
+}
+
+
+static const char *
 SVNIndexXSLT_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
@@ -217,14 +243,23 @@ SVNAutoversioning_cmd(cmd_parms *cmd, void *config, int arg)
 
 
 static const char *
-SVNPathAuthz_cmd(cmd_parms *cmd, void *config, int arg)
+SVNPathAuthz_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
 
-  if (arg)
-    conf->do_path_authz = CONF_FLAG_ON;
+  if (apr_strnatcasecmp("off", arg1) == 0)
+    conf->path_authz_method = CONF_PATHAUTHZ_OFF;
+  else if (apr_strnatcasecmp(PATHAUTHZ_BYPASS_ARG,arg1) == 0)
+    {
+      conf->path_authz_method = CONF_PATHAUTHZ_BYPASS;
+      if (pathauthz_bypass_func == NULL)
+        pathauthz_bypass_func=ap_lookup_provider(
+                                          AUTHZ_SVN__SUBREQ_BYPASS_PROV_GRP,
+                                          AUTHZ_SVN__SUBREQ_BYPASS_PROV_NAME,
+                                          AUTHZ_SVN__SUBREQ_BYPASS_PROV_VER);
+    }
   else
-    conf->do_path_authz = CONF_FLAG_OFF;
+    conf->path_authz_method = CONF_PATHAUTHZ_ON;
 
   return NULL;
 }
@@ -434,13 +469,30 @@ dav_svn__get_autoversioning_flag(request_rec *r)
 }
 
 
+/* FALSE if path authorization should be skipped.
+ * TRUE if either the bypass or the apache subrequest methods should be used.
+ */
 svn_boolean_t
 dav_svn__get_pathauthz_flag(request_rec *r)
 {
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->do_path_authz != CONF_FLAG_OFF;
+  return conf->path_authz_method != CONF_PATHAUTHZ_OFF;
+}
+
+/* Function pointer if we should use the bypass directly to mod_authz_svn.
+ * NULL otherwise. */
+authz_svn__subreq_bypass_func_t
+dav_svn__get_pathauthz_bypass(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
+  if(conf->path_authz_method==CONF_PATHAUTHZ_BYPASS)
+    return pathauthz_bypass_func;
+  return NULL;
 }
 
 
@@ -451,6 +503,16 @@ dav_svn__get_list_parentpath_flag(request_rec *r)
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
   return conf->list_parentpath == CONF_FLAG_ON;
+}
+
+
+const char *
+dav_svn__get_activities_db(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->activities_db;
 }
 
 
@@ -607,9 +669,11 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF, "turn on deltaV autoversioning."),
 
   /* per directory/location */
-  AP_INIT_FLAG("SVNPathAuthz", SVNPathAuthz_cmd, NULL,
+  AP_INIT_TAKE1("SVNPathAuthz", SVNPathAuthz_cmd, NULL,
                ACCESS_CONF|RSRC_CONF,
-               "control path-based authz by enabling/disabling subrequests"),
+               "control path-based authz by enabling subrequests(On,default), "
+               "disabling subrequests(Off), or"
+               "querying mod_authz_svn directly(" PATHAUTHZ_BYPASS_ARG ")"),
 
   /* per directory/location */
   AP_INIT_FLAG("SVNListParentPath", SVNListParentPath_cmd, NULL,
@@ -618,6 +682,12 @@ static const command_rec cmds[] =
   /* per directory/location */
   AP_INIT_TAKE1("SVNMasterURI", SVNMasterURI_cmd, NULL, ACCESS_CONF,
                 "specifies a URI to access a master Subversion repository"),
+
+  /* per directory/location */
+  AP_INIT_TAKE1("SVNActivitiesDB", SVNActivitiesDB_cmd, NULL, ACCESS_CONF,
+                "specifies the location in the filesystem in which the "
+                "activities database(s) should be stored"),
+
 
   { NULL }
 };

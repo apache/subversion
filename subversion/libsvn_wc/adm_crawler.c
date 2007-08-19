@@ -137,6 +137,24 @@ restore_file(const char *file_path,
    Alternatively, if REPORT_EVERYTHING is set, then report all
    children unconditionally.
 
+   DEPTH is actually the *requested* depth for the update-like
+   operation for which we are reporting working copy state.  However,
+   certain requested depths affect the depth of the report crawl.  For
+   example, if the requested depth is svn_depth_empty, there's no
+   point descending into subdirs, no matter what their depths.  So:
+
+   If DEPTH is svn_depth_empty, don't report any files and don't
+   descend into any subdirs.  If svn_depth_files, report files but
+   still don't descend into subdirs.  If svn_depth_immediates, report
+   files, and report subdirs themselves but not their entries.  If
+   svn_depth_infinity or svn_depth_unknown, report everything all the
+   way down.  (That last sentence might sound counterintuitive, but
+   since you can't go deeper than the local ambient depth anyway,
+   requesting svn_depth_infinity really means "as deep as the various
+   parts of this working copy go".  Of course, the information that
+   comes back from the server will be different for svn_depth_unknown
+   than for svn_depth_infinity.)
+
    If TRAVERSAL_INFO is non-null, record this directory's
    value of svn:externals in both TRAVERSAL_INFO->externals_old and
    TRAVERSAL_INFO->externals_new, using wc_path + dir_path as the key,
@@ -323,11 +341,11 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                         FALSE,
                                         current_entry->lock_token,
                                         iterpool));
-          /* ... or perhaps just a differing revision or depth or
-             lock token. */
-          else if (current_entry->revision !=  dir_rev
-                   || current_entry->depth != depth
-                   || current_entry->lock_token)
+          /* ... or perhaps just a differing revision or lock token,
+             or the mere presence of the file in a depth-empty dir. */ 
+          else if (current_entry->revision != dir_rev
+                   || current_entry->lock_token
+                   || dot_entry->depth == svn_depth_empty)
             SVN_ERR(reporter->set_path(report_baton,
                                        this_path,
                                        current_entry->revision,
@@ -339,15 +357,9 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
       
       /*** Directories (in recursive mode) ***/
       else if (current_entry->kind == svn_node_dir
-               && depth == svn_depth_infinity)
+               && (depth > svn_depth_files
+                   || depth == svn_depth_unknown))
         {
-          /* ### TODO(sd): I think it's correct to check whether
-             ### 'depth == svn_depth_infinity' above.  If the
-             ### specified depth is not infinity, then we don't want
-             ### to recurse at all.  If it is, then we want recursion
-             ### to be dependent on the subdirs' entries, right?
-             ### That's what the code below does. */ 
-
           svn_wc_adm_access_t *subdir_access;
           const svn_wc_entry_t *subdir_entry;
 
@@ -365,6 +377,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
 
           /* We need to read the full entry of the directory from its
              own "this dir", if available. */
+          if (svn_wc__adm_missing(adm_access, this_full_path))
+            continue;
           SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access,
                                       this_full_path, iterpool));
           SVN_ERR(svn_wc_entry(&subdir_entry, this_full_path, subdir_access,
@@ -400,11 +414,17 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                         subdir_entry->incomplete,
                                         subdir_entry->lock_token,
                                         iterpool));
-          /* ... or perhaps just a differing revision, lock token or
-             incomplete subdir. */
+          /* ... or perhaps just a differing revision, lock token, incomplete
+             subdir, the mere presence of the directory in a depth-empty or
+             depth-files dir, or if the parent dir is at depth-immediates but
+             the child is not at depth-empty. */
           else if (subdir_entry->revision != dir_rev
                    || subdir_entry->lock_token
-                   || subdir_entry->incomplete)
+                   || subdir_entry->incomplete
+                   || dot_entry->depth == svn_depth_empty
+                   || dot_entry->depth == svn_depth_files
+                   || (dot_entry->depth == svn_depth_immediates
+                       && subdir_entry->depth != svn_depth_empty))
             SVN_ERR(reporter->set_path(report_baton,
                                        this_path,
                                        subdir_entry->revision,
@@ -413,9 +433,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                        subdir_entry->lock_token,
                                        iterpool));
 
-          /* ### TODO(sd): See TODO comment in svn_wc_crawl_revisions3()
-             ### about depth treatment here. */ 
-          if (depth == svn_depth_infinity)
+          if (depth == svn_depth_infinity || depth == svn_depth_unknown)
             SVN_ERR(report_revisions_and_depths(adm_access, this_path,
                                                 subdir_entry->revision,
                                                 reporter, report_baton,
@@ -474,8 +492,13 @@ svn_wc_crawl_revisions3(const char *path,
                                       adm_access, FALSE, pool));
 
       base_rev = parent_entry->revision;
+
+      /* If no versioned path exists, we use the requested depth, which
+         is the depth at which the new path should be brought in.  Default
+         to infinity if no explicit depth was given. */
       if (depth == svn_depth_unknown)
-        depth = parent_entry->depth;
+        depth = svn_depth_infinity;
+
       SVN_ERR(reporter->set_path(report_baton, "", base_rev, depth,
                                  entry ? entry->incomplete : TRUE, 
                                  NULL, pool));
@@ -497,13 +520,10 @@ svn_wc_crawl_revisions3(const char *path,
       base_rev = parent_entry->revision;
     }
 
-  if (depth == svn_depth_unknown)
-    depth = entry->depth;
-
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
-  SVN_ERR(reporter->set_path(report_baton, "", base_rev, depth,
+  SVN_ERR(reporter->set_path(report_baton, "", base_rev, entry->depth,
                              entry->incomplete , /* start_empty ? */
                              NULL, pool));
 
@@ -530,16 +550,8 @@ svn_wc_crawl_revisions3(const char *path,
           if (err)
             goto abort_report;
         }
-      else
+      else if (depth != svn_depth_empty)
         {
-          /* ### TODO(sd): Just passing depth here is not enough.  There
-             ### can be circumstances where the root is depth 0 or 1,
-             ### but some child directories are present at depth
-             ### infinity.  We need to detect them and recurse into
-             ### them *unless* there is a passed-in depth that is not
-             ### infinity.  I think.
-           */
-
           /* Recursively crawl ROOT_DIRECTORY and report differing
              revisions. */
           err = report_revisions_and_depths(adm_access,

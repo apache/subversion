@@ -2,7 +2,7 @@
  * add.c:  wrappers around wc add/mkdir functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -80,8 +80,9 @@ trim_string(char **pstr)
 }
 
 /* For one auto-props config entry (NAME, VALUE), if the filename pattern
-   NAME matches BATON->filename then add the properties listed in VALUE
-   into BATON->properties.  BATON must point to an auto_props_baton_t.
+   NAME matches BATON->filename case insensitively then add the properties 
+   listed in VALUE into BATON->properties.  
+   BATON must point to an auto_props_baton_t.
 */
 static svn_boolean_t
 auto_props_enumerator(const char *name,
@@ -98,7 +99,7 @@ auto_props_enumerator(const char *name,
     return TRUE;
 
   /* check if filename matches and return if it doesn't */
-  if (apr_fnmatch(name, autoprops->filename, 0) == APR_FNM_NOMATCH)
+  if (apr_fnmatch(name, autoprops->filename, APR_FNM_CASE_BLIND) == APR_FNM_NOMATCH)
     return TRUE;
   
   /* parse the value (we dup it first to effectively lose the
@@ -438,24 +439,95 @@ add(const char *path,
 }
 
 
+/* Go up the directory tree, looking for a versioned directory.  If found,
+   add all the intermediate directories.  Otherwise, return
+   SVN_ERR_CLIENT_NO_VERSIONED_PARENT. */
+static svn_error_t *
+add_parent_dirs(const char *path,
+                svn_wc_adm_access_t **parent_access,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access;
+  svn_error_t *err;
+
+  err = svn_wc_adm_open3(&adm_access, NULL, path, TRUE, 0,
+                         ctx->cancel_func, ctx->cancel_baton, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+    {
+      if (svn_dirent_is_root(path, strlen(path)))
+        {
+          svn_error_clear(err);
+
+          return svn_error_create
+            (SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL, NULL);
+        }
+      else
+        {
+          const char *parent_path = svn_path_dirname(path, pool);
+
+          svn_error_clear(err);
+          SVN_ERR(add_parent_dirs(parent_path, &adm_access, ctx, pool));
+          SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, parent_path,
+                                      pool));
+          SVN_ERR(svn_wc_add2(path, adm_access, NULL, SVN_INVALID_REVNUM,
+                              ctx->cancel_func, ctx->cancel_baton,
+                              ctx->notify_func2, ctx->notify_baton2, pool));
+        }
+    }
+  else if (err)
+    {
+      return err;
+    }
+
+  if (parent_access)
+    *parent_access = adm_access;
+
+  return SVN_NO_ERROR;
+}
+
+
 
 svn_error_t *
-svn_client_add3(const char *path, 
+svn_client_add4(const char *path, 
                 svn_boolean_t recursive,
                 svn_boolean_t force,
                 svn_boolean_t no_ignore,
+                svn_boolean_t add_parents,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_error_t *err, *err2;
   svn_wc_adm_access_t *adm_access;
-  const char *parent_path = svn_path_dirname(path, pool);
+  const char *parent_dir;
 
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_path,
-                           TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
-                           pool));
+  if (add_parents)
+    {
+      apr_pool_t *subpool;
+      const char *abs_path;
 
-  err = add(path, recursive, force, no_ignore, adm_access, ctx, pool);
+      SVN_ERR(svn_path_get_absolute(&abs_path, path, pool));
+      parent_dir = svn_path_dirname(abs_path, pool);
+
+      subpool = svn_pool_create(pool);
+      SVN_ERR(add_parent_dirs(parent_dir, &adm_access, ctx, subpool));
+      SVN_ERR(svn_wc_adm_close(adm_access));
+      svn_pool_destroy(subpool);
+
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
+                               TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+      err = add(abs_path, recursive, force, no_ignore, adm_access, ctx, pool);
+    }
+  else
+    {
+      parent_dir = svn_path_dirname(path, pool);
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
+                               TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+      err = add(path, recursive, force, no_ignore, adm_access, ctx, pool);
+    }
   
   err2 = svn_wc_adm_close(adm_access);
   if (err2)
@@ -469,6 +541,17 @@ svn_client_add3(const char *path,
   return err;
 }
 
+svn_error_t *
+svn_client_add3(const char *path, 
+                svn_boolean_t recursive,
+                svn_boolean_t force,
+                svn_boolean_t no_ignore,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_add4(path, recursive, force, no_ignore, FALSE, ctx,
+                         pool);
+}
 
 svn_error_t *
 svn_client_add2(const char *path,
@@ -503,14 +586,41 @@ path_driver_cb_func(void **dir_baton,
                                SVN_INVALID_REVNUM, pool, dir_baton);
 }
 
+/* Append URL, and all it's non-existent parent directories, to TARGETS.
+   Use TEMPPOOL for temporary allocations and POOL for any additions to 
+   TARGETS. */
+static svn_error_t *
+add_url_parents(svn_ra_session_t *ra_session,
+                const char *url,
+                apr_array_header_t *targets,
+                apr_pool_t *temppool,
+                apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  const char *parent_url;
+
+  svn_path_split(url, &parent_url, NULL, pool);
+
+  SVN_ERR(svn_ra_reparent(ra_session, parent_url, temppool));
+  SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
+                            temppool));
+
+  if (kind == svn_node_none)
+    SVN_ERR(add_url_parents(ra_session, parent_url, targets, temppool, pool));
+
+  APR_ARRAY_PUSH(targets, const char *) = url;
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 mkdir_urls(svn_commit_info_t **commit_info_p,
-           const apr_array_header_t *paths,
+           const apr_array_header_t *urls,
+           svn_boolean_t make_parents,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session;
+  svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *commit_baton;
@@ -521,8 +631,34 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   const char *common;
   int i;
 
+  /* Find any non-existent parent directories */
+  if (make_parents)
+    {
+      apr_array_header_t *all_urls = apr_array_make(pool, urls->nelts,
+                                                    sizeof(const char *));
+      const char *first_url = APR_ARRAY_IDX(urls, 0, const char *);
+      apr_pool_t *iterpool = svn_pool_create(pool);
+
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, first_url,
+                                                   NULL, NULL, NULL, FALSE,
+                                                   TRUE, ctx, pool));
+
+      for (i = 0; i < urls->nelts; i++)
+        {
+          const char *url = APR_ARRAY_IDX(urls, i, const char *);
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(add_url_parents(ra_session, url, all_urls, iterpool, pool));
+        }
+
+      svn_pool_destroy(iterpool);
+
+      urls = all_urls;
+    }
+
   /* Condense our list of mkdir targets. */
-  SVN_ERR(svn_path_condense_targets(&common, &targets, paths, FALSE, pool));
+  SVN_ERR(svn_path_condense_targets(&common, &targets, urls, FALSE, pool));
+
   if (! targets->nelts)
     {
       const char *bname;
@@ -589,9 +725,10 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common, NULL,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+  if (!ra_session)
+    SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common, NULL,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
 
   /* URI-decode each target. */
   for (i = 0; i < targets->nelts; i++)
@@ -628,9 +765,41 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
 }
 
 
+
 svn_error_t *
-svn_client_mkdir2(svn_commit_info_t **commit_info_p,
+svn_client__make_local_parents(const char *path,
+                               svn_boolean_t make_parents,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool)
+{
+  svn_error_t *err;
+  
+  if (make_parents)
+    SVN_ERR(svn_io_make_dir_recursively(path, pool));
+  else
+    SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
+  
+  err = svn_client_add4(path, FALSE, FALSE, FALSE, make_parents, ctx, pool);
+  
+  /* We just created a new directory, but couldn't add it to
+     version control. Don't leave unversioned directories behind. */
+  if (err)
+    {
+      /* ### If this returns an error, should we link it onto
+         err instead, so that the user is warned that we just
+         created an unversioned directory? */
+
+      svn_error_clear(svn_io_remove_dir(path, pool));
+    }
+
+  return err;
+}
+
+
+svn_error_t *
+svn_client_mkdir3(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
+                  svn_boolean_t make_parents,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -639,13 +808,12 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
   
   if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
     {
-      SVN_ERR(mkdir_urls(commit_info_p, paths, ctx, pool));
+      SVN_ERR(mkdir_urls(commit_info_p, paths, make_parents, ctx, pool));
     }
   else
     {
       /* This is a regular "mkdir" + "svn add" */
       apr_pool_t *subpool = svn_pool_create(pool);
-      svn_error_t *err;
       int i;
 
       for (i = 0; i < paths->nelts; i++)
@@ -658,24 +826,23 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-          SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, subpool));
-          err = svn_client_add3(path, FALSE, FALSE, FALSE, ctx, subpool);
-
-          /* We just created a new directory, but couldn't add it to
-             version control. Don't leave unversioned directories behind. */
-          if (err)
-            {
-              /* ### If this returns an error, should we link it onto
-                 err instead, so that the user is warned that we just
-                 created an unversioned directory? */
-              svn_error_clear(svn_io_remove_dir2(path, FALSE, subpool));
-              return err;
-            }
+          SVN_ERR(svn_client__make_local_parents(path, make_parents, ctx,
+                                                 subpool));
         }
       svn_pool_destroy(subpool);
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_mkdir2(svn_commit_info_t **commit_info_p,
+                  const apr_array_header_t *paths,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client_mkdir3(commit_info_p, paths, FALSE, ctx, pool);
 }
 
 

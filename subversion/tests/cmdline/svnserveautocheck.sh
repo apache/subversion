@@ -65,7 +65,7 @@ while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
   SVNSERVE_PORT=$(($RANDOM+1024))
 done
 
-$SERVER_CMD -d -r $ABS_BUILDDIR/subversion/tests/cmdline \
+"$SERVER_CMD" -d -r "$ABS_BUILDDIR/subversion/tests/cmdline" \
             --listen-host 127.0.0.1 \
             --listen-port $SVNSERVE_PORT \
             --pid-file $SVNSERVE_PID &
@@ -78,7 +78,7 @@ else
   pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
   TEST="$1"
   shift
-  time "$SCRIPTDIR/${TEST}_tests.py" "--url=$BASE_URL" $*
+  time "./${TEST}_tests.py" "--url=$BASE_URL" $*
   r=$?
   popd >/dev/null
 fi

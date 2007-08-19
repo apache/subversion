@@ -31,6 +31,7 @@
 #include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "mod_authz_svn.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -108,6 +109,9 @@ typedef struct {
 
   /* is the client a Subversion client? */
   svn_boolean_t is_svn_client;
+
+  /* The path to the activities db */
+  const char *activities_db;
 
 } dav_svn_repos;
 
@@ -252,6 +256,11 @@ svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
 
+/* for the repository referred to by this request, are subrequests bypassed?
+ * A function pointer if yes, NULL if not.
+ */
+authz_svn__subreq_bypass_func_t dav_svn__get_pathauthz_bypass(request_rec *r);
+
 /* for the repository referred to by this request, is a GET of
    SVNParentPath allowed? */
 svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
@@ -295,6 +304,9 @@ const char *dav_svn__get_xslt_uri(request_rec *r);
 
 /* Return the master URI (for mirroring) */
 const char * dav_svn__get_master_uri(request_rec *r);
+
+/* Return the activities db */
+const char * dav_svn__get_activities_db(request_rec *r);
 
 /* Return the root directory */
 const char * dav_svn__get_root_dir(request_rec *r);
@@ -517,9 +529,9 @@ dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output);
 dav_error *
-dav_svn__get_merge_info_report(const dav_resource *resource,
-                               const apr_xml_doc *doc,
-                               ap_filter_t *output);
+dav_svn__get_mergeinfo_report(const dav_resource *resource,
+                              const apr_xml_doc *doc,
+                              ap_filter_t *output);
 dav_error *
 dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,

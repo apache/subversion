@@ -503,7 +503,7 @@ log_header_re = re.compile\
                 ('^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
 field_re = re.compile('^(Patch|Review(ed)?|Suggested|Found) by:\s*(.*)')
 field_aliases = { 'Reviewed' : 'Review' }
-parenthetical_aside_re = re.compile('^\(.*\)\s*$')
+parenthetical_aside_re = re.compile('^\s*\(.*\)\s*$')
 
 def graze(input):
   just_saw_separator = False
@@ -553,7 +553,7 @@ def graze(input):
                 # Each line begins either with "WORD by:", or with whitespace.
                 in_field_re = re.compile('^('
                                          + (field.alias or field.name)
-                                         + ' by:\s+|\s+)(\S.*)+')
+                                         + ' by:\s+|\s+)([^\s(].*)')
                 m = in_field_re.match(line)
                 user, real, email = Contributor.parse(m.group(2))
                 if user == 'me':

@@ -89,9 +89,10 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                                 &write_required,
                                 svn_wc_adm_access_pool(dirpath)));
 
-  if (depth == svn_depth_files
-      || depth == svn_depth_immediates
-      || depth == svn_depth_infinity)
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
+  if (depth > svn_depth_empty)
     {
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
@@ -135,9 +136,15 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
             }
       
           /* If a directory and recursive... */
-          else if ((depth == svn_depth_infinity)
+          else if ((depth == svn_depth_infinity
+                    || depth == svn_depth_immediates)
                    && (current_entry->kind == svn_node_dir))
             {
+              svn_depth_t depth_below_here = depth;
+
+              if (depth == svn_depth_immediates)
+                depth_below_here = svn_depth_empty;
+
               /* If the directory is 'missing', remove it.  This is safe as 
                  long as this function is only called as a helper to 
                  svn_wc__do_update_cleanup, since the update will already have 
@@ -170,7 +177,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                   SVN_ERR(tweak_entries
                           (child_access, child_url, repos, new_rev,
                            notify_func, notify_baton, remove_missing_dirs,
-                           depth, exclude_paths, subpool));
+                           depth_below_here, exclude_paths, subpool));
                 }
             }
         }
@@ -195,18 +202,10 @@ remove_revert_file(svn_stringbuf_t **logtags,
                    apr_pool_t * pool)
 {
   const char * revert_file;
-  const svn_wc_entry_t *entry;
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_wc_entry(&entry, base_name, adm_access, FALSE, pool));
-
-  /*### Maybe assert (entry); calling remove_revert_file
-    for an unversioned file is bogus */
-  if (! entry)
-    return SVN_NO_ERROR;
-
   if (is_prop)
-    SVN_ERR(svn_wc__prop_revert_path(&revert_file, base_name, entry->kind,
+    SVN_ERR(svn_wc__prop_revert_path(&revert_file, base_name, svn_node_file,
                                      FALSE, pool));
   else
     revert_file = svn_wc__text_revert_path(base_name, FALSE, pool);
@@ -1494,12 +1493,17 @@ svn_wc_add2(const char *path,
       modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
     }
 
-  /* If this is a replacement we want to remove the checksum so it is not set
-   * to the old value. */
+  /* If this is a replacement we want to remove the checksum and the property
+     flags so they are not set to their respective old values. */
   if (is_replace)
     {
       tmp_entry.checksum = NULL;
       modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+
+      tmp_entry.has_props = FALSE;
+      tmp_entry.has_prop_mods = FALSE;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROPS;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS;
     }
   
   tmp_entry.revision = 0;
@@ -1726,6 +1730,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   apr_hash_t *baseprops = NULL;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
+  svn_boolean_t revert_base = FALSE;
 
   /* Build the full path of the thing we're reverting. */
   fullpath = svn_wc_adm_access_path(adm_access);
@@ -1733,24 +1738,34 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     fullpath = svn_path_join(fullpath, name, pool);
 
   /* Deal with properties. */
-
   if (entry->schedule == svn_wc_schedule_replace)
     {
       const char *rprop;
       svn_node_kind_t kind;
 
+      revert_base = TRUE;
       /* Use the revertpath as the new propsbase if it exists. */
       SVN_ERR(svn_wc__prop_revert_path(&rprop, fullpath, entry->kind, FALSE,
                                        pool));
       SVN_ERR(svn_io_check_path(rprop, &kind, pool));
+
+      /* If the revert-base doesn't exist, check for a normal propsbase */
+      if (kind != svn_node_file)
+        {
+          SVN_ERR(svn_wc__prop_base_path(&rprop, fullpath, entry->kind, FALSE,
+                                         pool));
+          SVN_ERR(svn_io_check_path(rprop, &kind, pool));
+          revert_base = FALSE;
+        }
       if (kind == svn_node_file)
         {
           baseprops = apr_hash_make(pool);
           SVN_ERR(svn_wc__load_prop_file(rprop, baseprops, pool));
           /* Ensure the revert propfile gets removed. */
-          SVN_ERR(svn_wc__loggy_remove
-                  (&log_accum, adm_access,
-                   svn_path_is_child(adm_path, rprop, pool), pool));
+          if (revert_base)
+            SVN_ERR(svn_wc__loggy_remove
+                    (&log_accum, adm_access,
+                     svn_path_is_child(adm_path, rprop, pool), pool));
           *reverted = TRUE;
         }
     }
@@ -1786,7 +1801,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     {
       SVN_ERR(svn_wc__install_props(&log_accum, adm_access, name, baseprops,
                                     baseprops,
-                                    entry->schedule == svn_wc_schedule_replace,
+                                    revert_base,
                                     pool));
       *reverted = TRUE;
     }
@@ -2221,16 +2236,26 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       
   if (is_file)
     {
+      svn_node_kind_t kind;
+      svn_boolean_t wc_special, local_special;
       svn_boolean_t text_modified_p;
       full_path = svn_path_join(full_path, name, pool);
 
-      /* Check for local mods. before removing entry */
-      SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
-                                     FALSE, adm_access, pool));
-      if (text_modified_p && instant_error)
-        return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
-                                 _("File '%s' has local modifications"),
-                                 svn_path_local_style(full_path, pool));
+      /* Only check if the file was modified when it wasn't overwritten with a 
+         special file */
+      SVN_ERR(svn_wc__get_special(&wc_special, full_path, adm_access, pool));
+      SVN_ERR(svn_io_check_special_path(full_path, &kind, &local_special, 
+                                        pool));
+      if (wc_special || ! local_special)
+        {
+          /* Check for local mods. before removing entry */
+          SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
+                  FALSE, adm_access, pool));
+          if (text_modified_p && instant_error)
+            return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
+                   _("File '%s' has local modifications"),
+                   svn_path_local_style(full_path, pool));
+        }
 
       /* Remove the wcprops. */
       SVN_ERR(svn_wc__remove_wcprops(adm_access, name, FALSE, pool));
@@ -2267,7 +2292,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
          it has local mods. */
       if (destroy_wf)
         {
-          if (text_modified_p)  /* Don't kill local mods. */
+          /* Don't kill local mods. */
+          if (text_modified_p || (! wc_special && local_special))
             return svn_error_create(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL, NULL);
           else  /* The working file is still present; remove it. */
             SVN_ERR(remove_file_if_present(full_path, pool));

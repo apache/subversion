@@ -48,9 +48,9 @@ href="http://svn.haxx.se/dev/archive-2006-04/0916.shtml">proposal</a>
 
 <p style="color: red">The following content has been temporarily
 superseded by <a
-href="http://svn.collab.net/repos/svn/branches/merge-tracking/notes/merge-tracking.txt">notes
-on the development branch</a> until the design completely
-stabilizes.</p>
+href="http://svn.collab.net/repos/svn/trunk/notes/merge-tracking.txt">notes
+on the development branch</a>, which contain some changes not listed
+in this section.</p>
 
 <div class="h3">
 <h3>Goals</h3>
@@ -462,7 +462,7 @@ operations.  It consists of three sections:</p>
 
   <li>Find Change Set (TODO)</li>
 
-  <li><a href="commutative-reporting">Commutative Author and Revision
+  <li><a href="#commutative-reporting">Commutative Author and Revision
   Reporting</a></li>
 </ul>
 
@@ -479,6 +479,53 @@ FS isn't based on a weave.</p>
 
 <p>Existing functions of interest are <code>svn_repos_fs_get_merge_info()</code>
 and <code>svn_fs_merge_info__get_merge_info()</code>.</p>
+
+<div class="h4" id="audit-log">
+<h4><code>svn log</code> Implementation</h4>
+
+<p>Prior to merge tracking, log messages had a linear relationship to one
+another.  That is, the only information gleaned from the order in which a
+message was returned was where the revision number of that message fell in
+relation to the revision numbers of messages preceding and succeeding it.</p>
+
+<p>The introduction of merge tracking changes that paradigm.  Log messages
+for independent revisions are still linearly related as before, but log
+messages for merging revisions now have children.  These children are log
+messages for the revisions which have been merged, and they may in turn
+also have children.</p>
+
+<p>The result is a tree structure which the repository layer builds as it
+collects log message information.  This tree structure then gets serialized
+and marshaled back to the client, which can then rebuilt the tree if needed.
+Additionally, less information needs to be explicitly given, as the tree
+structure itself implies revision relationships.
+</p>
+
+<p>We currently use the <code>svn_log_message_receiver_t</code> interface
+to return log messages between application layers.  To enable communication
+of the tree structure, we add another parameter, <code>child_count</code>.
+When <code>child_count</code> is zero, the node is a leaf node.  When
+<code>child_count</code> is greater than zero, the node is an interior node,
+with the given number of children.  These children may also have children and
+indicate such by their own <code>child_count</code> parameters.  Children
+are returned in-band through the receiver interface immediately following their
+parents.  Consumers of this API can be aware of the number of children and
+rebuild the tree, or pass the values farther up the application stack.  In
+effect, this method implements a preorder traversal of the log message tree.</p>
+
+<p>(For convenience, we may want to consolidate all the data parameters of
+<code>svn_log_message_receiver_t</code> into a single structure.)</p>
+
+</div>  <!-- audit-log -->
+
+<div class="h4" id="audit-blame">
+<h4><code>svn blame</code> Implementation</h4>
+
+<p>Even though the command line client doesn't consume both the original 
+author and revision and the merging author and revision, the blame API should
+provide both for use by other clients.</p>
+
+</div>  <!-- audit-blame -->
 
 </div>  <!-- commutative-reporting -->
 

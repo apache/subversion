@@ -9,6 +9,7 @@
 # Be warned this this script has many dependencies that don't ship with Python.
 
 import sys
+import os
 import fileinput
 import datetime
 import time
@@ -17,8 +18,10 @@ from matplotlib.dates import date2num
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib.pylab import *
+import Image
 
 OUTPUT_FILE = '../../www/images/svn-dav-securityspace-survey.png'
+OUTPUT_IMAGE_WIDTH = 800
 
 STATS = """1/1/2003       70
 2/1/2003                 158
@@ -70,7 +73,10 @@ STATS = """1/1/2003       70
 12/1/2006              68988
 1/1/2007               77027
 2/1/2007               84813
-3/1/2007               95679"""
+3/1/2007               95679
+4/1/2007              103852
+5/1/2007              117267
+6/1/2007              133665"""
 
 
 def get_date(raw_date):
@@ -100,22 +106,43 @@ def parse_stats(str):
 def draw_graph(dates, counts):
   ###########################################################
   # Drawing takes place here.
-  ax = subplot(111)
-  ax.xaxis.set_major_formatter( DateFormatter('%b,%y') )
-  ax.yaxis.set_major_formatter( FormatStrFormatter('%d') )
+  figure(1, figsize=(6.5, 4.5))
 
-  line = bar(dates, counts,  color='r', width=24)
+  ax = subplot(111)
+  plot_date(dates, counts, color='r', linestyle='-', marker='o', markersize=3)
+
+  ax.xaxis.set_major_formatter( DateFormatter('%Y') )
+  ax.xaxis.set_major_locator( YearLocator() )
+  ax.xaxis.set_minor_locator( MonthLocator() )
+
+  ax.yaxis.set_major_formatter( FormatStrFormatter('%d') )
 
   ylabel('Total # of Public DAV Servers')
 
   lastdate = datetime.fromordinal(dates[len(dates) - 1]).strftime("%B %Y")
   xlabel("Data as of " + lastdate)
-  title('Security Space Survey of Public Subversion DAV Servers')
+  title('Security Space Survey of\nPublic Subversion DAV Servers')
   # End drawing
   ###########################################################
   png = open(OUTPUT_FILE, 'w')
   savefig(png)
   png.close()
+  os.rename(OUTPUT_FILE, OUTPUT_FILE + ".tmp.png")
+  try:
+    im = Image.open(OUTPUT_FILE + ".tmp.png", 'r')
+    (width, height) = im.size
+    print "Original size: %d x %d pixels" % (width, height)
+    scale = float(OUTPUT_IMAGE_WIDTH) / float(width)
+    width = OUTPUT_IMAGE_WIDTH
+    height = int(float(height) * scale)
+    print "Final size: %d x %d pixels" % (width, height)
+    im = im.resize((width, height), Image.ANTIALIAS)
+    im.save(OUTPUT_FILE, im.format)
+    os.unlink(OUTPUT_FILE + ".tmp.png")
+  except Exception, e:
+    sys.stderr.write("Error attempting to resize the graphic: %s\n" % (str(e)))
+    os.rename(OUTPUT_FILE + ".tmp.png", OUTPUT_FILE)
+    raise
   close()
 
 

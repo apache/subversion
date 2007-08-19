@@ -315,10 +315,12 @@ typedef struct svn_client_proplist_item_t
  * The callback invoked by svn_client_proplist3().  Each invocation
  * describes the property specified by @a item.  Use @a pool for all
  * temporary allocation.
+ *
+ * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_proplist_receiver_t)
   (void *baton,
-   svn_stringbuf_t *path,
+   const char *path,
    apr_hash_t *prop_hash,
    apr_pool_t *pool);
 
@@ -810,15 +812,6 @@ typedef struct svn_client_ctx_t
    * @since New in 1.3. */
   void *log_msg_baton2;
 
-  /** Log message callback function. NULL means that Subversion
-   *   should try @c log_msg_func2, then @c log_msg_func.
-   * @since New in 1.5. */
-  svn_client_get_commit_log3_t log_msg_func3;
-
-  /** The callback baton for @c log_msg_func3.
-   * @since New in 1.5. */
-  void *log_msg_baton3;
-
   /** Notification callback for network progress information.
    * May be NULL if not used.
    * @since New in 1.3. */
@@ -827,6 +820,15 @@ typedef struct svn_client_ctx_t
   /** Callback baton for progress_func.
    * @since New in 1.3. */
   void *progress_baton;
+
+  /** Log message callback function. NULL means that Subversion
+   *   should try @c log_msg_func2, then @c log_msg_func.
+   * @since New in 1.5. */
+  svn_client_get_commit_log3_t log_msg_func3;
+
+  /** The callback baton for @c log_msg_func3.
+   * @since New in 1.5. */
+  void *log_msg_baton3;
 
   /** MIME types map.
    * @since New in 1.5. */
@@ -1199,10 +1201,10 @@ svn_client_switch(svn_revnum_t *result_rev,
  * ### important for the sparse-directories work, so leaving it
  * ### for now.
  * 
- * @a path's parent must be under revision control already, but @a 
- * path is not.  If @a recursive is set, then assuming @a path is a 
- * directory, all of its contents will be scheduled for addition as 
- * well.
+ * @a path's parent must be under revision control already (unless
+ * @a add_parents is true), but @a path is not.  If @a recursive is 
+ * set, then assuming @a path is a directory, all of its contents will
+ * be scheduled for addition as well.
  *
  * If @a force is not set and @a path is already under version
  * control, return the error @c SVN_ERR_ENTRY_EXISTS.  If @a force is
@@ -1218,12 +1220,31 @@ svn_client_switch(svn_revnum_t *result_rev,
  * If @a no_ignore is false, don't add files or directories that match
  * ignore patterns.
  *
+ * If @a add_parents is true, recurse up @a path's directory and look for
+ * a versioned directory.  If found, add all intermediate paths between it
+ * and @a path.  If not found, return @c SVN_ERR_CLIENT_NO_VERSIONED_PARENTS.
+ *
  * @par Important:
  * This is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
  * can be removed with svn_client_revert().
  *
- * @since New in 1.3.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_add4(const char *path,
+                svn_boolean_t recursive,
+                svn_boolean_t force,
+                svn_boolean_t no_ignore,
+                svn_boolean_t add_parents,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_add4(), but with @a add_parents always set to
+ * false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_client_add3(const char *path,
@@ -1276,6 +1297,9 @@ svn_client_add(const char *path,
  * for addition (using svn_client_add(), whose docstring you should
  * read).
  *
+ * If @a make_parents is TRUE, create any non-existent parent directories
+ * also.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1285,14 +1309,27 @@ svn_client_add(const char *path,
  * @a ctx->notify_baton2 and the path of the new directory.  Note that this is
  * only called for items added to the working copy.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_mkdir3(svn_commit_info_t **commit_info_p,
+                  const apr_array_header_t *paths,
+                  svn_boolean_t make_parents,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+
+/**
+ * Same as svn_client_mkdir3(), but with @a make_parents always FALSE.
+ *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_mkdir2(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
-
 
 /**
  * Same as svn_client_mkdir2(), but takes the @c svn_client_commit_info_t
@@ -1693,6 +1730,12 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each target.
  *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a targets will also be returned.
+ *
+ * If @a omit_log_text is set, the contents of the log message will not
+ * be returned.
+ *
  * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
  * return the error @c SVN_ERR_CLIENT_BAD_REVISION.
  *
@@ -1708,6 +1751,30 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
+ * @since New in 1.5.
+ */
+
+svn_error_t *
+svn_client_log4(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                svn_boolean_t omit_log_text,
+                svn_log_message_receiver2_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_log4(), but using @c svn_log_message_receiver_t
+ * instead of @c svn_log_message_receiver2_t.  Also, @a
+ * include_merged_revisions and @a omit_log_text are set to @c FALSE
+ *
+ * @deprecated Provided for compatibility with the 1.4 API.
  * @since New in 1.4.
  */
 svn_error_t *
@@ -2392,6 +2459,27 @@ svn_client_merge_peg(const char *source,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
+/**
+ * Retrieve the merge info for @a path_or_url in @a *mergeinfo,
+ * storing a mapping of repository-relative paths to @c
+ * apr_array_header_t *'s of @c svn_merge_range_t *'s, or @c NULL if
+ * there is no merge info.
+ *
+ * @a path_or_url is a WC path or repository URL.  If @a path_or_url
+ * is a WC path, @a revision is ignored in preference to @a
+ * path_or_url's @c WORKING revision.  If @a path_or_url is a URL, @a
+ * revision is the revision at which to get its merge info.  @a
+ * mergeinfo is allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
+                         const char *path_or_url,
+                         const svn_opt_revision_t *revision,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *pool);
+
 /** @} */
 
 /**
@@ -2559,7 +2647,7 @@ typedef struct svn_client_copy_source_t
  * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
  * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
  *
- * If @a src_paths has multiple items, and @a copy_as_child is FALSE, fail
+ * If @a sources has multiple items, and @a copy_as_child is FALSE, fail
  * with @c SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED.
  *
  * If @a dst_path is a URL, use the authentication baton 
@@ -2573,6 +2661,9 @@ typedef struct svn_client_copy_source_t
  * svn_client_add(), where the @a sources are scheduled for addition
  * as copies.  No changes will happen to the repository until a commit occurs.
  * This scheduling can be removed with svn_client_revert().
+ *
+ * If @a make_parents is TRUE, create any non-existent parent directories
+ * also.
  *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo
  * that this function can use to query for a commit log message when one is
@@ -2589,13 +2680,14 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_copy4(), with only one @a src_path and
- * @a copy_as_child set to FALSE.  Also, use @a src_revision as both 
- * the operational and peg revision.
+ * Similar to svn_client_copy4(), with only one @a src_path,
+ * @a copy_as_child set to FALSE and @a make_parents set to FALSE.  Also,
+ * use @a src_revision as both the operational and peg revision.
  *
  * @since New in 1.4.
  *
@@ -2706,6 +2798,9 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * If @a src_paths has multiple items, and @a move_as_child is FALSE, fail
  * with @c SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED.
  *
+ * If @a make_parents is TRUE, create any non-existent parent directories
+ * also.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
  *
@@ -2724,12 +2819,13 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  const char *dst_path,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
+                 svn_boolean_t make_parents,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_move5(), with only one @a src_path and
- * @a move_as_child set to FALSE.
+ * Similar to svn_client_move5(), with only one @a src_path,
+ * @a move_as_child set to FALSE and @a make_parents set to FALSE.
  *
  * @since New in 1.4.
  *
@@ -3036,15 +3132,15 @@ svn_client_revprop_get(const char *propname,
  * baton cached in @a ctx for authentication if contacting the
  * repository.
  *
- * If @a recurse is false, or @a target is a file, @a *props will contain 
- * only a single element.  Otherwise, it will contain one element for each
- * versioned entry below (and including) @a target.
- *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth right now; it's not exactly part of the
- * ### sparse-directories feature, although it's related.  Usually
- * ### you would just name the target carefully... Is there a
- * ### situation where depth support would be useful here?
+ * If @a depth is @c svn_depth_empty, list only the properties of
+ * @a path_or_url itself.  If @a depth is @c svn_depth_files, and
+ * @a path_or_url is a directory, list the properties of @a path_or_url
+ * and its file entries.  If @c svn_depth_immediates, list the properties
+ * of its immediate file and directory entries.  If @c svn_depth_infinity,
+ * list the properties of its file entries and recurse (with
+ * @c svn_depth_infinity) on directory entries.  @c svn_depth_unknown is
+ * equivalent to @c svn_depth_empty.  All other values produce undefined
+ * results.
  *
  * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
@@ -3054,7 +3150,7 @@ svn_error_t *
 svn_client_proplist3(const char *target,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
+                     svn_depth_t depth,
                      svn_proplist_receiver_t receiver,
                      void *receiver_baton,
                      svn_client_ctx_t *ctx,
@@ -3063,7 +3159,9 @@ svn_client_proplist3(const char *target,
 /**
  * Similar to svn_client_proplist3(), except the properties are returned 
  * as an array of @c svn_client_proplist_item_t * structures, instead of
- * by invoking the receiver function.
+ * by invoking the receiver function, and @a recurse is used instead of
+ * a @c svn_depth_t parameter (FALSE corresponds to @c svn_depth_empty,
+ * and TRUE to @c svn_depth_infinity).
  *
  * @since New in 1.2.
  *
@@ -3256,7 +3354,7 @@ svn_client_export(svn_revnum_t *result_rev,
  * @{
  */
 
-/** Invoked by svn_client_list() for each @a path with its @a dirent and,
+/** Invoked by svn_client_list2() for each @a path with its @a dirent and,
  * if @a path is locked, its @a lock.  @a abs_path is the filesystem path
  * to which @a path is relative.  @a baton is the baton passed to the
  * caller.  @a pool may be used for temporary allocations.
@@ -3291,18 +3389,38 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * Use authentication baton cached in @a ctx to authenticate against the 
  * repository.
  *
- * If @a recurse is true (and @a path_or_url is a directory) this will
- * be a recursive operation.
- *
- * ### TODO(sd): This really should take depth instead of recurse, but
- * ### one thing at a time, one thing at a time...
+ * If @a depth is @c svn_depth_empty, list just @a path_or_url itself.
+ * If @a depth is @c svn_depth_files, list @a path_or_url and its file
+ * entries.  If @c svn_depth_immediates, list its immediate file and
+ * directory entries.  If @c svn_depth_infinity, list file entries and
+ * recurse (with @c svn_depth_infinity) on directory entries.
  *
  * @a dirent_fields controls which fields in the @c svn_dirent_t's are
  * filled in.  To have them totally filled in use @c SVN_DIRENT_ALL, 
  * otherwise simply bitwise OR together the combination of @c SVN_DIRENT_
  * fields you care about.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_list2(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_client_list_func_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/* Like svn_client_list2(), but with @a recurse instead of @a depth.
+ * If @a recurse is true, pass @c svn_depth_files for @a depth; else
+ * pass @c svn_depth_infinity.
+ *
  * @since New in 1.4.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_list(const char *path_or_url,

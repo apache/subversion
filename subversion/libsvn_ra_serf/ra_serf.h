@@ -900,7 +900,9 @@ svn_ra_serf__get_log(svn_ra_session_t *session,
                      int limit,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
-                     svn_log_message_receiver_t receiver,
+                     svn_boolean_t include_merged_revisions,
+                     svn_boolean_t omit_log_text,
+                     svn_log_message_receiver2_t receiver,
                      void *receiver_baton,
                      apr_pool_t *pool);
 
@@ -1040,10 +1042,10 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        const char *path,
                        apr_pool_t *pool);
 
-svn_error_t * svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
-                                          apr_hash_t **mergeinfo,
-                                          const apr_array_header_t *paths,
-                                          svn_revnum_t revision,
-                                          svn_boolean_t include_parents,
-                                          apr_pool_t *pool);
+svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
+                                         apr_hash_t **mergeinfo,
+                                         const apr_array_header_t *paths,
+                                         svn_revnum_t revision,
+                                         svn_boolean_t include_parents,
+                                         apr_pool_t *pool);
 

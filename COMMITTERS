@@ -29,7 +29,6 @@ Blanket commit access:
          naked   Nuutti Kotivuori <naked@iki.fi>
        dwhedon   David Kimdon <dwhedon@debian.org>
            dlr   Daniel Rall <dlr@collab.net>
-         kraai   Matt Kraai <kraai@alumni.cmu.edu>
            mbk   Mark Benedetto King <mbk@lowlatency.com>
            epg   Eric Gillespie <epg@pretzelnet.org>
            jaa   Jani Averbach <jaa@iki.fi>
@@ -52,6 +51,7 @@ Blanket commit access:
            lgo   Lieven Govaerts <lgo@mobsol.be>
        hwright   Hyrum Wright <hyrum_wright@mail.utexas.edu>
     vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
+       kameshj   Kamesh Jayachandran <kamesh@collab.net>
 
 Commit access for specific areas:
 
@@ -62,6 +62,7 @@ Commit access for specific areas:
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
+    joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
 
   Packages:
@@ -102,8 +103,8 @@ Commit access for specific areas:
        madanus   Madan U S <madanus@gmail.com>               (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
-       kameshj   Kamesh Jayachandran <kamesh@collab.net>     (svntest)
         aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
+      dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
 
   Translation of message files:
 
@@ -161,6 +162,7 @@ Committers who have asked to be listed as dormant:
 
         bdenny   Brian Estlin <brian@implementality.com>
       rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
+         kraai   Matt Kraai <kraai@alumni.cmu.edu>
 
 ## Local Variables:
 ## coding:utf-8

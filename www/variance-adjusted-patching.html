@@ -18,8 +18,9 @@
 <h2>Variance-Adjusted Patching for Divergent Texts</h2>
 <p>Karl&nbsp;Fogel&nbsp;<tt>&lt;kfogel@collab.net&gt;</tt></p>
 
+<p>Date of First Publication: 22 May, 2001</p>
+
 <p>$LastChangedDate$<br />
-Original Date: 22 May, 2001<br />
 Canonical URL: <a href="http://svn.collab.net/repos/svn/trunk/www/variance-adjusted-patching.html">http://svn.collab.net/repos/svn/trunk/www/variance-adjusted-patching.html</a></p>
 
 <hr />  <!-- ====================================================== -->
@@ -655,6 +656,42 @@ Through variance-adjusted patching, any repository that stores
 successive revisions can apply patches even between highly divergent
 branches, as long as there is a common ancestor.
 </p>
+
+<h4>Addendum</h4>
+
+<p>For clarity, I have used line-based diffs to describe the process
+of variance adjustment.  The algorithm applies equally well, of
+course, to other kinds of diffs, including arbitrary binary diffs.  In
+fact,
+<a href="http://www.red-bean.com/pipermail/changesets/2003-April/000097.html"
+>Dr. William Uther wrote</a>:</p>
+
+<blockquote>
+<em>I actually gave an example of a binary version of the VAP algorithm on
+the svn-dev list a while back.  It used VAP at the byte level, instead
+of at the line level.  It was similar to your suggested VAP algorithm
+in that you could adjust the 'soft-conflict' zone around the changes.
+</em>
+</blockquote>
+
+<p>The message he's referring to appears to be this one:</p>
+
+<pre>
+   <a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=162878">http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=162878</a>
+   From: William Uther
+   To: dev@subversion.tigris.org
+   Subject: Re: Merging
+   Date: Sat, 16 Feb 2002 21:19:43 -0500
+   Message-ID: &lt;B8947D6F.787C%will=subversion@cs.cmu.edu&gt;
+   In-Reply-To: &lt;51C7002B020CD411824E009027C469F782259A@cldxch01.hifn.com&gt;
+</pre>
+
+<p>I mention this here in order to help anyone using this algorithm as
+prior art in a patent challenge.  I doubt I was the first person to
+describe variance-adjusted patching, but at the very least we can know
+that the method was described as of 22 May 2001&nbsp;&mdash;&nbsp;and
+that both I and someone else "proficient in the art" (William Uther)
+thought its applicability to binary diffs to be pretty obvious.</p>
 
 </div>
 </body>

@@ -73,6 +73,13 @@ typedef struct svn_fs_t svn_fs_t;
  *  @since New in 1.4. 
  */
 #define SVN_FS_CONFIG_PRE_1_4_COMPATIBLE        "pre-1.4-compatible"
+
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.5.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_FS_CONFIG_PRE_1_5_COMPATIBLE        "pre-1.5-compatible"
 /** @} */
 
 
@@ -87,7 +94,10 @@ typedef struct svn_fs_t svn_fs_t;
  * effort to bootstrap a mutex for protecting data common to FS
  * objects; however, there is a small window of failure.  Also, a
  * small amount of data will be leaked if the Subversion FS library is
- * dynamically unloaded.
+ * dynamically unloaded, and using the bdb FS can potentially segfault
+ * or invoke other undefined behavior if this function is not called
+ * with an appropriate pool (such as the pool the module was loaded into)
+ * when loaded dynamically.
  *
  * If this function is called multiple times before the pool passed to
  * the first call is destroyed or cleared, the later calls will have
@@ -1177,11 +1187,13 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
  *   the merge info for that path should be removed altogether.
  *
  * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.5.
  */
-svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
-                                      const char *path,
-                                      apr_hash_t *mergeinhash,
-                                      apr_pool_t *pool);
+svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
+                                     const char *path,
+                                     apr_hash_t *mergeinhash,
+                                     apr_pool_t *pool);
 
 /** Retrieve merge info for multiple nodes.
  *
@@ -1196,12 +1208,34 @@ svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
  * from parent directories of @a paths.
  *
  * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.5.
  */
-svn_error_t *svn_fs_get_merge_info(apr_hash_t **minfohash,
-                                   svn_fs_root_t *root,
-                                   const apr_array_header_t *paths,
-                                   svn_boolean_t include_parents,
-                                   apr_pool_t *pool);
+svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
+                                  svn_fs_root_t *root,
+                                  const apr_array_header_t *paths,
+                                  svn_boolean_t include_parents,
+                                  apr_pool_t *pool);
+
+/** Retrieve combined mergeinfo for multiple nodes, and their children.
+ *
+ * @a mergeinfo is filled with mergeinfo for each of the @a paths and
+ * their children, stored as a mergeinfo hash.  It will never be @c NULL,
+ * but may be empty.
+ *
+ * @a root indicate the revision root to use when looking up paths.
+ *
+ * @a paths indicate the paths you are requesting information for.
+ *
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
+                              svn_fs_root_t *root,
+                              const apr_array_header_t *paths,
+                              apr_pool_t *pool);
 
 /** Merge changes between two nodes into a third node.
  *

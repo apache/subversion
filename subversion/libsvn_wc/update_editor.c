@@ -40,6 +40,7 @@
 #include "svn_md5.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
+#include "svn_config.h"
 
 #include "wc.h"
 #include "questions.h"
@@ -67,6 +68,10 @@ struct edit_baton
 
   /* ADM_ACCESS is an access baton that includes the ANCHOR directory */
   svn_wc_adm_access_t *adm_access;
+
+  /* Array of file extension patterns to preserve as extensions in
+     generated conflict files. */
+  apr_array_header_t *ext_patterns;
 
   /* The revision we're targeting...or something like that.  This
      starts off as a pointer to the revision to which we are updating,
@@ -2280,18 +2285,40 @@ merge_file(svn_wc_notify_state_t *content_state,
             /* Working file exists and has local mods
                or is scheduled for addition but is not an obstruction. */
             {                  
-              /* Now we need to let loose svn_wc_merge2() to merge the
-                 textual changes into the working file. */
-              const char *oldrev_str, *newrev_str;
+              /* Now we need to let loose svn_wc__merge_internal() to merge 
+                 the textual changes into the working file. */
+              const char *oldrev_str, *newrev_str, *mine_str;
               const char *merge_left;
-              
+              const char *path_ext = "";
+
+              /* If we have any file extensions we're supposed to
+                 preserve in generated conflict file names, then find
+                 this path's extension.  But then, if it isn't one of
+                 the ones we want to keep in conflict filenames,
+                 pretend it doesn't have an extension at all. */
+              if (eb->ext_patterns && eb->ext_patterns->nelts)
+                {
+                  svn_path_splitext(NULL, &path_ext, fb->path, pool);
+                  if (! (*path_ext 
+                         && svn_cstring_match_glob_list(path_ext, 
+                                                        eb->ext_patterns)))
+                    path_ext = "";
+                }
+                
               /* Create strings representing the revisions of the
                  old and new text-bases. */
-              oldrev_str = apr_psprintf(pool, ".r%ld",
-                                        entry->revision);
-              newrev_str = apr_psprintf(pool, ".r%ld",
-                                        *eb->target_revision);
-
+              oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
+                                        entry->revision,
+                                        *path_ext ? "." : "",
+                                        *path_ext ? path_ext : "");
+              newrev_str = apr_psprintf(pool, ".r%ld%s%s",
+                                        *eb->target_revision,
+                                        *path_ext ? "." : "",
+                                        *path_ext ? path_ext : "");
+              mine_str = apr_psprintf(pool, ".mine%s%s",
+                                      *path_ext ? "." : "",
+                                      *path_ext ? path_ext : "");
+              
               if (fb->add_existed && ! is_replaced)
                 {
                   SVN_ERR(svn_wc_create_tmp_file2(NULL, &merge_left,
@@ -2312,9 +2339,10 @@ merge_file(svn_wc_notify_state_t *content_state,
                        fb->new_text_base_path,
                        fb->path,
                        adm_access,
-                       oldrev_str, newrev_str, ".mine",
+                       oldrev_str, newrev_str, mine_str,
                        FALSE, eb->diff3_cmd, NULL, fb->propchanges,
                        pool));
+
               /* If we created a temporary left merge file, get rid of it. */
               if (merge_left != fb->text_base_path)
                 SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
@@ -2583,6 +2611,7 @@ make_editor(svn_revnum_t *target_revision,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
             const char *diff3_cmd,
+            apr_array_header_t *preserved_exts,
             const svn_delta_editor_t **editor,
             void **edit_baton,
             svn_wc_traversal_info_t *traversal_info,
@@ -2625,6 +2654,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->cancel_baton             = cancel_baton;
   eb->allow_unver_obstructions = allow_unver_obstructions;
   eb->skipped_paths            = apr_hash_make(subpool);
+  eb->ext_patterns             = preserved_exts;
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -2667,6 +2697,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2675,8 +2706,8 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
                      target, use_commit_times, NULL, depth,
                      allow_unver_obstructions, notify_func, notify_baton,
-                     cancel_func, cancel_baton, diff3_cmd, editor,
-                     edit_baton, traversal_info, pool);
+                     cancel_func, cancel_baton, diff3_cmd, preserved_exts, 
+                     editor, edit_baton, traversal_info, pool);
 }
 
 
@@ -2701,7 +2732,7 @@ svn_wc_get_update_editor2(svn_revnum_t *target_revision,
                                    SVN_DEPTH_FROM_RECURSE(recurse),
                                    FALSE, notify_func, notify_baton,
                                    cancel_func, cancel_baton,
-                                   diff3_cmd, editor, edit_baton,
+                                   diff3_cmd, NULL, editor, edit_baton,
                                    traversal_info, pool);
 }
 
@@ -2730,7 +2761,8 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
                                    SVN_DEPTH_FROM_RECURSE(recurse),
                                    FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton, diff3_cmd,
-                                   editor, edit_baton, traversal_info, pool);
+                                   NULL, editor, edit_baton, traversal_info, 
+                                   pool);
 }
 
 svn_error_t *
@@ -2746,6 +2778,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2756,8 +2789,8 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
                      target, use_commit_times, switch_url, depth,
                      allow_unver_obstructions, notify_func, notify_baton,
-                     cancel_func, cancel_baton, diff3_cmd, editor,
-                     edit_baton, traversal_info, pool);
+                     cancel_func, cancel_baton, diff3_cmd, preserved_exts, 
+                     editor, edit_baton, traversal_info, pool);
 }
 
 svn_error_t *
@@ -2784,7 +2817,7 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
                                    SVN_DEPTH_FROM_RECURSE(recurse),
                                    FALSE, notify_func, notify_baton,
                                    cancel_func, cancel_baton, diff3_cmd,
-                                   editor, edit_baton, traversal_info,
+                                   NULL, editor, edit_baton, traversal_info,
                                    pool);
 }
 
@@ -2814,7 +2847,8 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
                                    SVN_DEPTH_FROM_RECURSE(recurse),
                                    FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton, diff3_cmd,
-                                   editor, edit_baton, traversal_info, pool);
+                                   NULL, editor, edit_baton, traversal_info, 
+                                   pool);
 }
                                     
 

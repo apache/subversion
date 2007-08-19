@@ -151,6 +151,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->bkt_alloc =
           serf_bucket_allocator_create(serf_sess->pool, NULL, NULL);
   serf_sess->conns[0]->session = serf_sess;
+  serf_sess->conns[0]->last_status_code = -1;
 
   /* fetch the DNS record for this host */
   status = apr_sockaddr_info_get(&serf_sess->conns[0]->address, url.hostname,
@@ -695,7 +696,7 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__get_commit_editor,
   svn_ra_serf__get_file,
   svn_ra_serf__get_dir,
-  svn_ra_serf__get_merge_info,
+  svn_ra_serf__get_mergeinfo,
   svn_ra_serf__do_update,
   svn_ra_serf__do_switch,
   svn_ra_serf__do_status,

@@ -89,30 +89,29 @@ class SVNRepositoryCreateFailure(Failure):
   "Exception raised if unable to create a repository"
   pass
 
+# Define True and False if not provided by Python (<=2.1)
+try:
+  False
+except:
+  False = 0
+  True = 1
+
 # Windows specifics
 if sys.platform == 'win32':
-  windows = 1
+  windows = True
   file_scheme_prefix = 'file:///'
   _exe = '.exe'
 else:
-  windows = 0
+  windows = False
   file_scheme_prefix = 'file://'
   _exe = ''
 
 # os.wait() specifics
 try:
   from os import wait
-  platform_with_os_wait = 1
+  platform_with_os_wait = True
 except ImportError:
-  platform_with_os_wait = 0
-
-# The locations of the svn, svnadmin and svnlook binaries, relative to
-# the only scripts that import this file right now (they live in ../).
-svn_binary = os.path.abspath('../../svn/svn' + _exe)
-svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
-svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
-svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
-svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
+  platform_with_os_wait = False
 
 # The location of our mock svneditor script.
 svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
@@ -125,30 +124,55 @@ wc_passwd = 'rayjandom'
 # scenarios
 wc_author2 = 'jconstant' # use the same password as wc_author
 
+######################################################################
+# Global variables set during option parsing.  These should not be used
+# until the variable command_line_parsed has been set to True, as is
+# done in run_tests below.
+command_line_parsed = False
+
+# The locations of the svn, svnadmin and svnlook binaries, relative to
+# the only scripts that import this file right now (they live in ../).
+# Use --bin to override these defaults.
+svn_binary = os.path.abspath('../../svn/svn' + _exe)
+svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
+svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
+svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
+svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
+
 # Global variable indicating if we want verbose output.
-verbose_mode = 0
+verbose_mode = False
 
 # Global variable indicating if we want test data cleaned up after success
-cleanup_mode = 0
+cleanup_mode = False
 
 # Global variable indicating if svnserve should use Cyrus SASL
-enable_sasl = 0
+enable_sasl = False
 
 # Global variable indicating if this is a child process and no cleanup
 # of global directories is needed.
-is_child_process = 0
+is_child_process = False
 
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
-if windows == 1:
+if windows:
   test_area_url = test_area_url.replace('\\', '/')
+
+# Location to the pristine repository, will be calculated from test_area_url
+# when we know what the user specified for --url.
+pristine_url = None
 
 # Global variable indicating the FS type for repository creations.
 fs_type = None
 
+# End of command-line-set global variables.
+######################################################################
+
 # All temporary repositories and working copies are created underneath
 # this dir, so there's one point at which to mount, e.g., a ramdisk.
 work_dir = "svn-test-work"
+
+# Constant for the merge info property.
+SVN_PROP_MERGE_INFO = "svn:mergeinfo"
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
@@ -164,10 +188,6 @@ temp_dir = os.path.join(work_dir, 'local_tmp')
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
-
-# Location to the pristine repository, will be calculated from test_area_url
-# when we know what the user specified for --url.
-pristine_url = None
 
 #
 # Our pristine greek-tree state.
@@ -421,6 +441,15 @@ def file_write(path, contents, mode = 'w'):
   fp.write(contents)
   fp.close()
 
+# For reading the contents of a file
+def file_read(path, mode = 'r'):
+  """Return the contents of the file at PATH, opening file using MODE,
+  which is (r)ead by default."""
+  fp = open(path, mode)
+  contents = fp.read()
+  fp.close()
+  return contents
+
 # For creating blank new repositories
 def create_repos(path):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
@@ -446,7 +475,7 @@ def create_repos(path):
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
              "[general]\nauth-access = write\n");
-  if enable_sasl == 1:
+  if enable_sasl:
     file_append(get_svnserve_conf_file_path(path),
                 "realm = svntest\n[sasl]\nuse-sasl = true\n")
   else:
@@ -562,21 +591,76 @@ def compare_unordered_output(expected, actual):
     except ValueError:
       raise Failure("Expected output does not match actual output")
 
+def skip_test_when_no_authz_available():
+  "skip this test when authz is not available"
+  _check_command_line_parsed()
+  if test_area_url.startswith('file://'):
+    raise Skip
+
+def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
+  "Create a restrictive authz file ( no anynomous access )."
+
+  fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
+  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
+           "authz-db = authz\n" % anon_access)
+  if enable_sasl == 1:
+    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
+  else:
+    fp.write("password-db = passwd\n")
+  fp.close()
+
+def write_authz_file(sbox, rules, sections=None):
+  """Write an authz file to SBOX, appropriate for the RA method used,
+with authorizations rules RULES mapping paths to strings containing
+the rules. You can add sections SECTIONS (ex. groups, aliases...) with
+an appropriate list of mappings.
+"""
+  fp = open(sbox.authz_file, 'w')
+  if sbox.repo_url.startswith("http"):
+    prefix = sbox.name + ":"
+  else:
+    prefix = ""
+  if sections:
+    for p, r in sections.items():
+      fp.write("[%s]\n%s\n" % (p, r))
+
+  for p, r in rules.items():
+    fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+  fp.close()
+
 def use_editor(func):
   os.environ['SVN_EDITOR'] = svneditor_script
   os.environ['SVNTEST_EDITOR_FUNC'] = func
+
+
+def merge_notify_line(revstart, revend=None):
+  """Return an expected output line that describes the beginning of a
+  merge operation on revisions REVSTART through REVEND."""
+  if (revend is None):
+    return "--- Merging r%ld:\n" % revstart
+  else:
+    return "--- Merging r%ld through r%ld:\n" % (revstart, revend)
+
 
 ######################################################################
 # Functions which check the test configuration
 # (useful for conditional XFails)
 
+def _check_command_line_parsed():
+  """Raise an exception if the command line has not yet been parsed."""
+  if not command_line_parsed:
+    raise Failure("Condition cannot be tested until command line is parsed")
+
 def is_ra_type_dav():
+  _check_command_line_parsed()
   return test_area_url.startswith('http')
 
 def is_ra_type_svn():
+  _check_command_line_parsed()
   return test_area_url.startswith('svn')
 
 def is_fs_type_fsfs():
+  _check_command_line_parsed()
   # This assumes that fsfs is the default fs implementation.
   return (fs_type == 'fsfs' or fs_type is None)
 
@@ -619,7 +703,7 @@ class Sandbox:
     elif self.repo_url.startswith("svn"):
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
 
-    if windows == 1:
+    if windows:
       self.repo_url = self.repo_url.replace('\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
 
@@ -888,7 +972,7 @@ def usage():
   prog_name = os.path.basename(sys.argv[0])
   print "%s [--url] [--fs-type] [--verbose] [--enable-sasl] [--cleanup] \\" \
         % prog_name
-  print "%s [<test> ...]" % (" " * len(prog_name))
+  print "%s [--bin] [<test> ...]" % (" " * len(prog_name))
   print "%s [--list] [<test> ...]\n" % prog_name
   print "Arguments:"
   print " test          The number of the test to run (multiple okay), " \
@@ -901,6 +985,7 @@ def usage():
   print " --cleanup     Whether to clean up"
   print " --enable-sasl Whether to enable SASL authentication"
   print " --parallel    Run the tests in parallel"
+  print " --bin         Use the svn binaries installed in this path"
   print " --help        This information"
 
 
@@ -922,21 +1007,27 @@ def run_tests(test_list, serial_only = False):
   global cleanup_mode
   global enable_sasl
   global is_child_process
-
+  global svn_binary
+  global svnadmin_binary
+  global svnlook_binary
+  global svnsync_binary
+  global svnversion_binary
+  global command_line_parsed
+  
   testnums = []
   # Should the tests be listed (as opposed to executed)?
-  list_tests = 0
+  list_tests = False
 
   parallel = 0
-
+  svn_bin = None
   opts, args = my_getopt(sys.argv[1:], 'vhpc',
                          ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
-                          'enable-sasl', 'help', 'parallel'])
+                          'enable-sasl', 'help', 'parallel', 'bin='])
 
   for arg in args:
     if arg == "list":
       # This is an old deprecated variant of the "--list" option:
-      list_tests = 1
+      list_tests = True
     elif arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
@@ -955,16 +1046,16 @@ def run_tests(test_list, serial_only = False):
       fs_type = val
 
     elif opt == "-v" or opt == "--verbose":
-      verbose_mode = 1
+      verbose_mode = True
 
     elif opt == "--cleanup":
-      cleanup_mode = 1
+      cleanup_mode = True
 
     elif opt == "--list":
-      list_tests = 1
+      list_tests = True
 
     elif opt == "--enable-sasl":
-      enable_sasl = 1
+      enable_sasl = True
 
     elif opt == "-h" or opt == "--help":
       usage()
@@ -974,35 +1065,38 @@ def run_tests(test_list, serial_only = False):
       parallel = 5   # use 5 parallel threads.
 
     elif opt == '-c':
-      is_child_process = 1
+      is_child_process = True
+
+    elif opt == '--bin':
+      svn_bin = val
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
+  # Calculate pristine_url from test_area_url.
+  pristine_url = test_area_url + '/' + pristine_dir
+  if windows:
+    pristine_url = pristine_url.replace('\\', '/')  
+
+  if not svn_bin is None:
+    svn_binary = os.path.join(svn_bin, 'svn' + _exe)
+    svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
+    svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
+    svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
+    svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
+
+  command_line_parsed = True
+
   ######################################################################
-  # Initialization
-  
+
   # Cleanup: if a previous run crashed or interrupted the python
   # interpreter, then `temp_dir' was never removed.  This can cause wonkiness.
   if not is_child_process:
     safe_rmtree(temp_dir)
 
-  # Calculate pristine_url from test_area_url.
-  pristine_url = test_area_url + '/' + pristine_dir
-  if windows == 1:
-    pristine_url = pristine_url.replace('\\', '/')  
-  
-  # Setup the pristine repository (and working copy)
-  actions.setup_pristine_repository()
-
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
     testnums = range(1, len(test_list))
-
-  # don't run tests in parallel when the tests don't support it or there 
-  # are only a few tests to run.
-  if serial_only or len(testnums) < 2:
-    parallel = 0
 
   if list_tests:
     print "Test #  Mode   Test Description"
@@ -1013,7 +1107,12 @@ def run_tests(test_list, serial_only = False):
     # done. just exit with success.
     sys.exit(0)
 
-  # Setup the pristine repository (and working copy)
+  # don't run tests in parallel when the tests don't support it or there 
+  # are only a few tests to run.
+  if serial_only or len(testnums) < 2:
+    parallel = 0
+
+  # Setup the pristine repository
   actions.setup_pristine_repository()
 
   # Run the tests.

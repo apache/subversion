@@ -66,7 +66,7 @@ extern "C" {
      successfully or unsuccessfully.
 
    The `svn_fs_base__retry_txn' function and its friends help you manage
-   all of that, in one nice package.
+   some of that, in one nice package.
 
    To use it, write your code in a function like this:
 
@@ -114,23 +114,7 @@ extern "C" {
    SVN_NO_ERROR, `svn_fs_base__retry_txn' commits the trail's Berkeley DB
    transaction, thus making your DB changes permanent, leaves the
    trail's pool alone, so all the objects it contains are still
-   around, and returns SVN_NO_ERROR.
-
-   If you're making changes to in-memory data structures which should
-   be reverted if the transaction doesn't complete successfully, you
-   can call `svn_fs_base__record_undo' as you make your changes to register
-   functions that will undo them.  On failure (either due to deadlock
-   or a real error), `svn_fs_base__retry_txn' will invoke your undo
-   functions, youngest first, to restore your data structures to the
-   state they were in when you started the transaction.
-
-   If you're caching things in in-memory data structures, which may go
-   stale once the transaction is complete, you can call
-   `svn_fs_base__record_completion' to register functions that will clear
-   your caches.  When the trail completes, successfully or
-   unsuccessfully, `svn_fs_base__retry_txn' will invoke your completion
-   functions, youngest first, to remove whatever cached information
-   you like.  */
+   around, and returns SVN_NO_ERROR.  */
 
 struct trail_t
 {
@@ -144,10 +128,6 @@ struct trail_t
      subpool of the one passed to `begin_trail'.  We destroy this pool
      if we abort the transaction, and leave it around otherwise.  */
   apr_pool_t *pool;
-
-  /* A record of the side-effects to be undone in various
-     circumstances.  */
-  struct undo *undo;
 
 #if defined(SVN_FS__TRAIL_DEBUG)
   struct trail_debug_t *trail_debug;
@@ -172,10 +152,9 @@ typedef struct trail_t trail_t;
      run any completion functions, and return SVN_NO_ERROR.  Do *not*
      free TXN_POOL.
    - If E is a Berkeley DB error indicating that a deadlock occurred,
-     run all undo and completion functions, abort the DB transaction,
-     and free TXN_POOL.  Then retry the whole thing from the top.
-   - If E is any other kind of error, run all undo and completion
-     functions, free TXN_POOL, and return E.
+     abort the DB transaction and free TXN_POOL.  Then retry the whole
+     thing from the top.
+   - If E is any other kind of error, free TXN_POOL and return E.
 
    One benefit of using this function is that it makes it easy to
    ensure that whatever transactions a filesystem function starts, it
@@ -212,48 +191,6 @@ svn_fs_base__retry_debug(svn_fs_t *fs,
                                                            trail_t *trail),
                                   void *baton,
                                   apr_pool_t *pool);
-
-
-/* Record a change which should be undone if TRAIL is aborted, either
-   because of a deadlock or an error.
-
-   The beauty of a Berkeley DB transaction (like any database
-   transaction) is that, if you encounter an error partway through an
-   operation, aborting the DB transaction automatically undoes
-   whatever changes you've already made to the database.  Your
-   error-handling code doesn't need to clean everything up.
-
-   However, a Berkeley DB transaction only protects on-disk
-   structures.  If the operation changed in-memory data structures as
-   well, those may also need to be undone when an error occurs, or the
-   transaction deadlocks.
-
-   When you make a such a change, call this function with a FUNC and
-   BATON that, if invoked, will undo the change.  If TRAIL fails to
-   complete (deadlock, error, etc.), svn_fs_base__retry_txn will invoke the
-   FUNC/BATON pairs that were registered via this function.
-
-   Younger undo and completion functions get invoked before older
-   functions.  Undo and completion functions are ordered with respect
-   to each other.  */
-void svn_fs_base__record_undo(trail_t *trail,
-                              void (*func)(void *baton),
-                              void *baton);
-
-
-/* Record a change which should be undone when TRAIL is completed,
-   either successfully (the transaction is committed) or
-   unsuccessfully (the transaction deadlocked, or an error occurred).
-
-   You can use this to free caches of information that might become
-   stale once the transaction is complete.
-
-   Younger undo and completion functions get invoked before older
-   functions.  Undo and completion functions are ordered with respect
-   to each other.  */
-void svn_fs_base__record_completion(trail_t *trail,
-                                    void (*func)(void *baton),
-                                    void *baton);
 
 
 /* Record that OPeration is being done on TABLE in the TRAIL. */

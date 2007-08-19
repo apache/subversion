@@ -140,7 +140,6 @@ fs_set_errcall(svn_fs_t *fs,
 
 /* The vtable associated with a specific open filesystem. */
 static fs_vtable_t fs_vtable = {
-  fs_serialized_init,
   svn_fs_fs__youngest_rev,
   svn_fs_fs__revision_prop,
   svn_fs_fs__revision_proplist,
@@ -166,9 +165,11 @@ static fs_vtable_t fs_vtable = {
 
 /* This implements the fs_library_vtable_t.create() API.  Create a new
    fsfs-backed Subversion filesystem at path PATH and link it into
-   *FS.  Perform temporary allocations in POOL. */
+   *FS.  Perform temporary allocations in POOL, and fs-global allocations
+   in COMMON_POOL. */
 static svn_error_t *
-fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+          apr_pool_t *common_pool)
 {
   fs_fs_data_t *ffd;
 
@@ -179,8 +180,7 @@ fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   fs->fsap_data = ffd;
 
   SVN_ERR(svn_fs_fs__create(fs, path, pool));
-
-  return SVN_NO_ERROR;
+  return fs_serialized_init(fs, common_pool, pool);
 }
 
 
@@ -190,9 +190,10 @@ fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 /* This implements the fs_library_vtable_t.open() API.  Open an FSFS
    Subversion filesystem located at PATH, set *FS to point to the
    correct vtable for the filesystem.  Use POOL for any temporary
-   allocations. */
+   allocations, and COMMON_POOL for fs-global allocations. */
 static svn_error_t *
-fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+        apr_pool_t *common_pool)
 {
   fs_fs_data_t *ffd;
 
@@ -201,8 +202,7 @@ fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   fs->fsap_data = ffd;
 
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
-
-  return SVN_NO_ERROR;
+  return fs_serialized_init(fs, common_pool, pool);
 }
 
 
@@ -211,7 +211,7 @@ fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 static svn_error_t *
 fs_open_for_recovery(svn_fs_t *fs,
                      const char *path,
-                     apr_pool_t *pool)
+                     apr_pool_t *pool, apr_pool_t *common_pool)
 {
   /* Recovery for FSFS is currently limited to recreating the current
      file from the latest revision. */
@@ -229,7 +229,7 @@ fs_open_for_recovery(svn_fs_t *fs,
                                      "0 1 1\n", pool));
 
   /* Now open the filesystem properly by calling the vtable method directly. */
-  return fs_open(fs, path, pool);
+  return fs_open(fs, path, pool, common_pool);
 }
 
 
@@ -278,68 +278,6 @@ fs_delete_fs(const char *path,
   return svn_io_remove_dir2(path, FALSE, pool);
 }
 
-
- 
-/* Miscellany */
-
-const char *
-svn_fs_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
-{
-  char *newpath;
-  int path_len;
-  int path_i = 0, newpath_i = 0;
-  svn_boolean_t eating_slashes = FALSE;
-
-  /* No PATH?  No problem. */
-  if (! path)
-    return NULL;
-  
-  /* Empty PATH?  That's just "/". */
-  if (! *path)
-    return apr_pstrdup(pool, "/");
-
-  /* Now, the fun begins.  Alloc enough room to hold PATH with an
-     added leading '/'. */
-  path_len = strlen(path);
-  newpath = apr_pcalloc(pool, path_len + 2);
-
-  /* No leading slash?  Fix that. */
-  if (*path != '/')
-    {
-      newpath[newpath_i++] = '/';
-    }
-  
-  for (path_i = 0; path_i < path_len; path_i++)
-    {
-      if (path[path_i] == '/')
-        {
-          /* The current character is a '/'.  If we are eating up
-             extra '/' characters, skip this character.  Else, note
-             that we are now eating slashes. */
-          if (eating_slashes)
-            continue;
-          eating_slashes = TRUE;
-        }
-      else
-        {
-          /* The current character is NOT a '/'.  If we were eating
-             slashes, we need not do that any more. */
-          if (eating_slashes)
-            eating_slashes = FALSE;
-        }
-
-      /* Copy the current character into our new buffer. */
-      newpath[newpath_i++] = path[path_i];
-    }
-  
-  /* Did we leave a '/' attached to the end of NEWPATH (other than in
-     the root directory case)? */
-  if ((newpath[newpath_i - 1] == '/') && (newpath_i > 1))
-    newpath[newpath_i - 1] = '\0';
-
-  return newpath;
-}
-
 static const svn_version_t *
 fs_version(void)
 {
@@ -370,7 +308,7 @@ static fs_library_vtable_t library_vtable = {
 
 svn_error_t *
 svn_fs_fs__init(const svn_version_t *loader_version,
-                fs_library_vtable_t **vtable)
+                fs_library_vtable_t **vtable, apr_pool_t* common_pool)
 {
   static const svn_version_checklist_t checklist[] =
     {
