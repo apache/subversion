@@ -460,8 +460,8 @@ def add_with_history(sbox):
     ''       : Item(status=' M', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q2'     : Item(status='A ', wc_rev='-', copied='+'),
-    'Q/bar'  : Item(status='  ', wc_rev='-', copied='+'),
-    'Q/bar2' : Item(status='  ', wc_rev='-', copied='+'),
+    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
+    'Q/bar2' : Item(status='A ', wc_rev='-', copied='+'),
     'foo'    : Item(status='A ', wc_rev='-', copied='+'),
     'foo2'   : Item(status='A ', wc_rev='-', copied='+'),
     })
@@ -483,6 +483,8 @@ def add_with_history(sbox):
     'A/C'       : Item(verb='Sending'),
     'A/C/Q'     : Item(verb='Adding'),
     'A/C/Q2'    : Item(verb='Adding'),
+    'A/C/Q/bar' : Item(verb='Adding'),
+    'A/C/Q/bar2': Item(verb='Adding'),
     'A/C/foo'   : Item(verb='Adding'),
     'A/C/foo2'  : Item(verb='Adding'),
     })
@@ -1749,7 +1751,7 @@ def merge_skips_obstructions(sbox):
   expected_status = wc.State(short_C_path, {
     ''       : Item(status=' M', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
-    'Q/bar'  : Item(status='  ', wc_rev='-', copied='+'),
+    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(short_C_path, {
     'foo' : Item(),
@@ -2428,12 +2430,15 @@ def merge_funny_chars_on_path(sbox):
   os.chdir(saved_cwd)
 
   expected_output_dic = {}
-  expected_output_dic[''] = Item(verb='Adding')
+  
   for targets in add_by_add,add_by_mkdir:
     for target in targets:
       key = '%s' % target[1]
       expected_output_dic[key] = Item(verb='Adding')
-
+      if target[2]:
+        key = '%s/%s' % (target[1], target[2])
+        expected_output_dic[key] = Item(verb='Adding')
+      
   expected_output = wc.State(F_path, expected_output_dic)
   expected_output.add({
     '' : Item(verb='Sending'),
@@ -2625,8 +2630,8 @@ def setup_dir_replace(sbox):
   expected_status = wc.State(C_path, {
     ''    : Item(status=' M', wc_rev=1),
     'foo' : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/new file'   : Item(status='  ', wc_rev='-', copied='+'),
-    'foo/new file 2' : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/new file'   : Item(status='A ', wc_rev='-', copied='+'),
+    'foo/new file 2' : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, { })
   svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
@@ -2639,6 +2644,8 @@ def setup_dir_replace(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'        : Item(verb='Sending'),
     'A/C/foo'    : Item(verb='Adding'),
+    'A/C/foo/new file'      : Item(verb='Adding'),
+    'A/C/foo/new file 2'    : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -7352,95 +7359,6 @@ def merge_to_out_of_date_target(sbox):
                                         other_status,
                                         check_props=1)
 
-def merge_added_subtree(sbox):
-  "merge added subtree"
-
-  # The result of a subtree added by copying
-  # or merging an added subtree, should be the same on disk
-  ### with the exception of mergeinfo?!
-
-  # test for issue 1962
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  url = sbox.repo_url
-
-  # make a branch of A
-  # svn cp A A_COPY
-  A_url = url + "/A"
-  A_COPY_url = url + "/A_COPY"
-  A_path = os.path.join(wc_dir, "A")
-
-  svntest.actions.run_and_verify_svn("",["\n", "Committed revision 2.\n"], [],
-                                     "cp", "-m", "", A_url, A_COPY_url)
-  svntest.actions.run_and_verify_svn("",["\n", "Committed revision 3.\n"], [],
-                                     "cp", "-m", "",
-                                     A_COPY_url + '/D',
-                                     A_COPY_url + '/D2')
-  expected_output = wc.State(A_path, {
-    'D2'        : Item(status='A '),
-    'D2/gamma'  : Item(status='A '),
-    'D2/H/'     : Item(status='A '),
-    'D2/H/chi'  : Item(status='A '),
-    'D2/H/psi'  : Item(status='A '),
-    'D2/H/omega': Item(status='A '),
-    'D2/G/'     : Item(status='A '),
-    'D2/G/pi'   : Item(status='A '),
-    'D2/G/rho'  : Item(status='A '),
-    'D2/G/tau'  : Item(status='A ')
-    })
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D2'        : Item(status='A ', copied='+', wc_rev='-'),
-    'A/D2/gamma'  : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D2/H/'     : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D2/H/chi'  : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D2/H/psi'  : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D2/H/omega': Item(status='  ', copied='+', wc_rev='-'),
-    'A/D2/G/'     : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D2/G/pi'   : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D2/G/rho'  : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D2/G/tau'  : Item(status='  ', copied='+', wc_rev='-')
-    })
-  expected_status.remove('', 'iota')
-
-  expected_skip = wc.State('', {})
-  expected_disk = svntest.main.greek_state.subtree("A")
-  dest_name = ''
-  expected_disk.add({
-    dest_name + 'D2'         : Item(),
-    dest_name + 'D2/gamma'   : Item("This is the file 'gamma'.\n"),
-    dest_name + 'D2/G'       : Item(),
-    dest_name + 'D2/G/pi'    : Item("This is the file 'pi'.\n"),
-    dest_name + 'D2/G/rho'   : Item("This is the file 'rho'.\n"),
-    dest_name + 'D2/G/tau'   : Item("This is the file 'tau'.\n"),
-    dest_name + 'D2/H'       : Item(),
-    dest_name + 'D2/H/chi'   : Item("This is the file 'chi'.\n"),
-    dest_name + 'D2/H/omega' : Item("This is the file 'omega'.\n"),
-    dest_name + 'D2/H/psi'   : Item("This is the file 'psi'.\n")
-    })
-
-  # Using the above information, verify a REPO->WC copy
-  svntest.actions.run_and_verify_svn("", None, [],
-                                     "cp", A_COPY_url + '/D2',
-                                     os.path.join(A_path, "D2"))
-  actual_tree = svntest.tree.build_tree_from_wc (A_path, 0)
-  svntest.tree.compare_trees (actual_tree, expected_disk.old_tree(),
-                              None, None, None, None)
-  svntest.actions.run_and_verify_status(A_path, expected_status)
-
-  # Remove the copy artifacts
-  svntest.actions.run_and_verify_svn("", None, [],
-                                     "revert", "-R", A_path)
-  svntest.main.safe_rmtree(os.path.join(A_path, "D2"))
-
-  # Add merge-tracking differences between copying and merging
-  # Verify a merge using the otherwise unchanged disk and status trees
-  expected_status.tweak('A',status=' M')
-  svntest.actions.run_and_verify_merge(A_path, 2, 3, A_COPY_url,
-                                       expected_output, expected_disk,
-                                       expected_status, expected_skip)
-
 def merge_with_depth_files(sbox):
   "merge test for --depth files"
 
@@ -7564,7 +7482,6 @@ test_list = [ None,
               merge_loses_mergeinfo,
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
-              merge_added_subtree,
               XFail(merge_with_depth_files),
              ]
 

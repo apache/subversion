@@ -2120,9 +2120,6 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
                   const char *name,
                   svn_revnum_t new_revision,
                   const char *new_URL,
-                  const char *copyfrom_URL,
-                  svn_revnum_t copyfrom_rev,
-                  svn_boolean_t schedule_add,
                   apr_pool_t *pool)
 {
   /* Write log entry which will bump the revision number.  Also, just
@@ -2156,22 +2153,6 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
     {
       tmp_entry.url = new_URL;
       modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
-    }
-
-  if (copyfrom_URL)
-    {
-      tmp_entry.copied = TRUE;
-      tmp_entry.copyfrom_url = copyfrom_URL;
-      tmp_entry.copyfrom_rev = copyfrom_rev;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED
-        | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-        | SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
-    }
-
-  if (schedule_add)
-    {
-      tmp_entry.schedule = svn_wc_schedule_add;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
     }
 
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
@@ -2312,8 +2293,7 @@ merge_file(svn_wc_notify_state_t *content_state,
   /* Set the new revision and URL in the entry and clean up some other
      fields. */
   SVN_ERR(loggy_tweak_entry(log_accum, adm_access, base_name,
-                            *eb->target_revision, fb->new_URL,
-                            NULL, SVN_INVALID_REVNUM, FALSE, pool));
+                            *eb->target_revision, fb->new_URL, pool));
 
   /* For 'textual' merging, we implement this matrix.
 
@@ -3243,50 +3223,6 @@ install_added_props(svn_stringbuf_t *log_accum,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__schedule_for_added_entry(svn_wc_schedule_t *schedule,
-                                 svn_wc_adm_access_t *adm_access,
-                                 const char *dst_path,
-                                 const char *copyfrom_url,
-                                 svn_revnum_t copyfrom_rev,
-                                 apr_pool_t *pool)
-{
-  const char *dst_basename;
-  const char *dst_dirname;
-  char *url_basename;
-  const char *url_dirname;
-  const svn_wc_entry_t *parent_entry;
-
-  /* Normally, we want an add */
-  *schedule = svn_wc_schedule_add;
-
-  if (! copyfrom_url)
-    return SVN_NO_ERROR;
-
-  url_dirname = apr_pstrdup(pool, copyfrom_url);
-  url_basename = strrchr(url_dirname, '/');
-  *url_basename = '\0'; /* split into parent and basename */
-  url_basename++;
-  svn_path_split(dst_path, &dst_dirname, &dst_basename, pool);
-  if (! svn_path_is_uri_safe(dst_basename))
-    dst_basename = svn_path_uri_encode(dst_basename, pool);
-
-  if (strcmp(url_basename, dst_basename) != 0)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__entry_versioned(&parent_entry, dst_dirname,
-                                  adm_access, FALSE, pool));
-  if (parent_entry->copied
-      && parent_entry->copyfrom_rev == copyfrom_rev
-      && strcmp(parent_entry->copyfrom_url, url_dirname) == 0)
-    /* the url of the parent must be the exact parent of
-       the url we're copying from */
-    *schedule = svn_wc_schedule_normal;
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_wc_add_repos_file2(const char *dst_path,
                        svn_wc_adm_access_t *adm_access,
@@ -3398,22 +3334,34 @@ svn_wc_add_repos_file2(const char *dst_path,
    * an already-versioned item for addition.
    */
   {
-    svn_wc_schedule_t schedule;
+    svn_wc_entry_t tmp_entry;
+    apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
 
-    SVN_ERR(svn_wc__schedule_for_added_entry(&schedule, adm_access,
-                                             dst_path, copyfrom_url,
-                                             copyfrom_rev,
-                                             pool));
+    tmp_entry.schedule = svn_wc_schedule_add;
 
-    /* Set the new revision number and URL in the entry and clean up some other
-       fields. */
-    SVN_ERR(loggy_tweak_entry(log_accum, adm_access, base_name,
-                              dst_entry ? dst_entry->revision : ent->revision,
-                              new_URL, copyfrom_url, copyfrom_rev,
-                              schedule == svn_wc_schedule_add,
-                              pool));
+    if (copyfrom_url)
+      {
+        assert(SVN_IS_VALID_REVNUM(copyfrom_rev));
 
+        tmp_entry.copyfrom_url = copyfrom_url;
+        tmp_entry.copyfrom_rev = copyfrom_rev;
+        tmp_entry.copied = TRUE;
+
+        modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+          | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
+          | SVN_WC__ENTRY_MODIFY_COPIED;
+      }
+
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
+                                       base_name, &tmp_entry,
+                                       modify_flags, pool));
   }
+
+  /* Set the new revision number and URL in the entry and clean up some other
+     fields. */
+  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, base_name,
+                            dst_entry ? dst_entry->revision : ent->revision,
+                            new_URL, pool));
 
   SVN_ERR(install_added_props(log_accum, adm_access, dst_path,
                               new_base_props, new_props, pool));
