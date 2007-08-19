@@ -1409,6 +1409,8 @@ elide_children(apr_array_header_t *children_with_mergeinfo,
           svn_pool_clear(iterpool);
           child_wcpath = APR_ARRAY_IDX(children_with_mergeinfo, i,
                                        const char *);
+          if (!child_wcpath)
+            continue;
           if (i == 0)
             {
               /* children_with_mergeinfo is sorted depth
@@ -2219,6 +2221,8 @@ do_merge(const char *initial_URL1,
 
               child_wcpath = APR_ARRAY_IDX(children_sw_or_with_mergeinfo, j,
                                            const char *);
+              if (!child_wcpath)
+                continue;
               /* svn_path_is_ancestor returns true if paths are same,
                  so make sure paths are not same. */
               if (svn_path_is_ancestor(target_wcpath, child_wcpath) &&
@@ -2777,13 +2781,82 @@ get_sw_mergeinfo_paths(apr_array_header_t *children_sw_or_with_mergeinfo,
   return SVN_NO_ERROR;
 }
 
+/* Checks the copy relationship between 
+ * MERGE_SRC_URL+canonical(CHILD_PATH) and 
+ * TARGET_WC_URL+canonical(CHILD_PATH).
+ * If they are related sets the '*CHILD_MERGE_SRC_URL' to 
+ * 'REPO_ROOT_URL + copy_source_path' or 
+ * 'MERGE_SRC_URL + canonical(CHILD_PATH)' else to empty string.
+ * All allocations occur in POOL.
+ */
+static svn_error_t *
+guess_child_merge_src_url(svn_stringbuf_t **child_merge_src_url,
+                          const char *repo_root_url,
+                          const char *merge_src_url,
+                          const char *target_wc_url,
+                          const char *child_path,
+                          struct merge_cmd_baton *merge_cmd_baton,
+                          apr_pool_t *pool)
+{
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_rev;
+  *child_merge_src_url = svn_stringbuf_create("", pool);
+  svn_opt_revision_t target_revision;
+  target_revision.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client__get_copy_source(child_path,
+                                      &target_revision,
+                                      &copyfrom_path, &copyfrom_rev,
+                                      merge_cmd_baton->ctx, pool));
+  if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+    {
+      svn_stringbuf_appendbytes(*child_merge_src_url, repo_root_url, 
+                                strlen(repo_root_url));
+      svn_stringbuf_appendbytes(*child_merge_src_url, copyfrom_path,
+                                strlen(copyfrom_path));
+      if (!svn_path_is_ancestor(merge_src_url, (*child_merge_src_url)->data))
+        svn_stringbuf_setempty(*child_merge_src_url);
+    }
+  else
+    {
+      int merge_target_len;
+      const char *child_repos_canonical_path;
+      svn_stringbuf_t *guessed_url = svn_stringbuf_create(merge_src_url, pool);
+      merge_target_len = strlen(merge_cmd_baton->target);
+      target_revision.kind = svn_opt_revision_head;
+      child_repos_canonical_path = child_path + merge_target_len;
+      svn_stringbuf_appendbytes(guessed_url, child_repos_canonical_path,
+                                strlen(child_repos_canonical_path));
+      SVN_ERR(svn_client__get_copy_source(guessed_url->data,
+                                          &target_revision,
+                                          &copyfrom_path, &copyfrom_rev,
+                                          merge_cmd_baton->ctx, pool));
+      if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+        {
+          svn_stringbuf_appendbytes(*child_merge_src_url, repo_root_url,
+                                    strlen(repo_root_url));
+          svn_stringbuf_appendbytes(*child_merge_src_url, copyfrom_path,
+                                    strlen(copyfrom_path));
+          if (svn_path_is_ancestor(target_wc_url, 
+                                   (*child_merge_src_url)->data))
+            {
+              *child_merge_src_url = guessed_url;
+            }
+          else
+            svn_stringbuf_setempty(*child_merge_src_url);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Fill *CHILDREN_SW_OR_WITH_MERGEINFO with child paths (const char *) which
    might have intersecting merges because they have explicit working
    svn:mergeinfo and/or are switched. Here the paths are arranged in a depth
-   first order. For each such child, call do_merge() or do_single_file_merge()
-   with the appropriate arguments (based on the type of child).  Use
-   PARENT_ENTRY and ADM_ACCESS to fill CHILDREN_SW_OR_WITH_MERGEINFO.
-   Cascade PARENT_MERGE_SOURCE_URL, REVISION1, REVISION2, DEPTH,
+   first order. If PARENT_MERGE_SOURCE_URL and PARENT_ENTRY->url are same or 
+   their corresponding subtree(made of each child) are related by a copy, 
+   for each such child, call do_merge() or do_single_file_merge()
+   with the appropriate arguments (based on the type of child).
+   Use PARENT_ENTRY and ADM_ACCESS to fill CHILDREN_SW_OR_WITH_MERGEINFO.
+   Cascade PARENT_MERGE_SOURCE_URL, WC_ROOT_URL, REVISION1, REVISION2, DEPTH,
    IGNORE_ANCESTRY, ADM_ACCESS, and MERGE_CMD_BATON to do_merge() and
    do_single_file_merge().  All allocation occurs in POOL.
    
@@ -2794,6 +2867,7 @@ static svn_error_t *
 discover_and_merge_children(apr_array_header_t **children_sw_or_with_mergeinfo,
                             const svn_wc_entry_t *parent_entry,
                             const char *parent_merge_source_url,
+                            const char *wc_root_url,
                             const svn_opt_revision_t *revision1,
                             const svn_opt_revision_t *revision2,
                             svn_depth_t depth,
@@ -2805,6 +2879,7 @@ discover_and_merge_children(apr_array_header_t **children_sw_or_with_mergeinfo,
   const svn_wc_entry_t *child_entry;
   int merge_target_len = strlen(merge_cmd_baton->target);
   int i;
+  svn_boolean_t merge_src_dest_urls_are_same = FALSE;
 
   *children_sw_or_with_mergeinfo = apr_array_make(pool, 0, 
                                                   sizeof(const char *));
@@ -2812,11 +2887,14 @@ discover_and_merge_children(apr_array_header_t **children_sw_or_with_mergeinfo,
                                  merge_cmd_baton->target, parent_entry,
                                  adm_access, merge_cmd_baton->ctx, pool));
 
+  if (strcmp(parent_merge_source_url, parent_entry->url) == 0)
+    merge_src_dest_urls_are_same = TRUE;
+
   for (i = 0; i < (*children_sw_or_with_mergeinfo)->nelts; i++)
     {
-      const char *child_repos_path;
+      const char *child_repos_canonical_path;
       const char *child_wcpath;
-      const char *child_url;
+      svn_stringbuf_t *child_merge_src_url;
 
       child_wcpath = APR_ARRAY_IDX(*children_sw_or_with_mergeinfo, i,
                                    const char *);
@@ -2824,14 +2902,34 @@ discover_and_merge_children(apr_array_header_t **children_sw_or_with_mergeinfo,
         continue;
       SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath, adm_access,
                                       FALSE, pool));
-      child_repos_path = child_wcpath +
-        (merge_target_len ? merge_target_len + 1 : 0);
-      child_url = svn_path_join(parent_merge_source_url, 
-                                child_repos_path, pool);
+      if (merge_src_dest_urls_are_same)
+        {
+          child_repos_canonical_path = child_wcpath + merge_target_len;
+          child_merge_src_url = svn_stringbuf_create(parent_merge_source_url, 
+                                                     pool);
+          svn_stringbuf_appendbytes(child_merge_src_url, 
+                                    child_repos_canonical_path,
+                                    strlen(child_repos_canonical_path));
+        }
+      else
+        {
+          SVN_ERR(guess_child_merge_src_url(&child_merge_src_url, wc_root_url,
+                                            parent_merge_source_url,
+                                            parent_entry->url,
+                                            child_wcpath, merge_cmd_baton,
+                                            pool));
+          if (svn_stringbuf_isempty(child_merge_src_url))
+            {
+              APR_ARRAY_IDX(*children_sw_or_with_mergeinfo, 
+                            i, const char *) = NULL;
+              continue;
+            }
+        }
+
       if (child_entry->kind == svn_node_file)
         {
-          SVN_ERR(do_single_file_merge(child_url, revision1,
-                                       child_url, revision2,
+          SVN_ERR(do_single_file_merge(child_merge_src_url->data, revision1,
+                                       child_merge_src_url->data, revision2,
                                        child_wcpath,
                                        adm_access,
                                        merge_cmd_baton,
@@ -2840,9 +2938,9 @@ discover_and_merge_children(apr_array_header_t **children_sw_or_with_mergeinfo,
         }
       else if (child_entry->kind == svn_node_dir)
         {
-          SVN_ERR(do_merge(child_url,
+          SVN_ERR(do_merge(child_merge_src_url->data,
                            revision1,
-                           child_url,
+                           child_merge_src_url->data,
                            revision2,
                            child_wcpath,
                            adm_access,
@@ -2883,6 +2981,30 @@ from_same_repos(struct merge_cmd_baton *merge_cmd_baton, const char *src_url,
   return SVN_NO_ERROR;
 }
 
+/* Get repository root of PATH_OR_URL as *REPOS_ROOT.
+ * Cascade CTX.
+ * All allocations occur in POOL.
+ */
+static svn_error_t *
+get_repos_root(const char **repos_root, const char *path_or_url,
+               svn_client_ctx_t *ctx, apr_pool_t *pool)
+{
+  svn_revnum_t rev;
+  svn_opt_revision_t target_revision;
+  svn_ra_session_t *ra_session;
+  const char *target_url;
+  target_revision.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                           &rev,
+                                           &target_url,
+                                           path_or_url,
+                                           &target_revision,
+                                           &target_revision,
+                                           ctx,
+                                           pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, repos_root, pool));
+  return SVN_NO_ERROR;
+}
 /*-----------------------------------------------------------------------*/
 
 /*** Public APIs. ***/
@@ -2908,6 +3030,7 @@ svn_client_merge3(const char *source1,
   const char *URL1, *URL2;
   apr_array_header_t *children_with_mergeinfo = NULL;
   svn_config_t *cfg;
+  const char *wc_repos_root;
 
   /* If source1 or source2 are paths, we need to get the underlying
      URL from the wc and save the initial path we were passed so we
@@ -2936,6 +3059,14 @@ svn_client_merge3(const char *source1,
 
   SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
                                  pool));
+  if (entry->repos)
+    {
+      wc_repos_root = entry->repos;
+    }
+  else
+    {
+      SVN_ERR(get_repos_root(&wc_repos_root, target_wcpath, ctx, pool));
+    }
 
   if (depth == svn_depth_unknown)
     depth = entry->depth;
@@ -2987,6 +3118,7 @@ svn_client_merge3(const char *source1,
           SVN_ERR(discover_and_merge_children(&children_with_mergeinfo,
                                               entry,
                                               URL1,
+                                              wc_repos_root,
                                               revision1,
                                               revision2,
                                               depth,
@@ -3090,6 +3222,7 @@ svn_client_merge_peg3(const char *source,
   svn_opt_revision_t initial_rev1, initial_rev2;
   svn_opt_revision_t *rev1, *rev2;
   svn_config_t *cfg;
+  const char *wc_repos_root;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
                                  ! dry_run,
@@ -3099,6 +3232,14 @@ svn_client_merge_peg3(const char *source,
 
   SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
                                  pool));
+  if (entry->repos)
+    {
+      wc_repos_root = entry->repos;
+    }
+  else
+    {
+      SVN_ERR(get_repos_root(&wc_repos_root, target_wcpath, ctx, pool));
+    }
 
   if (source)
     {
@@ -3121,11 +3262,7 @@ svn_client_merge_peg3(const char *source,
     {
       /* If a merge source was not specified, try to derive it. */
       apr_array_header_t *suggested_sources;
-      svn_revnum_t rev;
       svn_opt_revision_t target_revision;
-      const char *repos_root;
-      svn_ra_session_t *ra_session;
-      const char *target_url;
       target_revision.kind = svn_opt_revision_working;
       SVN_ERR(svn_client__suggest_merge_sources(target_wcpath,
                                                 &target_revision,
@@ -3138,27 +3275,9 @@ svn_client_merge_peg3(const char *source,
                                  svn_path_local_style(target_wcpath, pool));
 
       /* Prepend the repository root path to the copy source path. */
-      if (entry->repos)
-        {
-          URL = apr_pstrcat(pool, entry->repos,
-                            APR_ARRAY_IDX(suggested_sources, 0, char *),
-                            NULL);
-        }
-      else
-        {
-          SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                                   &rev,
-                                                   &target_url,
-                                                   target_wcpath,
-                                                   &target_revision,
-                                                   &target_revision,
-                                                   ctx,
-                                                   pool));
-          SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
-          URL = apr_pstrcat(pool, repos_root,
-                            APR_ARRAY_IDX(suggested_sources, 0, char *),
-                            NULL);
-        }
+      URL = apr_pstrcat(pool, wc_repos_root,
+                        APR_ARRAY_IDX(suggested_sources, 0, char *),
+                        NULL);
     }
 
   if (depth == svn_depth_unknown)
@@ -3232,6 +3351,7 @@ svn_client_merge_peg3(const char *source,
       SVN_ERR(discover_and_merge_children(&children_with_mergeinfo,
                                           entry,
                                           URL1,
+                                          wc_repos_root,
                                           rev1,
                                           rev2,
                                           depth,

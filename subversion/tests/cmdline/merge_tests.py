@@ -5447,7 +5447,7 @@ def merge_to_target_with_copied_children(sbox):
     ''         : Item(status=' M', wc_rev=7),
     'pi'       : Item(status='  ', wc_rev=7),
     'rho'      : Item(status='M ', wc_rev=7),
-    'rho_copy' : Item(status=' M', wc_rev=7),
+    'rho_copy' : Item(status='  ', wc_rev=7),
     'tau'      : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
@@ -5456,7 +5456,7 @@ def merge_to_target_with_copied_children(sbox):
     'rho'      : Item("New content"),
     'rho_copy' : Item("This is the file 'rho'.\n",
                       props={SVN_PROP_MERGE_INFO :
-                             '/A/D/G/rho:1,4\n/A_COPY/D/G/rho:2-6\n'}),
+                             '/A/D/G/rho:1\n/A_COPY/D/G/rho:2-6\n'}),
     'tau'      : Item("This is the file 'tau'.\n"),
     })
   expected_skip = wc.State(short_G_COPY_path, { })
@@ -7503,7 +7503,7 @@ test_list = [ None,
               mergeinfo_inheritance,
               mergeinfo_elision,
               mergeinfo_inheritance_and_discontinuous_ranges,
-              XFail(merge_to_target_with_copied_children),
+              merge_to_target_with_copied_children,
               merge_to_switched_path,
               XFail(merge_to_path_with_switched_children),
               merge_with_implicit_target_file,
