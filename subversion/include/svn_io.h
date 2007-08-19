@@ -663,7 +663,7 @@ svn_error_t *svn_stream_printf(svn_stream_t *stream,
                                apr_pool_t *pool,
                                const char *fmt,
                                ...)
-       __attribute__ ((format(printf, 3, 4)));
+       __attribute__((format(printf, 3, 4)));
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
  * apr_psprintf() using memory from @a pool.  The resulting string
@@ -679,7 +679,7 @@ svn_error_t *svn_stream_printf_from_utf8(svn_stream_t *stream,
                                          apr_pool_t *pool,
                                          const char *fmt,
                                          ...)
-       __attribute__ ((format(printf, 4, 5)));
+       __attribute__((format(printf, 4, 5)));
 
 /** Allocate @a *stringbuf in @a pool, and read into it one line (terminated
  * by @a eol) from @a stream. The line-terminator is read from the stream,
