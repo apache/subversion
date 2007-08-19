@@ -7448,6 +7448,60 @@ def merge_added_subtree(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+def merge_with_depth_files(sbox):
+  "merge test for --depth files"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # Some paths we'll care about
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  Acopy_path = os.path.join(wc_dir, 'A_copy')
+  Acopy_mu_path = os.path.join(wc_dir, 'A_copy', 'mu')
+  A_url = repo_url + '/A'
+  Acopy_url = repo_url + '/A_copy'
+
+  # Copy A_url to A_copy_url
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     A_url, Acopy_url,
+                                     '-m', 'create a new copy of A')
+
+  svntest.main.file_write(mu_path, "this is file 'mu' modified.\n")
+  svntest.main.file_write(gamma_path, "this is file 'gamma' modified.\n")
+
+  # Create expected output tree for commit
+  expected_output = wc.State(wc_dir, {
+    'A/mu'        : Item(verb='Sending'),
+    'A/D/gamma'   : Item(verb='Sending'),
+    })
+  
+  # Create expected status tree for commit
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/mu'          : Item(status='  ', wc_rev=3),
+    'A/D/gamma'     : Item(status='  ', wc_rev=3),
+    })
+  
+  # Commit the modified contents
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
+
+  # Update working copy
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', Acopy_path)
+
+  # Merge r1:3 with --depth files
+  svntest.actions.run_and_verify_svn(None,
+                                     [svntest.main.merge_notify_line(2,3),
+                                     'U    ' + Acopy_mu_path + '\n'],
+                                     [], 'merge', '-r1:3', '--depth',
+                                     'files', A_url, Acopy_path)
+
 
 
 ########################################################################
@@ -7517,7 +7571,8 @@ test_list = [ None,
               merge_loses_mergeinfo,
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
-              merge_added_subtree
+              merge_added_subtree,
+              XFail(merge_with_depth_files),
              ]
 
 if __name__ == '__main__':
