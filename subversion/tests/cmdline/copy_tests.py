@@ -3306,15 +3306,11 @@ def copy_peg_rev_local_files(sbox):
                                      '-m', 'rev 3')
 
   expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=psi_text)
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
-    'iota'      : Item(contents=psi_text,
-                       props={ SVN_PROP_MERGE_INFO :
-                               '/A/D/H/psi:1\n/new_iota:1\n' }),
-    'A/D/H/psi' : Item(contents=iota_text,
-                   props={ SVN_PROP_MERGE_INFO : '/iota:1' }),
-    'sigma'     : Item(contents=psi_text,
-                       props={ SVN_PROP_MERGE_INFO : '/A/D/H/psi:1' }),
+    'sigma' : Item(contents=psi_text,
+                   props={ SVN_PROP_MERGE_INFO : '/A/D/H/psi:1' }),
     })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
@@ -3379,11 +3375,9 @@ def copy_peg_rev_local_dirs(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_disk.add({
-    'A/B/E'       : Item(props={ SVN_PROP_MERGE_INFO : '/A/D/G:1-2' }),
     'A/B/E/pi'    : Item(contents="This is the file 'pi'.\n"),
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
-    'A/D/G'       : Item(props={ SVN_PROP_MERGE_INFO : '/A/B/E:1-2\n/A/D/I:1-3\n' }),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
     'A/J'         : Item(props={ SVN_PROP_MERGE_INFO : '/A/B/E:1' }),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
