@@ -822,7 +822,8 @@ def new_style_externals(sbox):
   # Set an external property using the new '-rN URL PATH' syntax.
   new_externals_desc = \
            other_repo_url + "/A/D/G exdir_G \n" + \
-           "-r 1 " + other_repo_url + "/A/D/H exdir_H \n"
+           "-r 1 " + other_repo_url + "/A/D/H exdir_H \n" + \
+           "-r1 " + other_repo_url + "/A/D/H exdir_I \n"
 
   # Set and commit the property.
   change_external(os.path.join(wc_dir, "A/C"), new_externals_desc)
@@ -830,12 +831,13 @@ def new_style_externals(sbox):
   # Update other working copy.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
-  exdir_H_omega_path = os.path.join(wc_dir, "A", "C", "exdir_H", "omega")
-  fp = open(exdir_H_omega_path, 'r')
-  lines = fp.readlines()
-  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
-    raise svntest.Failure("Unexpected contents for rev 1 of " +
-                          exdir_H_omega_path)
+  for dir_name in ["exdir_H", "exdir_I"]:
+    exdir_X_omega_path = os.path.join(wc_dir, "A", "C", dir_name, "omega")
+    fp = open(exdir_X_omega_path, 'r')
+    lines = fp.readlines()
+    if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
+      raise svntest.Failure("Unexpected contents for rev 1 of " +
+                            exdir_X_omega_path)
 
 
 
