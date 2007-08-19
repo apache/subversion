@@ -569,7 +569,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
    and that for every chunk C, CHAIN_ORIG[C] and CHAIN_MERGED[C] have the
    same starting value.  Both CHAIN_ORIG and CHAIN_MERGED should not be
    NULL.  */
-void
+static void
 normalize_blames(struct blame_chain *chain,
                  struct blame_chain *chain_merged,
                  apr_pool_t *pool)
