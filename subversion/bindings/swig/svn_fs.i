@@ -25,9 +25,9 @@
 #elif defined(SWIGMZSCHEME)
 %module svnfs
 #endif
-#ifndef SWIGMZSCHEME
 %include svn_global.swg
 %import core.i
+#ifndef SWIGMZSCHEME
 %import svn_delta.i
 
 /* -----------------------------------------------------------------------

@@ -25,9 +25,11 @@
 #endif
 
 %include svn_global.swg
+%include svn_opt_h.swg
 %import core.i
 %import svn_delta.i
 %import svn_ra.i
+
 
 /* -----------------------------------------------------------------------
    ### these functions require a pool, which we don't have immediately
@@ -49,6 +51,10 @@
 %ignore svn_wc_notify;
 
 %ignore svn_wc_set_changelist;
+#endif
+
+#ifdef SWIGMZSCHEME
+%types(svn_opt_revision_t *);
 #endif
 
 /* -----------------------------------------------------------------------

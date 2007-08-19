@@ -125,3 +125,11 @@ svn_swig_mzscm_repos_authz_func(svn_boolean_t *allowed,
   /*FIXME: Implement me*/
   return err;
 }
+
+void svn_swig_mzscm_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
+                                    void **baton,
+                                    void* rb_callbacks,
+                                    apr_pool_t *pool)
+{
+  
+}

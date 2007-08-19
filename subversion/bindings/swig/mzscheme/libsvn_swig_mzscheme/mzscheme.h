@@ -72,6 +72,13 @@ svn_error_t * svn_swig_mzscm_repos_authz_func(svn_boolean_t *allowed,
                              void *baton,
 				apr_pool_t *pool);
 
+
+
+SVN_MZSCM_SWIG_SWIGUTIL_EXPORT
+void svn_swig_mzscm_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
+                                    void **baton,
+                                    void * rb_callbacks,
+                                    apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
