@@ -3269,6 +3269,9 @@ svn_wc__schedule_for_added_entry(svn_wc_schedule_t *schedule,
   *url_basename = '\0'; /* split into parent and basename */
   url_basename++;
   svn_path_split(dst_path, &dst_dirname, &dst_basename, pool);
+  if (! svn_path_is_uri_safe(dst_basename))
+    dst_basename = svn_path_uri_encode(dst_basename, pool);
+
   if (strcmp(url_basename, dst_basename) != 0)
     return SVN_NO_ERROR;
 

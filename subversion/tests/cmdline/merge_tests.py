@@ -460,8 +460,8 @@ def add_with_history(sbox):
     ''       : Item(status=' M', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q2'     : Item(status='A ', wc_rev='-', copied='+'),
-    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
-    'Q/bar2' : Item(status='A ', wc_rev='-', copied='+'),
+    'Q/bar'  : Item(status='  ', wc_rev='-', copied='+'),
+    'Q/bar2' : Item(status='  ', wc_rev='-', copied='+'),
     'foo'    : Item(status='A ', wc_rev='-', copied='+'),
     'foo2'   : Item(status='A ', wc_rev='-', copied='+'),
     })
@@ -483,8 +483,6 @@ def add_with_history(sbox):
     'A/C'       : Item(verb='Sending'),
     'A/C/Q'     : Item(verb='Adding'),
     'A/C/Q2'    : Item(verb='Adding'),
-    'A/C/Q/bar' : Item(verb='Adding'),
-    'A/C/Q/bar2': Item(verb='Adding'),
     'A/C/foo'   : Item(verb='Adding'),
     'A/C/foo2'  : Item(verb='Adding'),
     })
@@ -1751,7 +1749,7 @@ def merge_skips_obstructions(sbox):
   expected_status = wc.State(short_C_path, {
     ''       : Item(status=' M', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
-    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
+    'Q/bar'  : Item(status='  ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(short_C_path, {
     'foo' : Item(),
@@ -2430,15 +2428,12 @@ def merge_funny_chars_on_path(sbox):
   os.chdir(saved_cwd)
 
   expected_output_dic = {}
-  
+  expected_output_dic[''] = Item(verb='Adding')
   for targets in add_by_add,add_by_mkdir:
     for target in targets:
       key = '%s' % target[1]
       expected_output_dic[key] = Item(verb='Adding')
-      if target[2]:
-        key = '%s/%s' % (target[1], target[2])
-        expected_output_dic[key] = Item(verb='Adding')
-      
+
   expected_output = wc.State(F_path, expected_output_dic)
   expected_output.add({
     '' : Item(verb='Sending'),
@@ -2630,8 +2625,8 @@ def setup_dir_replace(sbox):
   expected_status = wc.State(C_path, {
     ''    : Item(status=' M', wc_rev=1),
     'foo' : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/new file'   : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/new file 2' : Item(status='A ', wc_rev='-', copied='+'),
+    'foo/new file'   : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/new file 2' : Item(status='  ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, { })
   svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
@@ -2644,8 +2639,6 @@ def setup_dir_replace(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'        : Item(verb='Sending'),
     'A/C/foo'    : Item(verb='Adding'),
-    'A/C/foo/new file'      : Item(verb='Adding'),
-    'A/C/foo/new file 2'    : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
