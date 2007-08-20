@@ -72,6 +72,18 @@ class RemoteRepositoryTestCase(unittest.TestCase):
         revnum = self.repos.revprop_set("svn:log", "Another changed log", 4)
         self.assertEqual(revnum, 4)
         self.assertEqual(self.repos.revprop_get("svn:log", 4), "Another changed log")
+            
+    def _log_func(commits):
+        return ["test revision", None]
+    _log_func = staticmethod(_log_func)
+            
+    def test_svnimport(self):
+        newfile = os.path.join(tempfile.gettempdir(), "newfile.txt")
+        f = open(newfile, "w")
+        f.write("Some new stuff\n")
+        f.close()
+        commit_info = self.repos.svnimport(newfile, log_func=self._log_func)
+        self.assertEqual(commit_info.revision, 10)
         
 def suite():
     return unittest.makeSuite(RemoteRepositoryTestCase, 'test')
