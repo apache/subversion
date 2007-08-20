@@ -2185,6 +2185,22 @@ def automatic_conflict_resolution(sbox):
                                         svntest.tree.detect_conflict_files,
                                         extra_files)
 
+def info_nonexisting_file(sbox):
+  "get info on a file not in the repo"
+
+  sbox.build()
+  idonotexist_url = sbox.repo_url + '/IdoNotExist'
+  output, errput = svntest.main.run_svn(1, 'info', idonotexist_url)
+
+  # Check for the correct error message
+  for line in errput:
+    if re.match(".*\(Not a valid URL\).*", line):
+      return
+    
+  # Else never matched the expected error output, so the test failed.
+  raise svntest.main.SVNUnmatchedError
+
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -2231,6 +2247,7 @@ test_list = [ None,
               basic_rm_urls_one_repo,
               XFail(basic_rm_urls_multi_repos),
               automatic_conflict_resolution,
+              info_nonexisting_file,
              ]
 
 if __name__ == '__main__':

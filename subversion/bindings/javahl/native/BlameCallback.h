@@ -44,12 +44,18 @@ class BlameCallback
                                svn_revnum_t revision,
                                const char *author,
                                const char *date,
+                               svn_revnum_t merged_revision,
+                               const char *merged_author,
+                               const char *merged_date,
+                               const char *merged_path,
                                const char *line,
                                apr_pool_t *pool);
 
  protected:
   svn_error_t *singleLine(svn_revnum_t revision, const char *author,
-                          const char *date, const char *line,
+                          const char *date, svn_revnum_t mergedRevision,
+                          const char *mergedAuthor, const char *mergedDate,
+                          const char *mergedPath, const char *line,
                           apr_pool_t *pool);
 
  private:

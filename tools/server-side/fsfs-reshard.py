@@ -48,9 +48,11 @@
 
 import os, stat, sys
 
+from errno import EEXIST
+
 def usage():
   """Print a usage message and exit."""
-  print """usage: %s REPOS_PATH MAX_FILES_PER_SHARD
+  print """usage: %s REPOS_PATH MAX_FILES_PER_SHARD [START END]
 
 Perform an offline conversion of an FSFS repository between linear
 (readable by Subversion 1.4 or later) and sharded (readable by
@@ -60,6 +62,9 @@ The MAX_FILES_PER_SHARD argument specifies the maximum number of
 files that will be stored in each shard (directory), or zero to
 specify a linear layout.  Subversion 1.5 uses a default value of
 1000 files per shard.
+
+Convert revisions START through END inclusive if specified, or all
+revisions if unspecified.
 """ % sys.argv[0]
   sys.exit(1)
 
@@ -143,7 +148,8 @@ def check_repos_format(repos_path):
 def check_fs_format(repos_path):
   """Check that REPOS_PATH contains a filesystem with a suitable format,
   or that it contains no format file; print a message and exit if neither
-  is true."""
+  is true.  Return bool whether the filesystem is sharded."""
+  sharded = False
   db_path = os.path.join(repos_path, 'db')
   format_path = os.path.join(db_path, 'format')
   try:
@@ -169,8 +175,10 @@ def check_fs_format(repos_path):
         unexpected_fs_format_options(repos_path)
 
       line = line.rstrip('\n')
-      if line == 'layout linear' or line.startswith('layout sharded '):
+      if line == 'layout linear':
         pass
+      elif line.startswith('layout sharded '):
+        sharded = True
       else:
         incompatible_fs_format_option(repos_path, line)
 
@@ -181,6 +189,13 @@ def check_fs_format(repos_path):
     # repository.  In both cases, we'll just assume the format was
     # compatible.
     pass
+
+  return sharded
+
+def current_file(repos_path):
+  """Return triple of (revision, next_node_id, next_copy_id) from
+  REPOS_PATH/db/current ."""
+  return open(os.path.join(repos_path, 'db', 'current')).readline().split()
 
 def remove_fs_format(repos_path):
   """Remove the filesystem format file for repository REPOS_PATH.
@@ -238,50 +253,60 @@ def linearise(path):
       os.rename(from_path, to_path)
     os.rmdir(root_path)
 
-def shard(path, max_files_per_shard):
-  """Move all the files in PATH into subdirectories of PATH named such that
-  subdirectory '0' contains at most MAX_FILES_PER_SHARD files, those named
-  [0, MAX_FILES_PER_SHARD).  Abort if PATH is found to contain any entries
-  with non-numeric names."""
+def shard(path, max_files_per_shard, start, end):
+  """Move the files for revisions START to END inclusive in PATH into
+  subdirectories of PATH named such that subdirectory '0' contains at most
+  MAX_FILES_PER_SHARD files, those named [0, MAX_FILES_PER_SHARD).  Abort if
+  PATH is found to contain any entries with non-numeric names."""
+
+  tmp = path + '.reshard'
+  try:
+    os.mkdir(tmp)
+  except OSError, e:
+    if e.errno != EEXIST:
+      raise
 
   # Move all entries into shards named N.shard.
-  for name in os.listdir(path):
-    try:
-      rev = int(name)
-    except ValueError, OverflowError:
-      print >> sys.stderr, "error: file '%s' does not represent a revision." \
-        % os.path.join(path, name)
-      sys.exit(1)
-
+  for rev in xrange(start, end + 1):
+    name = str(rev)
     shard = rev // max_files_per_shard
     shard_name = str(shard) + '.shard'
 
     from_path = os.path.join(path, name)
-    to_path = os.path.join(path, shard_name, name)
+    to_path = os.path.join(tmp, shard_name, name)
     try:
       os.rename(from_path, to_path)
     except OSError:
       # The most likely explanation is that the shard directory doesn't
       # exist.  Let's create it and retry the rename.
-      os.mkdir(os.path.join(path, shard_name))
+      os.mkdir(os.path.join(tmp, shard_name))
       os.rename(from_path, to_path)
 
   # Now rename all the shards to remove the suffix.
-  for name in os.listdir(path):
+  skipped = 0
+  for name in os.listdir(tmp):
     if not name.endswith('.shard'):
       print >> sys.stderr, "warning: ignoring unexpected subdirectory '%s'." \
-        % os.path.join(path, name)
+        % os.path.join(tmp, name)
+      skipped += 1
       continue
-    from_path = os.path.join(path, name)
-    to_path = from_path[:-6]
+    from_path = os.path.join(tmp, name)
+    to_path = os.path.join(path, os.path.basename(from_path)[:-6])
     os.rename(from_path, to_path)
+  skipped == 0 and os.rmdir(tmp)
 
 def main():
-  if len(sys.argv) != 3:
+  if len(sys.argv) < 3:
     usage()
 
   repos_path = sys.argv[1]
   max_files_per_shard = sys.argv[2]
+  try:
+    start = int(sys.argv[3])
+    end = int(sys.argv[4])
+  except IndexError:
+    start = 0
+    end = int(current_file(repos_path)[0])
 
   # Validate the command-line arguments.
   db_path = os.path.join(repos_path, 'db')
@@ -308,13 +333,14 @@ def main():
 
   # Check the format of the repository.
   check_repos_format(repos_path)
-  check_fs_format(repos_path)
+  sharded = check_fs_format(repos_path)
 
   # Let the user know what's going on.
   if max_files_per_shard > 0:
     print "Converting '%s' to a sharded structure with %d files per directory" \
       % (repos_path, max_files_per_shard)
-    print '(will convert to a linear structure first)'
+    if sharded:
+      print '(will convert to a linear structure first)'
   else:
     print "Converting '%s' to a linear structure" % repos_path
 
@@ -326,10 +352,11 @@ def main():
 
   # First, convert to a linear scheme (this makes recovery easier because
   # it's easier to reason about the behaviour on restart).
-  print '- linearising db/revs'
-  linearise(os.path.join(repos_path, 'db', 'revs'))
-  print '- linearising db/revprops'
-  linearise(os.path.join(repos_path, 'db', 'revprops'))
+  if sharded:
+    print '- linearising db/revs'
+    linearise(os.path.join(repos_path, 'db', 'revs'))
+    print '- linearising db/revprops'
+    linearise(os.path.join(repos_path, 'db', 'revprops'))
 
   if max_files_per_shard == 0:
     # We're done.  Stamp the filesystem with a format 2 db/format file.
@@ -337,9 +364,11 @@ def main():
     write_fs_format(repos_path, '2\n')
   else:
     print '- sharding db/revs'
-    shard(os.path.join(repos_path, 'db', 'revs'), max_files_per_shard)
+    shard(os.path.join(repos_path, 'db', 'revs'), max_files_per_shard,
+          start, end)
     print '- sharding db/revprops'
-    shard(os.path.join(repos_path, 'db', 'revprops'), max_files_per_shard)
+    shard(os.path.join(repos_path, 'db', 'revprops'), max_files_per_shard,
+          start, end)
 
     # We're done.  Stamp the filesystem with a format 3 db/format file.
     print '- marking the repository as a valid sharded repository'

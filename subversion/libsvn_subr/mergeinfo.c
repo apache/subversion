@@ -48,7 +48,7 @@ combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
 }
 
 static svn_error_t *
-parse_revision(const char **input, const char *end, svn_revnum_t *revision)
+parse_revision(const char **input, svn_revnum_t *revision)
 {
   const char *curr = *input;
   char *endptr;
@@ -130,7 +130,7 @@ parse_revlist(const char **input, const char *end,
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
       svn_revnum_t firstrev;
 
-      SVN_ERR(parse_revision(&curr, end, &firstrev));
+      SVN_ERR(parse_revision(&curr, &firstrev));
       if (*curr != '-' && *curr != '\n' && *curr != ',' && curr != end)
         return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                  _("Invalid character '%c' found in revision "
@@ -143,7 +143,7 @@ parse_revlist(const char **input, const char *end,
           svn_revnum_t secondrev;
 
           curr++;
-          SVN_ERR(parse_revision(&curr, end, &secondrev));
+          SVN_ERR(parse_revision(&curr, &secondrev));
           mrange->end = secondrev;
         }
 

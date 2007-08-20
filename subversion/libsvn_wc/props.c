@@ -2444,8 +2444,8 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
 /** Externals **/
 
 /* Parse external definitions of the forms:
- *   [rN]   URL  TARGET_DIR
- *   [r N]  URL  TARGET_DIR
+ *   [-rN]   URL  TARGET_DIR
+ *   [-r N]  URL  TARGET_DIR
  *
  * Return FALSE if there is an error, TRUE otherwise.
  * (We avoid actually creating an error in this function, so that a generic
@@ -2461,7 +2461,7 @@ parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
 
   if (line_parts->nelts == 2)
     {
-      /* No "r REV" given. */
+      /* No "-r REV" given. */
       url = APR_ARRAY_IDX(line_parts, 0, const char *);
       item->target_dir = APR_ARRAY_IDX(line_parts, 1, const char *);
       item->revision.kind = svn_opt_revision_unspecified;
@@ -2470,8 +2470,8 @@ parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
     {
       /* We're dealing with one of these two forms:
        *
-       *    rN   URL  TARGET_DIR
-       *    r N  URL  TARGET_DIR
+       *    -rN   URL  TARGET_DIR
+       *    -r N  URL  TARGET_DIR
        * 
        * Handle either way.
        */
@@ -2498,10 +2498,10 @@ parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
 
       if (! r_part_2)  /* "rN" */
         {
-          if (strlen(r_part_1) < 2)
+          if (strlen(r_part_1) < 3)
             return FALSE;
           else
-            item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 1);
+            item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 2);
         }
       else             /* "r N" */
         {

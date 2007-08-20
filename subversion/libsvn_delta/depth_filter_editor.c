@@ -28,7 +28,6 @@ struct edit_baton
   void *wrapped_edit_baton;
   svn_depth_t requested_depth;
   svn_boolean_t has_target;
-  int actual_depth;
 };
 
 struct node_baton
@@ -36,6 +35,7 @@ struct node_baton
   svn_boolean_t filtered;
   void *edit_baton;
   void *wrapped_baton;
+  int dir_depth;
 };
 
 /* Allocate and return a new node_baton structure, populated via the
@@ -43,12 +43,14 @@ struct node_baton
 static struct node_baton *
 make_node_baton(void *edit_baton,
                 svn_boolean_t filtered,
+                int dir_depth,
                 apr_pool_t *pool)
 {
   struct node_baton *b = apr_palloc(pool, sizeof(*b));
   b->edit_baton = edit_baton;
   b->wrapped_baton = NULL;
   b->filtered = filtered;
+  b->dir_depth = dir_depth;
   return b;
 }
 
@@ -62,7 +64,7 @@ okay_to_edit(struct edit_baton *eb,
   if (pb->filtered)
     return FALSE;
 
-  effective_depth = eb->actual_depth - (eb->has_target ? 1 : 0);
+  effective_depth = pb->dir_depth - (eb->has_target ? 1 : 0);
   switch (eb->requested_depth)
     {
     case svn_depth_empty:
@@ -105,11 +107,10 @@ open_root(void *edit_baton,
   struct node_baton *b;
 
   /* The root node always gets through cleanly. */
-  b = make_node_baton(edit_baton, FALSE, pool);
+  b = make_node_baton(edit_baton, FALSE, 1, pool);
   SVN_ERR(eb->wrapped_editor->open_root(eb->wrapped_edit_baton, base_revision,
                                         pool, &b->wrapped_baton));
 
-  eb->actual_depth++;
   *root_baton = b;
   return SVN_NO_ERROR;
 }
@@ -153,7 +154,7 @@ add_directory(const char *path,
   /* Check for sufficient depth. */
   if (okay_to_edit(eb, pb, svn_node_dir))
     {
-      b = make_node_baton(eb, FALSE, pool);
+      b = make_node_baton(eb, FALSE, pb->dir_depth + 1, pool);
       SVN_ERR(eb->wrapped_editor->add_directory(path, pb->wrapped_baton,
                                                 copyfrom_path, 
                                                 copyfrom_revision,
@@ -161,10 +162,9 @@ add_directory(const char *path,
     }
   else
     {
-      b = make_node_baton(eb, TRUE, pool);
+      b = make_node_baton(eb, TRUE, pb->dir_depth + 1, pool);
     }
 
-  eb->actual_depth++;
   *child_baton = b;
   return SVN_NO_ERROR;
 }
@@ -183,17 +183,16 @@ open_directory(const char *path,
   /* Check for sufficient depth. */
   if (okay_to_edit(eb, pb, svn_node_dir))
     {
-      b = make_node_baton(eb, FALSE, pool);
+      b = make_node_baton(eb, FALSE, pb->dir_depth + 1, pool);
       SVN_ERR(eb->wrapped_editor->open_directory(path, pb->wrapped_baton,
                                                  base_revision, pool,
                                                  &b->wrapped_baton));
     }
   else
     {
-      b = make_node_baton(eb, TRUE, pool);
+      b = make_node_baton(eb, TRUE, pb->dir_depth + 1, pool);
     }
 
-  eb->actual_depth++;
   *child_baton = b;
   return SVN_NO_ERROR;
 }
@@ -213,14 +212,14 @@ add_file(const char *path,
   /* Check for sufficient depth. */
   if (okay_to_edit(eb, pb, svn_node_file))
     {
-      b = make_node_baton(eb, FALSE, pool);
+      b = make_node_baton(eb, FALSE, pb->dir_depth, pool);
       SVN_ERR(eb->wrapped_editor->add_file(path, pb->wrapped_baton,
                                            copyfrom_path, copyfrom_revision,
                                            pool, &b->wrapped_baton));
     }
   else
     {
-      b = make_node_baton(eb, TRUE, pool);
+      b = make_node_baton(eb, TRUE, pb->dir_depth, pool);
     }
 
   *child_baton = b;
@@ -241,14 +240,14 @@ open_file(const char *path,
   /* Check for sufficient depth. */
   if (okay_to_edit(eb, pb, svn_node_file))
     {
-      b = make_node_baton(eb, FALSE, pool);
+      b = make_node_baton(eb, FALSE, pb->dir_depth, pool);
       SVN_ERR(eb->wrapped_editor->open_file(path, pb->wrapped_baton,
                                             base_revision, pool,
                                             &b->wrapped_baton));
     }
   else
     {
-      b = make_node_baton(eb, TRUE, pool);
+      b = make_node_baton(eb, TRUE, pb->dir_depth, pool);
     }
 
   *child_baton = b;
@@ -322,7 +321,6 @@ close_directory(void *dir_baton,
   if (! db->filtered)
     SVN_ERR(eb->wrapped_editor->close_directory(db->wrapped_baton, pool));
 
-  eb->actual_depth--;
   return SVN_NO_ERROR;
 }
 
@@ -428,7 +426,6 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
   eb = apr_palloc(pool, sizeof(*eb));
   eb->wrapped_editor = wrapped_editor;
   eb->wrapped_edit_baton = wrapped_edit_baton;
-  eb->actual_depth = 0;
   eb->has_target = has_target;
   eb->requested_depth = requested_depth;
 

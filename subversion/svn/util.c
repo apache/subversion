@@ -888,6 +888,31 @@ svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
 }
 
 
+void
+svn_cl__print_xml_commit(svn_stringbuf_t **sb,
+                         svn_revnum_t revision,
+                         const char *author,
+                         const char *date,
+                         apr_pool_t *pool)
+{
+  /* "<commit ...>" */
+  svn_xml_make_open_tag(sb, pool, svn_xml_normal, "commit",
+                        "revision",
+                        apr_psprintf(pool, "%ld", revision), NULL);
+
+  /* "<author>xx</author>" */
+  if (author)
+    svn_cl__xml_tagged_cdata(sb, pool, "author", author);
+
+  /* "<date>xx</date>" */
+  if (date)
+    svn_cl__xml_tagged_cdata(sb, pool, "date", date);
+
+  /* "</commit>" */
+  svn_xml_make_close_tag(sb, pool, "commit");
+}
+
+
 svn_error_t *
 svn_cl__xml_print_header(const char *tagname,
                          apr_pool_t *pool)

@@ -45,6 +45,8 @@ typedef struct svn_diff__file_token_t
   svn_diff_datasource_e datasource;
   /* Offset in the datasource. */
   apr_off_t offset;
+  /* Offset of the normalized token (may skip leading whitespace) */
+  apr_off_t norm_offset;
   /* Total length - before normalization. */
   apr_off_t raw_length;
   /* Total length - after normalization. */
@@ -88,7 +90,7 @@ find_eol_start(char *buf, apr_size_t len)
     }
   return NULL;
 }
-      
+
 static int
 datasource_to_index(svn_diff_datasource_e datasource)
 {
@@ -324,9 +326,9 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       length = endp - curp;
       file_token->raw_length += length;
-      svn_diff__normalize_buffer(curp, &length,
+      svn_diff__normalize_buffer(&curp, &length,
                                  &file_baton->normalize_state[idx],
-                                 file_baton->options);
+                                 curp, file_baton->options);
       file_token->length += length;
       h = svn_diff__adler32(h, curp, length);
 
@@ -363,12 +365,15 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
    * line. */
   if (file_token->raw_length > 0)
     {
-      svn_diff__normalize_buffer(curp, &length,
+      char *c = curp;
+      svn_diff__normalize_buffer(&c, &length,
                                  &file_baton->normalize_state[idx],
-                                 file_baton->options);
+                                 curp, file_baton->options);
+
+      file_token->norm_offset = file_token->offset + (c - curp);
       file_token->length += length;
 
-      *hash = svn_diff__adler32(h, curp, length);
+      *hash = svn_diff__adler32(h, c, length);
       *token = file_token;
     }
 
@@ -419,7 +424,7 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
   for (i = 0; i < 2; ++i)
     {
       idx[i] = datasource_to_index(file_token[i]->datasource);
-      offset[i] = file_token[i]->offset;
+      offset[i] = file_token[i]->norm_offset;
       chunk[i] = file_baton->chunk[idx[i]];
       state[i] = svn_diff__normalize_state_normal;
 
@@ -469,8 +474,10 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
                                  file_baton->pool));
               offset[i] += length[i];
               raw_length[i] -= length[i];
-              svn_diff__normalize_buffer(bufp[i], &length[i], &state[i],
-                                         file_baton->options);
+              /* bufp[i] gets reset to buffer[i] before reading each chunk,
+                 so, overwriting it isn't a problem */
+              svn_diff__normalize_buffer(&bufp[i], &length[i], &state[i],
+                                         bufp[i], file_baton->options);
             }
         }
 

@@ -1403,7 +1403,8 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
 
 void SVNClient::blame(const char *path, Revision &pegRevision,
                       Revision &revisionStart, Revision &revisionEnd,
-                      bool ignoreMimeType, BlameCallback *callback)
+                      bool ignoreMimeType, bool includeMergedRevisions,
+                      BlameCallback *callback)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1415,10 +1416,11 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_blame3(intPath.c_str(), pegRevision.revision(),
+    SVN_JNI_ERR(svn_client_blame4(intPath.c_str(), pegRevision.revision(),
                                   revisionStart.revision(),
                                   revisionEnd.revision(),
-                                  svn_diff_file_options_create(pool), false,
+                                  svn_diff_file_options_create(pool),
+                                  ignoreMimeType, includeMergedRevisions,
                                   BlameCallback::callback, callback, ctx,
                                   pool),
         );

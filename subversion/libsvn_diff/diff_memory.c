@@ -52,6 +52,12 @@ typedef struct diff_mem_baton_t
 {
   /* The tokens for each of the sources */
   source_tokens_t sources[4];
+
+  /* Normalization buffer; we only ever compare 2 tokens at the same time */
+  char *normalization_buf[2];
+
+  /* Options for normalized comparison of the data sources */
+  const svn_diff_file_options_t *normalization_options;
 } diff_mem_baton_t;
 
 
@@ -109,10 +115,16 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
   if (src->tokens->nelts > src->next_token)
     {
       /* There are actually tokens to be returned */
-      (*token) = APR_ARRAY_IDX(src->tokens, src->next_token, svn_string_t *);
-      *hash = svn_diff__adler32(0,
-                                ((svn_string_t *)*token)->data,
-                                ((svn_string_t *)*token)->len);
+      char *buf = mem_baton->normalization_buf[0];
+      svn_string_t *tok = (*token)
+        = APR_ARRAY_IDX(src->tokens, src->next_token, svn_string_t *);
+      apr_off_t len = tok->len;
+      svn_diff__normalize_state_t state
+        = svn_diff__normalize_state_normal;
+
+      svn_diff__normalize_buffer(&buf, &len, &state, tok->data,
+                                 mem_baton->normalization_options);
+      *hash = svn_diff__adler32(0, buf, len);
       src->next_token++;
     }
   else
@@ -127,13 +139,25 @@ token_compare(void *baton, void *token1, void *token2, int *result)
 {
   /* Implement the same behaviour as diff_file.c:token_compare(),
      but be simpler, because we know we'll have all data in memory */
+  diff_mem_baton_t *btn = baton;
   svn_string_t *t1 = token1;
   svn_string_t *t2 = token2;
+  char *buf1 = btn->normalization_buf[0];
+  char *buf2 = btn->normalization_buf[1];
+  apr_off_t len1 = t1->len;
+  apr_off_t len2 = t2->len;
+  svn_diff__normalize_state_t state = svn_diff__normalize_state_normal;
 
-  if (t1->len != t2->len)
-    *result = (t1->len < t2->len) ? -1 : 1;
+  svn_diff__normalize_buffer(&buf1, &len1, &state, t1->data,
+                             btn->normalization_options);
+  state = svn_diff__normalize_state_normal;
+  svn_diff__normalize_buffer(&buf2, &len2, &state, t2->data,
+                             btn->normalization_options);
+
+  if (len1 != len2)
+    *result = (len1 < len2) ? -1 : 1;
   else
-    *result = (t1->len == 0) ? 0 : memcmp(t1->data, t2->data, t2->len);
+    *result = (len1 == 0) ? 0 : memcmp(buf1, buf2, len1);
 
   return SVN_NO_ERROR;
 }
@@ -214,16 +238,46 @@ fill_source_tokens(source_tokens_t *src,
     src->ends_without_eol = FALSE;
 }
 
+
+static void
+alloc_normalization_bufs(diff_mem_baton_t *btn,
+                         int sources,
+                         apr_pool_t *pool)
+{
+  apr_size_t max_len = 0;
+  apr_off_t idx;
+  int i;
+
+  for (i = 0; i < sources; i++)
+    {
+      apr_array_header_t *tokens = btn->sources[i].tokens;
+      if (tokens->nelts > 0)
+        for (idx = 0; idx < tokens->nelts; idx++)
+          {
+            apr_size_t token_len
+              = APR_ARRAY_IDX(tokens, idx, svn_string_t *)->len;
+            max_len = (max_len < token_len) ? token_len : max_len;
+          }
+    }
+
+  btn->normalization_buf[0] = apr_palloc(pool, max_len);
+  btn->normalization_buf[1] = apr_palloc(pool, max_len);
+}
+
 svn_error_t *
 svn_diff_mem_string_diff(svn_diff_t **diff,
                          svn_string_t *original,
                          svn_string_t *modified,
+                         const svn_diff_file_options_t *options,
                          apr_pool_t *pool)
 {
   diff_mem_baton_t baton;
 
   fill_source_tokens(&(baton.sources[0]), original, pool);
   fill_source_tokens(&(baton.sources[1]), modified, pool);
+  alloc_normalization_bufs(&baton, 2, pool);
+
+  baton.normalization_options = options;
 
   SVN_ERR(svn_diff_diff(diff, &baton, &svn_diff__mem_vtable, pool));
 
@@ -235,6 +289,7 @@ svn_diff_mem_string_diff3(svn_diff_t **diff,
                           svn_string_t *original,
                           svn_string_t *modified,
                           svn_string_t *latest,
+                          const svn_diff_file_options_t *options,
                           apr_pool_t *pool)
 {
   diff_mem_baton_t baton;
@@ -242,6 +297,9 @@ svn_diff_mem_string_diff3(svn_diff_t **diff,
   fill_source_tokens(&(baton.sources[0]), original, pool);
   fill_source_tokens(&(baton.sources[1]), modified, pool);
   fill_source_tokens(&(baton.sources[2]), latest, pool);
+  alloc_normalization_bufs(&baton, 3, pool);
+
+  baton.normalization_options = options;
 
   SVN_ERR(svn_diff_diff3(diff, &baton, &svn_diff__mem_vtable, pool));
 
@@ -255,6 +313,7 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
                           svn_string_t *modified,
                           svn_string_t *latest,
                           svn_string_t *ancestor,
+                          const svn_diff_file_options_t *options,
                           apr_pool_t *pool)
 {
   diff_mem_baton_t baton;
@@ -263,6 +322,9 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
   fill_source_tokens(&(baton.sources[1]), modified, pool);
   fill_source_tokens(&(baton.sources[2]), latest, pool);
   fill_source_tokens(&(baton.sources[3]), ancestor, pool);
+  alloc_normalization_bufs(&baton, 4, pool);
+
+  baton.normalization_options = options;
 
   SVN_ERR(svn_diff_diff4(diff, &baton, &svn_diff__mem_vtable, pool));
 
@@ -369,7 +431,7 @@ static svn_error_t *
 output_unified_flush_hunk(output_baton_t *baton)
 {
   apr_off_t target_token;
-  apr_uint32_t hunk_len;
+  apr_size_t hunk_len;
 
   if (svn_stringbuf_isempty(baton->hunk))
     return SVN_NO_ERROR;

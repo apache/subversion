@@ -451,13 +451,27 @@ equivalent to \".\", so you would commit more than you intended."
   :group 'psvn)
 (put 'svn-status-default-commit-arguments 'risky-local-variable t)
 
-(defcustom svn-status-default-diff-arguments '()
+(defcustom svn-status-default-diff-arguments '("-x" "--ignore-eol-style")
   "*A list of arguments that is passed to the svn diff command.
-If you'd like to suppress whitespace changes use the following value:
-'(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")"
+When the built in diff command is used,
+the following options are available: --ignore-eol-style, --ignore-space-change,
+--ignore-all-space, --ignore-eol-style.
+The following setting ignores eol style changes and all white space changes:
+'(\"-x\" \"--ignore-eol-style --ignore-all-space\")
+
+If you'd like to suppress whitespace changes using the external diff command
+use the following value:
+'(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")
+
+"
   :type '(repeat string)
   :group 'psvn)
 (put 'svn-status-default-diff-arguments 'risky-local-variable t)
+
+(defcustom svn-status-default-blame-arguments '("-x" "--ignore-eol-style")
+  "*A list of arguments that is passed to the svn blame command.
+See `svn-status-default-diff-arguments' for some examples.")
+(put 'svn-status-default-blame-arguments 'risky-local-variable t)
 
 (defvar svn-trac-project-root nil
   "Path for an eventual existing trac issue tracker.
@@ -3519,7 +3533,7 @@ When called from a file buffer, go to the current line in the resulting blame ou
     (setq revision (svn-status-read-revision-string "Blame for version: " "BASE")))
   (unless revision (setq revision "BASE"))
   (setq svn-status-blame-file-name (svn-status-line-info->filename (svn-status-get-file-information)))
-  (svn-run t t 'blame "blame" "-r" revision svn-status-blame-file-name))
+  (svn-run t t 'blame "blame" svn-status-default-blame-arguments "-r" revision svn-status-blame-file-name))
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
@@ -3919,9 +3933,14 @@ When called with a negative prefix argument, only update the selected files."
     (if selective-update
         (progn
           (message "Running svn-update for %s" (svn-status-marked-file-names))
-          (svn-run t t 'update "update" (when rev (list "-r" rev)) (svn-status-marked-file-names)))
+          (svn-run t t 'update "update"
+                   (when rev (list "-r" rev))
+                   (list "--non-interactive")
+                   (svn-status-marked-file-names)))
       (message "Running svn-update for %s" default-directory)
-      (svn-run t t 'update "update" (when rev (list "-r" rev))))))
+      (svn-run t t 'update "update"
+               (when rev (list "-r" rev))
+               (list "--non-interactive")))))
 
 (defun svn-status-commit ()
   "Commit selected files.
