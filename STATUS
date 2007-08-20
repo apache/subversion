@@ -41,6 +41,18 @@ Candidate changes:
     Votes:
       +1: blair, cmpilato
 
+  * r23815
+    Fix bug in authz code related to inconclusive responses to global
+    access checks.
+    Justification:
+      Simple and obvious fix, low risk, problems in authz code should be
+      fixed asap.
+    Notes:
+      Bug was found in production on svn.apache.org, currently requires
+      a local patch whenever we upgrade that machine's svn install.
+    Votes:
+      +1: rooneg
+
   * r24697, -9, 24793, 24827
     Fix issue 2743: fix property handling for locally replaced files
     Justification:
