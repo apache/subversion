@@ -608,7 +608,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  This command allows some amount of fuzzing as Unidiff is contextual\n"
      "  and svnpatch revisionless.  However, you might see failure warnings\n"
      "  when pushing this feature too hard.\n"),
-    {'q', svn_cl__dry_run_opt, svn_cl__config_dir_opt} },
+    {'q', svn_cl__force_opt, svn_cl__dry_run_opt, svn_cl__config_dir_opt} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"

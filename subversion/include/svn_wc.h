@@ -44,6 +44,7 @@
 #include "svn_error.h"
 #include "svn_opt.h"
 #include "svn_ra.h"    /* for svn_ra_reporter_t type */
+#include "svn_ra_svn.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -4339,6 +4340,8 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
  *
  */
 
+/* Output -- Writing */
+
 /* Append @a number into @a target stream. */
 svn_error_t *
 svn_wc_write_number(svn_stream_t *target,
@@ -4391,6 +4394,29 @@ svn_wc_write_cmd(svn_stream_t *target,
                  apr_pool_t *pool,
                  const char *cmdname,
                  const char *fmt, ...);
+
+/* Input -- Reading */
+
+svn_error_t *
+svn_wc_read_item(svn_stream_t *from,
+                 apr_pool_t *pool,
+                 svn_ra_svn_item_t **item);
+
+svn_error_t *
+svn_wc_parse_tuple(apr_array_header_t *list,
+                   apr_pool_t *pool,
+                   const char *fmt, ...);
+
+svn_error_t *
+svn_wc_read_tuple(svn_stream_t *from,
+                  apr_pool_t *pool,
+                  const char *fmt, ...);
+
+svn_error_t *
+svn_wc_apply_patch(apr_file_t *decoded_patch_file,
+                   const svn_delta_editor_t *diff_editor,
+                   void *diff_edit_baton,
+                   apr_pool_t *pool);
 
 /** @} end group: svnpatch related functions */
 

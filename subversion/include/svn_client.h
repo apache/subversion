@@ -3952,10 +3952,14 @@ svn_client_info(const char *path_or_url,
  * The patch might carry Unified diffs, svnpatch diffs, or both.
  * Although we're pretty much able to handle the svnpatch block, we'll
  * be using external tools to process the Unidiff.  On Unix-like systems
- * we'll invoke the patch(1) binary while we'll leave the user with its
+ * we'll invoke the patch(1) binary while we'll leave the user with her
  * own tools on other platforms.
  * Note: hopefuly this is temporary and we'll have our own implementation
  * one day to cut off the dependency.
+ *
+ * If @a force is not set and the patch involves deleting locally modified or
+ * unversioned items the operation will fail.  If @a force is set such items
+ * will be deleted.
  *
  * If @a dry_run is true, the patch is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
@@ -3965,6 +3969,7 @@ svn_client_info(const char *path_or_url,
 svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *wc_path,
+                 svn_boolean_t force,
                  svn_boolean_t dry_run,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);

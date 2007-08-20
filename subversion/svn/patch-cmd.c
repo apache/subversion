@@ -84,9 +84,14 @@ svn_cl__patch(apr_getopt_t *os,
       return svn_error_create(SVN_ERR_WC_NOT_DIRECTORY, 0, NULL);
   }
 
+  if (! opt_state->quiet)
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                         FALSE, FALSE, pool);
+
   /* OK we're good. */
   SVN_ERR(svn_client_patch(patch_path,
                            target_path,
+                           opt_state->force,
                            opt_state->dry_run,
                            ctx,
                            pool));
