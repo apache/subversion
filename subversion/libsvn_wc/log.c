@@ -2130,7 +2130,6 @@ svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-/*###TODO*/
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
                           svn_wc_adm_access_t *adm_access,
@@ -2139,13 +2138,12 @@ svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
 {
   svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
                         SVN_WC__LOG_DELETE_LOCK,
-                        SVN_WC__LOG_ATTR_NAME, path,
+                        SVN_WC__LOG_ATTR_NAME, loggy_path(path, adm_access),
                         NULL);
 
   return SVN_NO_ERROR;
 }
 
-/*###TODO*/
 svn_error_t *
 svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
                                 svn_wc_adm_access_t *adm_access,
@@ -2154,7 +2152,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
 {
   svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
                         SVN_WC__LOG_DELETE_CHANGELIST,
-                        SVN_WC__LOG_ATTR_NAME, path,
+                        SVN_WC__LOG_ATTR_NAME, loggy_path(path, adm_access),
                         NULL);
 
   return SVN_NO_ERROR;
