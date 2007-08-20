@@ -115,6 +115,28 @@ class WCTestCase(unittest.TestCase):
         diffresult = difffile.read()
         self.assertEqual(diffstring, diffresult)
         
+        diffstring="""Index: """+wc_location+"""/branches/0.x/README.txt
+===================================================================
+--- """+wc_location+"""/branches/0.x/README.txt\t(revision 0)
++++ """+wc_location+"""/branches/0.x/README.txt\t(revision 5)
+@@ -0,0 +1,9 @@
++This repository is for test purposes only. Any resemblance to any other
++repository, real or imagined, is purely coincidental.
++
++This branch preserves and refines the code of the excellent pre-1.0 days.
++
++Contributors:
++Clark
++Bruce
++Henry
+"""
+        difffile.seek(0)
+        self.wc.diff(revnum1=4, revnum2=5, outfile=difffile)
+        difffile.seek(0)
+        diffresult = difffile.read()
+        self.assertEqual(diffstring, diffresult)
+        
+        
     def test_export(self):
         export_location = os.path.join(tempfile.gettempdir(), "svn_export")
         self.wc.export("", export_location)

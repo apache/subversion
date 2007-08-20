@@ -166,12 +166,18 @@ class WC(object):
             self._progress_func(progress, total)
     _progress_func_wrapper = staticmethod(_progress_func_wrapper)
 
-    def diff(self, path="", diff_options=[], recurse=True,
-             ignore_ancestry=True, no_diff_deleted=False,
-             ignore_content_type=False, header_encoding="",
-             outfile = sys.stdout, errfile = sys.stderr):
+    def diff(self, path1="", revnum1=None, path2=None, revnum2=None,
+             diff_options=[], recurse=True, ignore_ancestry=True,
+             no_diff_deleted=False, ignore_content_type=False,
+             header_encoding="", outfile = sys.stdout, errfile = sys.stderr):
         """Produce svn diff output that describes the difference between
-        PATH at base revision and working copy.
+        PATH1 at REVISION1 and PATH2 at REVISION2.
+        
+        If PATH2 is not given, it defaults to PATH1.
+        
+        REVISION1 will default to svn_opt_revision_base if it is not given.
+        
+        REVISION2 will default to svn_opt_revision_working if it is not given.
         
         DIFF_OPTIONS will be passed to the diff process.
         
@@ -197,21 +203,33 @@ class WC(object):
         diff_options = self._build_path_list(diff_options)
         
         rev1 = svn_opt_revision_t()
-        rev1.kind = svn_opt_revision_base
+        if revnum1:
+            rev1.kind = svn_opt_revision_number
+            rev1.value.number = revnum1
+        else:
+            rev1.kind = svn_opt_revision_base
         
         rev2 = svn_opt_revision_t()
-        rev2.kind = svn_opt_revision_working
+        if revnum2:
+            rev2.kind = svn_opt_revision_number
+            rev2.value.number = revnum2
+        else:
+            rev2.kind = svn_opt_revision_working
         
-        path = self._build_path(path)
+        path1 = self._build_path(path1)
+        if path2:
+            path2 = self._build_path(path2)
+        else:
+            path2 = path1
 
         # Create temporary objects for output and errors
         apr_outfile = _types.APRFile(outfile)
         apr_errfile = _types.APRFile(errfile)
 
-        svn_client_diff3(diff_options, path, rev1, path,
-                         rev2, recurse, ignore_ancestry, no_diff_deleted,
-                         ignore_content_type, header_encoding, apr_outfile,
-                         apr_errfile, self.client, self.iterpool)
+        svn_client_diff3(diff_options, path1, rev1, path2, rev2, recurse,
+            ignore_ancestry, no_diff_deleted, ignore_content_type,
+            header_encoding, apr_outfile, apr_errfile, self.client,
+            self.iterpool)
 
         # Close the APR wrappers
         apr_outfile.close()
