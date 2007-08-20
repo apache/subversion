@@ -176,7 +176,7 @@ create_repos_dir(const char *path, apr_pool_t *pool)
       else
         err = svn_error_createf(SVN_ERR_DIR_NOT_EMPTY, 0,
                                 _("'%s' exists and is non-empty"),
-                                path);
+                                svn_path_local_style(path, pool));
     }
 
   return err;
