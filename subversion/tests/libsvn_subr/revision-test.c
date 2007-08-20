@@ -26,8 +26,6 @@ test_parse_revision_number(const char **msg,
                            svn_test_opts_t *opts,
                            apr_pool_t *pool)
 {
-  *msg = "test svn_parse_revision_number";
-
   const char **t;
 
   const char *failure_tests[] = {
@@ -43,6 +41,8 @@ test_parse_revision_number(const char **msg,
     "12345ABC",
     NULL
   };
+
+  *msg = "test svn_parse_revision_number";
 
   /* These tests should succeed. */
   for (t=success_tests; *t; ++t)
