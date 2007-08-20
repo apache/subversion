@@ -371,13 +371,17 @@ svn_boolean_t svn_path_is_backpath_present(const char *path);
  * If not, return @c NULL.
  * If so, return a copy of the remainder path, allocated in @a pool.
  * (The remainder is the component which, added to @a path1, yields
- * @a path2.  The remainder does not begin with a dir separator.)  
+ * @a path2.  The remainder does not begin with a dir separator.)
  *
  * Both paths must be in canonical form, and must either be absolute,
  * or contain no ".." components.
  *
  * If @a path2 is the same as @a path1, it is not considered a child, so the
  * result is @c NULL; an empty string is never returned.
+ *
+ * @note In 1.5 this function has been extended to allow a @c NULL @a pool
+ *       in which case a pointer into @a path2 will be returned to
+ *       identify the remainder path.
  *
  * ### todo: the ".." restriction is unfortunate, and would ideally
  * be lifted by making the implementation smarter.  But this is not

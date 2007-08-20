@@ -460,7 +460,7 @@ process_committed_leaf(int log_number,
      contains a command to bump the revision attribute (and
      timestamp). */
   SVN_ERR(svn_wc__loggy_committed(&logtags, adm_access,
-                                  base_name, new_revnum, pool));
+                                  path, new_revnum, pool));
 
 
   /* Do wcprops in the same log txn as revision, etc. */
@@ -1866,15 +1866,15 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
              than the 'now' time that already exists. */
           if (use_commit_times && entry->cmt_date)
             SVN_ERR(svn_wc__loggy_set_timestamp
-                    (&log_accum, adm_access,
-                     name, svn_time_to_cstring(entry->cmt_date, pool),
+                    (&log_accum, adm_access, fullpath,
+                     svn_time_to_cstring(entry->cmt_date, pool),
                      pool));
 
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
-                  (&log_accum, adm_access, name, SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                   pool));
+                  (&log_accum, adm_access,
+                   fullpath, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
           SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
-                  (&log_accum, adm_access, name, pool));
+                  (&log_accum, adm_access, fullpath, pool));
 
           *reverted = TRUE;
         }

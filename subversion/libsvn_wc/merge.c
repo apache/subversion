@@ -787,11 +787,11 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   if (! dry_run)
     {
       SVN_ERR(svn_wc__loggy_maybe_set_executable(log_accum,
-                                                 adm_access, log_merge_target,
+                                                 adm_access, merge_target,
                                                  pool));
 
       SVN_ERR(svn_wc__loggy_maybe_set_readonly(log_accum,
-                                                adm_access, log_merge_target,
+                                                adm_access, merge_target,
                                                 pool));
 
     }
