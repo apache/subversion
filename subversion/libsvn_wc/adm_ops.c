@@ -197,23 +197,20 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
 static svn_error_t *
 remove_revert_file(svn_stringbuf_t **logtags,
                    svn_wc_adm_access_t *adm_access,
-                   const char *base_name,
+                   const char *path,
                    svn_boolean_t is_prop,
                    apr_pool_t * pool)
 {
-  const char * revert_file;
+  const char *revert_file;
   svn_node_kind_t kind;
 
   if (is_prop)
-    SVN_ERR(svn_wc__prop_revert_path(&revert_file, base_name, svn_node_file,
+    SVN_ERR(svn_wc__prop_revert_path(&revert_file, path, svn_node_file,
                                      FALSE, pool));
   else
-    revert_file = svn_wc__text_revert_path(base_name, FALSE, pool);
+    revert_file = svn_wc__text_revert_path(path, FALSE, pool);
 
-  SVN_ERR(svn_io_check_path
-          (svn_path_join(svn_wc_adm_access_path(adm_access),
-                         revert_file, pool),
-           &kind, pool));
+  SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
 
   if (kind == svn_node_file)
     SVN_ERR(svn_wc__loggy_remove(logtags, adm_access, revert_file, pool));
@@ -365,10 +362,8 @@ process_committed_leaf(int log_number,
 
       /* If the props or text revert file exists it needs to be deleted when
        * the file is committed. */
-      SVN_ERR(remove_revert_file(&logtags, adm_access, base_name,
-                                 FALSE, pool));
-      SVN_ERR(remove_revert_file(&logtags, adm_access, base_name,
-                                 TRUE, pool));
+      SVN_ERR(remove_revert_file(&logtags, adm_access, path, FALSE, pool));
+      SVN_ERR(remove_revert_file(&logtags, adm_access, path, TRUE, pool));
 
       if (digest)
         hex_digest = svn_md5_digest_to_cstring(digest, pool);
@@ -474,7 +469,7 @@ process_committed_leaf(int log_number,
 
           SVN_ERR(svn_wc__loggy_modify_wcprop
                   (&logtags, adm_access,
-                   base_name, prop->name,
+                   path, prop->name,
                    prop->value ? prop->value->data : NULL,
                    pool));
         }
@@ -1288,7 +1283,7 @@ svn_wc_delete3(const char *path,
         {
           /* remove the properties file */
           const char *svn_prop_file_path;
-          SVN_ERR(svn_wc__prop_path(&svn_prop_file_path, base_name,
+          SVN_ERR(svn_wc__prop_path(&svn_prop_file_path, path,
                                     was_kind, FALSE, pool));
           SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
                                        svn_prop_file_path, pool));
@@ -1763,9 +1758,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           SVN_ERR(svn_wc__load_prop_file(rprop, baseprops, pool));
           /* Ensure the revert propfile gets removed. */
           if (revert_base)
-            SVN_ERR(svn_wc__loggy_remove
-                    (&log_accum, adm_access,
-                     svn_path_is_child(adm_path, rprop, pool), pool));
+            SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access, rprop, pool));
           *reverted = TRUE;
         }
     }
@@ -1886,24 +1879,30 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     {
       flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
       tmp_entry.conflict_old = NULL;
-      SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                   entry->conflict_old, pool));
+      SVN_ERR(svn_wc__loggy_remove
+              (&log_accum, adm_access,
+               svn_path_join(svn_wc_adm_access_path(adm_access),
+                             entry->conflict_old, pool), pool));
     }
 
   if (entry->conflict_new)
     {
       flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
       tmp_entry.conflict_new = NULL;
-      SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                   entry->conflict_new, pool));
+      SVN_ERR(svn_wc__loggy_remove
+              (&log_accum, adm_access,
+               svn_path_join(svn_wc_adm_access_path(adm_access),
+                             entry->conflict_new, pool), pool));
     }
 
   if (entry->conflict_wrk)
     {
       flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
       tmp_entry.conflict_wrk = NULL;
-      SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                   entry->conflict_wrk, pool));
+      SVN_ERR(svn_wc__loggy_remove
+              (&log_accum, adm_access,
+               svn_path_join(svn_wc_adm_access_path(adm_access),
+                             entry->conflict_wrk, pool), pool));
     }
 
   /* Remove the prej-file if the entry lists one (and it exists) */
@@ -1911,8 +1910,10 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     {
       flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
       tmp_entry.prejfile = NULL;
-      SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                   entry->prejfile, pool));
+      SVN_ERR(svn_wc__loggy_remove
+              (&log_accum, adm_access,
+               svn_path_join(svn_wc_adm_access_path(adm_access),
+                             entry->prejfile, pool), pool));
     }
 
   /* Clean up the copied state if this is a replacement. */
