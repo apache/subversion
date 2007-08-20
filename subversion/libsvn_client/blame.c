@@ -756,6 +756,15 @@ svn_client_blame4(const char *target,
   /* Perform optional merged chain normalization. */
   if (include_merged_revisions)
     {
+      /* If we never created any blame for the original chain, create it now,
+         with the most recent changed revision.  This could occur if a file
+         was created on a branch and them merged to another branch.  This is
+         semanticly a copy, and we want to use the revision on the branch as
+         the most recently changed revision.  ### Is this really what we want
+         to do here?  Do the sematics of copy change? */
+      if (!frb.chain)
+        frb.chain->blame = blame_create(frb.chain, frb.rev, 0);
+
       normalize_blames(frb.chain, frb.merged_chain, pool);
       walk_merged = frb.merged_chain->blame;
     }
