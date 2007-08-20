@@ -702,7 +702,8 @@ copy-swig-mzscm: autogen-swig-mzscm $(SWIG_MZSCM_DIR)/libsvn
 
 swig-mzscm: autogen-swig-mzscm copy-swig-mzscm
 	cd $(SWIG_MZSCM_DIR);\
-	$(MAKE) shared-magic
+	$(MAKE) shared-magic;\
+	$(MAKE) all
 
 clean-swig-mzscm:
 	rm -rf $(SWIG_MZSCM_DIR)/libsvn
