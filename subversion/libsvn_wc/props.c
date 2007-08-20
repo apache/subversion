@@ -144,7 +144,7 @@ open_reject_tmp_file(apr_file_t **fp, const char **reject_tmp_path,
                      svn_wc_adm_access_t *adm_access,
                      svn_boolean_t is_dir, apr_pool_t *pool)
 {
-  const char *tmp_path, *tmp_name;
+  const char *tmp_path;
 
   /* Get path to /temporary/ local prop file */
   SVN_ERR(svn_wc__prop_path(&tmp_path, full_path,
@@ -155,24 +155,6 @@ open_reject_tmp_file(apr_file_t **fp, const char **reject_tmp_path,
   SVN_ERR(svn_io_open_unique_file2(fp, reject_tmp_path, tmp_path,
                                    SVN_WC__PROP_REJ_EXT,
                                    svn_io_file_del_none, pool));
-
-  /* reject_tmp_path is an absolute path at this point,
-     but that's no good for us.  We need to convert this
-     path to a *relative* path to use in the logfile. */
-  tmp_name = svn_path_basename(*reject_tmp_path, pool);
-
-  if (is_dir)
-    {
-      /* Dealing with directory "path" */
-      *reject_tmp_path = svn_wc__adm_path("", TRUE, /* use tmp */ pool,
-                                          tmp_name, NULL);
-    }
-  else
-    {
-      /* Dealing with file "path/name" */
-      *reject_tmp_path = svn_wc__adm_path("", TRUE, pool, SVN_WC__ADM_PROPS,
-                                          tmp_name, NULL);
-    }
 
   return SVN_NO_ERROR;
 }
@@ -431,7 +413,8 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
     {
       /* No property modifications, remove the file instead. */
       if (! has_propcaching || (entry && entry->has_prop_mods))
-        SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, real_props, pool));
+        SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
+                                     working_propfile_path, pool));
     }
 
   /* Repeat the above steps for the base properties if required. */
@@ -464,8 +447,8 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
       else
         {
           if (! has_propcaching || (entry && entry->has_props))
-            SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, real_prop_base,
-                                         pool));
+            SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
+                                         base_propfile_path, pool));
         }
     }
 
@@ -1094,13 +1077,12 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         {
           /* Reserve a new .prej file *above* the .svn/ directory by
              opening and closing it. */
-          const char *reserved_path;
           const char *full_reject_path;
 
           full_reject_path = svn_path_join
             (access_path, is_dir ? SVN_WC__THIS_DIR_PREJ : name, pool);
 
-          SVN_ERR(svn_io_open_unique_file2(NULL, &reserved_path,
+          SVN_ERR(svn_io_open_unique_file2(NULL, &reject_path,
                                            full_reject_path,
                                            SVN_WC__PROP_REJ_EXT,
                                            svn_io_file_del_none, pool));
@@ -1108,20 +1090,15 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
           /* This file will be overwritten when the log is run; that's
              ok, because at least now we have a reservation on
              disk. */
-
-          /* Now just get the name of the reserved file.  This is the
-             "relative" path we will use in the log entry. */
-          reject_path = svn_path_basename(reserved_path, pool);
         }
+      else
+        reject_path = svn_path_join(access_path, reject_path, pool);
 
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
          conflicts to it. */
       SVN_ERR(svn_wc__loggy_append(entry_accum, adm_access,
-                                   svn_path_join(access_path,
-                                                 reject_tmp_path, pool),
-                                   svn_path_join(access_path,
-                                                 reject_path, pool), pool));
+                                   reject_tmp_path, reject_path, pool));
 
       /* And of course, delete the temporary reject file. */
       SVN_ERR(svn_wc__loggy_remove(entry_accum, adm_access,
@@ -1131,7 +1108,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       {
         svn_wc_entry_t entry;
 
-        entry.prejfile = reject_path;
+        entry.prejfile = reject_path + access_len;
         SVN_ERR(svn_wc__loggy_entry_modify(entry_accum,
                                            adm_access,
                                            entryname,

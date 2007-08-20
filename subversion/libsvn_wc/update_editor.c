@@ -863,7 +863,7 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
 static svn_error_t *
 accumulate_wcprops(svn_stringbuf_t *log_accum,
                    svn_wc_adm_access_t *adm_access,
-                   const char *base_name,
+                   const char *path,
                    apr_array_header_t *wcprops,
                    apr_pool_t *pool)
 {
@@ -877,8 +877,7 @@ accumulate_wcprops(svn_stringbuf_t *log_accum,
       const svn_prop_t *prop = &APR_ARRAY_IDX(wcprops, i, svn_prop_t);
 
       SVN_ERR(svn_wc__loggy_modify_wcprop
-              (&log_accum, adm_access,
-               base_name,
+              (&log_accum, adm_access, path,
                prop->name, prop->value ? prop->value->data : NULL, pool));
     }
 
@@ -1588,7 +1587,7 @@ close_directory(void *dir_baton,
                                      entry_props, pool));
 
       SVN_ERR(accumulate_wcprops(db->log_accum, adm_access,
-                                 SVN_WC_ENTRY_THIS_DIR, wc_props, pool));
+                                 db->path, wc_props, pool));
     }
 
   /* Flush and run the log. */
@@ -2105,7 +2104,7 @@ merge_props(svn_stringbuf_t *log_accum,
   /* This writes a whole bunch of log commands to install wcprops.  */
   if (wc_props)
     SVN_ERR(accumulate_wcprops(log_accum, adm_access,
-                               base_name, wc_props, pool));
+                               file_path, wc_props, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2405,9 +2404,7 @@ merge_file(svn_wc_notify_state_t *content_state,
               /* If we created a temporary left merge file, get rid of it. */
               if (merge_left != fb->text_base_path)
                 SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                             svn_path_is_child(parent_dir,
-                                                               merge_left,
-                                                               pool), pool));
+                                             merge_left, pool));
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
     } /* end: "textual" merging process */
@@ -3218,7 +3215,7 @@ install_added_props(svn_stringbuf_t *log_accum,
 
   /* This writes a whole bunch of log commands to install wcprops.  */
   SVN_ERR(accumulate_wcprops(log_accum, adm_access,
-                             base_name, wc_props, pool));
+                             dst_path, wc_props, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3394,7 +3391,7 @@ svn_wc_add_repos_file2(const char *dst_path,
                                      base_name, FALSE, pool));
           /* Remove the copy-source, making it look like a move */
           SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                       local_tmp_text_path, pool));
+                                       tmp_text_path, pool));
         }
       else
         SVN_ERR(svn_wc__loggy_move(&log_accum, NULL, adm_access,

@@ -173,6 +173,8 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
    for PATH, setting it to PROPVAL.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
@@ -282,11 +284,13 @@ svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to remove the file
    BASE_NAME, if it exists.
+
+   **** Converted to take paths relative to the operating root.
 */
 svn_error_t *
 svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      svn_wc_adm_access_t *adm_access,
-                     const char *base_name,
+                     const char *path,
                      apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with instructions to cause the working copy of ADM_ACCESS
