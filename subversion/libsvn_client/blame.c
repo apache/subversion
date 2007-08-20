@@ -368,40 +368,39 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     SVN_ERR(svn_io_file_close(dbaton->source_file, frb->currpool));
   SVN_ERR(svn_io_file_close(dbaton->file, frb->currpool));
 
+  /* If we are including merged revisions, we need to add each rev to the
+     merged chain. */
   if (frb->include_merged_revisions)
-    {
-      chain = frb->merged_chain;
-
-      /* If the current revision is not a merged one, we need to add its
-         blame info to the chain for the original line of history. */
-      if (! frb->merged_revision)
-        {
-          apr_pool_t *tmppool;
-
-          SVN_ERR(add_file_blame(frb->last_original_filename,
-                                 dbaton->filename, frb->chain, frb->rev,
-                                 frb->diff_options, frb->currpool));
-
-          /* This filename could be around for a while, potentially, so
-             use the longer lifetime pool, and switch it with the previous one*/
-          svn_pool_clear(frb->prevfilepool);
-          tmppool = frb->filepool;
-          frb->filepool = frb->prevfilepool;
-          frb->prevfilepool = tmppool;
-
-          frb->last_original_filename = apr_pstrdup(frb->filepool, 
-                                                    dbaton->filename);
-        }
-    }
+    chain = frb->merged_chain;
   else
-    {
-      chain = frb->chain;
-    }
+    chain = frb->chain;
 
   /* Process this file. */
   SVN_ERR(add_file_blame(frb->last_filename,
                          dbaton->filename, chain, frb->rev,
                          frb->diff_options, frb->currpool));
+
+  /* If we are including merged revisions, and the current revision is not a
+     merged one, we need to add its blame info to the chain for the original
+     line of history. */
+  if (frb->include_merged_revisions && ! frb->merged_revision)
+    {
+      apr_pool_t *tmppool;
+
+      SVN_ERR(add_file_blame(frb->last_original_filename,
+                             dbaton->filename, frb->chain, frb->rev,
+                             frb->diff_options, frb->currpool));
+
+      /* This filename could be around for a while, potentially, so
+         use the longer lifetime pool, and switch it with the previous one*/
+      svn_pool_clear(frb->prevfilepool);
+      tmppool = frb->filepool;
+      frb->filepool = frb->prevfilepool;
+      frb->prevfilepool = tmppool;
+
+      frb->last_original_filename = apr_pstrdup(frb->filepool, 
+                                                dbaton->filename);
+    }
 
   /* Prepare for next revision. */
 
