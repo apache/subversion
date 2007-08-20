@@ -47,24 +47,6 @@ combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
   return FALSE;
 }
 
-static svn_error_t *
-parse_revision(const char **input, svn_revnum_t *revision)
-{
-  const char *curr = *input;
-  char *endptr;
-  svn_revnum_t result = strtol(curr, &endptr, 10);
-
-  if (curr == endptr)
-    return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                             _("Invalid revision number found parsing '%s'"),
-                             curr);
-
-  *revision = result;
-
-  *input = endptr;
-  return SVN_NO_ERROR;
-}
-
 /* pathname -> PATHNAME */
 static svn_error_t *
 parse_pathname(const char **input, const char *end,
@@ -130,7 +112,7 @@ parse_revlist(const char **input, const char *end,
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
       svn_revnum_t firstrev;
 
-      SVN_ERR(parse_revision(&curr, &firstrev));
+      SVN_ERR(svn_parse_revision_number(&firstrev, curr, &curr));
       if (*curr != '-' && *curr != '\n' && *curr != ',' && curr != end)
         return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                  _("Invalid character '%c' found in revision "
@@ -143,7 +125,7 @@ parse_revlist(const char **input, const char *end,
           svn_revnum_t secondrev;
 
           curr++;
-          SVN_ERR(parse_revision(&curr, &secondrev));
+          SVN_ERR(svn_parse_revision_number(&secondrev, curr, &curr));
           mrange->end = secondrev;
         }
 

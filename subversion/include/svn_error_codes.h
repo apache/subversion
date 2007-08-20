@@ -1073,6 +1073,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 21,
              "Cease invocation of this API")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_REVISION_NUMBER_PARSE_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 22,
+             "Revision number parse error")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
