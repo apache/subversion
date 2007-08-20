@@ -20,7 +20,43 @@
 #include <apr_uuid.h>
 
 #include "svn_types.h"
+#include "svn_error.h"
+#include "svn_private_config.h"
 
+svn_error_t *
+svn_parse_revision_number(svn_revnum_t *rev_p,
+                          const char *str,
+                          const char **endptr)
+{
+  char *endptr_;
+
+  svn_revnum_t result = strtol(str, &endptr_, 10);
+
+  if (endptr)
+    *endptr = endptr_;
+
+  if (str == endptr_)
+    return svn_error_createf(SVN_ERR_REVISION_NUMBER_PARSE_ERROR, NULL,
+                             _("Invalid revision number found parsing '%s'"),
+                             str);
+
+  if (result < 0)
+    {
+      /* The end pointer from strtol is valid, but a negative revision
+         number is invalid, so move the end pointer back to the
+         beginning of the string. */
+      if (endptr)
+        *endptr = str;
+
+      return svn_error_createf(SVN_ERR_REVISION_NUMBER_PARSE_ERROR, NULL,
+                               _("Negative revision number found parsing '%s'"),
+                               str);
+    }
+
+  *rev_p = result;
+
+  return SVN_NO_ERROR;
+}
 
 const char *
 svn_uuid_generate(apr_pool_t *pool)
