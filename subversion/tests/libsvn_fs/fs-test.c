@@ -4490,7 +4490,7 @@ closest_copy_test(const char **msg,
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
 
-  /* Anything under Z should have a closest copy pair of ("/A", 1), so
+  /* Anything under Z should have a closest copy pair of ("/Z", 2), so
      we'll pick some spots to test.  Stuff under A should have no
      relevant closest copy. */
   SVN_ERR(svn_fs_closest_copy(&croot, &cpath, rev_root, "Z", spool));
@@ -4526,7 +4526,7 @@ closest_copy_test(const char **msg,
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
 
-  /* Okay, just for kicks, let's modify Z2/D/H3/t.  Shouldn't affect
+  /* Okay, just for kicks, let's modify Z2/D/H2/t.  Shouldn't affect
      its closest-copy-ness, right?  */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
