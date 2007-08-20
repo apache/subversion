@@ -813,8 +813,10 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
          defunct. */
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
         {
-          SVN_ERR(svn_wc__loggy_delete_lock(&log_accum, adm_access,
-                                            base_name, pool));
+          SVN_ERR(svn_wc__loggy_delete_lock
+                  (&log_accum, adm_access,
+                   svn_path_join(svn_wc_adm_access_path(adm_access),
+                                 base_name, pool), pool));
           if (lock_state)
             *lock_state = svn_wc_notify_lock_state_unlocked;
           continue;

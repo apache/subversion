@@ -444,12 +444,10 @@ process_committed_leaf(int log_number,
                                      pool));
 
   if (remove_lock)
-    SVN_ERR(svn_wc__loggy_delete_lock(&logtags, adm_access,
-                                      base_name, pool));
+    SVN_ERR(svn_wc__loggy_delete_lock(&logtags, adm_access, path, pool));
 
   if (remove_changelist)
-    SVN_ERR(svn_wc__loggy_delete_changelist(&logtags, adm_access,
-                                            base_name, pool));
+    SVN_ERR(svn_wc__loggy_delete_changelist(&logtags, adm_access, path, pool));
 
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and

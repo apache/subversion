@@ -140,6 +140,8 @@ svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to delete lock related
    fields from the entry belonging to PATH.
+
+   **** Converted to take paths relative to the operating root.
 */
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
@@ -149,6 +151,8 @@ svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to delete changelist
    from the entry belonging to PATH.
+
+   **** Converted to take paths relative to the operating root.
 */
 svn_error_t *
 svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
