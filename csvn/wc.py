@@ -622,3 +622,37 @@ class WC(object):
         locks are destroyed in the repository."""
         targets = _types.Array(c_char_p, paths)
         svn_client_unlock(targets, break_lock, self.client, self.pool)
+        
+    def merge(self, source1, revnum1, source2, revnum2, target_wcpath,
+                recurse=True, ignore_ancestry=False, force=False,
+                dry_run=False, merge_options=[]):
+        """Merge changes form SOURCE1@REVNUM1 to SOURCE2@REVNUM2 into the
+        working copy path TARGET_WCPATH.
+        
+        If RECURSE is True (True by default) apply changes recursively.
+        
+        If IGNORE_ANCESTRY is True (False by default) relatedness will not be
+        checked.
+        
+        If FORCE is False (False by default) and the merge involves deleting
+        locally modified files, the merge will fail.
+        
+        If DRY_RUN is True (False by Default) full notification is provided,
+        but no local files are modified.
+        
+        MERGE_OPTIONS is a list of other options to be passed to the diff
+        process."""
+        
+        revision1 = svn_opt_revision_t()
+        revision1.kind = svn_opt_revision_number
+        revision1.value.number = revnum1
+        
+        revision2 = svn_opt_revision_t()
+        revision2.kind = svn_opt_revision_number
+        revision2.value.number = revnum2
+        
+        merge_options = _types.Array(c_char_p, merge_options)
+        
+        svn_client_merge2(source1, byref(revision1), source2, byref(revision2),
+            target_wcpath, recurse, ignore_ancestry, force, dry_run,
+            merge_options.header, self.client, self.iterpool)
