@@ -2452,7 +2452,7 @@ merge_file(svn_wc_notify_state_t *content_state,
         /* If a lock was removed and we didn't update the text contents, we
            might need to set the file read-only. */
         SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum, adm_access,
-                                                 base_name, pool));
+                                                 fb->path, pool));
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
@@ -2461,7 +2461,7 @@ merge_file(svn_wc_notify_state_t *content_state,
       SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
                                  adm_access, tmp_txtb, txtb, FALSE, pool));
       SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
-                                         txtb, pool));
+                                         fb->text_base_path, pool));
 
       /* If the file is replaced don't write the checksum.  Checksum is blank
          on replaced files. */
@@ -2483,7 +2483,7 @@ merge_file(svn_wc_notify_state_t *content_state,
          obstruction. */
       if (fb->last_changed_date && !fb->existed)
         SVN_ERR(svn_wc__loggy_set_timestamp(&log_accum, adm_access,
-                                            base_name, fb->last_changed_date,
+                                            fb->path, fb->last_changed_date,
                                             pool));
 
       if (tmp_txtb || magic_props_changed)
@@ -2491,10 +2491,10 @@ merge_file(svn_wc_notify_state_t *content_state,
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
                   (&log_accum, adm_access,
-                   base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+                   fb->path, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
         }
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
-              (&log_accum, adm_access, base_name, pool));
+              (&log_accum, adm_access, fb->path, pool));
     }
 
   /* Set the returned content state. */
@@ -3401,7 +3401,7 @@ svn_wc_add_repos_file2(const char *dst_path,
                                    local_tmp_text_path, base_name,
                                    FALSE, pool));
       SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum, adm_access,
-                                               base_name, pool));
+                                               dst_path, pool));
     }
   else
     {
@@ -3413,9 +3413,9 @@ svn_wc_add_repos_file2(const char *dst_path,
                                  pool));
       SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
               (&log_accum, adm_access,
-               base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+               dst_path, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
-              (&log_accum, adm_access, base_name, pool));
+              (&log_accum, adm_access, dst_path, pool));
     }
 
   /* Install new text base. */
@@ -3429,7 +3429,7 @@ svn_wc_add_repos_file2(const char *dst_path,
                                adm_access, local_tmp_text_base_path,
                                local_text_base_path, FALSE, pool));
     SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
-                                       local_text_base_path, pool));
+                                       text_base_path, pool));
 
     SVN_ERR(svn_io_file_checksum(digest, tmp_text_base_path, pool));
 

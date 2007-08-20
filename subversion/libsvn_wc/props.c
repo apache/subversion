@@ -425,7 +425,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
 
       /* Make props read-only */
       SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_access,
-                                         real_props, pool));
+                                         working_propfile_path, pool));
     }
   else
     {
@@ -459,7 +459,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                                      FALSE, pool));
 
           SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_access,
-                                             real_prop_base, pool));
+                                             base_propfile_path, pool));
         }
       else
         {
@@ -1118,7 +1118,10 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
          above the .svn/ dir.  We write log entries to append our
          conflicts to it. */
       SVN_ERR(svn_wc__loggy_append(entry_accum, adm_access,
-                                   reject_tmp_path, reject_path, pool));
+                                   svn_path_join(access_path,
+                                                 reject_tmp_path, pool),
+                                   svn_path_join(access_path,
+                                                 reject_path, pool), pool));
 
       /* And of course, delete the temporary reject file. */
       SVN_ERR(svn_wc__loggy_remove(entry_accum, adm_access,

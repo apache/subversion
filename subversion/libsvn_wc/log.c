@@ -2021,6 +2021,19 @@ loggy_move_copy_internal(svn_stringbuf_t **log_accum,
 
 
 
+static const char *
+loggy_path(const char *path,
+           svn_wc_adm_access_t *adm_access)
+{
+  const char *adm_path = svn_wc_adm_access_path(adm_access);
+  const char *local_path = svn_path_is_child(adm_path, path, NULL);
+
+  if (! local_path && strcmp(path, adm_path) == 0)
+    local_path = SVN_WC_ENTRY_THIS_DIR;
+
+  return local_path;
+}
+
 svn_error_t *
 svn_wc__loggy_append(svn_stringbuf_t **log_accum,
                      svn_wc_adm_access_t *adm_access,
@@ -2032,9 +2045,9 @@ svn_wc__loggy_append(svn_stringbuf_t **log_accum,
                         svn_xml_self_closing,
                         SVN_WC__LOG_APPEND,
                         SVN_WC__LOG_ATTR_NAME,
-                        src,
+                        loggy_path(src, adm_access),
                         SVN_WC__LOG_ATTR_DEST,
-                        dst,
+                        loggy_path(dst, adm_access),
                         NULL);
 
   return SVN_NO_ERROR;
@@ -2049,7 +2062,7 @@ svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
 {
   svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
                         SVN_WC__LOG_COMMITTED,
-                        SVN_WC__LOG_ATTR_NAME, path,
+                        SVN_WC__LOG_ATTR_NAME, loggy_path(path, adm_access),
                         SVN_WC__LOG_ATTR_REVISION,
                         apr_psprintf(pool, "%ld", revnum),
                         NULL);
@@ -2057,7 +2070,7 @@ svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-
+/*###TODO*/
 svn_error_t *
 svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
                    svn_boolean_t *dst_modified,
@@ -2081,6 +2094,7 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
      adm_access, src_path, dst_path, remove_dst_if_no_src, pool);
 }
 
+/*###TODO*/
 svn_error_t *
 svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
                               svn_wc_adm_access_t *adm_access,
@@ -2099,6 +2113,7 @@ svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
+/*###TODO*/
 svn_error_t *
 svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
@@ -2113,7 +2128,7 @@ svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-
+/*###TODO*/
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
                           svn_wc_adm_access_t *adm_access,
@@ -2128,7 +2143,7 @@ svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-
+/*###TODO*/
 svn_error_t *
 svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
                                 svn_wc_adm_access_t *adm_access,
@@ -2143,7 +2158,7 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-
+/*###TODO*/
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
@@ -2340,7 +2355,7 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-
+/*###TODO*/
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                    svn_boolean_t *dst_modified,
@@ -2355,7 +2370,6 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                                   pool);
 }
 
-
 svn_error_t *
 svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
                                    svn_wc_adm_access_t *adm_access,
@@ -2366,12 +2380,11 @@ svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
                         pool,
                         svn_xml_self_closing,
                         SVN_WC__LOG_MAYBE_EXECUTABLE,
-                        SVN_WC__LOG_ATTR_NAME, path,
+                        SVN_WC__LOG_ATTR_NAME, loggy_path(path, adm_access),
                         NULL);
 
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_wc__loggy_maybe_set_readonly(svn_stringbuf_t **log_accum,
@@ -2384,12 +2397,11 @@ svn_wc__loggy_maybe_set_readonly(svn_stringbuf_t **log_accum,
                         svn_xml_self_closing,
                         SVN_WC__LOG_MAYBE_READONLY,
                         SVN_WC__LOG_ATTR_NAME,
-                        path,
+                        loggy_path(path, adm_access),
                         NULL);
 
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
@@ -2403,14 +2415,13 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                         svn_xml_self_closing,
                         SVN_WC__LOG_MODIFY_ENTRY,
                         SVN_WC__LOG_ATTR_NAME,
-                        path,
+                        loggy_path(path, adm_access),
                         time_prop,
                         SVN_WC__TIMESTAMP_WC,
                         NULL);
 
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
@@ -2423,14 +2434,13 @@ svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
                         svn_xml_self_closing,
                         SVN_WC__LOG_MODIFY_ENTRY,
                         SVN_WC__LOG_ATTR_NAME,
-                        path,
+                        loggy_path(path, adm_access),
                         SVN_WC__ENTRY_ATTR_WORKING_SIZE,
                         SVN_WC__TIMESTAMP_WC,
                         NULL);
 
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_wc__loggy_set_readonly(svn_stringbuf_t **log_accum,
@@ -2443,7 +2453,7 @@ svn_wc__loggy_set_readonly(svn_stringbuf_t **log_accum,
                         svn_xml_self_closing,
                         SVN_WC__LOG_READONLY,
                         SVN_WC__LOG_ATTR_NAME,
-                        path,
+                        loggy_path(path, adm_access),
                         NULL);
 
   return SVN_NO_ERROR;
@@ -2461,7 +2471,7 @@ svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
                         svn_xml_self_closing,
                         SVN_WC__LOG_SET_TIMESTAMP,
                         SVN_WC__LOG_ATTR_NAME,
-                        path,
+                        loggy_path(path, adm_access),
                         SVN_WC__LOG_ATTR_TIMESTAMP,
                         timestr,
                         NULL);
@@ -2469,6 +2479,7 @@ svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
+/*###TODO*/
 svn_error_t *
 svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      svn_wc_adm_access_t *adm_access,
