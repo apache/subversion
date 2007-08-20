@@ -2096,7 +2096,6 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
      adm_access, src_path, dst_path, remove_dst_if_no_src, pool);
 }
 
-/*###TODO*/
 svn_error_t *
 svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
                               svn_wc_adm_access_t *adm_access,
@@ -2105,17 +2104,17 @@ svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
                               const char *versioned,
                               apr_pool_t *pool)
 {
-  svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
-                        SVN_WC__LOG_CP_AND_TRANSLATE,
-                        SVN_WC__LOG_ATTR_NAME, src,
-                        SVN_WC__LOG_ATTR_DEST, dst,
-                        SVN_WC__LOG_ATTR_ARG_2, versioned,
-                        NULL);
+  svn_xml_make_open_tag
+    (log_accum, pool, svn_xml_self_closing,
+     SVN_WC__LOG_CP_AND_TRANSLATE,
+     SVN_WC__LOG_ATTR_NAME, loggy_path(src, adm_access),
+     SVN_WC__LOG_ATTR_DEST, loggy_path(dst, adm_access),
+     SVN_WC__LOG_ATTR_ARG_2, loggy_path(versioned, adm_access),
+     NULL);
 
   return SVN_NO_ERROR;
 }
 
-/*###TODO*/
 svn_error_t *
 svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
@@ -2124,7 +2123,7 @@ svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
 {
   svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
                         SVN_WC__LOG_DELETE_ENTRY,
-                        SVN_WC__LOG_ATTR_NAME, path,
+                        SVN_WC__LOG_ATTR_NAME, loggy_path(path, adm_access),
                         NULL);
 
   return SVN_NO_ERROR;

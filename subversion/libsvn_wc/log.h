@@ -118,8 +118,9 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to generate a translated
    file from SRC to DST with translation settings from VERSIONED
    and flags specified in FLAGS.
-*/
 
+   **** Converted to take paths relative to the operating root.
+*/
 svn_error_t *
 svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
                               svn_wc_adm_access_t *adm_access,
@@ -130,6 +131,8 @@ svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to delete the entry
    associated with PATH from the entries file.
+
+   **** Converted to take paths relative to the operating root.
 */
 svn_error_t *
 svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,

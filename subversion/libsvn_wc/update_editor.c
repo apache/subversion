@@ -1064,8 +1064,7 @@ do_entry_deletion(struct edit_baton *eb,
      parent_path, i.e. where the log is being executed.  */
 
   base_name = svn_path_basename(path, pool);
-  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access,
-                                     base_name, pool));
+  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
 
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that parent can give
