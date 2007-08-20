@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
+#include <apr_lib.h>
 #include "svn_io.h"
 #include "svn_types.h"
 #include "svn_error.h"
@@ -295,6 +296,8 @@ svn_wc__path_switched(const char *wc_path,
 
 /* --- SVNPATCH ROUTINES --- */
 
+#define svn_iswhitespace(c) ((c) == ' ' || (c) == '\n')
+
 /* --- WRITING DATA ITEMS --- */
  
 svn_error_t *
@@ -490,4 +493,285 @@ svn_wc_write_cmd(svn_stream_t *target,
   SVN_ERR(svn_wc_end_list(target));
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+readbuf_getchar_skip_whitespace(svn_stream_t *from,
+                                char *result)
+{
+  apr_size_t lenone = 1;
+  do
+    SVN_ERR(svn_stream_read(from, result, &lenone));
+  while (svn_iswhitespace(*result));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+read_string(svn_stream_t *from,
+            apr_pool_t *pool,
+            svn_ra_svn_item_t *item,
+            apr_uint64_t len)
+{
+  char readbuf[4096];
+  apr_size_t readbuf_len;
+  svn_stringbuf_t *stringbuf = svn_stringbuf_create("", pool);
+
+  /* We can't store strings longer than the maximum size of apr_size_t,
+   * so check for wrapping */
+  if (((apr_size_t) len) < len) 
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("String length larger than maximum"));
+
+  while (len)
+    {
+      readbuf_len = len > sizeof(readbuf) ? sizeof(readbuf) : len;
+
+      SVN_ERR(svn_stream_read(from, readbuf, &readbuf_len));
+      /* Read into a stringbuf_t to so we don't allow the sender to allocate
+       * an arbitrary amount of memory without actually sending us that much
+       * data */
+      svn_stringbuf_appendbytes(stringbuf, readbuf, readbuf_len);
+      len -= readbuf_len;
+    }
+  
+  item->kind = SVN_RA_SVN_STRING;
+  item->u.string = apr_palloc(pool, sizeof(*item->u.string));
+  item->u.string->data = stringbuf->data;
+  item->u.string->len = stringbuf->len;
+
+  return SVN_NO_ERROR; 
+}
+
+
+static svn_error_t *
+read_item(svn_stream_t *from,
+          apr_pool_t *pool,
+          svn_ra_svn_item_t *item,
+          char first_char,
+          int level)
+{
+  char c = first_char;
+  apr_uint64_t val, prev_val=0;
+  svn_stringbuf_t *str;
+  svn_ra_svn_item_t *listitem;
+  apr_size_t lenone = 1;
+
+  if (++level >= 64)
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("Too many nested items"));
+  
+  
+  /* Determine the item type and read it in.  Make sure that c is the
+   * first character at the end of the item so we can test to make
+   * sure it's whitespace. */
+  if (apr_isdigit(c))
+    {
+      /* It's a number or a string.  Read the number part, either way. */
+      val = c - '0';
+      while (1)
+        {
+          prev_val = val;
+          SVN_ERR(svn_stream_read(from, &c, &lenone));
+          if (!apr_isdigit(c))
+            break;
+          val = val * 10 + (c - '0');
+          if ((val / 10) != prev_val) /* val wrapped past maximum value */
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    _("Number is larger than maximum"));
+        }
+      if (c == ':')
+        {
+          /* It's a string. */
+          SVN_ERR(read_string(from, pool, item, val));
+          SVN_ERR(svn_stream_read(from, &c, &lenone));
+        }
+      else
+        {
+          /* It's a number. */
+          item->kind = SVN_RA_SVN_NUMBER;
+          item->u.number = val;
+        }
+    }
+  else if (apr_isalpha(c))
+    {
+      /* It's a word. */
+      str = svn_stringbuf_ncreate(&c, 1, pool);
+      while (1)
+        {
+          SVN_ERR(svn_stream_read(from, &c, &lenone));
+          if (!apr_isalnum(c) && c != '-')
+            break;
+          svn_stringbuf_appendbytes(str, &c, 1);
+        }
+      item->kind = SVN_RA_SVN_WORD;
+      item->u.word = str->data;
+    }
+  else if (c == '(')
+    {
+      /* Read in the list items. */
+      item->kind = SVN_RA_SVN_LIST;
+      item->u.list = apr_array_make(pool, 0, sizeof(svn_ra_svn_item_t));
+      while (1)
+        {
+          SVN_ERR(readbuf_getchar_skip_whitespace(from, &c));
+          if (c == ')')
+            break;
+          listitem = apr_array_push(item->u.list);
+          SVN_ERR(read_item(from, pool, listitem, c, level));
+        }
+      SVN_ERR(svn_stream_read(from, &c, &lenone));
+    }
+
+  if (!svn_iswhitespace(c))
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("Malformed patch data"));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_read_item(svn_stream_t *from,
+                 apr_pool_t *pool,
+                 svn_ra_svn_item_t **item)
+{
+  char c;
+
+  /* Allocate space, read the first character, and then do the rest of
+   * the work.  This makes sense because of the way lists are read. */
+  *item = apr_palloc(pool, sizeof(**item));
+  SVN_ERR(readbuf_getchar_skip_whitespace(from, &c));
+  return read_item(from, pool, *item, c, 0);
+}
+
+/* Parse a tuple of svn_ra_svn_item_t *'s.  Advance *FMT to the end of the
+ * tuple specification and advance AP by the corresponding arguments. */
+static svn_error_t *
+vparse_tuple(apr_array_header_t *items,
+             apr_pool_t *pool,
+             const char **fmt,
+             va_list *ap)
+{
+  int count, nesting_level;
+  svn_ra_svn_item_t *elt;
+
+  for (count = 0; **fmt && count < items->nelts; (*fmt)++, count++)
+    {
+      /* '?' just means the tuple may stop; skip past it. */
+      if (**fmt == '?')
+        (*fmt)++;
+      elt = &APR_ARRAY_IDX(items, count, svn_ra_svn_item_t);
+      if (**fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
+        *va_arg(*ap, apr_uint64_t *) = elt->u.number;
+      else if (**fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
+        *va_arg(*ap, svn_revnum_t *) = elt->u.number;
+      else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
+        *va_arg(*ap, svn_string_t **) = elt->u.string;
+      else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
+        *va_arg(*ap, const char **) = elt->u.string->data;
+      else if (**fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
+        *va_arg(*ap, const char **) = elt->u.word;
+      else if (**fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
+        {
+          if (strcmp(elt->u.word, "true") == 0)
+            *va_arg(*ap, svn_boolean_t *) = TRUE;
+          else if (strcmp(elt->u.word, "false") == 0)
+            *va_arg(*ap, svn_boolean_t *) = FALSE;
+          else
+            break;
+        }
+      else if (**fmt == 'B' && elt->kind == SVN_RA_SVN_WORD)
+        {
+          if (strcmp(elt->u.word, "true") == 0)
+            *va_arg(*ap, apr_uint64_t *) = TRUE;
+          else if (strcmp(elt->u.word, "false") == 0)
+            *va_arg(*ap, apr_uint64_t *) = FALSE;
+          else
+            break;
+        }
+      else if (**fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
+        *va_arg(*ap, apr_array_header_t **) = elt->u.list;
+      else if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
+        {
+          (*fmt)++;
+          SVN_ERR(vparse_tuple(elt->u.list, pool, fmt, ap));
+        }
+      else if (**fmt == ')')
+        return SVN_NO_ERROR;
+      else
+        break;
+    }
+  if (**fmt == '?')
+    {
+      nesting_level = 0;
+      for (; **fmt; (*fmt)++)
+        {
+          switch (**fmt)
+            {
+            case '?':
+              break;
+            case 'r':
+              *va_arg(*ap, svn_revnum_t *) = SVN_INVALID_REVNUM;
+              break;
+            case 's':
+              *va_arg(*ap, svn_string_t **) = NULL;
+              break;
+            case 'c':
+            case 'w':
+              *va_arg(*ap, const char **) = NULL;
+              break;
+            case 'l':
+              *va_arg(*ap, apr_array_header_t **) = NULL;
+              break;
+            case 'B':
+            case 'n':
+              *va_arg(*ap, apr_uint64_t *) = SVN_RA_SVN_UNSPECIFIED_NUMBER;
+              break;
+            case '(':
+              nesting_level++;
+              break;
+            case ')':
+              if (--nesting_level < 0)
+                return SVN_NO_ERROR;
+              break;
+            default:
+              abort();
+            }
+        }
+    }
+  if (**fmt && **fmt != ')')
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("Malformed patch data"));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_parse_tuple(apr_array_header_t *list,
+                   apr_pool_t *pool,
+                   const char *fmt, ...)
+{
+  svn_error_t *err;
+  va_list ap;
+
+  va_start(ap, fmt);
+  err = vparse_tuple(list, pool, &fmt, &ap);
+  va_end(ap);
+  return err;
+}
+
+svn_error_t *
+svn_wc_read_tuple(svn_stream_t *from,
+                  apr_pool_t *pool,
+                  const char *fmt, ...)
+{
+  va_list ap;
+  svn_ra_svn_item_t *item;
+  svn_error_t *err;
+
+  SVN_ERR(svn_wc_read_item(from, pool, &item));
+  if (item->kind != SVN_RA_SVN_LIST)
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("Malformed patch data"));
+  va_start(ap, fmt);
+  err = vparse_tuple(item->u.list, pool, &fmt, &ap);
+  va_end(ap);
+  return err;
 }
