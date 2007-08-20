@@ -4386,7 +4386,7 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
     'F/E'        : Item(status=' M', wc_rev=8),
     'F/E/alpha'  : Item(status='M ', wc_rev=8),
     'F/E/beta'   : Item(status='  ', wc_rev=8),
-    'F/E1'       : Item(status=' M', wc_rev=8),
+    'F/E1'       : Item(status='  ', wc_rev=8),
     'F/E1/alpha' : Item(status='  ', wc_rev=8),
     'F/E1/beta'  : Item(status='  ', wc_rev=8),
     'lambda'     : Item(status='  ', wc_rev=8),
@@ -4399,7 +4399,7 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
     'F/E1'       : Item(props={SVN_PROP_MERGE_INFO :
-                                             '/A/B/F/E:5\n/A/B/F/E1:5-8\n'}),
+                                             '/A/B/F/E:5'}),
     'F/E1/alpha' : Item(new_content_for_alpha1),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'lambda'     : Item("This is the file 'lambda'.\n")
@@ -5447,7 +5447,7 @@ def merge_to_target_with_copied_children(sbox):
     ''         : Item(status=' M', wc_rev=7),
     'pi'       : Item(status='  ', wc_rev=7),
     'rho'      : Item(status='M ', wc_rev=7),
-    'rho_copy' : Item(status=' M', wc_rev=7),
+    'rho_copy' : Item(status='  ', wc_rev=7),
     'tau'      : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
@@ -5456,7 +5456,7 @@ def merge_to_target_with_copied_children(sbox):
     'rho'      : Item("New content"),
     'rho_copy' : Item("This is the file 'rho'.\n",
                       props={SVN_PROP_MERGE_INFO :
-                             '/A/D/G/rho:1,4\n/A_COPY/D/G/rho:2-6\n'}),
+                             '/A/D/G/rho:1\n/A_COPY/D/G/rho:2-6\n'}),
     'tau'      : Item("This is the file 'tau'.\n"),
     })
   expected_skip = wc.State(short_G_COPY_path, { })
@@ -7468,7 +7468,7 @@ test_list = [ None,
               mergeinfo_inheritance,
               mergeinfo_elision,
               mergeinfo_inheritance_and_discontinuous_ranges,
-              XFail(merge_to_target_with_copied_children),
+              merge_to_target_with_copied_children,
               merge_to_switched_path,
               XFail(merge_to_path_with_switched_children),
               merge_with_implicit_target_file,
