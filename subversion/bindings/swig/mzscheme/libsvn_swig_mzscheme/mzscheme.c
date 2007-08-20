@@ -50,6 +50,7 @@
 
 
 #include "mzscheme.h"
+#include <stdio.h>
 
 
 #if APR_HAS_LARGE_FILES
@@ -63,10 +64,13 @@
 #else
 #  define AI642NUM(num) LONG2NUM(num)
 #endif
+apr_threadkey_t *_saved_thread_key = NULL;
+apr_pool_t *_saved_thread_pool = NULL;
 
 apr_status_t svn_swig_mzscheme_initialize(void)
 {
   apr_status_t status;
+  printf("svn_swig_mzscheme_initialize\n");
 
   if ((status = apr_initialize()) != APR_SUCCESS)
     return status;

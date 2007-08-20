@@ -41,7 +41,7 @@ typedef struct apr_pool_wrapper_t
   apr_array_header_t *children;
 } apr_pool_wrapper_t;
 
-/* Initialize the libsvn_swig_py library. */
+/* Initialize the libsvn_swig_mzscm library. */
 SVN_MZSCM_SWIG_SWIGUTIL_EXPORT
 apr_status_t svn_swig_mzscm_initialize(void);
 
