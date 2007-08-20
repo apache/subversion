@@ -29,14 +29,20 @@ class LocalRepositoryTestCase(unittest.TestCase):
         self.assertEqual(9, self.repos.latest_revnum())
         
     def test_local_get_prop(self):
-        self.assertEqual("Set prop to indicate proper information on awesomeness.\n",
-                        self.repos.get_rev_prop(8, "svn:log"))
+        self.assertEqual(
+            "Set prop to indicate proper information on awesomeness.\n",
+            self.repos.get_rev_prop(8, "svn:log")
+        )
     
     def test_local_check_path(self):
-        self.assertEqual(svn_node_file, self.repos.check_path("trunk/README.txt"))
-        self.assertEqual(svn_node_dir, self.repos.check_path("trunk/dir", 6))
-        self.assertEqual(svn_node_none, self.repos.check_path("trunk/dir", 7))
-        self.assertEqual(svn_node_none, self.repos.check_path("does_not_compute"))
+        self.assertEqual(svn_node_file,
+            self.repos.check_path("trunk/README.txt"))
+        self.assertEqual(svn_node_dir,
+            self.repos.check_path("trunk/dir", 6))
+        self.assertEqual(svn_node_none,
+            self.repos.check_path("trunk/dir", 7))
+        self.assertEqual(svn_node_none,
+            self.repos.check_path("does_not_compute"))
 
 def suite():
     return unittest.makeSuite(LocalRepositoryTestCase, 'test')
