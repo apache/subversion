@@ -1021,9 +1021,9 @@ build_log_tree(struct log_tree_node **out_tree,
       /* Build the subtree, starting at the most recent revision in the 
          rangelist difference.  The idea is to construct the tree rooted at
          the current message, and remove any revisions which are included by
-         children that tree from the remaining revisions.  In this way, we can
-         untransitify merged revisions, and make sure that revisions get nested
-         at the appropriate level.
+         children of that tree from the remaining revisions.  In this way, we
+         can untransitify merged revisions, and make sure that revisions get
+         nested at the appropriate level.
 
          The drawback is that we basically have to build the tree locally,
          before sending any of it to the client, because we don't know how 
@@ -1031,6 +1031,7 @@ build_log_tree(struct log_tree_node **out_tree,
          could be time and memory expensive. */
 
       apr_array_header_t *revisions;
+      apr_pool_t *iterpool = svn_pool_create(pool);
       int i;
 
       /* Get the individual revisions, and sort in descending order. */
@@ -1044,10 +1045,20 @@ build_log_tree(struct log_tree_node **out_tree,
           svn_revnum_t revision = APR_ARRAY_IDX(revisions, i, svn_revnum_t);
           struct log_tree_node *subtree;
           const char *merge_source;
+          svn_node_kind_t kind;
+          svn_fs_root_t *root;
+
+          svn_pool_clear(iterpool);
 
           /* Figure out where the source of this revision was, given our
              mergeinfo. */
-          SVN_ERR(find_merge_source(&merge_source, revision, mergeinfo, pool));
+          SVN_ERR(find_merge_source(&merge_source, revision, mergeinfo,
+                                    iterpool));
+
+          SVN_ERR(svn_fs_revision_root(&root, fs, revision, iterpool));
+          SVN_ERR(svn_fs_check_path(&kind, root, merge_source, iterpool));
+          if (kind == svn_node_none)
+            continue;
 
           SVN_ERR(do_merged_log(&subtree, fs, merge_source, revision,
                                 discover_changed_paths, omit_log_text,
@@ -1057,6 +1068,8 @@ build_log_tree(struct log_tree_node **out_tree,
           if (subtree)
             APR_ARRAY_PUSH(tree->children, struct log_tree_node *) = subtree;
         }
+
+        svn_pool_destroy(iterpool);
     }
 
   *out_tree = tree;

@@ -1005,7 +1005,28 @@ def merge_sensitive_log_non_branching_revision(sbox):
   }
   check_merge_results(log_chain, expected_merges)
 
-  
+
+def merge_sensitive_log_added_path(sbox):
+  "test 'svn log -g' a path added before merge"
+
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
+
+  XI_path = os.path.join(sbox.wc_dir, "trunk", "A", "xi")
+
+  # Run log on a non-copying revision that adds mergeinfo
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', XI_path)
+
+  # Parse and check output.  There should be one extra revision.
+  log_chain = parse_log_output(output)
+  expected_merges = {
+    14: [], 12 : [], 11 : [],
+  }
+  check_merge_results(log_chain, expected_merges)
+
+
 def log_single_change(sbox):
   "test log -c for a single change"
 
@@ -1067,6 +1088,7 @@ test_list = [ None,
               merge_sensitive_log_single_revision,
               merge_sensitive_log_branching_revision,
               merge_sensitive_log_non_branching_revision,
+              merge_sensitive_log_added_path,
               XFail(log_single_change),
               XFail(log_changes_range),
               XFail(log_changes_list),
