@@ -1788,7 +1788,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
      if we're reverting a replacement.  This is just an optimization. */
   if (baseprops)
     {
-      SVN_ERR(svn_wc__install_props(&log_accum, adm_access, name, baseprops,
+      SVN_ERR(svn_wc__install_props(&log_accum, adm_access, fullpath, baseprops,
                                     baseprops,
                                     revert_base,
                                     pool));
