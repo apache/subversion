@@ -1257,14 +1257,14 @@ svn_wc_delete3(const char *path,
       if (was_schedule == svn_wc_schedule_replace && was_copied)
         {
           const char *text_base =
-            svn_wc__text_base_path(base_name, FALSE, pool);
+            svn_wc__text_base_path(path, FALSE, pool);
           const char *text_revert =
-            svn_wc__text_revert_path(base_name, FALSE, pool);
+            svn_wc__text_revert_path(path, FALSE, pool);
           const char *prop_base, *prop_revert;
 
-          SVN_ERR(svn_wc__prop_base_path(&prop_base, base_name,
+          SVN_ERR(svn_wc__prop_base_path(&prop_base, path,
                                          was_kind, FALSE, pool));
-          SVN_ERR(svn_wc__prop_revert_path(&prop_revert, base_name,
+          SVN_ERR(svn_wc__prop_revert_path(&prop_revert, path,
                                            was_kind, FALSE, pool));
 
           if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
@@ -1814,12 +1814,10 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
             reinstall_working = TRUE;
         }
 
-      base_thing = svn_wc__text_base_path(name, FALSE, pool);
+      base_thing = svn_wc__text_base_path(fullpath, FALSE, pool);
 
       /* Check for text base presence. */
-      SVN_ERR(svn_io_check_path(svn_path_join(adm_path,
-                                              base_thing, pool),
-                                &base_kind, pool));
+      SVN_ERR(svn_io_check_path(base_thing, &base_kind, pool));
 
       if (base_kind != svn_node_file)
         return svn_error_createf(APR_ENOENT, NULL,
@@ -1831,7 +1829,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
        * text base. */
       SVN_ERR(svn_wc__loggy_move
               (&log_accum, &tgt_modified, adm_access,
-               svn_wc__text_revert_path(name, FALSE, pool), base_thing,
+               svn_wc__text_revert_path(fullpath, FALSE, pool), base_thing,
                FALSE, pool));
       reinstall_working = reinstall_working || tgt_modified;
 
@@ -1851,7 +1849,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
              file. */
           SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
                                      svn_wc__copy_translate,
-                                     base_thing, name, FALSE, pool));
+                                     base_thing, fullpath, FALSE, pool));
 
           /* Possibly set the timestamp to last-commit-time, rather
              than the 'now' time that already exists. */

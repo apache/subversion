@@ -87,6 +87,8 @@ svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
    the file at DST_PATH will be deleted if any.
 
    Sets *DST_MODIFIED, if either the copy or the remove have been carried out.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 typedef enum svn_wc__copy_t
@@ -198,6 +200,8 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
    the file at DST_PATH will be deleted if any.
 
    Sets *DST_MODIFIED, if either the copy or the remove have been carried out.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
