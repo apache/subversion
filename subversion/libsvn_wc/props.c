@@ -335,7 +335,6 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                       apr_pool_t *pool)
 {
   const char *working_propfile_path, *working_prop_tmp_path;
-  const char *tmp_props, *real_props;      
   const char *full_path;
   const char *access_path = svn_wc_adm_access_path(adm_access);
   int access_len = strlen(access_path);
@@ -383,8 +382,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
      paths computed are ABSOLUTE pathnames, which is what our disk
      routines require. */
   SVN_ERR(svn_wc__prop_path(&working_propfile_path, full_path,
-                            kind, FALSE, pool)); 
-  real_props = apr_pstrdup(pool, working_propfile_path + access_len);
+                            kind, FALSE, pool));
   if (tmp_entry.has_prop_mods)
     {
       SVN_ERR(svn_wc__prop_path(&working_prop_tmp_path, full_path,
@@ -394,15 +392,12 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
          path/.svn/tmp/dir-props */
       SVN_ERR(svn_wc__save_prop_file(working_prop_tmp_path, working_props,
                                      FALSE, pool));
-  
-      /* Compute pathnames for the "mv" log entries.  Notice that these
-         paths are RELATIVE pathnames (each beginning with ".svn/"), so
-         that each .svn subdir remains separable when executing run_log().  */
-      tmp_props = apr_pstrdup(pool, working_prop_tmp_path + access_len);
-  
+
       /* Write log entry to move working tmp copy to real working area. */
       SVN_ERR(svn_wc__loggy_move(log_accum, NULL,
-                                 adm_access, tmp_props, real_props,
+                                 adm_access,
+                                 working_prop_tmp_path,
+                                 working_propfile_path,
                                  FALSE, pool));
 
       /* Make props read-only */
@@ -421,11 +416,9 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   if (write_base_props)
     {
       const char *base_propfile_path, *base_prop_tmp_path;
-      const char *tmp_prop_base, *real_prop_base;
 
       SVN_ERR(svn_wc__prop_base_path(&base_propfile_path, full_path,
                                      kind, FALSE, pool));
-      real_prop_base = apr_pstrdup(pool, base_propfile_path + access_len);
 
       if (apr_hash_count(base_props) > 0)
         {
@@ -435,10 +428,9 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
           SVN_ERR(svn_wc__save_prop_file(base_prop_tmp_path, base_props,
                                          FALSE, pool));
 
-          tmp_prop_base = apr_pstrdup(pool, base_prop_tmp_path + access_len);
-
           SVN_ERR(svn_wc__loggy_move(log_accum, NULL, adm_access,
-                                     tmp_prop_base, real_prop_base,
+                                     base_prop_tmp_path,
+                                     base_propfile_path,
                                      FALSE, pool));
 
           SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_access,
@@ -478,7 +470,8 @@ diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
       apr_hash_t *from, *to;
       SVN_ERR(svn_mergeinfo_parse(&from, from_prop_val->data, pool));
       SVN_ERR(svn_mergeinfo_parse(&to, to_prop_val->data, pool));
-      SVN_ERR(svn_mergeinfo_diff(deleted, added, from, to, pool));
+      SVN_ERR(svn_mergeinfo_diff(deleted, added, from, to,
+                                 svn_rangelist_ignore_inheritance, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -496,7 +489,8 @@ combine_mergeinfo_props(const svn_string_t **output,
   apr_hash_t *mergeinfo1, *mergeinfo2;
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, pool));
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, pool));
-  SVN_ERR(svn_mergeinfo_merge(&mergeinfo1, mergeinfo2, pool));
+  SVN_ERR(svn_mergeinfo_merge(&mergeinfo1, mergeinfo2,
+                              svn_rangelist_equal_inheritance, pool));
   SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) output,
                                    mergeinfo1, pool));
   return SVN_NO_ERROR;
@@ -519,12 +513,15 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
                                working_prop_val, pool));
   SVN_ERR(diff_mergeinfo_props(&r_deleted, &r_added, from_prop_val,
                                to_prop_val, pool));
-  SVN_ERR(svn_mergeinfo_merge(&l_deleted, r_deleted, pool));
-  SVN_ERR(svn_mergeinfo_merge(&l_added, r_added, pool));
+  SVN_ERR(svn_mergeinfo_merge(&l_deleted, r_deleted,
+                              svn_rangelist_equal_inheritance, pool));
+  SVN_ERR(svn_mergeinfo_merge(&l_added, r_added,
+                              svn_rangelist_equal_inheritance, pool));
 
   /* Apply the combined deltas to the base. */
   SVN_ERR(svn_mergeinfo_parse(&from_mergeinfo, from_prop_val->data, pool));
-  SVN_ERR(svn_mergeinfo_merge(&from_mergeinfo, l_added, pool));
+  SVN_ERR(svn_mergeinfo_merge(&from_mergeinfo, l_added,
+                              svn_rangelist_equal_inheritance, pool));
   SVN_ERR(svn_mergeinfo_remove(&from_mergeinfo, l_deleted,
                                from_mergeinfo, pool));
 

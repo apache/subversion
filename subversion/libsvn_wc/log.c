@@ -2072,7 +2072,6 @@ svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-/*###TODO*/
 svn_error_t *
 svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
                    svn_boolean_t *dst_modified,
@@ -2093,7 +2092,9 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
   return loggy_move_copy_internal
     (log_accum, dst_modified,
      copy_op[copy_type], copy_type == svn_wc__copy_translate_special_only,
-     adm_access, src_path, dst_path, remove_dst_if_no_src, pool);
+     adm_access,
+     loggy_path(src_path, adm_access),
+     loggy_path(dst_path, adm_access), remove_dst_if_no_src, pool);
 }
 
 svn_error_t *
@@ -2354,7 +2355,6 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-/*###TODO*/
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                    svn_boolean_t *dst_modified,
@@ -2365,8 +2365,9 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
 {
   return loggy_move_copy_internal(log_accum, dst_modified,
                                   SVN_WC__LOG_MV, FALSE, adm_access,
-                                  src_path, dst_path, remove_dst_if_no_src,
-                                  pool);
+                                  loggy_path(src_path, adm_access),
+                                  loggy_path(dst_path, adm_access),
+                                  remove_dst_if_no_src, pool);
 }
 
 svn_error_t *

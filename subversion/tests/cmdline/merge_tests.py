@@ -5630,8 +5630,6 @@ def merge_to_switched_path(sbox):
 def merge_to_path_with_switched_children(sbox):
   "merge to path with switched children"
 
-  # Test set as XFail until issues 2823 and 2839 are resolved.
-  #
   # Merging to a target with switched children requires special handling
   # to keep mergeinfo correct:
   #
@@ -7413,7 +7411,130 @@ def merge_with_depth_files(sbox):
                                      [], 'merge', '-r1:3', '--depth',
                                      'files', A_url, Acopy_path)
 
+def merge_fails_if_subtree_is_deleted_on_src(sbox):
+  "merge fails if subtree is deleted on src"
 
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2876. ##
+
+  # Create a WC and for some paths and URLs
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+  Acopy_path = os.path.join(wc_dir, 'A_copy')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  Acopy_gamma_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma')
+  Acopy_gamma_w_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma.working')
+  A_url = repo_url + '/A'
+  Acopy_url = repo_url + '/A_copy'
+
+  # Contents to be added to 'gamma'
+  new_content = "line1\nline2\nline3\nline4\nline5\n"
+
+  svntest.main.file_write(gamma_path, new_content)
+
+  # Create expected output tree for commit
+  expected_output = wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree for commit
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', wc_rev=2)
+  
+  # Commit the new content
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None, 
+                                        None, None, wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', A_url, Acopy_url,
+                                     '-m', 'create a new copy of A')
+
+  # Update working copy
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  svntest.main.file_substitute(gamma_path, "line1", "this is line1")
+  # Create expected output tree for commit
+  expected_output = wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree for commit
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('A/D/gamma', wc_rev=4)
+  expected_status.add({
+    'A_copy'          : Item(status='  ', wc_rev=3),
+    'A_copy/B'        : Item(status='  ', wc_rev=3),
+    'A_copy/B/lambda' : Item(status='  ', wc_rev=3),
+    'A_copy/B/E'      : Item(status='  ', wc_rev=3),
+    'A_copy/B/E/alpha': Item(status='  ', wc_rev=3),
+    'A_copy/B/E/beta' : Item(status='  ', wc_rev=3),
+    'A_copy/B/F'      : Item(status='  ', wc_rev=3),
+    'A_copy/mu'       : Item(status='  ', wc_rev=3),
+    'A_copy/C'        : Item(status='  ', wc_rev=3),
+    'A_copy/D'        : Item(status='  ', wc_rev=3),
+    'A_copy/D/gamma'  : Item(status='  ', wc_rev=3),
+    'A_copy/D/G'      : Item(status='  ', wc_rev=3),
+    'A_copy/D/G/pi'   : Item(status='  ', wc_rev=3),
+    'A_copy/D/G/rho'  : Item(status='  ', wc_rev=3),
+    'A_copy/D/G/tau'  : Item(status='  ', wc_rev=3),
+    'A_copy/D/H'      : Item(status='  ', wc_rev=3),
+    'A_copy/D/H/chi'  : Item(status='  ', wc_rev=3),
+    'A_copy/D/H/omega': Item(status='  ', wc_rev=3),
+    'A_copy/D/H/psi'  : Item(status='  ', wc_rev=3),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None, 
+                                        None, None, wc_dir)
+
+  svntest.main.file_substitute(gamma_path, "line2", "this is line2")
+  expected_status.tweak('A/D/gamma', wc_rev=5)
+  
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None, 
+                                        None, None, wc_dir)
+
+  svntest.main.file_substitute(gamma_path, "line3", "this is line3")
+  expected_status.tweak('A/D/gamma', wc_rev=6)
+  
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None, 
+                                        None, None, wc_dir)
+
+  # Delete A/D/gamma from working copy
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', gamma_path)
+  # Create expected output tree for commit
+  expected_output = wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
+  
+  expected_status.remove('A/D/gamma')
+  
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir, wc_dir)
+  #Have a conflicting local change.
+  svntest.main.file_substitute(Acopy_gamma_path, "line1", "THIS IS LINE1")
+
+  svntest.actions.run_and_verify_svn(None, [svntest.main.merge_notify_line(3,4),
+                                     'C    ' + Acopy_gamma_path + '\n'],
+                                     [], 'merge', '-r1:4',
+                                     A_url + '/D/gamma' + '@6',
+                                     Acopy_gamma_path, '--non-interactive')
+
+  contents = svntest.main.file_read(Acopy_gamma_w_path)
+  svntest.main.file_write(Acopy_gamma_path, contents)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', 
+                                     Acopy_gamma_path)
+
+  svntest.actions.run_and_verify_svn(None, [svntest.main.merge_notify_line(3,8),
+                                     'D    ' + Acopy_gamma_path + '\n'],
+                                     [], 'merge', '-r1:7',
+                                     A_url, Acopy_path)
 
 ########################################################################
 # Run the tests
@@ -7470,7 +7591,7 @@ test_list = [ None,
               mergeinfo_inheritance_and_discontinuous_ranges,
               merge_to_target_with_copied_children,
               merge_to_switched_path,
-              XFail(merge_to_path_with_switched_children),
+              merge_to_path_with_switched_children,
               merge_with_implicit_target_file,
               empty_rev_range_mergeinfo,
               detect_copy_src_for_target_with_multiple_ancestors,
@@ -7483,6 +7604,7 @@ test_list = [ None,
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
               XFail(merge_with_depth_files),
+              XFail(merge_fails_if_subtree_is_deleted_on_src),
              ]
 
 if __name__ == '__main__':

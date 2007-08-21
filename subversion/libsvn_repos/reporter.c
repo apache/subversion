@@ -25,7 +25,6 @@
 #include "svn_pools.h"
 #include "svn_md5.h"
 #include "svn_props.h"
-#include "private/svn_repos_private.h"
 #include "repos.h"
 #include "svn_private_config.h"
 
@@ -630,8 +629,10 @@ add_file_smartly(report_baton_t *b,
   svn_fs_t *fs = svn_repos_fs(b->repos);
   svn_fs_root_t *closest_copy_root = NULL;
   const char *closest_copy_path = NULL;
-  svn_revnum_t my_copyfrom_rev = SVN_INVALID_REVNUM;
-  const char *my_copyfrom_path = NULL;
+
+  /* Pre-emptively assume no copyfrom args exist. */
+  *copyfrom_path = NULL;
+  *copyfrom_rev = SVN_INVALID_REVNUM;
 
   /* Find the destination of the nearest 'copy event' which may have
      caused o_path@t_root to exist.  */
@@ -644,16 +645,29 @@ add_file_smartly(report_baton_t *b,
          have 'copyfrom' history. */
       if (strcmp(closest_copy_path + 1, o_path) == 0)
         {
-          SVN_ERR(svn_fs_copied_from(&my_copyfrom_rev, &my_copyfrom_path,
+          SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
                                      closest_copy_root, closest_copy_path,
                                      pool));
-          *copyfrom_path = my_copyfrom_path;
-          *copyfrom_rev = my_copyfrom_rev;
+          if (b->authz_read_func)
+            {
+              svn_boolean_t allowed;
+              svn_fs_root_t *copyfrom_root;
+              SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
+                                           *copyfrom_rev, pool));
+              SVN_ERR(b->authz_read_func(&allowed, copyfrom_root,
+                                         *copyfrom_path, b->authz_read_baton,
+                                         pool));
+              if (! allowed)
+                {
+                  *copyfrom_path = NULL;
+                  *copyfrom_rev = SVN_INVALID_REVNUM;
+                }
+            }
         }
     }
 
   SVN_ERR(b->editor->add_file(path, parent_baton,
-                              my_copyfrom_path, my_copyfrom_rev,
+                              **copyfrom_path, *copyfrom_rev,
                               pool, new_file_baton));
   return SVN_NO_ERROR;
 }
@@ -1314,7 +1328,7 @@ svn_repos_abort_report(void *baton, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_repos__begin_report(void **report_baton,
+svn_repos_begin_report2(void **report_baton,
                         svn_revnum_t revnum,
                         svn_repos_t *repos,
                         const char *fs_base,
@@ -1360,37 +1374,6 @@ svn_repos__begin_report(void **report_baton,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_repos_begin_report2(void **report_baton,
-                        svn_revnum_t revnum,
-                        svn_repos_t *repos,
-                        const char *fs_base,
-                        const char *s_operand,
-                        const char *switch_path,
-                        svn_boolean_t text_deltas,
-                        svn_boolean_t ignore_ancestry,
-                        const svn_delta_editor_t *editor,
-                        void *edit_baton,
-                        svn_repos_authz_func_t authz_read_func,
-                        void *authz_read_baton,
-                        apr_pool_t *pool)
-{
-  return svn_repos__begin_report(report_baton,
-                                 revnum,
-                                 repos,
-                                 fs_base,
-                                 s_operand,
-                                 switch_path,
-                                 text_deltas,
-                                 svn_depth_unknown,
-                                 ignore_ancestry,
-                                 editor,
-                                 edit_baton,
-                                 authz_read_func,
-                                 authz_read_baton,
-                                 pool);
-}
-
 
 svn_error_t *
 svn_repos_begin_report(void **report_baton,
@@ -1409,7 +1392,7 @@ svn_repos_begin_report(void **report_baton,
                        void *authz_read_baton,
                        apr_pool_t *pool)
 {
-  return svn_repos__begin_report(report_baton,
+  return svn_repos_begin_report2(report_baton,
                                  revnum,
                                  repos,
                                  fs_base,

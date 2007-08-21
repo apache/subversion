@@ -28,7 +28,6 @@
 #include "svn_path.h"
 
 #include "svn_private_config.h"
-#include "private/svn_repos_private.h"
 #include "../libsvn_ra/ra_loader.h"
 
 #define APR_WANT_STRFUNC
@@ -618,7 +617,7 @@ make_reporter(svn_ra_session_t *session,
                                               pool));
 
   /* Build a reporter baton. */
-  SVN_ERR(svn_repos__begin_report(&rbaton,
+  SVN_ERR(svn_repos_begin_report2(&rbaton,
                                   revision,
                                   sbaton->repos,
                                   sbaton->fs_path->data,

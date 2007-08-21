@@ -561,6 +561,7 @@ calculate_branching_copy_mergeinfo(apr_hash_t **implied_mergeinfo,
   range = apr_palloc(pool, sizeof(*range));
   range->start = oldest_rev;
   range->end = rev - 1;
+  range->inheritable = TRUE;
   rangelist = apr_array_make(pool, 1, sizeof(range));
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
   apr_hash_set(*implied_mergeinfo, dst_path, APR_HASH_KEY_STRING, rangelist);
@@ -649,7 +650,8 @@ svn_repos__is_branching_copy(svn_boolean_t *is_branching,
                                              copy_path, path, rev, subpool));
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, implied_mergeinfo,
-                             mergeinfo, subpool));
+                             mergeinfo, svn_rangelist_ignore_inheritance,
+                             subpool));
   if (apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0)
     {
       svn_pool_destroy(subpool);
@@ -756,7 +758,8 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
       apr_hash_t *path_mergeinfo;
 
       apr_hash_this(hi, NULL, NULL, (void *)&path_mergeinfo);
-      SVN_ERR(svn_mergeinfo_merge(mergeinfo, path_mergeinfo, pool));
+      SVN_ERR(svn_mergeinfo_merge(mergeinfo, path_mergeinfo,
+                                  svn_rangelist_equal_inheritance, pool));
     }
 
   svn_pool_destroy(subpool);
@@ -781,7 +784,8 @@ combine_mergeinfo_rangelists(apr_array_header_t **rangelist,
       apr_array_header_t *path_rangelist;
 
       apr_hash_this(hi, NULL, NULL, (void *)&path_rangelist);
-      SVN_ERR(svn_rangelist_merge(rangelist, path_rangelist, pool));
+      SVN_ERR(svn_rangelist_merge(rangelist, path_rangelist,
+                                  svn_rangelist_equal_inheritance, pool));
     }
 
   return SVN_NO_ERROR;
@@ -814,9 +818,11 @@ get_merged_rev_mergeinfo(apr_hash_t **mergeinfo,
   SVN_ERR(get_combined_mergeinfo(&prev_mergeinfo, fs, rev - 1, rev, paths,
                                  subpool));
 
-  SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
+  SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo,
+                             curr_mergeinfo, svn_rangelist_ignore_inheritance,
                              subpool));
-  SVN_ERR(svn_mergeinfo_merge(&changed, deleted, subpool));
+  SVN_ERR(svn_mergeinfo_merge(&changed, deleted,
+                              svn_rangelist_equal_inheritance, subpool));
 
   *mergeinfo = svn_mergeinfo_dup(changed, pool);
   svn_pool_destroy(subpool);
