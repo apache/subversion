@@ -762,7 +762,7 @@ svn_client_blame4(const char *target,
          semanticly a copy, and we want to use the revision on the branch as
          the most recently changed revision.  ### Is this really what we want
          to do here?  Do the sematics of copy change? */
-      if (!frb.chain)
+      if (!frb.chain->blame)
         frb.chain->blame = blame_create(frb.chain, frb.rev, 0);
 
       normalize_blames(frb.chain, frb.merged_chain, pool);
