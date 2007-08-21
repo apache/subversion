@@ -440,8 +440,7 @@ process_committed_leaf(int log_number,
     }
 
   SVN_ERR(svn_wc__loggy_entry_modify(&logtags, adm_access,
-                                     base_name, &tmp_entry, modify_flags,
-                                     pool));
+                                     path, &tmp_entry, modify_flags, pool));
 
   if (remove_lock)
     SVN_ERR(svn_wc__loggy_delete_lock(&logtags, adm_access, path, pool));
@@ -1249,7 +1248,7 @@ svn_wc_delete3(const char *path,
          and copyfrom_url. */
       tmp_entry.schedule = svn_wc_schedule_delete;
       SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
-                                         base_name, &tmp_entry,
+                                         path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_SCHEDULE,
                                          pool));
 
@@ -1722,7 +1721,6 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   apr_uint64_t flags = 0;
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   apr_hash_t *baseprops = NULL;
-  const char *adm_path = svn_wc_adm_access_path(adm_access);
   svn_boolean_t revert_base = FALSE;
 
   /* Build the full path of the thing we're reverting. */
@@ -1933,7 +1931,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       *reverted = TRUE;
     }
 
-  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, name,
+  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, fullpath,
                                      &tmp_entry, flags, pool));
 
   /* Don't run log if nothing to change. */

@@ -288,8 +288,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 {
   const char *tmp_target, *result_target;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
-  const char *log_merge_target =
-    svn_path_is_child(adm_path, merge_target, pool);
   apr_file_t *result_f;
   svn_boolean_t is_binary;
   const svn_wc_entry_t *entry;
@@ -593,7 +591,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
              the backup files in the entry as well. */
           SVN_ERR(svn_wc__loggy_entry_modify
                   (log_accum, adm_access,
-                   log_merge_target, &tmp_entry,
+                   merge_target, &tmp_entry,
                    SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                    | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                    | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
@@ -753,7 +751,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
       tmp_entry.conflict_new = right_base;
       SVN_ERR(svn_wc__loggy_entry_modify
               (log_accum,
-               adm_access, log_merge_target,
+               adm_access, merge_target,
                &tmp_entry,
                SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW

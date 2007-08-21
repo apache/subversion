@@ -2158,7 +2158,6 @@ svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-/*###TODO*/
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
@@ -2323,7 +2322,8 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   if (apr_hash_count(prop_hash) == 0)
     return SVN_NO_ERROR;
 
-  apr_hash_set(prop_hash, SVN_WC__LOG_ATTR_NAME, APR_HASH_KEY_STRING, name);
+  apr_hash_set(prop_hash, SVN_WC__LOG_ATTR_NAME,
+               APR_HASH_KEY_STRING, loggy_path(name, adm_access));
 
   svn_xml_make_open_tag_hash(log_accum, pool,
                              svn_xml_self_closing,
