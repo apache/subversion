@@ -398,16 +398,34 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  * All allocation for the context and collected state will occur in
  * @a pool.
  *
- * Drives of @a editor are recursive by default.  However, this depth
- * can be overridden for subpaths by explicitly telling the reporter
- * that they are at different depths using the @c
- * svn_repos_set_path3() or @c svn_repos_link_path3() APIs.  For
- * example, if the reported tree is the @c A subdir of the Greek Tree
+ * @a depth is the requested depth of the editor drive.
+ *
+ * If @a depth is @c svn_depth_unknown, the editor will affect only the
+ * paths reported by the individual calls to @c svn_repos_set_path3 and
+ * @c svn_repos_link_path3.
+ *
+ * For example, if the reported tree is the @c A subdir of the Greek Tree
  * (see Subversion's test suite), at depth @c svn_depth_empty, but the
  * @c A/B subdir is reported at depth @c svn_depth_infinity, then
  * repository-side changes to @c A/mu, or underneath @c A/C and @c
  * A/D, would not be reflected in the editor drive, but changes
  * underneath @c A/B would be.
+ *
+ * Additionally, the editor driver will call @c add_directory and
+ * and @c add_file for directories with an appropriate depth.  For
+ * example, a directory reported at @c svn_depth_files will receive
+ * file (but not directory) additions.  A directory at @c svn_depth_files
+ * will receive neither.
+ *
+ * If @a depth is @c svn_depth_files, @c svn_depth_immediates or
+ * @c svn_depth_infinity and @a depth is greater than the reported depth
+ * of the working copy, then the editor driver will emit editor
+ * operations so as to upgrade the working copy to this depth.
+ *
+ * If @a depth is @c svn_depth_empty, @c svn_depth_files,
+ * @c svn_depth_immediates or @c svn_depth_infinity and @a depth is lower
+ * than or equal to the depth of the working copy, then the editor
+ * operations will affect only paths at or above @a depth.
  *
  * @since New in 1.5.
  */
@@ -419,6 +437,7 @@ svn_repos_begin_report2(void **report_baton,
                         const char *target,
                         const char *tgt_path,
                         svn_boolean_t text_deltas,
+                        svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
@@ -433,15 +452,6 @@ svn_repos_begin_report2(void **report_baton,
  * If @a recurse is true, the editor driver will drive the editor with
  * a depth of @c svn_depth_infinity; if false, then with a depth of
  * @c svn_depth_files.
- *
- * @note In svn_repos_begin_report2(), @a depth is not passed as an
- * explicit parameter; instead, the reporting code's initial call to
- * svn_repos_set_path3() sets the default depth for the report; the
- * @a depth passed there serves an equivalent function to the
- * @a recurse passed here.
- *
- * ### TODO(sd): The depth behavior described above may not be
- * ### implemented yet, since r23967.  Investigate.
  *
  * @note @a username is ignored, and has been removed in a revised
  * version of this API.
