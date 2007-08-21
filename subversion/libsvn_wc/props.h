@@ -57,15 +57,12 @@ svn_error_t *svn_wc__save_prop_file(const char *propfile_path,
                                     apr_pool_t *pool);
 
 
-/* Given ADM_ACCESS/NAME and an array of PROPCHANGES based on
+/* Given ADM_ACCESS/PATH and an array of PROPCHANGES based on
    SERVER_BASEPROPS, merge the changes into the working copy.
    Necessary log entries will be appended to ENTRY_ACCUM.
 
    If SERVER_BASEPROPS is NULL than base props will be used as
    PROPCHANGES base.
-
-   If we are attempting to merge changes to a directory, simply pass
-   ADM_ACCESS and NULL for NAME.
 
    If BASE_MERGE is FALSE only the working properties will be changed,
    if it is TRUE both the base and working properties will be changed.
@@ -80,7 +77,7 @@ svn_error_t *svn_wc__save_prop_file(const char *propfile_path,
    after the merge.  */
 svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
                                  svn_wc_adm_access_t *adm_access,
-                                 const char *name,
+                                 const char *path,
                                  apr_hash_t *server_baseprops,
                                  const apr_array_header_t *propchanges,
                                  svn_boolean_t base_merge,
@@ -139,24 +136,24 @@ svn_boolean_t svn_wc__has_special_property(apr_hash_t *props);
 svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
 
 /* Extend LOG_ACCUM with log entries to install PROPS and, if WRITE_BASE_PROPS
-   is true, BASE_PROPS for the path NAME in ADM_ACCESS, updating the wc entry
+   is true, BASE_PROPS for the PATH in ADM_ACCESS, updating the wc entry
    to reflect the changes.  Use POOL for temporary allocations. */
 svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,
                                    svn_wc_adm_access_t *adm_access,
-                                   const char *name,
+                                   const char *path,
                                    apr_hash_t *base_props,
                                    apr_hash_t *props,
                                    svn_boolean_t write_base_props,
                                    apr_pool_t *pool);
 
-/* Load the base and working props for NAME in ADM_ACCESS returning them
+/* Load the base and working props for PATH in ADM_ACCESS returning them
    in *BASE_PROPS_P and *PROPS_P, respectively.  BASE_PROPS or PROPS may be null.
    Do all allocations in POOL.  */
 svn_error_t *
 svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_hash_t **props_p,
                    svn_wc_adm_access_t *adm_access,
-                   const char *name,
+                   const char *path,
                    apr_pool_t *pool);
 
 #ifdef __cplusplus
