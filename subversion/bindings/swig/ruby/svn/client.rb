@@ -315,10 +315,21 @@ module Svn
                       dry_run, options, self)
       end
 
+
+      def uri?(p) 
+        u = URI.parse(p)
+        # URI.parse is pretty liberal in what it will accept as a scheme,
+        # but if we get a scheme and a host we can be pretty sure it's a
+        # URI as far as subversion is concerned.
+        u.scheme && u.host
+      end
+      private :uri?
+      
       def merge_peg(src, rev1, rev2, target_wcpath,
                     peg_rev=nil, depth=nil,
                     ignore_ancestry=false, force=false,
                     dry_run=false, options=nil, record_only=false)
+        peg_rev ||= uri?(src) ? 'HEAD' : 'WORKING'
         Client.merge_peg3(src, rev1, rev2, peg_rev,
                           target_wcpath, depth, ignore_ancestry,
                           force, record_only, dry_run, options, self)
