@@ -5630,8 +5630,6 @@ def merge_to_switched_path(sbox):
 def merge_to_path_with_switched_children(sbox):
   "merge to path with switched children"
 
-  # Test set as XFail until issues 2823 and 2839 are resolved.
-  #
   # Merging to a target with switched children requires special handling
   # to keep mergeinfo correct:
   #
@@ -7593,7 +7591,7 @@ test_list = [ None,
               mergeinfo_inheritance_and_discontinuous_ranges,
               merge_to_target_with_copied_children,
               merge_to_switched_path,
-              XFail(merge_to_path_with_switched_children),
+              merge_to_path_with_switched_children,
               merge_with_implicit_target_file,
               empty_rev_range_mergeinfo,
               detect_copy_src_for_target_with_multiple_ancestors,
