@@ -1829,11 +1829,18 @@ add_or_open_file(const char *path,
         }
     }
 
-  /* ### todo:  right now the incoming copyfrom* args are being
-     completely ignored!  Someday the editor-driver may expect us to
-     support this optimization;  when that happens, this func needs to
-     -copy- the specified existing wc file to this location.  From
-     there, the driver can apply_textdelta on it, etc. */
+  /* ### TODO(sussman):
+
+     if copyfrom args exist:
+        make an attempt to locate the file somewhere in the wc.
+        if (file exists in wc)
+           copy file to this location; // entry already exists.
+        else
+           fallback to just calling svn_ra_get_file()
+
+      This guarantees that the 'copyfrom' file is in place, ready to
+      receive any pending txdelta from the repository.
+  */
 
   svn_pool_destroy(subpool);
 
@@ -1862,7 +1869,7 @@ open_file(const char *name,
           apr_pool_t *pool,
           void **file_baton)
 {
-  return add_or_open_file(name, parent_baton, NULL, base_revision, 
+  return add_or_open_file(name, parent_baton, NULL, SVN_INVALID_REVNUM,
                           file_baton, FALSE, pool);
 }
 
