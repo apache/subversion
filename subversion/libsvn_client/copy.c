@@ -85,6 +85,7 @@ get_implied_mergeinfo(svn_ra_session_t *ra_session,
   range = apr_palloc(pool, sizeof(*range));
   range->start = oldest_rev - 1;
   range->end = rev;
+  range->inheritable = TRUE;
   rangelist = apr_array_make(pool, 1, sizeof(range));
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
   apr_hash_set(*implied_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
@@ -123,7 +124,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
   /* Combine and return all mergeinfo. */
   if (src_mergeinfo)
     {
-      return svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo, pool);
+      return svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo,
+                                 svn_rangelist_equal_inheritance, pool);
     }
   else
     {
@@ -148,7 +150,7 @@ extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
   /* Combine the provided mergeinfo with any mergeinfo from the WC. */
   if (wc_mergeinfo)
     SVN_ERR(svn_mergeinfo_merge(&wc_mergeinfo, mergeinfo,
-                                pool));
+                                svn_rangelist_equal_inheritance, pool));
   else
     wc_mergeinfo = mergeinfo;
 
@@ -1246,7 +1248,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                           pair->src, FALSE, adm_access, ctx,
                                           pool));
       if (wc_mergeinfo)
-        SVN_ERR(svn_mergeinfo_merge(&mergeinfo, wc_mergeinfo, pool));
+        SVN_ERR(svn_mergeinfo_merge(&mergeinfo, wc_mergeinfo,
+                                    svn_rangelist_equal_inheritance, pool));
       SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
                                        &mergeinfo_prop->value,
                                        mergeinfo, pool));
