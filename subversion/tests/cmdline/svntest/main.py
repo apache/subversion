@@ -490,6 +490,17 @@ def file_read(path, mode = 'r'):
   fp.close()
   return contents
 
+# For replacing parts of contents in an existing file, with new content.
+def file_substitute(path, contents, new_contents):
+  """Replace the CONTENTS in the file at PATH using the NEW_CONTENTS"""
+  fp = open(path, 'r')
+  fcontent = fp.read()
+  fp.close()
+  fcontent = fcontent.replace(contents, new_contents)
+  fp = open(path, 'w')
+  fp.write(fcontent)
+  fp.close()
+
 # For creating blank new repositories
 def create_repos(path):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
