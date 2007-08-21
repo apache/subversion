@@ -2691,9 +2691,9 @@ struct get_sw_mergeinfo_walk_baton
 
    Given PATH, its corresponding ENTRY, and WB, where WB is the WALK_BATON
    of type "struct get_sw_mergeinfo_walk_baton *":  If PATH is switched or
-   has explicit working svn:mergeinfo set on it, then make a copy of *PATH,
-   allocated in WB->CHILDREN_SW_OR_WITH_MERGEINFO->POOL, and push the copy
-   into to the WB->CHILDREN_SW_OR_WITH_MERGEINFO array. */
+   has explicit working svn:mergeinfo from a corresponding merge source, then
+   make a copy of *PATH, allocated in WB->CHILDREN_SW_OR_WITH_MERGEINFO->POOL,
+   and push the copy into to the WB->CHILDREN_SW_OR_WITH_MERGEINFO array. */
 static svn_error_t *
 get_sw_mergeinfo_walk_cb(const char *path,
                          const svn_wc_entry_t *entry,
@@ -2772,8 +2772,9 @@ get_sw_mergeinfo_error_handler(const char *path,
 /* Helper for discover_and_merge_children()
 
    Perform a depth first walk of the working copy tree rooted at TARGET (with
-   the corresponding ENTRY).  Place any path which has working svn:mergeinfo,
-   or is switched, in CHILDREN_SW_OR_WITH_MERGEINFO. */
+   the corresponding ENTRY).  Place any path which has working svn:mergeinfo
+   from corresponding merge source, or is switched, 
+   in CHILDREN_SW_OR_WITH_MERGEINFO.  Cascade MERGE_SRC_CANON_PATH. */
 static svn_error_t *
 get_sw_mergeinfo_paths(apr_array_header_t *children_sw_or_with_mergeinfo,
                        const char *target, const char* merge_src_canon_path,
@@ -2806,6 +2807,9 @@ get_sw_mergeinfo_paths(apr_array_header_t *children_sw_or_with_mergeinfo,
    IGNORE_ANCESTRY, ADM_ACCESS, and MERGE_CMD_BATON to do_merge() and
    do_single_file_merge().  All allocation occurs in POOL.
    
+   From PARENT_MERGE_SOURCE_URL and WC_ROOT_URL deduce the 
+   MERGE_SRC_CANON_PATH.
+
    Note that any paths in CHILDREN_SW_OR_WITH_MERGEINFO which were switched
    but had no explicit working mergeinfo at the start of the call, will have
    some at the end as a result of do_merge() and/or do_single_file_merge. */
