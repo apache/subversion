@@ -233,8 +233,8 @@ end_element(void *userdata, int state,
          there were no content changes. */
       if (!rb->had_txdelta)
         SVN_ERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
-                            rb->rev_props, FALSE, NULL, NULL, rb->prop_diffs,
-                            rb->subpool));
+                            rb->rev_props, rb->merged_rev, NULL, NULL,
+                            rb->prop_diffs, rb->subpool));
       break;
 
     case ELEM_rev_prop:
