@@ -1298,7 +1298,6 @@ wcprop_get(const svn_string_t **value,
                    svn_wc_adm_access_t *adm_access,
                    apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *prophash;
   const svn_wc_entry_t *entry;
 
@@ -1314,11 +1313,8 @@ wcprop_get(const svn_string_t **value,
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
                                 svn_path_dirname(path, pool), pool));
 
-  err = svn_wc__wcprop_list(&prophash, entry->name, adm_access, pool);
-  if (err)
-    return
-      svn_error_quick_wrap
-      (err, _("Failed to load properties from disk"));
+  SVN_ERR_W(svn_wc__wcprop_list(&prophash, entry->name, adm_access, pool),
+            _("Failed to load properties from disk"));
 
   *value = apr_hash_get(prophash, name, APR_HASH_KEY_STRING);
   return SVN_NO_ERROR;
@@ -1333,7 +1329,6 @@ svn_wc__wcprop_set(const char *name,
                    svn_boolean_t force_write,
                    apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
   apr_pool_t *cache_pool = svn_wc_adm_access_pool(adm_access);
@@ -1346,11 +1341,8 @@ svn_wc__wcprop_set(const char *name,
   else
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
                                 svn_path_dirname(path, pool), pool));
-  err = svn_wc__wcprop_list(&prophash, entry->name, adm_access, pool);
-  if (err)
-    return
-      svn_error_quick_wrap
-      (err, _("Failed to load properties from disk"));
+  SVN_ERR_W(svn_wc__wcprop_list(&prophash, entry->name, adm_access, pool),
+            _("Failed to load properties from disk"));
 
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
@@ -1538,7 +1530,6 @@ svn_wc_prop_get(const svn_string_t **value,
                 svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *prophash;
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
   const svn_wc_entry_t *entry;
@@ -1582,12 +1573,9 @@ svn_wc_prop_get(const svn_string_t **value,
     }
   else  /* regular prop */
     {
-      err = svn_wc_prop_list(&prophash, path, adm_access, pool);
-      if (err)
-        return
-          svn_error_quick_wrap
-          (err, _("Failed to load properties from disk"));
-      
+      SVN_ERR_W(svn_wc_prop_list(&prophash, path, adm_access, pool),
+                _("Failed to load properties from disk"));
+
       *value = apr_hash_get(prophash, name, APR_HASH_KEY_STRING);
 
       return SVN_NO_ERROR;
@@ -1735,7 +1723,6 @@ svn_wc_prop_set2(const char *name,
                  svn_boolean_t skip_checks,
                  apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *prophash, *base_prophash;
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
@@ -1800,11 +1787,9 @@ svn_wc_prop_set2(const char *name,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  err = svn_wc__load_props(&base_prophash, &prophash, adm_access, path, pool);
-  if (err)
-    return
-      svn_error_quick_wrap
-      (err, _("Failed to load properties from disk"));
+  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash,
+                               adm_access, path, pool),
+            _("Failed to load properties from disk"));
 
   /* If we're changing this file's list of expanded keywords, then
    * we'll need to invalidate its text timestamp, since keyword
