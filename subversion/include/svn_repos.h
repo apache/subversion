@@ -414,7 +414,7 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  * Additionally, the editor driver will call @c add_directory and
  * and @c add_file for directories with an appropriate depth.  For
  * example, a directory reported at @c svn_depth_files will receive
- * file (but not directory) additions.  A directory at @c svn_depth_files
+ * file (but not directory) additions.  A directory at @c svn_depth_empty
  * will receive neither.
  *
  * If @a depth is @c svn_depth_files, @c svn_depth_immediates or
@@ -423,7 +423,7 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  * operations so as to upgrade the working copy to this depth.
  *
  * If @a depth is @c svn_depth_empty, @c svn_depth_files,
- * @c svn_depth_immediates or @c svn_depth_infinity and @a depth is lower
+ * @c svn_depth_immediates and @a depth is lower
  * than or equal to the depth of the working copy, then the editor
  * operations will affect only paths at or above @a depth.
  *
