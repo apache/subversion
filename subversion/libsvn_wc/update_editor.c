@@ -793,7 +793,7 @@ static svn_error_t *
 accumulate_entry_props(svn_stringbuf_t *log_accum,
                        svn_wc_notify_lock_state_t *lock_state,
                        svn_wc_adm_access_t *adm_access,
-                       const char *base_name,
+                       const char *path,
                        apr_array_header_t *entry_props,
                        apr_pool_t *pool)
 {
@@ -814,9 +814,8 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
         {
           SVN_ERR(svn_wc__loggy_delete_lock
-                  (&log_accum, adm_access,
-                   svn_path_join(svn_wc_adm_access_path(adm_access),
-                                 base_name, pool), pool));
+                  (&log_accum, adm_access, path, pool));
+
           if (lock_state)
             *lock_state = svn_wc_notify_lock_state_unlocked;
           continue;
@@ -853,7 +852,7 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
     }
 
   if (flags)
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, base_name,
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, path,
                                        &tmp_entry, flags, pool));
 
   return SVN_NO_ERROR;
@@ -885,7 +884,7 @@ accumulate_wcprops(svn_stringbuf_t *log_accum,
 
   return SVN_NO_ERROR;
 }
-      
+
 
 /* Check that when ADD_PATH is joined to BASE_PATH, the resulting path
  * is still under BASE_PATH in the local filesystem.  If not, return
@@ -1047,7 +1046,7 @@ do_entry_deletion(struct edit_baton *eb,
                               parent_path, pool));
 
   logfile_name = svn_wc__logfile_path(*log_number, pool);
-  
+
   logfile_path = svn_wc__adm_path(parent_path, FALSE, pool,
                                   logfile_name, NULL);
 
@@ -1078,8 +1077,7 @@ do_entry_deletion(struct edit_baton *eb,
       tmp_entry.deleted = TRUE;
 
       SVN_ERR(svn_wc__loggy_entry_modify(&log_item, adm_access,
-                                         path, &tmp_entry,
-                                         /*### path should have been base_name?! */
+                                         full_path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_REVISION
                                          | SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_DELETED,
@@ -1584,7 +1582,7 @@ close_directory(void *dir_baton,
         }
 
       SVN_ERR(accumulate_entry_props(db->log_accum, NULL,
-                                     adm_access, SVN_WC_ENTRY_THIS_DIR,
+                                     adm_access, db->path,
                                      entry_props, pool));
 
       SVN_ERR(accumulate_wcprops(db->log_accum, adm_access,
@@ -2097,7 +2095,7 @@ merge_props(svn_stringbuf_t *log_accum,
      versioned, so if the property is present, we overwrite the value. */  
   if (entry_props)
     SVN_ERR(accumulate_entry_props(log_accum, lock_state,
-                                   adm_access, base_name,
+                                   adm_access, file_path,
                                    entry_props, pool));
   else
     *lock_state = svn_wc_notify_lock_state_unchanged;
@@ -2117,7 +2115,7 @@ merge_props(svn_stringbuf_t *log_accum,
 static svn_error_t *
 loggy_tweak_entry(svn_stringbuf_t *log_accum,
                   svn_wc_adm_access_t *adm_access,
-                  const char *name,
+                  const char *path,
                   svn_revnum_t new_revision,
                   const char *new_URL,
                   apr_pool_t *pool)
@@ -2156,7 +2154,7 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
     }
 
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
-                                     name, &tmp_entry, modify_flags,
+                                     path, &tmp_entry, modify_flags,
                                      pool));
 
   return SVN_NO_ERROR;
@@ -2292,7 +2290,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 
   /* Set the new revision and URL in the entry and clean up some other
      fields. */
-  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, base_name,
+  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, fb->path,
                             *eb->target_revision, fb->new_URL, pool));
 
   /* For 'textual' merging, we implement this matrix.
@@ -2474,7 +2472,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 
   /* Do the entry modifications we've accumulated. */
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
-                                     base_name, &tmp_entry, flags, pool));
+                                     fb->path, &tmp_entry, flags, pool));
 
   /* Log commands to handle text-timestamp and working-size */
   if (!is_locally_modified)
@@ -3213,7 +3211,7 @@ install_added_props(svn_stringbuf_t *log_accum,
 
   /* Install the entry props. */
   SVN_ERR(accumulate_entry_props(log_accum, NULL,
-                                 adm_access, base_name,
+                                 adm_access, dst_path,
                                  entry_props, pool));
 
   /* This writes a whole bunch of log commands to install wcprops.  */
@@ -3238,12 +3236,8 @@ svn_wc_add_repos_file2(const char *dst_path,
   const char *adm_path = svn_wc_adm_access_path(adm_access);
   const char *tmp_text_base_path =
     svn_wc__text_base_path(dst_path, TRUE, pool);
-  const char *local_tmp_text_base_path =
-    svn_path_is_child(adm_path, tmp_text_base_path, pool);
   const char *text_base_path =
     svn_wc__text_base_path(dst_path, FALSE, pool);
-  const char *local_text_base_path =
-    svn_path_is_child(adm_path, text_base_path, pool);
   const svn_wc_entry_t *ent;
   const svn_wc_entry_t *dst_entry;
   svn_stringbuf_t *log_accum;
@@ -3349,13 +3343,13 @@ svn_wc_add_repos_file2(const char *dst_path,
       }
 
     SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
-                                       base_name, &tmp_entry,
+                                       dst_path, &tmp_entry,
                                        modify_flags, pool));
   }
 
   /* Set the new revision number and URL in the entry and clean up some other
      fields. */
-  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, base_name,
+  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, dst_path,
                             dst_entry ? dst_entry->revision : ent->revision,
                             new_URL, pool));
 
@@ -3430,7 +3424,7 @@ svn_wc_add_repos_file2(const char *dst_path,
 
     tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
     SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
-                                       base_name, &tmp_entry,
+                                       dst_path, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_CHECKSUM,
                                        pool));
   }

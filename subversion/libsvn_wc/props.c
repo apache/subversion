@@ -366,9 +366,10 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   tmp_entry.cachable_props = SVN_WC__CACHABLE_PROPS;
   tmp_entry.present_props = build_present_props(working_props, pool);
 
-  SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, name, &tmp_entry,
+  SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access,
+                                     full_path, &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_HAS_PROPS
-                                     | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS 
+                                     | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                      | SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS
                                      | SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
                                      pool));
@@ -1108,7 +1109,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         entry.prejfile = reject_path + access_len;
         SVN_ERR(svn_wc__loggy_entry_modify(entry_accum,
                                            adm_access,
-                                           entryname,
+                                           full_path,
                                            &entry,
                                            SVN_WC__ENTRY_MODIFY_PREJFILE,
                                            pool));
@@ -1898,7 +1899,7 @@ svn_wc_prop_set2(const char *name,
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
           SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
-                                             base_name, &tmp_entry,
+                                             path, &tmp_entry,
                                              SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                              pool));
         }
