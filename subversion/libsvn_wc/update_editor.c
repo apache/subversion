@@ -813,8 +813,10 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
          defunct. */
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
         {
-          SVN_ERR(svn_wc__loggy_delete_lock(&log_accum, adm_access,
-                                            base_name, pool));
+          SVN_ERR(svn_wc__loggy_delete_lock
+                  (&log_accum, adm_access,
+                   svn_path_join(svn_wc_adm_access_path(adm_access),
+                                 base_name, pool), pool));
           if (lock_state)
             *lock_state = svn_wc_notify_lock_state_unlocked;
           continue;
@@ -863,7 +865,7 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
 static svn_error_t *
 accumulate_wcprops(svn_stringbuf_t *log_accum,
                    svn_wc_adm_access_t *adm_access,
-                   const char *base_name,
+                   const char *path,
                    apr_array_header_t *wcprops,
                    apr_pool_t *pool)
 {
@@ -877,8 +879,7 @@ accumulate_wcprops(svn_stringbuf_t *log_accum,
       const svn_prop_t *prop = &APR_ARRAY_IDX(wcprops, i, svn_prop_t);
 
       SVN_ERR(svn_wc__loggy_modify_wcprop
-              (&log_accum, adm_access,
-               base_name,
+              (&log_accum, adm_access, path,
                prop->name, prop->value ? prop->value->data : NULL, pool));
     }
 
@@ -1063,8 +1064,7 @@ do_entry_deletion(struct edit_baton *eb,
      parent_path, i.e. where the log is being executed.  */
 
   base_name = svn_path_basename(path, pool);
-  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access,
-                                     base_name, pool));
+  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
 
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that parent can give
@@ -1588,7 +1588,7 @@ close_directory(void *dir_baton,
                                      entry_props, pool));
 
       SVN_ERR(accumulate_wcprops(db->log_accum, adm_access,
-                                 SVN_WC_ENTRY_THIS_DIR, wc_props, pool));
+                                 db->path, wc_props, pool));
     }
 
   /* Flush and run the log. */
@@ -2105,7 +2105,7 @@ merge_props(svn_stringbuf_t *log_accum,
   /* This writes a whole bunch of log commands to install wcprops.  */
   if (wc_props)
     SVN_ERR(accumulate_wcprops(log_accum, adm_access,
-                               base_name, wc_props, pool));
+                               file_path, wc_props, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2405,9 +2405,7 @@ merge_file(svn_wc_notify_state_t *content_state,
               /* If we created a temporary left merge file, get rid of it. */
               if (merge_left != fb->text_base_path)
                 SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                             svn_path_is_child(parent_dir,
-                                                               merge_left,
-                                                               pool), pool));
+                                             merge_left, pool));
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
     } /* end: "textual" merging process */
@@ -2452,7 +2450,7 @@ merge_file(svn_wc_notify_state_t *content_state,
         /* If a lock was removed and we didn't update the text contents, we
            might need to set the file read-only. */
         SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum, adm_access,
-                                                 base_name, pool));
+                                                 fb->path, pool));
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
@@ -2461,7 +2459,7 @@ merge_file(svn_wc_notify_state_t *content_state,
       SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
                                  adm_access, tmp_txtb, txtb, FALSE, pool));
       SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
-                                         txtb, pool));
+                                         fb->text_base_path, pool));
 
       /* If the file is replaced don't write the checksum.  Checksum is blank
          on replaced files. */
@@ -2483,7 +2481,7 @@ merge_file(svn_wc_notify_state_t *content_state,
          obstruction. */
       if (fb->last_changed_date && !fb->existed)
         SVN_ERR(svn_wc__loggy_set_timestamp(&log_accum, adm_access,
-                                            base_name, fb->last_changed_date,
+                                            fb->path, fb->last_changed_date,
                                             pool));
 
       if (tmp_txtb || magic_props_changed)
@@ -2491,10 +2489,10 @@ merge_file(svn_wc_notify_state_t *content_state,
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
                   (&log_accum, adm_access,
-                   base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+                   fb->path, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
         }
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
-              (&log_accum, adm_access, base_name, pool));
+              (&log_accum, adm_access, fb->path, pool));
     }
 
   /* Set the returned content state. */
@@ -3218,7 +3216,7 @@ install_added_props(svn_stringbuf_t *log_accum,
 
   /* This writes a whole bunch of log commands to install wcprops.  */
   SVN_ERR(accumulate_wcprops(log_accum, adm_access,
-                             base_name, wc_props, pool));
+                             dst_path, wc_props, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3394,14 +3392,14 @@ svn_wc_add_repos_file2(const char *dst_path,
                                      base_name, FALSE, pool));
           /* Remove the copy-source, making it look like a move */
           SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                       local_tmp_text_path, pool));
+                                       tmp_text_path, pool));
         }
       else
         SVN_ERR(svn_wc__loggy_move(&log_accum, NULL, adm_access,
                                    local_tmp_text_path, base_name,
                                    FALSE, pool));
       SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum, adm_access,
-                                               base_name, pool));
+                                               dst_path, pool));
     }
   else
     {
@@ -3413,9 +3411,9 @@ svn_wc_add_repos_file2(const char *dst_path,
                                  pool));
       SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
               (&log_accum, adm_access,
-               base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+               dst_path, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
-              (&log_accum, adm_access, base_name, pool));
+              (&log_accum, adm_access, dst_path, pool));
     }
 
   /* Install new text base. */
@@ -3429,7 +3427,7 @@ svn_wc_add_repos_file2(const char *dst_path,
                                adm_access, local_tmp_text_base_path,
                                local_text_base_path, FALSE, pool));
     SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
-                                       local_text_base_path, pool));
+                                       text_base_path, pool));
 
     SVN_ERR(svn_io_file_checksum(digest, tmp_text_base_path, pool));
 

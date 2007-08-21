@@ -528,25 +528,25 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
              relative to the adm_access path they are executed in.
 
              Make our LEFT and RIGHT files 'local' if they aren't... */
-          tmp_left = svn_path_is_child(adm_path, left, pool);
-          if (! tmp_left)
+          if (! svn_path_is_child(adm_path, left, pool))
             {
               SVN_ERR(svn_wc_create_tmp_file2
                       (NULL, &tmp_left,
                        adm_path, svn_io_file_del_none, pool));
               SVN_ERR(svn_io_copy_file(left, tmp_left, TRUE, pool));
-              tmp_left = svn_path_is_child(adm_path, tmp_left, pool);
             }
+          else
+            tmp_left = left;
 
-          tmp_right = svn_path_is_child(adm_path, right, pool);
-          if (! tmp_right)
+          if (! svn_path_is_child(adm_path, right, pool))
             {
               SVN_ERR(svn_wc_create_tmp_file2
                       (NULL, &tmp_right,
                        adm_path, svn_io_file_del_none, pool));
               SVN_ERR(svn_io_copy_file(right, tmp_right, TRUE, pool));
-              tmp_right = svn_path_is_child(adm_path, tmp_right, pool);
             }
+          else
+            tmp_right = right;
 
           /* NOTE: Callers must ensure that the svn:eol-style and
              svn:keywords property values are correct in the currently
@@ -563,17 +563,14 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           /* Create LEFT and RIGHT backup files, in expanded form.
              We use merge_target's current properties to do the translation. */
           /* Derive the basenames of the 3 backup files. */
-          left_base = svn_path_is_child(adm_path, left_copy, pool);
-          right_base = svn_path_is_child(adm_path, right_copy, pool);
-
           SVN_ERR(svn_wc__loggy_translated_file(log_accum,
                                                 adm_access,
-                                                left_base, tmp_left,
-                                                log_merge_target, pool));
+                                                left_copy, tmp_left,
+                                                merge_target, pool));
           SVN_ERR(svn_wc__loggy_translated_file(log_accum,
                                                 adm_access,
-                                                right_base, tmp_right,
-                                                log_merge_target, pool));
+                                                right_copy, tmp_right,
+                                                merge_target, pool));
 
           /* Back up MERGE_TARGET through detranslation/retranslation:
              the new translation properties may not match the current ones */
@@ -586,9 +583,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                           pool));
           SVN_ERR(svn_wc__loggy_translated_file
                   (log_accum, adm_access,
-                   svn_path_is_child(adm_path, target_copy, pool),
-                   svn_path_is_child(adm_path, tmp_target_copy, pool),
-                   log_merge_target, pool));
+                   target_copy, tmp_target_copy, merge_target, pool));
+
+          left_base = svn_path_is_child(adm_path, left_copy, pool);
+          right_base = svn_path_is_child(adm_path, right_copy, pool);
 
           tmp_entry.conflict_old = left_base;
           tmp_entry.conflict_new = right_base;
@@ -787,11 +785,11 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   if (! dry_run)
     {
       SVN_ERR(svn_wc__loggy_maybe_set_executable(log_accum,
-                                                 adm_access, log_merge_target,
+                                                 adm_access, merge_target,
                                                  pool));
 
       SVN_ERR(svn_wc__loggy_maybe_set_readonly(log_accum,
-                                                adm_access, log_merge_target,
+                                                adm_access, merge_target,
                                                 pool));
 
     }

@@ -43,8 +43,23 @@ const char *svn_wc__logfile_path(int log_number,
                                  apr_pool_t *pool);
 
 
+
+/* The svn_wc__loggy_* functions in this section take path arguments
+   relative to the adm_access passed in.
+
+   Note: I'm rewriting the function interfaces to take paths
+   relative to whatever the adm_access was opened to; we'll call it
+   the 'operating root'.  Note that an adm_access can be opened with
+   an absolute path.  If this is the case, then 'relative to the
+   operating root' means 'absolute'.
+
+   Functions which have been converted are explicitly noted to be so.
+*/
+
 /* Extend **LOG_ACCUM with log instructions to append the contents
    of SRC to DST.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
@@ -56,6 +71,8 @@ svn_wc__loggy_append(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to mark PATH as committed
    with revision REVNUM.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
@@ -101,8 +118,9 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to generate a translated
    file from SRC to DST with translation settings from VERSIONED
    and flags specified in FLAGS.
-*/
 
+   **** Converted to take paths relative to the operating root.
+*/
 svn_error_t *
 svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
                               svn_wc_adm_access_t *adm_access,
@@ -113,6 +131,8 @@ svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to delete the entry
    associated with PATH from the entries file.
+
+   **** Converted to take paths relative to the operating root.
 */
 svn_error_t *
 svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
@@ -123,6 +143,8 @@ svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to delete lock related
    fields from the entry belonging to PATH.
+
+   **** Converted to take paths relative to the operating root.
 */
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
@@ -132,6 +154,8 @@ svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to delete changelist
    from the entry belonging to PATH.
+
+   **** Converted to take paths relative to the operating root.
 */
 svn_error_t *
 svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
@@ -156,6 +180,8 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
    for PATH, setting it to PROPVAL.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
@@ -186,6 +212,8 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'executable' if it has the 'executable' property set.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
@@ -197,6 +225,8 @@ svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly' if it has the 'needs-lock' property set and there is
    no lock for the file in the working copy.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
@@ -210,6 +240,8 @@ svn_wc__loggy_maybe_set_readonly(svn_stringbuf_t **log_accum,
    in the entry field with name TIME_PROP.
 
    Use SVN_WC__ENTRY_ATTR_* values for TIME_PROP.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
@@ -223,6 +255,7 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to set the file size of PATH
    in the entries' WORKING_SIZE field.
 
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
@@ -234,6 +267,8 @@ svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly'.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
@@ -243,6 +278,8 @@ svn_wc__loggy_set_readonly(svn_stringbuf_t **log_accum,
                            apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH.
+
+   **** Converted to take paths relative to the operating root.
 */
 
 svn_error_t *
@@ -254,11 +291,13 @@ svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to remove the file
    BASE_NAME, if it exists.
+
+   **** Converted to take paths relative to the operating root.
 */
 svn_error_t *
 svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      svn_wc_adm_access_t *adm_access,
-                     const char *base_name,
+                     const char *path,
                      apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with instructions to cause the working copy of ADM_ACCESS

@@ -368,40 +368,39 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     SVN_ERR(svn_io_file_close(dbaton->source_file, frb->currpool));
   SVN_ERR(svn_io_file_close(dbaton->file, frb->currpool));
 
+  /* If we are including merged revisions, we need to add each rev to the
+     merged chain. */
   if (frb->include_merged_revisions)
-    {
-      chain = frb->merged_chain;
-
-      /* If the current revision is not a merged one, we need to add its
-         blame info to the chain for the original line of history. */
-      if (! frb->merged_revision)
-        {
-          apr_pool_t *tmppool;
-
-          SVN_ERR(add_file_blame(frb->last_original_filename,
-                                 dbaton->filename, frb->chain, frb->rev,
-                                 frb->diff_options, frb->currpool));
-
-          /* This filename could be around for a while, potentially, so
-             use the longer lifetime pool, and switch it with the previous one*/
-          svn_pool_clear(frb->prevfilepool);
-          tmppool = frb->filepool;
-          frb->filepool = frb->prevfilepool;
-          frb->prevfilepool = tmppool;
-
-          frb->last_original_filename = apr_pstrdup(frb->filepool, 
-                                                    dbaton->filename);
-        }
-    }
+    chain = frb->merged_chain;
   else
-    {
-      chain = frb->chain;
-    }
+    chain = frb->chain;
 
   /* Process this file. */
   SVN_ERR(add_file_blame(frb->last_filename,
                          dbaton->filename, chain, frb->rev,
                          frb->diff_options, frb->currpool));
+
+  /* If we are including merged revisions, and the current revision is not a
+     merged one, we need to add its blame info to the chain for the original
+     line of history. */
+  if (frb->include_merged_revisions && ! frb->merged_revision)
+    {
+      apr_pool_t *tmppool;
+
+      SVN_ERR(add_file_blame(frb->last_original_filename,
+                             dbaton->filename, frb->chain, frb->rev,
+                             frb->diff_options, frb->currpool));
+
+      /* This filename could be around for a while, potentially, so
+         use the longer lifetime pool, and switch it with the previous one*/
+      svn_pool_clear(frb->prevfilepool);
+      tmppool = frb->filepool;
+      frb->filepool = frb->prevfilepool;
+      frb->prevfilepool = tmppool;
+
+      frb->last_original_filename = apr_pstrdup(frb->filepool, 
+                                                dbaton->filename);
+    }
 
   /* Prepare for next revision. */
 
@@ -757,6 +756,15 @@ svn_client_blame4(const char *target,
   /* Perform optional merged chain normalization. */
   if (include_merged_revisions)
     {
+      /* If we never created any blame for the original chain, create it now,
+         with the most recent changed revision.  This could occur if a file
+         was created on a branch and them merged to another branch.  This is
+         semanticly a copy, and we want to use the revision on the branch as
+         the most recently changed revision.  ### Is this really what we want
+         to do here?  Do the sematics of copy change? */
+      if (!frb.chain)
+        frb.chain->blame = blame_create(frb.chain, frb.rev, 0);
+
       normalize_blames(frb.chain, frb.merged_chain, pool);
       walk_merged = frb.merged_chain->blame;
     }
