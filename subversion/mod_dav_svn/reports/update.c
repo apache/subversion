@@ -35,8 +35,6 @@
 #include "svn_dav.h"
 #include "svn_props.h"
 
-#include "private/svn_repos_private.h"
-
 #include "../dav_svn.h"
 
 
@@ -1178,7 +1176,7 @@ dav_svn__update_report(const dav_resource *resource,
   editor->close_file = upd_close_file;
   editor->absent_file = upd_absent_file;
   editor->close_edit = upd_close_edit;
-  if ((serr = svn_repos__begin_report(&rbaton, revnum,
+  if ((serr = svn_repos_begin_report2(&rbaton, revnum,
                                       repos->repos, 
                                       src_path, target,
                                       dst_path,
