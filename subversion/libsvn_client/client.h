@@ -697,8 +697,9 @@ typedef struct
    locked in the process of this crawl.  These will need to be
    unlocked again post-commit.
 
-   If NONRECURSIVE is specified, subdirectories of directory targets
-   found in TARGETS will not be crawled for modifications.
+   If DEPTH is specified, descend (or not) into each target in TARGETS
+   as specified by DEPTH; the behavior is the same as that described
+   for svn_client_commit4().
 
    If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
    commit candidates.
@@ -715,7 +716,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
                                  svn_wc_adm_access_t *parent_dir,
                                  apr_array_header_t *targets,
-                                 svn_boolean_t nonrecursive,
+                                 svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const char *changelist_name,
                                  svn_client_ctx_t *ctx,

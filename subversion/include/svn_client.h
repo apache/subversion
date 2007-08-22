@@ -1564,14 +1564,16 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  * @c svn_wc_notify_commit_deleted, @c svn_wc_notify_commit_replaced,
  * @c svn_wc_notify_commit_postfix_txdelta.
  *
- * ### TODO(sd): For consistency, this should probably take svn_depth_t
- * ### depth instead of svn_boolean_t recurse.  But it's not needed
- * ### for the sparse-directories work right now, so leaving it alone
- * ### for now, although note that this is a 1.5 API so revving it
- * ### would be fairly painless.
- *
- * If @a recurse is false, subdirectories of directories in @a targets
- * will be ignored.
+ * If @a depth is @c svn_depth_infinity, commit all changes to and
+ * below named targets.  If @a depth is @c svn_depth_empty, commit
+ * only named targets (that is, only property changes on named
+ * directory targets, and property and content changes for named file
+ * targets).  If @a depth is @c svn_depth_files, behave as above for
+ * named file targets, and for named directory targets, commit
+ * property changes on a named directory and all changes to files
+ * directly inside that directory.  If @c svn_depth_immediates, behave
+ * as for @c svn_depth_files, and for subdirectories of any named
+ * directory target commit as though for @c svn_depth_empty.
  *
  * Unlock paths in the repository, unless @a keep_locks is true.
  *
@@ -1592,7 +1594,7 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
 svn_error_t *
 svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
-                   svn_boolean_t recurse,
+                   svn_depth_t depth,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelist,
                    const char *changelist_name,

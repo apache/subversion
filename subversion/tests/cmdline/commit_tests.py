@@ -1546,60 +1546,80 @@ def commit_nonrecursive(sbox):
                                         os.path.join(wc_dir, dir2_path),
                                         os.path.join(wc_dir, file4_path))
 
-  #####################################################
-  ### Issue #1239:
+  #######################################################################
   ###
-  ### 1. Create these directories and files:
+  ### There's some complex history here; please bear with me.
   ###
-  ###    dirA
-  ###    dirA/fileA
-  ###    dirA/fileB
-  ###    dirA/dirB
-  ###    dirA/dirB/fileC
-  ###    dirA/dirB/nocommit
+  ### First there was issue #1239, which had the following recipe:
+  ###
+  ###    1. Create these directories and files:
+  ###
+  ###       dirA
+  ###       dirA/fileA
+  ###       dirA/fileB
+  ###       dirA/dirB
+  ###       dirA/dirB/fileC
+  ###       dirA/dirB/nocommit
   ###   
-  ### 2. run 'svn add -N <all of the above>'
+  ###    2. run 'svn add -N <all of the above>'
   ###
-  ### 3. run 'svn ci -N <all but nocommit>'
+  ###    3. run 'svn ci -N <all but nocommit>'
   ###
-  ### The bug was that it would attempt to commit the file `nocommit',
-  ### when it shouldn't, and then get an error anyway:
+  ### Issue #1239 claimed a two-part bug: that step 3 would try to
+  ### commit the file `nocommit' when it shouldn't, and that it would
+  ### get an error anyway: 
   ###
-  ###    Adding         wc/dirA
-  ###    Adding         wc/dirA/fileA
-  ###    Adding         wc/dirA/fileB
-  ###    Adding         wc/dirA/dirB
-  ###    Adding         wc/dirA/dirB/nocommit
-  ###    Adding         wc/dirA/dirB/fileC
-  ###    Transmitting file data ....svn: A problem occurred; see later errors
-  ###    for details
-  ###    svn: Commit succeeded, but other errors follow:
-  ###    svn: Problem running log
-  ###    svn: Error bumping revisions post-commit (details follow):
-  ###    svn: in directory
-  ###    'F:/Programmation/Projets/subversion/svnant/test/wc/dirA'
-  ###    svn: start_handler: error processing command 'committed' in
-  ###    'F:/Programmation/Projets/subversion/svnant/test/wc/dirA'
-  ###    svn: Working copy not locked
-  ###    svn: directory not locked
-  ###    (F:/Programmation/Projets/subversion/svnant/test/wc)  
+  ###       Adding         wc/dirA
+  ###       Adding         wc/dirA/fileA
+  ###       Adding         wc/dirA/fileB
+  ###       Adding         wc/dirA/dirB
+  ###       Adding         wc/dirA/dirB/nocommit
+  ###       Adding         wc/dirA/dirB/fileC
+  ###       Transmitting file data ....svn: A problem occurred; \
+  ###          see later errors for details
+  ###       svn: Commit succeeded, but other errors follow:
+  ###       svn: Problem running log
+  ###       svn: Error bumping revisions post-commit (details follow):
+  ###       svn: in directory
+  ###       'F:/Programmation/Projets/subversion/svnant/test/wc/dirA'
+  ###       svn: start_handler: error processing command 'committed' in
+  ###       'F:/Programmation/Projets/subversion/svnant/test/wc/dirA'
+  ###       svn: Working copy not locked
+  ###       svn: directory not locked
+  ###       (F:/Programmation/Projets/subversion/svnant/test/wc)  
   ### 
+  ### However, this was all in the days before --depth, and depended
+  ### on an idiosyncratic interpretation of -N, one which required
+  ### commit to behave differently from other commands taking -N.
+  ###
+  ### These days, -N should be equivalent to --depth=files in almost
+  ### all cases.  There are some exceptions (e.g., status), but commit
+  ### is not an exception.  Thus, the above recipe is now incorrect,
+  ### because "wc/dirA/dirB" was given as an explicit target, and
+  ### therefore the file "wc/dirA/dirB/nocommit" *should* have been
+  ### committed after all, since it's a file child of a named target
+  ### and -N means --depth=files.
+  ###
+  ### So we really need two tests: one for commit -N (--depth=files),
+  ### and another for --depth=empty.  I've changed this test to cover
+  ### the -N case, and added 'commit_propmods_with_depth_empty' to
+  ### depth_tests.py to cover the --depth=empty case.
 
   # Now add these directories and files, except the last:
   dirA_path  = 'dirA'
   fileA_path = os.path.join('dirA', 'fileA')
   fileB_path = os.path.join('dirA', 'fileB')
   dirB_path  = os.path.join('dirA', 'dirB')
-  fileC_path = os.path.join(dirB_path, 'fileC')
-  nocommit_path = os.path.join(dirB_path, 'nocommit')
+  nope_1_path = os.path.join(dirB_path, 'nope_1')
+  nope_2_path = os.path.join(dirB_path, 'nope_2')
 
   # Create the new files and directories.
   os.mkdir(os.path.join(wc_dir, dirA_path))
   svntest.main.file_append(os.path.join(wc_dir, fileA_path), 'fileA')
   svntest.main.file_append(os.path.join(wc_dir, fileB_path), 'fileB')
   os.mkdir(os.path.join(wc_dir, dirB_path))
-  svntest.main.file_append(os.path.join(wc_dir, fileC_path), 'fileC')
-  svntest.main.file_append(os.path.join(wc_dir, nocommit_path), 'nocommit')
+  svntest.main.file_append(os.path.join(wc_dir, nope_1_path), 'nope_1')
+  svntest.main.file_append(os.path.join(wc_dir, nope_2_path), 'nope_2')
 
   # Add them to version control.
   svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
@@ -1608,16 +1628,14 @@ def commit_nonrecursive(sbox):
                                      os.path.join(wc_dir, fileA_path),
                                      os.path.join(wc_dir, fileB_path),
                                      os.path.join(wc_dir, dirB_path),
-                                     os.path.join(wc_dir, fileC_path),
-                                     os.path.join(wc_dir, nocommit_path))
+                                     os.path.join(wc_dir, nope_1_path),
+                                     os.path.join(wc_dir, nope_2_path))
 
   expected_output = svntest.wc.State(
     wc_dir,
     { dirA_path  : Item(verb='Adding'),
       fileA_path : Item(verb='Adding'),
       fileB_path : Item(verb='Adding'),
-      dirB_path  : Item(verb='Adding'),
-      fileC_path : Item(verb='Adding'),
       }
     )
 
@@ -1633,14 +1651,14 @@ def commit_nonrecursive(sbox):
     file4_path : Item(status='  ', wc_rev=2),
     })
 
-  # Expect the commits (and one noncommit) from this part of the test.
+  # Expect some commits and some non-commits from this part of the test.
   expected_status.add({
     dirA_path     : Item(status='  ', wc_rev=3),
     fileA_path    : Item(status='  ', wc_rev=3),
     fileB_path    : Item(status='  ', wc_rev=3),
-    dirB_path     : Item(status='  ', wc_rev=3),
-    fileC_path    : Item(status='  ', wc_rev=3),
-    nocommit_path : Item(status='A ', wc_rev=0)
+    dirB_path     : Item(status='A ', wc_rev=0),
+    nope_1_path   : Item(status='A ', wc_rev=0),
+    nope_2_path   : Item(status='A ', wc_rev=0)
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1649,12 +1667,7 @@ def commit_nonrecursive(sbox):
                                         None,
                                         None, None,
                                         None, None,
-                                        '-N',
-                                        os.path.join(wc_dir, dirA_path),
-                                        os.path.join(wc_dir, fileA_path),
-                                        os.path.join(wc_dir, fileB_path),
-                                        os.path.join(wc_dir, dirB_path),
-                                        os.path.join(wc_dir, fileC_path))
+                                        '-N', os.path.join(wc_dir, dirA_path))
 
 #----------------------------------------------------------------------
 # Regression for #1017: ra_neon was allowing the deletion of out-of-date
