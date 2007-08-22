@@ -1209,7 +1209,8 @@ dav_svn__update_report(const dav_resource *resource,
             const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
             apr_xml_attr *this_attr = child->attr;
-            svn_depth_t depth = svn_depth_unknown;
+            /* Default to infinity, for old clients that don't send depth. */
+            svn_depth_t depth = svn_depth_infinity;
 
             entry_counter++;
 
