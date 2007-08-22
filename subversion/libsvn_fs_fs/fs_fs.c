@@ -3381,7 +3381,11 @@ svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
   svn_error_t *err;
 
   err = get_txn_proplist(txn_prop, txn->fs, txn->id, pool);
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err))) /* doesn't exist yet */
+  /* Here - and here only - we need to deal with the possibility that the
+     transaction property file doesn't yet exist.  The rest of the
+     implementation assumes that the file exists, but we're called to set the
+     initial transaction properties as the transaction is being created. */
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)))
     svn_error_clear(err);
   else if (err)
     return err;
