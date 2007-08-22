@@ -1575,7 +1575,7 @@ main(int argc, const char *argv[])
         }
     }
 
-  if ((opt_state.depth != svn_depth_unknown) && opt_state.relocate)
+  if (opt_state.relocate && (opt_state.depth != svn_depth_unknown))
     {
       err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                              _("--relocate and --depth are mutually "
