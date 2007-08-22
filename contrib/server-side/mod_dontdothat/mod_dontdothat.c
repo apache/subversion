@@ -19,6 +19,7 @@
 
 #include <httpd.h>
 #include <http_config.h>
+#include <http_protocol.h>
 #include <http_request.h>
 #include <http_log.h>
 #include <util_filter.h>
@@ -280,10 +281,25 @@ dontdothat_filter(ap_filter_t *f,
                         "mod_dontdothat: client broke the rules, "
                         "returning error");
 
-          f->r->status = 403;
-          f->r->status_line = "403 Forbidden, No Soup For You!";
+          /* Ok, pass an error bucket and an eos bucket back to the client.
+           *
+           * NOTE: The custom error string passed here doesn't seem to be
+           *       used anywhere by httpd.  This is quite possibly a bug.
+           *
+           * TODO: Try and pass back a custom document body containing a
+           *       serialized svn_error_t so the client displays a better
+           *       error message. */
+          bb = apr_brigade_create(f->r->pool, f->c->bucket_alloc);
+          e = ap_bucket_error_create(403, "No Soup For You!",
+                                     f->r->pool, f->c->bucket_alloc);
+          APR_BRIGADE_INSERT_TAIL(bb, e);
+          e = apr_bucket_eos_create(f->c->bucket_alloc);
+          APR_BRIGADE_INSERT_TAIL(bb, e);
 
-          return APR_EGENERAL;
+          /* Don't forget to remove us, otherwise recursion blows the stack. */
+          ap_remove_input_filter(f);
+
+          return ap_pass_brigade(f->r->output_filters, bb);
         }
       else if (ctx->let_it_go || last)
         {
