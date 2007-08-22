@@ -385,7 +385,8 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     if (ctx == NULL)
         return SVN_INVALID_REVNUM;
 
-    SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, recurse,
+    SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2,
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
                                    noUnlock, keepChangelist, changelistName,
                                    ctx, requestPool.pool()),
                 SVN_INVALID_REVNUM);
