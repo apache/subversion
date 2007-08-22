@@ -312,7 +312,7 @@ A transaction directory has the following layout:
 
   rev                        Prototype rev file with new text reps
   rev-lock                   Lockfile for writing to the above
-  props                      Transaction props, if any
+  props                      Transaction props
   mergeinfo                  Transaction mergeinfo props, if any
   next-ids                   Next temporary node-ID and copy-ID
   changes                    Changed-path information so far
@@ -326,10 +326,10 @@ writing to the file at a given time, the "rev-lock" file is locked for
 the duration of each write.
 
 The three kinds of props files are all in hash dump format.  The
-"props" and "mergeinfo" files may optionally be absent if no
-properties of that type have been set on the transaction.  The
-"node.<nid>.<cid>.props" file will only be present if the node-rev
-properties have been changed.
+"props" file will always be present.  The "mergeinfo" file may be
+absent if no svn:mergeinfo properties have been changed on any node in
+the transaction.  The "node.<nid>.<cid>.props" file will only be
+present if the node-rev properties have been changed.
 
 The "next-ids" file contains a single line "<next-temp-node-id>
 <next-temp-copy-id>\n" giving the next temporary node-ID and copy-ID
