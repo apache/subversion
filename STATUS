@@ -119,6 +119,13 @@ Candidate changes:
     Votes:
       +1: dlr, vgeorgescu
 
+  * r26115
+    Enable compression (svndiff1 deltas) for ra_svn's get-file-revs command.
+    Justification:
+      Makes blame take longer than it should over ra_svn.
+    Votes:
+      +1: malcolm
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
