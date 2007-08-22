@@ -111,7 +111,7 @@ class SVNClient :public SVNBase
             bool makeParents);
   void copy(CopySources &copySources, const char *destPath,
             const char *message, bool copyAsChild, bool makeParents);
-  jlong commit(Targets &targets, const char *message, bool recurse,
+  jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
                const char *changelistName);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,

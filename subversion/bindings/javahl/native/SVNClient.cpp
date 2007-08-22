@@ -373,8 +373,8 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
 }
 
-jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
-                        bool noUnlock, bool keepChangelist,
+jlong SVNClient::commit(Targets &targets, const char *message,
+                        svn_depth_t depth, bool noUnlock, bool keepChangelist,
                         const char *changelistName)
 {
     Pool requestPool;
@@ -385,8 +385,7 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     if (ctx == NULL)
         return SVN_INVALID_REVNUM;
 
-    SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2,
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+    SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, depth,
                                    noUnlock, keepChangelist, changelistName,
                                    ctx, requestPool.pool()),
                 SVN_INVALID_REVNUM);

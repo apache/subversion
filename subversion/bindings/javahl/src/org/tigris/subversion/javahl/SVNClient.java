@@ -644,10 +644,10 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean, boolean, String)
+     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, int, boolean, boolean, String)
      * @since 1.5
      */
-    public native long commit(String[] path, String message, boolean recurse,
+    public native long commit(String[] path, String message, int depth,
                               boolean noUnlock, boolean keepChangelist,
                               String changelistName)
             throws ClientException;
@@ -1774,7 +1774,8 @@ public class SVNClient implements SVNClientInterface
                        boolean noUnlock)
             throws ClientException
     {
-        return commit(path, message, recurse, noUnlock, false, null);
+        return commit(path, message, Depth.fromRecurse(recurse), noUnlock,
+                      false, null);
     }
 
     /**
