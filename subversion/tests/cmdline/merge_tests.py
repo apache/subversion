@@ -7423,7 +7423,6 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   Acopy_path = os.path.join(wc_dir, 'A_copy')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   Acopy_gamma_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma')
-  Acopy_gamma_w_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma.working')
   A_url = repo_url + '/A'
   Acopy_url = repo_url + '/A_copy'
 
@@ -7487,20 +7486,6 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                         expected_status, None, None, None, 
                                         None, None, wc_dir)
 
-  svntest.main.file_substitute(gamma_path, "line2", "this is line2")
-  expected_status.tweak('A/D/gamma', wc_rev=5)
-  
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None, 
-                                        None, None, wc_dir)
-
-  svntest.main.file_substitute(gamma_path, "line3", "this is line3")
-  expected_status.tweak('A/D/gamma', wc_rev=6)
-  
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None, 
-                                        None, None, wc_dir)
-
   # Delete A/D/gamma from working copy
   svntest.actions.run_and_verify_svn(None, None, [], 'delete', gamma_path)
   # Create expected output tree for commit
@@ -7516,24 +7501,16 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                         None,
                                         None, None, None, None,
                                         wc_dir, wc_dir)
-  #Have a conflicting local change.
-  svntest.main.file_substitute(Acopy_gamma_path, "line1", "THIS IS LINE1")
 
   svntest.actions.run_and_verify_svn(None, [svntest.main.merge_notify_line(3,4),
-                                     'C    ' + Acopy_gamma_path + '\n'],
+                                     'U    ' + Acopy_gamma_path + '\n'],
                                      [], 'merge', '-r1:4',
-                                     A_url + '/D/gamma' + '@6',
-                                     Acopy_gamma_path, '--non-interactive')
-
-  contents = svntest.main.file_read(Acopy_gamma_w_path)
-  svntest.main.file_write(Acopy_gamma_path, contents)
-
-  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', 
+                                     A_url + '/D/gamma' + '@4',
                                      Acopy_gamma_path)
 
-  svntest.actions.run_and_verify_svn(None, [svntest.main.merge_notify_line(3,7),
+  svntest.actions.run_and_verify_svn(None, [svntest.main.merge_notify_line(3,5),
                                      'D    ' + Acopy_gamma_path + '\n'],
-                                     [], 'merge', '-r1:7', '--force',
+                                     [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
 
 ########################################################################
