@@ -497,7 +497,7 @@ Java_org_tigris_subversion_javahl_SVNClient_update
 JNIEXPORT jlong JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_commit
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
- jboolean jrecurse, jboolean jnoUnlock, jboolean jkeepChangelist,
+ jint jdepth, jboolean jnoUnlock, jboolean jkeepChangelist,
  jstring jchangelistName)
 {
   JNIEntry(SVNClient, commit);
@@ -516,7 +516,7 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  return cl->commit(targets, message, jrecurse ? true : false,
+  return cl->commit(targets, message, (svn_depth_t)jdepth,
                     jnoUnlock ? true : false, jkeepChangelist ? true : false,
                     changelistName);
 }
