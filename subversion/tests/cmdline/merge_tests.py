@@ -7531,9 +7531,9 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'resolved', 
                                      Acopy_gamma_path)
 
-  svntest.actions.run_and_verify_svn(None, [svntest.main.merge_notify_line(3,8),
+  svntest.actions.run_and_verify_svn(None, [svntest.main.merge_notify_line(3,7),
                                      'D    ' + Acopy_gamma_path + '\n'],
-                                     [], 'merge', '-r1:7',
+                                     [], 'merge', '-r1:7', '--force',
                                      A_url, Acopy_path)
 
 ########################################################################
@@ -7604,7 +7604,7 @@ test_list = [ None,
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
               XFail(merge_with_depth_files),
-              XFail(merge_fails_if_subtree_is_deleted_on_src),
+              merge_fails_if_subtree_is_deleted_on_src,
              ]
 
 if __name__ == '__main__':
