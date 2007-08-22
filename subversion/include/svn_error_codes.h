@@ -1074,9 +1074,9 @@ SVN_ERROR_START
              "Cease invocation of this API")
 
   /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_REVISION_NUMBER_PARSE_ERROR,
+  SVN_ERRDEF(SVN_ERR_REVNUM_PARSE_FAILURE,
              SVN_ERR_MISC_CATEGORY_START + 22,
-             "Revision number parse error")
+             "Error parsing revision number")
 
   /* command-line client errors */
 

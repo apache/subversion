@@ -156,19 +156,20 @@ typedef long int svn_revnum_t;
 #define SVN_STR_TO_REV(str) ((svn_revnum_t) atol(str))
 
 /**
- * Parse null-terminated C string @a str as a revision number and
- * store it in @a rev_p.  If @a endptr is non-NULL, then the address
- * of the first invalid character in @a str is stored in it.  If there
- * are no digits in @a str, then @a endptr is set if it is non-NULL,
- * and an error is returned.  Negative numbers are considered an
- * invalid revision number and an error is returned.
+ * Parse NULL-terminated C string @a str as a revision number and
+ * store its value in @a rev.  If @a endptr is non-NULL, then the
+ * address of the first non-numeric character in @a str is stored in
+ * it.  If there are no digits in @a str, then @a endptr is set (if
+ * non-NULL), and the error @c SVN_ERR_REVNUM_PARSE_FAILURE error is
+ * returned.  Negative numbers parsed from @a str are considered
+ * invalid, and result in the same error.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_parse_revision_number(svn_revnum_t *rev_p,
-                          const char *str,
-                          const char **endptr);
+svn_revnum_parse(svn_revnum_t *rev,
+                 const char *str,
+                 const char **endptr);
 
 /** Originally intended to be used in printf()-style functions to format
  * revision numbers.  Deprecated due to incompatibilities with language

@@ -136,7 +136,7 @@ parse_revlist(const char **input, const char *end,
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
       svn_revnum_t firstrev;
 
-      SVN_ERR(svn_parse_revision_number(&firstrev, curr, &curr));
+      SVN_ERR(svn_revnum_parse(&firstrev, curr, &curr));
       if (*curr != '-' && *curr != '\n' && *curr != ',' && *curr != '*'
           && curr != end)
         return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
@@ -151,7 +151,7 @@ parse_revlist(const char **input, const char *end,
           svn_revnum_t secondrev;
 
           curr++;
-          SVN_ERR(svn_parse_revision_number(&secondrev, curr, &curr));
+          SVN_ERR(svn_revnum_parse(&secondrev, curr, &curr));
           mrange->end = secondrev;
         }
 
