@@ -1444,6 +1444,10 @@ elide_children(apr_array_header_t *children_with_mergeinfo,
           merge_path_t *child = APR_ARRAY_IDX(children_with_mergeinfo, i,
                                               merge_path_t *);
           svn_pool_clear(iterpool);
+
+          if (!child)
+            continue;
+
           if (i == 0)
             {
               /* children_with_mergeinfo is sorted depth
@@ -2270,6 +2274,9 @@ do_merge(const char *initial_URL1,
               const char *child_repos_path;
               merge_path_t *child = 
                 APR_ARRAY_IDX(children_with_mergeinfo, j, merge_path_t *);
+
+              if (!child)
+                continue;
 
               /* svn_path_is_ancestor returns true if paths are same,
                  so make sure paths are not same. */
@@ -3267,6 +3274,37 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   return SVN_NO_ERROR;
 }
 
+
+/* A baton for get_diff_summary_func_cb. */
+struct get_diff_summary_baton
+{
+  /* Target path. */
+  const char* target_path;
+  /* Hash of Deleted paths. */
+  apr_hash_t* deleted_paths;
+  /* Pool to use for allocations. */
+  apr_pool_t *pool;
+};
+
+/* Records the path getting deleted in BATON->deleted_paths, implements
+ * svn_client_diff_summarize_func_t interface. */
+static svn_error_t *
+get_diff_summary_func_cb(const svn_client_diff_summarize_t *summary,
+                         void *baton,
+                         apr_pool_t *pool)
+{
+  struct get_diff_summary_baton *sb = baton;
+  const char* path;
+
+  path = svn_path_join(sb->target_path, summary->path, sb->pool);
+
+  if (summary->summarize_kind == svn_client_diff_summarize_kind_deleted)
+    apr_hash_set(sb->deleted_paths, path, APR_HASH_KEY_STRING, "");
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Fill *CHILDREN_WITH_MERGEINFO with child paths (const char *) which
    might have intersecting merges because they have explicit working
    svn:mergeinfo and/or are switched. Here the paths are arranged in a depth
@@ -3304,9 +3342,17 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
   const svn_wc_entry_t *child_entry;
   int merge_target_len = strlen(merge_cmd_baton->target);
   int i;
+  apr_hash_t *deleted_subtrees;
+  struct get_diff_summary_baton sb;
+  svn_opt_revision_t peg_revision;
   const char* merge_src_canon_path = apr_pstrdup(pool, 
                                                  parent_merge_source_url + 
                                                  strlen(wc_root_url));
+  deleted_subtrees = apr_hash_make(pool);
+  sb.target_path = merge_cmd_baton->target;
+  sb.deleted_paths = deleted_subtrees;
+  sb.pool = pool;
+  peg_revision.kind = svn_opt_revision_head;
 
   *children_with_mergeinfo = apr_array_make(pool, 0, sizeof(merge_path_t *));
   SVN_ERR(get_mergeinfo_paths(*children_with_mergeinfo,
@@ -3314,6 +3360,17 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
                               merge_src_canon_path,
                               parent_entry, adm_access, 
                               merge_cmd_baton->ctx, pool));
+
+  SVN_ERR(svn_client_diff_summarize_peg2(parent_merge_source_url,
+                                         &peg_revision,
+                                         revision1,
+                                         revision2,
+                                         depth,
+                                         ignore_ancestry,
+                                         get_diff_summary_func_cb,
+                                         &sb,
+                                         merge_cmd_baton->ctx,
+                                         pool));
 
   for (i = 0; i < (*children_with_mergeinfo)->nelts; i++)
     {
@@ -3328,6 +3385,17 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
           merge_cmd_baton->existing_mergeinfo = TRUE;
           continue;
         }
+
+      /* If the path is getting deleted don't bother doing subtree merge.
+       * Just remove it from children_sw_or_with_mergeinfo, so that merge
+       * on a parent can handle it in a usual way.
+       */
+      if (apr_hash_get(deleted_subtrees, child->path, APR_HASH_KEY_STRING))
+        {
+          APR_ARRAY_IDX(*children_with_mergeinfo, i, merge_path_t *) = NULL;
+          continue;
+        }
+
       SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path, adm_access,
                                       FALSE, pool));
       child_repos_path = child->path +
