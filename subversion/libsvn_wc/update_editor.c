@@ -2205,8 +2205,6 @@ merge_file(svn_wc_notify_state_t *content_state,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
 
-  const char *txtb, *tmp_txtb;
-
   /*
      When this function is called on file F, we assume the following
      things are true:
@@ -2236,16 +2234,6 @@ merge_file(svn_wc_notify_state_t *content_state,
         SVN_ERR_UNVERSIONED_RESOURCE, NULL,
         _("'%s' is not under version control"),
         svn_path_local_style(fb->path, pool));
-
-  /* Get versions of the text base paths that are relative to parent_dir. */
-  if (fb->text_base_path)
-    txtb = svn_path_is_child(parent_dir, fb->text_base_path, pool);
-  else
-    txtb = NULL;
-  if (fb->new_text_base_path)
-    tmp_txtb = svn_path_is_child(parent_dir, fb->new_text_base_path, pool);
-  else
-    tmp_txtb = FALSE;
 
   /* Determine if any of the propchanges are the "magic" ones that
      might require changing the working file. */
@@ -2307,7 +2295,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 
    So the first thing we do is figure out where we are in the
    matrix. */
-  if (tmp_txtb)
+  if (fb->new_text_base_path)
     {
       if (! is_locally_modified && ! is_replaced)
         {
@@ -2355,12 +2343,12 @@ merge_file(svn_wc_notify_state_t *content_state,
               if (eb->ext_patterns && eb->ext_patterns->nelts)
                 {
                   svn_path_splitext(NULL, &path_ext, fb->path, pool);
-                  if (! (*path_ext 
-                         && svn_cstring_match_glob_list(path_ext, 
+                  if (! (*path_ext
+                         && svn_cstring_match_glob_list(path_ext,
                                                         eb->ext_patterns)))
                     path_ext = "";
                 }
-                
+
               /* Create strings representing the revisions of the
                  old and new text-bases. */
               oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
@@ -2374,7 +2362,7 @@ merge_file(svn_wc_notify_state_t *content_state,
               mine_str = apr_psprintf(pool, ".mine%s%s",
                                       *path_ext ? "." : "",
                                       *path_ext ? path_ext : "");
-              
+
               if (fb->add_existed && ! is_replaced)
                 {
                   SVN_ERR(svn_wc_create_tmp_file2(NULL, &merge_left,
@@ -2450,7 +2438,7 @@ merge_file(svn_wc_notify_state_t *content_state,
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
-  if (tmp_txtb)
+  if (fb->new_text_base_path)
     {
       SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
                                  adm_access, fb->new_text_base_path,
@@ -2481,7 +2469,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                                             fb->path, fb->last_changed_date,
                                             pool));
 
-      if (tmp_txtb || magic_props_changed)
+      if (fb->new_text_base_path || magic_props_changed)
         {
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
