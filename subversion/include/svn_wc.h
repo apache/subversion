@@ -912,6 +912,25 @@ typedef void (*svn_wc_notify_func_t)(void *baton,
 
 
 /**
+ * A simple callback type to wrap svn_ra_get_file();  see that
+ * docstring for more information.
+ *
+ * This technique allows libsvn_client to 'wrap' svn_ra_get_file() and
+ * pass it down into libsvn_wc functions, thus allowing the WC layer
+ * to legally call the RA function via (blind) callback.
+ *
+ * @since New in 1.5
+ */
+typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
+                                          const char *path,
+                                          svn_revnum_t revision,
+                                          svn_stream_t *stream,
+                                          svn_revnum_t *fetched_rev,
+                                          apr_hash_t **props,
+                                          apr_pool_t *pool);
+
+
+/**
  * Conflict handling
  *
  * @defgroup clnt_diff Conflict callback functionality
@@ -3017,6 +3036,10 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * more drastic measures (such as marking a file conflicted, or
  * bailing out of the update).
  *
+ * If @a fetch_func is non-NULL, then use it (with @a fetch_baton) as
+ * a fallback for retrieving repository files whenever 'copyfrom' args
+ * are sent into editor->add_file().
+ *
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
@@ -3070,6 +3093,8 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                        svn_wc_conflict_resolver_func_t
                                                             conflict_func,
                                        void *conflict_baton,
+                                       svn_wc_get_file_t fetch_func,
+                                       void *fetch_baton,
                                        const char *diff3_cmd,
                                        apr_array_header_t *preserved_exts,
                                        const svn_delta_editor_t **editor,
@@ -3081,9 +3106,10 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
 /**
  * Similar to svn_wc_get_update_editor3() but with the @a
  * allow_unver_obstructions parameter always set to false, @a
- * conflict_func and baton set to NULL, @a preserved_exts set to NULL,
- * and @a depth set according to @a recurse: if @a recurse is true,
- * pass @c svn_depth_infinity, if false, pass @c svn_depth_files.
+ * conflict_func and baton set to NULL, @a fetch_func and baton set to
+ * NULL, @a preserved_exts set to NULL, and @a depth set according to
+ * @a recurse: if @a recurse is true, pass @c svn_depth_infinity, if
+ * false, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
