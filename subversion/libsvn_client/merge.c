@@ -1093,29 +1093,7 @@ get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
                              _("Entry '%s' has no URL"),
                              svn_path_local_style(target_wcpath, pool));
 
-  /* ### FIXME: dionisos sez: "We can have schedule 'normal' files
-     ### with a copied parameter of TRUE and a revision number of
-     ### INVALID_REVNUM.  Copied directories cause this behaviour on
-     ### their children.  It's an implementation shortcut to model
-     ### wc-side copies." */
-  switch (entry->schedule)
-    {
-    case svn_wc_schedule_add:
-    case svn_wc_schedule_replace:
-      /* If we have any history, consider its mergeinfo. */
-      if (entry->copyfrom_url)
-        {
-          url = entry->copyfrom_url;
-          target_rev = entry->copyfrom_rev;
-          break;
-        }
-
-    default:
-      /* Consider the mergeinfo for the WC target. */
-      url = entry->url;
-      target_rev = entry->revision;
-      break;
-    }
+  svn_client__derive_mergeinfo_location(&url, &target_rev, entry);
 
   repos_rel_path = url + strlen(entry->repos);
 
