@@ -3947,13 +3947,11 @@ svn_client_info(const char *path_or_url,
 
 /**
  * Apply a patch that's located at @a patch_path against a working copy
- * pointed by @a wc_path.
+ * pointed to by @a wc_path.
  *
  * The patch might carry Unified diffs, svnpatch diffs, or both.
- * Although we're pretty much able to handle the svnpatch block, we'll
- * be using external tools to process the Unidiff.  On Unix-like systems
- * we'll invoke the patch(1) binary while we'll leave the user with her
- * own tools on other platforms.
+ * Although we're pretty much able to handle the svnpatch block, we're
+ * not yet able to handle the Unidiff section internally.  See notes/svnpatch.
  * Note: hopefuly this is temporary and we'll have our own implementation
  * one day to cut off the dependency.
  *
