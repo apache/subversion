@@ -95,6 +95,9 @@ typedef struct {
 
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
+
+  svn_ra_progress_notify_func_t progress_func;
+  void *progress_baton;
 } svn_ra_neon__session_t;
 
 
