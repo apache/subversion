@@ -500,6 +500,38 @@ def blame_merge_out_of_range(sbox):
     ]
   parse_and_verify_blame(output, expected_blame)
 
+# test for issue #2888: 'svn blame' aborts over ra_serf
+def blame_peg_rev_file_not_in_head(sbox):
+  "blame target not in HEAD with peg-revisions"
+
+  sbox.build()
+
+  expected_output_r1 = [
+    "     1    jrandom This is the file 'iota'.\n" ]
+
+  os.chdir(sbox.wc_dir)
+
+  # Modify iota and commit it (r2).
+  svntest.main.file_write('iota', "This is no longer the file 'iota'.\n")
+  expected_output = svntest.wc.State('.', {
+    'iota' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit('.', expected_output, None)
+
+  # Delete iota so that it doesn't exist in HEAD
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/iota', 
+                       '-m', 'log message')
+
+  # Check that we get a blame of r1 when we specify a peg revision of r1
+  # and no explicit revision.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+                                     'blame', 'iota@1')
+
+  # Check that an explicit revision overrides the default provided by
+  # the peg revision.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+                                     'blame', 'iota@2', '-r1')
+
 
 ########################################################################
 # Run the tests
@@ -518,6 +550,7 @@ test_list = [ None,
               blame_ignore_eolstyle,
               blame_merge_info,
               blame_merge_out_of_range,
+              blame_peg_rev_file_not_in_head,
              ]
 
 if __name__ == '__main__':
