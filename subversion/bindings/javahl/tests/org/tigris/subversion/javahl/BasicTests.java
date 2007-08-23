@@ -2132,8 +2132,9 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
-        // test that getMergeInfo returns null
-        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A").toString(), Revision.HEAD));
+        // Test that getMergeInfo() returns null.
+        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
 
         // modify file A/mu
         File mu = new File(thisTest.getWorkingCopy(), "A/mu");
