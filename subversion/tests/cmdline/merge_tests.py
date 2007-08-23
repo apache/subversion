@@ -7581,7 +7581,8 @@ test_list = [ None,
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
               XFail(merge_with_depth_files),
-              merge_fails_if_subtree_is_deleted_on_src,
+              XFail(merge_fails_if_subtree_is_deleted_on_src, 
+                    svntest.main.is_ra_type_dav),
              ]
 
 if __name__ == '__main__':
