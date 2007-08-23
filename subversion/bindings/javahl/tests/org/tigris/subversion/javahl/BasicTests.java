@@ -2165,7 +2165,7 @@ public class BasicTests extends SVNTests
         assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
                                        .toString(), Revision.HEAD));
 
-        // Merge some and commit some changes (r4).
+        // Merge and commit some changes (r4).
         appendText(thisTest, "A/mu", "xxx", 4);
         appendText(thisTest, "A/D/G/rho", "yyy", 4);
         assertEquals("wrong revision number from commit",
