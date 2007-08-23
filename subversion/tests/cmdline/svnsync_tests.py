@@ -22,8 +22,7 @@ import sys, os
 # Our testing module
 import svntest
 
-from authz_tests import write_restrictive_svnserve_conf
-                        
+from svntest.main import write_restrictive_svnserve_conf
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
