@@ -1712,7 +1712,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           || notify->content_state == svn_wc_notify_state_changed
           || notify->prop_state == svn_wc_notify_state_conflicted
           || notify->prop_state == svn_wc_notify_state_merged
-          || notify->prop_state == svn_wc_notify_state_changed)
+          || notify->prop_state == svn_wc_notify_state_changed
+          || notify->action == svn_wc_notify_update_add)
         notify_b->nbr_operative_notifications++;
 
       if (notify->action == svn_wc_notify_skip)
