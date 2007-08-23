@@ -126,6 +126,15 @@ Candidate changes:
     Votes:
       +1: malcolm
 
+  * r26264
+    Make recursive 'svn info $REPO_ROOT' work against pre-1.2 svnserve, make
+    non-recursive version throw an error rather than do nothing.
+    Justification:
+      Bug fix for user report; and while conditions for reproduction are pretty
+      rare, patch is straightforward.
+    Votes:
+      +1: malcolm
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
