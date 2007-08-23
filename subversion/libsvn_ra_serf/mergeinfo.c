@@ -266,6 +266,15 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   svn_ra_serf__request_create(handler);
 
   err = svn_ra_serf__context_run_wait(&mergeinfo_ctx->done, session, pool);
+
+  if (status_code == 404)
+    {
+      svn_error_clear(err);
+      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+                               "'%s' path not found",
+                               handler->path);
+    }
+
   /* If the server responds with HTTP_NOT_IMPLEMENTED (which ra_serf
      translates into a Subversion error), assume its mod_dav_svn is
      too old to understand the mergeinfo-report REPORT.
