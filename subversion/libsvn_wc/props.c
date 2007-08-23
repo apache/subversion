@@ -2341,159 +2341,90 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
 
 /** Externals **/
 
-/* Parse external definitions of the forms:
- *   [-rN]   URL  TARGET_DIR
- *   [-r N]  URL  TARGET_DIR
+/*
+ * Look for either
  *
- * Return FALSE if there is an error, TRUE otherwise.
- * (We avoid actually creating an error in this function, so that a generic
- *  INVALID_EXTERNALS_DESCRIPTION can be created by the caller.)
+ *   -r N
+ *   -rN
+ * in the LINE_PARTS array and update the revision field in ITEM with
+ * the revision if the revision is found.  Set REV_IDX to the index in
+ * LINE_PARTS where the revision specification starts.  Remove from
+ * LINE_PARTS the element(s) that specify the revision.
+ * PARENT_DIRECTORY_DISPLAY and LINE are given to return a nice error
+ * string.
  */
-static svn_boolean_t
-parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
-                                  svn_wc_external_item2_t *item,
-                                  apr_pool_t *pool)
+static svn_error_t *
+find_and_remove_externals_revision(int *rev_idx,
+                                   apr_array_header_t *line_parts,
+                                   svn_wc_external_item2_t *item,
+                                   const char *parent_directory_display,
+                                   const char *line)
 {
-  svn_error_t *err;
-  const char *url;
+  int i;
 
-  if (line_parts->nelts == 2)
+  for (i = 0; i < 2; ++i)
     {
-      /* No "-r REV" given. */
-      url = APR_ARRAY_IDX(line_parts, 0, const char *);
-      item->target_dir = APR_ARRAY_IDX(line_parts, 1, const char *);
-      item->revision.kind = svn_opt_revision_unspecified;
-    }
-  else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
-    {
-      /* We're dealing with one of these two forms:
-       *
-       *    -rN   URL  TARGET_DIR
-       *    -r N  URL  TARGET_DIR
-       * 
-       * Handle either way.
-       */
-      const char *r_part_1 = NULL, *r_part_2 = NULL;
+      const char *token = APR_ARRAY_IDX(line_parts, i, const char *);
 
-      item->revision.kind = svn_opt_revision_number;
-
-      if (line_parts->nelts == 3)
+      if (token[0] == '-' && token[1] == 'r')
         {
-          r_part_1 = APR_ARRAY_IDX(line_parts, 0, const char *);
-          url = APR_ARRAY_IDX(line_parts, 1, const char *);
-          item->target_dir = APR_ARRAY_IDX(line_parts, 2, const char *);
-        }
-      else
-        {
-          r_part_1 = APR_ARRAY_IDX(line_parts, 0, const char *);
-          r_part_2 = APR_ARRAY_IDX(line_parts, 1, const char *);
-          url = APR_ARRAY_IDX(line_parts, 2, const char *);
-          item->target_dir = APR_ARRAY_IDX(line_parts, 3, const char *);
-        }
+          const char *digits_ptr;
+          const char *end_ptr;
+          int shift_count;
+          int j;
 
-      if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
-        return FALSE;
+          *rev_idx = i;
 
-      if (! r_part_2)  /* "rN" */
-        {
-          if (strlen(r_part_1) < 3)
-            return FALSE;
+          if (token[2] == '\0')
+            {
+              /* There must be a total of four elements in the line if
+                 -r N is used. */
+              if (line_parts->nelts != 4)
+                goto parse_error;
+
+              shift_count = 2;
+              digits_ptr = APR_ARRAY_IDX(line_parts, i+1, const char *);
+            }
           else
-            item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 2);
-        }
-      else             /* "r N" */
-        {
-          if (strlen(r_part_2) < 1)
-            return FALSE;
-          else
-            item->revision.value.number = SVN_STR_TO_REV(r_part_2);
-        }
-    }
-  else  /* too many items */
-    return FALSE;
+            {
+              /* There must be a total of three elements in the line
+                 if -rN is used. */
+              if (line_parts->nelts != 3)
+                goto parse_error;
 
-  err = svn_opt_parse_path(&item->peg_revision, &item->url, url, pool);
-  if (err)
-    {
-      svn_error_clear(err);
-      return FALSE;
-    }
+              shift_count = 1;
+              digits_ptr = token+2;
+            }
 
-  return TRUE;
-}
+          item->revision.kind = svn_opt_revision_number;
+          SVN_ERR(svn_revnum_parse(&item->revision.value.number,
+                                   digits_ptr,
+                                   &end_ptr));
 
-/* Parse one of these two forms:
- * 
- *    TARGET_DIR  [-rN]  URL
- *    TARGET_DIR  [-r N]  URL
- *
- * Return FALSE if there is an error, TRUE otherwise.
- * (We avoid actually creating an error in this function, so that a generic
- *  INVALID_EXTERNALS_DESCRIPTION can be created by the caller.)
- */
-static svn_boolean_t
-parse_external_parts(apr_array_header_t *line_parts,
-                     svn_wc_external_item2_t *item,
-                     apr_pool_t *pool)
-{
+          /* If there's trailing garbage after the digits, then treat
+             the revision as invalid. */
+          if (*end_ptr != '\0')
+            goto parse_error;
 
-  if (line_parts->nelts == 2)
-    {
-      /* No "-r REV" given. */
-      item->target_dir = APR_ARRAY_IDX(line_parts, 0, const char *);
-      item->url = APR_ARRAY_IDX(line_parts, 1, const char *);
-      item->revision.kind = svn_opt_revision_head;
-    }
-  else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
-    {
-      /* We're dealing with one of these two forms:
-       *
-       *    TARGET_DIR  -rN  URL
-       *    TARGET_DIR  -r N  URL
-       * 
-       * Handle either way.
-       */
-      const char *r_part_1 = NULL, *r_part_2 = NULL;
-
-      item->target_dir = APR_ARRAY_IDX(line_parts, 0, const char *);
-      item->revision.kind = svn_opt_revision_number;
-
-      if (line_parts->nelts == 3)
-        {
-          r_part_1 = APR_ARRAY_IDX(line_parts, 1, const char *);
-          item->url = APR_ARRAY_IDX(line_parts, 2, const char *);
-        }
-      else
-        {
-          r_part_1 = APR_ARRAY_IDX(line_parts, 1, const char *);
-          r_part_2 = APR_ARRAY_IDX(line_parts, 2, const char *);
-          item->url = APR_ARRAY_IDX(line_parts, 3, const char *);
-        }
-
-      if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
-        return FALSE;
-
-      if (! r_part_2)  /* "-rN" */
-        {
-          if (strlen(r_part_1) < 3)
-            return FALSE;
-          else
-            item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 2);
-        }
-      else             /* "-r N" */
-        {
-          if (strlen(r_part_2) < 1)
-            return FALSE;
-          else
-            item->revision.value.number = SVN_STR_TO_REV(r_part_2);
+          /* Shift any line elements past the revision specification
+             down over the revision specification. */
+          for (j = i; j < line_parts->nelts-shift_count; ++j)
+            APR_ARRAY_IDX(line_parts, j, const char *) =
+              APR_ARRAY_IDX(line_parts, j+shift_count, const char *);
+          for (j = 0; j < shift_count; ++j)
+            apr_array_pop(line_parts);
         }
     }
-  else  /* too many items */
-    return FALSE;
 
-  item->peg_revision = item->revision;
+  return SVN_NO_ERROR;
 
-  return TRUE;
+ parse_error:
+  return svn_error_createf
+    (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+     _("Error parsing %s property on '%s': '%s'"),
+     SVN_PROP_EXTERNALS,
+     parent_directory_display,
+     line);
 }
 
 svn_error_t *
@@ -2515,6 +2446,12 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       const char *line = APR_ARRAY_IDX(lines, i, const char *);
       apr_array_header_t *line_parts;
       svn_wc_external_item2_t *item;
+      const char *token0;
+      const char *token1;
+
+      /* Index into line_parts where the revision specification
+         started. */
+      int rev_idx = -1;
 
       if ((! line) || (line[0] == '#'))
         continue;
@@ -2526,40 +2463,57 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       SVN_ERR(svn_wc_external_item_create
               ((const svn_wc_external_item2_t **) &item, pool));
       item->revision.kind = svn_opt_revision_unspecified;
+      item->peg_revision.kind = svn_opt_revision_unspecified;
 
-      if (line_parts->nelts < 2)
-        goto parse_error;
+      /*
+       * There are six different formats of externals:
+       *
+       * 1) DIR URL
+       * 2) DIR -r N URL
+       * 3) DIR -rN  URL
+       * 4) URL DIR
+       * 5) -r N URL DIR
+       * 6) -rN URL DIR
+       *
+       * The last three allow peg revisions in the URL.
+       */
+      if (line_parts->nelts < 2 || line_parts->nelts > 4)
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           _("Error parsing %s property on '%s': '%s'"),
+               SVN_PROP_EXTERNALS,
+           parent_directory_display,
+           line);
 
-      else 
+      /* To make it easy to check for the forms, find and remove -r N
+         or -rN from the line item array.  If it is found, rev_idx
+         contains the index into line_parts where '-r' was found and
+         set item->revision to the parsed revision. */
+      SVN_ERR(find_and_remove_externals_revision(&rev_idx, line_parts, item,
+                                                 parent_directory_display,
+                                                 line));
+
+      token0 = APR_ARRAY_IDX(line_parts, 0, const char *);
+      token1 = APR_ARRAY_IDX(line_parts, 1, const char *);
+
+      /* If -r is at the beginning of the line or the first token is
+         an absolute URL, then the URL supports peg revisions. */
+      if (0 == rev_idx || svn_path_is_url(token0))
         {
-          const char *token = APR_ARRAY_IDX(line_parts, 0, const char *);
-
-          if ( (token[0] == '-' && token[1] == 'r') || svn_path_is_url(token) )
-            {
-              if (! parse_external_parts_with_peg_rev(line_parts, item, pool) )
-                goto parse_error;
-
-              SVN_ERR(svn_opt_resolve_revisions(&item->peg_revision,
-                                                &item->revision, TRUE, FALSE,
-                                                pool));
-            }
-          else
-            {
-              if (! parse_external_parts(line_parts, item, pool) )
-                goto parse_error;
-            }
+          SVN_ERR(svn_opt_parse_path(&item->peg_revision, &item->url,
+                                     token0, pool));
+          item->target_dir = token1;
+        }
+      else
+        {
+          item->target_dir = token0;
+          item->url = token1;
+          item->peg_revision = item->revision;
         }
 
-      if (0)
-        {
-        parse_error:
-          return svn_error_createf
-            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
-             _("Error parsing %s property on '%s': '%s'"),
-             SVN_PROP_EXTERNALS,
-             parent_directory_display,
-             line);
-        }
+      SVN_ERR(svn_opt_resolve_revisions(&item->peg_revision,
+                                        &item->revision, TRUE, FALSE,
+                                        pool));
 
       item->target_dir = svn_path_canonicalize
         (svn_path_internal_style(item->target_dir, pool), pool);
@@ -2574,9 +2528,6 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
              parent_directory_display);
       }
 
-      SVN_ERR(svn_opt_parse_path(&item->peg_revision, &item->url, item->url,
-                                 pool));
-    
       item->url = svn_path_canonicalize(item->url, pool);
 
       if (externals_p)
