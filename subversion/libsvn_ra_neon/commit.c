@@ -105,6 +105,9 @@ typedef struct
   apr_file_t *tmpfile;        /* may be NULL for content-less file */
   svn_stringbuf_t *fname;     /* may be NULL for content-less file */
   const char *base_checksum;  /* hex md5 of base text; may be null */
+  apr_off_t progress;
+  svn_ra_neon__session_t *ras;
+  apr_pool_t *pool;
 } put_baton_t;
 
 typedef struct
@@ -1123,6 +1126,13 @@ static svn_error_t * commit_stream_write(void *baton,
     return svn_error_wrap_apr(status, 
                               _("Could not write svndiff to temp file"));
 
+  if (pb->ras->progress_func)
+    {
+      pb->progress += *len;
+      pb->ras->progress_func(pb->progress, -1, pb->ras->progress_baton,
+                             pb->pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1138,6 +1148,8 @@ commit_apply_txdelta(void *file_baton,
   svn_stream_t *stream;
 
   baton = apr_pcalloc(file->pool, sizeof(*baton));
+  baton->ras = file->cc->ras;
+  baton->pool = file->pool;
   file->put_baton = baton;
 
   if (base_checksum)
