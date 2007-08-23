@@ -223,6 +223,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
+  int status_code;
 
   mergeinfo_context_t *mergeinfo_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
@@ -257,6 +258,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   parser_ctx->end = end_element;
   parser_ctx->cdata = cdata_handler;
   parser_ctx->done = &mergeinfo_ctx->done;
+  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
