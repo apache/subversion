@@ -392,6 +392,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
+  const char *lopped_path, *remaining_path;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
@@ -446,13 +447,13 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      session->repos_url.path,
-                                      SVN_INVALID_REVNUM, "0", base_props,
-                                      pool));
-
-  /* Send the request to the baseline URL */
-  vcc_url = svn_ra_serf__get_prop(props, session->repos_url.path,
+  /* Get the VCC from file url, or if the file doesn't exist in HEAD, from
+     its closest existing parent.  */
+  SVN_ERR(svn_ra_serf__search_for_base_props(props, &remaining_path, 
+                                             &lopped_path, 
+                                             session, session->conns[0],
+                                             session->repos_url.path, pool));
+  vcc_url = svn_ra_serf__get_prop(props, remaining_path,
                                   "DAV:", "version-controlled-configuration");
 
   if (!vcc_url)
@@ -461,33 +462,52 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
     }
 
   /* Send the request to the baseline URL */
-  relative_url = svn_ra_serf__get_prop(props, session->repos_url.path,
+  relative_url = svn_ra_serf__get_prop(props, remaining_path,
                                        SVN_DAV_PROP_NS_DAV,
                                        "baseline-relative-path");
-
   if (!relative_url)
     {
       abort();
     }
+  relative_url = svn_path_join(relative_url,
+                               svn_path_uri_decode(lopped_path, pool),
+                               pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      vcc_url, SVN_INVALID_REVNUM, "0",
-                                      checked_in_props, pool));
-
-  baseline_url = svn_ra_serf__get_prop(props, vcc_url, "DAV:", "checked-in");
-
-  if (!baseline_url)
+  if (end == SVN_INVALID_REVNUM)
     {
-      abort();
+     /* Use the "checked-in" property to determine the baseline url of the HEAD
+        revision. */
+     SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          vcc_url, SVN_INVALID_REVNUM, "0",
+                                          checked_in_props, pool));
+
+      baseline_url = svn_ra_serf__get_prop(props, vcc_url, "DAV:", "checked-in");
+
+      if (!baseline_url)
+        {
+          abort();
+        }
+
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          baseline_url, SVN_INVALID_REVNUM,
+                                          "0", baseline_props, pool));
+
+      basecoll_url = svn_ra_serf__get_prop(props, baseline_url,
+                                           "DAV:", "baseline-collection");
     }
+  else
+    {
+      /* We're asking for a specific revision. No need to use "checked-in" 
+         here, request the baseline-collection property with the specified
+         revision in the 'Label' header (added in svn_ra_serf__retrieve_props).
+      */
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          vcc_url, end,
+                                          "0", baseline_props, pool));
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      baseline_url, SVN_INVALID_REVNUM,
-                                      "0", baseline_props, pool));
-
-  basecoll_url = svn_ra_serf__get_prop(props, baseline_url,
-                                       "DAV:", "baseline-collection");
-
+      basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, end,
+                                               "DAV:", "baseline-collection");
+    }
   if (!basecoll_url)
     {
       abort();
