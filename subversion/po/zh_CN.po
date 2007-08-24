@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-08-24 10:46+0800\n"
-"PO-Revision-Date: 2007-08-24 10:50+0800\n"
+"PO-Revision-Date: 2007-08-24 10:57+0800\n"
 "Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -875,11 +875,11 @@ msgstr "进行递归增加“%s”时出错"
 #: libsvn_client/blame.c:436 libsvn_client/blame.c:1116
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
-msgstr "无法为二进制文件“%s”计算谴责信息"
+msgstr "无法为二进制文件“%s”计算追溯信息"
 
 #: libsvn_client/blame.c:672
 msgid "blame of the WORKING revision is not supported"
-msgstr "工作版本不支持谴责"
+msgstr "工作版本不支持追溯"
 
 #: libsvn_client/blame.c:685
 msgid "Start revision must precede end revision"
