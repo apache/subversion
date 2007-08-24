@@ -1118,7 +1118,11 @@ static svn_error_t * commit_stream_write(void *baton,
                                          apr_size_t *len)
 {
   put_baton_t *pb = baton;
+  svn_ra_neon__session_t *ras = pb->ras;
   apr_status_t status;
+
+  if (ras->callbacks && ras->callbacks->cancel_func)
+    SVN_ERR(ras->callbacks->cancel_func(ras->callback_baton));
 
   /* drop the data into our temp file */
   status = apr_file_write_full(pb->tmpfile, data, *len, NULL);
@@ -1126,11 +1130,10 @@ static svn_error_t * commit_stream_write(void *baton,
     return svn_error_wrap_apr(status, 
                               _("Could not write svndiff to temp file"));
 
-  if (pb->ras->progress_func)
+  if (ras->progress_func)
     {
       pb->progress += *len;
-      pb->ras->progress_func(pb->progress, -1, pb->ras->progress_baton,
-                             pb->pool);
+      ras->progress_func(pb->progress, -1, ras->progress_baton, pb->pool);
     }
 
   return SVN_NO_ERROR;
