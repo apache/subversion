@@ -3259,10 +3259,12 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 struct get_diff_summary_baton
 {
   /* Target path. */
-  const char* target_path;
+  const char *target_path;
+
   /* Hash of Deleted paths. */
-  apr_hash_t* deleted_paths;
-  /* Pool to use for allocations. */
+  apr_hash_t *deleted_paths;
+
+  /* Pool to use for all allocations. */
   apr_pool_t *pool;
 };
 
@@ -3277,7 +3279,7 @@ get_diff_summary_func_cb(const svn_client_diff_summarize_t *summary,
   const char *path = svn_path_join(sb->target_path, summary->path, sb->pool);
 
   if (summary->summarize_kind == svn_client_diff_summarize_kind_deleted)
-    apr_hash_set(sb->deleted_paths, path, APR_HASH_KEY_STRING, "");
+    apr_hash_set(sb->deleted_paths, path, APR_HASH_KEY_STRING, path);
 
   return SVN_NO_ERROR;
 }
