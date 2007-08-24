@@ -2311,7 +2311,8 @@ do_merge(const char *initial_URL1,
     }
 
   /* Check if we need to make non-inheritable ranges inheritable. */
-  if (notify_b.same_urls
+  if (target_mergeinfo
+      && notify_b.same_urls
       && !merge_b->dry_run
       && merge_b->same_repos
       && target_index >= 0)
