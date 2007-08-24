@@ -872,7 +872,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
         }
     }
 
-  /* Then, copy destinations, and posibly move sources. */
+  /* Then, copy destinations, and possibly move sources. */
   for (i = 0; i < path_infos->nelts; i++)
     {
       path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
