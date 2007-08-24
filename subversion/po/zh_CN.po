@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.4.4\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-08-05 18:03+0800\n"
-"PO-Revision-Date: 2007-08-06 23:11+0800\n"
+"PO-Revision-Date: 2007-08-24 10:56+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -819,11 +819,11 @@ msgstr "无法关闭目录“%s”"
 #: libsvn_client/blame.c:368 libsvn_client/blame.c:838
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
-msgstr "无法为二进制文件“%s”计算谴责信息"
+msgstr "无法为二进制文件“%s”计算追溯信息"
 
 #: libsvn_client/blame.c:522
 msgid "blame of the WORKING revision is not supported"
-msgstr "工作版本不支持谴责"
+msgstr "工作版本不支持追溯"
 
 #: libsvn_client/blame.c:535
 msgid "Start revision must precede end revision"
