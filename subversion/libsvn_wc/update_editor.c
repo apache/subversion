@@ -1032,11 +1032,8 @@ do_entry_deletion(struct edit_baton *eb,
                   int *log_number,
                   apr_pool_t *pool)
 {
-  apr_file_t *log_fp = NULL;
-  const char *base_name;
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t kind;
-  const char *logfile_path, *logfile_name;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
 
@@ -1045,24 +1042,12 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_path, pool));
 
-  logfile_name = svn_wc__logfile_path(*log_number, pool);
-
-  logfile_path = svn_wc__adm_path(parent_path, FALSE, pool,
-                                  logfile_name, NULL);
-
-  SVN_ERR(svn_wc__open_adm_file(&log_fp,
-                                parent_path,
-                                logfile_name,
-                                (APR_WRITE | APR_CREATE), /* not excl */
-                                pool));
-
   /* Here's the deal: in the new editor interface, PATH is a full path
      below the editor's anchor, and parent_path is the parent directory.
      That's all fine and well, but our log-system requires that all
      log commands talk *only* about paths relative (and below)
      parent_path, i.e. where the log is being executed.  */
 
-  base_name = svn_path_basename(path, pool);
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
 
   /* If the thing being deleted is the *target* of this update, then
@@ -1086,17 +1071,7 @@ do_entry_deletion(struct edit_baton *eb,
       eb->target_deleted = TRUE;
     }
 
-  SVN_ERR_W(svn_io_file_write_full(log_fp, log_item->data,
-                                   log_item->len, NULL, pool),
-            apr_psprintf(pool,
-                         _("Error writing log file for '%s'"),
-                         svn_path_local_style(parent_path, pool)));
-
-  SVN_ERR(svn_wc__close_adm_file(log_fp,
-                                 parent_path,
-                                 logfile_name,
-                                 TRUE, /* sync */
-                                 pool));
+  SVN_ERR(svn_wc__write_log(adm_access, *log_number, log_item, pool));
 
   if (eb->switch_url)
     {
@@ -1118,6 +1093,9 @@ do_entry_deletion(struct edit_baton *eb,
       if (kind == svn_node_dir)
         {
           svn_wc_adm_access_t *child_access;
+          const char *logfile_path
+            = svn_wc__adm_path(parent_path, FALSE, pool,
+                               svn_wc__logfile_path(*log_number, pool), NULL);
 
           SVN_ERR(svn_wc_adm_retrieve
                   (&child_access, eb->adm_access,
@@ -1136,8 +1114,7 @@ do_entry_deletion(struct edit_baton *eb,
         }
     }
 
-  SVN_ERR(leftmod_error_chain(svn_wc__run_log(adm_access, NULL, pool),
-                              logfile_path, parent_path, pool));
+  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
   *log_number = 0;
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
@@ -1149,7 +1126,7 @@ do_entry_deletion(struct edit_baton *eb,
   if (eb->notify_func)
     (*eb->notify_func)
       (eb->notify_baton,
-       svn_wc_create_notify(svn_path_join(parent_path, base_name, pool),
+       svn_wc_create_notify(full_path,
                             svn_wc_notify_update_delete, pool), pool);
 
   return SVN_NO_ERROR;
