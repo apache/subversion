@@ -119,7 +119,8 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-  
+  const char *adm_path = svn_wc_adm_access_path(adm_access);
+
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
 
   /* Reinstall the properties for each file and this dir; subdirs are handled
@@ -128,8 +129,7 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
     {
       void *val;
       const svn_wc_entry_t *entry;
-      const char *entrypath
-        = svn_path_join(svn_wc_adm_access_path(adm_access), entry->name, pool);
+      const char *entrypath;
       svn_wc_entry_t tmpentry;
       apr_hash_t *base_props, *props;
 
@@ -142,6 +142,7 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
 
       svn_pool_clear(subpool);
 
+      entrypath = svn_path_join(adm_path, entry->name, subpool);
       SVN_ERR(svn_wc__load_props(&base_props, &props, adm_access,
                                  entrypath, subpool));
       SVN_ERR(svn_wc__install_props(&log_accum, adm_access, entrypath,
