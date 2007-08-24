@@ -1619,7 +1619,7 @@ calculate_requested_ranges(apr_array_header_t **requested_rangelist,
    do_merge()'s application of the editor to the WC -- by subtracting
    revisions which have already been merged into the WC from the
    requested range(s) REQUESTED_MERGE, and storing what's left in
-   REMAINING_RANGES.  TARGET_MERGEINFO is expected to be non-NULL. */
+   REMAINING_RANGES.  TARGET_MERGEINFO may be NULL. */
 static svn_error_t *
 calculate_merge_ranges(apr_array_header_t **remaining_ranges,
                        const char *rel_path,
