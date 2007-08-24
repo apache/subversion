@@ -2247,26 +2247,9 @@ public class BasicTests extends SVNTests
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
         Revision unspec = new Revision(RevisionKind.unspecified);
-        boolean xpass = false;
-        try
-        {
-        client.merge(modUrl, unspec,
+        client.merge(modUrl, Revision.HEAD,
                      new RevisionRange[] { new RevisionRange(unspec, unspec) },
                      branchPath, true, Depth.infinity, false, false);
-        xpass = true;
-        }
-        catch (SubversionException xfail)
-        {
-            // ### FIXME: This is failing with the following error:
-            // org.tigris.subversion.javahl.ClientException: Bogus revision information given
-            // svn: subversion/libsvn_client/ra.c:710: (apr_err=195002)
-            //   at org.tigris.subversion.javahl.SVNClient.merge(Native Method)
-            //   at org.tigris.subversion.javahl.SVNClient.merge(SVNClient.java:1029)
-            return;
-        }
-
-        if (xpass)
-            throw new RuntimeException("XPASS: 'merge -g' working expected");
 
         // commit the changes so that we can verify merge
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
