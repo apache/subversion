@@ -107,30 +107,47 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                            apr_pool_t *pool)
 {
   const char *src_path;
-  apr_hash_t *src_mergeinfo;
+  apr_hash_t *src_mergeinfo = NULL;
+  svn_boolean_t locally_added = FALSE;
 
   /* Find src path relative to the repository root. */
   SVN_ERR(svn_client__path_relative_to_root(&src_path, src_path_or_url,
                                             NULL, ra_session, adm_access,
                                             pool));
 
-  /* Obtain any implied and/or existing (explicit) mergeinfo. */
-  SVN_ERR(get_implied_mergeinfo(ra_session, target_mergeinfo,
-                                src_rel_path, src_path, src_revnum, pool));
-  SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
-                                          src_path, src_revnum,
-                                          svn_mergeinfo_inherited, pool));
-
-  /* Combine and return all mergeinfo. */
-  if (src_mergeinfo)
+  /* If we have a schedule-add path, it doesn't have any repository mergeinfo,
+     so don't bother checking. */
+  if ( ! svn_path_is_url(src_path_or_url) )
     {
-      return svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo,
-                                 svn_rangelist_equal_inheritance, pool);
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR(svn_wc__entry_versioned(&entry, src_path_or_url, adm_access,
+                                      FALSE, pool));
+      if (entry->schedule == svn_wc_schedule_add)
+        locally_added = TRUE;
+    }
+
+  if (! locally_added)
+    {
+      /* Obtain any implied and/or existing (explicit) mergeinfo. */
+      SVN_ERR(get_implied_mergeinfo(ra_session, target_mergeinfo,
+                                    src_rel_path, src_path, src_revnum, pool));
+      SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
+                                              src_path, src_revnum,
+                                              svn_mergeinfo_inherited, pool));
+      /* Combine and return all mergeinfo. */
+      if (src_mergeinfo)
+        {
+          SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo,
+                                      svn_rangelist_equal_inheritance, pool));
+        }
     }
   else
     {
-      return SVN_NO_ERROR;
+      *target_mergeinfo = apr_hash_make(pool);
     }
+
+  return SVN_NO_ERROR;
 }
 
 /* Extend the mergeinfo for the single WC path TARGET_WCPATH, adding

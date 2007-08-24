@@ -61,26 +61,14 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
                                svn_revnum_t rev,
                                apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
   *oldest_rev = SVN_INVALID_REVNUM;
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
 
   /* Trace back in history to find the revision at which this node
      was created (copied or added). */
-  err = svn_ra_get_log2(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
-                        FALSE, TRUE, revnum_receiver, oldest_rev, pool);
-  /* ### This function really shouldn't even be called on schedule-add
-     ### WC paths.  FIXME: Adjust copy.c and merge.c accordingly... */
-  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
-              err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
-    {
-      /* A locally-added but uncommitted versioned resource won't
-         exist in the repository. */
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-  return err;
+  return svn_ra_get_log2(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
+                         FALSE, TRUE, revnum_receiver, oldest_rev, pool);
 }
 
 /* The baton for use with copyfrom_info_receiver(). */
