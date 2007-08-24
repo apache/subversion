@@ -155,7 +155,7 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
                entrypath,
                &tmpentry,
                SVN_WC__ENTRY_MODIFY_PROP_TIME,
-               pool));
+               subpool));
     }
 
   return SVN_NO_ERROR;
