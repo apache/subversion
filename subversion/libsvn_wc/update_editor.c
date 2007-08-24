@@ -783,7 +783,7 @@ prep_directory(struct dir_baton *db,
 }
 
 
-/* Accumulate tags in LOG_ACCUM to set ENTRY_PROPS for BASE_NAME.
+/* Accumulate tags in LOG_ACCUM to set ENTRY_PROPS for PATH.
    ENTRY_PROPS is an array of svn_prop_t* entry props.
    If ENTRY_PROPS contains the removal of a lock token, all entryprops
    related to a lock will be removed and LOCK_STATE, if non-NULL, will be
@@ -859,7 +859,7 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
 }
 
 
-/* Accumulate tags in LOG_ACCUM to set WCPROPS for BASE_NAME.  WCPROPS is
+/* Accumulate tags in LOG_ACCUM to set WCPROPS for PATH.  WCPROPS is
    an array of svn_prop_t* wc props. */
 static svn_error_t *
 accumulate_wcprops(svn_stringbuf_t *log_accum,
@@ -2191,7 +2191,7 @@ merge_file(svn_wc_notify_state_t *content_state,
            struct file_baton *fb,
            apr_pool_t *pool)
 {
-  const char *parent_dir, *base_name;
+  const char *parent_dir;
   struct edit_baton *eb = fb->edit_baton;
   svn_stringbuf_t *log_accum = fb->dir_baton->log_accum;
   svn_wc_adm_access_t *adm_access;
@@ -2224,7 +2224,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
-  svn_path_split(fb->path, &parent_dir, &base_name, pool);
+  svn_path_split(fb->path, &parent_dir, NULL, pool);
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_dir, pool));
 
