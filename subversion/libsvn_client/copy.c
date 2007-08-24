@@ -95,8 +95,8 @@ get_implied_mergeinfo(svn_ra_session_t *ra_session,
 
 /* Obtain the implied mergeinfo and the existing mergeinfo of the
    source path, combine them and return the result in
-   *TARGET_MERGEINFO.  SRC_REL_PATH corresponds to SRC_PATH_OR_URL,
-   but is relative to RA_SESSION. */
+   *TARGET_MERGEINFO.  ADM_ACCESS may be NULL, if SRC_PATH_OR_URL is an
+   URL. */
 static svn_error_t *
 calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                            apr_hash_t **target_mergeinfo,
@@ -117,7 +117,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
   /* If we have a schedule-add path, it doesn't have any repository mergeinfo,
      so don't bother checking. */
-  if ( ! svn_path_is_url(src_path_or_url) )
+  if (adm_access)
     {
       const svn_wc_entry_t *entry;
 
