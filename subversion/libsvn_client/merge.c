@@ -3274,9 +3274,7 @@ get_diff_summary_func_cb(const svn_client_diff_summarize_t *summary,
                          apr_pool_t *pool)
 {
   struct get_diff_summary_baton *sb = baton;
-  const char* path;
-
-  path = svn_path_join(sb->target_path, summary->path, sb->pool);
+  const char *path = svn_path_join(sb->target_path, summary->path, sb->pool);
 
   if (summary->summarize_kind == svn_client_diff_summarize_kind_deleted)
     apr_hash_set(sb->deleted_paths, path, APR_HASH_KEY_STRING, "");
@@ -3322,15 +3320,13 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
   const svn_wc_entry_t *child_entry;
   int merge_target_len = strlen(merge_cmd_baton->target);
   int i;
-  apr_hash_t *deleted_subtrees;
   struct get_diff_summary_baton sb;
   svn_opt_revision_t peg_revision;
   const char* merge_src_canon_path = apr_pstrdup(pool, 
                                                  parent_merge_source_url + 
                                                  strlen(wc_root_url));
-  deleted_subtrees = apr_hash_make(pool);
   sb.target_path = merge_cmd_baton->target;
-  sb.deleted_paths = deleted_subtrees;
+  sb.deleted_paths = apr_hash_make(pool);
   sb.pool = pool;
   peg_revision.kind = svn_opt_revision_head;
 
@@ -3370,7 +3366,7 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
        * Just remove it from children_sw_or_with_mergeinfo, so that merge
        * on a parent can handle it in a usual way.
        */
-      if (apr_hash_get(deleted_subtrees, child->path, APR_HASH_KEY_STRING))
+      if (apr_hash_get(sb.deleted_paths, child->path, APR_HASH_KEY_STRING))
         {
           APR_ARRAY_IDX(*children_with_mergeinfo, i, merge_path_t *) = NULL;
           continue;
