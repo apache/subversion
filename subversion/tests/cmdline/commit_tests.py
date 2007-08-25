@@ -2391,6 +2391,41 @@ sys.exit(1)"""
                                             'STDERR', 
                                             expected_stderr, actual_stderr)
 
+#----------------------------------------------------------------------
+
+def versioned_log_message(sbox):
+  "'svn commit -F foo' when foo is a versioned file"
+
+  sbox.build()
+
+  os.chdir(sbox.wc_dir)
+
+  iota_path = os.path.join('iota')
+  mu_path = os.path.join('A', 'mu')
+  log_path = os.path.join('A', 'D', 'H', 'omega')
+
+  svntest.main.file_append(iota_path, "2")
+
+  # try to check in a change using a versioned file as your log entry.
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                     'ci', '-F', log_path)
+
+  # force it.  should not produce any errors.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-F', log_path, '--force-log')
+
+  svntest.main.file_append(mu_path, "2")
+
+  # try the same thing, but specifying the file to commit explicitly.
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                     'ci', '-F', log_path, mu_path)
+
+  # force it...  should succeed.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci',
+                                     '-F', log_path,
+                                     '--force-log', mu_path)
+
 ########################################################################
 # Run the tests
 
@@ -2448,6 +2483,7 @@ test_list = [ None,
               SkipUnless(set_invalid_revprops, server_has_revprop_commit),
               start_commit_hook_test,
               pre_commit_hook_test,
+              versioned_log_message,
              ]
 
 if __name__ == '__main__':
