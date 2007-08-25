@@ -762,14 +762,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean, boolean, String)
      * @since 1.5
      */
-    public long commit(String[] path, String message, boolean recurse,
+    public long commit(String[] path, String message, int depth,
                        boolean noUnlock, boolean keepChangelist,
                        String changelistName)
             throws ClientException
     {
         synchronized (clazz)
         {
-            return worker.commit(path, message, recurse, noUnlock,
+            return worker.commit(path, message, depth, noUnlock,
                                  keepChangelist, changelistName);
         }
     }
@@ -1956,6 +1956,8 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param revisionStart the first revision to show
      * @param revisionEnd   the last revision to show
      * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param includeMergedRevisions whether or not to include extra merge
+     *                      information
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
@@ -1967,13 +1969,14 @@ public class SVNClientSynchronized implements SVNClientInterface
                       Revision revisionStart,
                       Revision revisionEnd,
                       boolean ignoreMimeType,
-                      BlameCallback callback)
+                      boolean includeMergedRevisions,
+                      BlameCallback2 callback)
             throws ClientException
     {
         synchronized(clazz)
         {
             worker.blame(path, pegRevision, revisionStart, revisionEnd,
-                         ignoreMimeType, callback);
+                         ignoreMimeType, includeMergedRevisions, callback);
         }
     }
 

@@ -633,7 +633,8 @@ svn_path_is_child(const char *path1,
           || path2[0] == '/')                  /* "/foo" not a child */
         return NULL;
       else
-        return apr_pstrdup(pool, path2);      /* everything else is child */
+        /* everything else is child */
+        return pool ? apr_pstrdup(pool, path2) : path2;
     }
 
   /* Reach the end of at least one of the paths.  How should we handle
@@ -654,9 +655,9 @@ svn_path_is_child(const char *path1,
   if (path1[i] == '\0' && path2[i])
     {
       if (path2[i] == '/')
-        return apr_pstrdup(pool, path2 + i + 1);
+        return pool ? apr_pstrdup(pool, path2 + i + 1) : path2 + i + 1;
       else if (i == 1 && path1[0] == '/')
-        return apr_pstrdup(pool, path2 + 1);
+        return pool ? apr_pstrdup(pool, path2 + 1) : path2 + 1;
     }
 
   /* Otherwise, path2 isn't a child. */

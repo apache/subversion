@@ -364,7 +364,8 @@ test_diff_mergeinfo(const char **msg,
   SVN_ERR(svn_mergeinfo_parse(&from, "/trunk: 1,3-4,7,9,11-12,31-34", pool));
   SVN_ERR(svn_mergeinfo_parse(&to, "/trunk: 1-6,12-16,30-32", pool));
   /* On /trunk: deleted (7, 9, 11, 33-34) and added (2, 5-6, 13-16, 30) */
-  SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to, pool));
+  SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to,
+                             svn_rangelist_ignore_inheritance, pool));
 
   /* Verify calculation of range list deltas. */
   SVN_ERR(verify_mergeinfo_deltas(deleted, expected_rangelist_deletions,
@@ -460,7 +461,7 @@ test_rangelist_intersect(const char **msg,
 {
   apr_array_header_t *rangelist1, *rangelist2, *intersection;
   svn_merge_range_t expected_intersection[4] =
-    { {0, 1}, {2, 4}, {11, 12}, {30, 32} };
+    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, TRUE} };
 
   *msg = "intersection of rangelists";
   if (msg_only)
@@ -494,7 +495,8 @@ test_merge_mergeinfo(const char **msg,
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
   SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo2, pool));
 
-  SVN_ERR(svn_mergeinfo_merge(&info1, info2, pool));
+  SVN_ERR(svn_mergeinfo_merge(&info1, info2, svn_rangelist_ignore_inheritance,
+                              pool));
 
   if (apr_hash_count(info1) != 2)
     return fail(pool, "Wrong number of paths in merged mergeinfo");
@@ -566,7 +568,7 @@ test_remove_rangelist(const char **msg,
   if (!eraser)
     return fail(pool, "Missing path in parsed mergeinfo");
 
-  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
+  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, TRUE, pool));
   
   SVN_ERR(svn_rangelist_to_stringbuf(&outputstring, result, pool));
 
@@ -579,7 +581,7 @@ test_remove_rangelist(const char **msg,
   if (!whiteboard)
     return fail(pool, "Missing path in parsed mergeinfo");
 
-  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
+  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, TRUE, pool));
   
   SVN_ERR(svn_rangelist_to_stringbuf(&outputstring, result, pool));
 
@@ -592,7 +594,7 @@ test_remove_rangelist(const char **msg,
   if (!eraser)
     return fail(pool, "Missing path in parsed mergeinfo");
 
-  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
+  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, TRUE, pool));
   
   SVN_ERR(svn_rangelist_to_stringbuf(&outputstring, result, pool));
 

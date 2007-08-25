@@ -431,7 +431,7 @@ static svn_error_t *
 output_unified_flush_hunk(output_baton_t *baton)
 {
   apr_off_t target_token;
-  apr_uint32_t hunk_len;
+  apr_size_t hunk_len;
 
   if (svn_stringbuf_isempty(baton->hunk))
     return SVN_NO_ERROR;

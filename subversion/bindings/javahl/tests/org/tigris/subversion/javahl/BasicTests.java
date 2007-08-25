@@ -21,6 +21,7 @@ import org.tigris.subversion.javahl.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -2124,6 +2125,34 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Append the text <code>toAppend</code> to the WC file at
+     * <code>path</code>, and update the expected WC state
+     * accordingly.
+     *
+     * @param thisTest The test whose expected WC to tweak.
+     * @param path The working copy-relative path to change.
+     * @param toAppend The text to append to <code>path</code>.
+     * @param rev The expected revision number for thisTest's WC.
+     * @return The file created during the setup.
+     * @since 1.5
+     */
+    private File appendText(OneTest thisTest, String path, String toAppend,
+                            int rev)
+        throws FileNotFoundException
+    {
+        File f = new File(thisTest.getWorkingCopy(), path);
+        PrintWriter writer = new PrintWriter(new FileOutputStream(f, true));
+        writer.print(toAppend);
+        writer.close();
+        WC wc = thisTest.getWc();
+        wc.setItemWorkingCopyRevision(path, rev);
+        wc.setItemContent(path, wc.getItemContent(path) + toAppend);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(), path,
+                              NodeKind.file, CommitItemStateFlags.TextMods);
+        return f;
+    }
+
+    /**
      * Test the basic functionality of SVNClient.merge().
      * @throws Throwable
      * @since 1.2
@@ -2132,35 +2161,13 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
-        // test that getMergeInfo returns null
-        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A").toString(), Revision.HEAD));
+        // Test that getMergeInfo() returns null.
+        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
 
-        // modify file A/mu
-        File mu = new File(thisTest.getWorkingCopy(), "A/mu");
-        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
-        muWriter.print("appended mu text");
-        muWriter.close();
-        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 4);
-        thisTest.getWc().setItemContent("A/mu",
-                thisTest.getWc().getItemContent("A/mu") + "appended mu text");
-        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
-                              "A/mu", NodeKind.file,
-                              CommitItemStateFlags.TextMods);
-
-        // modify file A/D/G/rho
-        File rho = new File(thisTest.getWorkingCopy(), "A/D/G/rho");
-        PrintWriter rhoWriter =
-            new PrintWriter(new FileOutputStream(rho, true));
-        rhoWriter.print("new appended text for rho");
-        rhoWriter.close();
-        thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 4);
-        thisTest.getWc().setItemContent("A/D/G/rho",
-                thisTest.getWc().getItemContent("A/D/G/rho")
-                + "new appended text for rho");
-        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
-                              "A/D/G/rho", NodeKind.file,
-                              CommitItemStateFlags.TextMods);
-        // commit the changes (r4)
+        // Merge and commit some changes (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        appendText(thisTest, "A/D/G/rho", "yyy", 4);
         assertEquals("wrong revision number from commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true),
@@ -2217,6 +2224,46 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test merge with automatic source and revision determination
+     * (e.g. 'svn merge -g').
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testMergeUsingHistory() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Test that getMergeInfo() returns null.
+        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true),
+                     4);
+
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        Revision unspec = new Revision(RevisionKind.unspecified);
+        client.merge(modUrl, Revision.HEAD,
+                     new RevisionRange[] { new RevisionRange(unspec, unspec) },
+                     branchPath, true, Depth.infinity, false, false);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true), 5);
+    }
+
+    /**
      * Test automatic merge conflict resolution.
      * @throws Throwable
      * @since 1.5
@@ -2234,21 +2281,11 @@ public class BasicTests extends SVNTests
             });
 
         OneTest thisTest = new OneTest();
-
-        // modify file A/mu
-        File mu = new File(thisTest.getWorkingCopy(), "A/mu");
-        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
-        muWriter.print("appended mu text");
-        muWriter.close();
-        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
         String originalContents = thisTest.getWc().getItemContent("A/mu");
-        String expectedContents = originalContents + "appended mu text";
-        thisTest.getWc().setItemContent("A/mu", expectedContents);
-        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
-                              "A/mu", NodeKind.file,
-                              CommitItemStateFlags.TextMods);
+        String expectedContents = originalContents + "xxx";
 
-        // Commit the changes (r2).
+        // Merge and commit a change (r2).
+        File mu = appendText(thisTest, "A/mu", "xxx", 2);
         assertEquals("wrong revision number from commit", 2,
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true));
@@ -2256,16 +2293,9 @@ public class BasicTests extends SVNTests
         // Backdate the WC to the previous revision (r1).
         client.update(thisTest.getWCPath(), Revision.getInstance(1), true);
 
-        // Prep for a merge conflict by changing A/mu in a different way.
-        muWriter = new PrintWriter(new FileOutputStream(mu, true));
-        muWriter.print(" other stuff");
-        muWriter.close();
-        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 1);
-        thisTest.getWc().setItemContent("A/mu",
-                                        originalContents + " other stuff");
-        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
-                              "A/mu", NodeKind.file,
-                              CommitItemStateFlags.TextMods);
+        // Prep for a merge conflict by changing A/mu in a different
+        // way.
+        mu = appendText(thisTest, "A/mu", "yyy", 1);
 
         // Merge in the previous changes to A/mu (from r2).
         client.merge(thisTest.getUrl(), Revision.HEAD, new Revision.Number(1),

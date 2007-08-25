@@ -72,7 +72,8 @@ class SVNClient :public SVNBase
 
   void blame(const char *path, Revision &pegRevision,
              Revision &revisionStart, Revision &revisionEnd,
-             bool ignoreMimeType, BlameCallback *callback);
+             bool ignoreMimeType, bool includeMergedRevisions,
+             BlameCallback *callback);
   void relocate(const char *from, const char *to, const char *path,
                 bool recurse);
   jbyteArray fileContent(const char *path, Revision &revision,
@@ -110,7 +111,7 @@ class SVNClient :public SVNBase
             bool makeParents);
   void copy(CopySources &copySources, const char *destPath,
             const char *message, bool copyAsChild, bool makeParents);
-  jlong commit(Targets &targets, const char *message, bool recurse,
+  jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
                const char *changelistName);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,

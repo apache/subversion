@@ -132,6 +132,11 @@ typedef struct
   svn_stringbuf_t *want_cdata;
   svn_stringbuf_t *cdata;
 
+  svn_boolean_t in_propstat;
+  svn_boolean_t propstat_has_error;
+  svn_stringbuf_t *propname;
+  svn_stringbuf_t *propstat_description;
+
   svn_ra_neon__request_t *req;
   svn_stringbuf_t *description;
   svn_boolean_t contains_error;
@@ -147,8 +152,30 @@ start_207_element(int *elem, void *baton, int parent,
   *elem = elm ? validate_element(parent, elm->id) : SVN_RA_NEON__XML_DECLINE;
 
 
+  if (parent == ELEM_prop)
+    {
+      svn_stringbuf_setempty(b->propname);
+      if (strcmp(nspace, SVN_DAV_PROP_NS_DAV) == 0)
+        svn_stringbuf_set(b->propname, SVN_PROP_PREFIX);
+      else if (strcmp(nspace, "DAV:") == 0)
+        svn_stringbuf_set(b->propname, "DAV:");
+
+      svn_stringbuf_appendcstr(b->propname, name);
+    }
+
   if (*elem < 1) /* ! > 0 */
     return SVN_NO_ERROR;
+
+  switch (*elem)
+    {
+    case ELEM_propstat:
+      b->in_propstat = TRUE;
+      b->propstat_has_error = FALSE;
+      break;
+
+    default:
+      break;
+    }
 
   /* We're guaranteed to have ELM now: SVN_RA_NEON__XML_DECLINE < 1 */
   if (elm->flags & SVN_RA_NEON__XML_CDATA)
@@ -170,13 +197,26 @@ end_207_element(void *baton, int state,
     {
     case ELEM_multistatus:
       if (b->contains_error)
-        return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                _("The request response contained at least "
-                                  "one error"));
+                {
+          if (svn_stringbuf_isempty(b->description))
+            return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                    _("The request response contained at least "
+                                      "one error"));
+          else
+            return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                    b->description->data);
+        }
       break;
 
     case ELEM_responsedescription:
-      b->description = svn_stringbuf_dup(b->cdata, b->req->pool);
+      if (b->in_propstat)
+        svn_stringbuf_set(b->propstat_description, b->cdata->data);
+      else
+        {
+          if (! svn_stringbuf_isempty(b->description))
+            svn_stringbuf_appendcstr(b->description, "\n");
+          svn_stringbuf_appendstr(b->description, b->cdata);
+        }
       break;
 
     case ELEM_status:
@@ -186,7 +226,11 @@ end_207_element(void *baton, int state,
         if (ne_parse_statusline(b->cdata->data, &status) == 0)
           {
             /*### I wanted ||=, but I guess the end result is the same */
-            b->contains_error |= (status.klass != 2);
+            if (! b->in_propstat)
+              b->contains_error |= (status.klass != 2);
+            else
+              b->propstat_has_error = (status.klass != 2);
+
             free(status.reason_phrase);
           }
         else
@@ -194,6 +238,17 @@ end_207_element(void *baton, int state,
                                   _("The response contains a non-conforming "
                                     "HTTP status line"));
       }
+      break;
+
+    case ELEM_propstat:
+      b->in_propstat = FALSE;
+      b->contains_error |= b->propstat_has_error;
+      svn_stringbuf_appendcstr(b->description,
+                               apr_psprintf(b->req->pool,
+                                            _("Error setting property '%s': "),
+                                            b->propname->data));
+      svn_stringbuf_appendstr(b->description,
+                              b->propstat_description);
 
     default:
       /* do nothing */
@@ -218,7 +273,11 @@ multistatus_parser_create(svn_ra_neon__request_t *req)
                                    svn_ra_neon__xml_collect_cdata,
                                    end_207_element, b);
   b->cdata = svn_stringbuf_create("", req->pool);
+  b->description = svn_stringbuf_create("", req->pool);
   b->req = req;
+
+  b->propname = svn_stringbuf_create("", req->pool);
+  b->propstat_description = svn_stringbuf_create("", req->pool);
 
   return multistatus_parser;
 }

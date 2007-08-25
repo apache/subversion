@@ -186,9 +186,13 @@ static svn_wc_entry_callbacks_t add_tokens_callbacks = {
    entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
    recognized.  COPYFROM_URL is the default copyfrom-url for children
-   of copied directories.  NONRECURSIVE indicates that this function
-   will not recurse into subdirectories of PATH when PATH is itself a
-   directory.  Lock tokens of candidates will be added to LOCK_TOKENS, if
+   of copied directories.  
+
+   DEPTH indicates how to treat files and subdirectories of PATH when
+   PATH is itself a directory; see svn_client__harvest_committables()
+   for its behavior.
+
+   Lock tokens of candidates will be added to LOCK_TOKENS, if
    non-NULL.  JUST_LOCKED indicates whether to treat non-modified items with
    lock tokens as commit candidates.
 
@@ -216,7 +220,7 @@ harvest_committables(apr_hash_t *committables,
                      const svn_wc_entry_t *parent_entry,
                      svn_boolean_t adds_only,
                      svn_boolean_t copy_mode,
-                     svn_boolean_t nonrecursive,
+                     svn_depth_t depth,
                      svn_boolean_t just_locked,
                      const char *changelist_name,
                      svn_client_ctx_t *ctx,
@@ -505,13 +509,10 @@ harvest_committables(apr_hash_t *committables,
         }
     }
 
-  /* For directories, recursively handle each of their entries (except
-     when the directory is being deleted, unless the deletion is part
-     of a replacement ... how confusing).  Oh, and don't recurse at
-     all if this is a nonrecursive commit.  ### We'll probably make
-     the whole 'nonrecursive' concept go away soon and be replaced
-     with the more sophisticated Depth0|Depth1|DepthInfinity. */
-  if (entries && (! nonrecursive)
+  /* For directories, recursively handle each entry according to depth
+     (except when the directory is being deleted, unless the deletion
+     is part of a replacement ... how confusing).  */
+  if (entries && (depth > svn_depth_empty)
       && ((! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
           || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
     {
@@ -561,64 +562,94 @@ harvest_committables(apr_hash_t *committables,
           /* Recurse. */
           if (this_entry->kind == svn_node_dir)
             {
-              svn_error_t *lockerr;
-              lockerr = svn_wc_adm_retrieve(&dir_access, adm_access,
-                                            full_path, loop_pool);
-
-              if (lockerr)
+              if (depth <= svn_depth_files)
                 {
-                  if (lockerr->apr_err == SVN_ERR_WC_NOT_LOCKED)
+                  /* Don't bother with any of this if it's a directory
+                     and depth says not to go there. */
+                  continue;
+                }
+              else
+                {
+                  svn_error_t *lockerr;
+                  lockerr = svn_wc_adm_retrieve(&dir_access, adm_access,
+                                                full_path, loop_pool);
+                  
+                  if (lockerr)
                     {
-                      /* A missing, schedule-delete child dir is
-                         allowable.  Just don't try to recurse. */
-                      svn_node_kind_t childkind;
-                      svn_error_t *err = svn_io_check_path(full_path,
-                                                           &childkind,
-                                                           loop_pool);
-                      if (! err
-                          && childkind == svn_node_none
-                          && this_entry->schedule == svn_wc_schedule_delete)
+                      if (lockerr->apr_err == SVN_ERR_WC_NOT_LOCKED)
                         {
-                          if ((changelist_name == NULL)
-                              || (entry->changelist
-                                  && (strcmp(changelist_name,
-                                             entry->changelist) == 0)))
+                          /* A missing, schedule-delete child dir is
+                             allowable.  Just don't try to recurse. */
+                          svn_node_kind_t childkind;
+                          svn_error_t *err = svn_io_check_path(full_path,
+                                                               &childkind,
+                                                               loop_pool);
+                          if (! err
+                              && (childkind == svn_node_none)
+                              && (this_entry->schedule
+                                  == svn_wc_schedule_delete))
                             {
-                              add_committable(committables, full_path,
-                                              this_entry->kind, used_url,
-                                              SVN_INVALID_REVNUM,
-                                              NULL,
-                                              SVN_INVALID_REVNUM,
-                                              SVN_CLIENT_COMMIT_ITEM_DELETE);
-                              svn_error_clear(lockerr);
-                              continue; /* don't recurse! */
+                              if ((changelist_name == NULL)
+                                  || (entry->changelist
+                                      && (strcmp(changelist_name,
+                                                 entry->changelist) == 0)))
+                                {
+                                  add_committable(
+                                    committables, full_path,
+                                    this_entry->kind, used_url,
+                                    SVN_INVALID_REVNUM,
+                                    NULL,
+                                    SVN_INVALID_REVNUM,
+                                    SVN_CLIENT_COMMIT_ITEM_DELETE);
+                                  svn_error_clear(lockerr);
+                                  continue; /* don't recurse! */
+                                }
+                            }
+                          else
+                            {
+                              svn_error_clear(err);
+                              return lockerr;
                             }
                         }
                       else
-                        {
-                          svn_error_clear(err);
-                          return lockerr;
-                        }
+                        return lockerr;
                     }
-                  else
-                    return lockerr;
                 }
             }
           else
-            dir_access = adm_access;
+            {
+              dir_access = adm_access;
+            }
 
-          SVN_ERR(harvest_committables 
-                  (committables, lock_tokens, full_path, dir_access,
-                   used_url ? used_url : this_entry->url,
-                   this_cf_url,
-                   this_entry,
-                   entry,
-                   adds_only,
-                   copy_mode,
-                   FALSE, just_locked,
-                   changelist_name,
-                   ctx,
-                   loop_pool));
+          {
+            svn_depth_t depth_below_here = depth;
+
+            /* If depth is svn_depth_files, then we must be recursing
+               into a file, or else we wouldn't be here -- either way,
+               svn_depth_empty is the right depth to use.  On the
+               other hand, if depth is svn_depth_immediates, then we
+               could be recursing into a directory or a file -- in
+               which case svn_depth_empty is *still* the right depth
+               to use.  I know that sounds bizarre (one normally
+               expects to just do depth - 1) but it's correct. */
+            if (depth == svn_depth_immediates
+                || depth == svn_depth_files)
+              depth_below_here = svn_depth_empty;
+
+            SVN_ERR(harvest_committables
+                    (committables, lock_tokens, full_path, dir_access,
+                     used_url ? used_url : this_entry->url,
+                     this_cf_url,
+                     this_entry,
+                     entry,
+                     adds_only,
+                     copy_mode,
+                     depth_below_here,
+                     just_locked,
+                     changelist_name,
+                     ctx,
+                     loop_pool));
+          }
         }
 
       svn_pool_destroy(loop_pool);
@@ -642,7 +673,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
                                  svn_wc_adm_access_t *parent_dir,
                                  apr_array_header_t *targets,
-                                 svn_boolean_t nonrecursive,
+                                 svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const char *changelist_name,
                                  svn_client_ctx_t *ctx,
@@ -772,7 +803,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                   subpool));
       SVN_ERR(harvest_committables(*committables, *lock_tokens, target,
                                    dir_access, entry->url, NULL,
-                                   entry, NULL, FALSE, FALSE, nonrecursive,
+                                   entry, NULL, FALSE, FALSE, depth,
                                    just_locked, changelist_name,
                                    ctx, subpool));
 
@@ -857,8 +888,8 @@ svn_client__get_copy_committables(apr_hash_t **committables,
          allocate the new commit_item, we can safely use the iterpool here. */
       SVN_ERR(harvest_committables(*committables, NULL, pair->src,
                                    dir_access, pair->dst, entry->url, entry,
-                                   NULL, FALSE, TRUE, FALSE, FALSE,
-                                   NULL, ctx, iterpool));
+                                   NULL, FALSE, TRUE, svn_depth_infinity,
+                                   FALSE, NULL, ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);

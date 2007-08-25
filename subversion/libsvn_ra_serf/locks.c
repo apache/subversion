@@ -523,6 +523,15 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
       
   svn_ra_serf__request_create(handler);
   err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool);
+  if (lock_ctx->error || parser_ctx->error)
+    {
+      svn_error_clear(err);
+      /* A 403 forbidden error indicates there's no lock, which we can ignore
+         here. */
+      if (lock_ctx->error && lock_ctx->status_code == 403)
+        svn_error_clear(lock_ctx->error);
+      SVN_ERR(parser_ctx->error);
+    }
 
   if (status_code == 404) 
     {

@@ -49,6 +49,7 @@ typedef enum {
   REV_PROP,
   SET_PROP,
   REMOVE_PROP,
+  MERGED_REVISION,
   TXDELTA,
 } blame_state_e;
 
@@ -85,6 +86,9 @@ typedef struct {
 
   svn_string_t *prop_string;
 
+  /* Merged revision flag */
+  svn_boolean_t merged_revision;
+
 } blame_info_t;
 
 typedef struct {
@@ -100,7 +104,7 @@ typedef struct {
   svn_boolean_t done;
 
   /* blame handler and baton */
-  svn_ra_file_rev_handler_t file_rev;
+  svn_file_rev_handler_t file_rev;
   void *file_rev_baton;
 } blame_context_t;
 
@@ -127,6 +131,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       info->prop_diffs = apr_array_make(info->pool, 0, sizeof(svn_prop_t));
 
       info->stream = NULL;
+      info->merged_revision = FALSE;
 
       parser->state->private = info;
     }
@@ -203,11 +208,15 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
         {
           push_state(parser, blame_ctx, REMOVE_PROP);
         }
+      else if (strcmp(name.name, "merged-revision") == 0)
+        {
+          push_state(parser, blame_ctx, MERGED_REVISION);
+        }
       else if (strcmp(name.name, "txdelta") == 0)
         {
           SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
                                       info->path, info->rev,
-                                      info->rev_props,
+                                      info->rev_props, info->merged_revision,
                                       &info->txdelta, &info->txdelta_baton,
                                       info->prop_diffs, info->pool));
 
@@ -239,6 +248,9 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
             {
               info->prop_base64 = FALSE;
             }
+          break;
+        case MERGED_REVISION:
+            info->merged_revision = TRUE;
           break;
         default:
           break;
@@ -278,7 +290,7 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
         {
           SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
                                       info->path, info->rev,
-                                      info->rev_props,
+                                      info->rev_props, FALSE,
                                       NULL, NULL,
                                       info->prop_diffs, info->pool));
         }
@@ -302,6 +314,11 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
       prop->name = info->prop_name;
       prop->value = create_propval(info);
 
+      svn_ra_serf__xml_pop_state(parser);
+    }
+  else if (state == MERGED_REVISION &&
+           strcmp(name.name, "merged-revision") == 0)
+    {
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == TXDELTA &&
@@ -364,7 +381,8 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                            const char *path,
                            svn_revnum_t start,
                            svn_revnum_t end,
-                           svn_ra_file_rev_handler_t rev_handler,
+                           svn_boolean_t include_merged_revisions,
+                           svn_file_rev_handler_t rev_handler,
                            void *rev_handler_baton,
                            apr_pool_t *pool)
 {
@@ -374,7 +392,9 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
+  const char *lopped_path, *remaining_path;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
+  int status_code;
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
   blame_ctx->pool = pool;
@@ -410,6 +430,13 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                "S:end-revision", apr_ltoa(pool, end),
                                session->bkt_alloc);
 
+  if (include_merged_revisions)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:include-merged-revisions", NULL,
+                                   session->bkt_alloc);
+    }
+
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", path,
                                session->bkt_alloc);
@@ -421,13 +448,13 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      session->repos_url.path,
-                                      SVN_INVALID_REVNUM, "0", base_props,
-                                      pool));
-
-  /* Send the request to the baseline URL */
-  vcc_url = svn_ra_serf__get_prop(props, session->repos_url.path,
+  /* Get the VCC from file url, or if the file doesn't exist in HEAD, from
+     its closest existing parent.  */
+  SVN_ERR(svn_ra_serf__search_for_base_props(props, &remaining_path, 
+                                             &lopped_path, 
+                                             session, session->conns[0],
+                                             session->repos_url.path, pool));
+  vcc_url = svn_ra_serf__get_prop(props, remaining_path,
                                   "DAV:", "version-controlled-configuration");
 
   if (!vcc_url)
@@ -436,33 +463,52 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
     }
 
   /* Send the request to the baseline URL */
-  relative_url = svn_ra_serf__get_prop(props, session->repos_url.path,
+  relative_url = svn_ra_serf__get_prop(props, remaining_path,
                                        SVN_DAV_PROP_NS_DAV,
                                        "baseline-relative-path");
-
   if (!relative_url)
     {
       abort();
     }
+  relative_url = svn_path_join(relative_url,
+                               svn_path_uri_decode(lopped_path, pool),
+                               pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      vcc_url, SVN_INVALID_REVNUM, "0",
-                                      checked_in_props, pool));
-
-  baseline_url = svn_ra_serf__get_prop(props, vcc_url, "DAV:", "checked-in");
-
-  if (!baseline_url)
+  if (end == SVN_INVALID_REVNUM)
     {
-      abort();
+     /* Use the "checked-in" property to determine the baseline url of the HEAD
+        revision. */
+     SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          vcc_url, SVN_INVALID_REVNUM, "0",
+                                          checked_in_props, pool));
+
+      baseline_url = svn_ra_serf__get_prop(props, vcc_url, "DAV:", "checked-in");
+
+      if (!baseline_url)
+        {
+          abort();
+        }
+
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          baseline_url, SVN_INVALID_REVNUM,
+                                          "0", baseline_props, pool));
+
+      basecoll_url = svn_ra_serf__get_prop(props, baseline_url,
+                                           "DAV:", "baseline-collection");
     }
+  else
+    {
+      /* We're asking for a specific revision. No need to use "checked-in" 
+         here, request the baseline-collection property with the specified
+         revision in the 'Label' header (added in svn_ra_serf__retrieve_props).
+      */
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          vcc_url, end,
+                                          "0", baseline_props, pool));
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      baseline_url, SVN_INVALID_REVNUM,
-                                      "0", baseline_props, pool));
-
-  basecoll_url = svn_ra_serf__get_prop(props, baseline_url,
-                                       "DAV:", "baseline-collection");
-
+      basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, end,
+                                               "DAV:", "baseline-collection");
+    }
   if (!basecoll_url)
     {
       abort();
@@ -487,6 +533,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   parser_ctx->end = end_blame;
   parser_ctx->cdata = cdata_blame;
   parser_ctx->done = &blame_ctx->done;
+  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -495,5 +542,11 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool));
 
+  if (status_code == 404)
+    {
+      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+                               "'%s' path not found",
+                               handler->path);
+    }
   return SVN_NO_ERROR;
 }
