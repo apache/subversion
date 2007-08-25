@@ -532,6 +532,18 @@ def blame_peg_rev_file_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
                                      'blame', 'iota@2', '-r1')
 
+def blame_file_not_in_head(sbox):
+  "blame target not in HEAD"
+
+  sbox.build(create_wc = False)
+  notexisting_url = sbox.repo_url + '/notexisting'
+
+  # Check that a correct error message is printed when blaming a target that 
+  # doesn't exist (in HEAD).
+  expected_err = ".*notexisting' (is not a file in.*|path not found)"
+  svntest.actions.run_and_verify_svn(None, [], expected_err,
+                                     'blame', notexisting_url)
+
 
 ########################################################################
 # Run the tests
@@ -551,6 +563,7 @@ test_list = [ None,
               blame_merge_info,
               blame_merge_out_of_range,
               blame_peg_rev_file_not_in_head,
+              blame_file_not_in_head,
              ]
 
 if __name__ == '__main__':
