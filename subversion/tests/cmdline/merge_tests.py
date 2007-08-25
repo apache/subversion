@@ -7524,8 +7524,6 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
 def no_mergeinfo_from_no_op_merge(sbox):
   "no-op merge without skips doesn't change mergeinfo"
 
-  # This test is marked as XFail until Issue #2883 is resolved.
-
   sbox.build()
   wc_dir = sbox.wc_dir
   wc_disk, wc_status = setup_branch(sbox)
@@ -7704,7 +7702,7 @@ test_list = [ None,
               XFail(merge_with_depth_files),
               XFail(merge_fails_if_subtree_is_deleted_on_src, 
                     svntest.main.is_ra_type_dav),
-              XFail(no_mergeinfo_from_no_op_merge),
+              no_mergeinfo_from_no_op_merge,
              ]
 
 if __name__ == '__main__':
