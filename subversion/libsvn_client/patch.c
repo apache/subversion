@@ -165,7 +165,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 {
   struct patch_cmd_baton *patch_b = baton;
   apr_pool_t *subpool = svn_pool_create(patch_b->pool);
-  svn_boolean_t merge_required = TRUE;
+  svn_boolean_t merge_required = (mimetype2
+                                  && svn_mime_type_is_binary(mimetype2));
   enum svn_wc_merge_outcome_t merge_outcome;
 
   /* Easy out:  no access baton means there ain't no merge target */
@@ -223,10 +224,11 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
        exactly identical to the file content from the patch, then don't
        allow svn_wc_merge to produce a conflict.  Instead, just
        overwrite the working file with the one from the patch. */
-  if (!has_local_mods && !patch_b->dry_run
+  if (!has_local_mods
       && (mimetype2 && svn_mime_type_is_binary(mimetype2)))
     {
-      SVN_ERR(svn_io_file_rename(yours, mine, subpool));
+      if (!patch_b->dry_run)
+        SVN_ERR(svn_io_file_rename(yours, mine, subpool));
       merge_outcome = svn_wc_merge_merged;
       merge_required = FALSE;
     }
@@ -999,6 +1001,13 @@ get_empty_file(struct edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
+/* Convenience function */
+static apr_hash_t *
+dry_run_deletions_hash(struct edit_baton *eb)
+{
+  return ((struct patch_cmd_baton*)eb)->dry_run_deletions;
+}
+
 /* Implementation of svn_delta_editor_t vtable. */
 
 /* An editor function. The root of the comparison hierarchy */
@@ -1073,7 +1082,7 @@ delete_entry(const char *path,
         default:
           break;
         }
-      
+
       if ((state != svn_wc_notify_state_missing)
           && (state != svn_wc_notify_state_obstructed))
         {
@@ -1082,7 +1091,7 @@ delete_entry(const char *path,
             {
               /* Remember what we _would've_ deleted (issue #2584). */
               const char *wcpath = svn_path_join(eb->target, path, pb->pool);
-              apr_hash_set(svn_client__dry_run_deletions(eb->diff_cmd_baton),
+              apr_hash_set(dry_run_deletions_hash(eb->diff_cmd_baton),
                            wcpath, APR_HASH_KEY_STRING, wcpath);
 
               /* ### TODO: if (kind == svn_node_dir), record all
@@ -1384,7 +1393,7 @@ close_directory(void *dir_baton,
   svn_error_t *err;
 
   if (eb->dry_run)
-    svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton));
+    svn_hash__clear(dry_run_deletions_hash(eb->diff_cmd_baton));
 
   if (b->propchanges->nelts > 0)
     {
