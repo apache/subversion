@@ -7518,6 +7518,122 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                      [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
 
+# Test for issue:
+#
+#   2883: No-op merge (without skip) should not change mergeinfo.
+def no_mergeinfo_from_no_op_merge(sbox):
+  "no-op merge without skips doesn't change mergeinfo"
+
+  # This test is marked as XFail until Issue #2883 is resolved.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox)
+
+  # Some paths we'll care about
+  beta_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
+  G_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G")
+  tau_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G", "tau")
+  C_COPY_path = os.path.join(wc_dir, "A_COPY", "C")
+
+  # Merge r5 into A_COPY/B/E/beta and commit it.
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_beta_COPY_path = shorten_path_kludge(beta_COPY_path)
+  expected_skip = wc.State(short_beta_COPY_path, { })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  # run_and_verify_merge doesn't support merging to a file WCPATH
+  # so use run_and_verify_svn.
+  svntest.actions.run_and_verify_svn(None,
+                                     [svntest.main.merge_notify_line(5),
+                                      'U    ' + short_beta_COPY_path + \
+                                      '\n'], [], 'merge', '-c5',
+                                     sbox.repo_url + '/A/B/E/beta',
+                                     short_beta_COPY_path)
+  os.chdir(saved_cwd)
+
+  expected_output = wc.State(wc_dir,
+                             {'A_COPY/B/E/beta' : Item(verb='Sending')})
+  wc_status.tweak('A_COPY/B/E/beta', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+
+  # Merge r4 into A_COPY/D/G.
+  short_G_COPY_path = shorten_path_kludge(G_COPY_path)
+  expected_output = wc.State(short_G_COPY_path, {
+    'rho' : Item(status='U ')
+    })
+  expected_status = wc.State(short_G_COPY_path, {
+    ''         : Item(status=' M', wc_rev=2),
+    'pi'       : Item(status='  ', wc_rev=2),
+    'rho'      : Item(status='M ', wc_rev=2),
+    'tau'      : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4'}),
+    'pi'       : Item("This is the file 'pi'.\n"),
+    'rho'      : Item("New content"),
+    'tau'      : Item("This is the file 'tau'.\n"),
+    })
+  expected_skip = wc.State(short_G_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_G_COPY_path, '3', '4',
+                                       sbox.repo_url + '/A/D/G',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
+  wc_status.tweak('A_COPY/D/G', status=' M')
+  wc_status.tweak('A_COPY/D/G/rho', status='M ')
+
+  # Now try a few no-op variants, in every case no mergeinfo should
+  # change from the above state.
+  
+  # Do a no-op merge to a file with committed mergeinfo:
+  #   -r2:4 into A_COPY/B/E/beta.
+  svntest.actions.run_and_verify_svn(None,
+                                     [svntest.main.merge_notify_line(3,4)],
+                                     [], 'merge', '-r2:4',
+                                     sbox.repo_url + '/A/B/E/beta',
+                                     short_beta_COPY_path)
+
+  # Do a no-op merge to a file with inherited mergeinfo:
+  # -c3 into A_COPY/D/G/tau.
+  short_tau_COPY_path = shorten_path_kludge(tau_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [svntest.main.merge_notify_line(3)],
+                                     [], 'merge', '-c3',
+                                     sbox.repo_url + '/A/D/G/tau',
+                                     short_tau_COPY_path)
+
+  # Do a no-op merge to a dir with local mergeinfo:
+  #   -r4:6 into A_COPY/D/G.
+  short_tau_COPY_path = shorten_path_kludge(tau_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [svntest.main.merge_notify_line(5,6)],
+                                     [], 'merge', '-r4:6',
+                                     sbox.repo_url + '/A/D/G',
+                                     short_G_COPY_path)
+  os.chdir(saved_cwd)
+  svntest.actions.run_and_verify_svn(None, ["/A/D/G:1,4\n"], [],
+                                     'propget', SVN_PROP_MERGE_INFO,
+                                     G_COPY_path)
+
+  # Do a no-op merge to a dir with inherited mergeinfo:
+  #   All available revs into A_COPY/C.
+  os.chdir(svntest.main.work_dir)
+  short_C_COPY_path = shorten_path_kludge(C_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [svntest.main.merge_notify_line(2,7)],
+                                     [], 'merge',
+                                     sbox.repo_url + '/A/C',
+                                     short_C_COPY_path)
+  os.chdir(saved_cwd)
+
+  # A final check of the WC's status to ensure nothing unexpected occurred
+  # (that the above merge's stdout/stderr didn't already reveal).
+  svntest.actions.run_and_verify_status(wc_dir, wc_status)
+
 ########################################################################
 # Run the tests
 
@@ -7588,6 +7704,7 @@ test_list = [ None,
               XFail(merge_with_depth_files),
               XFail(merge_fails_if_subtree_is_deleted_on_src, 
                     svntest.main.is_ra_type_dav),
+              XFail(no_mergeinfo_from_no_op_merge),
              ]
 
 if __name__ == '__main__':
