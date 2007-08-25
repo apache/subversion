@@ -2636,7 +2636,7 @@ def diff_svnpatch(sbox):
   svntest.main.run_svn(None, 'ci', '-m', 'log msg')
   svntest.main.run_svn(None, 'up')
 
-  # Ready.  Five subtests follow in which we only verify the svnpatch
+  # Ready.  Seven subtests follow in which we only verify the svnpatch
   # block, i.e. no check is performed against the unidiff part.  Editor
   # commands are written in clear-text-lists which we encode
   # (gzip-base64'ed) before comparing against the extracted encoded
