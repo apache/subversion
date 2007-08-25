@@ -394,6 +394,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   apr_hash_t *props;
   const char *lopped_path, *remaining_path;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
+  int status_code;
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
   blame_ctx->pool = pool;
@@ -532,6 +533,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   parser_ctx->end = end_blame;
   parser_ctx->cdata = cdata_blame;
   parser_ctx->done = &blame_ctx->done;
+  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -540,5 +542,11 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool));
 
+  if (status_code == 404)
+    {
+      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+                               "'%s' path not found",
+                               handler->path);
+    }
   return SVN_NO_ERROR;
 }
