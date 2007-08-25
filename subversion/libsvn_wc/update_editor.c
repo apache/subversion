@@ -1042,12 +1042,6 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_path, pool));
 
-  /* Here's the deal: in the new editor interface, PATH is a full path
-     below the editor's anchor, and parent_path is the parent directory.
-     That's all fine and well, but our log-system requires that all
-     log commands talk *only* about paths relative (and below)
-     parent_path, i.e. where the log is being executed.  */
-
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
 
   /* If the thing being deleted is the *target* of this update, then
@@ -1117,12 +1111,6 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
   *log_number = 0;
 
-  /* The passed-in `path' is relative to the anchor of the edit, so if
-   * the operation was invoked on something other than ".", then
-   * `path' will be wrong for purposes of notification.  However, we
-   * can always count on the parent_path being the parent of base_name,
-   * so we just join them together to get a good notification path.
-   */
   if (eb->notify_func)
     (*eb->notify_func)
       (eb->notify_baton,
