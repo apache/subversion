@@ -839,6 +839,61 @@ def new_style_externals(sbox):
       raise svntest.Failure("Unexpected contents for rev 1 of " +
                             exdir_X_omega_path)
 
+def disallow_propset_invalid_formatted_externals(sbox):
+  "error if propset'ing external with invalid format"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # It should not be possible to set these external properties on a
+  # directory.
+  for ext in [ 'arg1',
+               'arg1 arg2 arg3',
+               'arg1 arg2 arg3 arg4',
+               'arg1 arg2 arg3 arg4 arg5',
+               '-r',
+               '-r1',
+               '-r 1',
+               '-r1 arg1',
+               '-r 1 arg1',
+               'arg1 -r',
+               'arg1 -r1',
+               'arg1 -r 1',
+               ]:
+    tmp_f = os.tempnam()
+    svntest.main.file_append(tmp_f, ext)
+    svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
+                                       None,
+                                       '.*Error parsing svn:externals.*',
+                                       'propset',
+                                       '-F',
+                                       tmp_f,
+                                       'svn:externals',
+                                       A_path)
+    os.remove(tmp_f)
+
+  for ext in [ '-r abc arg1 arg2',
+               '-rabc arg1 arg2',
+               'arg1 -r abc arg2',
+               'arg1 -rabc arg2',
+               ]:
+    tmp_f = os.tempnam()
+    svntest.main.file_append(tmp_f, ext)
+    svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
+                                       None,
+                                       '.*Invalid revision number found.*',
+                                       'propset',
+                                       '-F',
+                                       tmp_f,
+                                       'svn:externals',
+                                       A_path)
+    os.remove(tmp_f)
 
 
 ########################################################################
@@ -859,6 +914,7 @@ test_list = [ None,
               export_wc_with_externals,
               external_with_peg_and_op_revision,
               new_style_externals,
+              disallow_propset_invalid_formatted_externals,
              ]
 
 if __name__ == '__main__':
