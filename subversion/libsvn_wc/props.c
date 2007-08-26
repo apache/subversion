@@ -2352,6 +2352,9 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
  * LINE_PARTS the element(s) that specify the revision.
  * PARENT_DIRECTORY_DISPLAY and LINE are given to return a nice error
  * string.
+ *
+ * If this function returns successfully, then LINE_PARTS will have
+ * only two elements in it.
  */
 static svn_error_t *
 find_and_remove_externals_revision(int *rev_idx,
@@ -2413,10 +2416,17 @@ find_and_remove_externals_revision(int *rev_idx,
               APR_ARRAY_IDX(line_parts, j+shift_count, const char *);
           for (j = 0; j < shift_count; ++j)
             apr_array_pop(line_parts);
+
+          /* Found the revision, so leave the function immediately, do
+           * not continue looking for additional revisions. */
+          return SVN_NO_ERROR;
         }
     }
 
-  return SVN_NO_ERROR;
+  /* No revision was found, so there must be exactly two items in the
+     line array. */
+  if (line_parts->nelts == 2)
+    return SVN_NO_ERROR;
 
  parse_error:
   return svn_error_createf
