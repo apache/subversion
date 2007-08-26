@@ -377,7 +377,7 @@ determine_copyfrom_info(const char **copyfrom_url, svn_revnum_t *copyfrom_rev,
      - dst_basename will be the 'new' name of the copied file in dst_parent
  */
 static svn_error_t *
-copy_file_administratively(const char *src_path, 
+copy_file_administratively(const char *src_path,
                            svn_wc_adm_access_t *src_access,
                            svn_wc_adm_access_t *dst_parent,
                            const char *dst_basename,
@@ -425,7 +425,7 @@ copy_file_administratively(const char *src_path,
      in the repository unless it's a copy of an uncommitted copy. */
   if ((src_entry->schedule == svn_wc_schedule_add && (! src_entry->copied))
       || (! src_entry->url))
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it's not in the repository yet; "
          "try committing first"),
@@ -460,7 +460,7 @@ copy_file_administratively(const char *src_path,
 
     /* Load source base and working props. */
     SVN_ERR(svn_wc__load_props(&base_props, &props, src_access,
-                               src_entry->name, pool));
+                               src_path, pool));
 
     /* Copy pristine text-base to temporary location. */
     SVN_ERR(svn_io_copy_file(src_txtb, tmp_txtb, TRUE, pool));

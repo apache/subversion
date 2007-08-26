@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import os
+import os, sys
 
 # Our testing module
 import svntest
@@ -28,7 +28,45 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
- 
+# Helper function to validate the output of a particular run of blame.
+def parse_and_verify_blame(output, expected_blame):
+  "tokenize and validate the output of blame"
+
+  max_split = 2
+  keys = ['revision', 'author', 'text']
+
+  results = []
+
+  # Tokenize and parse each line
+  for line_str in output:
+    tokens = line_str.split(None, max_split)
+    this_line = {}
+
+    if tokens[0] == '-':
+      this_line['revision'] = None
+    else:
+      this_line['revision'] = int(tokens[0])
+
+    if tokens[1] == '-':
+      this_line['author'] = None
+    else:
+      this_line['author'] = tokens[1]
+      
+    this_line['text'] = tokens[2]
+
+    results.append(this_line)
+
+  # Verify the results
+  if len(results) != len(expected_blame):
+    raise svntest.Failure, "expected and actual results not the same length"
+
+  for (num, (item, expected_item)) in enumerate(zip(results, expected_blame)):
+    for key in keys:
+      if item[key] != expected_item[key]:
+        raise svntest.Failure, 'on line %d, expecting %s "%s", found "%s"' % \
+          (num+1, key, str(expected_item[key]), str(item[key]))
+
+
 ######################################################################
 # Tests
 #
@@ -411,6 +449,102 @@ def blame_ignore_eolstyle(sbox):
   output, error = svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'blame', '-x', '--ignore-eol-style', file_path)
 
+
+def blame_merge_info(sbox):
+  "test 'svn blame -g'"
+
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
+
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'trunk', 'iota')
+
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'blame', '-g', iota_path)
+  expected_blame = [
+      { 'revision' : 2,
+        'author' : 'jrandom',
+        'text' : "This is the file 'iota'.\n",
+      },
+      { 'revision' : 11,
+        'author' : 'jrandom',
+        'text' : "'A' has changed a bit, with 'upsilon', and 'xi'.\n",
+      },
+    ]
+  parse_and_verify_blame(output, expected_blame)
+
+
+def blame_merge_out_of_range(sbox):
+  "don't look for merged files out of range"
+
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
+
+  wc_dir = sbox.wc_dir
+  upsilon_path = os.path.join(wc_dir, 'trunk', 'A', 'upsilon')
+
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'blame', '-g',
+                                                     upsilon_path)
+  expected_blame = [
+      { 'revision' : 4,
+        'author' : 'jrandom',
+        'text' : "This is the file 'upsilon'.\n",
+      },
+      { 'revision' : 11,
+        'author': 'jrandom',
+        'text' : "There is also the file 'xi'.\n",
+      },
+    ]
+  parse_and_verify_blame(output, expected_blame)
+
+# test for issue #2888: 'svn blame' aborts over ra_serf
+def blame_peg_rev_file_not_in_head(sbox):
+  "blame target not in HEAD with peg-revisions"
+
+  sbox.build()
+
+  expected_output_r1 = [
+    "     1    jrandom This is the file 'iota'.\n" ]
+
+  os.chdir(sbox.wc_dir)
+
+  # Modify iota and commit it (r2).
+  svntest.main.file_write('iota', "This is no longer the file 'iota'.\n")
+  expected_output = svntest.wc.State('.', {
+    'iota' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit('.', expected_output, None)
+
+  # Delete iota so that it doesn't exist in HEAD
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/iota', 
+                       '-m', 'log message')
+
+  # Check that we get a blame of r1 when we specify a peg revision of r1
+  # and no explicit revision.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+                                     'blame', 'iota@1')
+
+  # Check that an explicit revision overrides the default provided by
+  # the peg revision.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+                                     'blame', 'iota@2', '-r1')
+
+def blame_file_not_in_head(sbox):
+  "blame target not in HEAD"
+
+  sbox.build(create_wc = False)
+  notexisting_url = sbox.repo_url + '/notexisting'
+
+  # Check that a correct error message is printed when blaming a target that 
+  # doesn't exist (in HEAD).
+  expected_err = ".*notexisting' (is not a file in.*|path not found)"
+  svntest.actions.run_and_verify_svn(None, [], expected_err,
+                                     'blame', notexisting_url)
+
+
 ########################################################################
 # Run the tests
 
@@ -425,7 +559,11 @@ test_list = [ None,
               blame_peg_rev,
               blame_eol_styles,
               blame_ignore_whitespace,
-              blame_ignore_eolstyle
+              blame_ignore_eolstyle,
+              blame_merge_info,
+              blame_merge_out_of_range,
+              blame_peg_rev_file_not_in_head,
+              blame_file_not_in_head,
              ]
 
 if __name__ == '__main__':

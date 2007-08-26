@@ -394,8 +394,8 @@ svn_error_t *svn_ra_svn_write_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return writebuf_printf(conn, pool, "%s ", word);
 }
 
-svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                   	   apr_hash_t *props)
+svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn,
+                                       apr_pool_t *pool, apr_hash_t *props)
 {
   apr_pool_t *iterpool;
   apr_hash_index_t *hi;
@@ -412,8 +412,9 @@ svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool
           svn_pool_clear(iterpool);
           apr_hash_this(hi, &key, NULL, &val);
           propname = key;
-          propval = val;          
-          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cs", propname, propval));
+          propval = val;
+          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cs",
+                                         propname, propval));
         }
       svn_pool_destroy(iterpool);
     }
@@ -789,8 +790,8 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 svn_error_t *svn_ra_svn_parse_proplist(apr_array_header_t *list,
-																			 apr_pool_t *pool,
-                                   		 apr_hash_t **props)
+                                       apr_pool_t *pool,
+                                       apr_hash_t **props)
 {
   char *name;
   svn_string_t *value;

@@ -144,3 +144,33 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
   apr_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
+
+void
+svn_client__derive_mergeinfo_location(const char **url,
+                                      svn_revnum_t *rev,
+                                      const svn_wc_entry_t *entry)
+{
+  /* ### FIXME: dionisos sez: "We can have schedule 'normal' files
+     ### with a copied parameter of TRUE and a revision number of
+     ### INVALID_REVNUM.  Copied directories cause this behaviour on
+     ### their children.  It's an implementation shortcut to model
+     ### wc-side copies." */
+  switch (entry->schedule)
+    {
+    case svn_wc_schedule_add:
+    case svn_wc_schedule_replace:
+      /* If we have any history, consider its mergeinfo. */
+      if (entry->copyfrom_url)
+        {
+          *url = entry->copyfrom_url;
+          *rev = entry->copyfrom_rev;
+          break;
+        }
+
+    default:
+      /* Consider the mergeinfo for the WC target. */
+      *url = entry->url;
+      *rev = entry->revision;
+      break;
+    }
+}

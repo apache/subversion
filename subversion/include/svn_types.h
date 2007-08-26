@@ -155,6 +155,22 @@ typedef long int svn_revnum_t;
 /** Convert null-terminated C string @a str to a revision number. */
 #define SVN_STR_TO_REV(str) ((svn_revnum_t) atol(str))
 
+/**
+ * Parse NULL-terminated C string @a str as a revision number and
+ * store its value in @a rev.  If @a endptr is non-NULL, then the
+ * address of the first non-numeric character in @a str is stored in
+ * it.  If there are no digits in @a str, then @a endptr is set (if
+ * non-NULL), and the error @c SVN_ERR_REVNUM_PARSE_FAILURE error is
+ * returned.  Negative numbers parsed from @a str are considered
+ * invalid, and result in the same error.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_revnum_parse(svn_revnum_t *rev,
+                 const char *str,
+                 const char **endptr);
+
 /** Originally intended to be used in printf()-style functions to format
  * revision numbers.  Deprecated due to incompatibilities with language
  * translation tools (e.g. gettext).
@@ -847,7 +863,26 @@ typedef struct svn_merge_range_t
 {
   svn_revnum_t start;
   svn_revnum_t end;
+  svn_boolean_t inheritable;
 } svn_merge_range_t;
+
+/**
+ * The three ways to consider the inheritable member when
+ * comparing @c svn_merge_range_t.
+ *
+ * @since New in 1.5.
+ */
+typedef enum
+{
+  /* Don't take inheritability into consideration. */
+  svn_rangelist_ignore_inheritance,
+
+  /* Inheritability of both ranges must be the same. */
+  svn_rangelist_equal_inheritance,
+
+  /* Inheritability of both ranges must be the @c TRUE. */
+  svn_rangelist_only_inheritable,
+} svn_merge_range_inheritance_t;
 
 /**
  * Return a copy of @a range, allocated in @a pool.

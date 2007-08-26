@@ -1189,7 +1189,7 @@ collect_lock_tokens(apr_hash_t **result,
 svn_error_t *
 svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
-                   svn_boolean_t recurse,
+                   svn_depth_t depth,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelist,
                    const char *changelist_name,
@@ -1226,9 +1226,23 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
            _("'%s' is a URL, but URLs cannot be commit targets"), target);
     }
 
-  /* Condense the target list. */
+  /* Condense the target list.
+
+     ### TODO(sd): Back when svn_path_condense_targets() was written,
+     ### there was no depth, only a recurse boolean, so condensation
+     ### was a yes-no proposition.
+     ###
+     ### Nowadays things are a little more complex.  For example, if
+     ### depth is svn_depth_files, and two targets are "foo" and
+     ### "foo/bar", we should ideally condense out the latter if
+     ### "foo/bar" is a file but not if it is a directory.
+     ###
+     ### However, the code isn't that smart yet, which might mean
+     ### we'll grab more/deeper recursive adm locks than we really
+     ### need.
+  */
   SVN_ERR(svn_path_condense_targets(&base_dir, &rel_targets, targets,
-                                    recurse, pool));
+                                    depth == svn_depth_infinity, pool));
 
   /* No targets means nothing to commit, so just return. */
   if (! base_dir)
@@ -1268,7 +1282,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           /* If the final target is a dir, we want to recursively lock it */
           if (kind == svn_node_dir)
             {
-              if (recurse)
+              if (depth == svn_depth_infinity || depth == svn_depth_immediates)
                 APR_ARRAY_PUSH(dirs_to_lock_recursive, const char *) = target;
               else
                 APR_ARRAY_PUSH(dirs_to_lock, const char *) = target;
@@ -1304,7 +1318,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           /* If the final target is a dir, we want to lock it */
           if (kind == svn_node_dir)
             {
-              if (recurse)
+              if (depth == svn_depth_infinity || depth == svn_depth_immediates)
                 APR_ARRAY_PUSH(dirs_to_lock_recursive, 
                                const char *) = apr_pstrdup(pool, target);
               else
@@ -1424,7 +1438,25 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                           target, pool),
                 _("Are all the targets part of the same working copy?"));
 
-      if (!recurse)
+      /* ### TODO(sd): This check is slightly too strict.  It should be
+         ### possible to:
+         ### 
+         ###   * delete an empty directory when depth==svn_depth_empty;
+         ###
+         ###   * delete a directory containing only files when
+         ###     depth==svn_depth_files;
+         ###
+         ###   * delete a directory containing only files and empty
+         ###     subdirs when depth==svn_depth_immediates.
+         ###
+         ### But for now, we insist on svn_depth_infinity if you're
+         ### going to delete a directory, because we're lazy and
+         ### trying to get depthy commits working in the first place.
+         ###
+         ### This would be fairly easy to fix, though: just, well,
+         ### check the above conditions!
+       */
+      if (depth != svn_depth_infinity)
         {
           svn_wc_status2_t *status;
           svn_node_kind_t kind;
@@ -1448,7 +1480,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                                   &lock_tokens,
                                                   base_dir_access,
                                                   rel_targets, 
-                                                  recurse ? FALSE : TRUE,
+                                                  depth,
                                                   ! keep_locks,
                                                   changelist_name,
                                                   ctx,

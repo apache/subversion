@@ -333,6 +333,16 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
                             svn_boolean_t names_only,
                             apr_pool_t *pool);
 
+/* Output a commit xml element to OUTSTR.  IF OUTSTR is NULL, allocate it
+   first from pool, otherwise appen the xml to it.  If AUTHOR or DATE is
+   NULL, it will be omitted. */
+void
+svn_cl__print_xml_commit(svn_stringbuf_t **outstr,
+                         svn_revnum_t revision,
+                         const char *author,
+                         const char *date,
+                         apr_pool_t *pool);
+
 /* Do the following things that are commonly required before accessing revision
    properties.  Ensure that REVISION is specified explicitly and is not
    relative to a working-copy item.  Ensure that exactly one target is

@@ -78,7 +78,7 @@ compare_external_items(svn_wc_external_item2_t *new_item,
       || (! svn_client__compare_revisions(&(new_item->peg_revision),
                                           &(old_item->peg_revision))))
     return FALSE;
-    
+
   /* Else. */
   return TRUE;
 }
@@ -177,7 +177,7 @@ switch_external(const char *path,
     ctx->notify_func2(ctx->notify_baton2,
                       svn_wc_create_notify(path, svn_wc_notify_update_external,
                                            pool), pool);
-  
+
   /* If path is a directory, try to update/switch to the correct URL
      and revision. */
   SVN_ERR(svn_io_check_path(path, &kind, pool));
@@ -188,7 +188,7 @@ switch_external(const char *path,
 
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, TRUE, 0,
                                ctx->cancel_func, ctx->cancel_baton, subpool));
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, 
+      SVN_ERR(svn_wc_entry(&entry, path, adm_access,
                            FALSE, subpool));
       SVN_ERR(svn_wc_adm_close(adm_access));
 
@@ -252,7 +252,7 @@ switch_external(const char *path,
     }
 
  relegate:
-      
+
   /* Fall back on removing the WC and checking out a new one. */
 
   /* Ensure that we don't have any RA sessions or WC locks from failed
@@ -274,8 +274,8 @@ switch_external(const char *path,
     }
 
   /* ... Hello, new hotness. */
-  SVN_ERR(svn_client__checkout_internal(NULL, url, path, peg_revision, revision,
-                                        SVN_DEPTH_FROM_RECURSE(TRUE),
+  SVN_ERR(svn_client__checkout_internal(NULL, url, path, peg_revision,
+                                        revision, SVN_DEPTH_FROM_RECURSE(TRUE),
                                         FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
@@ -379,7 +379,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
     {
       /* See comment in above case about fancy rename handling.  Here,
          before removing an old subdir, we would see if it wants to
-         just be renamed to a new one. */ 
+         just be renamed to a new one. */
 
       svn_error_t *err, *err2;
       svn_wc_adm_access_t *adm_access;
@@ -452,7 +452,7 @@ struct handle_externals_desc_change_baton
 
 
 /* This implements the 'svn_hash_diff_func_t' interface.
-   BATON is of type 'struct handle_externals_desc_change_baton *'.  
+   BATON is of type 'struct handle_externals_desc_change_baton *'.
 */
 static svn_error_t *
 handle_externals_desc_change(const void *key, apr_ssize_t klen,
@@ -491,7 +491,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
       apr_hash_set(old_desc_hash, item->target_dir,
                    APR_HASH_KEY_STRING, item);
     }
-  
+
   for (i = 0; new_desc && (i < new_desc->nelts); i++)
     {
       item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item2_t *);
@@ -534,7 +534,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
                                             APR_HASH_KEY_STRING,
                                             svn_hash_diff_key_b, &ib));
     }
-  
+
   /* Now destroy the subpool we pass to the hash differ.  This will
      close any remaining RA sessions used by the hash diff callback. */
   svn_pool_destroy(ib.pool);
@@ -614,8 +614,8 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
   /* Loop over the hash of new values (we don't care about the old
      ones).  This is a mapping of versioned directories to property
      values. */
-  for (hi = apr_hash_first(pool, externals_new); 
-       hi; 
+  for (hi = apr_hash_first(pool, externals_new);
+       hi;
        hi = apr_hash_next(hi))
     {
       apr_array_header_t *exts;
@@ -635,7 +635,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
 
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */
-      SVN_ERR(svn_wc_parse_externals_description3(&exts, path, 
+      SVN_ERR(svn_wc_parse_externals_description3(&exts, path,
                                                   propval, subpool));
 
       /* Make a sub-pool of SUBPOOL. */
@@ -667,7 +667,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                     iterpool), iterpool);
 
           /* And then do the status. */
-          SVN_ERR(svn_client_status3(NULL, fullpath, 
+          SVN_ERR(svn_client_status3(NULL, fullpath,
                                      &(external->revision),
                                      status_func, status_baton,
                                      /* ### TODO(sd): Is it really correct
@@ -676,8 +676,8 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                      svn_depth_infinity, get_all, update,
                                      no_ignore, FALSE, ctx, iterpool));
         }
-    } 
-  
+    }
+
   /* Destroy SUBPOOL and (implicitly) ITERPOOL. */
   apr_pool_destroy(subpool);
 

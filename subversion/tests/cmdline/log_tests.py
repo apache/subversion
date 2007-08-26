@@ -433,41 +433,6 @@ def plain_log(sbox):
 
 
 #----------------------------------------------------------------------
-def versioned_log_message(sbox):
-  "'svn commit -F foo' when foo is a versioned file"
-
-  sbox.build()
-
-  os.chdir(sbox.wc_dir)
-
-  iota_path = os.path.join('iota')
-  mu_path = os.path.join('A', 'mu')
-  log_path = os.path.join('A', 'D', 'H', 'omega')
-
-  svntest.main.file_append(iota_path, "2")
-
-  # try to check in a change using a versioned file as your log entry.
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                     'ci', '-F', log_path)
-
-  # force it.  should not produce any errors.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-F', log_path, '--force-log')
-
-  svntest.main.file_append(mu_path, "2")
-
-  # try the same thing, but specifying the file to commit explicitly.
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                     'ci', '-F', log_path, mu_path)
-
-  # force it...  should succeed.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci',
-                                     '-F', log_path,
-                                     '--force-log', mu_path)
-
-
-#----------------------------------------------------------------------
 def log_with_empty_repos(sbox):
   "'svn log' on an empty repository"
 
@@ -1005,7 +970,28 @@ def merge_sensitive_log_non_branching_revision(sbox):
   }
   check_merge_results(log_chain, expected_merges)
 
-  
+
+def merge_sensitive_log_added_path(sbox):
+  "test 'svn log -g' a path added before merge"
+
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'mergetracking_data',
+                                               'basic-merge.dump'))
+
+  XI_path = os.path.join(sbox.wc_dir, "trunk", "A", "xi")
+
+  # Run log on a non-copying revision that adds mergeinfo
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
+                                                   '-g', XI_path)
+
+  # Parse and check output.  There should be one extra revision.
+  log_chain = parse_log_output(output)
+  expected_merges = {
+    14: [], 12 : [], 11 : [],
+  }
+  check_merge_results(log_chain, expected_merges)
+
+
 def log_single_change(sbox):
   "test log -c for a single change"
 
@@ -1049,7 +1035,6 @@ def log_changes_list(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               plain_log,
-              versioned_log_message,
               log_with_empty_repos,
               log_where_nothing_changed,
               log_to_revision_zero,
@@ -1067,6 +1052,7 @@ test_list = [ None,
               merge_sensitive_log_single_revision,
               merge_sensitive_log_branching_revision,
               merge_sensitive_log_non_branching_revision,
+              merge_sensitive_log_added_path,
               XFail(log_single_change),
               XFail(log_changes_range),
               XFail(log_changes_list),
