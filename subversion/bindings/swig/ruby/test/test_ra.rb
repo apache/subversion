@@ -316,7 +316,7 @@ class SvnRaTest < Test::Unit::TestCase
     end
   end
 
-  def test_merge_info
+  def test_mergeinfo
     log = "sample log"
     file = "sample.txt"
     src = "sample\n"
@@ -342,17 +342,17 @@ class SvnRaTest < Test::Unit::TestCase
     callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
     session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
 
-    assert_nil(session.merge_info(trunk_uri))
+    assert_nil(session.mergeinfo(trunk_uri))
     ctx.merge(branch, rev1, branch, rev2, trunk)
-    assert_nil(session.merge_info(trunk_uri))
+    assert_nil(session.mergeinfo(trunk_uri))
 
     rev3 = ctx.commit(@wc_path).revision
-    merge_info = session.merge_info(trunk_uri)
-    assert_equal([trunk_uri], merge_info.keys)
-    trunk_merge_info = merge_info[trunk_uri]
-    assert_equal([branch_uri], trunk_merge_info.keys)
+    mergeinfo = session.mergeinfo(trunk_uri)
+    assert_equal([trunk_uri], mergeinfo.keys)
+    trunk_mergeinfo = mergeinfo[trunk_uri]
+    assert_equal([branch_uri], trunk_mergeinfo.keys)
     assert_equal([[1, 2]],
-                 trunk_merge_info[branch_uri].collect {|range| range.to_a})
+                 trunk_mergeinfo[branch_uri].collect {|range| range.to_a})
 
     ctx.rm(branch_path)
     rev4 = ctx.commit(@wc_path).revision
@@ -361,11 +361,11 @@ class SvnRaTest < Test::Unit::TestCase
     assert(!File.exist?(trunk_path))
     rev5 = ctx.commit(@wc_path).revision
 
-    merge_info = session.merge_info(trunk_uri, rev5)
-    assert_equal([trunk_uri], merge_info.keys)
-    trunk_merge_info = merge_info[trunk_uri]
-    assert_equal([branch_uri], trunk_merge_info.keys)
+    mergeinfo = session.mergeinfo(trunk_uri, rev5)
+    assert_equal([trunk_uri], mergeinfo.keys)
+    trunk_mergeinfo = mergeinfo[trunk_uri]
+    assert_equal([branch_uri], trunk_mergeinfo.keys)
     assert_equal([[1, 2], [3, 4]],
-                 trunk_merge_info[branch_uri].collect {|range| range.to_a})
+                 trunk_mergeinfo[branch_uri].collect {|range| range.to_a})
   end
 end

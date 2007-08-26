@@ -462,7 +462,7 @@ class SvnFsTest < Test::Unit::TestCase
                  @fs.deleted_revision(path_in_repos, rev4, rev4))
   end
 
-  def test_merge_info
+  def test_mergeinfo
     log = "sample log"
     file = "sample.txt"
     src = "sample\n"
@@ -484,13 +484,13 @@ class SvnFsTest < Test::Unit::TestCase
     File.open(branch_path, "w") {|f| f.print(src)}
     rev2 = ctx.commit(@wc_path).revision
 
-    assert_equal({}, @fs.root.merge_info(trunk_in_repos))
+    assert_equal({}, @fs.root.mergeinfo(trunk_in_repos))
     ctx.merge(branch, rev1, branch, rev2, trunk)
-    assert_equal({}, @fs.root.merge_info(trunk_in_repos))
+    assert_equal({}, @fs.root.mergeinfo(trunk_in_repos))
 
     rev3 = ctx.commit(@wc_path).revision
     assert_equal({trunk_in_repos => "#{branch_in_repos}:2"},
-                 @fs.root.merge_info(trunk_in_repos))
+                 @fs.root.mergeinfo(trunk_in_repos))
 
     ctx.rm(branch_path)
     rev4 = ctx.commit(@wc_path).revision
@@ -499,15 +499,15 @@ class SvnFsTest < Test::Unit::TestCase
     assert(!File.exist?(trunk_path))
     rev5 = ctx.commit(@wc_path).revision
     assert_equal({trunk_in_repos => "#{branch_in_repos}:2,4"},
-                 @fs.root.merge_info(trunk_in_repos))
+                 @fs.root.mergeinfo(trunk_in_repos))
 
 
-    new_merge_info_str = "#{branch_in_repos}:2"
+    new_mergeinfo_str = "#{branch_in_repos}:2"
     @fs.transaction do |txn|
-      new_merge_info = Svn::Core::MergeInfo.parse(new_merge_info_str)
-      txn.root.change_merge_info(trunk_in_repos, new_merge_info)
+      new_mergeinfo = Svn::Core::MergeInfo.parse(new_mergeinfo_str)
+      txn.root.change_mergeinfo(trunk_in_repos, new_mergeinfo)
     end
-    assert_equal({trunk_in_repos => new_merge_info_str},
-                 @fs.root.merge_info(trunk_in_repos))
+    assert_equal({trunk_in_repos => new_mergeinfo_str},
+                 @fs.root.mergeinfo(trunk_in_repos))
   end
 end

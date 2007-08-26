@@ -836,11 +836,11 @@ class SvnClientTest < Test::Unit::TestCase
     File.open(branch_path, "w") {|f| f.print(src)}
     rev2 = ctx.commit(@wc_path).revision
 
-    assert_nil(ctx.merge_info(trunk))
+    assert_nil(ctx.mergeinfo(trunk))
     ctx.merge(branch, rev1, branch, rev2, trunk)
-    merge_info = ctx.merge_info(trunk)
-    assert_equal(["/branch"], merge_info.keys)
-    assert_equal([[1, 2]], merge_info["/branch"].collect {|range| range.to_a})
+    mergeinfo = ctx.mergeinfo(trunk)
+    assert_equal(["/branch"], mergeinfo.keys)
+    assert_equal([[1, 2]], mergeinfo["/branch"].collect {|range| range.to_a})
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -851,12 +851,12 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge(branch, rev3, branch, rev4, trunk)
     assert(!File.exist?(trunk_path))
 
-    merge_info = ctx.merge_info(trunk, rev4)
-    assert_equal(["/branch"], merge_info.keys)
+    mergeinfo = ctx.mergeinfo(trunk, rev4)
+    assert_equal(["/branch"], mergeinfo.keys)
     assert_equal([[1, 2], [3, 4]],
-                 merge_info["/branch"].collect {|range| range.to_a })
+                 mergeinfo["/branch"].collect {|range| range.to_a })
     ctx.propdel("svn:mergeinfo", trunk)
-    assert_nil ctx.merge_info(trunk)
+    assert_nil ctx.mergeinfo(trunk)
 
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
@@ -894,11 +894,11 @@ class SvnClientTest < Test::Unit::TestCase
     File.open(branch_path, "w") {|f| f.print(src)}
     rev2 = ctx.commit(@wc_path).revision
 
-    assert_nil(ctx.merge_info(trunk))
+    assert_nil(ctx.mergeinfo(trunk))
     ctx.merge_peg(branch, rev1, rev2, trunk)
-    merge_info = ctx.merge_info(trunk)
-    assert_equal(["/branch"], merge_info.keys)
-    assert_equal([[1, 2]], merge_info["/branch"].collect {|range| range.to_a})
+    mergeinfo = ctx.mergeinfo(trunk)
+    assert_equal(["/branch"], mergeinfo.keys)
+    assert_equal([[1, 2]], mergeinfo["/branch"].collect {|range| range.to_a})
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -909,12 +909,12 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge_peg(branch, rev3, rev4, trunk)
     assert(!File.exist?(trunk_path))
 
-    merge_info = ctx.merge_info(trunk, rev4)
-    assert_equal(["/branch"], merge_info.keys)
+    mergeinfo = ctx.mergeinfo(trunk, rev4)
+    assert_equal(["/branch"], mergeinfo.keys)
     assert_equal([[1, 2], [3, 4]],
-                 merge_info["/branch"].collect {|range| range.to_a })
+                 mergeinfo["/branch"].collect {|range| range.to_a })
     ctx.propdel("svn:mergeinfo", trunk)
-    assert_nil(ctx.merge_info(trunk))
+    assert_nil(ctx.mergeinfo(trunk))
 
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
