@@ -747,7 +747,7 @@ EOM
   def test_merge_info_to_s
     info = Svn::Core::MergeInfo.parse("/trunk: 5,7,9-13")
     assert_equal("/trunk:5,7,9-13", info.to_s)
-    assert_not_equal("/trunk:5,7,9-13", info.inspect)
+    assert_not_equal(info.to_s, info.inspect)
   end
 
   def test_merge_info_sort
