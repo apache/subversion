@@ -111,7 +111,7 @@ def link_options():
         add_option_if_missing(options, '-L%s' % shared_libdir)
     elif os.path.exists(os.path.join(static_libdir, ldlibrary)):
       add_option_if_missing(options, "-L%s" % static_libdir)
-    
+
     # Add a flag to build against the library itself.
     python_version = sysconfig.get_config_var('VERSION')
     add_option_if_missing(options, "-lpython%s" % python_version)

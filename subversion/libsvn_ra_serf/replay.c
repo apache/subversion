@@ -358,7 +358,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       checksum = svn_ra_serf__find_attr(attrs, "checksum");
 
-      SVN_ERR(ctx->editor->close_file(info->baton, checksum, 
+      SVN_ERR(ctx->editor->close_file(info->baton, checksum,
                                       parser->state->pool));
 
       svn_ra_serf__xml_pop_state(parser);
@@ -449,7 +449,7 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
     {
       prop_info_t *info = parser->state->private;
       const svn_string_t *prop_val;
-      
+
       if (info->del_prop == TRUE)
         {
           prop_val = NULL;

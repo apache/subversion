@@ -207,7 +207,7 @@ get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
       if (strcmp(fs_type, fst->fs_type) == 0)
         return get_library_vtable_direct(vtable, fst, pool);
     }
-  
+
   return svn_error_createf(SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
                            _("Unknown FS type '%s'"), fs_type);
 }
@@ -800,7 +800,7 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
-svn_fs_change_mergeinfo(svn_fs_root_t *root, const char *path, 
+svn_fs_change_mergeinfo(svn_fs_root_t *root, const char *path,
                         apr_hash_t *minfo,
                         apr_pool_t *pool)
 {
@@ -992,10 +992,10 @@ svn_fs_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path, 
+svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
             const char *token, const char *comment,
-            svn_boolean_t is_dav_comment, apr_time_t expiration_date, 
-            svn_revnum_t current_rev, svn_boolean_t steal_lock, 
+            svn_boolean_t is_dav_comment, apr_time_t expiration_date,
+            svn_revnum_t current_rev, svn_boolean_t steal_lock,
             apr_pool_t *pool)
 {
   /* Enforce that the comment be xml-escapable. */
@@ -1004,22 +1004,22 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
       if (! svn_xml_is_xml_safe(comment, strlen(comment)))
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-           _("Lock comment contains illegal characters"));      
+           _("Lock comment contains illegal characters"));
     }
 
   if (expiration_date < 0)
         return svn_error_create
           (SVN_ERR_INCORRECT_PARAMS, NULL,
-           _("Negative expiration date passed to svn_fs_lock"));      
+           _("Negative expiration date passed to svn_fs_lock"));
 
   return fs->vtable->lock(lock, fs, path, token, comment, is_dav_comment,
-                          expiration_date, current_rev, steal_lock, pool);  
+                          expiration_date, current_rev, steal_lock, pool);
 }
 
 svn_error_t *
 svn_fs_generate_lock_token(const char **token, svn_fs_t *fs, apr_pool_t *pool)
 {
-  return fs->vtable->generate_lock_token(token, fs, pool);  
+  return fs->vtable->generate_lock_token(token, fs, pool);
 }
 
 svn_error_t *
@@ -1042,7 +1042,7 @@ svn_fs_get_locks(svn_fs_t *fs, const char *path,
                  void *get_locks_baton,
                  apr_pool_t *pool)
 {
-  return fs->vtable->get_locks(fs, path, get_locks_func, 
+  return fs->vtable->get_locks(fs, path, get_locks_func,
                                get_locks_baton, pool);
 }
 
@@ -1095,7 +1095,7 @@ svn_fs_check_related(const svn_fs_id_t *a, const svn_fs_id_t *b)
   return (a->vtable->compare(a, b) != -1);
 }
 
-int 
+int
 svn_fs_compare_ids(const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   return a->vtable->compare(a, b);

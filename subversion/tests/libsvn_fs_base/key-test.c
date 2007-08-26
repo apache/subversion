@@ -30,7 +30,7 @@
 
 
 static svn_error_t *
-key_test(const char **msg, 
+key_test(const char **msg,
          svn_boolean_t msg_only,
          svn_test_opts_t *opts,
          apr_pool_t *pool)
@@ -59,7 +59,7 @@ key_test(const char **msg,
       const char *orig_key = keys[i][0];
       const char *next_key = keys[i][1];
       apr_size_t len, olen;
-  
+
       len = strlen(orig_key);
       olen = len;
 
@@ -68,7 +68,7 @@ key_test(const char **msg,
              && (strlen(next_key) == len)
              && (strcmp(next_key, gen_key) == 0)))
         {
-          return svn_error_createf 
+          return svn_error_createf
             (SVN_ERR_FS_GENERAL, NULL,
              "failed to increment key \"%s\" correctly\n"
              "  expected: %s\n"

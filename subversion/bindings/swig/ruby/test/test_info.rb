@@ -4,7 +4,7 @@ require "svn/info"
 
 class SvnInfoTest < Test::Unit::TestCase
   include SvnTestUtil
-  
+
   def setup
     setup_basic
   end
@@ -12,7 +12,7 @@ class SvnInfoTest < Test::Unit::TestCase
   def teardown
     teardown_basic
   end
-  
+
   def test_info
     file = "hello.txt"
     path = File.join(@wc_path, file)
@@ -36,7 +36,7 @@ class SvnInfoTest < Test::Unit::TestCase
     dir_path = File.join(@wc_path, dir)
     file_path = File.join(dir_path, file)
     log = "added dir"
-    
+
     ctx = make_context(log)
     ctx.mkdir(dir_path)
     FileUtils.touch(file_path)
@@ -97,7 +97,7 @@ class SvnInfoTest < Test::Unit::TestCase
     assert_equal(["#{dir_svn_path}/", "#{tmp_dir_svn_path}/"].sort,
                  info.added_dirs)
 
-    
+
     file6 = "changed6.txt"
     file7 = "changed7.txt"
     file8 = "changed8.txt"
@@ -182,9 +182,9 @@ class SvnInfoTest < Test::Unit::TestCase
     ctx.propdel(file1_prop_key, file1_path)
     ctx.propset(file4_prop_key, file4_prop_value, file4_path)
     ctx.cp(file3_path, file5_path)
-    
+
     commit_info = ctx.commit(@wc_path)
-    
+
     info = make_info(commit_info.revision)
     keys = info.diffs.keys.sort
     file5_key = keys.last
@@ -238,7 +238,7 @@ class SvnInfoTest < Test::Unit::TestCase
     ctx.add(file2_path)
 
     commit_info = ctx.commit(@wc_path)
-    
+
     info = make_info(commit_info.revision)
     assert_equal(2, info.diffs.size)
     assert(info.diffs.has_key?(file1_svn_path))
@@ -257,12 +257,12 @@ class SvnInfoTest < Test::Unit::TestCase
     file4_path = File.join(child_dir_path, file4)
     file3_svn_path = [parent_dir_svn_path, file3].join("/")
     file4_svn_path = [child_dir_svn_path, file4].join("/")
-    
+
     ctx.mv(file2_path, file3_path)
     ctx.mv(file1_path, file4_path)
 
     commit_info = ctx.commit(@wc_path)
-    
+
     info = make_info(commit_info.revision)
     assert_equal([
                    file1_svn_path,
@@ -276,11 +276,11 @@ class SvnInfoTest < Test::Unit::TestCase
     assert(info.diffs[file3_svn_path].has_key?(:copied))
     assert(info.diffs[file4_svn_path].has_key?(:copied))
   end
-  
+
   def test_sha256
     log = "sha256"
     ctx = make_context(log)
-    
+
     file1 = "diff1.txt"
     file2 = "diff2.txt"
     file3 = "diff3.txt"
@@ -298,7 +298,7 @@ class SvnInfoTest < Test::Unit::TestCase
     ctx.add(file1_path)
     ctx.add(file2_path)
     ctx.add(file3_path)
-    
+
     commit_info = ctx.commit(@wc_path)
 
     info = make_info(commit_info.revision)
@@ -314,7 +314,7 @@ class SvnInfoTest < Test::Unit::TestCase
     assert_equal(commit_info.revision, info.revision)
     assert_equal(log, info.log)
   end
-  
+
   def make_info(rev=nil)
     Svn::Info.new(@repos_path, rev || @fs.youngest_rev)
   end

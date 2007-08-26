@@ -40,17 +40,17 @@ svn_md5_digest_to_cstring_display(const unsigned char digest[],
   static const char *hex = "0123456789abcdef";
   char *str = apr_palloc(pool, (APR_MD5_DIGESTSIZE * 2) + 1);
   int i;
-  
+
   for (i = 0; i < APR_MD5_DIGESTSIZE; i++)
     {
       str[i*2]   = hex[digest[i] >> 4];
       str[i*2+1] = hex[digest[i] & 0x0f];
     }
   str[i*2] = '\0';
-  
+
   return str;
 }
-  
+
 
 const char *
 svn_md5_digest_to_cstring(const unsigned char digest[], apr_pool_t *pool)

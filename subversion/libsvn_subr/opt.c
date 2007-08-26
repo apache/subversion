@@ -117,7 +117,7 @@ svn_opt_get_option_from_code2(int code,
               }
         return &(option_table[i]);
       }
-  
+
   return NULL;
 }
 
@@ -131,7 +131,7 @@ svn_opt_get_option_from_code(int code,
   for (i = 0; option_table[i].optch; i++)
     if (option_table[i].optch == code)
       return &(option_table[i]);
-  
+
   return NULL;
 }
 
@@ -141,7 +141,7 @@ svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
                                  int option_code)
 {
   apr_size_t i;
-  
+
   for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
     if (command->valid_options[i] == option_code)
       return TRUE;
@@ -155,7 +155,7 @@ svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
                                 int option_code)
 {
   apr_size_t i;
-  
+
   for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
     if (command->valid_options[i] == option_code)
       return TRUE;
@@ -170,7 +170,7 @@ svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
 static svn_error_t *
 print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                     const apr_getopt_option_t *options_table,
-                    svn_boolean_t help, 
+                    svn_boolean_t help,
                     apr_pool_t *pool,
                     FILE *stream)
 {
@@ -182,7 +182,7 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
 
   /* Print the list of aliases. */
   first_time = TRUE;
-  for (i = 0; i < SVN_OPT_MAX_ALIASES; i++) 
+  for (i = 0; i < SVN_OPT_MAX_ALIASES; i++)
     {
       if (cmd->aliases[i] == NULL)
         break;
@@ -193,13 +193,13 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
       }
       else
         SVN_ERR(svn_cmdline_fputs(", ", stream, pool));
-      
+
       SVN_ERR(svn_cmdline_fputs(cmd->aliases[i], stream, pool));
     }
 
   if (! first_time)
     SVN_ERR(svn_cmdline_fputs(")", stream, pool));
-  
+
   if (help)
     {
       const apr_getopt_option_t *option;
@@ -220,7 +220,7 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                 }
 
               /* convert each option code into an option */
-              option = 
+              option =
                 svn_opt_get_option_from_code2(cmd->valid_options[i],
                                               options_table,
                                               cmd, pool);
@@ -248,7 +248,7 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
 static svn_error_t *
 print_command_info(const svn_opt_subcommand_desc_t *cmd,
                    const apr_getopt_option_t *options_table,
-                   svn_boolean_t help, 
+                   svn_boolean_t help,
                    apr_pool_t *pool,
                    FILE *stream)
 {
@@ -260,7 +260,7 @@ print_command_info(const svn_opt_subcommand_desc_t *cmd,
 
   /* Print the list of aliases. */
   first_time = TRUE;
-  for (i = 0; i < SVN_OPT_MAX_ALIASES; i++) 
+  for (i = 0; i < SVN_OPT_MAX_ALIASES; i++)
     {
       if (cmd->aliases[i] == NULL)
         break;
@@ -271,13 +271,13 @@ print_command_info(const svn_opt_subcommand_desc_t *cmd,
       }
       else
         SVN_ERR(svn_cmdline_fputs(", ", stream, pool));
-      
+
       SVN_ERR(svn_cmdline_fputs(cmd->aliases[i], stream, pool));
     }
 
   if (! first_time)
     SVN_ERR(svn_cmdline_fputs(")", stream, pool));
-  
+
   if (help)
     {
       const apr_getopt_option_t *option;
@@ -298,7 +298,7 @@ print_command_info(const svn_opt_subcommand_desc_t *cmd,
                 }
 
               /* convert each option code into an option */
-              option = 
+              option =
                 svn_opt_get_option_from_code(cmd->valid_options[i],
                                              options_table);
 
@@ -334,8 +334,8 @@ svn_opt_print_generic_help2(const char *header,
   if (header)
     if ((err = svn_cmdline_fputs(header, stream, pool)))
       goto print_error;
-  
-  while (cmd_table[i].name) 
+
+  while (cmd_table[i].name)
     {
       if ((err = svn_cmdline_fputs("   ", stream, pool))
           || (err = print_command_info2(cmd_table + i, opt_table, FALSE,
@@ -373,8 +373,8 @@ svn_opt_print_generic_help(const char *header,
   if (header)
     if ((err = svn_cmdline_fputs(header, stream, pool)))
       goto print_error;
-  
-  while (cmd_table[i].name) 
+
+  while (cmd_table[i].name)
     {
       if ((err = svn_cmdline_fputs("   ", stream, pool))
           || (err = print_command_info(cmd_table + i, opt_table, FALSE,
@@ -415,7 +415,7 @@ svn_opt_format_option(const char **string,
 
   /* We have a valid option which may or may not have a "short
      name" (a single-character alias for the long option). */
-  if (opt->optch <= 255)  
+  if (opt->optch <= 255)
     opts = apr_psprintf(pool, "-%c [--%s]", opt->optch, opt->name);
   else
     opts = apr_psprintf(pool, "--%s", opt->name);
@@ -439,13 +439,13 @@ svn_opt_subcommand_help2(const char *subcommand,
   const svn_opt_subcommand_desc2_t *cmd =
     svn_opt_get_canonical_subcommand2(table, subcommand);
   svn_error_t *err;
-    
+
   if (cmd)
     err = print_command_info2(cmd, options_table, TRUE, pool, stdout);
   else
     err = svn_cmdline_fprintf(stderr, pool,
                               _("\"%s\": unknown command.\n\n"), subcommand);
-  
+
   if (err) {
     svn_handle_error2(err, stderr, FALSE, "svn: ");
     svn_error_clear(err);
@@ -462,13 +462,13 @@ svn_opt_subcommand_help(const char *subcommand,
   const svn_opt_subcommand_desc_t *cmd =
     svn_opt_get_canonical_subcommand(table, subcommand);
   svn_error_t *err;
-    
+
   if (cmd)
     err = print_command_info(cmd, options_table, TRUE, pool, stdout);
   else
     err = svn_cmdline_fprintf(stderr, pool,
                               _("\"%s\": unknown command.\n\n"), subcommand);
-  
+
   if (err) {
     svn_handle_error2(err, stderr, FALSE, "svn: ");
     svn_error_clear(err);
@@ -549,7 +549,7 @@ static char *parse_one_rev(svn_opt_revision_t *revision, char *str,
           return NULL;
         }
       if (!matched)
-        return NULL; 
+        return NULL;
       revision->kind = svn_opt_revision_date;
       revision->value.date = tm;
       return end + 1;
@@ -644,7 +644,7 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
 
 
 /* Copy STR into POOL and push the copy onto ARRAY. */
-static void 
+static void
 array_push_str(apr_array_header_t *array,
                const char *str,
                apr_pool_t *pool)
@@ -660,7 +660,7 @@ array_push_str(apr_array_header_t *array,
 
 
 void
-svn_opt_push_implicit_dot_target(apr_array_header_t *targets, 
+svn_opt_push_implicit_dot_target(apr_array_header_t *targets,
                                  apr_pool_t *pool)
 {
   if (targets->nelts == 0)
@@ -676,7 +676,7 @@ svn_opt_parse_num_args(apr_array_header_t **args_p,
                        apr_pool_t *pool)
 {
   int i;
-  apr_array_header_t *args 
+  apr_array_header_t *args
     = apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
 
   /* loop for num_args and add each arg to the args array */
@@ -698,7 +698,7 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
                        apr_getopt_t *os,
                        apr_pool_t *pool)
 {
-  apr_array_header_t *args 
+  apr_array_header_t *args
     = apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
 
   if (os->ind > os->argc)
@@ -746,7 +746,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
           if (path[i + 1] == '\0')  /* looking at empty peg revision */
             {
               ret = 0;
-              start_revision.kind = is_url ? svn_opt_revision_head 
+              start_revision.kind = is_url ? svn_opt_revision_head
                                            : svn_opt_revision_base;
             }
           else  /* looking at non-empty peg revision */
@@ -759,13 +759,13 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
                      URI-encoded delimeters.  */
                   int rev_len = strlen(rev_str);
                   if (rev_len > 6
-                      && rev_str[0] == '%' 
-                      && rev_str[1] == '7' 
-                      && (rev_str[2] == 'B' 
+                      && rev_str[0] == '%'
+                      && rev_str[1] == '7'
+                      && (rev_str[2] == 'B'
                           || rev_str[2] == 'b')
-                      && rev_str[rev_len-3] == '%' 
-                      && rev_str[rev_len-2] == '7' 
-                      && (rev_str[rev_len-1] == 'D' 
+                      && rev_str[rev_len-3] == '%'
+                      && rev_str[rev_len-2] == '7'
+                      && (rev_str[rev_len-1] == 'D'
                           || rev_str[rev_len-1] == 'd'))
                     {
                       rev_str = svn_path_uri_decode(rev_str, pool);
@@ -799,7 +799,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
 
 
 svn_error_t *
-svn_opt_args_to_target_array2(apr_array_header_t **targets_p, 
+svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool)
@@ -863,7 +863,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
             return svn_error_createf(SVN_ERR_BAD_URL, 0,
                                      _("URL '%s' contains a '..' element"),
                                      utf8_target);
-          
+
           /* strip any trailing '/' */
           target = svn_path_canonicalize(target, pool);
         }
@@ -919,14 +919,14 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
 
   /* kff todo: need to remove redundancies from targets before
      passing it to the cmd_func. */
-  
+
   *targets_p = output_targets;
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_opt_args_to_target_array(apr_array_header_t **targets_p, 
+svn_opt_args_to_target_array(apr_array_header_t **targets_p,
                              apr_getopt_t *os,
                              apr_array_header_t *known_targets,
                              svn_opt_revision_t *start_revision,
@@ -967,7 +967,7 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
             }
         }
     }
-  
+
   *targets_p = output_targets;
   return SVN_NO_ERROR;
 }

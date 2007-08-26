@@ -270,7 +270,7 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
  * the line.  Set *PCH to the character that ended the line (either
  * newline or EOF), and set CTX->section to the string of characters
  * seen before ']'.
- * 
+ *
  * This is meant to be called immediately after reading the '[' that
  * starts a section name.
  */
@@ -358,7 +358,7 @@ svn_config__user_config_path(const char *config_dir,
       *path_p = svn_path_join_many(pool, config_dir, fname, NULL);
       return SVN_NO_ERROR;
     }
-  
+
 #ifdef WIN32
   {
     const char *folder;
@@ -369,7 +369,7 @@ svn_config__user_config_path(const char *config_dir,
 
 #else  /* ! WIN32 */
   {
-    const char *homedir = svn_user_get_homedir(pool); 
+    const char *homedir = svn_user_get_homedir(pool);
     if (! homedir)
       return SVN_NO_ERROR;
     *path_p = svn_path_join_many(pool,
@@ -522,7 +522,7 @@ ensure_auth_dirs(const char *path,
       svn_error_clear(err);
       svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
     }
-      
+
   auth_subdir = svn_path_join_many(pool, auth_dir,
                                    SVN_AUTH_CRED_USERNAME, NULL);
   err = svn_io_check_path(auth_subdir, &kind, pool);
@@ -743,7 +743,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 
       if (! err)
         {
-          SVN_ERR(svn_io_file_write_full(f, contents, 
+          SVN_ERR(svn_io_file_write_full(f, contents,
                                          strlen(contents), NULL, pool));
           SVN_ERR(svn_io_file_close(f, pool));
         }
@@ -764,7 +764,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
       svn_error_clear(err);
       return SVN_NO_ERROR;
     }
-  
+
   if (kind == svn_node_none)
     {
       apr_file_t *f;
@@ -868,7 +868,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 
       if (! err)
         {
-          SVN_ERR(svn_io_file_write_full(f, contents, 
+          SVN_ERR(svn_io_file_write_full(f, contents,
                                          strlen(contents), NULL, pool));
           SVN_ERR(svn_io_file_close(f, pool));
         }
@@ -889,7 +889,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
       svn_error_clear(err);
       return SVN_NO_ERROR;
     }
-  
+
   if (kind == svn_node_none)
     {
       apr_file_t *f;
@@ -1010,7 +1010,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# *.jpg = svn:mime-type=image/jpeg"                                 NL
         "# Makefile = svn:eol-style=native"                                  NL
         ""                                                                   NL;
-        
+
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
                              APR_OS_DEFAULT,
@@ -1018,7 +1018,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 
       if (! err)
         {
-          SVN_ERR(svn_io_file_write_full(f, contents, 
+          SVN_ERR(svn_io_file_write_full(f, contents,
                                          strlen(contents), NULL, pool));
           SVN_ERR(svn_io_file_close(f, pool));
         }

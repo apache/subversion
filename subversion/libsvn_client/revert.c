@@ -97,7 +97,7 @@ svn_client_revert(const apr_array_header_t *paths,
   svn_config_t *cfg;
   svn_boolean_t use_commit_times;
 
-  cfg = ctx->config ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
+  cfg = ctx->config ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                                    APR_HASH_KEY_STRING) : NULL;
 
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
@@ -114,7 +114,7 @@ svn_client_revert(const apr_array_header_t *paths,
       svn_pool_clear(subpool);
 
       /* See if we've been asked to cancel this operation. */
-      if ((ctx->cancel_func) 
+      if ((ctx->cancel_func)
           && ((err = ctx->cancel_func(ctx->cancel_baton))))
         goto errorful;
 
@@ -122,11 +122,11 @@ svn_client_revert(const apr_array_header_t *paths,
       if (err)
         goto errorful;
     }
-  
+
  errorful:
 
   svn_pool_destroy(subpool);
-  
+
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
 

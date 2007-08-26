@@ -35,7 +35,7 @@ passed) on REPOS-PATH, then check its lock usage counts.  If there is
 any accumulation present, report that accumulation to stdout.
 """ % (os.path.basename(sys.argv[0])))
   sys.exit(retval)
-  
+
 def main():
   now_time = time.asctime()
   repos_path = None

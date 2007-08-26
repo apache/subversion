@@ -43,7 +43,7 @@ import re
 
 def print_error(err):
     sys.stderr.write("ERROR: %s\n\n" % (err))
-    
+
 def usage_and_exit(err=None):
     if err:
         stream = sys.stderr
@@ -65,7 +65,7 @@ Options:
 
     --username USER      Specify the username used to connect to the repository
     --password PASS      Specify the PASSWORD used to connect to the repository
-    
+
 """ % (os.path.basename(sys.argv[0])))
     sys.exit(err and 1 or 0)
 
@@ -84,20 +84,20 @@ def get_head_revision(path, args):
 
 def compare_paths(path1, path2):
     """This is a sort() helper function for two paths."""
-    
+
     path1_len = len (path1);
     path2_len = len (path2);
     min_len = min(path1_len, path2_len)
     i = 0
-  
+
     # Are the paths exactly the same?
     if path1 == path2:
       return 0
-    
+
     # Skip past common prefix
     while (i < min_len) and (path1[i] == path2[i]):
       i = i + 1
-  
+
     # Children of paths are greater than their parents, but less than
     # greater siblings of their parents
     char1 = '\0'
@@ -106,8 +106,8 @@ def compare_paths(path1, path2):
       char1 = path1[i]
     if (i < path2_len):
       char2 = path2[i]
-      
-    if (char1 == '/') and (i == path2_len): 
+
+    if (char1 == '/') and (i == path2_len):
       return 1
     if (char2 == '/') and (i == path1_len):
       return -1
@@ -115,7 +115,7 @@ def compare_paths(path1, path2):
       return -1
     if (i < path2_len) and (char2 == '/'):
       return 1
-  
+
     # Common prefix was skipped above, next character is compared to
     # determine order
     return cmp(char1, char2)
@@ -124,7 +124,7 @@ def compare_paths(path1, path2):
 def harvest_dirs(path):
     """Return a list of versioned directories under working copy
     directory PATH, inclusive."""
-    
+
     # 'svn status' output line matcher, taken from the Subversion test suite
     rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ]) ' \
                     '([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
@@ -146,8 +146,8 @@ def harvest_dirs(path):
             except:
                 pass
     return dirs
-        
-    
+
+
 def main():
     argc = len(sys.argv)
     if argc < 2:
@@ -176,7 +176,7 @@ def main():
         print format_string % (current, num_dirs, dir)
         os.system('%s update --quiet --revision %d %s %s'
                   % (SVN_BINARY, head_revision, args, dir))
-        
+
 
 if __name__ == "__main__":
     try:

@@ -155,7 +155,7 @@ class Svn2Feed:
 
     def _format_updated_ts(self, revision_ts):
 
-        # Get "2006-08-10 20:17:08" from 
+        # Get "2006-08-10 20:17:08" from
         # "2006-07-28 20:17:18 +0530 (Fri, 28 Jul 2006)
         date = revision_ts[0:19]
         epoch = time.mktime(time.strptime(date, "%Y-%m-%d %H:%M:%S"))

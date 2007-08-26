@@ -219,7 +219,7 @@ main(int argc, const char *argv[])
       SVN_INT_ERR(svn_io_check_path(wc_path, &kind, pool));
       if (kind == svn_node_dir)
         {
-          SVN_INT_ERR(svn_cmdline_printf(pool, _("exported%s"), 
+          SVN_INT_ERR(svn_cmdline_printf(pool, _("exported%s"),
                                          no_newline ? "" : "\n"));
           svn_pool_destroy(pool);
           return EXIT_SUCCESS;

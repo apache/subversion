@@ -88,7 +88,7 @@ svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
 
 /* Return a list of wc props for ENTRYNAME in ADM_ACCESS.
    ENTRYNAME must be the name of a file or SVN_WC_ENTRY_THIS_DIR.
-   
+
    The returned WCPROPS may be allocated in POOL, or may be the props
    cached in ADM_ACCESS.  */
 svn_error_t *
@@ -97,7 +97,7 @@ svn_wc__wcprop_list(apr_hash_t **wcprops,
                     svn_wc_adm_access_t *adm_access,
                     apr_pool_t *pool);
 
-/* Set a single 'wcprop' NAME to VALUE for versioned object PATH. 
+/* Set a single 'wcprop' NAME to VALUE for versioned object PATH.
    If VALUE is null, remove property NAME.  ADM_ACCESS is an access
    baton set that contains PATH.
 

@@ -38,7 +38,7 @@ class SvnCoreTest < Test::Unit::TestCase
     apr_time = now.to_i * 1000000 + now.usec
     assert_equal(apr_time, now.to_apr_time)
   end
-  
+
   def test_not_new_auth_provider_object
     assert_raise(NoMethodError) do
       Svn::Core::AuthProviderObject.new
@@ -51,17 +51,17 @@ class SvnCoreTest < Test::Unit::TestCase
     patch = 3
     tag = "-dev"
     ver = Svn::Core::Version.new(major, minor, patch, tag)
-    
+
     assert_equal("#{major}.#{minor}.#{patch}#{tag}", ver.to_s)
     assert_equal([major, minor, patch, tag], ver.to_a)
   end
-  
+
   def test_version_valid?
     assert_true(Svn::Core::Version.new(1, 2, 3, "-devel").valid?)
     assert_true(Svn::Core::Version.new(nil, nil, nil, "").valid?)
     assert_true(Svn::Core::Version.new.valid?)
   end
-  
+
   def test_version_equal
     major = 1
     minor = 2
@@ -127,12 +127,12 @@ class SvnCoreTest < Test::Unit::TestCase
       auth[key] = 1
     end
   end
-  
+
   def test_pool_GC
     gc_disable do
       made_number_of_pool = 100
       pools = []
-    
+
       gc
       before_number_of_pools = Svn::Core::Pool.number_of_pools
       made_number_of_pool.times do
@@ -142,7 +142,7 @@ class SvnCoreTest < Test::Unit::TestCase
       current_number_of_pools = Svn::Core::Pool.number_of_pools
       created_number_of_pools = current_number_of_pools - before_number_of_pools
       assert_operator(made_number_of_pool, :<=, current_number_of_pools)
-      
+
       gc
       pools.clear
       before_number_of_pools = Svn::Core::Pool.number_of_pools
@@ -165,17 +165,17 @@ class SvnCoreTest < Test::Unit::TestCase
     section = Svn::Core::CONFIG_SECTION_HELPERS
     option = Svn::Core::CONFIG_OPTION_DIFF_CMD
     value = "diff"
-    
+
     assert_nil(config.get(section, option))
     config.set(section, option, value)
     assert_equal(value, config.get(section, option))
   end
-  
+
   def test_config_bool
     config = Svn::Core::Config.read(@config_file)
     section = Svn::Core::CONFIG_SECTION_MISCELLANY
     option = Svn::Core::CONFIG_OPTION_ENABLE_AUTO_PROPS
-    
+
     assert(config.get_bool(section, option, true))
     config.set_bool(section, option, false)
     assert(!config.get_bool(section, option, true))
@@ -247,7 +247,7 @@ class SvnCoreTest < Test::Unit::TestCase
     port_prop_name = "http-proxy-port"
     port_prop_value = 8080
     default_port_value = 1818
-    
+
     File.open(@servers_file, "w") do |f|
       f.puts("[#{group}]")
     end
@@ -261,7 +261,7 @@ class SvnCoreTest < Test::Unit::TestCase
                  config.get_server_setting_int(group,
                                                port_prop_name,
                                                default_port_value))
-    
+
     File.open(@servers_file, "w") do |f|
       f.puts("[#{group}]")
       f.puts("#{host_prop_name} = #{host_prop_value}")

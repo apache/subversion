@@ -1148,7 +1148,7 @@ svn_wc_delete3(const char *path,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
                void *notify_baton,
-               svn_boolean_t keep_local, 
+               svn_boolean_t keep_local,
                apr_pool_t *pool)
 {
   svn_wc_adm_access_t *dir_access;

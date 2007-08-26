@@ -1,9 +1,9 @@
 #
 # repos.py: public Python interface for repos components
 #
-# Subversion is a tool for revision control. 
+# Subversion is a tool for revision control.
 # See http://subversion.tigris.org for more information.
-#    
+#
 ######################################################################
 #
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -67,9 +67,9 @@ class ChangedPath:
 class ChangeCollector(_svndelta.Editor):
   """Available Since: 1.2.0
   """
-  
+
   # BATON FORMAT: [path, base_path, base_rev]
-  
+
   def __init__(self, fs_ptr, root, pool=None, notify_cb=None):
     self.fs_ptr = fs_ptr
     self.changes = { } # path -> ChangedPathEntry()
@@ -94,13 +94,13 @@ class ChangeCollector(_svndelta.Editor):
 
   def get_changes(self):
     return self.changes
-  
+
   def _send_change(self, path):
     if self.notify_cb:
       change = self.changes.get(path)
       if change:
         self.notify_cb(change)
-    
+
   def _make_base_path(self, parent_path, path):
     idx = path.rfind('/')
     if parent_path:
@@ -116,7 +116,7 @@ class ChangeCollector(_svndelta.Editor):
       pass
     root = self.roots[rev] = _svnfs.revision_root(self.fs_ptr, rev)
     return root
-    
+
   def open_root(self, base_revision, dir_pool=None):
     return ('', '', self.base_rev)  # dir_baton
 
@@ -239,16 +239,16 @@ class ChangeCollector(_svndelta.Editor):
                                             )
   def close_directory(self, dir_baton):
     self._send_change(dir_baton[0])
-    
+
   def close_file(self, file_baton, text_checksum):
     self._send_change(file_baton[0])
-    
+
 
 class RevisionChangeCollector(ChangeCollector):
   """Deprecated: Use ChangeCollector.
   This is a compatibility wrapper providing the interface of the
   Subversion 1.1.x and earlier bindings.
-  
+
   Important difference: base_path members have a leading '/' character in
   this interface."""
 

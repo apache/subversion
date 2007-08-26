@@ -25,7 +25,7 @@ def _authz_callback(root, path, pool):
 
 class SubversionRepositoryTestCase(unittest.TestCase):
   """Test cases for the Subversion repository layer"""
-  
+
   def setUp(self):
     """Load a Subversion repository"""
     self.repos = repos.open(REPOS_PATH)
@@ -69,7 +69,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
     dumpstream.close()
     feedbackstream.close()
-   
+
     # Check that the dump fails when the dumpstream is closed
     self.assertRaises(ValueError, repos.dump_fs2,
       self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0, None)
@@ -103,7 +103,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         logs.append(paths)
 
     # Run get_logs
-    repos.get_logs(self.repos, ['/'], self.rev, 0, True, 0, addLog) 
+    repos.get_logs(self.repos, ['/'], self.rev, 0, True, 0, addLog)
 
     # Count and verify changes
     change_count = 0
@@ -125,7 +125,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     e_ptr, e_baton = delta.make_editor(editor)
     repos.dir_delta(prev_root, '', '', this_root, '', e_ptr, e_baton,
                     _authz_callback, 1, 1, 0, 0)
-   
+
     # Check results
     self.assertEqual(editor.textdeltas[0].new_data, "This is a test.\n")
     self.assertEqual(editor.textdeltas[1].new_data, "A test.\n")

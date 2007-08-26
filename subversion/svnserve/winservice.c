@@ -98,7 +98,7 @@ Stopping the Service
 
 At some point, the SCM will decide to stop the service, either because
 an administrator chose to stop the service, or the system is shutting
-down.  To do this, the SCM calls winservice_handler() with the 
+down.  To do this, the SCM calls winservice_handler() with the
 SERVICE_CONTROL_STOP control code.  When this happens,
 winservice_handler() will inform the SCM that the service is now
 in the "stopping" state, and will call winservice_notify_stop().
@@ -450,7 +450,7 @@ winservice_stop(DWORD exit_code)
     }
   else
     {
-      /* There was no dispatcher thread.  So we never started in 
+      /* There was no dispatcher thread.  So we never started in
          the first place. */
       exit_code = winservice_status.dwWin32ExitCode;
       dbg_print("dispatcher thread was not running\r\n");

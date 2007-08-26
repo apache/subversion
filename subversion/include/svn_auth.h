@@ -31,7 +31,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /** Overview of the svn authentication system.
- *    
+ *
  * We define an authentication "provider" as a module that is able to
  * return a specific set of credentials. (e.g. username/password,
  * certificate, etc.)  Each provider implements a vtable that
@@ -86,7 +86,7 @@ typedef struct svn_auth_provider_t
 {
   /** The kind of credentials this provider knows how to retrieve. */
   const char *cred_kind;
-  
+
   /** Get an initial set of credentials.
    *
    * Set @a *credentials to a set of valid credentials within @a
@@ -122,7 +122,7 @@ typedef struct svn_auth_provider_t
                                     apr_hash_t *parameters,
                                     const char *realmstring,
                                     apr_pool_t *pool);
-  
+
   /** Save credentials.
    *
    * Store @a credentials for future use.  @a provider_baton is
@@ -140,7 +140,7 @@ typedef struct svn_auth_provider_t
                                     apr_hash_t *parameters,
                                     const char *realmstring,
                                     apr_pool_t *pool);
-  
+
 } svn_auth_provider_t;
 
 
@@ -278,7 +278,7 @@ typedef struct svn_auth_cred_ssl_client_cert_pw_t
 /** SSL server certificate information used by @c
  * SVN_AUTH_CRED_SSL_SERVER_TRUST providers.
  */
-typedef struct svn_auth_ssl_server_cert_info_t 
+typedef struct svn_auth_ssl_server_cert_info_t
 {
   /** Primary CN */
   const char *hostname;
@@ -643,12 +643,12 @@ void svn_auth_get_username_prompt_provider
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
- *  
+ *
  * If a default username or password is available, @a *provider will
  * honor them as well, and return them when
  * svn_auth_first_credentials() is called.  (see @c
  * SVN_AUTH_PARAM_DEFAULT_USERNAME and @c
- * SVN_AUTH_PARAM_DEFAULT_PASSWORD). 
+ * SVN_AUTH_PARAM_DEFAULT_PASSWORD).
  *
  * @since New in 1.4.
  */
@@ -778,7 +778,7 @@ void svn_auth_get_ssl_client_cert_pw_file_provider
 
 
 /** Create and return @a *provider, an authentication provider of type @c
- * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.  
+ * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used to override

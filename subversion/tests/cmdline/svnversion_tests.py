@@ -2,9 +2,9 @@
 #
 #  svnversion_tests.py:  testing the 'svnversion' tool.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2003 CollabNet.  All rights reserved.
 #

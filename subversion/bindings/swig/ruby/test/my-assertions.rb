@@ -10,7 +10,7 @@ module Test
           assert_equal(true, boolean, message)
         end
       end
-      
+
       def assert_false(boolean, message=nil)
         _wrap_assertion do
           assert_equal(false, boolean, message)

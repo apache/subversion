@@ -100,7 +100,7 @@ sub PathSvn
         @paths = ($path_svnclient =~ /(\w+)/g);
         $path_svn = &cmn_ValuePathfile($paths[0]);
         $path_svnclient = "$path_svn\\$paths[1]";
-        $path_svnclient =~ s/\\\\/\\/g; 
+        $path_svnclient =~ s/\\\\/\\/g;
       }
 
     $ErrMsg="ERROR: File not found: Could not find svn.exe in:\n  $path_svnclient\n";
@@ -129,7 +129,7 @@ sub SetVersion
     my ($InputVersion, $InputRevision)='';
 
     $SvnRevision = "unset" if (! $SvnRevision);
-    
+
     if (! $g_AutoRun)
       {
         print "\nsvn.exe that's mentioned in your svn_dynamics.iss file have ",
@@ -142,15 +142,15 @@ sub SetVersion
           " button.\n\n",
           "Please, make sure that svn.iss is not opened by another ",
           "applications before you continue:\n\n";
-          
+
           print "  Version [$SvnVersion]: ";
-        
+
         chomp ($InputVersion = <STDIN>);
 
         if ($InputVersion)
           {
             $SvnVersion = $InputVersion;
-            
+
           }
 
         $SvnRevision = "" if ($SvnRevision eq "unset");
@@ -211,7 +211,7 @@ sub SetVerSvnIss
               $IssFileCnt= $IssFileCnt . $_;
           }
       }
-    close (FH_ISSFILE);  
+    close (FH_ISSFILE);
 
     $IssFileCnt="$IssFileCnt\n";
 
@@ -242,7 +242,7 @@ sub SvnVersion
         if (/svn, version /)
           {
             $SvnRetVal = $_;
-            last;          
+            last;
           }
       }
 

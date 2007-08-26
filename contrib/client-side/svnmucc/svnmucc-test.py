@@ -31,7 +31,7 @@ repos_url = 'file://' + repos_path
 def die(msg):
   """Write MSG (formatted as a failure) to stderr, and exit with a
   non-zero errorcode."""
-  
+
   sys.stderr.write("FAIL: " + msg + "\n")
   sys.exit(1)
 
@@ -53,7 +53,7 @@ def run_svnmucc(expected_path_changes, *varargs):
     raise svntest.main.SVNCommitFailure(str(errlines))
   if len(outlines) != 1 or not _svnmucc_re.match(outlines[0]):
     raise svntest.main.SVNLineUnequal(str(outlines))
-  
+
   # Now, run 'svn log -vq -rHEAD'
   changed_paths = []
   outlines, errlines = svntest.main.run_svn(None, 'log', '-vqrHEAD', repos_url)
@@ -100,7 +100,7 @@ def main():
                'D /foo',
                'A /zig/zag (from /foo:3)',
                ], # ---------
-              'cp', '3', 'foo', 'zig', 
+              'cp', '3', 'foo', 'zig',
               'rm',             'zig/bar',
               'mv',      'foo', 'zig/zag')
 
@@ -126,8 +126,8 @@ def main():
                'A /zig/zag/bar/z%20z.c (from /zig/zag/bar/y%20y.c:6)',
                'A /zig/zag/bar/z z2.c (from /zig/zag/bar/y y.c:6)',
                ], #---------
-              'mv',         'zig/zag/bar/y%20y.c',   'zig/zag/bar/z z1.c', 
-              'cp', 'HEAD', 'zig/zag/bar/y%2520y.c', 'zig/zag/bar/z%2520z.c', 
+              'mv',         'zig/zag/bar/y%20y.c',   'zig/zag/bar/z z1.c',
+              'cp', 'HEAD', 'zig/zag/bar/y%2520y.c', 'zig/zag/bar/z%2520z.c',
               'cp', 'HEAD', 'zig/zag/bar/y y.c',     'zig/zag/bar/z z2.c')
 
   # revision 8
@@ -137,30 +137,30 @@ def main():
                'D /zig/foo/bar/z z2.c',
                'R /zig/foo/bar/z z1.c (from /zig/zag/bar/x.c:5)',
                ], #---------
-              'mv',      'zig/zag',         'zig/foo', 
-              'rm',                         'zig/foo/bar/z z1.c', 
-              'rm',                         'zig/foo/bar/z%20z2.c', 
-              'rm',                         'zig/foo/bar/z%2520z.c', 
+              'mv',      'zig/zag',         'zig/foo',
+              'rm',                         'zig/foo/bar/z z1.c',
+              'rm',                         'zig/foo/bar/z%20z2.c',
+              'rm',                         'zig/foo/bar/z%2520z.c',
               'cp', '5', 'zig/zag/bar/x.c', 'zig/foo/bar/z%20z1.c')
 
   # revision 9
   run_svnmucc(['R /zig/foo/bar (from /zig/z.c:8)',
                ], #---------
-              'rm',                 'zig/foo/bar', 
+              'rm',                 'zig/foo/bar',
               'cp', '8', 'zig/z.c', 'zig/foo/bar')
 
   # revision 10
   run_svnmucc(['R /zig/foo/bar (from /zig/foo/bar:8)',
                'D /zig/foo/bar/z z1.c',
                ], #---------
-              'rm',                     'zig/foo/bar', 
-              'cp', '8', 'zig/foo/bar', 'zig/foo/bar', 
+              'rm',                     'zig/foo/bar',
+              'cp', '8', 'zig/foo/bar', 'zig/foo/bar',
               'rm',                     'zig/foo/bar/z%20z1.c')
 
   # revision 11
   run_svnmucc(['R /zig/foo (from /zig/foo/bar:10)',
                ], #---------
-              'rm',                        'zig/foo', 
+              'rm',                        'zig/foo',
               'cp', 'head', 'zig/foo/bar', 'zig/foo')
 
   # revision 12
@@ -171,12 +171,12 @@ def main():
                'D /foo/foo/bar',
                'R /foo/foo/foo/bar (from /foo:3)',
                ], #---------
-              'rm',             'zig', 
+              'rm',             'zig',
               'cp', '3', 'foo', 'foo',
-              'cp', '3', 'foo', 'foo/foo', 
-              'cp', '3', 'foo', 'foo/foo/foo', 
+              'cp', '3', 'foo', 'foo/foo',
+              'cp', '3', 'foo', 'foo/foo/foo',
               'rm',             'foo/foo/bar',
-              'rm',             'foo/foo/foo/bar', 
+              'rm',             'foo/foo/foo/bar',
               'cp', '3', 'foo', 'foo/foo/foo/bar')
 
   # revision 13
@@ -185,7 +185,7 @@ def main():
                'A /boozle/buz/nuz',
                ], #---------
               'cp',    '3', 'foo', 'boozle',
-              'mkdir',             'boozle/buz',  
+              'mkdir',             'boozle/buz',
               'mkdir',             'boozle/buz/nuz')
 
   # revision 14

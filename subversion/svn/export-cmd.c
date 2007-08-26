@@ -46,7 +46,7 @@ svn_cl__export(apr_getopt_t *os,
   svn_opt_revision_t peg_revision;
   const char *truefrom;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
   /* We want exactly 1 or 2 targets for this subcommand. */
@@ -54,7 +54,7 @@ svn_cl__export(apr_getopt_t *os,
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
   if (targets->nelts > 2)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-  
+
   /* The first target is the `from' path. */
   from = APR_ARRAY_IDX(targets, 0, const char *);
 
@@ -63,7 +63,7 @@ svn_cl__export(apr_getopt_t *os,
 
   /* If only one target was given, split off the basename to use as
      the `to' path.  Else, a `to' path was supplied. */
-  if (targets->nelts == 1) 
+  if (targets->nelts == 1)
     to = svn_path_uri_decode(svn_path_basename(truefrom, pool), pool);
   else
     to = APR_ARRAY_IDX(targets, 1, const char *);

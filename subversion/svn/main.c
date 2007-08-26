@@ -233,7 +233,7 @@ const apr_getopt_option_t svn_cl__options[] =
                              svn_cl__auth_password_opt, \
                              svn_cl__no_auth_cache_opt, \
                              svn_cl__non_interactive_opt
-/* Options for giving a log message.  (Some of these also have other uses.) 
+/* Options for giving a log message.  (Some of these also have other uses.)
  *
  * In theory, we should include svn_cl__non_interactive_opt here too,
  * because all the log-message-taking commands have the potential to
@@ -256,7 +256,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: add PATH...\n"),
     {svn_cl__targets_opt, 'N', svn_cl__depth_opt, 'q', svn_cl__config_dir_opt,
      svn_cl__force_opt, svn_cl__no_ignore_opt, svn_cl__autoprops_opt,
-     svn_cl__no_autoprops_opt, svn_cl__parents_opt }, 
+     svn_cl__no_autoprops_opt, svn_cl__parents_opt },
      {{svn_cl__parents_opt, N_("add intermediate parents")}} },
 
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"}, N_
@@ -919,7 +919,7 @@ svn_cl__check_cancel(void *baton)
 static svn_error_t *
 parse_revprop(apr_hash_t **revprop_table_p,
               const char *revprop_pair,
-              apr_pool_t *pool) 
+              apr_pool_t *pool)
 {
   const char *sep, *propname;
   svn_string_t *propval;
@@ -943,7 +943,7 @@ parse_revprop(apr_hash_t **revprop_table_p,
       propval = svn_string_create("", pool);
     }
 
-  apr_hash_set(*revprop_table_p, propname, APR_HASH_KEY_STRING, propval);  
+  apr_hash_set(*revprop_table_p, propname, APR_HASH_KEY_STRING, propval);
 
   return SVN_NO_ERROR;
 }
@@ -959,7 +959,7 @@ main(int argc, const char *argv[])
   apr_allocator_t *allocator;
   apr_pool_t *pool;
   int opt_id;
-  apr_getopt_t *os;  
+  apr_getopt_t *os;
   svn_cl__opt_state_t opt_state = { { 0 } };
   svn_client_ctx_t *ctx;
   apr_array_header_t *received_opts;
@@ -1397,7 +1397,7 @@ main(int argc, const char *argv[])
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
-        break;  
+        break;
       }
     }
 
@@ -1487,7 +1487,7 @@ main(int argc, const char *argv[])
       if (! svn_opt_subcommand_takes_option2(subcommand, opt_id))
         {
           const char *optstr;
-          const apr_getopt_option_t *badopt = 
+          const apr_getopt_option_t *badopt =
             svn_opt_get_option_from_code2(opt_id, svn_cl__options,
                                           subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
@@ -1507,7 +1507,7 @@ main(int argc, const char *argv[])
   /* if we're running a command that could result in a commit, verify
      that any log message we were given on the command line makes
      sense (unless we've also been instructed not to care). */
-  if ((! opt_state.force_log) 
+  if ((! opt_state.force_log)
       && (subcommand->cmd_func == svn_cl__commit
           || subcommand->cmd_func == svn_cl__copy
           || subcommand->cmd_func == svn_cl__delete
@@ -1531,14 +1531,14 @@ main(int argc, const char *argv[])
             {
               if (subcommand->cmd_func != svn_cl__lock)
                 {
-                  err = svn_error_create 
+                  err = svn_error_create
                     (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
                      _("Log message file is a versioned file; "
                        "use '--force-log' to override"));
                 }
               else
                 {
-                  err = svn_error_create 
+                  err = svn_error_create
                     (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
                      _("Lock comment file is a versioned file; "
                        "use '--force-log' to override"));
@@ -1553,19 +1553,19 @@ main(int argc, const char *argv[])
       if (dash_m_arg)
         {
           apr_finfo_t finfo;
-          if (apr_stat(&finfo, dash_m_arg, 
+          if (apr_stat(&finfo, dash_m_arg,
                        APR_FINFO_MIN, pool) == APR_SUCCESS)
             {
               if (subcommand->cmd_func != svn_cl__lock)
                 {
-                  err = svn_error_create 
+                  err = svn_error_create
                     (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                      _("The log message is a pathname "
                        "(was -F intended?); use '--force-log' to override"));
                 }
               else
                 {
-                  err = svn_error_create 
+                  err = svn_error_create
                     (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                      _("The lock comment is a pathname "
                        "(was -F intended?); use '--force-log' to override"));
@@ -1746,7 +1746,7 @@ main(int argc, const char *argv[])
       if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
           || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
-          err = svn_error_quick_wrap(err, 
+          err = svn_error_quick_wrap(err,
                                      _("Try 'svn help' for more info"));
         }
       svn_handle_error2(err, stderr, FALSE, "svn: ");

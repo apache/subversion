@@ -275,7 +275,7 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
                   apr_pool_t *pool);
 
 
-/* Process the instructions in the log file for ADM_ACCESS. 
+/* Process the instructions in the log file for ADM_ACCESS.
    DIFF3_CMD is the external differ used by the 'SVN_WC__LOG_MERGE'
    log entry.  It is always safe to pass null for this.
 

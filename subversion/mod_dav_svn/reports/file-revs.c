@@ -69,7 +69,7 @@ maybe_send_header(struct file_rev_baton *frb)
 }
 
 
-/* Send a property named NAME with value VAL in an element named ELEM_NAME. 
+/* Send a property named NAME with value VAL in an element named ELEM_NAME.
    Quote NAME and base64-encode VAL if necessary. */
 static svn_error_t *
 send_prop(struct file_rev_baton *frb,
@@ -228,7 +228,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   struct file_rev_baton frb;
   dav_svn__authz_read_baton arb;
   const char *path = NULL;
-  
+
   /* These get determined from the request document. */
   svn_revnum_t start = SVN_INVALID_REVNUM;
   svn_revnum_t end = SVN_INVALID_REVNUM;
@@ -270,7 +270,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          path = svn_path_join(resource->info->repos_path, rel_path, 
+          path = svn_path_join(resource->info->repos_path, rel_path,
                                resource->pool);
         }
       /* else unknown element; skip it */

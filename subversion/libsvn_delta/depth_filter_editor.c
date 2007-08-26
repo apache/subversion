@@ -54,7 +54,7 @@ make_node_baton(void *edit_baton,
   return b;
 }
 
-static svn_boolean_t 
+static svn_boolean_t
 okay_to_edit(struct edit_baton *eb,
              struct node_baton *pb,
              svn_node_kind_t kind)
@@ -92,7 +92,7 @@ set_target_revision(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  /* Nothing depth-y to filter here. */ 
+  /* Nothing depth-y to filter here. */
  return eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
                                                 target_revision, pool);
 }
@@ -156,7 +156,7 @@ add_directory(const char *path,
     {
       b = make_node_baton(eb, FALSE, pb->dir_depth + 1, pool);
       SVN_ERR(eb->wrapped_editor->add_directory(path, pb->wrapped_baton,
-                                                copyfrom_path, 
+                                                copyfrom_path,
                                                 copyfrom_revision,
                                                 pool, &b->wrapped_baton));
     }
@@ -289,7 +289,7 @@ close_file(void *file_baton,
 
   /* Don't close filtered files. */
   if (! fb->filtered)
-    SVN_ERR(eb->wrapped_editor->close_file(fb->wrapped_baton, 
+    SVN_ERR(eb->wrapped_editor->close_file(fb->wrapped_baton,
                                            text_checksum, pool));
 
   return SVN_NO_ERROR;
@@ -334,7 +334,7 @@ absent_directory(const char *path,
 
   /* Don't report absent items in filtered directories. */
   if (! pb->filtered)
-    SVN_ERR(eb->wrapped_editor->absent_directory(path, pb->wrapped_baton, 
+    SVN_ERR(eb->wrapped_editor->absent_directory(path, pb->wrapped_baton,
                                                  pool));
 
   return SVN_NO_ERROR;

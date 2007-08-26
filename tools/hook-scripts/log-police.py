@@ -106,7 +106,7 @@ def main(ignored_pool, argv):
     usage_and_exit("must provide exactly one of -r, -t, or --all-revs.")
   if len(args) != 1:
     usage_and_exit("only one argument allowed (the repository).")
-    
+
   repos_path = svn.core.svn_path_canonicalize(args[0])
 
   # A non-bindings version of this could be implemented by calling out

@@ -318,7 +318,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
               info->val_len = 0;
             }
         }
-   
+
       if (parser->state->prev->current_state == RESPONSE &&
           strcmp(name.name, "href") == 0)
         {
@@ -500,7 +500,7 @@ check_cache(apr_hash_t *ret_props,
  *
  * This function will not block waiting for the response.  If the
  * request can be satisfied from a local cache, set PROP_CTX to NULL
- * as a signal to callers of that fact.  Otherwise, callers are 
+ * as a signal to callers of that fact.  Otherwise, callers are
  * expected to call svn_ra_serf__wait_for_props().
  */
 svn_error_t *
@@ -528,7 +528,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
 
           cache_satisfy = check_cache(ret_props, sess, path, rev, find_props,
                                       pool);
-          
+
           if (cache_satisfy)
             {
               *prop_ctx = NULL;
@@ -638,7 +638,7 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
   return SVN_NO_ERROR;
 }
 
-svn_error_t * 
+svn_error_t *
 svn_ra_serf__search_for_base_props(apr_hash_t *props,
                                    const char **remaining_path,
                                    const char **missing_path,

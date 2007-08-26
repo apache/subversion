@@ -314,7 +314,7 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
   static const char request_tail[]
     = "</S:file-revs-report>";
 
-  apr_hash_set(request_headers, "Accept-Encoding", APR_HASH_KEY_STRING, 
+  apr_hash_set(request_headers, "Accept-Encoding", APR_HASH_KEY_STRING,
                "svndiff1;q=0.9,svndiff;q=0.8");
 
   /* Construct request body. */

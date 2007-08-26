@@ -89,7 +89,7 @@ struct svn_wc_traversal_info_t
 
   /* The before and after values of the SVN_PROP_EXTERNALS property,
    * for each directory on which that property changed.  These have
-   * the same layout as those returned by svn_wc_edited_externals(). 
+   * the same layout as those returned by svn_wc_edited_externals().
    *
    * The hashes, their keys, and their values are allocated in the
    * above pool.
@@ -104,7 +104,7 @@ struct svn_wc_traversal_info_t
 
 /* A special timestamp value which means "use the timestamp from the
    working copy".  This is sometimes used in a log entry like:
-   
+
    <modify-entry name="foo.c" revision="5" timestamp="working"/>
  */
 #define SVN_WC__TIMESTAMP_WC   "working"

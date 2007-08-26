@@ -85,7 +85,7 @@ svn_repos__change_txn_props(svn_fs_txn_t *txn,
       SVN_ERR(svn_repos_fs_change_txn_prop(txn, propname, propval, iterpool));
     }
   svn_pool_destroy(iterpool);
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -178,10 +178,10 @@ validate_prop(const char *name,
 {
   svn_prop_kind_t kind = svn_property_kind(NULL, name);
   if (kind != svn_prop_regular_kind)
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_REPOS_BAD_ARGS, NULL,
        _("Storage of non-regular property '%s' is disallowed through the "
-         "repository interface, and could indicate a bug in your client"), 
+         "repository interface, and could indicate a bug in your client"),
        name);
   return SVN_NO_ERROR;
 }
@@ -244,7 +244,7 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
         action = 'M';
 
       if (use_pre_revprop_change_hook)
-        SVN_ERR(svn_repos__hooks_pre_revprop_change(repos, rev, author, name, 
+        SVN_ERR(svn_repos__hooks_pre_revprop_change(repos, rev, author, name,
                                                     new_value, action, pool));
 
       SVN_ERR(svn_fs_change_rev_prop(repos->fs, rev, name, new_value, pool));
@@ -255,7 +255,7 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
     }
   else  /* rev is either unreadable or only partially readable */
     {
-      return svn_error_createf 
+      return svn_error_createf
         (SVN_ERR_AUTHZ_UNREADABLE, NULL,
          _("Write denied:  not authorized to read all of revision %ld"), rev);
     }
@@ -290,8 +290,8 @@ svn_repos_fs_change_rev_prop(svn_repos_t *repos,
                              apr_pool_t *pool)
 {
   return svn_repos_fs_change_rev_prop2(repos, rev, author, name, new_value,
-                                       NULL, NULL, pool);  
-}     
+                                       NULL, NULL, pool);
+}
 
 
 
@@ -307,8 +307,8 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
   svn_repos_revision_access_level_t readability;
 
   SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
-                                          authz_read_func, authz_read_baton, 
-                                          pool));    
+                                          authz_read_func, authz_read_baton,
+                                          pool));
 
   if (readability == svn_repos_revision_access_none)
     {
@@ -316,7 +316,7 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
       *value_p = NULL;
     }
   else if (readability == svn_repos_revision_access_partial)
-    {      
+    {
       /* Only svn:author and svn:date are fetchable. */
       if ((strncmp(propname, SVN_PROP_REVISION_AUTHOR,
                    strlen(SVN_PROP_REVISION_AUTHOR)) != 0)
@@ -349,8 +349,8 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
   svn_repos_revision_access_level_t readability;
 
   SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
-                                          authz_read_func, authz_read_baton, 
-                                          pool));    
+                                          authz_read_func, authz_read_baton,
+                                          pool));
 
   if (readability == svn_repos_revision_access_none)
     {
@@ -358,7 +358,7 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
       *table_p = apr_hash_make(pool);
     }
   else if (readability == svn_repos_revision_access_partial)
-    {      
+    {
       apr_hash_t *tmphash;
       svn_string_t *value;
 
@@ -416,10 +416,10 @@ svn_repos_fs_lock(svn_lock_t **lock,
     SVN_ERR(svn_fs_access_get_username(&username, access_ctx));
 
   if (! username)
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_FS_NO_USER, NULL,
        "Cannot lock path '%s', no authenticated username available.", path);
-  
+
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock() from happening. */
   SVN_ERR(svn_repos__hooks_pre_lock(repos, path, username, pool));
@@ -459,7 +459,7 @@ svn_repos_fs_unlock(svn_repos_t *repos,
     SVN_ERR(svn_fs_access_get_username(&username, access_ctx));
 
   if (! break_lock && ! username)
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_FS_NO_USER, NULL,
        _("Cannot unlock path '%s', no authenticated username available"),
        path);
@@ -493,8 +493,8 @@ struct get_locks_baton_t
 
 /* This implements the svn_fs_get_locks_callback_t interface. */
 static svn_error_t *
-get_locks_callback(void *baton, 
-                   svn_lock_t *lock, 
+get_locks_callback(void *baton,
+                   svn_lock_t *lock,
                    apr_pool_t *pool)
 {
   struct get_locks_baton_t *b = baton;
@@ -510,7 +510,7 @@ get_locks_callback(void *baton,
 
   /* If we can read this lock path, add the lock to the return hash. */
   if (readable)
-    apr_hash_set(b->locks, apr_pstrdup(hash_pool, lock->path), 
+    apr_hash_set(b->locks, apr_pstrdup(hash_pool, lock->path),
                  APR_HASH_KEY_STRING, svn_lock_dup(lock, hash_pool));
 
   return SVN_NO_ERROR;
@@ -538,7 +538,7 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
   baton.locks = all_locks;
   baton.authz_read_func = authz_read_func;
   baton.authz_read_baton = authz_read_baton;
-  SVN_ERR(svn_fs_revision_root(&(baton.head_root), repos->fs, 
+  SVN_ERR(svn_fs_revision_root(&(baton.head_root), repos->fs,
                                head_rev, pool));
 
   /* Get all the locks. */
@@ -615,8 +615,8 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
 
 
 
-/* 
- * vim:ts=4:sw=4:expandtab:tw=80:fo=tcroq 
- * vim:isk=a-z,A-Z,48-57,_,.,-,> 
+/*
+ * vim:ts=4:sw=4:expandtab:tw=80:fo=tcroq
+ * vim:isk=a-z,A-Z,48-57,_,.,-,>
  * vim:cino=>1s,e0,n0,f0,{.5s,}0,^-.5s,=.5s,t0,+1s,c3,(0,u0,\:0
  */

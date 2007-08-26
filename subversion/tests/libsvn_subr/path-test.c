@@ -36,12 +36,12 @@ test_path_is_child(const char **msg,
 {
   int i, j;
 
-/* The path checking code is platform specific, so we shouldn't run 
+/* The path checking code is platform specific, so we shouldn't run
    the Windows path handling testcases on non-Windows platforms.
    */
 #define NUM_TEST_PATHS 11
 
-  static const char * const paths[NUM_TEST_PATHS] = { 
+  static const char * const paths[NUM_TEST_PATHS] = {
     "/foo/bar",
     "/foo/bars",
     "/foo/baz",
@@ -54,7 +54,7 @@ test_path_is_child(const char **msg,
     "/",
     "foo2",
     };
-  
+
   static const char * const remainders[NUM_TEST_PATHS][NUM_TEST_PATHS] = {
     { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -69,7 +69,7 @@ test_path_is_child(const char **msg,
       "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   };
-  
+
   *msg = "test svn_path_is_child";
 
   if (msg_only)
@@ -89,7 +89,7 @@ test_path_is_child(const char **msg,
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
                "svn_path_is_child (%s, %s) returned '%s' instead of '%s'",
-               paths[i], paths[j], 
+               paths[i], paths[j],
                remainder ? remainder : "(null)",
                remainders[i][j] ? remainders[i][j] : "(null)" );
         }
@@ -107,7 +107,7 @@ test_path_split(const char **msg,
 {
   apr_size_t i;
 
-  static const char * const paths[][3] = { 
+  static const char * const paths[][3] = {
     { "/foo/bar",        "/foo",          "bar" },
     { "/foo/bar/ ",       "/foo/bar",      " " },
     { "/foo",            "/",             "foo" },
@@ -123,7 +123,7 @@ test_path_split(const char **msg,
     { "/flu\\b/\\blarg", "/flu\\b",       "\\blarg" },
     { "/",               "/",             "/" },
   };
-  
+
   *msg = "test svn_path_split";
 
   if (msg_only)
@@ -162,7 +162,7 @@ test_is_url(const char **msg,
   apr_size_t i;
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path;
     svn_boolean_t result;
   } tests[] = {
@@ -189,7 +189,7 @@ test_is_url(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_url (%s) returned %s instead of %s",
-           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].path, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
     }
 
@@ -206,7 +206,7 @@ test_is_uri_safe(const char **msg,
   apr_size_t i;
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path;
     svn_boolean_t result;
   } tests[] = {
@@ -235,7 +235,7 @@ test_is_uri_safe(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_uri_safe (%s) returned %s instead of %s",
-           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].path, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
     }
 
@@ -255,7 +255,7 @@ test_uri_encode(const char **msg,
     const char *path;
     const char *result;
   } tests[] = {
-    { "http://subversion.tigris.org", 
+    { "http://subversion.tigris.org",
          "http://subversion.tigris.org"},
     { " special_at_beginning",
          "%20special_at_beginning" },
@@ -263,10 +263,10 @@ test_uri_encode(const char **msg,
          "special_at_end%20" },
     { "special in middle",
          "special%20in%20middle" },
-    { "\"Ouch!\"  \"Did that hurt?\"", 
+    { "\"Ouch!\"  \"Did that hurt?\"",
          "%22Ouch!%22%20%20%22Did%20that%20hurt%3F%22" }
   };
-  
+
   *msg = "test svn_path_uri_[en/de]code";
 
   if (msg_only)
@@ -285,7 +285,7 @@ test_uri_encode(const char **msg,
              "svn_path_uri_encode ('%s') returned '%s' instead of '%s'",
              tests[i].path, en_path, tests[i].result);
         }
- 
+
       /* URI-decode the path, and make sure we're back where we started. */
       de_path = svn_path_uri_decode(en_path, pool);
       if (strcmp(de_path, tests[i].path))
@@ -312,14 +312,14 @@ test_uri_decode(const char **msg,
     const char *path;
     const char *result;
   } tests[] = {
-    { "http://c.r.a/s%\0008me", 
+    { "http://c.r.a/s%\0008me",
          "http://c.r.a/s%"},
     { "http://c.r.a/s%6\000me",
          "http://c.r.a/s%6" },
     { "http://c.r.a/s%68me",
          "http://c.r.a/shme" },
   };
-  
+
   *msg = "test svn_path_uri_decode with invalid escape";
 
   if (msg_only)
@@ -379,7 +379,7 @@ test_uri_autoescape(const char **msg,
            "svn_path_uri_autoescape on '%s' returned identical but not same"
            " string", tests[i].path);
     }
-                                  
+
   return SVN_NO_ERROR;
 }
 
@@ -664,7 +664,7 @@ test_decompose(const char **msg,
                                          "svn_path_decompose(\"%s\") returned "
                                          "unexpected component \"%s\"",
                                          paths[i], component);
-              if (strcmp(component, paths[i+j+1])) 
+              if (strcmp(component, paths[i+j+1]))
                 return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                          "svn_path_decompose(\"%s\") returned "
                                          "\"%s\" expected \"%s\"",
@@ -775,14 +775,14 @@ test_remove_component(const char **msg,
     return SVN_NO_ERROR;
 
   buf = svn_stringbuf_create("", pool);
-  
+
   i = 0;
   while (tests[i].path)
     {
       svn_stringbuf_set(buf, tests[i].path);
 
       svn_path_remove_component(buf);
-      
+
       if (strcmp(buf->data, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_path_remove_component(\"%s\") returned "
@@ -803,7 +803,7 @@ test_is_root(const char **msg,
   apr_size_t i;
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path;
     svn_boolean_t result;
   } tests[] = {
@@ -839,7 +839,7 @@ test_is_root(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_dirent_is_root (%s) returned %s instead of %s",
-           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].path, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
     }
 
@@ -855,7 +855,7 @@ test_path_check_valid(const char **msg,
   apr_size_t i;
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path;
     svn_boolean_t result;
   } tests[] = {
@@ -886,7 +886,7 @@ test_path_check_valid(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_check_valid (%s) returned %s instead of %s",
-           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].path, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
     }
 
@@ -902,7 +902,7 @@ test_path_is_ancestor(const char **msg,
   apr_size_t i;
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path1;
     const char *path2;
     svn_boolean_t result;
@@ -912,13 +912,13 @@ test_path_is_ancestor(const char **msg,
     { "/",               "/foo",          TRUE},
     { SVN_EMPTY_PATH,    "foo",           TRUE},
     { SVN_EMPTY_PATH,    ".bar",          TRUE},
-                                         
+
     { "/.bar",           "/",             FALSE},
     { "foo/bar",         "foo",           FALSE},
     { "/foo/bar",        "/foo",          FALSE},
     { "foo",             "foo/bar",       TRUE},
     { "foo.",            "foo./.bar",     TRUE},
-                                         
+
     { "../foo",          "..",            FALSE},
     { SVN_EMPTY_PATH,    SVN_EMPTY_PATH,  TRUE},
     { "/",               "/",             TRUE},
@@ -938,7 +938,7 @@ test_path_is_ancestor(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_ancestor (%s, %s) returned %s instead of %s",
-           tests[i].path1, tests[i].path2, retval ? "TRUE" : "FALSE", 
+           tests[i].path1, tests[i].path2, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
     }
   return SVN_NO_ERROR;
@@ -953,7 +953,7 @@ test_is_single_path_component(const char **msg,
   apr_size_t i;
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path;
     svn_boolean_t result;
   } tests[] = {
@@ -981,7 +981,7 @@ test_is_single_path_component(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_single_path_component (%s) returned %s instead of %s",
-           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].path, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
     }
 
@@ -997,7 +997,7 @@ test_compare_paths(const char **msg,
   apr_size_t i;
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path1;
     const char *path2;
     int result;
@@ -1008,7 +1008,7 @@ test_compare_paths(const char **msg,
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH, 0},
     { "foo",          "foo",          0},
     { "foo",          "foo/bar",      -1},
-    { "foo/bar",      "foo/boo",      -1},    
+    { "foo/bar",      "foo/boo",      -1},
     { "boo",          "foo",          -1},
     { "foo",          "boo",          1},
     { "foo/bar",      "foo",          1},
@@ -1029,7 +1029,7 @@ test_compare_paths(const char **msg,
       int retval;
 
       retval = svn_path_compare_paths(tests[i].path1, tests[i].path2);
-      /* tests if expected and actual result are both < 0, 
+      /* tests if expected and actual result are both < 0,
          equal to 0 or greater than 0. */
       if (! (tests[i].result * retval > 0 ||
             (tests[i].result == 0 && retval == 0)) )
@@ -1050,7 +1050,7 @@ test_get_longest_ancestor(const char **msg,
   apr_size_t i;
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path1;
     const char *path2;
     const char *result;
@@ -1083,7 +1083,7 @@ test_get_longest_ancestor(const char **msg,
     {
       const char *retval;
 
-      retval = svn_path_get_longest_ancestor(tests[i].path1, tests[i].path2, 
+      retval = svn_path_get_longest_ancestor(tests[i].path1, tests[i].path2,
                                              pool);
 
       if (strcmp(tests[i].result, retval))
@@ -1093,7 +1093,7 @@ test_get_longest_ancestor(const char **msg,
            tests[i].path1, tests[i].path2, retval, tests[i].result);
 
       /* changing the order of the paths should return the same results */
-      retval = svn_path_get_longest_ancestor(tests[i].path2, tests[i].path1, 
+      retval = svn_path_get_longest_ancestor(tests[i].path2, tests[i].path1,
                                              pool);
 
       if (strcmp(tests[i].result, retval))
@@ -1116,7 +1116,7 @@ test_splitext(const char **msg,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path;
     const char *path_root;
     const char *path_ext;
@@ -1150,7 +1150,7 @@ test_splitext(const char **msg,
       const char *path_ext;
 
       svn_pool_clear(subpool);
-      
+
       /* First, we'll try splitting and fetching both root and
          extension to see if they match our expected results. */
       svn_path_splitext(&path_root, &path_ext, path, subpool);
@@ -1160,7 +1160,7 @@ test_splitext(const char **msg,
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_splitext (%s) returned ('%s', '%s') "
            "instead of ('%s', '%s')",
-           tests[i].path, path_root, path_ext, 
+           tests[i].path, path_root, path_ext,
            tests[i].path_root, tests[i].path_ext);
 
       /* Now, let's only fetch the root. */

@@ -24,7 +24,7 @@ def run(files):
     dirpath = fullpath = os.path.abspath(f)
     if not os.path.isdir(dirpath):
       dirpath = os.path.dirname(dirpath)
-  
+
     adm_baton = svn.wc.adm_open(None, dirpath, False, True)
 
     try:
@@ -42,4 +42,4 @@ def run(files):
 
 if __name__ == '__main__':
   run(sys.argv[1:])
-    
+

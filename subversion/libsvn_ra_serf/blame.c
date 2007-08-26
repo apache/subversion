@@ -244,7 +244,7 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
             {
               info->prop_base64 = TRUE;
             }
-          else 
+          else
             {
               info->prop_base64 = FALSE;
             }
@@ -450,8 +450,8 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   /* Get the VCC from file url, or if the file doesn't exist in HEAD, from
      its closest existing parent.  */
-  SVN_ERR(svn_ra_serf__search_for_base_props(props, &remaining_path, 
-                                             &lopped_path, 
+  SVN_ERR(svn_ra_serf__search_for_base_props(props, &remaining_path,
+                                             &lopped_path,
                                              session, session->conns[0],
                                              session->repos_url.path, pool));
   vcc_url = svn_ra_serf__get_prop(props, remaining_path,
@@ -498,7 +498,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
     }
   else
     {
-      /* We're asking for a specific revision. No need to use "checked-in" 
+      /* We're asking for a specific revision. No need to use "checked-in"
          here, request the baseline-collection property with the specified
          revision in the 'Label' header (added in svn_ra_serf__retrieve_props).
       */

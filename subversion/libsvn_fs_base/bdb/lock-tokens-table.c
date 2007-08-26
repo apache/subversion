@@ -99,9 +99,9 @@ svn_fs_bdb__lock_token_delete(svn_fs_t *fs,
   svn_fs_base__trail_debug(trail, "lock-tokens", "del");
   db_err = bfd->lock_tokens->del(bfd->lock_tokens, trail->db_txn, &key, 0);
   if (db_err == DB_NOTFOUND)
-    return SVN_FS__ERR_NO_SUCH_LOCK(fs, path); 
+    return SVN_FS__ERR_NO_SUCH_LOCK(fs, path);
   SVN_ERR(BDB_WRAP(fs, "deleting entry from 'lock-tokens' table", db_err));
-  
+
   return SVN_NO_ERROR;
 }
 

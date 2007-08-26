@@ -32,7 +32,7 @@ if os.path.exists(xsl_dir):
 for i in candidate_xsldirs:
   globs = glob.glob(i)
   # Crude method of preferring the highest version, when multiple exist
-  globs.sort() 
+  globs.sort()
   globs.reverse()
   for j in globs:
     if os.path.exists(os.path.join(j, 'html', 'docbook.xsl')):
