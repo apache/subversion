@@ -750,7 +750,7 @@ EOF
     assert(started)
   end
 
-  def test_merge_info
+  def test_mergeinfo
     log = "sample log"
     file = "sample.txt"
     src = "sample\n"
@@ -775,10 +775,10 @@ EOF
     ctx.merge(branch, original_rev, branch, merged_rev, trunk)
     ctx.commit(@wc_path)
 
-    merge_info = "#{branch_path_in_repos}:#{merged_rev}"
-    assert_equal({trunk_path_in_repos => merge_info},
-                 @repos.merge_info([trunk_path_in_repos]))
-    assert_equal(merge_info, @repos.merge_info(trunk_path_in_repos))
+    mergeinfo = "#{branch_path_in_repos}:#{merged_rev}"
+    assert_equal({trunk_path_in_repos => mergeinfo},
+                 @repos.mergeinfo([trunk_path_in_repos]))
+    assert_equal(mergeinfo, @repos.mergeinfo(trunk_path_in_repos))
   end
 
   private

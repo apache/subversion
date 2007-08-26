@@ -359,7 +359,7 @@ module Svn
         editor.baton.node
       end
 
-      def merge_info(paths, revision=nil, inherit=nil, &authz_read_func)
+      def mergeinfo(paths, revision=nil, inherit=nil, &authz_read_func)
         path = nil
         unless paths.is_a?(Array)
           path = paths
@@ -371,7 +371,6 @@ module Svn
         results = results[path] if path
         results
       end
-      alias_method :mergeinfo, :merge_info
 
       private
       def setup_report_baton(baton)

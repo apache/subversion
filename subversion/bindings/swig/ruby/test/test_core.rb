@@ -692,7 +692,7 @@ EOM
                  Svn::Core::Property.categorize2(props))
   end
 
-  def test_merge_info_parse
+  def test_mergeinfo_parse
     assert_equal({}, Svn::Core::MergeInfo.parse(""))
 
     input = "/trunk: 5,7-9,10,11,13,14"
@@ -702,7 +702,7 @@ EOM
                  result["/trunk"].collect {|range| range.to_a})
   end
 
-  def test_merge_info_diff
+  def test_mergeinfo_diff
     input1 = "/trunk: 5,7-9,10,11,13,14"
     input2 = "/trunk: 5,6,7-9,10,11"
 
@@ -718,7 +718,7 @@ EOM
                  added["/trunk"].collect {|range| range.to_a})
   end
 
-  def test_merge_info_merge
+  def test_mergeinfo_merge
     info = Svn::Core::MergeInfo.parse("/trunk: 5,7-9")
     assert_equal(["/trunk"], info.keys)
     assert_equal([[4, 5], [6, 9]],
@@ -731,7 +731,7 @@ EOM
                  merged["/trunk"].collect {|range| range.to_a})
   end
 
-  def test_merge_info_remove
+  def test_mergeinfo_remove
     info = Svn::Core::MergeInfo.parse("/trunk: 5-13")
     assert_equal(["/trunk"], info.keys)
     assert_equal([[4, 13]],
@@ -744,13 +744,13 @@ EOM
                  removed["/trunk"].collect {|range| range.to_a})
   end
 
-  def test_merge_info_to_s
+  def test_mergeinfo_to_s
     info = Svn::Core::MergeInfo.parse("/trunk: 5,7,9-13")
     assert_equal("/trunk:5,7,9-13", info.to_s)
     assert_not_equal(info.to_s, info.inspect)
   end
 
-  def test_merge_info_sort
+  def test_mergeinfo_sort
     info = Svn::Core::MergeInfo.parse("/trunk: 5,7,9-13")
 
     info["/trunk"] = info["/trunk"].reverse
