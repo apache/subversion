@@ -353,7 +353,7 @@ _svn_client_remove_from_changelist(const apr_array_header_t *paths,
 svn_error_t *
 _svn_client_commit4(svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *targets,
-                    svn_boolean_t recurse,
+                    svn_depth_t depth,
                     svn_boolean_t keep_locks,
                     svn_boolean_t keep_changelist,
                     const char *changelist_name_may_be_null,
