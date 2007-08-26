@@ -497,7 +497,7 @@ Java_org_tigris_subversion_javahl_SVNClient_update
 JNIEXPORT jlong JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_commit
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
- jboolean jrecurse, jboolean jnoUnlock, jboolean jkeepChangelist,
+ jint jdepth, jboolean jnoUnlock, jboolean jkeepChangelist,
  jstring jchangelistName)
 {
   JNIEntry(SVNClient, commit);
@@ -516,7 +516,7 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  return cl->commit(targets, message, jrecurse ? true : false,
+  return cl->commit(targets, message, (svn_depth_t)jdepth,
                     jnoUnlock ? true : false, jkeepChangelist ? true : false,
                     changelistName);
 }
@@ -1331,7 +1331,7 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_blame
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jignoreMimeType,
- jobject jblameCallback)
+ jboolean jincludeMergedRevisions, jobject jblameCallback)
 {
   JNIEntry(SVNClient, blame);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1358,7 +1358,8 @@ Java_org_tigris_subversion_javahl_SVNClient_blame
 
   BlameCallback callback(jblameCallback);
   cl->blame(path, pegRevision, revisionStart, revisionEnd,
-            jignoreMimeType ? true : false, &callback);
+            jignoreMimeType ? true : false,
+            jincludeMergedRevisions ? true : false, &callback);
 }
 
 JNIEXPORT void JNICALL

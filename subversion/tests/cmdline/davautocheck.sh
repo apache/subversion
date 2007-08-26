@@ -95,8 +95,8 @@ function get_prog_name() {
   return 1
 }
 
-# dont assume sbin is in the PATH
-PATH="/usr/sbin:/usr/local/sbin:$PATH"
+# Don't assume sbin is in the PATH.
+PATH="$PATH:/usr/sbin:/usr/local/sbin"
 
 # Remove any proxy environmental variables that affect wget or curl.
 # We don't need a proxy to connect to localhost and having the proxy
@@ -135,8 +135,15 @@ MOD_AUTHZ_SVN="$ABS_BUILDDIR/subversion/mod_authz_svn/.libs/mod_authz_svn.so"
 
 export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
 
+case "`uname`" in
+  Darwin*) LDD='otool -L'
+    ;;
+  *) LDD='ldd'
+    ;;
+esac
+
 CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
-ldd "$CLIENT_CMD" | grep -q 'not found' \
+$LDD "$CLIENT_CMD" | grep -q 'not found' \
   && fail "Subversion client couldn't be fully linked at run-time"
 "$CLIENT_CMD" --version | egrep -q '^[*] ra_(neon|serf)' \
   || fail "Subversion client couldn't find and/or load ra_dav library"

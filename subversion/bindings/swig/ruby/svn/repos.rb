@@ -103,7 +103,7 @@ module Svn
         authz_read_func ||= @authz_read_func
         args = [
           rev, self, fs_base, target, tgt_path, text_deltas,
-          ignore_ancestry, editor, authz_read_func,
+          depth, ignore_ancestry, editor, authz_read_func,
         ]
         report_baton = Repos.begin_report2(*args)
         setup_report_baton(report_baton)

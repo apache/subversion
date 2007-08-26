@@ -4490,7 +4490,7 @@ closest_copy_test(const char **msg,
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
 
-  /* Anything under Z should have a closest copy pair of ("/A", 1), so
+  /* Anything under Z should have a closest copy pair of ("/Z", 2), so
      we'll pick some spots to test.  Stuff under A should have no
      relevant closest copy. */
   SVN_ERR(svn_fs_closest_copy(&croot, &cpath, rev_root, "Z", spool));
@@ -4526,7 +4526,7 @@ closest_copy_test(const char **msg,
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
 
-  /* Okay, just for kicks, let's modify Z2/D/H3/t.  Shouldn't affect
+  /* Okay, just for kicks, let's modify Z2/D/H2/t.  Shouldn't affect
      its closest-copy-ness, right?  */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
@@ -4790,7 +4790,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(reopen_trivial_transaction),
     SVN_TEST_PASS(create_file_transaction),
     SVN_TEST_PASS(verify_txn_list),
-    SVN_TEST_PASS(txn_names_are_not_reused),
     SVN_TEST_PASS(write_and_read_file),
     SVN_TEST_PASS(create_mini_tree_transaction),
     SVN_TEST_PASS(create_greek_tree_transaction),
@@ -4819,5 +4818,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(closest_copy_test),
     SVN_TEST_PASS(root_revisions),
     SVN_TEST_PASS(unordered_txn_dirprops),
+    SVN_TEST_PASS(txn_names_are_not_reused),
     SVN_TEST_NULL
   };

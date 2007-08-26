@@ -133,7 +133,7 @@ svn_string_t *svn_string_create_from_buf(const svn_stringbuf_t *strbuf,
 svn_string_t *svn_string_createf(apr_pool_t *pool,
                                  const char *fmt,
                                  ...)
-  __attribute__ ((format(printf, 2, 3)));
+  __attribute__((format(printf, 2, 3)));
 
 /** Create a new bytestring by formatting @a cstring (null-terminated)
  * from a @c va_list (see svn_stringbuf_createf()).
@@ -141,7 +141,7 @@ svn_string_t *svn_string_createf(apr_pool_t *pool,
 svn_string_t *svn_string_createv(apr_pool_t *pool,
                                  const char *fmt,
                                  va_list ap)
-  __attribute__ ((format(printf, 2, 0)));
+  __attribute__((format(printf, 2, 0)));
 
 /** Return true if a bytestring is empty (has length zero). */
 svn_boolean_t svn_string_isempty(const svn_string_t *str);
@@ -193,7 +193,7 @@ svn_stringbuf_t *svn_stringbuf_create_from_string(const svn_string_t *str,
 svn_stringbuf_t *svn_stringbuf_createf(apr_pool_t *pool,
                                        const char *fmt,
                                        ...)
-  __attribute__ ((format(printf, 2, 3)));
+  __attribute__((format(printf, 2, 3)));
 
 /** Create a new bytestring by formatting @a cstring (null-terminated)
  * from a @c va_list (see svn_stringbuf_createf()).
@@ -201,7 +201,7 @@ svn_stringbuf_t *svn_stringbuf_createf(apr_pool_t *pool,
 svn_stringbuf_t *svn_stringbuf_createv(apr_pool_t *pool,
                                        const char *fmt,
                                        va_list ap)
-  __attribute__ ((format(printf, 2, 0)));
+  __attribute__((format(printf, 2, 0)));
 
 /** Make sure that the string @a str has at least @a minimum_size bytes of
  * space available in the memory block.

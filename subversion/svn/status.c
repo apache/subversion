@@ -231,21 +231,11 @@ svn_cl__print_status_xml(const char *path,
 
   if (status->entry && SVN_IS_VALID_REVNUM(status->entry->cmt_rev))
     {
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "commit",
-                            "revision",
-                            apr_psprintf(pool, "%ld",
-                                         status->entry->cmt_rev),
-                            NULL);
-
-      svn_cl__xml_tagged_cdata(&sb, pool, "author",
-                               status->entry->cmt_author);
-
-      if (status->entry->cmt_date)
-        svn_cl__xml_tagged_cdata(&sb, pool, "date",
-                                 svn_time_to_cstring
-                                 (status->entry->cmt_date, pool));
-
-      svn_xml_make_close_tag(&sb, pool, "commit");
+      svn_cl__print_xml_commit(&sb, status->entry->cmt_rev,
+                               status->entry->cmt_author,
+                               svn_time_to_cstring(status->entry->cmt_date,
+                                                   pool),
+                               pool);
     }
 
   if (status->entry && status->entry->lock_token)

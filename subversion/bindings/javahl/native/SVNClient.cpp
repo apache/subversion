@@ -373,8 +373,8 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
 }
 
-jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
-                        bool noUnlock, bool keepChangelist,
+jlong SVNClient::commit(Targets &targets, const char *message,
+                        svn_depth_t depth, bool noUnlock, bool keepChangelist,
                         const char *changelistName)
 {
     Pool requestPool;
@@ -385,7 +385,7 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     if (ctx == NULL)
         return SVN_INVALID_REVNUM;
 
-    SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, recurse,
+    SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, depth,
                                    noUnlock, keepChangelist, changelistName,
                                    ctx, requestPool.pool()),
                 SVN_INVALID_REVNUM);
@@ -1403,7 +1403,8 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
 
 void SVNClient::blame(const char *path, Revision &pegRevision,
                       Revision &revisionStart, Revision &revisionEnd,
-                      bool ignoreMimeType, BlameCallback *callback)
+                      bool ignoreMimeType, bool includeMergedRevisions,
+                      BlameCallback *callback)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1415,11 +1416,11 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_blame3(intPath.c_str(), pegRevision.revision(),
+    SVN_JNI_ERR(svn_client_blame4(intPath.c_str(), pegRevision.revision(),
                                   revisionStart.revision(),
                                   revisionEnd.revision(),
                                   svn_diff_file_options_create(pool),
-                                  ignoreMimeType,
+                                  ignoreMimeType, includeMergedRevisions,
                                   BlameCallback::callback, callback, ctx,
                                   pool),
         );

@@ -782,6 +782,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
   ras->compression = compression;
+  ras->progress_baton = callbacks->progress_baton;
+  ras->progress_func = callbacks->progress_func;
   /* save config and server group in the auth parameter hash */
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG, cfg);

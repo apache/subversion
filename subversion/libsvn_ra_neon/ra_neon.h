@@ -95,6 +95,9 @@ typedef struct {
 
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
+
+  svn_ra_progress_notify_func_t progress_func;
+  void *progress_baton;
 } svn_ra_neon__session_t;
 
 
@@ -321,7 +324,8 @@ svn_error_t *svn_ra_neon__get_file_revs(svn_ra_session_t *session,
                                         const char *path,
                                         svn_revnum_t start,
                                         svn_revnum_t end,
-                                        svn_ra_file_rev_handler_t handler,
+                                        svn_boolean_t include_merged_revisions,
+                                        svn_file_rev_handler_t handler,
                                         void *handler_baton,
                                         apr_pool_t *pool);
 
@@ -770,7 +774,8 @@ enum {
   ELEM_mergeinfo_item,
   ELEM_mergeinfo_path,
   ELEM_mergeinfo_info,
-  ELEM_nbr_children
+  ELEM_nbr_children,
+  ELEM_merged_revision
 };
 
 /* ### docco */

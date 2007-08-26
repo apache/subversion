@@ -268,7 +268,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  If specified, REV determines in which revision the target is first\n"
      "  looked up.\n"),
-    {'r', 'v', svn_cl__incremental_opt, svn_cl__xml_opt, 'x',
+    {'r', 'v', 'g', svn_cl__incremental_opt, svn_cl__xml_opt, 'x',
      svn_cl__force_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "cat", svn_cl__cat, {0}, N_
@@ -529,7 +529,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Apply the differences between two sources to a working copy path.\n"
      "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
      "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-     "       3. merge [-c M | -r N:M] [SOURCE[@REV] [WCPATH]]\n"
+     "       3. merge [-c M | -r N:M | -g] [SOURCE[@REV] [WCPATH]]\n"
      "\n"
      "  1. In the first form, the source URLs are specified at revisions\n"
      "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -541,14 +541,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  3. In the third form, SOURCE can be a URL, or working copy item\n"
      "     in which case the corresponding URL is used.  If not specified,\n"
-     "     the copy source URL of SOURCE is used. If the WCPATH cannot be\n"
+     "     the copy source URL of SOURCE is used.  If the WCPATH cannot be\n"
      "     determined automatically, an error is displayed asking for an\n"
-     "     explicit SOURCE. This URL in revision REV is compared as it\n"
+     "     explicit SOURCE.  This URL in revision REV is compared as it\n"
      "     existed between revisions N and M.  If REV is not specified, HEAD\n"
-     "     is assumed. The '-c M' option is equivalent to '-r N:M' where\n"
-     "     N = M-1.  Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n"
-     "     If a revision range is not specified, it is assumed to be\n"
-     "     -r OLDEST_REV_OF_SOURCE_AT_URL:HEAD.\n"
+     "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
+     "     does the reverse: '-r M:<M-1>'.  -g is a shorthand for the\n"
+     "     revision range -r OLDEST_REV_OF_SOURCE_AT_URL:HEAD.\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"
      "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
@@ -1349,23 +1348,9 @@ main(int argc, const char *argv[])
         opt_state.config_dir = svn_path_canonicalize(path_utf8, pool);
         break;
       case svn_cl__autoprops_opt:
-        if (opt_state.no_autoprops)
-          {
-            err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                   _("--auto-props and --no-auto-props are "
-                                     "mutually exclusive"));
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-          }
         opt_state.autoprops = TRUE;
         break;
       case svn_cl__no_autoprops_opt:
-        if (opt_state.autoprops)
-          {
-            err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                   _("--auto-props and --no-auto-props are "
-                                     "mutually exclusive"));
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-          }
         opt_state.no_autoprops = TRUE;
         break;
       case svn_cl__native_eol_opt:
@@ -1611,15 +1596,12 @@ main(int argc, const char *argv[])
         }
     }
 
-  if (subcommand->cmd_func == svn_cl__switch)
+  if (opt_state.relocate && (opt_state.depth != svn_depth_unknown))
     {
-      if ((opt_state.depth != svn_depth_unknown) && opt_state.relocate)
-        {
-          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                 _("--relocate and --depth are mutually "
-                                   "exclusive"));
-          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-        }
+      err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                             _("--relocate and --depth are mutually "
+                               "exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
   /* Only a few commands can accept a revision range; the rest can take at
@@ -1666,6 +1648,15 @@ main(int argc, const char *argv[])
   if (opt_state.merge_cmd)
     svn_config_set(cfg, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+
+  /* Check for mutually exclusive args --auto-props and --no-auto-props */
+  if (opt_state.autoprops && opt_state.no_autoprops)
+    {
+      err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                             _("--auto-props and --no-auto-props are "
+                               "mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
 
   /* Update auto-props-enable option, and populate the MIME types map,
      for add/import commands */

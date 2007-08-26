@@ -136,7 +136,7 @@ const char SVN_MTD_CREATE_SQL[] = "PRAGMA auto_vacuum = 1;"
   APR_EOL_STR 
   "CREATE TABLE mergeinfo (revision INTEGER NOT NULL, mergedfrom TEXT NOT "
   "NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, "
-  "mergedrevend INTEGER NOT NULL);"
+  "mergedrevend INTEGER NOT NULL, inheritable INTEGER NOT NULL);"
   APR_EOL_STR
   "CREATE INDEX mi_mergedfrom_idx ON mergeinfo (mergedfrom);"
   APR_EOL_STR
@@ -264,8 +264,8 @@ index_path_mergeinfo(svn_revnum_t new_rev,
           SQLITE_ERR(sqlite3_prepare
                      (db, 
                       "INSERT INTO mergeinfo (revision, mergedfrom, "
-                      "mergedto, mergedrevstart, mergedrevend) VALUES "
-                      "(?, ?, ?, ?, ?);",
+                      "mergedto, mergedrevstart, mergedrevend, inheritable) "
+                      "VALUES (?, ?, ?, ?, ?, ?);",
                       -1, &stmt, NULL), db);
           SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
           SQLITE_ERR(sqlite3_bind_text(stmt, 2, from, -1, SQLITE_TRANSIENT),
@@ -293,6 +293,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
                          db);
               SQLITE_ERR(sqlite3_bind_int64(stmt, 5, range->end),
                          db);
+              SQLITE_ERR(sqlite3_bind_int64(stmt, 6, range->inheritable), db);
               if (sqlite3_step(stmt) != SQLITE_DONE)
                 return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                                         sqlite3_errmsg(db));
@@ -401,7 +402,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
 
   SQLITE_ERR(sqlite3_prepare(db,
                              "SELECT mergedfrom, mergedrevstart, "
-                             "mergedrevend FROM mergeinfo "
+                             "mergedrevend, inheritable FROM mergeinfo "
                              "WHERE mergedto = ? AND revision = ? "
                              "ORDER BY mergedfrom, mergedrevstart;",
                              -1, &stmt, NULL), db);
@@ -423,6 +424,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
       const char *mergedfrom;
       svn_revnum_t startrev;
       svn_revnum_t endrev;
+      svn_boolean_t inheritable;
       const char *lastmergedfrom = NULL;
 
       *result = apr_hash_make(pool);
@@ -433,6 +435,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
           mergedfrom = (char *) sqlite3_column_text(stmt, 0);
           startrev = sqlite3_column_int64(stmt, 1);
           endrev = sqlite3_column_int64(stmt, 2);
+          inheritable = sqlite3_column_int64(stmt, 3) == 0 ? FALSE : TRUE;
 
           mergedfrom = apr_pstrdup(pool, mergedfrom);
           if (lastmergedfrom && strcmp(mergedfrom, lastmergedfrom) != 0)
@@ -453,6 +456,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
               svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
               range->start = startrev;
               range->end = endrev;
+              range->inheritable = inheritable;
               APR_ARRAY_PUSH(pathranges, svn_merge_range_t *) = range;
             }
 
@@ -606,6 +610,10 @@ get_mergeinfo_for_path(sqlite3 *db,
           apr_hash_t *translated_mergeinfo;
           const char *to_append = &path[parentpath->len + 1];
 
+          /* But first remove all non-inheritable revision ranges. */
+          SVN_ERR(svn_mergeinfo_inheritable(&path_mergeinfo, path_mergeinfo,
+                                            NULL, SVN_INVALID_REVNUM,
+                                            SVN_INVALID_REVNUM, pool));
           append_component_to_paths(&translated_mergeinfo, path_mergeinfo,
                                     to_append, pool);
           apr_hash_set(cache, path, APR_HASH_KEY_STRING, translated_mergeinfo);
@@ -674,7 +682,9 @@ get_mergeinfo_for_children(sqlite3 *db,
                                 db_mergeinfo, pool));
 
           if (!omit)
-            SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
+            SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo,
+                                        svn_rangelist_equal_inheritance,
+                                        pool));
         }
 
       sqlite_result = sqlite3_step(stmt);

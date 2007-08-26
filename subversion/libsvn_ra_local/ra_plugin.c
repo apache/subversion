@@ -28,7 +28,6 @@
 #include "svn_path.h"
 
 #include "svn_private_config.h"
-#include "private/svn_repos_private.h"
 #include "../libsvn_ra/ra_loader.h"
 
 #define APR_WANT_STRFUNC
@@ -147,7 +146,8 @@ svn_ra_local__get_file_revs(svn_ra_session_t *session,
                             const char *path,
                             svn_revnum_t start,
                             svn_revnum_t end,
-                            svn_ra_file_rev_handler_t handler,
+                            svn_boolean_t include_merged_revisions,
+                            svn_file_rev_handler_t handler,
                             void *handler_baton,
                             apr_pool_t *pool)
 {
@@ -157,8 +157,9 @@ svn_ra_local__get_file_revs(svn_ra_session_t *session,
   /* Concatenate paths */
   abs_path = svn_path_join(abs_path, path, pool);
 
-  return svn_repos_get_file_revs(sbaton->repos, abs_path, start, end, NULL,
-                                 NULL, handler, handler_baton, pool);
+  return svn_repos_get_file_revs2(sbaton->repos, abs_path, start, end, 
+                                  include_merged_revisions, NULL, NULL,
+                                  handler, handler_baton, pool);
 }
 
 /* Pool cleanup handler: Ensure that the access descriptor of the filesystem
@@ -616,7 +617,7 @@ make_reporter(svn_ra_session_t *session,
                                               pool));
 
   /* Build a reporter baton. */
-  SVN_ERR(svn_repos__begin_report(&rbaton,
+  SVN_ERR(svn_repos_begin_report2(&rbaton,
                                   revision,
                                   sbaton->repos,
                                   sbaton->fs_path->data,

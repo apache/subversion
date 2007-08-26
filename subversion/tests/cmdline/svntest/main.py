@@ -490,6 +490,17 @@ def file_read(path, mode = 'r'):
   fp.close()
   return contents
 
+# For replacing parts of contents in an existing file, with new content.
+def file_substitute(path, contents, new_contents):
+  """Replace the CONTENTS in the file at PATH using the NEW_CONTENTS"""
+  fp = open(path, 'r')
+  fcontent = fp.read()
+  fp.close()
+  fcontent = fcontent.replace(contents, new_contents)
+  fp = open(path, 'w')
+  fp.write(fcontent)
+  fp.close()
+
 # For creating blank new repositories
 def create_repos(path):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
@@ -672,13 +683,13 @@ def use_editor(func):
 def merge_notify_line(revstart, revend=None):
   """Return an expected output line that describes the beginning of a
   merge operation on revisions REVSTART through REVEND."""
-  if (revend is None):
-    if (revstart < 0):
+  if revend is None:
+    if revstart < 0:
       return "--- Undoing r%ld:\n" % abs(revstart)
     else:
       return "--- Merging r%ld:\n" % revstart
   else:
-    if (revstart > revend):
+    if revstart > revend:
       return "--- Undoing r%ld through r%ld:\n" % (revstart, revend)
     else:
       return "--- Merging r%ld through r%ld:\n" % (revstart, revend)

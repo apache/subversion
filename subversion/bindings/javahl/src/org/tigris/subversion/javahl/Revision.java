@@ -48,10 +48,7 @@ public class Revision implements java.io.Serializable
      */
     public Revision(int kind)
     {
-        if (kind < RevisionKind.unspecified || kind > RevisionKind.head)
-            throw new IllegalArgumentException(
-                    kind+" is not a legal revision kind");
-        revKind = kind;
+        this(kind, true);
     }
 
     /**

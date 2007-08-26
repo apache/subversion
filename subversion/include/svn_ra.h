@@ -1305,11 +1305,30 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
  * empty file.  In the following calls, the delta will be against the
  * fulltext contents for the previous call.
  *
+ * If @a include_merged_revisions is TRUE, revisions which a included as a
+ * result of a merge between @a start and @a end will be included.
+ *
  * @note This functionality is not available in pre-1.1 servers.  If the
  * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
  * returned.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
+                                   const char *path,
+                                   svn_revnum_t start,
+                                   svn_revnum_t end,
+                                   svn_boolean_t include_merged_revisions,
+                                   svn_file_rev_handler_t handler,
+                                   void *handler_baton,
+                                   apr_pool_t *pool);
+
+/**
+ * Similiar to svn_ra_get_file_revs2(), but with @a include_merged_revisions
+ * set to FALSE.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
                                   const char *path,
