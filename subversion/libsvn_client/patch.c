@@ -366,6 +366,11 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
             SVN_ERR(svn_wc_add_repos_file2(mine, adm_access, yours, NULL,
                                            new_props, NULL, NULL,
                                            SVN_IGNORED_REVNUM, subpool));
+            /* The file 'yours' points to edit_baton's cached empty file. Since
+             * it was just moved, set it to empty so that later get_empty_file()
+             * calls don't get it wrong with the cache, i.e.  create another
+             * empty file again. */
+            sprintf((char *)yours, ""); /* awful cast */
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
@@ -988,13 +993,12 @@ static svn_error_t *
 get_empty_file(struct edit_baton *eb,
                const char **empty_file_path)
 {
-  /* Create the file if it does not exist */
+  /* Create the file if it does not exist or is empty path. */
   /* Note that we tried to use /dev/null in r17220, but
      that won't work on Windows: it's impossible to stat NUL */
-  if (!eb->empty_file)
+  if (!eb->empty_file || (eb->empty_file && strlen(eb->empty_file) < 1))
     SVN_ERR(create_empty_file(NULL, &(eb->empty_file), eb->adm_access,
                               svn_io_file_del_on_pool_cleanup, eb->pool));
-
 
   *empty_file_path = eb->empty_file;
 
