@@ -30,7 +30,7 @@ def main():
     f = open(filename)
     contents = f.read()
     f.close()
-    
+
     funcname = os.environ['SVNTEST_EDITOR_FUNC']
     func = sys.modules['__main__'].__dict__[funcname]
 

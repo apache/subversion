@@ -19,7 +19,7 @@ module Svn
         print_modules("")
       end
     end
-    
+
     Session = SWIG::TYPE_p_svn_ra_session_t
 
     class Session

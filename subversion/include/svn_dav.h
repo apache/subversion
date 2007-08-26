@@ -88,7 +88,7 @@ extern "C" {
  * These headers are for client and server to verify that the base
  * and the result of a change transmission are the same on both
  * sides, regardless of what transformations (svndiff deltification,
- * gzipping, etc) the data may have gone through in between.  
+ * gzipping, etc) the data may have gone through in between.
  *
  * The result md5 is always used whenever file contents are
  * transferred, because every transmission has a resulting text.

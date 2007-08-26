@@ -165,7 +165,7 @@ utf_validate(const char **msg,
           (svn_utf__is_valid(tests[i].string, len) != tests[i].valid))
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "is_valid test %d failed", i);
-      
+
       if (!svn_utf__is_valid(tests[i].string, last - tests[i].string)
           ||
           (tests[i].valid && *last))
@@ -255,7 +255,7 @@ test_utf_cstring_to_utf8_ex2(const char **msg,
       svn_pool_clear(subpool);
 
       SVN_ERR(svn_utf_cstring_to_utf8_ex2(&dest, tests[i].string,
-                                          tests[i].from_page, pool)); 
+                                          tests[i].from_page, pool));
 
       if (strcmp(dest, tests[i].expected_result))
         {
@@ -303,7 +303,7 @@ test_utf_cstring_from_utf8_ex2(const char **msg,
       svn_pool_clear(subpool);
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2(&dest, tests[i].string,
-                                            tests[i].to_page, pool)); 
+                                            tests[i].to_page, pool));
 
       if (strcmp(dest, tests[i].expected_result))
         {

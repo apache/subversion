@@ -287,7 +287,7 @@ class DiffEditor(delta.Editor):
         break
       print line,
     print ""
-    
+
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
     if not fs.is_dir(self.base_root, '/' + path):
@@ -344,7 +344,7 @@ def usage(exit):
      "   tree:          print the tree.\n"
      "\n"
      % (sys.argv[0], sys.argv[0], sys.argv[0]))
-  
+
   sys.exit(exit)
 
 def main():

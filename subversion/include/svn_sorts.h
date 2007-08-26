@@ -65,11 +65,11 @@ typedef struct svn_sort__item_t {
  *
  * The key strings must be null-terminated, even though klen does not
  * include the terminator.
- * 
+ *
  * This is useful for converting a hash into a sorted
  * @c apr_array_header_t.  For example, to convert hash @a hsh to a sorted
  * array, do this:
- * 
+ *
  *<pre>   apr_array_header_t *hdr;
  *   hdr = svn_sort__hash (hsh, @c svn_sort_compare_items_as_paths, pool);</pre>
  */

@@ -418,7 +418,7 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             worker.logMessages(path, pegRevision, revisionStart,
                                revisionEnd, stopOnCopy, discoverPath,
-                               includeMergedRevisions, omitLogText, 
+                               includeMergedRevisions, omitLogText,
                                limit, callback);
         }
     }

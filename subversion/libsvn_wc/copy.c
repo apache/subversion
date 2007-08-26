@@ -173,7 +173,7 @@ copy_added_dir_administratively(const char *src_path,
           svn_pool_clear(subpool);
 
           err = svn_io_dir_read(&this_entry, flags, dir, subpool);
-          
+
           if (err)
             {
               /* Check if we're done reading the dir's entries. */
@@ -316,7 +316,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
     }
 
   return SVN_NO_ERROR;
-} 
+}
 
 /* A helper for copy_file_administratively() which sets *COPYFROM_URL
    and *COPYFROM_REV appropriately (possibly to NULL/SVN_INVALID_REVNUM).
@@ -519,7 +519,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
   apr_hash_index_t *hi;
   svn_wc_entry_t *entry;
   const char *path = svn_wc_adm_access_path(adm_access);
-  
+
   /* Remove wcprops. */
   SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, FALSE, pool));
 
@@ -580,7 +580,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
         {
           entry->schedule = svn_wc_schedule_delete;
           flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
-          
+
           entry->deleted = FALSE;
           flags |= SVN_WC__ENTRY_MODIFY_DELETED;
 
@@ -620,13 +620,13 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
                     | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
                     | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE);
         }
-      
+
       /* If we meaningfully modified the flags, we must be wanting to
          change the entry. */
       if (flags != SVN_WC__ENTRY_MODIFY_FORCE)
         SVN_ERR(svn_wc__entry_modify(adm_access, key, entry,
                                      flags, TRUE, subpool));
-      
+
       /* If a dir, not deleted, and not "this dir", recurse. */
       if ((! deleted)
           && (kind == svn_node_dir)
@@ -634,9 +634,9 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
         {
           svn_wc_adm_access_t *child_access;
           const char *child_path;
-          child_path = svn_path_join 
+          child_path = svn_path_join
             (svn_wc_adm_access_path(adm_access), key, subpool);
-          SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access, 
+          SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access,
                                       child_path, subpool));
           SVN_ERR(post_copy_cleanup(child_access, subpool));
         }
@@ -661,7 +661,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
      - dst_basename will be the 'new' name of the copied dir in dst_parent
  */
 static svn_error_t *
-copy_dir_administratively(const char *src_path, 
+copy_dir_administratively(const char *src_path,
                           svn_wc_adm_access_t *src_access,
                           svn_wc_adm_access_t *dst_parent,
                           const char *dst_basename,
@@ -687,7 +687,7 @@ copy_dir_administratively(const char *src_path,
      in the repository unless it's a copy of an uncommitted copy. */
   if ((src_entry->schedule == svn_wc_schedule_add && (! src_entry->copied))
       || (! src_entry->url))
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
          "try committing first"),
@@ -760,7 +760,7 @@ copy_dir_administratively(const char *src_path,
                         cancel_func, cancel_baton,
                         notify_copied, notify_baton, pool));
   }
- 
+
   return SVN_NO_ERROR;
 }
 
@@ -868,7 +868,7 @@ svn_wc_copy(const char *src_path,
             apr_pool_t *pool)
 {
   svn_wc__compat_notify_baton_t nb;
-  
+
   nb.func = notify_func;
   nb.baton = notify_baton;
 

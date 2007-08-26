@@ -45,7 +45,7 @@ static const char * const timestamp_format =
 "%04d-%02d-%02dT%02d:%02d:%02d.%06dZ";
 
 /* Our old timestamp strings looked like this:
- * 
+ *
  *    "Tue 3 Oct 2000 HH:MM:SS.UUU (day 277, dst 1, gmt_off -18000)"
  *
  * The idea is that they are conventionally human-readable for the
@@ -113,7 +113,7 @@ svn_time_to_cstring(apr_time_t when, apr_pool_t *pool)
                         exploded_time.tm_usec);
 
   /* ### Remove this when the old style timestamp parsing is taken
-     out. 
+     out.
   t_cstr = apr_psprintf (pool,
                          old_timestamp_format,
                          apr_day_snames[exploded_time.tm_wday],
@@ -262,7 +262,7 @@ svn_time_to_human_cstring(apr_time_t when, apr_pool_t *pool)
                      SVN_TIME__MAX_LENGTH - len,
                      human_timestamp_format_suffix,
                      &exploded_time);
-  
+
   /* If there was an error, ensure that the string is zero-terminated. */
   if (ret || retlen == 0)
     *curptr = '\0';

@@ -68,7 +68,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
                                     dav_svn__authz_read_func(&arb), &arb,
                                     resource->pool)) != SVN_NO_ERROR)
     return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                err->message, resource->pool);      
+                                err->message, resource->pool);
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
@@ -97,7 +97,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
       svn_pool_clear(subpool);
       apr_hash_this(hi, NULL, NULL, &val);
       lock = val;
-      
+
       path_quoted = apr_xml_quote_string(subpool, lock->path, 1);
       token_quoted = apr_xml_quote_string(subpool, lock->token, 1);
       creation_str = svn_time_to_cstring(lock->creation_date, subpool);
@@ -113,7 +113,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
                                     HTTP_INTERNAL_SERVER_ERROR,
                                     "Error writing REPORT response.",
                                     resource->pool);
-      
+
       if (lock->expiration_date)
         {
           expiration_str = svn_time_to_cstring(lock->expiration_date, subpool);
@@ -137,12 +137,12 @@ dav_svn__get_locks_report(const dav_resource *resource,
           const svn_string_t *encoded_owner;
 
           owner_string.data = lock->owner;
-          owner_string.len = strlen(lock->owner);         
+          owner_string.len = strlen(lock->owner);
           encoded_owner = svn_base64_encode_string(&owner_string, subpool);
           owner_to_send = encoded_owner->data;
           owner_base64 = TRUE;
         }
-          
+
       apr_err = ap_fprintf(output, bb,
                            "<S:owner %s>%s</S:owner>" DEBUG_CR,
                            owner_base64 ? "encoding=\"base64\"" : "",
@@ -151,7 +151,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
         return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
                                     HTTP_INTERNAL_SERVER_ERROR,
                                     "Error writing REPORT response.",
-                                    resource->pool);          
+                                    resource->pool);
 
       if (lock->comment)
         {
@@ -164,9 +164,9 @@ dav_svn__get_locks_report(const dav_resource *resource,
             {
               svn_string_t comment_string;
               const svn_string_t *encoded_comment;
-              
+
               comment_string.data = lock->comment;
-              comment_string.len = strlen(lock->comment);         
+              comment_string.len = strlen(lock->comment);
               encoded_comment = svn_base64_encode_string(&comment_string,
                                                          subpool);
               comment_to_send = encoded_comment->data;
@@ -183,7 +183,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
                                         "Error writing REPORT response.",
                                         resource->pool);
         }
-          
+
       apr_err = ap_fprintf(output, bb, "</S:lock>" DEBUG_CR);
       if (apr_err)
         return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),

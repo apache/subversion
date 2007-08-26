@@ -177,19 +177,19 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
      up by APR at exit time. */
   pool = svn_pool_create(NULL);
   svn_utf_initialize(pool);
-  
+
   {
     svn_error_t *err = svn_nls_init();
     if (err)
       {
         if (error_stream && err->message)
           fprintf(error_stream, "%s", err->message);
-        
+
         svn_error_clear(err);
         return EXIT_FAILURE;
       }
   }
-  
+
   return EXIT_SUCCESS;
 }
 

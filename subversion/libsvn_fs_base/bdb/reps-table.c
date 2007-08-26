@@ -179,8 +179,8 @@ svn_fs_bdb__write_new_rep(const char **key,
 
 
 svn_error_t *
-svn_fs_bdb__delete_rep(svn_fs_t *fs, 
-                       const char *key, 
+svn_fs_bdb__delete_rep(svn_fs_t *fs,
+                       const char *key,
                        trail_t *trail,
                        apr_pool_t *pool)
 {

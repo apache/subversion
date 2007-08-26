@@ -152,10 +152,10 @@ svn_cl__merge(apr_getopt_t *os,
   if (sourcepath1 && sourcepath2 && strcmp(targetpath, "") == 0)
     {
       /* If the sourcepath is a URL, it can only refer to a target in the
-         current working directory. 
+         current working directory.
          However, if the sourcepath is a local path, it can refer to a target
          somewhere deeper in the directory structure. */
-      if (svn_path_is_url(sourcepath1)) 
+      if (svn_path_is_url(sourcepath1))
         {
           char *sp1_basename, *sp2_basename;
           sp1_basename = svn_path_basename(sourcepath1, pool);
@@ -166,7 +166,7 @@ svn_cl__merge(apr_getopt_t *os,
               svn_node_kind_t kind;
               const char *decoded_path = svn_path_uri_decode(sp1_basename, pool);
               SVN_ERR(svn_io_check_path(decoded_path, &kind, pool));
-              if (kind == svn_node_file) 
+              if (kind == svn_node_file)
                 {
                   targetpath = decoded_path;
                 }
@@ -177,7 +177,7 @@ svn_cl__merge(apr_getopt_t *os,
           svn_node_kind_t kind;
           const char *decoded_path = svn_path_uri_decode(sourcepath1, pool);
           SVN_ERR(svn_io_check_path(decoded_path, &kind, pool));
-          if (kind == svn_node_file) 
+          if (kind == svn_node_file)
             {
               targetpath = decoded_path;
             }

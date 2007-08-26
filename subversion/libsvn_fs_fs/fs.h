@@ -76,7 +76,7 @@ extern "C" {
    format option. */
 #define SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT 3
 
-/* Maximum number of directories to cache dirents for. 
+/* Maximum number of directories to cache dirents for.
    This *must* be a power of 2 for DIR_CACHE_ENTRIES_INDEX
    to work.  */
 #define NUM_DIR_CACHE_ENTRIES 128
@@ -192,7 +192,7 @@ typedef struct
   /* MD5 checksum for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
-     independent of the storage (fulltext, delta, whatever). 
+     independent of the storage (fulltext, delta, whatever).
 
      If all the bytes are 0, then for compatibility behave as though
      this checksum matches the expected checksum. */
@@ -238,7 +238,7 @@ typedef struct
      this node-rev was copied. */
   svn_revnum_t copyroot_rev;
   const char *copyroot_path;
-  
+
   /* number of predecessors this node revision has (recursively), or
      -1 if not known (for backward compatibility). */
   int predecessor_count;
@@ -250,7 +250,7 @@ typedef struct
   /* representation for this node's data.  may be NULL if there is
      no data. */
   representation_t *data_rep;
-  
+
   /* path at which this node first came into existence.  */
   const char *created_path;
 

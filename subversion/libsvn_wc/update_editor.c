@@ -2638,7 +2638,7 @@ make_editor(svn_revnum_t *target_revision,
      if that is known. */
   if (switch_url && entry && entry->repos &&
       ! svn_path_is_ancestor(entry->repos, switch_url))
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_WC_INVALID_SWITCH, NULL,
        _("'%s'\n"
          "is not the same repository as\n"
@@ -2863,7 +2863,7 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
                                    SVN_DEPTH_FROM_RECURSE(recurse),
                                    FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton, diff3_cmd,
-                                   NULL, editor, edit_baton, traversal_info, 
+                                   NULL, editor, edit_baton, traversal_info,
                                    pool);
 }
 

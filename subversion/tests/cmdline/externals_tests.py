@@ -2,9 +2,9 @@
 #
 #  module_tests.py:  testing modules / external sources.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
@@ -138,7 +138,7 @@ def externals_test_setup(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
                                      '-F', tmp_f, 'svn:externals', C_path)
-   
+
   os.remove(tmp_f)
 
   externals_desc = \
@@ -187,7 +187,7 @@ def change_external(path, new_val):
 
 
 def probe_paths_exist(paths):
-  """ Probe each one of PATHS to see if it exists, otherwise throw a 
+  """ Probe each one of PATHS to see if it exists, otherwise throw a
       Failure exception. """
 
   for path in paths:
@@ -196,7 +196,7 @@ def probe_paths_exist(paths):
 
 
 def probe_paths_missing(paths):
-  """ Probe each one of PATHS to see if does not exist, otherwise throw a 
+  """ Probe each one of PATHS to see if does not exist, otherwise throw a
       Failure exception. """
 
   for path in paths:
@@ -264,7 +264,7 @@ def update_receive_new_external(sbox):
 
   externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-  
+
   other_wc_dir   = sbox.add_wc_path('other')
   repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
@@ -312,7 +312,7 @@ def update_lose_external(sbox):
 
   externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-  
+
   other_wc_dir   = sbox.add_wc_path('other')
   repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
@@ -383,7 +383,7 @@ def update_change_pristine_external(sbox):
 
   externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-  
+
   other_wc_dir   = sbox.add_wc_path('other')
   repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
@@ -493,7 +493,7 @@ def update_receive_change_under_external(sbox):
 
   externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-  
+
   other_wc_dir   = sbox.add_wc_path('other')
   repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
@@ -526,7 +526,7 @@ def update_receive_change_under_external(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         other_wc_dir)
-  
+
   # Now update the regular wc to see if we get the change.  Note that
   # none of the module *properties* in this wc have been changed; only
   # the source repository of the modules has received a change, and
@@ -614,7 +614,7 @@ def modify_and_update_receive_new_external(sbox):
   os.chdir(B_path)
 
   # Once upon a time there was a core-dump here
-    
+
   svntest.actions.run_and_verify_svn("update failed",
                                      SVNAnyOutput, [], 'up' )
 
@@ -778,7 +778,7 @@ def external_with_peg_and_op_revision(sbox):
                                      repo_url, wc_dir)
 
   # remove A/D/H in the other repo
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', other_repo_url + 
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', other_repo_url +
                                      '/A/D/H', '-m', 'remove original A/D/H')
 
   # Set an external property using peg revision syntax.

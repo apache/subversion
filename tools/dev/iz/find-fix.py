@@ -4,7 +4,7 @@
 
 For simple text summary:
        find-fix.py query-set-1.tsv YYYY-MM-DD YYYY-MM-DD
-Statistics will be printed for bugs found or fixed within the 
+Statistics will be printed for bugs found or fixed within the
 time frame.
 
 For gnuplot presentation:
@@ -202,7 +202,7 @@ def summary(datafile, d_start, d_end):
                    = alltypes_other = alltypes_rem = 0
   for t in _types:
     fromzerorem_t = fromzerofound[t]\
-                    - (fromzerofixed[t] + fromzeroinval[t] + fromzerodup[t] 
+                    - (fromzerofixed[t] + fromzeroinval[t] + fromzerodup[t]
                        + fromzeroother[t])
     print '%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
           'other=%3d  remain=%3d' \
@@ -409,7 +409,7 @@ For simple text summary:
 For gnuplot presentation:
        find-fix.py [options] query-set-1.tsv outfile
 """
-  
+
 def usage():
   shortusage()
   for x in long_opts:

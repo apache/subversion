@@ -455,7 +455,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
       for (i = 0; i < paths->nelts; i++)
         {
           svn_ra_serf__add_tag_buckets(buckets,
-                                       "S:path", APR_ARRAY_IDX(paths, i, 
+                                       "S:path", APR_ARRAY_IDX(paths, i,
                                                                const char*),
                                        session->bkt_alloc);
         }

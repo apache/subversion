@@ -369,8 +369,8 @@ dav_svn_get_repos_path(request_rec *r,
                        const char **repos_path)
 {
 
-  const char *fs_path;        
-  const char *fs_parent_path; 
+  const char *fs_path;
+  const char *fs_parent_path;
   const char *repos_name;
   const char *ignored_path_in_repos;
   const char *ignored_cleaned_uri;

@@ -42,7 +42,7 @@ class SvnWcTest < Test::Unit::TestCase
       assert_equal(Svn::Wc::STATUS_UNVERSIONED, status.text_status)
       assert_nil(status.entry)
     end
-    
+
     log = "sample log"
     ctx = make_context(log)
     ctx.add(file1_path)
@@ -50,9 +50,9 @@ class SvnWcTest < Test::Unit::TestCase
       status = adm.status(file1_path)
       assert_equal(Svn::Wc::STATUS_ADDED, status.text_status)
     end
-    
+
     commit_info = ctx.commit(@wc_path)
-    
+
     Svn::Wc::AdmAccess.open(nil, @wc_path, false, 0) do |adm|
       status = adm.status(file1_path)
       assert_equal(Svn::Wc::STATUS_NORMAL, status.text_status)
@@ -85,18 +85,18 @@ class SvnWcTest < Test::Unit::TestCase
 
     result = Svn::Wc::AdmAccess.open_anchor(path, true, 5)
     anchor_access, target_access, target = result
-    
+
     assert_equal(file, target)
     assert_equal(dir_path, anchor_access.path)
     assert_equal(dir_path, target_access.path)
-    
+
     assert(anchor_access.locked?)
     assert(target_access.locked?)
-    
+
     assert(!target_access.has_binary_prop?(path))
     assert(!target_access.text_modified?(path))
     assert(!target_access.props_modified?(path))
-    
+
     File.open(path, "w") {|f| f.print(source * 2)}
     target_access.set_prop(prop_name, prop_value, path)
     assert_equal(prop_value, target_access.prop(prop_name, path))
@@ -104,14 +104,14 @@ class SvnWcTest < Test::Unit::TestCase
                  target_access.prop_list(path))
     assert(target_access.text_modified?(path))
     assert(target_access.props_modified?(path))
-    
+
     target_access.set_prop("name", nil, path)
     assert(!target_access.props_modified?(path))
-    
+
     target_access.revert(path)
     assert(!target_access.text_modified?(path))
     assert(!target_access.props_modified?(path))
-    
+
     anchor_access.close
     target_access.close
 
@@ -186,7 +186,7 @@ class SvnWcTest < Test::Unit::TestCase
     File.open(path, "w") {|f| f.print(source1)}
     ctx.add(path)
     rev1 = ctx.ci(@wc_path).revision
-    
+
     Svn::Wc::AdmAccess.open(nil, @wc_path, false, 5) do |access|
       show = true
       entry = Svn::Wc::Entry.new(path, access, show)
@@ -200,7 +200,7 @@ class SvnWcTest < Test::Unit::TestCase
 
       assert(!entry.conflicted?(@wc_path))
     end
-    
+
     File.open(path, "w") {|f| f.print(source2)}
     rev2 = ctx.ci(@wc_path).revision
 
@@ -412,7 +412,7 @@ EOE
     rev2 = ctx.ci(@wc_path).revision
 
     FileUtils.rm(path1)
-    
+
     Svn::Wc::AdmAccess.open(nil, @wc_path, false, 5) do |access|
       status = access.status(path1)
       assert_equal(Svn::Wc::STATUS_MISSING, status.text_status)
@@ -420,7 +420,7 @@ EOE
     end
 
     ctx.revert(path1)
-    
+
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
       access.copy(path1, file3)
       assert(File.exist?(path3))

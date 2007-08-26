@@ -73,7 +73,7 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=files",
       SVNAnyOutput, [], "co", "--depth", "files", sbox.repo_url, wc_files)
-    
+
   wc_immediates = None
   if immediates:
     wc_immediates = sbox.wc_dir + '-depth-immediates'
@@ -103,7 +103,7 @@ def depth_empty_checkout(sbox):
   svntest.actions.run_and_verify_svn(
     "Expected depth empty for top of WC, got some other depth",
     "Depth: empty", [], "info", wc_empty)
-                    
+
 
 # Helper for two test functions.
 def depth_files_same_as_nonrecursive(sbox, opt):
@@ -136,7 +136,7 @@ def depth_files_same_as_nonrecursive(sbox, opt):
   svntest.actions.run_and_verify_svn(
     "Expected depth files for top of WC, got some other depth",
     "Depth: files", [], "info", sbox.wc_dir)
-                    
+
 
 def depth_files_checkout(sbox):
   "depth-files checkout"
@@ -440,7 +440,7 @@ def depth_immediates_fill_in_dir(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--depth', 'infinity', 
+                                        '--depth', 'infinity',
                                         A_path)
 
 #----------------------------------------------------------------------
@@ -459,14 +459,14 @@ def depth_mixed_bring_in_dir(sbox):
     'A/D'            : Item(status='A '),
     })
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('iota', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha', 
-                       'A/B/E/beta', 'A/B/F', 'A/D/gamma', 'A/D/G', 
-                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H', 
+  expected_disk.remove('iota', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
+                       'A/B/E/beta', 'A/B/F', 'A/D/gamma', 'A/D/G',
+                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H',
                        'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
   expected_status = svntest.actions.get_virginal_state(wc_empty, 1)
-  expected_status.remove('iota', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha', 
-                         'A/B/E/beta', 'A/B/F', 'A/D/gamma', 'A/D/G', 
-                         'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H', 
+  expected_status.remove('iota', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
+                         'A/B/E/beta', 'A/B/F', 'A/D/gamma', 'A/D/G',
+                         'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H',
                          'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
   svntest.actions.run_and_verify_update(wc_empty,
                                         expected_output,
@@ -474,7 +474,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--depth', 'immediates', 
+                                        '--depth', 'immediates',
                                         A_path)
 
 #----------------------------------------------------------------------
@@ -540,7 +540,7 @@ def depth_immediates_subdir_propset_1(sbox):
   expected_output = svntest.wc.State(wc_immediates, {
     'A' : Item(verb='Sending'),
     })
-  
+
   # Create expected status tree.
   expected_status = svntest.wc.State(wc_immediates, {
     '' : Item(status='  ', wc_rev=1),
@@ -561,13 +561,13 @@ def depth_immediates_subdir_propset_1(sbox):
   expected_output = svntest.wc.State(wc_immediates, { })
 
   # Create expected disk tree.
-  expected_disk = svntest.wc.State('', { 
+  expected_disk = svntest.wc.State('', {
     'iota' : Item(contents="This is the file 'iota'.\n"),
     'A' : Item(contents=None, props={'foo' : 'bar'}),
     })
-  
+
   expected_status.tweak(contents=None, status='  ', wc_rev=2)
-  
+
   # Update the depth-immediates wc.
   svntest.actions.run_and_verify_update(wc_immediates,
                                         expected_output,

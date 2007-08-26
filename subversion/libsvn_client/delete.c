@@ -66,7 +66,7 @@ find_undeletables(void *baton,
     sb->err = svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                 _("'%s' is not under version control"),
                                 svn_path_local_style(path, sb->pool));
-  
+
   else if ((status->text_status != svn_wc_status_normal
             && status->text_status != svn_wc_status_deleted
             && status->text_status != svn_wc_status_missing)
@@ -148,9 +148,9 @@ delete_urls(svn_commit_info_t **commit_info_p,
     {
       svn_client_commit_item3_t *item;
       const char *tmp_file;
-      apr_array_header_t *commit_items 
+      apr_array_header_t *commit_items
         = apr_array_make(pool, targets->nelts, sizeof(item));
-          
+
       for (i = 0; i < targets->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
@@ -207,8 +207,8 @@ delete_urls(svn_commit_info_t **commit_info_p,
                                     pool));
 
   /* Call the path-based editor driver. */
-  err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM, 
-                              targets, path_driver_cb_func, 
+  err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM,
+                              targets, path_driver_cb_func,
                               (void *)editor, pool);
   if (err)
     {
@@ -226,7 +226,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
 svn_error_t *
 svn_client__wc_delete(const char *path,
                       svn_wc_adm_access_t *adm_access,
-                      svn_boolean_t force, 
+                      svn_boolean_t force,
                       svn_boolean_t dry_run,
                       svn_boolean_t keep_local,
                       svn_wc_notify_func2_t notify_func,
@@ -252,7 +252,7 @@ svn_error_t *
 svn_client_delete3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
                    svn_boolean_t force,
-                   svn_boolean_t keep_local, 
+                   svn_boolean_t keep_local,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -282,10 +282,10 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
           /* Let the working copy library handle the PATH. */
-          SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_path, 
+          SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_path,
                                    TRUE, 0, ctx->cancel_func,
                                    ctx->cancel_baton, subpool));
-          SVN_ERR(svn_client__wc_delete(path, adm_access, force, 
+          SVN_ERR(svn_client__wc_delete(path, adm_access, force,
                                         FALSE, keep_local,
                                         ctx->notify_func2,
                                         ctx->notify_baton2,
@@ -311,7 +311,7 @@ svn_client_delete2(svn_commit_info_t **commit_info_p,
 svn_error_t *
 svn_client_delete(svn_client_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
-                  svn_boolean_t force, 
+                  svn_boolean_t force,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {

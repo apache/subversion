@@ -93,7 +93,7 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
 
   if (FAILED(hr))
     return APR_EGENERAL;
-  
+
   /* Convert page name to wide string. */
   MultiByteToWideChar(CP_UTF8, 0, page_name, -1, ucs2_page_name,
                       sizeof(ucs2_page_name) / sizeof(ucs2_page_name[0]));

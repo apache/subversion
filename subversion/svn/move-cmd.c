@@ -46,7 +46,7 @@ svn_cl__move(apr_getopt_t *os,
   svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
   if (targets->nelts < 2)

@@ -2717,7 +2717,7 @@ public class BasicTests extends SVNTests
             assertEquals("jrandom", line.getAuthor());
         }
     }
-    
+
     /**
      * @return <code>file</code> converted into a -- possibly
      * <code>canonical</code>-ized -- Subversion-internal path
@@ -2742,7 +2742,7 @@ public class BasicTests extends SVNTests
             return file.getPath().replace('\\', '/');
         }
     }
-    
+
 
     /**
      * A DiffSummaryReceiver implementation which collects all DiffSummary

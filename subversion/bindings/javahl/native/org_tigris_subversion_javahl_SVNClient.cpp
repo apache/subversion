@@ -248,7 +248,7 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jstopOnCopy,
- jboolean jdisoverPaths, jboolean jincludeMergedRevisions, 
+ jboolean jdisoverPaths, jboolean jincludeMergedRevisions,
  jboolean jomitLogText, jlong jlimit, jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, logMessages);
@@ -277,7 +277,7 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
   LogMessageCallback callback(jlogMessageCallback);
   cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
-                  jincludeMergedRevisions ? true : false, 
+                  jincludeMergedRevisions ? true : false,
                   jomitLogText ? true : false, jlimit, &callback);
 }
 
@@ -1586,6 +1586,6 @@ Java_org_tigris_subversion_javahl_SVNClient_getCopySource
   Revision rev(jrevision);
   if (JNIUtil::isExceptionThrown())
     return NULL;
- 
+
   return cl->getCopySource(path, rev);
 }

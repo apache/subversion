@@ -2,9 +2,9 @@
 #
 #  blame_tests.py:  testing line-by-line annotation.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
@@ -51,7 +51,7 @@ def parse_and_verify_blame(output, expected_blame):
       this_line['author'] = None
     else:
       this_line['author'] = tokens[1]
-      
+
     this_line['text'] = tokens[2]
 
     results.append(this_line)
@@ -78,7 +78,7 @@ def parse_and_verify_blame(output, expected_blame):
 def blame_space_in_name(sbox):
   "annotate a file whose name contains a space"
   sbox.build()
-  
+
   file_path = os.path.join(sbox.wc_dir, 'space in name')
   svntest.main.file_append(file_path, "Hello\n")
   svntest.main.run_svn(None, 'add', file_path)
@@ -120,7 +120,7 @@ def blame_binary(sbox):
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
                        '-m', '', iota)
-  
+
   output, errput = svntest.main.run_svn(2, 'blame', iota)
   if (len(errput) != 1) or (errput[0].find('Skipping') == -1):
     raise svntest.Failure
@@ -129,13 +129,13 @@ def blame_binary(sbox):
   output, errput = svntest.main.run_svn(2, 'blame', '--force', iota)
   if (len(errput) != 0 or len(output) != 4):
     raise svntest.Failure
-  
-    
-  
 
-# Issue #2154 - annotating a directory should fail 
-# (change needed if the desired behavior is to 
-#  run blame recursively on all the files in it) 
+
+
+
+# Issue #2154 - annotating a directory should fail
+# (change needed if the desired behavior is to
+#  run blame recursively on all the files in it)
 #
 def blame_directory(sbox):
   "annotating a directory not allowed"
@@ -303,7 +303,7 @@ def blame_peg_rev(sbox):
 
 def blame_eol_styles(sbox):
   "blame with different eol styles"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -331,7 +331,7 @@ def blame_eol_styles(sbox):
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                           None, None, None, None,
                                           None, None, wc_dir)
-                                     
+
     output, error = svntest.actions.run_and_verify_svn(None, None, [],
                                                        'blame', file_path,
                                                        '-r1:HEAD')
@@ -374,9 +374,9 @@ def blame_ignore_whitespace(sbox):
                                         None, None, wc_dir)
 
   # match the blame output, as defined in the blame code:
-  # "%6ld %10s %s %s%s", rev, author ? author : "         -", 
+  # "%6ld %10s %s %s%s", rev, author ? author : "         -",
   #                      time_stdout , line, APR_EOL_STR
-  expected_output = [                                  
+  expected_output = [
     "     2    jrandom  A  a   \n",
     "     2    jrandom    B b  \n",
     "     2    jrandom     C    c    \n",
@@ -398,7 +398,7 @@ def blame_ignore_whitespace(sbox):
                                         None, None, None, None,
                                         None, None, wc_dir)
 
-  expected_output = [                                  
+  expected_output = [
     "     2    jrandom  A  a   \n",
     "     4    jrandom Xxxx X\n",
     "     4    jrandom    Bb b  \n",
@@ -440,7 +440,7 @@ def blame_ignore_eolstyle(sbox):
                                         None, None, None, None,
                                         None, None, wc_dir)
 
-  expected_output = [                                  
+  expected_output = [
     "     2    jrandom Aa\n",
     "     2    jrandom Bb\n",
     "     3    jrandom Cc\n",
@@ -519,7 +519,7 @@ def blame_peg_rev_file_not_in_head(sbox):
   svntest.actions.run_and_verify_commit('.', expected_output, None)
 
   # Delete iota so that it doesn't exist in HEAD
-  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/iota', 
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/iota',
                        '-m', 'log message')
 
   # Check that we get a blame of r1 when we specify a peg revision of r1
@@ -538,7 +538,7 @@ def blame_file_not_in_head(sbox):
   sbox.build(create_wc = False)
   notexisting_url = sbox.repo_url + '/notexisting'
 
-  # Check that a correct error message is printed when blaming a target that 
+  # Check that a correct error message is printed when blaming a target that
   # doesn't exist (in HEAD).
   expected_err = ".*notexisting' (is not a file in.*|path not found)"
   svntest.actions.run_and_verify_svn(None, [], expected_err,

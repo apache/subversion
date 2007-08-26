@@ -103,7 +103,7 @@ log_receiver(void *baton,
 
   if (log_entry->nbr_children)
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                              "<S:nbr-children>%" APR_INT64_T_FMT 
+                              "<S:nbr-children>%" APR_INT64_T_FMT
                               "</S:nbr-children>" DEBUG_CR,
                               log_entry->nbr_children));
 
@@ -118,7 +118,7 @@ log_receiver(void *baton,
         {
           void *val;
           svn_log_changed_path_t *log_item;
-          
+
           apr_hash_this(hi, (void *) &path, NULL, &val);
           log_item = val;
 
@@ -127,15 +127,15 @@ log_receiver(void *baton,
           switch (log_item->action)
             {
             case 'A':
-              if (log_item->copyfrom_path 
+              if (log_item->copyfrom_path
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
-                SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output, 
+                SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                           "<S:added-path"
-                                          " copyfrom-path=\"%s\"" 
+                                          " copyfrom-path=\"%s\""
                                           " copyfrom-rev=\"%ld\">"
                                           "%s</S:added-path>" DEBUG_CR,
                                           apr_xml_quote_string
-                                          (pool, 
+                                          (pool,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
                                           log_item->copyfrom_rev,
@@ -143,22 +143,22 @@ log_receiver(void *baton,
                                                                path, 0)));
               else
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                                          "<S:added-path>%s</S:added-path>" 
-                                          DEBUG_CR, 
+                                          "<S:added-path>%s</S:added-path>"
+                                          DEBUG_CR,
                                           apr_xml_quote_string(pool, path,
                                                                0)));
               break;
 
             case 'R':
-              if (log_item->copyfrom_path 
+              if (log_item->copyfrom_path
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                           "<S:replaced-path"
-                                          " copyfrom-path=\"%s\"" 
+                                          " copyfrom-path=\"%s\""
                                           " copyfrom-rev=\"%ld\">"
                                           "%s</S:replaced-path>" DEBUG_CR,
                                           apr_xml_quote_string
-                                          (pool, 
+                                          (pool,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
                                           log_item->copyfrom_rev,
@@ -174,7 +174,7 @@ log_receiver(void *baton,
 
             case 'D':
               SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                                        "<S:deleted-path>%s</S:deleted-path>" 
+                                        "<S:deleted-path>%s</S:deleted-path>"
                                         DEBUG_CR,
                                         apr_xml_quote_string(pool, path, 0)));
               break;
@@ -185,7 +185,7 @@ log_receiver(void *baton,
                                         "</S:modified-path>" DEBUG_CR,
                                         apr_xml_quote_string(pool, path, 0)));
               break;
-              
+
             default:
               break;
             }
@@ -238,7 +238,7 @@ dav_svn__log_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_NAMESPACE,
                                     SVN_DAV_ERROR_TAG);
     }
-  
+
   /* ### todo: okay, now go fill in svn_ra_dav__get_log() based on the
      syntax implied below... */
   for (child = doc->root->first_child; child != NULL; child = child->next)
@@ -266,7 +266,7 @@ dav_svn__log_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          target = svn_path_join(resource->info->repos_path, rel_path, 
+          target = svn_path_join(resource->info->repos_path, rel_path,
                                  resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
 
@@ -317,7 +317,7 @@ dav_svn__log_report(const dav_resource *resource,
                                   resource->pool);
       goto cleanup;
     }
-  
+
   if ((serr = maybe_send_header(&lrb)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -325,7 +325,7 @@ dav_svn__log_report(const dav_resource *resource,
                                   resource->pool);
       goto cleanup;
     }
-    
+
   if ((serr = dav_svn__send_xml(lrb.bb, lrb.output, "</S:log-report>"
                                 DEBUG_CR)))
     {

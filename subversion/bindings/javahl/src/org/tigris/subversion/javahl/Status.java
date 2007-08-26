@@ -713,7 +713,7 @@ public class Status implements java.io.Serializable
     {
         return reposLastCmtAuthor;
     }
-    
+
     /**
      * @return the changelist name
      * @since 1.5

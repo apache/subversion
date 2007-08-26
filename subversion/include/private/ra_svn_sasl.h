@@ -1,5 +1,5 @@
 /*
- * ra_svn_sasl.h :  SASL-related declarations shared between the 
+ * ra_svn_sasl.h :  SASL-related declarations shared between the
  * ra_svn and svnserve module
  *
  * ====================================================================
@@ -44,7 +44,7 @@ void svn_ra_svn__default_secprops(sasl_security_properties_t *secprops);
    calling sasl_{client, server}_init, pool is used for allocations. */
 apr_status_t svn_ra_svn__sasl_common_init(apr_pool_t *pool);
 
-/* Sets local_addrport and remote_addrport to a string containing the 
+/* Sets local_addrport and remote_addrport to a string containing the
    remote and local IP address and port, formatted like this: a.b.c.d;port. */
 svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport,
                                        const char **remote_addrport,

@@ -43,7 +43,7 @@ extern "C" {
  * the subcommand.  See @a os->argv and @a os->ind.
  *
  * @a baton is anything you need it to be.
- * 
+ *
  * @a pool is used for allocating errors, and for any other allocation
  * unless the instance is explicitly documented to allocate from a
  * pool in @a baton.
@@ -125,32 +125,32 @@ typedef struct svn_opt_subcommand_desc_t
 
 
 /**
- * Return the entry in @a table whose name matches @a cmd_name, or @c NULL if 
+ * Return the entry in @a table whose name matches @a cmd_name, or @c NULL if
  * none.  @a cmd_name may be an alias.
  *
  * @since New in 1.4.
- */  
+ */
 const svn_opt_subcommand_desc2_t *
 svn_opt_get_canonical_subcommand2(const svn_opt_subcommand_desc2_t *table,
                                   const char *cmd_name);
 
 
 /**
- * Return the entry in @a table whose name matches @a cmd_name, or @c NULL if 
+ * Return the entry in @a table whose name matches @a cmd_name, or @c NULL if
  * none.  @a cmd_name may be an alias.
  *
  * Same as svn_opt_get_canonical_subcommand2(), but acts on
  * #svn_opt_subcommand_desc_t.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
- */  
+ */
 const svn_opt_subcommand_desc_t *
 svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
                                  const char *cmd_name);
 
 
 /**
- * Return pointer to an @c apr_getopt_option_t for the option whose 
+ * Return pointer to an @c apr_getopt_option_t for the option whose
  * option code is @a code, or @c NULL if no match.  @a option_table must end
  * with an element whose every field is zero.  If @c command is non-NULL,
  * then return the subcommand-specific option description instead of the
@@ -243,7 +243,7 @@ svn_opt_print_generic_help(const char *header,
 
 
 /**
- * Print an option @a opt nicely into a @a string allocated in @a pool.  
+ * Print an option @a opt nicely into a @a string allocated in @a pool.
  * If @a doc is set, include the generic documentation string of @a opt,
  * localized to the current locale if a translation is available.
  */
@@ -256,7 +256,7 @@ svn_opt_format_option(const char **string,
 
 
 /**
- * Get @a subcommand's usage from @a table, and print it to @c stdout.  
+ * Get @a subcommand's usage from @a table, and print it to @c stdout.
  * Obtain option usage from @a options_table.  Use @a pool for temporary
  * allocation.  @a subcommand may be a canonical command name or an
  * alias.  (### todo: why does this only print to @c stdout, whereas
@@ -265,7 +265,7 @@ svn_opt_format_option(const char **string,
  * @since New in 1.4.
  */
 void
-svn_opt_subcommand_help2(const char *subcommand, 
+svn_opt_subcommand_help2(const char *subcommand,
                          const svn_opt_subcommand_desc2_t *table,
                          const apr_getopt_option_t *options_table,
                          apr_pool_t *pool);
@@ -278,7 +278,7 @@ svn_opt_subcommand_help2(const char *subcommand,
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void
-svn_opt_subcommand_help(const char *subcommand, 
+svn_opt_subcommand_help(const char *subcommand,
                         const svn_opt_subcommand_desc_t *table,
                         const apr_getopt_option_t *options_table,
                         apr_pool_t *pool);
@@ -288,7 +288,7 @@ svn_opt_subcommand_help(const char *subcommand,
 /* Parsing revision and date options. */
 
 /**
- * Various ways of specifying revisions. 
+ * Various ways of specifying revisions.
  *
  * @note
  * In contexts where local mods are relevant, the `working' kind
@@ -346,15 +346,15 @@ typedef struct svn_opt_revision_t
 
 
 /**
- * Set @a *start_revision and/or @a *end_revision according to @a arg, 
+ * Set @a *start_revision and/or @a *end_revision according to @a arg,
  * where @a arg is "N" or "N:M", like so:
- * 
+ *
  *    - If @a arg is "N", set @a *start_revision to represent N, and
  *      leave @a *end_revision untouched.
  *
  *    - If @a arg is "N:M", set @a *start_revision and @a *end_revision
- *      to represent N and M respectively. 
- * 
+ *      to represent N and M respectively.
+ *
  * N and/or M may be one of the special revision descriptors
  * recognized by revision_from_word(), or a date in curly braces.
  *
@@ -465,7 +465,7 @@ void svn_opt_push_implicit_dot_target(apr_array_header_t *targets,
 
 /**
  * Parse @a num_args non-target arguments from the list of arguments in
- * @a os->argv, return them as <tt>const char *</tt> in @a *args_p, without 
+ * @a os->argv, return them as <tt>const char *</tt> in @a *args_p, without
  * doing any UTF-8 conversion.  Allocate @a *args_p and its values in @a pool.
  */
 svn_error_t *

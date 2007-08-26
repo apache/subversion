@@ -41,7 +41,7 @@ typedef struct
 
 /*** Code. ***/
 
-/* This implements the svn_proplist_receiver_t interface, printing XML to 
+/* This implements the svn_proplist_receiver_t interface, printing XML to
    stdout. */
 static svn_error_t *
 proplist_receiver_xml(void *baton,
@@ -153,10 +153,10 @@ svn_cl__proplist(apr_getopt_t *os,
                                       &URL, pool));
 
       /* Let libsvn_client do the real work. */
-      SVN_ERR(svn_client_revprop_list(&proplist, 
+      SVN_ERR(svn_client_revprop_list(&proplist,
                                       URL, &(opt_state->start_revision),
                                       &rev, ctx, pool));
-     
+
       if (opt_state->xml)
         {
           svn_stringbuf_t *sb = NULL;
@@ -219,7 +219,7 @@ svn_cl__proplist(apr_getopt_t *os,
           /* Check for a peg revision. */
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                      subpool));
-         
+
           SVN_ERR(svn_cl__try
                   (svn_client_proplist3(truepath, &peg_revision,
                                         &(opt_state->start_revision),

@@ -63,7 +63,7 @@ extern "C" {
  * Patch number.
  *
  * Modify for every released patch.
- * 
+ *
  * @since New in 1.1.
  */
 #define SVN_VER_PATCH      0
@@ -83,7 +83,7 @@ extern "C" {
  * from the repository rather than a "blessed" distribution.
  *
  * When rolling a tarball, we automatically replace this text with " (r1234)"
- * (where 1234 is the last revision on the branch prior to the release) 
+ * (where 1234 is the last revision on the branch prior to the release)
  * for final releases; in prereleases, it becomes " (Alpha 1)",
  * " (Beta 1)", etc., as appropriate.
  *

@@ -2,9 +2,9 @@
 #
 #  svnlook_tests.py:  testing the 'svnlook' tool.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -371,11 +371,11 @@ def tree_non_recursive(sbox):
 
   sbox.build()
   repo_dir = sbox.repo_dir
-  
+
   expected_results_root = ('/', ' iota', ' A/')
   expected_results_deep = ('B/', ' lambda', ' E/', ' F/')
 
-  # check the output of svnlook --non-recursive on the 
+  # check the output of svnlook --non-recursive on the
   # root of the repository
   treelist = run_svnlook('tree', '--non-recursive', repo_dir)
   for entry in treelist:
@@ -387,7 +387,7 @@ def tree_non_recursive(sbox):
     print "Expected %i output entries, found %i" \
           % (len(expected_results_root), len(treelist))
     raise svntest.Failure
-    
+
   # check the output of svnlook --non-recursive on a
   # subdirectory of the repository
   treelist = run_svnlook('tree', '--non-recursive', repo_dir, '/A/B')

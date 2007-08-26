@@ -220,7 +220,7 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
   SVN_ERR(svn_io_file_open(&file_baton->file[idx], file_baton->path[idx],
                            APR_READ, APR_OS_DEFAULT, file_baton->pool));
 
-  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, 
+  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE,
                                file_baton->file[idx], file_baton->pool));
 
   file_baton->size[idx] = finfo.size;
@@ -930,7 +930,7 @@ output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 
   /* Output the hunk header.  If the hunk length is 1, the file is a one line
      file.  In this case, surpress the number of lines in the hunk (it is
-     1 implicitly) 
+     1 implicitly)
    */
   SVN_ERR(svn_stream_printf_from_utf8(baton->output_stream,
                                       baton->header_encoding,
@@ -1015,14 +1015,14 @@ output_unified_diff_modified(void *baton,
   /* Skip lines until we are at the start of the changed range */
   while (output_baton->current_line[1] < target_line[1])
     {
-      SVN_ERR(output_unified_line(output_baton, 
+      SVN_ERR(output_unified_line(output_baton,
                                   svn_diff__file_output_unified_skip, 1));
     }
 
   /* Output the context preceding the changed range */
   while (output_baton->current_line[0] < original_start)
     {
-      SVN_ERR(output_unified_line(output_baton, 
+      SVN_ERR(output_unified_line(output_baton,
                                   svn_diff__file_output_unified_context, 0));
     }
 
@@ -1035,7 +1035,7 @@ output_unified_diff_modified(void *baton,
       while (output_baton->current_line[i] < target_line[i])
         {
           SVN_ERR(output_unified_line
-                          (output_baton, 
+                          (output_baton,
                            i == 0 ? svn_diff__file_output_unified_delete
                                   : svn_diff__file_output_unified_insert, i));
         }

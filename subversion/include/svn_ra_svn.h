@@ -81,8 +81,8 @@ extern "C" {
 /** A specialized form of @c SVN_ERR to deal with errors which occur in an
  * svn_ra_svn_command_handler().
  *
- * An error returned with this macro will be passed back to the other side 
- * of the connection.  Use this macro when performing the requested operation; 
+ * An error returned with this macro will be passed back to the other side
+ * of the connection.  Use this macro when performing the requested operation;
  * use the regular @c SVN_ERR when performing I/O with the client.
  */
 #define SVN_CMD_ERR(expr)                                     \
@@ -107,7 +107,7 @@ typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
  * If @c terminate is set, command-handling will cease after command is
  * processed.
  */
-typedef struct svn_ra_svn_cmd_entry_t 
+typedef struct svn_ra_svn_cmd_entry_t
 {
   const char *cmdname;
   svn_ra_svn_command_handler handler;
@@ -115,7 +115,7 @@ typedef struct svn_ra_svn_cmd_entry_t
 } svn_ra_svn_cmd_entry_t;
 
 /** Memory representation of an on-the-wire data item. */
-typedef struct svn_ra_svn_item_t 
+typedef struct svn_ra_svn_item_t
 {
   /** Variant indicator. */
   enum {
@@ -315,7 +315,7 @@ svn_error_t *svn_ra_svn_parse_proplist(apr_array_header_t *list,
                                        apr_pool_t *pool,
                                        apr_hash_t **props);
 
-/** Read a command response from the network and parse it as a tuple, using 
+/** Read a command response from the network and parse it as a tuple, using
  * the format string notation from svn_ra_svn_parse_tuple().
  */
 svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
@@ -338,7 +338,7 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                                         const svn_ra_svn_cmd_entry_t *commands,
                                         void *baton);
 
-/** Write a command over the network, using the same format string notation 
+/** Write a command over the network, using the same format string notation
  * as svn_ra_svn_write_tuple().
  */
 svn_error_t *svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -360,7 +360,7 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
 /** Set @a *editor and @a *edit_baton to an editor which will pass editing
  * operations over the network, using @a conn and @a pool.
  *
- * Upon successful completion of the edit, the editor will invoke @a callback 
+ * Upon successful completion of the edit, the editor will invoke @a callback
  * with @a callback_baton as an argument.
  */
 void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,

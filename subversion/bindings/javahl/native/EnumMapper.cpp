@@ -335,7 +335,7 @@ jint EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
 
     case svn_wc_status_unversioned:
       return org_tigris_subversion_javahl_StatusKind_unversioned;
-    
+
     case svn_wc_status_normal:
       return org_tigris_subversion_javahl_StatusKind_normal;
 

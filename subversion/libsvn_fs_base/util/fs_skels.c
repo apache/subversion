@@ -353,7 +353,7 @@ is_valid_lock_skel(skel_t *skel)
       && skel->children->next->next->next->next->next->next->is_atom
       && skel->children->next->next->next->next->next->next->next->is_atom)
     return TRUE;
-  
+
   return FALSE;
 }
 
@@ -802,7 +802,7 @@ svn_fs_base__parse_lock_skel(svn_lock_t **lock_p,
   /* Validate the skel. */
   if (! is_valid_lock_skel(skel))
     return skel_err("lock");
-  
+
   /* Create the returned structure */
   lock = apr_pcalloc(pool, sizeof(*lock));
 
@@ -822,31 +822,31 @@ svn_fs_base__parse_lock_skel(svn_lock_t **lock_p,
 
   /* COMMENT  (could be just an empty atom) */
   if (skel->children->next->next->next->next->len)
-    lock->comment = 
+    lock->comment =
       apr_pstrmemdup(pool,
                      skel->children->next->next->next->next->data,
                      skel->children->next->next->next->next->len);
 
   /* XML_P */
-  if (svn_fs_base__matches_atom 
+  if (svn_fs_base__matches_atom
       (skel->children->next->next->next->next->next, "1"))
     lock->is_dav_comment = TRUE;
   else
     lock->is_dav_comment = FALSE;
 
   /* CREATION-DATE */
-  timestr = apr_pstrmemdup 
+  timestr = apr_pstrmemdup
     (pool,
      skel->children->next->next->next->next->next->next->data,
      skel->children->next->next->next->next->next->next->len);
   SVN_ERR(svn_time_from_cstring(&(lock->creation_date),
                                 timestr, pool));
-  
+
   /* EXPIRATION-DATE  (could be just an empty atom) */
   if (skel->children->next->next->next->next->next->next->next->len)
     {
-      timestr = 
-        apr_pstrmemdup 
+      timestr =
+        apr_pstrmemdup
         (pool,
          skel->children->next->next->next->next->next->next->next->data,
          skel->children->next->next->next->next->next->next->next->len);
@@ -1398,14 +1398,14 @@ svn_fs_base__unparse_lock_skel(skel_t **skel_p,
 
   /* EXP-DATE is optional.  If not present, just use an empty atom. */
   if (lock->expiration_date)
-    svn_fs_base__prepend 
+    svn_fs_base__prepend
       (svn_fs_base__str_atom
        (svn_time_to_cstring(lock->expiration_date, pool), pool), skel);
   else
     svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool), skel);
 
   /* CREATION-DATE */
-  svn_fs_base__prepend 
+  svn_fs_base__prepend
     (svn_fs_base__str_atom
      (svn_time_to_cstring(lock->creation_date, pool), pool), skel);
 
@@ -1423,7 +1423,7 @@ svn_fs_base__unparse_lock_skel(skel_t **skel_p,
 
   /* OWNER */
   svn_fs_base__prepend(svn_fs_base__str_atom(lock->owner, pool), skel);
-  
+
   /* LOCK-TOKEN */
   svn_fs_base__prepend(svn_fs_base__str_atom(lock->token, pool), skel);
 

@@ -1508,7 +1508,7 @@ log_do_committed(struct log_runner *loggy,
     if (apr_hash_get(entries, base_name, APR_HASH_KEY_STRING))
       {
         if ((err = svn_wc__entry_modify(paccess, base_name, entry,
-                                        (SVN_WC__ENTRY_MODIFY_SCHEDULE 
+                                        (SVN_WC__ENTRY_MODIFY_SCHEDULE
                                          | SVN_WC__ENTRY_MODIFY_COPIED
                                          | SVN_WC__ENTRY_MODIFY_DELETED
                                          | SVN_WC__ENTRY_MODIFY_FORCE),

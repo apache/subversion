@@ -64,7 +64,7 @@ svn_wc__ensure_directory(const char *path,
           /* Tried to create the dir, and encountered some problem
              other than non-existence of intermediate dirs.  We can't
              ensure the desired directory's existence, so just return
-             the error. */ 
+             the error. */
           return err;
         }
       else if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -87,7 +87,7 @@ svn_wc__ensure_directory(const char *path,
           else  /* We have a valid path, so recursively ensure it. */
             {
               err = svn_wc__ensure_directory(shorter, pool);
-          
+
               if (err)
                 return (err);
               else
@@ -281,7 +281,7 @@ svn_wc__path_switched(const char *wc_path,
   if (!parent_entry->url || !entry->url)
     {
       const char *no_url_path = parent_entry->url ? wc_path : wc_parent_path;
-      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL, 
+      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                _("Cannot find a URL for '%s'"),
                                svn_path_local_style(no_url_path, pool));
     }

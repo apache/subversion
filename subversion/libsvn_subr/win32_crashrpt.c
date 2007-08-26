@@ -549,7 +549,7 @@ is_debugger_present()
 
 /* Match the version of dbghelp.dll with the minimum expected version */
 static BOOL
-check_dbghelp_version(WORD exp_major, WORD exp_minor, WORD exp_build, 
+check_dbghelp_version(WORD exp_major, WORD exp_minor, WORD exp_build,
                       WORD exp_qfe)
 {
   HANDLE version_dll = LoadLibrary(VERSION_DLL);
@@ -571,7 +571,7 @@ check_dbghelp_version(WORD exp_major, WORD exp_minor, WORD exp_build,
   if (resource_size)
     {
       void *resource_data = malloc(resource_size);
-      if (GetFileVersionInfo_(DBGHELP_DLL, h, resource_size, 
+      if (GetFileVersionInfo_(DBGHELP_DLL, h, resource_size,
                               resource_data) != FALSE)
         {
           void *buf = NULL;
@@ -640,7 +640,7 @@ load_dbghelp_dll()
 
       if (! (MiniDumpWriteDump_ &&
              SymInitialize_ && SymSetOptions_  && SymGetOptions_ &&
-             SymCleanup_    && SymGetTypeInfo_ && SymGetLineFromAddr_ && 
+             SymCleanup_    && SymGetTypeInfo_ && SymGetLineFromAddr_ &&
              SymEnumSymbols_ && SymSetContext_ && SymFromAddr_ && StackWalk_ &&
              SymFunctionTableAccess_ && SymGetModuleBase_) )
         goto cleanup;

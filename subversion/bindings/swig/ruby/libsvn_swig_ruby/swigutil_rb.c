@@ -2157,7 +2157,7 @@ svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool, rb_result;
-  
+
   *result = svn_wc_conflict_result_conflicted;
 
   svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
@@ -2173,7 +2173,7 @@ svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
     rb_result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
     r2c_swig_type2(rb_result, "svn_wc_conflict_result_t *", &result);
   }
-  
+
   return err;
 }
 
