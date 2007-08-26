@@ -2186,9 +2186,9 @@ svn_swig_rb_notify_func2(void *baton,
 
 svn_error_t *
 svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
-                           const svn_wc_conflict_description_t *description,
-                           void *baton,
-                           apr_pool_t *pool)
+                                   const svn_wc_conflict_description_t *description,
+                                   void *baton,
+                                   apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool, rb_result;
@@ -2199,6 +2199,7 @@ svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
 
   if (!NIL_P(proc)) {
     callback_baton_t cbb;
+    void *converted_result;
 
     cbb.receiver = proc;
     cbb.message = id_call;
@@ -2206,7 +2207,8 @@ svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
              c2r_swig_type((void *)description,
                            (void *)"const svn_wc_conflict_description_t *"));
     rb_result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
-    r2c_swig_type2(rb_result, "svn_wc_conflict_result_t *", &result);
+    converted_result = result;
+    r2c_swig_type2(rb_result, "svn_wc_conflict_result_t *", &converted_result);
   }
 
   return err;
