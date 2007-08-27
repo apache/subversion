@@ -133,7 +133,7 @@ init_sspi_connection(svn_ra_serf__session_t *session,
   const char *tmp;
   apr_size_t tmp_len;
 
-  load_security_dll();
+  SVN_ERR(load_security_dll());
 
   conn->sspi_context = (serf_sspi_context_t*)
     apr_palloc(pool, sizeof(serf_sspi_context_t));
