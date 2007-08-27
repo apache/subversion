@@ -1074,6 +1074,18 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
+     */
+    public String[] suggestMergeSources(String path)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            return worker.suggestMergeSources(path);
+        }
+    }
+
+    /**
      * Merge changes from two paths into a new local path.
      * @param path1         first path or url
      * @param revision1     first revision

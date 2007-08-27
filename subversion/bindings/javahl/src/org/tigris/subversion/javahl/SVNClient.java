@@ -890,6 +890,12 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
+     */
+    public native String[] suggestMergeSources(String path)
+            throws ClientException;
+
+    /**
      * Merge changes from two paths into a new local path.
      * @param path1         first path or url
      * @param revision1     first revision

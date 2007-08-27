@@ -570,6 +570,40 @@ void SVNClient::doImport(const char *path, const char *url,
                                   requestPool.pool()), );
 }
 
+jobjectArray
+SVNClient::suggestMergeSources(const char *path)
+{
+    Pool requestPool;
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return NULL;
+
+    apr_array_header_t *sources;
+    SVN_JNI_ERR(svn_client_suggest_merge_sources(&sources, path,
+                                                 ctx, requestPool.pool()),
+                NULL);
+
+    JNIEnv *env = JNIUtil::getEnv();
+    jclass clazz = env->FindClass("java/lang/String");
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+    jobjectArray ret = env->NewObjectArray(sources->nelts, clazz, NULL);
+    for (int i = 0; i < sources->nelts; ++i)
+    {
+        const char *source = APR_ARRAY_IDX(sources, i, const char *);
+        jstring jpath = JNIUtil::makeJString(source);
+        if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
+
+        env->SetObjectArrayElement(ret, i, jpath);
+        if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
+    }
+
+    return ret;
+}
+
 void SVNClient::merge(const char *path1, Revision &revision1,
                       const char *path2, Revision &revision2,
                       const char *localPath, bool force, svn_depth_t depth,

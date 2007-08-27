@@ -726,6 +726,25 @@ Java_org_tigris_subversion_javahl_SVNClient_doImport
   cl->doImport(path, url, message, jrecurse ? true : false);
 }
 
+JNIEXPORT jobjectArray JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_suggestMergeSources
+(JNIEnv *env, jobject jthis, jstring jpath)
+{
+  JNIEntry(SVNClient, suggestMergeSources);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return cl->suggestMergeSources(path);
+}
+
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2ZIZZ
 (JNIEnv *env, jobject jthis, jstring jpath1, jobject jrevision1,
