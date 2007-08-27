@@ -21,7 +21,7 @@ import stat, os, re
 
 # Our testing module
 import svntest
-from svntest import SVNAnyOutput
+from svntest import SVNAnyOutput, wc
 
 from svntest.main import SVN_PROP_MERGE_INFO
 
@@ -3674,6 +3674,101 @@ def copy_make_parents_repo_repo(sbox):
                                         expected_disk,
                                         expected_status)
 
+# Test for issue #2894
+# Can't perform URL to WC copy if URL needs URI encoding.
+def URI_encoded_repos_to_wc(sbox):
+  "copy a URL that needs URI encoding to WC"
+
+  # Test marked as XFail until issue # 2894 is fixed.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk = svntest.main.greek_state.copy()
+
+  def copy_URL_to_WC(URL_rel_path, dest_name, rev):
+    expected = svntest.actions.UnorderedOutput(
+      ["A    " + os.path.join(wc_dir, dest_name, "B") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "B", "lambda") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "B", "E") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "B", "E", "alpha") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "B", "E", "beta") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "B", "F") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "mu") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "C") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "gamma") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "G") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "pi") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "rho") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "tau") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "H") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "chi") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "omega") + "\n",
+       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "psi") + "\n",
+       "Checked out revision " + str(rev - 1) + ".\n",
+       "A         " + os.path.join(wc_dir, dest_name) + "\n"])
+    expected_status.add({
+      dest_name + "/B"         : Item(status='  ', wc_rev=rev),
+      dest_name + "/B/lambda"  : Item(status='  ', wc_rev=rev),
+      dest_name + "/B/E"       : Item(status='  ', wc_rev=rev),
+      dest_name + "/B/E/alpha" : Item(status='  ', wc_rev=rev),
+      dest_name + "/B/E/beta"  : Item(status='  ', wc_rev=rev),
+      dest_name + "/B/F"       : Item(status='  ', wc_rev=rev),
+      dest_name + "/mu"        : Item(status='  ', wc_rev=rev),
+      dest_name + "/C"         : Item(status='  ', wc_rev=rev),
+      dest_name + "/D"         : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/gamma"   : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/G"       : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/G/pi"    : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/G/rho"   : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/G/tau"   : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/H"       : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/H/chi"   : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/H/omega" : Item(status='  ', wc_rev=rev),
+      dest_name + "/D/H/psi"   : Item(status='  ', wc_rev=rev),
+      dest_name                : Item(status='  ', wc_rev=rev)})
+    if rev < 3:
+      copy_mergeinfo = '/A:1'
+    else:
+      copy_mergeinfo  = '/A:1-' + str(rev - 1)
+    expected_disk.add({
+      dest_name : Item(props={SVN_PROP_MERGE_INFO : copy_mergeinfo}),
+      dest_name + '/B'         : Item(),
+      dest_name + '/B/lambda'  : Item("This is the file 'lambda'.\n"),
+      dest_name + '/B/E'       : Item(),
+      dest_name + '/B/E/alpha' : Item("This is the file 'alpha'.\n"),
+      dest_name + '/B/E/beta'  : Item("This is the file 'beta'.\n"),
+      dest_name + '/B/F'       : Item(),
+      dest_name + '/mu'        : Item("This is the file 'mu'.\n"),
+      dest_name + '/C'         : Item(),
+      dest_name + '/D'         : Item(),
+      dest_name + '/D/gamma'   : Item("This is the file 'gamma'.\n"),
+      dest_name + '/D/G'       : Item(),
+      dest_name + '/D/G/pi'    : Item("This is the file 'pi'.\n"),
+      dest_name + '/D/G/rho'   : Item("This is the file 'rho'.\n"),
+      dest_name + '/D/G/tau'   : Item("This is the file 'tau'.\n"),
+      dest_name + '/D/H'       : Item(),
+      dest_name + '/D/H/chi'   : Item("This is the file 'chi'.\n"),
+      dest_name + '/D/H/omega' : Item("This is the file 'omega'.\n"),
+      dest_name + '/D/H/psi'   : Item("This is the file 'psi'.\n"),
+      })
+
+    # Make a copy
+    svntest.actions.run_and_verify_svn(None, expected, [], 'copy',
+                                       sbox.repo_url + '/' + URL_rel_path,
+                                       os.path.join(wc_dir,
+                                                    dest_name))
+
+    expected_output = wc.State(wc_dir, {dest_name : Item(verb='Adding')})
+    svntest.actions.run_and_verify_commit(wc_dir,
+                                          expected_output,
+                                          expected_status,
+                                          None, None, None, None, None,
+                                          wc_dir)
+
+  copy_URL_to_WC('A', 'A COPY', 2)
+  copy_URL_to_WC('A COPY', 'A_COPY_2', 3)
 
 ########################################################################
 # Run the tests
@@ -3749,6 +3844,7 @@ test_list = [ None,
               copy_make_parents_repo_wc,
               copy_make_parents_wc_repo,
               copy_make_parents_repo_repo,
+              XFail(URI_encoded_repos_to_wc),
              ]
 
 if __name__ == '__main__':
