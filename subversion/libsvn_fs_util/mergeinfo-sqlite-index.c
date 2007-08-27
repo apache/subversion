@@ -52,6 +52,10 @@
                             sqlite3_errmsg((db)));              \
 } while (0)
 
+/* A flow-control helper macro for sending processing to the 'cleanup'
+  label when the local variable 'err' is not SVN_NO_ERROR. */
+#define MAYBE_CLEANUP if (err) goto cleanup
+
 #ifdef SQLITE3_DEBUG
 /* An sqlite query execution callback. */
 static void
@@ -186,15 +190,28 @@ open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
   return err;
 }
 
+/* Close DB, returning any ERR which may've necessitated an early connection
+   closure, or -- if none -- the error from the closure itself. */
+static svn_error_t *
+close_db(sqlite3 *db, svn_error_t *err)
+{
+  int result = sqlite3_close(db);
+  /* If there's a pre-existing error, return it. */
+  /* ### If the connection close also fails, say something about it as well? */
+  SVN_ERR(err);
+  SQLITE_ERR(result, db);
+  return SVN_NO_ERROR;
+}
+
 /* Create an sqlite DB for our mergeinfo index under PATH.  Use POOL
    for temporary allocations. */
 svn_error_t *
 svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool)
 {
   sqlite3 *db;
+  /* Opening the database will create it + schema if it's not already there. */
   SVN_ERR(open_db(&db, path, pool));
-  SQLITE_ERR(sqlite3_close(db), db);
-  return SVN_NO_ERROR;
+  return close_db(db, SVN_NO_ERROR);
 }
 
 static svn_error_t *
@@ -354,11 +371,13 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
                                apr_hash_t *mergeinfo_for_paths,
                                apr_pool_t *pool)
 {
-  const char *deletestring;
+  svn_error_t *err;
   sqlite3 *db;
+  const char *deletestring;
 
   SVN_ERR(open_db(&db, txn->fs->path, pool));
-  SVN_ERR(util_sqlite_exec(db, "BEGIN TRANSACTION;", NULL, NULL));
+  err = util_sqlite_exec(db, "BEGIN TRANSACTION;", NULL, NULL);
+  MAYBE_CLEANUP;
 
   /* Cleanup the leftovers of any previous, failed transactions
    * involving NEW_REV. */
@@ -366,25 +385,31 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
                               "DELETE FROM mergeinfo_changed WHERE "
                               "revision = %ld;",
                               new_rev);
-  SVN_ERR(util_sqlite_exec(db, deletestring, NULL, NULL));
+  err = util_sqlite_exec(db, deletestring, NULL, NULL);
+  MAYBE_CLEANUP;
   deletestring = apr_psprintf(pool,
                               "DELETE FROM mergeinfo WHERE revision = %ld;",
                               new_rev);
-  SVN_ERR(util_sqlite_exec(db, deletestring, NULL, NULL));
+  err = util_sqlite_exec(db, deletestring, NULL, NULL);
+  MAYBE_CLEANUP;
 
   /* Record any mergeinfo from the current transaction. */
   if (mergeinfo_for_paths)
-    SVN_ERR(index_txn_mergeinfo(db, new_rev, mergeinfo_for_paths, pool));
+    {
+      err = index_txn_mergeinfo(db, new_rev, mergeinfo_for_paths, pool);
+      MAYBE_CLEANUP;
+    }
 
   /* This is moved here from FSFS's commit_txn, because we don't want to
    * write the final current file if the sqlite commit fails.
    * On the other hand, if we commit the transaction and end up failing
    * the current file, we just end up with inaccessible data in the
    * database, not a real problem.  */
-  SVN_ERR(util_sqlite_exec(db, "COMMIT TRANSACTION;", NULL, NULL));
-  SQLITE_ERR(sqlite3_close(db), db);
+  err = util_sqlite_exec(db, "COMMIT TRANSACTION;", NULL, NULL);
+  MAYBE_CLEANUP;
 
-  return SVN_NO_ERROR;
+ cleanup:
+  return close_db(db, err);
 }
 
 /* Helper for get_mergeinfo_for_path() that retrieves mergeinfo for
@@ -736,10 +761,11 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
 {
   sqlite3 *db;
   int i;
+  svn_error_t *err;
 
   SVN_ERR(open_db(&db, root->fs->path, pool));
-  SVN_ERR(get_mergeinfo(db, mergeinfo, root, paths, inherit, pool));
-  SQLITE_ERR(sqlite3_close(db), db);
+  err = get_mergeinfo(db, mergeinfo, root, paths, inherit, pool);
+  SVN_ERR(close_db(db, err));
 
   for (i = 0; i < paths->nelts; i++)
     {
@@ -770,13 +796,15 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                                          void *filter_func_baton,
                                          apr_pool_t *pool)
 {
+  svn_error_t *err;
   svn_revnum_t rev;
   sqlite3 *db;
   int i;
 
   SVN_ERR(open_db(&db, root->fs->path, pool));
-  SVN_ERR(get_mergeinfo(db, mergeinfo, root, paths, svn_mergeinfo_inherited,
-                        pool));
+  err = get_mergeinfo(db, mergeinfo, root, paths, svn_mergeinfo_inherited,
+                      pool);
+  MAYBE_CLEANUP;
 
   rev = REV_ROOT_REV(root);
 
@@ -793,8 +821,10 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
         {
           svn_boolean_t omit;
 
-          SVN_ERR(filter_func(filter_func_baton, &omit, path, path_mergeinfo,
-                              pool));
+          err = filter_func(filter_func_baton, &omit, path, path_mergeinfo,
+                            pool);
+          MAYBE_CLEANUP;
+
           if (omit)
             {
               apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, NULL);
@@ -802,13 +832,13 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
             }
         }
 
-      SVN_ERR(get_mergeinfo_for_children(db, path, rev, &path_mergeinfo,
-                                         filter_func, filter_func_baton,
-                                         pool));
+      err = get_mergeinfo_for_children(db, path, rev, &path_mergeinfo,
+                                       filter_func, filter_func_baton, pool);
+      MAYBE_CLEANUP;
 
       apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, path_mergeinfo);
     }
 
-  SQLITE_ERR(sqlite3_close(db), db);
-  return SVN_NO_ERROR;
+ cleanup:
+  return close_db(db, err);
 }
