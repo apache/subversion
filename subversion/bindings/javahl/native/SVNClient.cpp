@@ -1508,6 +1508,8 @@ jobjectArray SVNClient::getChangelist(const char *changelist,
     {
         const char *path = APR_ARRAY_IDX(paths, i, const char *);
         jstring jpath = JNIUtil::makeJString(path);
+        if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
 
         env->SetObjectArrayElement(ret, i, jpath);
         if (JNIUtil::isJavaExceptionThrown())
