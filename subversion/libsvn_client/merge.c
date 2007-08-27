@@ -3503,19 +3503,20 @@ from_same_repos(struct merge_cmd_baton *merge_cmd_baton, const char *src_url,
   return SVN_NO_ERROR;
 }
 
-/* Get repository root of PATH_OR_URL as *REPOS_ROOT.
- * Cascade CTX.
- * All allocations occur in POOL.
- */
-static svn_error_t *
-get_repos_root(const char **repos_root, const char *path_or_url,
-               svn_client_ctx_t *ctx, apr_pool_t *pool)
+svn_error_t *
+svn_client__get_repos_root(const char **repos_root, 
+                           const char *path_or_url,
+                           svn_client_ctx_t *ctx, 
+                           apr_pool_t *pool)
 {
   svn_revnum_t rev;
   svn_opt_revision_t target_revision;
   svn_ra_session_t *ra_session;
   const char *target_url;
   target_revision.kind = svn_opt_revision_working;
+
+  /* ### FIXME: If PATH_OR_URL is a local path, we should first see
+     ###        if its entry already has the repository root URL. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session,
                                            &rev,
                                            &target_url,
@@ -3623,7 +3624,8 @@ svn_client_merge3(const char *source1,
     }
   else
     {
-      SVN_ERR(get_repos_root(&wc_repos_root, target_wcpath, ctx, pool));
+      SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath, 
+                                         ctx, pool));
     }
 
   if (depth == svn_depth_unknown)
@@ -3805,48 +3807,24 @@ svn_client_merge_peg3(const char *source,
     }
   else
     {
-      SVN_ERR(get_repos_root(&wc_repos_root, target_wcpath, ctx, pool));
+      SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath, 
+                                         ctx, pool));
     }
 
-
-  if (source)
-    {
-      /* If source is a path, we need to get the underlying URL from
-         the wc and save the initial path we were passed so we can use
-         it as a path parameter (either in the baton or not).
-         otherwise, the path will just be NULL, which means we won't
-         be able to figure out some kind of revision specifications,
-         but in that case it won't matter, because those ways of
-         specifying a revision are meaningless for a URL. */
-      SVN_ERR(svn_client_url_from_path(&URL, source, pool));
-      if (! URL)
-        return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                 _("'%s' has no URL"),
-                                 svn_path_local_style(source, pool));
-      if (URL != source)
-        path = source;
-    }
-  else
-    {
-      /* If a merge source was not specified, try to derive it. */
-      apr_array_header_t *suggested_sources;
-      svn_opt_revision_t target_revision;
-      target_revision.kind = svn_opt_revision_working;
-      SVN_ERR(svn_client__suggest_merge_sources(target_wcpath,
-                                                &target_revision,
-                                                &suggested_sources,
-                                                ctx, pool));
-      if (! suggested_sources->nelts)
-        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                 _("Unable to determine merge source for "
-                                   "'%s', please provide an explicit source"),
-                                 svn_path_local_style(target_wcpath, pool));
-
-      /* Prepend the repository root path to the copy source path. */
-      URL = apr_pstrcat(pool, wc_repos_root,
-                        APR_ARRAY_IDX(suggested_sources, 0, char *),
-                        NULL);
-    }
+  /* If source is a path, we need to get the underlying URL from
+     the wc and save the initial path we were passed so we can use
+     it as a path parameter (either in the baton or not).
+     otherwise, the path will just be NULL, which means we won't
+     be able to figure out some kind of revision specifications,
+     but in that case it won't matter, because those ways of
+     specifying a revision are meaningless for a URL. */
+  SVN_ERR(svn_client_url_from_path(&URL, source, pool));
+  if (! URL)
+    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                             _("'%s' has no URL"),
+                             svn_path_local_style(source, pool));
+  if (URL != source)
+    path = source;
 
   if (depth == svn_depth_unknown)
     depth = entry->depth;

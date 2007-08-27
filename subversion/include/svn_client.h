@@ -2335,6 +2335,22 @@ svn_client_diff_summarize_peg(const char *path,
  * @{
  */
 
+/** Set @a suggestions to an ordered array of @c const char *
+ * potential merge sources (expressed as URLs relative to the
+ * repository root URL for the repository with which @a path is
+ * associated) for @a path at @a revision.  @path a working copy path.
+ * @a ctx is a context used for authentication in the repository case.
+ * Use @a pool for all allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
+                                 const char *path,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
+
+
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into
  * the working-copy path @a target_wcpath.
  *

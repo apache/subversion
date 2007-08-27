@@ -206,56 +206,60 @@ svn_client__get_copy_source(const char *path_or_url,
 }
 
 svn_error_t *
-svn_client__suggest_merge_sources(const char *path_or_url,
-                                  const svn_opt_revision_t *revision,
-                                  apr_array_header_t **suggestions,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool)
+svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
+                                 const char *path,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool)
 {
+  const char *repos_root;
   const char *copyfrom_path;
+  apr_array_header_t *list;
   svn_revnum_t copyfrom_rev;
   apr_hash_t *mergeinfo;
   apr_hash_index_t *hi;
+  svn_opt_revision_t revision;
+  revision.kind = svn_opt_revision_working;
 
-  *suggestions = apr_array_make(pool, 1, sizeof(const char *));
+  list = apr_array_make(pool, 1, sizeof(const char *));
 
   /* In our ideal algorithm, the list of recommendations should be
      ordered by:
 
-     1) The most recent existing merge source.
-     2) The copyfrom source (which will also be listed as a merge
-        source if the copy was made with a 1.5+ client and server).
-     3) All other merge sources, most recent to least recent.
+        1. The most recent existing merge source.
+        2. The copyfrom source (which will also be listed as a merge
+           source if the copy was made with a 1.5+ client and server).
+        3. All other merge sources, most recent to least recent.
 
      However, determining the order of application of merge sources
      requires a new RA API.  Until such an API is available, our
      algorithm will be:
 
-     1) The copyfrom source.
-     2) All remaining merge sources (unordered). */
+        1. The copyfrom source.
+        2. All remaining merge sources (unordered).
+  */
 
-  /* ### TODO: Use RA APIs directly to improve efficiency. */
-  SVN_ERR(svn_client__get_copy_source(path_or_url, revision, &copyfrom_path,
+  /* ### TODO: Share ra_session batons to improve efficiency? */
+  SVN_ERR(svn_client__get_repos_root(&repos_root, path, ctx, pool));
+  SVN_ERR(svn_client__get_copy_source(path, &revision, &copyfrom_path,
                                       &copyfrom_rev, ctx, pool));
   if (copyfrom_path)
-    APR_ARRAY_PUSH(*suggestions, const char *) = copyfrom_path;
+    APR_ARRAY_PUSH(list, const char *) = 
+      svn_path_url_add_component(repos_root, copyfrom_path + 1, pool);
 
-  SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, revision,
-                                   ctx, pool));
-
-  if (!mergeinfo)
-    return SVN_NO_ERROR;
-
-  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+  SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path, &revision, ctx, pool));
+  if (mergeinfo)
     {
-      const char *path;
-      apr_hash_this(hi, (void *) &path, NULL, NULL);
-      if (copyfrom_path == NULL || strcmp(path, copyfrom_path) != 0)
+      for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
         {
-          APR_ARRAY_PUSH(*suggestions, const char *) = apr_pstrdup(pool, path);
+          const char *merge_path;
+          apr_hash_this(hi, (void *)(&merge_path), NULL, NULL);
+          if (copyfrom_path == NULL || strcmp(merge_path, copyfrom_path) != 0)
+            APR_ARRAY_PUSH(list, const char *) = 
+              svn_path_url_add_component(repos_root, merge_path + 1, pool);
         }
     }
 
+  *suggestions = list;
   return SVN_NO_ERROR;
 }
 
