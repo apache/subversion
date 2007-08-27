@@ -283,7 +283,7 @@ svn_wc__path_switched(const char *wc_path,
     }
 
   parent_child_url
-    = svn_path_add_url_component(parent_entry->url,
+    = svn_path_url_add_component(parent_entry->url,
                                  svn_path_basename(wc_path, pool), pool);
   *switched = strcmp(parent_child_url, entry->url) != 0;
 
