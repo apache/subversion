@@ -839,6 +839,8 @@ def new_style_externals(sbox):
       raise svntest.Failure("Unexpected contents for rev 1 of " +
                             exdir_X_omega_path)
 
+#----------------------------------------------------------------------
+
 def disallow_propset_invalid_formatted_externals(sbox):
   "error if propset'ing external with invalid format"
 
