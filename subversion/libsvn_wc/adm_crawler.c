@@ -250,7 +250,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
         continue;
 
       /* Compute the paths and URLs we need. */
-      this_url = svn_path_add_url_component(dot_entry->url, key, iterpool);
+      this_url = svn_path_url_add_component(dot_entry->url, key, iterpool);
       this_path = svn_path_join(dir_path, key, iterpool);
       this_full_path = svn_path_join(full_path, key, iterpool);
 
