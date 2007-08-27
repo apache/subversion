@@ -893,7 +893,7 @@ public class SVNClient implements SVNClientInterface
      * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
      */
     public native String[] suggestMergeSources(String path)
-            throws ClientException;
+            throws SubversionException;
 
     /**
      * Merge changes from two paths into a new local path.
