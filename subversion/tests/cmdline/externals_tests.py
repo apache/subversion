@@ -897,6 +897,42 @@ def disallow_propset_invalid_formatted_externals(sbox):
                                        A_path)
     os.remove(tmp_f)
 
+#----------------------------------------------------------------------
+
+def old_style_externals_ignore_peg_reg(sbox):
+  "old 'PATH URL' format should ignore peg revisions"
+
+  externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+
+  repo_url       = sbox.repo_url
+  other_repo_url = repo_url + ".other"
+
+  # Checkout a working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     repo_url, wc_dir)
+
+  # Update the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Set an external property using the old 'PATH URL' syntax with
+  # @HEAD in the URL.
+  ext = "exdir_G " + other_repo_url + "/A/D/G@HEAD \n"
+
+  # Set and commit the property.
+  change_external(os.path.join(wc_dir, "A"), ext)
+
+  # Update the working copy.  This should fail because the URL with
+  # '@HEAD' does not exist.
+  svntest.actions.run_and_verify_svn("External '%s' used pegs" % ext.strip(),
+                                     None,
+                                     ".*URL '.*/A/D/G@HEAD' doesn't exist",
+                                     'up',
+                                     wc_dir)
+
 
 ########################################################################
 # Run the tests
@@ -917,6 +953,7 @@ test_list = [ None,
               external_with_peg_and_op_revision,
               new_style_externals,
               disallow_propset_invalid_formatted_externals,
+              old_style_externals_ignore_peg_reg
              ]
 
 if __name__ == '__main__':
