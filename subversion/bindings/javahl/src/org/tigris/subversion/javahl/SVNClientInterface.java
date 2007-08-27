@@ -736,9 +736,10 @@ public interface SVNClientInterface
      * @param path The merge target path for which to suggest sources.
      * @return The list of URLs, empty if there are no suggestions.
      * @throws ClientException If an error occurs.
+     * @since 1.5
      */
     String[] suggestMergeSources(String path)
-            throws ClientException;
+            throws SubversionException;
 
     /**
      * Merge changes from two paths into a new local path.
