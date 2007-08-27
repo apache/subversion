@@ -182,6 +182,15 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+/* Set REPOS_ROOT to the URL which represents the root of the
+   repository in with PATH_OR_URL is versioned.  Use the
+   authentication baton cached in CTX as necessary.  Use POOL for all
+   allocations. */
+svn_error_t *
+svn_client__get_repos_root(const char **repos_root, 
+                           const char *path_or_url,
+                           svn_client_ctx_t *ctx, 
+                           apr_pool_t *pool);
 
 /* Return the path of PATH_OR_URL relative to the repository root
    (REPOS_ROOT) in REL_PATH (URI-decoded).
