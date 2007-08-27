@@ -199,9 +199,6 @@ svn_cl__merge(apr_getopt_t *os,
         {
           /* If a merge source was not specified, try to derive it. */
           apr_array_header_t *suggested_sources;
-          svn_opt_revision_t working_revision;
-          working_revision.kind = svn_opt_revision_working;
-
           SVN_ERR(svn_client_suggest_merge_sources(&suggested_sources,
                                                    targetpath, ctx, pool));
           if (! suggested_sources->nelts)
