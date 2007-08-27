@@ -861,7 +861,7 @@ def merge_catches_nonexistent_target(sbox):
   newfile_path = os.path.join(Q_path, 'newfile')
   Q_url = sbox.repo_url + '/A/D/Q'
 
-  # Copy dir A/D/G to A/D/Q, creating r1.
+  # Copy dir A/D/G to A/D/Q
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', G_path, Q_path)
 
   svntest.main.file_append(newfile_path, 'This is newfile.\n')
@@ -7700,8 +7700,7 @@ test_list = [ None,
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
               XFail(merge_with_depth_files),
-              XFail(merge_fails_if_subtree_is_deleted_on_src,
-                    svntest.main.is_ra_type_dav),
+              merge_fails_if_subtree_is_deleted_on_src,
               no_mergeinfo_from_no_op_merge,
              ]
 

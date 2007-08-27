@@ -2100,6 +2100,7 @@ do_merge(const char *initial_URL1,
   svn_boolean_t is_root_of_noop_merge = FALSE;
   apr_size_t target_count, merge_target_count;
   apr_pool_t *subpool;
+  svn_boolean_t is_same_repos = FALSE;
 
   ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
                               initial_revision2->kind);
@@ -2141,13 +2142,26 @@ do_merge(const char *initial_URL1,
 
   if (notify_b.same_urls)
     {
+      /* ### TODO: Should we use from_same_repos? I don't like its behaviour
+         ### for dry-run case. */
+      const char *src_repos_root;
+      SVN_ERR(svn_ra_get_repos_root(ra_session, &src_repos_root, pool));
+      if (svn_path_is_ancestor(src_repos_root, entry->url))
+        is_same_repos = TRUE;
+    }
+  if (notify_b.same_urls && is_same_repos)
+    {
       apr_array_header_t *requested_rangelist;
 
+      /* Reparent ra_session to WC target url. */
+      svn_ra_reparent(ra_session, entry->url, pool);
       SVN_ERR(get_wc_or_repos_mergeinfo(&target_mergeinfo, entry,
                                         &indirect, FALSE,
                                         svn_mergeinfo_inherited, ra_session,
                                         target_wcpath, adm_access,
                                         ctx, pool));
+      /* Reparent ra_session back to initial_URL1. */
+      svn_ra_reparent(ra_session, initial_URL1, pool);
 
       is_rollback = (merge_type == merge_type_rollback);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, initial_URL1, NULL,
@@ -2507,6 +2521,7 @@ do_single_file_merge(const char *initial_URL1,
   svn_boolean_t indirect = FALSE, is_replace = FALSE;
   svn_boolean_t is_root_of_noop_merge = FALSE;
   apr_size_t target_count, merge_target_count;
+  svn_boolean_t is_same_repos = FALSE;
   apr_pool_t *subpool;
 
   ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
@@ -2577,16 +2592,32 @@ do_single_file_merge(const char *initial_URL1,
                                              pool));
   if (notify_b.same_urls)
     {
+      /* ### TODO: Should we use from_same_repos? I don't like its behaviour
+         ### for dry-run case. */
+      const char *src_repos_root;
+      SVN_ERR(svn_ra_get_repos_root(ra_session1, &src_repos_root, pool));
+      if (svn_path_is_ancestor(src_repos_root, entry->url))
+        is_same_repos = TRUE;
+    }
+
+  if (notify_b.same_urls && is_same_repos)
+    {
       apr_array_header_t *requested_rangelist;
 
       if (merge_type == merge_type_no_op)
         return SVN_NO_ERROR;
+
+      /* Reparent ra_session1 to WC target url. */
+      svn_ra_reparent(ra_session1, entry->url, pool);
 
       SVN_ERR(get_wc_or_repos_mergeinfo(&target_mergeinfo, entry,
                                         &indirect, FALSE,
                                         svn_mergeinfo_inherited, ra_session1,
                                         target_wcpath, adm_access,
                                         ctx, pool));
+
+      /* Reparent ra_session1 back to initial_URL1. */
+      svn_ra_reparent(ra_session1, initial_URL1, pool);
 
       is_rollback = (merge_type == merge_type_rollback);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, initial_URL1, NULL,
