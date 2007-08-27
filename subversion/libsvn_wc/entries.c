@@ -2924,11 +2924,11 @@ svn_wc_walk_entries(const char *path,
                               pool);
 }
 
-static svn_error_t *
-walker_default_error_handler(const char *path,
-                             svn_error_t *err,
-                             void *walk_baton,
-                             apr_pool_t *pool)
+svn_error_t *
+svn_wc__walker_default_error_handler(const char *path,
+                                     svn_error_t *err,
+                                     void *walk_baton,
+                                     apr_pool_t *pool)
 {
   return err;
 }
@@ -2944,7 +2944,7 @@ svn_wc_walk_entries2(const char *path,
                      apr_pool_t *pool)
 {
   svn_wc_entry_callbacks2_t walk_cb2 = { walk_callbacks->found_entry,
-                                         walker_default_error_handler };
+                                         svn_wc__walker_default_error_handler };
   return svn_wc_walk_entries3(path, adm_access, &walk_cb2, walk_baton,
                               show_hidden, cancel_func, cancel_baton, pool);
 }

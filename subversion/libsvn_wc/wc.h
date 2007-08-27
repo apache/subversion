@@ -2,7 +2,7 @@
  * wc.h :  shared stuff internal to the svn_wc library.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -252,6 +252,14 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        svn_wc_conflict_resolver_func_t conflict_func,
                        void *conflict_baton,
                        apr_pool_t *pool);
+
+/* A default error handler for svn_wc_walk_entries3().  Returns ERR in
+   all cases. */
+svn_error_t *
+svn_wc__walker_default_error_handler(const char *path,
+                                     svn_error_t *err,
+                                     void *walk_baton,
+                                     apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -2685,10 +2685,11 @@ resolve_found_entry_callback(const char *path,
                                    baton->notify_baton, pool);
 }
 
-static const svn_wc_entry_callbacks_t
+static const svn_wc_entry_callbacks2_t
 resolve_walk_callbacks =
   {
-    resolve_found_entry_callback
+    resolve_found_entry_callback,
+    svn_wc__walker_default_error_handler
   };
 
 
@@ -2764,7 +2765,7 @@ svn_wc_resolved_conflict3(const char *path,
     }
   else
     {
-      SVN_ERR(svn_wc_walk_entries2(path, adm_access,
+      SVN_ERR(svn_wc_walk_entries3(path, adm_access,
                                    &resolve_walk_callbacks, baton,
                                    FALSE, cancel_func, cancel_baton, pool));
 
