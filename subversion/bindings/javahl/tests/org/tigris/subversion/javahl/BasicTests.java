@@ -2161,6 +2161,12 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
+        // Verify that there are now potential merge sources.
+        String[] suggestedSrcs =
+            client.suggestMergeSources(thisTest.getWCPath() + "/branches/A");
+        assertNotNull(suggestedSrcs);
+        assertEquals(1, suggestedSrcs.length);
+
         // Test that getMergeInfo() returns null.
         assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
                                        .toString(), Revision.HEAD));
@@ -2316,6 +2322,12 @@ public class BasicTests extends SVNTests
         throws Exception
     {
         OneTest thisTest = new OneTest();
+
+        // Verify that there are initially no potential merge sources.
+        String[] suggestedSrcs =
+            client.suggestMergeSources(thisTest.getWCPath());
+        assertNotNull(suggestedSrcs);
+        assertEquals(0, suggestedSrcs.length);
 
         // create branches directory in the repository (r2)
         addExpectedCommitItem(null, thisTest.getUrl(), "branches",
