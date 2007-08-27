@@ -109,7 +109,7 @@ module Test
 
       def result_dir
         dir = File.join(File.dirname($0), ".test-result",
-                        self.class.name, @method_name.to_s)
+                        self.class.name, escaped_method_name)
         dir = File.expand_path(dir)
         FileUtils.mkdir_p(dir)
         dir
@@ -117,6 +117,17 @@ module Test
 
       def passed_file
         File.join(result_dir, "passed")
+      end
+
+      def escaped_method_name
+        @method_name.to_s.gsub(/[!?]$/) do |matched|
+          case matched
+          when "!"
+            ".destructive"
+          when "?"
+            ".predicate"
+          end
+        end
       end
     end
 
