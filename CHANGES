@@ -1,3 +1,13 @@
+Version 1.4.5
+(27 Aug 2007, from /branches/1.4.5)
+http://svn.collab.net/repos/svn/tags/1.4.5
+
+ User-visible changes:
+ * fixed: file placement vulnerability (Win32 clients only)
+          See CVE-2007-3846, and descriptive advisory at
+          http://subversion.tigris.org/security/CVE-2007-3864-advisory.txt
+
+
 Version 1.4.4
 (30 May 2007, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.4
