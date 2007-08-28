@@ -2868,9 +2868,21 @@ get_mergeinfo_walk_cb(const char *path,
   if (propval)
     {
       const char* path_relative_to_merge_target;
+      int merge_target_len;
       svn_stringbuf_t *merge_src_child_path =
                       svn_stringbuf_create(wb->merge_src_canon_path, pool);
-      path_relative_to_merge_target = path + strlen(wb->merge_target_path);
+      /* Note: Merge target is an empty string for '' and explicit '.'.
+       * Such relative merge targets makes path entries to be relative
+       * to current directory and hence for merge src '/trunk'
+       * "path of value 'subdir'" can cause merge_src_child_path to
+       * '/trunksubdir' instead of '/trunk/subdir'.
+       * For such merge targets insert '/' between merge_src_canon_path
+       * and path_relative_to_merge_target.
+       */
+      merge_target_len = strlen(wb->merge_target_path);
+      if (!merge_target_len)
+        svn_stringbuf_appendbytes(merge_src_child_path, "/", 1);
+      path_relative_to_merge_target = path + merge_target_len;
       svn_stringbuf_appendbytes(merge_src_child_path,
                                 path_relative_to_merge_target,
                                 strlen(path_relative_to_merge_target));
