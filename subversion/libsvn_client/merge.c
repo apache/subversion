@@ -2161,7 +2161,7 @@ do_merge(const char *initial_URL1,
          merge for the specified range. */
       if (merge_b->record_only)
         {
-          if (merge_b->dry_run || !merge_b->same_repos)
+          if (merge_b->dry_run)
             {
               return SVN_NO_ERROR;
             }
@@ -2606,7 +2606,7 @@ do_single_file_merge(const char *initial_URL1,
          merge for the specified range. */
       if (merge_b->record_only)
         {
-          if (merge_b->dry_run || !merge_b->same_repos)
+          if (merge_b->dry_run)
             {
               return SVN_NO_ERROR;
             }
