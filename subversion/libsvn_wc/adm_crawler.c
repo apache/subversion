@@ -1126,19 +1126,7 @@ svn_wc_transmit_prop_deltas(const char *path,
 
   /* First, get the prop_path from the original path */
   SVN_ERR(svn_wc__prop_path(&props, path, entry->kind, FALSE, pool));
-
-  /* Get the full path of the prop-base `pristine' file */
-  if (entry->schedule == svn_wc_schedule_replace)
-    {
-      /* do nothing: baseprop hash should be -empty- for comparison
-         purposes.  if they already exist on disk, they're "leftover"
-         from the old file that was replaced. */
-      props_base = NULL;
-    }
-  else
-    /* the real prop-base hash */
-    SVN_ERR(svn_wc__prop_base_path(&props_base, path, entry->kind, FALSE,
-                                   pool));
+  SVN_ERR(svn_wc__prop_base_path(&props_base, path, entry->kind, FALSE, pool));
 
   /* Copy the local prop file to the administrative temp area */
   SVN_ERR(svn_wc__prop_path(&props_tmp, path, entry->kind, TRUE, pool));
@@ -1151,8 +1139,7 @@ svn_wc_transmit_prop_deltas(const char *path,
 
   /* Load all properties into hashes */
   SVN_ERR(svn_wc__load_prop_file(props_tmp, localprops, pool));
-  if (props_base)
-    SVN_ERR(svn_wc__load_prop_file(props_base, baseprops, pool));
+  SVN_ERR(svn_wc__load_prop_file(props_base, baseprops, pool));
 
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR(svn_prop_diffs(&propmods, localprops, baseprops, pool));
