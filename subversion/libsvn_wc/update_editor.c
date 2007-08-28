@@ -902,22 +902,22 @@ check_path_under_root(const char *base_path,
                       const char *add_path,
                       apr_pool_t *pool)
 {
-  char *newpath;
-  apr_status_t retval;
+  char *full_path;
+  apr_status_t path_status;
 
-  retval = apr_filepath_merge
-    (&newpath, base_path, add_path,
+  path_status = apr_filepath_merge
+    (&full_path, base_path, add_path,
      APR_FILEPATH_NOTABOVEROOT | APR_FILEPATH_SECUREROOTTEST,
      pool);
 
-  if (retval != APR_SUCCESS)
+  if (path_status != APR_SUCCESS)
     {
       return svn_error_createf
         (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Path '%s' is not in the working copy"),
-         /* Not using newpath here because it might be NULL or
+         /* Not using full_path here because it might be NULL or
             undefined, since apr_filepath_merge() returned error.
-            (Pity we can't pass NULL for &newpath in the first place,
+            (Pity we can't pass NULL for &full_path in the first place,
             but the APR docs don't bless that.) */
          svn_path_local_style(svn_path_join(base_path, add_path, pool), pool));
     }
