@@ -204,7 +204,7 @@ svn_cl__merge(apr_getopt_t *os,
           if (! suggested_sources->nelts)
             return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                      _("Unable to determine merge source for "
-                                       "'%s'.  Please provide an explicit "
+                                       "'%s' -- please provide an explicit "
                                        "source"),
                                      svn_path_local_style(targetpath, pool));
           sourcepath1 = APR_ARRAY_IDX(suggested_sources, 0, const char *);

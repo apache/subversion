@@ -2336,11 +2336,10 @@ svn_client_diff_summarize_peg(const char *path,
  */
 
 /** Set @a suggestions to an ordered array of @c const char *
- * potential merge sources (expressed as URLs relative to the
- * repository root URL for the repository with which @a path is
- * associated) for @a path at @a revision.  @path a working copy path.
- * @a ctx is a context used for authentication in the repository case.
- * Use @a pool for all allocations.
+ * potential merge sources (expressed as full repository URLs) for @a
+ * path at @a revision.  @path a working copy path.  @a ctx is a
+ * context used for authentication in the repository case.  Use @a
+ * pool for all allocations.
  *
  * @since New in 1.5.
  */
