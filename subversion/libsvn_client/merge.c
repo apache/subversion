@@ -3534,32 +3534,6 @@ from_same_repos(struct merge_cmd_baton *merge_cmd_baton, const char *src_url,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client__get_repos_root(const char **repos_root, 
-                           const char *path_or_url,
-                           svn_client_ctx_t *ctx, 
-                           apr_pool_t *pool)
-{
-  svn_revnum_t rev;
-  svn_opt_revision_t target_revision;
-  svn_ra_session_t *ra_session;
-  const char *target_url;
-  target_revision.kind = svn_opt_revision_working;
-
-  /* ### FIXME: If PATH_OR_URL is a local path, we should first see
-     ###        if its entry already has the repository root URL. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                           &rev,
-                                           &target_url,
-                                           path_or_url,
-                                           &target_revision,
-                                           &target_revision,
-                                           ctx,
-                                           pool));
-  SVN_ERR(svn_ra_get_repos_root(ra_session, repos_root, pool));
-  return SVN_NO_ERROR;
-}
-
 /* Helper for svn_client_merge3() and svn_client_merge_peg3().
 
    If a merge was ultimately a no-op, as determined by examing
