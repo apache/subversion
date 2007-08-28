@@ -238,18 +238,18 @@ invalidate_wc_props(void *baton,
                     apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = baton;
-  svn_wc_entry_callbacks_t walk_callbacks;
+  svn_wc_entry_callbacks2_t walk_callbacks = { invalidate_wcprop_for_entry,
+                              svn_client__default_walker_error_handler };
   struct invalidate_wcprop_walk_baton wb;
   svn_wc_adm_access_t *adm_access;
 
   wb.base_access = cb->base_access;
   wb.prop_name = prop_name;
-  walk_callbacks.found_entry = invalidate_wcprop_for_entry;
 
   path = svn_path_join(cb->base_dir, path, pool);
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, cb->base_access, path,
                                     pool));
-  SVN_ERR(svn_wc_walk_entries2(path, adm_access, &walk_callbacks, &wb,
+  SVN_ERR(svn_wc_walk_entries3(path, adm_access, &walk_callbacks, &wb,
                                FALSE, cb->ctx->cancel_func,
                                cb->ctx->cancel_baton, pool));
 
