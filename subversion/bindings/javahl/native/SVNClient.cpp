@@ -2129,28 +2129,3 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
                                 recurse ? TRUE : FALSE,
                                 ctx, requestPool.pool()), );
 }
-
-jobject
-SVNClient::getCopySource(const char *path, Revision &revision)
-{
-    Pool requestPool;
-    svn_client_ctx_t *ctx = getContext(NULL);
-    if (ctx == NULL)
-        return NULL;
-    const char *copyfromPath;
-    svn_revnum_t copyfromRev;
-    svn_error_t *err = svn_client__get_copy_source(path, revision.revision(),
-                                                   &copyfromPath, &copyfromRev,
-                                                   ctx, requestPool.pool());
-    if (err)
-    {
-        JNIUtil::handleSVNError(err);
-        return NULL;
-    }
-
-    if (!SVN_IS_VALID_REVNUM(copyfromRev))
-        // "path" has no copy source.
-        return NULL;
-    return CopySources::makeJCopySource(copyfromPath, copyfromRev,
-                                        requestPool);
-}

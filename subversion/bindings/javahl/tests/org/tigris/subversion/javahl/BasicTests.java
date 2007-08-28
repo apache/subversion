@@ -752,8 +752,6 @@ public class BasicTests extends SVNTests
         throws SubversionException, IOException
     {
         OneTest thisTest = new OneTest();
-        // Test that getCopySource properly returns null here
-        assertNull(client.getCopySource(thisTest.getWCPath(), Revision.HEAD));
 
         WC wc = thisTest.getWc();
         final Revision firstRevision = Revision.getInstance(1);
@@ -790,7 +788,7 @@ public class BasicTests extends SVNTests
                      2);
         thisTest.checkStatus();
 
-        assertExpectedCopySource(sources[0], "A/B/F/alpha", thisTest);
+        assertExpectedSuggestion(sources[0].getPath(), "A/B/F/alpha", thisTest);
     }
 
     /**
@@ -834,33 +832,29 @@ public class BasicTests extends SVNTests
                                    "Move files", true), 2);
         thisTest.checkStatus();
 
-        assertExpectedCopySource(new CopySource(srcPaths[0],
-                                                Revision.getInstance(1), null),
-                                 "A/B/F/alpha", thisTest);
+        assertExpectedSuggestion(srcPaths[0], "A/B/F/alpha", thisTest);
     }
 
     /**
-     * Assert that the copy source discovered for
+     * Assert that the first merge source suggested for
      * <code>destPath</code> at {@link Revision#HEAD} is equivalent to
      * <code>expectedSrc</code>.
      * @exception SubversionException If retrieval of the copy source fails.
      * @since 1.5
      */
-    private void assertExpectedCopySource(CopySource expectedSrc,
+    private void assertExpectedSuggestion(String expectedSrc,
                                           String destPath, OneTest thisTest)
         throws SubversionException
     {
         String wcPath = new File(thisTest.getWCPath(), destPath).getPath();
-        CopySource src = client.getCopySource(wcPath, Revision.HEAD);
-        // ### FIXME: We really want consistent path formats:
-        //assertEquals("Unexpected copy source path",
-         //             expectedSrc.getPath(), src.getPath());
-        assertTrue("Unexpected copy source path",
-                   expectedSrc.getPath().endsWith(src.getPath()));
-        assertEquals("Unexpected copy source revision",
-                     expectedSrc.getRevision(), src.getRevision());
-        assertEquals("Unexpected copy source peg revision",
-                     expectedSrc.getPegRevision(), src.getPegRevision());
+        String[] suggestions = client.suggestMergeSources(wcPath);
+        assertNotNull(suggestions);
+        assertTrue(suggestions.length >= 1);
+        String suggestedSrc = suggestions[0];
+        // ### Improve rigor of (pathetically weak) path assertion.
+        assertTrue("Unexpected copy source path, expected " +
+                   expectedSrc + ", got " + suggestions[0],
+                   suggestions[0].endsWith(new File(wcPath).getName()));
     }
 
     /**

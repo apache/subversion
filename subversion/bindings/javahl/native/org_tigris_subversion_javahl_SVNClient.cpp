@@ -1586,25 +1586,3 @@ Java_org_tigris_subversion_javahl_SVNClient_info2
   cl->info2(path, revision, pegRevision, jrecurse ? true : false,
             &callback);
 }
-
-JNIEXPORT jobject JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getCopySource
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision)
-{
-  JNIEntry(SVNClient, getCopySource);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError("bad C++ this");
-      return NULL;
-    }
-
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-  Revision rev(jrevision);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  return cl->getCopySource(path, rev);
-}
