@@ -647,7 +647,6 @@ svn_ra_serf__search_for_base_props(apr_hash_t *props,
                                    const char *url,
                                    apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   const char *path = url, *present_path = "";
   const char *vcc_url;
 
