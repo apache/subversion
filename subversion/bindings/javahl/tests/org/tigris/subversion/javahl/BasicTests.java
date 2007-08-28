@@ -847,7 +847,8 @@ public class BasicTests extends SVNTests
         throws SubversionException
     {
         String wcPath = new File(thisTest.getWCPath(), destPath).getPath();
-        String[] suggestions = client.suggestMergeSources(wcPath);
+        String[] suggestions = client.suggestMergeSources(wcPath, 
+                                                          Revision.WORKING);
         assertNotNull(suggestions);
         assertTrue(suggestions.length >= 1);
         String suggestedSrc = suggestions[0];
@@ -2157,7 +2158,8 @@ public class BasicTests extends SVNTests
 
         // Verify that there are now potential merge sources.
         String[] suggestedSrcs =
-            client.suggestMergeSources(thisTest.getWCPath() + "/branches/A");
+            client.suggestMergeSources(thisTest.getWCPath() + "/branches/A",
+                                       Revision.WORKING);
         assertNotNull(suggestedSrcs);
         assertEquals(1, suggestedSrcs.length);
 
@@ -2319,7 +2321,8 @@ public class BasicTests extends SVNTests
 
         // Verify that there are initially no potential merge sources.
         String[] suggestedSrcs =
-            client.suggestMergeSources(thisTest.getWCPath());
+            client.suggestMergeSources(thisTest.getWCPath(),
+                                       Revision.WORKING);
         assertNotNull(suggestedSrcs);
         assertEquals(0, suggestedSrcs.length);
 
