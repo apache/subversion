@@ -734,11 +734,12 @@ public interface SVNClientInterface
     /**
      * Return an ordered list of suggested merge source URLs.
      * @param path The merge target path for which to suggest sources.
+     * @param pegRevision Peg revision used to interpret path.
      * @return The list of URLs, empty if there are no suggestions.
      * @throws ClientException If an error occurs.
      * @since 1.5
      */
-    String[] suggestMergeSources(String path)
+    String[] suggestMergeSources(String path, Revision pegRevision)
             throws SubversionException;
 
     /**

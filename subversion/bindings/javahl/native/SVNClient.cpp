@@ -570,7 +570,7 @@ void SVNClient::doImport(const char *path, const char *url,
 }
 
 jobjectArray
-SVNClient::suggestMergeSources(const char *path)
+SVNClient::suggestMergeSources(const char *path, Revision &pegRevision)
 {
     Pool requestPool;
     svn_client_ctx_t *ctx = getContext(NULL);
@@ -579,6 +579,7 @@ SVNClient::suggestMergeSources(const char *path)
 
     apr_array_header_t *sources;
     SVN_JNI_ERR(svn_client_suggest_merge_sources(&sources, path,
+                                                 pegRevision.revision(),
                                                  ctx, requestPool.pool()),
                 NULL);
 
