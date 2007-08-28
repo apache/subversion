@@ -76,6 +76,10 @@
   apr_array_header_t **paths
 }
 
+%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  apr_array_header_t **suggestions
+}
+
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
