@@ -793,6 +793,46 @@ accumulate_wcprops(svn_stringbuf_t *log_accum,
   return SVN_NO_ERROR;
 }
       
+
+/* Check that when ADD_PATH is joined to BASE_PATH, the resulting path
+ * is still under BASE_PATH in the local filesystem.  If not, return
+ * SVN_ERR_WC_OBSTRUCTED_UPDATE; else return success.
+ * 
+ * This is to prevent the situation where the repository contains,
+ * say, "..\nastyfile".  Although that's perfectly legal on some
+ * systems, when checked out onto Win32 it would cause "nastyfile" to
+ * be created in the parent of the current edit directory.
+ * 
+ * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
+ */
+static svn_error_t *
+check_path_under_root(const char *base_path,
+                      const char *add_path,
+                      apr_pool_t *pool)
+{
+  char *newpath;
+  apr_status_t retval;
+
+  retval = apr_filepath_merge
+    (&newpath, base_path, add_path,
+     APR_FILEPATH_NOTABOVEROOT | APR_FILEPATH_SECUREROOTTEST,
+     pool);
+
+  if (retval != APR_SUCCESS)
+    {
+      return svn_error_createf
+        (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+         _("Path '%s' is not in the working copy"),
+         /* Not using newpath here because it might be NULL or
+            undefined, since apr_filepath_merge() returned error.
+            (Pity we can't pass NULL for &newpath in the first place,
+            but the APR docs don't bless that.) */
+         svn_path_local_style(svn_path_join(base_path, add_path, pool), pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** The callbacks we'll plug into an svn_delta_editor_t structure. ***/
 
@@ -1033,6 +1073,8 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
+  SVN_ERR(check_path_under_root(pb->path, svn_path_basename(path, pool),
+                                pool));
   return do_entry_deletion(pb->edit_baton, pb->path, path, &pb->log_number,
                            pool);
 }
@@ -1056,6 +1098,8 @@ add_directory(const char *path,
   if ((copyfrom_path && (! SVN_IS_VALID_REVNUM(copyfrom_revision)))
       || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM(copyfrom_revision))))
     abort();
+
+  SVN_ERR(check_path_under_root(pb->path, db->name, pool));
 
   /* There should be nothing with this name. */
   SVN_ERR(svn_io_check_path(db->path, &kind, db->pool));
@@ -1167,6 +1211,8 @@ open_directory(const char *path,
 
   struct dir_baton *db = make_dir_baton(path, eb, pb, FALSE, pool);
   *child_baton = db;
+
+  SVN_ERR(check_path_under_root(pb->path, db->name, pool));
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = *(eb->target_revision);
@@ -1450,6 +1496,8 @@ add_or_open_file(const char *path,
      kind.  see issuezilla task #398. */
 
   fb = make_file_baton(pb, path, adding, pool);
+
+  SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
 
   /* It is interesting to note: everything below is just validation. We
      aren't actually doing any "work" or fetching any persistent data. */
