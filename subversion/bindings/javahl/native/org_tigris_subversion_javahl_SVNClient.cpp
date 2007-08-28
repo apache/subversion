@@ -728,7 +728,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doImport
 
 JNIEXPORT jobjectArray JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_suggestMergeSources
-(JNIEnv *env, jobject jthis, jstring jpath)
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision)
 {
   JNIEntry(SVNClient, suggestMergeSources);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -742,7 +742,11 @@ Java_org_tigris_subversion_javahl_SVNClient_suggestMergeSources
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  return cl->suggestMergeSources(path);
+  Revision pegRevision(jpegRevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return cl->suggestMergeSources(path, pegRevision);
 }
 
 JNIEXPORT void JNICALL

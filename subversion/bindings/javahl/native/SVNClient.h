@@ -87,7 +87,7 @@ class SVNClient :public SVNBase
                   Revision &pegRevision, svn_depth_t depth,
                   ProplistCallback *callback);
   jobject getMergeInfo(const char *target, Revision &rev);
-  jobjectArray suggestMergeSources(const char *path);
+  jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
              svn_depth_t depth, bool ignoreAncestry, bool dryRun);

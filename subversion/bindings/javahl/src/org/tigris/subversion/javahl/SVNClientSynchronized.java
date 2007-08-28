@@ -1076,12 +1076,12 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
      */
-    public String[] suggestMergeSources(String path)
+    public String[] suggestMergeSources(String path, Revision pegRevision)
             throws SubversionException
     {
         synchronized (clazz)
         {
-            return worker.suggestMergeSources(path);
+            return worker.suggestMergeSources(path, pegRevision);
         }
     }
 
