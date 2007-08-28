@@ -218,10 +218,11 @@ info_found_entry_callback(const char *path,
 
 
 
-static const svn_wc_entry_callbacks_t
+static const svn_wc_entry_callbacks2_t
 entry_walk_callbacks =
   {
-    info_found_entry_callback
+    info_found_entry_callback,
+    svn_client__default_walker_error_handler
   };
 
 
@@ -256,7 +257,7 @@ crawl_entries(const char *wcpath,
   else if (entry->kind == svn_node_dir)
     {
       if (recurse)
-        SVN_ERR(svn_wc_walk_entries2(wcpath, adm_access,
+        SVN_ERR(svn_wc_walk_entries3(wcpath, adm_access,
                                      &entry_walk_callbacks, &fe_baton,
                                      FALSE, ctx->cancel_func,
                                      ctx->cancel_baton, pool));

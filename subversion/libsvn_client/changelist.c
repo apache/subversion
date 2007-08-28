@@ -26,6 +26,8 @@
 #include "svn_wc.h"
 #include "svn_pools.h"
 
+#include "client.h"
+
 
 /*** Code. ***/
 
@@ -109,6 +111,8 @@ found_an_entry(const char *path,
   return SVN_NO_ERROR;
 }
 
+static const svn_wc_entry_callbacks2_t entry_callbacks =
+  { found_an_entry, svn_client__default_walker_error_handler };
 
 svn_error_t *
 svn_client_get_changelist(apr_array_header_t **paths,
@@ -117,11 +121,9 @@ svn_client_get_changelist(apr_array_header_t **paths,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *pool)
 {
-  svn_wc_entry_callbacks_t entry_callbacks;
   struct fe_baton feb;
   svn_wc_adm_access_t *adm_access;
 
-  entry_callbacks.found_entry = found_an_entry;
   feb.store_paths = TRUE;
   feb.pool = pool;
   feb.changelist_name = changelist_name;
@@ -132,7 +134,7 @@ svn_client_get_changelist(apr_array_header_t **paths,
                                  -1, /* infinite depth */
                                  ctx->cancel_func, ctx->cancel_baton, pool));
 
-  SVN_ERR(svn_wc_walk_entries2(root_path, adm_access,
+  SVN_ERR(svn_wc_walk_entries3(root_path, adm_access,
                                &entry_callbacks, &feb,
                                FALSE, /* don't show hidden entries */
                                ctx->cancel_func, ctx->cancel_baton,
@@ -153,11 +155,9 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
-  svn_wc_entry_callbacks_t entry_callbacks;
   struct fe_baton feb;
   svn_wc_adm_access_t *adm_access;
 
-  entry_callbacks.found_entry = found_an_entry;
   feb.store_paths = FALSE;
   feb.callback_func = callback_func;
   feb.callback_baton = callback_baton;
@@ -170,7 +170,7 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
                                  -1, /* infinite depth */
                                  ctx->cancel_func, ctx->cancel_baton, pool));
 
-  SVN_ERR(svn_wc_walk_entries2(root_path, adm_access,
+  SVN_ERR(svn_wc_walk_entries3(root_path, adm_access,
                                &entry_callbacks, &feb,
                                FALSE, /* don't show hidden entries */
                                ctx->cancel_func, ctx->cancel_baton,

@@ -229,6 +229,14 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
                                svn_revnum_t rev,
                                apr_pool_t *pool);
 
+/* A default error handler for use with svn_wc_walk_entries3().  Returns
+   ERR in all cases. */
+svn_error_t *
+svn_client__default_walker_error_handler(const char *path,
+                                         svn_error_t *err,
+                                         void *walk_baton,
+                                         apr_pool_t *pool);
+
 
 /* ---------------------------------------------------------------- */
 

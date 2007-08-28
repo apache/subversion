@@ -2,7 +2,7 @@
  * util.c :  utility functions for the libsvn_client library
  *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -222,4 +222,13 @@ svn_client__get_repos_root(const char **repos_root,
                                            pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, repos_root, pool));
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__default_walker_error_handler(const char *path,
+                                         svn_error_t *err,
+                                         void *walk_baton,
+                                         apr_pool_t *pool)
+{
+  return err;
 }

@@ -357,8 +357,8 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
 
   if (recurse && node->kind == svn_node_dir)
     {
-      static const svn_wc_entry_callbacks_t walk_callbacks
-        = { propset_walk_cb };
+      static const svn_wc_entry_callbacks2_t walk_callbacks
+        = { propset_walk_cb, svn_client__default_walker_error_handler };
       struct propset_walk_baton wb;
 
       wb.base_access = adm_access;
@@ -366,7 +366,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       wb.propval = propval;
       wb.force = skip_checks;
 
-      SVN_ERR(svn_wc_walk_entries2(target, adm_access,
+      SVN_ERR(svn_wc_walk_entries3(target, adm_access,
                                    &walk_callbacks, &wb, FALSE,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    pool));
@@ -1158,8 +1158,8 @@ svn_client_proplist3(const char *target,
       /* Fetch, recursively or not. */
       if (depth == svn_depth_infinity && (node->kind == svn_node_dir))
         {
-          static const svn_wc_entry_callbacks_t walk_callbacks
-            = { proplist_walk_cb };
+          static const svn_wc_entry_callbacks2_t walk_callbacks
+            = { proplist_walk_cb, svn_client__default_walker_error_handler };
           struct proplist_walk_baton wb;
 
           wb.base_access = adm_access;
@@ -1167,7 +1167,7 @@ svn_client_proplist3(const char *target,
           wb.receiver = receiver;
           wb.receiver_baton = receiver_baton;
 
-          SVN_ERR(svn_wc_walk_entries2(target, adm_access,
+          SVN_ERR(svn_wc_walk_entries3(target, adm_access,
                                        &walk_callbacks, &wb, FALSE,
                                        ctx->cancel_func, ctx->cancel_baton,
                                        pool));

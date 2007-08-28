@@ -178,8 +178,9 @@ add_lock_token(const char *path, const svn_wc_entry_t *entry,
 }
 
 /* Entry walker callback table to add lock tokens in an hierarchy. */
-static svn_wc_entry_callbacks_t add_tokens_callbacks = {
-  add_lock_token
+static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
+  add_lock_token,
+  svn_client__default_walker_error_handler
 };
 
 /* Recursively search for commit candidates in (and under) PATH (with
@@ -659,7 +660,7 @@ harvest_committables(apr_hash_t *committables,
   if (lock_tokens && entry->kind == svn_node_dir
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      SVN_ERR(svn_wc_walk_entries2(path, adm_access, &add_tokens_callbacks,
+      SVN_ERR(svn_wc_walk_entries3(path, adm_access, &add_tokens_callbacks,
                                    lock_tokens, FALSE, ctx->cancel_func,
                                    ctx->cancel_baton, pool));
     }
