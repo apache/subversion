@@ -360,9 +360,9 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       if (err)
         break;
 
-      SVN_ERR(svn_wc_delete2(pair->src, src_access,
+      SVN_ERR(svn_wc_delete3(pair->src, src_access,
                              ctx->cancel_func, ctx->cancel_baton,
-                             ctx->notify_func2, ctx->notify_baton2,
+                             ctx->notify_func2, ctx->notify_baton2, FALSE,
                              iterpool));
 
       if (adm_access != src_access)
