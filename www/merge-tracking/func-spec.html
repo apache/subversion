@@ -134,6 +134,28 @@ merge info in the WC).</p>
 
 </div>  <!-- copy-move -->
 
+<div class="h2" id="sparse-checkouts">
+<h2>Sparse Checkouts</h2>
+
+<p>When merging to a WC with sparsely populated directories, non-inheritable
+mergeinfo for the merge is set on the deepest directories present.</p>
+
+<ul>
+ <li>Directories with depth == empty: The directory gets non-inheritable
+ mergeinfo.</li>
+
+ <li>Directories with depth == files: The directory gets non-inheritable
+ mergeinfo.  Any child files present get inheritable mergeinfo (not to imply
+ files ever have anything but inheritable mergeinfo, they shouldn't!).</li>
+
+ <li>Directories with depth == imediates: The directory and any child files
+ present get inheritable mergeinfo.  And directory children present get
+ non-inheritable mergeinfo.</li>
+
+</ul>
+
+</div>  <!-- sparse-checkouts -->
+
 <div class="h2" id="switched-paths">
 <h2>Switched Paths</h2>
 
