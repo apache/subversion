@@ -327,13 +327,19 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   if platform_with_os_wait:
     pid, wait_code = os.wait()
 
-    exit_code = int(wait_code / 256)
-    exit_signal = wait_code % 256
-
-    if exit_signal != 0:
+    if os.WIFSIGNALED(wait_code):
+      exit_signal = os.WTERMSIG(wait_code)
       sys.stdout.write("".join(stdout_lines))
       sys.stderr.write("".join(stderr_lines))
+      if verbose_mode:
+        # show the whole path to make it easier to start a debugger
+        sys.stderr.write("CMD: %s terminated by signal %d\n"
+                         % (command, exit_signal))
       raise SVNProcessTerminatedBySignal
+    else:
+      exit_code = os.WEXITSTATUS(wait_code)
+      if exit_code and verbose_mode:
+        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
 
   return exit_code, stdout_lines, stderr_lines
 
