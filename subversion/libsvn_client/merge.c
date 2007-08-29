@@ -1779,7 +1779,7 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
        && !merge_b->record_only)
      return SVN_NO_ERROR;
 
-  rangelist = apr_array_make(pool, 1, sizeof(*range));
+  rangelist = apr_array_make(pool, 1, sizeof(range));
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
 
   /* Set the mergeinfo for the root of the target tree unless we skipped
@@ -1807,7 +1807,7 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
               /* Add an empty range list for this path. */
               apr_hash_set(*merges, (const char *) skipped_path,
                            APR_HASH_KEY_STRING,
-                           apr_array_make(pool, 0, sizeof(*range)));
+                           apr_array_make(pool, 0, sizeof(range)));
 
               if (nbr_skips < notify_b->nbr_notifications)
                 /* ### Use RANGELIST as the mergeinfo for all children of
