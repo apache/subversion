@@ -7925,7 +7925,7 @@ test_list = [ None,
               XFail(merge_with_depth_files),
               merge_fails_if_subtree_is_deleted_on_src,
               no_mergeinfo_from_no_op_merge,
-              XFail(merge_to_sparse_directories),
+              merge_to_sparse_directories,
              ]
 
 if __name__ == '__main__':
