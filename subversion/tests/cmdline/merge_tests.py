@@ -7632,6 +7632,229 @@ def no_mergeinfo_from_no_op_merge(sbox):
   # (that the above merge's stdout/stderr didn't already reveal).
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
 
+  # Test for issue #2827
+  # Handle merge info for sparsely-populated directories
+def merge_to_sparse_directories(sbox):
+  "merge to sparse directories"
+
+  # Merges into sparse working copies should set non-inheritable mergeinfo
+  # on the deepest directories present in the WC.
+  #
+  # Marked as XFail until issue #2827 is fixed.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  immediates_dir = wc_dir + ".immediates"
+  files_dir = wc_dir + ".files"
+  empty_dir = wc_dir + ".empty"
+  wc_disk, wc_status = setup_branch(sbox, False, 1)
+
+  # Some paths we'll care about
+  A_path = os.path.join(wc_dir, "A")
+  D_path = os.path.join(wc_dir, "A", "D")
+  I_path = os.path.join(wc_dir, "A", "C", "I")
+  G_path = os.path.join(wc_dir, "A", "D", "G")
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+
+  # Make a few more changes to the merge source...
+
+  # r7 - modify and commit A/mu
+  svntest.main.file_write(os.path.join(wc_dir, "A", "mu"),
+                          "New content")
+  expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
+  wc_status.tweak('A/mu', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, None, None,
+                                        None, None, wc_dir)
+  wc_disk.tweak('A/mu', contents="New content")
+
+  # r8 - Add a prop to A/D and commit.
+  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [],
+                                     'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property 'prop:name' set on '" +
+                                      D_path + "'\n"], [], 'ps',
+                                     'prop:name', 'propval', D_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D'            : Item(verb='Sending'),
+    })
+  wc_status.tweak(wc_rev=7)
+  wc_status.tweak('A/D', wc_rev=8)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+
+  # r9 - Add a prop to A and commit.
+  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [],
+                                     'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property 'prop:name' set on '" +
+                                      A_path + "'\n"], [], 'ps',
+                                     'prop:name', 'propval', A_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'            : Item(verb='Sending'),
+    })
+  wc_status.tweak(wc_rev=8)
+  wc_status.tweak('A', wc_rev=9)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+
+  # Do an --immediates checkout of A_COPY
+  expected_output = wc.State(immediates_dir, {
+    'B'  : Item(status='A '),
+    'mu' : Item(status='A '),
+    'C'  : Item(status='A '),
+    'D'  : Item(status='A '),
+    ''   : Item(status=' U'),
+    })
+  expected_disk = wc.State('', {
+    'B'  : Item(),
+    'mu' : Item("This is the file 'mu'.\n"),
+    'C'  : Item(),
+    'D'  : Item(),
+    })
+  svntest.actions.run_and_verify_checkout(sbox.repo_url + "/A_COPY",
+                                          immediates_dir,
+                                          expected_output, expected_disk,
+                                          None, None, None, None,
+                                          "--depth", "immediates")
+
+  # Merge r4:9 into the immediates WC.
+  # The root of the immediates WC should get inheritable r4:9 as should
+  # the one file present 'mu'.  The three directory children present, 'B',
+  # 'C', and 'D' are checked out at depth empty, so get non-inheritable
+  # mergeinfo for r4:9.  The root and 'D' do should also get the changes
+  # that affect them directly (the prop adds from r8 and r9).  Any changes
+  # deeper than the immediates should be skipped.
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_immediates_dir = shorten_path_kludge(immediates_dir)
+  expected_output = wc.State(short_immediates_dir, {
+    'D'  : Item(status=' U'),
+    'mu' : Item(status='U '),
+    ''   : Item(status=' U'),
+    })
+  expected_status = wc.State(short_immediates_dir, {
+    ''          : Item(status=' M', wc_rev=9),
+    'B'         : Item(status=' M', wc_rev=9),
+    'mu'        : Item(status='M ', wc_rev=9),
+    'C'         : Item(status=' M', wc_rev=9),
+    'D'         : Item(status=' M', wc_rev=9),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,5-9',
+                              "prop:name" : "propval"}),
+    'B'         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,5-9*'}),
+    'mu'        : Item("New content"),
+    'C'         : Item(props={SVN_PROP_MERGE_INFO : '/A/C:1,5-9*'}),
+    'D'         : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,5-9*',
+                              "prop:name" : "propval"}),
+    })
+  expected_skip = wc.State(short_immediates_dir, {
+    'B/E' : Item(),
+    'D/H' : Item(),
+    })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_immediates_dir, '4', '9',
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1,
+                                       0) # Don't dry-run for now, skips don't
+                                          # show when merging into sparse dir.
+                                          # Add an issue?
+  os.chdir(saved_cwd)
+
+  # Do a --files checkout of A_COPY
+  expected_output = wc.State(files_dir, {
+    'mu' : Item(status='A '),
+    ''   : Item(status=' U'),
+    })
+  expected_disk = wc.State('', {
+    'mu' : Item("This is the file 'mu'.\n"),
+    })
+  svntest.actions.run_and_verify_checkout(sbox.repo_url + "/A_COPY",
+                                          files_dir,
+                                          expected_output, expected_disk,
+                                          None, None, None, None,
+                                          "--depth", "files")
+
+  # Merge r4:9 into the files WC.
+  # The root of the files WC should get non-inheritable r4:9 and its one
+  # present child 'mu' should get the same but inheritable.  The root
+  # should also get the change that affects it directly (the prop add
+  # from r9).
+  short_files_dir = shorten_path_kludge(files_dir)
+  expected_output = wc.State(short_files_dir, {
+    'mu' : Item(status='U '),
+    ''   : Item(status=' U'),
+    })
+  expected_status = wc.State(short_files_dir, {
+    ''          : Item(status=' M', wc_rev=9),
+    'mu'        : Item(status='MM', wc_rev=9),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,5-9*',
+                              "prop:name" : "propval"}),
+    'mu'        : Item("New content",
+                       props={SVN_PROP_MERGE_INFO : '/A/mu:1,5-9'}),
+    })
+  expected_skip = wc.State(short_files_dir, {})
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_files_dir, '4', '9',
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0)
+  os.chdir(saved_cwd)
+
+  # Do an --empty checkout of A_COPY
+  expected_output = wc.State(empty_dir, {
+    ''   : Item(status=' U'),
+    })
+  expected_disk = wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url + "/A_COPY",
+                                          empty_dir,
+                                          expected_output, expected_disk,
+                                          None, None, None, None,
+                                          "--depth", "empty")
+
+  # Merge r4:9 into the empty WC.
+  # The root of the files WC should get non-inheritable r4:9 and also get
+  # the one change that affects it directly (the prop add from r9).
+  short_empty_dir = shorten_path_kludge(empty_dir)
+  expected_output = wc.State(short_empty_dir, {
+    ''   : Item(status=' U'),
+    })
+  expected_status = wc.State(short_empty_dir, {
+    ''          : Item(status=' M', wc_rev=9),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,5-9*',
+                              "prop:name" : "propval"}),
+    })
+  expected_skip = wc.State(short_empty_dir, {})
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_empty_dir, '4', '9',
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0)
+  os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -7702,6 +7925,7 @@ test_list = [ None,
               XFail(merge_with_depth_files),
               merge_fails_if_subtree_is_deleted_on_src,
               no_mergeinfo_from_no_op_merge,
+              XFail(merge_to_sparse_directories),
              ]
 
 if __name__ == '__main__':
