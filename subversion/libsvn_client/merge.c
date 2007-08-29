@@ -1753,9 +1753,12 @@ default_conflict_resolver(const char *path, void *baton, apr_pool_t *pool)
 /* Create mergeinfo describing the merge of RANGE into our target,
    without including mergeinfo for skips or conflicts from
    NOTIFY_B.  Note in MERGE_B->OPERATIVE_MERGE if an operative merge
-   is discovered. */
+   is discovered.  If TARGET_WCPATH is a directory and it is missing
+   an immediate child then TARGET_MISSING_CHILD should be true,
+   otherwise it is false.*/
 static svn_error_t *
 determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
+                           svn_boolean_t target_missing_child,
                            svn_merge_range_t *range,
                            notification_receiver_baton_t *notify_b,
                            struct merge_cmd_baton *merge_b,
@@ -1783,8 +1786,10 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
 
   /* Set the mergeinfo for the root of the target tree unless we skipped
-     everything. */
-  if (nbr_skips == 0 || notify_b->nbr_operative_notifications > 0)
+     everything or TARGET_WCPATH is missing children (in the latter case
+     we need to set non-inheritable mergeinfo on TARGET_WCPATH). */
+  if (nbr_skips == 0 || notify_b->nbr_operative_notifications > 0
+      || target_missing_child)
     {
       /* Note in the merge baton when the first operative merge is found. */
       if (notify_b->nbr_operative_notifications > 0
@@ -2168,6 +2173,7 @@ do_merge(const char *initial_URL1,
           /* Blindly record the range specified by the user (rather
              than refining it as we do for actual merges). */
           SVN_ERR(determine_merges_performed(&merges, target_wcpath,
+                                             target_missing_child,
                                              &range, &notify_b, merge_b,
                                              pool));
 
@@ -2315,7 +2321,8 @@ do_merge(const char *initial_URL1,
               /* Update the WC mergeinfo here to account for our new
                  merges, minus any unresolved conflicts and skips. */
               apr_hash_t *merges;
-              SVN_ERR(determine_merges_performed(&merges, target_wcpath, r,
+              SVN_ERR(determine_merges_performed(&merges, target_wcpath,
+                                                 target_missing_child, r,
                                                  &notify_b, merge_b,
                                                  subpool));
               /* If this is the final subtree to be merged (i.e. TARGET_WCPATH
@@ -2609,7 +2616,7 @@ do_single_file_merge(const char *initial_URL1,
              than refining it as we do for actual merges). */
           apr_hash_t *merges;
           SVN_ERR(determine_merges_performed(&merges, target_wcpath,
-                                             &range, &notify_b,
+                                             FALSE, &range, &notify_b,
                                              merge_b, pool));
 
           /* If merge target has indirect mergeinfo set it. */
@@ -2749,7 +2756,8 @@ do_single_file_merge(const char *initial_URL1,
               /* Update the WC mergeinfo here to account for our new
                  merges, minus any unresolved conflicts and skips. */
               apr_hash_t *merges;
-              SVN_ERR(determine_merges_performed(&merges, target_wcpath, r,
+              SVN_ERR(determine_merges_performed(&merges, target_wcpath,
+                                                 FALSE, r,
                                                  &notify_b, merge_b,
                                                  subpool));
               /* If this whole merge was simply a no-op merge to a file then
@@ -2827,8 +2835,9 @@ struct get_mergeinfo_walk_baton
 /* svn_wc_entry_callbacks2_t found_entry() callback for get_mergeinfo_paths.
 
    Given PATH, its corresponding ENTRY, and WB, where WB is the WALK_BATON
-   of type "struct get_mergeinfo_walk_baton *":  If PATH is switched or
-   has explicit working svn:mergeinfo from a corresponding merge source, then
+   of type "struct get_mergeinfo_walk_baton *":  If PATH is switched,
+   has explicit working svn:mergeinfo from a corresponding merge source, or
+   is missing a child due to a sparse checkout, then
    create a struct merge_path_t * representing *PATH, allocated in
    WB->CHILDREN_WITH_MERGEINFO->POOL, and push it onto the
    WB->CHILDREN_WITH_MERGEINFO array. */
@@ -2891,13 +2900,19 @@ get_mergeinfo_walk_cb(const char *path,
      their own complete set of mergeinfo. */
   SVN_ERR(svn_wc__path_switched(path, &switched, entry, pool));
 
-  /* Store PATHs with explict mergeinfo and/or which are switched. */
-  if (has_mergeinfo_from_merge_src || switched)
+  /* Store PATHs with explict mergeinfo, which are switched, and/or are
+     missing children due to a sparse checkout. */
+  if (has_mergeinfo_from_merge_src
+      || switched
+      || entry->depth == svn_depth_empty
+      || entry->depth == svn_depth_files)
     {
       merge_path_t *child = apr_palloc(wb->children_with_mergeinfo->pool,
                                        sizeof(*child));
       child->path = apr_pstrdup(wb->children_with_mergeinfo->pool, path);
-      child->missing_child = FALSE;
+      child->missing_child = (entry->depth == svn_depth_empty
+                              || entry->depth == svn_depth_files)
+                              ? TRUE : FALSE;
       child->switched = switched;
       if (propval)
         {
@@ -2914,6 +2929,19 @@ get_mergeinfo_walk_cb(const char *path,
           child->propval = NULL;
           child->has_noninheritable = FALSE;
         }
+
+      /* A little trickery: If PATH doesn't have any mergeinfo or has
+         only inheritable mergeinfo, we still describe it as having
+         non-inheritable mergeinfo if it is missing a child.  Why?  Because
+         the mergeinfo we'll add to PATH as a result of the merge will need
+         to be non-inheritable (since PATH is missing children) and doing
+         this now allows get_mergeinfo_paths() to properly account for PATH's
+         other children. */
+      if (!child->has_noninheritable
+          && (entry->depth == svn_depth_empty
+              || entry->depth == svn_depth_files))
+      child->has_noninheritable = TRUE;
+
       APR_ARRAY_PUSH(wb->children_with_mergeinfo, merge_path_t *) = child;
     }
 
@@ -3086,9 +3114,9 @@ compare_merge_path_t_as_paths(const void *a,
         override mergeinfo on the path if this isn't a dry-run and the merge
         is between differences in the same repository).
      4) Path has an immediate child (or children) missing from the WC because
-        the child is switched.
+        the child is switched or due to a sparse checkout.
      5) Path has a sibling (or siblings) missing from the WC because the
-        sibling is switched.
+        sibling is switched or missing due to a sparse checkout.
 
    Store the merge_path_ts in *CHILDREN_WITH_MERGEINFO.
    *CHILDREN_WITH_MERGEINFO is guaranteed to be in depth-first order based
