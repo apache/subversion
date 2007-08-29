@@ -2371,7 +2371,8 @@ do_merge(const char *initial_URL1,
          performed (i.e. this is a repeat merge where a previously missing
          child is now present) then those non-inheritable ranges are made
          inheritable. */
-      if (merge_path->has_noninheritable && !merge_path->missing_child)
+      if (merge_path
+          && merge_path->has_noninheritable && !merge_path->missing_child)
         {
           svn_boolean_t is_equal;
           apr_hash_t *merges;
@@ -3062,6 +3063,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
       curr_copy->missing_child = curr->missing_child;
       curr_copy->switched = curr->switched;
       curr_copy->has_noninheritable = curr->has_noninheritable;
+      curr_copy->propval = curr->propval;
       APR_ARRAY_PUSH(children_with_mergeinfo, merge_path_t *) = curr_copy;
 
       /* Move all elements from INSERT_INDEX to the end of the array forward
@@ -3076,6 +3078,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
               curr->missing_child = insert_element->missing_child;
               curr->switched = insert_element->switched;
               curr->has_noninheritable = insert_element->has_noninheritable;
+              curr->propval = insert_element->propval;
             }
           else
             {
@@ -3085,6 +3088,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
               curr->missing_child = prev->missing_child;
               curr->switched = prev->switched;
               curr->has_noninheritable = prev->has_noninheritable;
+              curr->propval = prev->propval;
             }
         }
     }
@@ -3562,7 +3566,8 @@ cleanup_noop_merge(struct merge_cmd_baton *merge_cmd_baton,
                                                i, merge_path_t *);
            /* Only undo mergeinfo changes for subtrees, do_merge() and
               do_single_file_merge() take care of the merge target. */
-           if (svn_path_compare_paths(child->path,
+           if (child &&
+               svn_path_compare_paths(child->path,
                                       merge_cmd_baton->target) != 0)
              SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGE_INFO, child->propval,
                                       child->path, adm_access, TRUE, pool));
