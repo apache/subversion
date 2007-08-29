@@ -129,6 +129,9 @@ svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
   return new_item;
 }
 
+/* ### FIXME: This isn't properly handling the case where PATH_OR_URL
+   ### is a WC path, and REPOS_ROOT is provided.  *REL_PATH may end up
+   ### missing information. */
 svn_error_t *
 svn_client__path_relative_to_root(const char **rel_path,
                                   const char *path_or_url,
