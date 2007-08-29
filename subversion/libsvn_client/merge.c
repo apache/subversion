@@ -2129,6 +2129,9 @@ do_merge(const char *initial_URL1,
   if (merge_type == merge_type_no_op)
     return SVN_NO_ERROR;
 
+  if (merge_b->record_only && merge_b->dry_run)
+    return SVN_NO_ERROR;
+
   /* Open a second session used to request individual file
      contents. Although a session can be used for multiple requests, it
      appears that they must be sequential. Since the first request, for
@@ -2161,29 +2164,22 @@ do_merge(const char *initial_URL1,
          merge for the specified range. */
       if (merge_b->record_only)
         {
-          if (merge_b->dry_run)
-            {
-              return SVN_NO_ERROR;
-            }
-          else
-            {
-              apr_hash_t *merges;
-              /* Blindly record the range specified by the user (rather
-                 than refining it as we do for actual merges). */
-              SVN_ERR(determine_merges_performed(&merges, target_wcpath,
-                                                 &range, &notify_b, merge_b,
-                                                 pool));
+          apr_hash_t *merges;
+          /* Blindly record the range specified by the user (rather
+             than refining it as we do for actual merges). */
+          SVN_ERR(determine_merges_performed(&merges, target_wcpath,
+                                             &range, &notify_b, merge_b,
+                                             pool));
 
-              /* If merge target has indirect mergeinfo set it. */
-              if (indirect)
-                SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
-                                                        target_mergeinfo,
-                                                        adm_access, pool));
+          /* If merge target has indirect mergeinfo set it. */
+          if (indirect)
+            SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
+                                                    target_mergeinfo,
+                                                    adm_access, pool));
 
-              return update_wc_mergeinfo(target_wcpath, entry, rel_path,
-                                         merges, is_rollback, adm_access,
-                                         ctx, pool);
-            }
+          return update_wc_mergeinfo(target_wcpath, entry, rel_path,
+                                     merges, is_rollback, adm_access,
+                                     ctx, pool);
         }
 
       /* Determine which of the requested ranges to consider merging... */
@@ -2586,6 +2582,9 @@ do_single_file_merge(const char *initial_URL1,
       if (merge_type == merge_type_no_op)
         return SVN_NO_ERROR;
 
+      if (merge_b->record_only && merge_b->dry_run)
+        return SVN_NO_ERROR;
+
       /* Reparent ra_session1 to WC target url. */
       svn_ra_reparent(ra_session1, entry->url, pool);
 
@@ -2606,29 +2605,22 @@ do_single_file_merge(const char *initial_URL1,
          merge for the specified range. */
       if (merge_b->record_only)
         {
-          if (merge_b->dry_run)
-            {
-              return SVN_NO_ERROR;
-            }
-          else
-            {
-              /* Blindly record the range specified by the user (rather
-                 than refining it as we do for actual merges). */
-              apr_hash_t *merges;
-              SVN_ERR(determine_merges_performed(&merges, target_wcpath,
-                                                 &range, &notify_b,
-                                                 merge_b, pool));
+          /* Blindly record the range specified by the user (rather
+             than refining it as we do for actual merges). */
+          apr_hash_t *merges;
+          SVN_ERR(determine_merges_performed(&merges, target_wcpath,
+                                             &range, &notify_b,
+                                             merge_b, pool));
 
-              /* If merge target has indirect mergeinfo set it. */
-              if (indirect)
-                SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
-                                                        target_mergeinfo,
-                                                        adm_access, pool));
+          /* If merge target has indirect mergeinfo set it. */
+          if (indirect)
+            SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
+                                                    target_mergeinfo,
+                                                    adm_access, pool));
 
-              return update_wc_mergeinfo(target_wcpath, entry, rel_path,
-                                         merges, is_rollback, adm_access,
-                                         ctx, pool);
-            }
+          return update_wc_mergeinfo(target_wcpath, entry, rel_path,
+                                     merges, is_rollback, adm_access,
+                                     ctx, pool);
         }
 
       /* Determine which of the requested ranges to consider merging... */
