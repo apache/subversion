@@ -677,7 +677,9 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
         }
-      if (! merge_b->dry_run)
+      if (merge_b->dry_run)
+        merge_b->added_path = apr_pstrdup(merge_b->pool, path);
+      else
         {
           SVN_ERR(svn_io_make_dir_recursively(path, subpool));
           SVN_ERR(svn_wc_add2(path, adm_access,
@@ -688,8 +690,6 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
                               subpool));
 
         }
-      if (merge_b->dry_run)
-        merge_b->added_path = apr_pstrdup(merge_b->pool, path);
       if (state)
         *state = svn_wc_notify_state_changed;
       break;
