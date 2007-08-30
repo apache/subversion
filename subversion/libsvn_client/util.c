@@ -204,14 +204,13 @@ svn_client__path_relative_to_root(const char **rel_path,
 svn_error_t *
 svn_client__get_repos_root(const char **repos_root, 
                            const char *path_or_url,
+                           const svn_opt_revision_t *peg_revision,
                            svn_client_ctx_t *ctx, 
                            apr_pool_t *pool)
 {
   svn_revnum_t rev;
-  svn_opt_revision_t target_revision;
   svn_ra_session_t *ra_session;
   const char *target_url;
-  target_revision.kind = svn_opt_revision_working;
 
   /* ### FIXME: If PATH_OR_URL is a local path, we should first see
      ###        if its entry already has the repository root URL. */
@@ -219,8 +218,8 @@ svn_client__get_repos_root(const char **repos_root,
                                            &rev,
                                            &target_url,
                                            path_or_url,
-                                           &target_revision,
-                                           &target_revision,
+                                           peg_revision,
+                                           peg_revision,
                                            ctx,
                                            pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, repos_root, pool));
