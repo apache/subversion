@@ -2604,9 +2604,6 @@ svn_client_cleanup(const char *dir,
  * @param recurse Whether to recurse
  * @param ctx svn_client_ctx_t
  * @param pool The pool from which to perform memory allocations
- *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth, but making a note to re-check this logic later.
  */
 svn_error_t *
 svn_client_relocate(const char *dir,

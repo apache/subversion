@@ -79,15 +79,15 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
 
-  /* ### TODO(sd): Ah, the irony.  We'd like to base our adm_open depth on
-     ### the depth we're going to use for the update.  But that
-     ### may depend on the depth in the working copy, which we can't
-     ### discover without calling adm_open.  We could expend an extra
-     ### call, with adm_open_depth=0, to get the real depth (but only
-     ### if we need to) and then make the real call... but it's not
-     ### worth the complexity right now.  Locking the entire tree when
-     ### we didn't need to is a performance hit, but (except for
-     ### access contention) not a correctness problem. */
+  /* ### Ah, the irony.  We'd like to base our adm_open depth on the
+     ### depth we're going to use for the update.  But that may depend
+     ### on the depth in the working copy, which we can't discover
+     ### without calling adm_open.  We could expend an extra call,
+     ### with adm_open_depth=0, to get the real depth (but only if we
+     ### need to) and then make the real call... but it's not worth
+     ### the complexity right now.  Locking the entire tree when we
+     ### didn't need to is a performance hit, but (except for access
+     ### contention) not a correctness problem. */
 
   if (depth == svn_depth_empty
       || depth == svn_depth_files)
