@@ -48,6 +48,10 @@ my $opt_import_tag_location;
 # Do not ask for any user input.  Just go ahead and do everything.
 my $opt_no_user_input;
 
+# Do not automatically set the svn:executable property based on the
+# file's exe bit.
+my $opt_no_auto_exe;
+
 # Username to use for commits.
 my $opt_svn_username;
 
@@ -74,6 +78,7 @@ my $REGEX_SEP_CHAR = '@';
 my $property_config_filename;
 
 GetOptions('no_user_input'           => \$opt_no_user_input,
+           'no_auto_exe'             => \$opt_no_auto_exe,
            'property_cfg_filename=s' => \$property_config_filename,
            'svn_password=s'          => \$opt_svn_password,
            'svn_username=s'          => \$opt_svn_username,
@@ -1028,7 +1033,7 @@ while (defined (my $load_dir = &get_next_load_dir))
 
         # Add svn:executable to files that have their executable bit
         # set.
-        if ($source_is_exe)
+        if ($source_is_exe and !$opt_no_auto_exe)
           {
             print "Adding to '$source_path' property 'svn:executable' with ",
                   "value '*'.\n";
@@ -1321,6 +1326,7 @@ sub usage
       "  dir_v1 ..      list dirs to import otherwise read from stdin\n",
       "options are\n",
       "  -no_user_input don't ask yes/no questions and assume yes answer\n",
+      "  -no_auto_exe   don't set svn:executable for executable files\n",
       "  -p filename    table listing properties to apply to matching files\n",
       "  -svn_username  username to perform commits as\n",
       "  -svn_password  password to supply to svn commit\n",
