@@ -1105,10 +1105,15 @@ def run_tests(test_list, serial_only = False):
 
   parallel = 0
   svn_bin = None
-  opts, args = my_getopt(sys.argv[1:], 'vhpc',
-                         ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
-                          'enable-sasl', 'help', 'parallel', 'bin=',
-                          'http-library=', 'server-minor-version='])
+  try:
+    opts, args = my_getopt(sys.argv[1:], 'vhpc',
+                           ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
+                            'enable-sasl', 'help', 'parallel', 'bin=',
+                            'http-library=', 'server-minor-version='])
+  except getopt.GetoptError, e:
+    print "ERROR: %s\n" % e
+    usage()
+    sys.exit(1)
 
   for arg in args:
     if arg == "list":
