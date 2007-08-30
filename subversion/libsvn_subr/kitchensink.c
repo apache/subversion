@@ -121,7 +121,10 @@ svn_depth_from_word(const char *word)
   if (strcmp(word, "infinity") == 0)
     return svn_depth_infinity;
   /* There's no special value for invalid depth, and no convincing
-     reason to make one yet, so just fall back to unknown depth. */
+     reason to make one yet, so just fall back to unknown depth.
+     If you ever change that convention, check callers to make sure
+     they're not depending on it (e.g., option parsing in main() ).
+  */
   return svn_depth_unknown;
 }
 

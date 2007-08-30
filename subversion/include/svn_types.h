@@ -304,7 +304,8 @@ svn_depth_to_word(svn_depth_t depth);
 
 
 /** Return the appropriate depth for @a depth_str.  @a word is as
- * returned from svn_depth_to_word().
+ * returned from svn_depth_to_word().  If @a depth_str does not
+ * represent a recognized depth, return @c svn_depth_unknown.
  *
  * @since New in 1.5.
  */

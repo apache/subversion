@@ -1221,28 +1221,16 @@ main(int argc, const char *argv[])
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                _("Error converting depth "
                                  "from locale to UTF8")), pool, "svn: ");
-        /* ### TODO(sd): Use svn_depth_from_word() here?  That could work
-           ### as long as that function continues to return
-           ### svn_depth_unknown for unrecognized words, but there's
-           ### a movement afoot (in my head, anyway) to make it
-           ### return svn_depth_infinity, for forwards compatibility
-           ### with Subversion's default depth.  Must decide that
-           ### before tweaking this code. */
-        if (strcmp(utf8_opt_arg, "empty") == 0)
-          opt_state.depth = svn_depth_empty;
-        else if (strcmp(utf8_opt_arg, "files") == 0)
-          opt_state.depth = svn_depth_files;
-        else if (strcmp(utf8_opt_arg, "immediates") == 0)
-          opt_state.depth = svn_depth_immediates;
-        else if (strcmp(utf8_opt_arg, "infinity") == 0)
-          opt_state.depth = svn_depth_infinity;
-        else
-          return svn_cmdline_handle_exit_error
-            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a valid depth; try "
-                                 "'empty', 'files', 'immediates', "
-                                 "or 'infinity'"),
-                               utf8_opt_arg), pool, "svn: ");
+        opt_state.depth = svn_depth_from_word(utf8_opt_arg);
+        if (opt_state.depth == svn_depth_unknown)
+          {
+            return svn_cmdline_handle_exit_error
+              (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' is not a valid depth; try "
+                                   "'empty', 'files', 'immediates', "
+                                   "or 'infinity'"),
+                                 utf8_opt_arg), pool, "svn: ");
+          }
         break;
       case svn_cl__version_opt:
         opt_state.version = TRUE;
