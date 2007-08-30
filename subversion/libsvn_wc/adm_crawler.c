@@ -1097,6 +1097,7 @@ svn_wc_transmit_text_deltas(const char *path,
                                       fulltext, editor, file_baton, pool);
 }
 
+
 svn_error_t *
 svn_wc_transmit_prop_deltas(const char *path,
                             svn_wc_adm_access_t *adm_access,
@@ -1107,42 +1108,14 @@ svn_wc_transmit_prop_deltas(const char *path,
                             apr_pool_t *pool)
 {
   int i;
-  const char *props, *props_base, *props_tmp;
   apr_array_header_t *propmods;
-  apr_hash_t *localprops = apr_hash_make(pool);
-  apr_hash_t *baseprops = apr_hash_make(pool);
 
-  /* Get the right access baton for the job. */
-  SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, adm_access, path, pool));
-
-  /* For an enough recent WC, we can have a really easy out. */
-  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION
-      && ! entry->has_prop_mods)
-    {
-      if (tempfile)
-        *tempfile = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  /* First, get the prop_path from the original path */
-  SVN_ERR(svn_wc__prop_path(&props, path, entry->kind, FALSE, pool));
-  SVN_ERR(svn_wc__prop_base_path(&props_base, path, entry->kind, FALSE, pool));
-
-  /* Copy the local prop file to the administrative temp area */
-  SVN_ERR(svn_wc__prop_path(&props_tmp, path, entry->kind, TRUE, pool));
-  SVN_ERR(svn_io_copy_file(props, props_tmp, FALSE, pool));
-
-  /* Alert the caller that we have created a temporary file that might
-     need to be cleaned up. */
   if (tempfile)
-    *tempfile = props_tmp;
-
-  /* Load all properties into hashes */
-  SVN_ERR(svn_wc__load_prop_file(props_tmp, localprops, pool));
-  SVN_ERR(svn_wc__load_prop_file(props_base, baseprops, pool));
+    *tempfile = NULL;
 
   /* Get an array of local changes by comparing the hashes. */
-  SVN_ERR(svn_prop_diffs(&propmods, localprops, baseprops, pool));
+  SVN_ERR(svn_wc_get_prop_diffs(&propmods, NULL,
+                                path, adm_access, pool));
 
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)

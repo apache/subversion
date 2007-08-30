@@ -414,6 +414,37 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
+
+
+svn_error_t *
+svn_wc__working_props_committed(const char *path,
+                                svn_wc_adm_access_t *adm_access,
+                                svn_boolean_t sync_entries,
+                                apr_pool_t *pool)
+{
+  const char *working_path;
+  const char *base_path;
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t mod_entry;
+  svn_wc_adm_access_t *mod_access;
+
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__prop_path(&working_path, path, entry->kind, FALSE, pool));
+  SVN_ERR(svn_wc__prop_base_path(&base_path, path, entry->kind, FALSE, pool));
+
+  /* svn_io_file_rename() retains a read-only bit, so there's no
+     need to explicitly set it. */
+  SVN_ERR(svn_io_file_rename(working_path, base_path, pool));
+
+  SVN_ERR(svn_wc_adm_probe_retrieve(&mod_access, adm_access, path, pool));
+  mod_entry.has_prop_mods = FALSE;
+  SVN_ERR(svn_wc__entry_modify(mod_access, entry->name, &mod_entry,
+                               SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS,
+                               sync_entries, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /*---------------------------------------------------------------------*/
 
 /*** Merging propchanges into the working copy ***/
@@ -2284,6 +2315,40 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         apr_pool_t *pool)
 {
   return modified_props(modified_p, path, NULL, adm_access, pool);
+}
+
+
+svn_error_t *
+svn_wc__has_prop_mods(svn_boolean_t *prop_mods,
+                      const char *path,
+                      svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *pool)
+{
+
+  /* For an enough recent WC, we can have a really easy out. */
+  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION)
+    {
+      const svn_wc_entry_t *entry;
+      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+      *prop_mods = entry->has_prop_mods;
+    }
+  else
+    {
+      apr_array_header_t *propmods;
+      apr_hash_t *localprops = apr_hash_make(pool);
+      apr_hash_t *baseprops = apr_hash_make(pool);
+
+      /* Load all properties into hashes */
+      SVN_ERR(svn_wc__load_props(&baseprops, &localprops,
+                                 adm_access, path, pool));
+
+      /* Get an array of local changes by comparing the hashes. */
+      SVN_ERR(svn_prop_diffs(&propmods, localprops, baseprops, pool));
+
+      *prop_mods = propmods->nelts > 0;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

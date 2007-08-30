@@ -4167,6 +4167,9 @@ svn_error_t *svn_wc_transmit_text_deltas(const char *path,
  * If a temporary file remains after this function is finished, the
  * path to that file is returned in @a *tempfile (so the caller can
  * clean this up if it wishes to do so).
+ *
+ * @note Starting version 1.5, no tempfile will ever be returned
+ *       anymore.  If @a *tempfile is passed, its value is set to @c NULL.
  */
 svn_error_t *svn_wc_transmit_prop_deltas(const char *path,
                                          svn_wc_adm_access_t *adm_access,
