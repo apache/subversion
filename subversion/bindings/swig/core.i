@@ -915,11 +915,13 @@ struct svn_auth_baton_t
 
 %extend svn_merge_range_t
 {
-  svn_merge_range_t(svn_revnum_t start, svn_revnum_t end, apr_pool_t *pool) {
+  svn_merge_range_t(svn_revnum_t start, svn_revnum_t end,
+                    svn_boolean_t inheritable, apr_pool_t *pool) {
     svn_merge_range_t *self;
     self = apr_palloc(pool, sizeof(svn_merge_range_t));
     self->start = start;
     self->end = end;
+    self->inheritable = inheritable;
     return self;
   };
 
