@@ -2305,14 +2305,7 @@ do_merge(const char *initial_URL1,
             }
         }
 
-      /* ### TODO: Print revision range separator line. */
-
       SVN_ERR(reporter->finish_report(report_baton, subpool));
-
-      /* ### LATER: Give the caller a shot at resolving any conflicts
-         ### we've detected.  If the conflicts are not resolved, abort
-         ### application of any remaining revision ranges for this WC
-         ### item. */
 
       if (notify_b.same_urls)
         {
@@ -2744,11 +2737,6 @@ do_single_file_merge(const char *initial_URL1,
       if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
         return err;
       svn_error_clear(err);
-
-      /* ### LATER: Give the caller a shot at resolving any conflicts
-         ### we've detected.  If the conflicts are not resolved, abort
-         ### application of any remaining revision ranges for this WC
-         ### item. */
 
       if (notify_b.same_urls)
         {
