@@ -252,11 +252,6 @@ svn_cl__status(apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 
-  /* ### TODO(sd): I don't think we need to convert to default depth here;
-     ### rather, depth should stay unknown, because it may depend on
-     ### what the working copy says.  On the other hand, if no -u
-     ### flag was passed, then does depth matter? */
-
   subpool = svn_pool_create(pool);
 
   sb.had_print_error = FALSE;
