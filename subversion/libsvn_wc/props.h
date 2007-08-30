@@ -146,6 +146,27 @@ svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,
                                    svn_boolean_t write_base_props,
                                    apr_pool_t *pool);
 
+/* Install PATHs working props as base props, clearing the
+   has_prop_mods cache value in the entries file.
+
+   Updates the on-disk entries file if SYNC_ENTRIES is TRUE.*/
+svn_error_t *
+svn_wc__working_props_committed(const char *path,
+                                svn_wc_adm_access_t *adm_access,
+                                svn_boolean_t sync_entries,
+                                apr_pool_t *pool);
+
+/* Check PATH for prop mods, returning the result in *PROP_MODS.
+
+   This function takes into account that some working copy versions
+   don't have a has_prop_mods cache laying around */
+svn_error_t *
+svn_wc__has_prop_mods(svn_boolean_t *prop_mods,
+                      const char *path,
+                      svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *pool);
+
+
 /* Load the base and working props for PATH in ADM_ACCESS returning them
    in *BASE_PROPS_P and *PROPS_P, respectively.  BASE_PROPS or PROPS may be null.
    Do all allocations in POOL.  */

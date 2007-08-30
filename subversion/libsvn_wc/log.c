@@ -1047,10 +1047,9 @@ log_do_committed(struct log_runner *loggy,
   const svn_wc_entry_t *orig_entry;
   svn_wc_entry_t *entry;
   apr_time_t text_time = 0; /* By default, don't override old stamp. */
-  svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   apr_finfo_t finfo;
-
+  svn_boolean_t prop_mods;
 
   /* Determine the actual full path of the affected item. */
   if (! is_this_dir)
@@ -1244,96 +1243,42 @@ log_do_committed(struct log_runner *loggy,
         }
     }
 
+  SVN_ERR(svn_wc__has_prop_mods(&prop_mods,
+                                full_path, loggy->adm_access, pool));
+  if (prop_mods)
+    {
+      if (entry->kind == svn_node_file)
+        {
+          /* Examine propchanges here before installing the new
+             propbase.  If the executable prop was -deleted-, then
+             tell install_committed_file() so.
 
-  /* Now check for property commits.  If a property commit occurred, a
-     copy of the "working" property file should have been dumped in
-     the admistrative `tmp' area.  We'll let that tmpfile's existence
-     be a signal that we need to do post-commit property processing.
-     Also, we have to again decide which timestamp to use (see the
-     text-time case above).  */
-  {
-    const char *tmpf, *basef;
+             The same applies to the needs-lock property. */
+          int i;
+          apr_array_header_t *propchanges;
 
-    /* Get property file pathnames (not from the `tmp' area) depending
-       on whether we're examining a file or THIS_DIR */
 
-    /* ### Logic check: if is_this_dir, then full_path is the same
-       as loggy->adm_access->path, I think.  In which case we don't need the
-       inline conditionals below... */
+          SVN_ERR(svn_wc_get_prop_diffs(&propchanges, NULL,
+                                        full_path, loggy->adm_access, pool));
+          for (i = 0; i < propchanges->nelts; i++)
+            {
+              svn_prop_t *propchange
+                = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
 
-    SVN_ERR(svn_wc__prop_base_path
-            (&basef,
-             is_this_dir
-             ? svn_wc_adm_access_path(loggy->adm_access) : full_path,
-             entry->kind, FALSE, pool));
+              if ((! strcmp(propchange->name, SVN_PROP_EXECUTABLE))
+                  && (propchange->value == NULL))
+                remove_executable = TRUE;
+              else if ((! strcmp(propchange->name, SVN_PROP_NEEDS_LOCK))
+                       && (propchange->value == NULL))
+                set_read_write = TRUE;
+            }
+        }
 
-    /* If this file was replaced in the commit, then we definitely
-       need to begin by removing any old residual prop-base file.  */
-    if (entry->schedule == svn_wc_schedule_replace)
-      {
-        svn_node_kind_t kinder;
-        SVN_ERR(svn_io_check_path(basef, &kinder, pool));
-        if (kinder == svn_node_file)
-          SVN_ERR(svn_io_remove_file(basef, pool));
-      }
-
-    SVN_ERR(svn_wc__prop_path
-            (&tmpf,
-             is_this_dir
-             ? svn_wc_adm_access_path(loggy->adm_access) : full_path,
-             entry->kind, TRUE, pool));
-    if ((err = svn_io_check_path(tmpf, &kind, pool)))
-      return svn_error_createf(pick_error_code(loggy), err,
-                               _("Error checking existence of '%s'"),
-                               svn_path_local_style(tmpf, pool));
-    if (kind == svn_node_file)
-      {
-        /* Examine propchanges here before installing the new
-           propbase.  If the executable prop was -deleted-, then
-           tell install_committed_file() so.
-
-           The same applies to the needs-lock property. */
-        if (! is_this_dir)
-          {
-            int i;
-            apr_array_header_t *propchanges;
-            SVN_ERR(svn_wc_get_prop_diffs(&propchanges, NULL,
-                                          full_path, loggy->adm_access,
-                                          pool));
-            for (i = 0; i < propchanges->nelts; i++)
-              {
-                svn_prop_t *propchange
-                  = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-
-                if ((! strcmp(propchange->name, SVN_PROP_EXECUTABLE))
-                    && (propchange->value == NULL))
-                  {
-                    remove_executable = TRUE;
-                    break;
-                  }
-              }
-
-            for (i = 0; i < propchanges->nelts; i++)
-              {
-                svn_prop_t *propchange
-                  = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-
-                if ((! strcmp(propchange->name, SVN_PROP_NEEDS_LOCK))
-                    && (propchange->value == NULL))
-                  {
-                    set_read_write = TRUE;
-                    break;
-                  }
-              }
-          }
-
-        /* Make the tmp prop file the new pristine one. */
-        SVN_ERR(svn_io_file_rename(tmpf, basef, pool));
-        SVN_ERR(svn_io_set_file_read_only(basef, FALSE, pool));
-      }
+      SVN_ERR(svn_wc__working_props_committed(full_path, loggy->adm_access,
+                                              FALSE, pool));
   }
 
-  if (! is_this_dir)
+  if (entry->kind == svn_node_file)
     {
       /* Install the new file, which may involve expanding keywords.
          A copy of this file should have been dropped into our `tmp/text-base'
