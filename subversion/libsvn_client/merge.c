@@ -3637,8 +3637,10 @@ svn_client_merge3(const char *source1,
     }
   else
     {
+      svn_opt_revision_t working_rev;
+      working_rev.kind = svn_opt_revision_working;
       SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath, 
-                                         ctx, pool));
+                                         &working_rev, ctx, pool));
     }
 
   if (depth == svn_depth_unknown)
@@ -3820,8 +3822,10 @@ svn_client_merge_peg3(const char *source,
     }
   else
     {
+      svn_opt_revision_t working_rev;
+      working_rev.kind = svn_opt_revision_working;
       SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath, 
-                                         ctx, pool));
+                                         peg_revision, ctx, pool));
     }
 
   /* If source is a path, we need to get the underlying URL from

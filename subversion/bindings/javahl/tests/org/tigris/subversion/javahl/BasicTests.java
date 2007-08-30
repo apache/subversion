@@ -856,6 +856,18 @@ public class BasicTests extends SVNTests
         assertTrue("Unexpected copy source path, expected " +
                    expectedSrc + ", got " + suggestions[0],
                    suggestions[0].endsWith(new File(wcPath).getName()));
+
+        // Same test using URL
+        String url = thisTest.getUrl() + "/" + destPath;
+        suggestions = client.suggestMergeSources(url,Revision.HEAD);
+        assertNotNull(suggestions);
+        assertTrue(suggestions.length >= 1);
+        suggestedSrc = suggestions[0];
+        // ### Improve rigor of (pathetically weak) path assertion.
+        assertTrue("Unexpected copy source path, expected " +
+                   expectedSrc + ", got " + suggestions[0],
+                   suggestions[0].endsWith(new File(wcPath).getName()));
+    
     }
 
     /**
