@@ -837,8 +837,8 @@ public class BasicTests extends SVNTests
 
     /**
      * Assert that the first merge source suggested for
-     * <code>destPath</code> at {@link Revision#HEAD} is equivalent to
-     * <code>expectedSrc</code>.
+     * <code>destPath</code> at {@link Revision#WORKING} and {@link
+     * Revision#HEAD} is equivalent to <code>expectedSrc</code>.
      * @exception SubversionException If retrieval of the copy source fails.
      * @since 1.5
      */
@@ -859,7 +859,7 @@ public class BasicTests extends SVNTests
 
         // Same test using URL
         String url = thisTest.getUrl() + "/" + destPath;
-        suggestions = client.suggestMergeSources(url,Revision.HEAD);
+        suggestions = client.suggestMergeSources(url, Revision.HEAD);
         assertNotNull(suggestions);
         assertTrue(suggestions.length >= 1);
         suggestedSrc = suggestions[0];
