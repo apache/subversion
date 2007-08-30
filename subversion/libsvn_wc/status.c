@@ -1243,7 +1243,8 @@ make_dir_baton(void **dir_baton,
       else if (pb->depth == svn_depth_files || pb->depth == svn_depth_empty)
         d->depth = svn_depth_exclude;
       else if (pb->depth == svn_depth_unknown)
-        // This is only tentative, it can be overridden from d's entry later.
+        /* This is only tentative, it can be overridden from d's entry
+           later. */
         d->depth = svn_depth_unknown;
       else
         d->depth = svn_depth_infinity;
