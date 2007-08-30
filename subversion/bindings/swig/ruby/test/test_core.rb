@@ -698,7 +698,13 @@ EOM
     input = "/trunk: 5,7-9,10,11,13,14"
     result = Svn::Core::MergeInfo.parse(input)
     assert_equal(["/trunk"], result.keys)
-    assert_equal([[4, 5], [6, 11], [12, 14]],
+    assert_equal([[4, 5, true], [6, 11, true], [12, 14, true]],
+                 result["/trunk"].collect {|range| range.to_a})
+
+    input = "/trunk: 5*,7-9,10,11,13,14"
+    result = Svn::Core::MergeInfo.parse(input)
+    assert_equal(["/trunk"], result.keys)
+    assert_equal([[4, 5, false], [6, 11, true], [12, 14, true]],
                  result["/trunk"].collect {|range| range.to_a})
   end
 
@@ -712,41 +718,45 @@ EOM
     deleted, added = result
     assert_equal(["/trunk"], deleted.keys)
     assert_equal(["/trunk"], added.keys)
-    assert_equal([[12, 14]],
+    assert_equal([[12, 14, true]],
                  deleted["/trunk"].collect {|range| range.to_a})
-    assert_equal([[5, 6]],
+    assert_equal([[5, 6, true]],
                  added["/trunk"].collect {|range| range.to_a})
   end
 
   def test_mergeinfo_merge
     info = Svn::Core::MergeInfo.parse("/trunk: 5,7-9")
     assert_equal(["/trunk"], info.keys)
-    assert_equal([[4, 5], [6, 9]],
+    assert_equal([[4, 5, true], [6, 9, true]],
                  info["/trunk"].collect {|range| range.to_a})
 
     changes = Svn::Core::MergeInfo.parse("/trunk: 6-13")
     merged = info.merge(changes)
     assert_equal(["/trunk"], merged.keys)
-    assert_equal([[4, 13]],
+    assert_equal([[4, 13, true]],
                  merged["/trunk"].collect {|range| range.to_a})
   end
 
   def test_mergeinfo_remove
     info = Svn::Core::MergeInfo.parse("/trunk: 5-13")
     assert_equal(["/trunk"], info.keys)
-    assert_equal([[4, 13]],
+    assert_equal([[4, 13, true]],
                  info["/trunk"].collect {|range| range.to_a})
 
     eraser = Svn::Core::MergeInfo.parse("/trunk: 7,9-11")
     removed = info.remove(eraser)
     assert_equal(["/trunk"], removed.keys)
-    assert_equal([[4, 6], [7, 8], [11, 13]],
+    assert_equal([[4, 6, true], [7, 8, true], [11, 13, true]],
                  removed["/trunk"].collect {|range| range.to_a})
   end
 
   def test_mergeinfo_to_s
     info = Svn::Core::MergeInfo.parse("/trunk: 5,7,9-13")
     assert_equal("/trunk:5,7,9-13", info.to_s)
+    assert_not_equal(info.to_s, info.inspect)
+
+    info = Svn::Core::MergeInfo.parse("/trunk: 5*,7,9-13")
+    assert_equal("/trunk:5*,7,9-13", info.to_s)
     assert_not_equal(info.to_s, info.inspect)
   end
 
@@ -755,59 +765,65 @@ EOM
 
     info["/trunk"] = info["/trunk"].reverse
     assert_equal(["/trunk"], info.keys)
-    assert_equal([[13, 8], [7, 6], [5, 4]],
+    assert_equal([[13, 8, true], [7, 6, true], [5, 4, true]],
                  info["/trunk"].collect {|range| range.to_a})
 
     sorted_info = info.sort
     assert_equal(["/trunk"], sorted_info.keys)
-    assert_equal([[5, 4], [7, 6], [13, 8]],
+    assert_equal([[5, 4, true], [7, 6, true], [13, 8, true]],
                  sorted_info["/trunk"].collect {|range| range.to_a})
   end
 
   def test_range_list_diff
-    range_list1 = Svn::Core::RangeList.new([5, 5], [9, 13])
-    range_list2 = Svn::Core::RangeList.new([7, 11])
+    range_list1 = Svn::Core::RangeList.new([5, 5, true], [9, 13, true])
+    range_list2 = Svn::Core::RangeList.new([7, 11, true])
 
     deleted, added = range_list1.diff(range_list2)
-    assert_equal([[7, 9]], added.collect {|range| range.to_a})
-    assert_equal([[5, 5], [11, 13]], deleted.collect {|range| range.to_a})
+    assert_equal([[7, 9, true]], added.collect {|range| range.to_a})
+    assert_equal([[5, 5, true], [11, 13, true]],
+                 deleted.collect {|range| range.to_a})
   end
 
   def test_range_list_merge
-    range_list1 = Svn::Core::RangeList.new([5, 5], [7, 7], [9, 13])
-    range_list2 = Svn::Core::RangeList.new([5, 9])
+    range_list1 = Svn::Core::RangeList.new([5, 5, true],
+                                           [7, 7, true], [9, 13, true])
+    range_list2 = Svn::Core::RangeList.new([5, 9, true])
 
     merged = range_list1.merge(range_list2)
-    assert_equal([[5, 13]], merged.collect {|range| range.to_a})
+    assert_equal([[5, 13, true]], merged.collect {|range| range.to_a})
   end
 
   def test_range_list_remove
-    range_list1 = Svn::Core::RangeList.new([5, 5], [7, 7], [9, 13])
-    range_list2 = Svn::Core::RangeList.new([5, 9])
+    range_list1 = Svn::Core::RangeList.new([5, 5, true],
+                                           [7, 7, true], [9, 13, true])
+    range_list2 = Svn::Core::RangeList.new([5, 9, true])
 
     removed = range_list1.remove(range_list2)
-    assert_equal([[9, 13]], removed.collect {|range| range.to_a})
+    assert_equal([[9, 13, true]], removed.collect {|range| range.to_a})
   end
 
   def test_range_list_intersect
-    range_list1 = Svn::Core::RangeList.new([5, 9])
-    range_list2 = Svn::Core::RangeList.new([5, 5], [7, 7], [9, 13])
+    range_list1 = Svn::Core::RangeList.new([5, 9, true])
+    range_list2 = Svn::Core::RangeList.new([5, 5, true],
+                                           [7, 7, true], [9, 13, true])
 
     intersected = range_list1.intersect(range_list2)
-    assert_equal([[5, 5], [7, 7]],
+    assert_equal([[5, 5, true], [7, 7, true]],
                  intersected.collect {|range| range.to_a})
   end
 
   def test_range_list_reverse
-    range_list = Svn::Core::RangeList.new([5, 5], [7, 7], [9, 13])
+    range_list = Svn::Core::RangeList.new([5, 5, true],
+                                          [7, 7, true], [9, 13, true])
 
     reversed = range_list.reverse
-    assert_equal([[13, 9], [7, 7], [5, 5]],
+    assert_equal([[13, 9, true], [7, 7, true], [5, 5, true]],
                  reversed.collect {|range| range.to_a})
   end
 
   def test_range_list_to_s
-    range_list = Svn::Core::RangeList.new([5, 5], [7, 7], [9, 13])
+    range_list = Svn::Core::RangeList.new([5, 5, true],
+                                          [7, 7, true], [9, 13, true])
     assert_equal("6-5,8-7,10-13", range_list.to_s)
     assert_not_equal("6-5,8-7,10-13", range_list.inspect)
   end

@@ -602,7 +602,7 @@ module Svn
 
     class MergeRange
       def to_a
-        [self.start, self.end]
+        [self.start, self.end, self.inheritable]
       end
 
       def inspect
