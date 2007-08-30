@@ -741,7 +741,7 @@ apply_textdelta(void *file_baton,
   node_baton_t *fb = file_baton;
   edit_baton_t *eb = fb->edit_baton;
 
-  SVN_ERR(svn_cmdline_printf(pool, _(".")));
+  SVN_ERR(svn_cmdline_printf(pool, "."));
   SVN_ERR(svn_cmdline_fflush(stdout));
 
   return eb->wrapped_editor->apply_textdelta(fb->wrapped_node_baton,
@@ -845,7 +845,7 @@ close_edit(void *edit_baton,
       SVN_ERR(eb->wrapped_editor->close_directory(baton, pool));
     }
 
-  SVN_ERR(svn_cmdline_printf(pool, _("\n")));
+  SVN_ERR(svn_cmdline_printf(pool, "\n"));
 
   return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
 }
