@@ -1395,24 +1395,6 @@ log_do_committed(struct log_runner *loggy,
        _("Error modifying entry of '%s'"), name);
   loggy->entries_modified = TRUE;
 
-  /* Remove the working props file if it exists.
-     This is done here, after resetting the has_prop_mods flag, since
-     the text-base install stuff above will need this file if
-     props_mod was set. */
-  {
-    const char *wf;
-    SVN_ERR(svn_wc__prop_path
-            (&wf,
-             is_this_dir
-             ? svn_wc_adm_access_path(loggy->adm_access) : full_path,
-             entry->kind, FALSE, pool));
-    if ((err = svn_io_remove_file(wf, pool))
-        && APR_STATUS_IS_ENOENT(err->apr_err))
-      svn_error_clear(err);
-    else if (err)
-      return err;
-  }
-
   /* If we aren't looking at "this dir" (meaning we are looking at a
      file), we are finished.  From here on out, it's all about a
      directory's entry in its parent.  */
