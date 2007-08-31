@@ -578,7 +578,9 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
       match = rm.search(line)
       if match:
         return
-    raise main.SVNUnmatchedError
+    raise main.SVNUnmatchedError("Expected pattern '%s' failed to match any "
+                                 "lines from error output '%s'" %
+                                 (error_re_string, err))
   elif err:
     ### we should raise a less generic error here. which?
     raise Failure(err)
