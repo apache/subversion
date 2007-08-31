@@ -2840,7 +2840,7 @@ get_mergeinfo_walk_cb(const char *path,
   const svn_string_t *propval;
   apr_hash_t *mergehash;
   svn_boolean_t switched = FALSE;
-  svn_boolean_t has_mergeinfo_from_merge_src= FALSE;
+  svn_boolean_t has_mergeinfo_from_merge_src = FALSE;
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
@@ -3617,7 +3617,7 @@ svn_client_merge3(const char *source1,
                                  pool));
 
   SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
-                                 pool));
+                                  pool));
 
   if (entry->repos)
     {
