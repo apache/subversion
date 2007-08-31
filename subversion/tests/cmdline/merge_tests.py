@@ -7409,12 +7409,71 @@ def merge_with_depth_files(sbox):
   # Update working copy
   svntest.actions.run_and_verify_svn(None, None, [], 'up', Acopy_path)
 
-  # Merge r1:3 with --depth files
-  svntest.actions.run_and_verify_svn(None,
-                                     [svntest.main.merge_notify_line(2,3),
-                                     'U    ' + Acopy_mu_path + '\n'],
-                                     [], 'merge', '-r1:3', '--depth',
-                                     'files', A_url, Acopy_path)
+  # Merge r1:3 into A_copy with --depth files.  The merge only affects
+  # 'A_copy' and its one file child 'mu', so 'A_copy' gets non-inheritable
+  # mergeinfo for -r1:3 and 'mu' gets its own complete set of mergeinfo:
+  # r1 from its parent, and r1:3 from the merge itself.
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_A_COPY_path = shorten_path_kludge(Acopy_path)
+  expected_output = wc.State(short_A_COPY_path, {
+    'mu'   : Item(status='U '),
+    })
+  expected_status = wc.State(short_A_COPY_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='M '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=3)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,2-3*'}),
+    'B'         : Item(),
+    'mu'        : Item("this is file 'mu' modified.\n",
+                       props={SVN_PROP_MERGE_INFO : '/A:1-3'}),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State(short_A_COPY_path, { })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_COPY_path, '1', '3',
+                                       sbox.repo_url + '/A',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 1,
+                                       '--depth', 'files')
+  os.chdir(saved_cwd)
 
 def merge_fails_if_subtree_is_deleted_on_src(sbox):
   "merge fails if subtree is deleted on src"
