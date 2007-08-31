@@ -364,9 +364,9 @@ svn_error_t *svn_fs_fs__txn_changes_fetch(apr_hash_t **changes,
    directory to its final location NEW_FILENAME in the repository.  On
    Unix, match the permissions of the new file to the permissions of
    PERMS_REFERENCE.  Temporary allocations are from POOL. */
-svn_error_t *svn_fs_fs__move_into_place(const char *old_filename, 
+svn_error_t *svn_fs_fs__move_into_place(const char *old_filename,
                                         const char *new_filename,
-                                        const char *perms_reference, 
+                                        const char *perms_reference,
                                         apr_pool_t *pool);
 
 /* Match the perms on FILENAME to the PERMS_REFERENCE file if we're
@@ -377,8 +377,8 @@ svn_error_t *svn_fs_fs__dup_perms(const char *filename,
 
 /* Return the path to the file containing revision REV in FS.
    Allocate the new char * from POOL. */
-const char *svn_fs_fs__path_rev(svn_fs_t *fs, 
-                                svn_revnum_t rev, 
+const char *svn_fs_fs__path_rev(svn_fs_t *fs,
+                                svn_revnum_t rev,
                                 apr_pool_t *pool);
 
 /* Return the path to the 'current' file in FS.

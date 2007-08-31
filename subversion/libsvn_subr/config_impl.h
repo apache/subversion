@@ -138,8 +138,8 @@ svn_config__sys_config_path(const char **path_p,
    name of the user's config area.  Allocate *PATH_P in POOL.
 
    If the user's personal configuration area cannot be located (most
-   likely under Win32), set *PATH_P to NULL regardless of FNAME.  
-   
+   likely under Win32), set *PATH_P to NULL regardless of FNAME.
+
    CONFIG_DIR overrides this and if set *PATH_P is set to it.
    */
 svn_error_t *

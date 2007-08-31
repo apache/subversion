@@ -2,9 +2,9 @@
 #
 #  revert_tests.py:  testing 'svn revert'.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
@@ -273,11 +273,11 @@ def revert_reexpand_keyword(sbox):
 
   # Verify that the keyword got re-expanded.
   check_expanded(newfile_path)
-  
+
 
 #----------------------------------------------------------------------
 # Regression test for issue #1775:
-# Should be able to revert a file with no properties i.e. no prop-base 
+# Should be able to revert a file with no properties i.e. no prop-base
 def revert_replaced_file_without_props(sbox):
   "revert a replaced file with no properties"
 
@@ -294,7 +294,7 @@ def revert_replaced_file_without_props(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'file1' : Item(verb='Adding')
     })
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'file1' : Item(status='  ', wc_rev=2),
@@ -304,18 +304,18 @@ def revert_replaced_file_without_props(sbox):
                                         expected_status, None, None,
                                         None, None, None, wc_dir)
 
-  # delete file1 
+  # delete file1
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', file1_path)
 
   # test that file1 is scheduled for deletion.
   expected_status.tweak('file1', status='D ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # recreate and add file1 
+  # recreate and add file1
   svntest.main.file_append(file1_path, "This is the file 'file1' revision 3.")
   svntest.actions.run_and_verify_svn(None, None, [], 'add', file1_path)
 
-  # Test to see if file1 is schedule for replacement 
+  # Test to see if file1 is schedule for replacement
   expected_status.tweak('file1', status='R ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -332,12 +332,12 @@ def revert_replaced_file_without_props(sbox):
 # svn revert of an svn move'd file does not revert the file
 def revert_moved_file(sbox):
     "revert a moved file"
-    
+
     sbox.build()
     wc_dir = sbox.wc_dir
     iota_path = os.path.join(wc_dir, 'iota')
     iota_path_moved = os.path.join(wc_dir, 'iota_moved')
-    
+
     svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path,
                                         iota_path_moved)
     expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -346,16 +346,16 @@ def revert_moved_file(sbox):
       'iota_moved' : Item(status='A ', copied='+', wc_rev='-'),
     })
     svntest.actions.run_and_verify_status(wc_dir, expected_output)
-    
+
     # now revert the file iota
-    svntest.actions.run_and_verify_svn(None, 
+    svntest.actions.run_and_verify_svn(None,
       ["Reverted '" + iota_path + "'\n"], [], 'revert', iota_path)
-    
+
     # at this point, svn status on iota_path_moved should return nothing
     # since it should disappear on reverting the move, and since svn status
     # on a non-existent file returns nothing.
-    
-    svntest.actions.run_and_verify_svn(None, [], [], 
+
+    svntest.actions.run_and_verify_svn(None, [], [],
                                       'status', '-v', iota_path_moved)
 
 
@@ -473,7 +473,7 @@ def revert_repos_to_wc_replace_with_props(sbox):
 
 def revert_after_second_replace(sbox):
   "revert file after second replace"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -494,10 +494,10 @@ def revert_after_second_replace(sbox):
 
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  
+
   # Now delete replaced file.
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force', rho_path)
-  
+
   # Status should be same as after first delete
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', status='D ')
@@ -520,7 +520,7 @@ def revert_after_second_replace(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
-  
+
 
 #----------------------------------------------------------------------
 # Tests for issue #2517.

@@ -288,8 +288,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 {
   const char *tmp_target, *result_target;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
-  const char *log_merge_target =
-    svn_path_is_child(adm_path, merge_target, pool);
   apr_file_t *result_f;
   svn_boolean_t is_binary;
   const svn_wc_entry_t *entry;
@@ -397,7 +395,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
         {
           const char *left_copy, *right_copy, *target_copy;
           const char *tmp_left, *tmp_right, *tmp_target_copy;
-          const char *parentt, *left_base, *right_base, *target_base;
+          const char *parentt, *target_base;
           svn_wc_adm_access_t *parent_access;
           svn_wc_entry_t tmp_entry;
 
@@ -405,8 +403,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
              up the conflict before we mark the file 'conflicted' */
           if (conflict_func)
             {
+              svn_wc_conflict_result_t result =
+                svn_wc_conflict_result_conflicted;
               svn_wc_conflict_description_t cdesc;
-              svn_wc_conflict_result_t result;
 
               cdesc.path = merge_target;
               cdesc.node_kind = svn_node_file;
@@ -582,18 +581,17 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                   (log_accum, adm_access,
                    target_copy, tmp_target_copy, merge_target, pool));
 
-          left_base = svn_path_is_child(adm_path, left_copy, pool);
-          right_base = svn_path_is_child(adm_path, right_copy, pool);
-
-          tmp_entry.conflict_old = left_base;
-          tmp_entry.conflict_new = right_base;
+          tmp_entry.conflict_old
+            = svn_path_is_child(adm_path, left_copy, pool);
+          tmp_entry.conflict_new
+            = svn_path_is_child(adm_path, right_copy, pool);
           tmp_entry.conflict_wrk = target_base;
 
           /* Mark merge_target's entry as "Conflicted", and start tracking
              the backup files in the entry as well. */
           SVN_ERR(svn_wc__loggy_entry_modify
                   (log_accum, adm_access,
-                   log_merge_target, &tmp_entry,
+                   merge_target, &tmp_entry,
                    SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                    | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                    | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
@@ -637,8 +635,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
          up the conflict before we mark the file 'conflicted' */
       if (conflict_func)
         {
+          svn_wc_conflict_result_t result =
+            svn_wc_conflict_result_conflicted;
           svn_wc_conflict_description_t cdesc;
-          svn_wc_conflict_result_t result;
 
           cdesc.path = merge_target;
           cdesc.node_kind = svn_node_file;
@@ -753,7 +752,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
       tmp_entry.conflict_new = right_base;
       SVN_ERR(svn_wc__loggy_entry_modify
               (log_accum,
-               adm_access, log_merge_target,
+               adm_access, merge_target,
                &tmp_entry,
                SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW

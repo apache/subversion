@@ -2,9 +2,9 @@
 #
 #  svnsync_tests.py:  Tests SVNSync's repository mirroring capabilities.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2005, 2006 CollabNet.  All rights reserved.
 #
@@ -22,8 +22,7 @@ import sys, os
 # Our testing module
 import svntest
 
-from authz_tests import write_restrictive_svnserve_conf
-                        
+from svntest.main import write_restrictive_svnserve_conf
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -211,7 +210,7 @@ def detect_meddling(sbox):
 
   # Make our own destination checkout (have to do it ourself because
   # it is not greek).
-  
+
   svntest.main.safe_rmtree(dest_sbox.wc_dir)
   svntest.actions.run_and_verify_svn(None,
                                      None,
@@ -665,7 +664,7 @@ test_list = [ None,
               detect_meddling,
               Skip(basic_authz, svntest.main.is_ra_type_file),
               Skip(copy_from_unreadable_dir, svntest.main.is_ra_type_file),
-              Skip(copy_with_mod_from_unreadable_dir, 
+              Skip(copy_with_mod_from_unreadable_dir,
                    svntest.main.is_ra_type_file),
               Skip(copy_with_mod_from_unreadable_dir_and_copy,
                    svntest.main.is_ra_type_file),

@@ -97,7 +97,7 @@ int svn_swig_py_get_parent_pool(PyObject *args, swig_type_info *type,
 
 /* Wrapper for SWIG_NewPointerObj */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type, 
+PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type,
                                  PyObject *pool, PyObject *args);
 
 /* Wrapper for SWIG_ConvertPtr */
@@ -145,14 +145,14 @@ PyObject *svn_swig_py_rangelist_to_list(apr_array_header_t *rangelist,
 /* helper function to convert an apr_hash_t* (const char *->array of
    svn_merge_range_t *) to a Python dict */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash, 
+PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash,
                                         swig_type_info *type,
                                         PyObject *py_pool);
 
 /* helper function to convert an apr_hash_t* (const char *->hash of
    mergeinfo hashes) to a Python dict */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash, 
+PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash,
                                         swig_type_info *type,
                                         PyObject *py_pool);
 
@@ -164,7 +164,7 @@ PyObject *svn_swig_py_stringhash_to_dict(apr_hash_t *hash);
 
 /* convert a hash of 'const char *' -> TYPE into a Python dict */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type, 
+PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type,
                                    PyObject *py_pool);
 
 /* helper function to convert a 'char **' into a Python list of string
@@ -208,7 +208,7 @@ SVN_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_py_proparray_from_dict(PyObject *dict,
                                                     apr_pool_t *pool);
 
-/* helper function to convert a 'apr_array_header_t *' of 'svn_prop_t 
+/* helper function to convert a 'apr_array_header_t *' of 'svn_prop_t
    to a Python dictionary mapping strings to strings. */
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_proparray_to_dict(const apr_array_header_t *array);
@@ -303,8 +303,8 @@ svn_error_t *svn_swig_py_cancel_func(void *cancel_baton);
 
 /* thunked fs get_locks function */
 SVN_SWIG_SWIGUTIL_EXPORT
-svn_error_t *svn_swig_py_fs_get_locks_func(void *baton, 
-                                           svn_lock_t *lock, 
+svn_error_t *svn_swig_py_fs_get_locks_func(void *baton,
+                                           svn_lock_t *lock,
                                            apr_pool_t *pool);
 
 /* thunked commit log fetcher */

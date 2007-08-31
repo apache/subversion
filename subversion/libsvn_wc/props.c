@@ -118,12 +118,12 @@ svn_wc__save_prop_file(const char *propfile_path,
 
   SVN_ERR(svn_io_file_open(&prop_tmp, propfile_path,
                            (APR_WRITE | APR_CREATE | APR_TRUNCATE
-                            | APR_BUFFERED), 
+                            | APR_BUFFERED),
                            APR_OS_DEFAULT, pool));
 
   if (apr_hash_count(hash) != 0 || write_empty)
     SVN_ERR_W(svn_hash_write(hash, prop_tmp, pool),
-              apr_psprintf(pool, 
+              apr_psprintf(pool,
                            _("Can't write property hash to '%s'"),
                            svn_path_local_style(propfile_path, pool)));
 
@@ -189,25 +189,16 @@ append_prop_conflict(apr_file_t *fp,
 static svn_error_t *
 get_existing_prop_reject_file(const char **reject_file,
                               svn_wc_adm_access_t *adm_access,
-                              const char *name,
+                              const char *path,
                               apr_pool_t *pool)
 {
-  apr_hash_t *entries;
-  const svn_wc_entry_t *the_entry;
+  const svn_wc_entry_t *entry;
 
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
-  the_entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
-  if (! the_entry)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       _("Can't find entry '%s' in '%s'"),
-       name,
-       svn_path_local_style(svn_wc_adm_access_path(adm_access), pool));
-
-  *reject_file = the_entry->prejfile 
-    ? apr_pstrdup(pool, the_entry->prejfile)
-                 : NULL;
+  *reject_file = entry->prejfile
+    ? apr_pstrcat(pool, svn_wc_adm_access_path(adm_access), entry->prejfile)
+    : NULL;
   return SVN_NO_ERROR;
 }
 
@@ -223,14 +214,14 @@ build_present_props(apr_hash_t *props, apr_pool_t *pool)
   apr_array_header_t *cachable;
   svn_stringbuf_t *present_props = svn_stringbuf_create("", pool);
   int i;
-  
+
   if (apr_hash_count(props) == 0)
     return present_props->data;
 
   cachable = svn_cstring_split(SVN_WC__CACHABLE_PROPS, " ", TRUE, pool);
   for (i = 0; i < cachable->nelts; i++)
     {
-      const char *proptolookfor = APR_ARRAY_IDX(cachable, i, 
+      const char *proptolookfor = APR_ARRAY_IDX(cachable, i,
                                                 const char *);
 
       if (apr_hash_get(props, proptolookfor, APR_HASH_KEY_STRING) != NULL)
@@ -250,29 +241,16 @@ svn_error_t *
 svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_hash_t **props_p,
                    svn_wc_adm_access_t *adm_access,
-                   const char *name,
+                   const char *path,
                    apr_pool_t *pool)
 {
-  const char *full_path;
-  const char *access_path = svn_wc_adm_access_path(adm_access);
   svn_node_kind_t kind;
   svn_boolean_t has_propcaching =
     svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION;
   const svn_wc_entry_t *entry;
   apr_hash_t *base_props = NULL; /* Silence uninitialized warning. */
 
-  if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
-    {
-      full_path = access_path;
-      kind = svn_node_dir;
-    }
-  else
-    {
-      full_path = svn_path_join(access_path, name, pool);
-      kind = svn_node_file;
-    }
-
-  SVN_ERR(svn_wc_entry(&entry, full_path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
   /* If there is no entry, we just return empty hashes, since the
      property merging can use this function when there is no entry. */
   if (! entry)
@@ -284,6 +262,7 @@ svn_wc__load_props(apr_hash_t **base_props_p,
       return SVN_NO_ERROR;
     }
 
+  kind = entry->kind;
   /* We will need the base props if the user requested them, OR,
      our WC has prop caching, the user requested working props and there are no
      prop mods. */
@@ -292,7 +271,7 @@ svn_wc__load_props(apr_hash_t **base_props_p,
     {
       const char *prop_base_path;
 
-      SVN_ERR(svn_wc__prop_base_path(&prop_base_path, full_path,
+      SVN_ERR(svn_wc__prop_base_path(&prop_base_path, path,
                                      kind, FALSE, pool));
       base_props = apr_hash_make(pool);
       SVN_ERR(svn_wc__load_prop_file(prop_base_path, base_props, pool));
@@ -309,15 +288,14 @@ svn_wc__load_props(apr_hash_t **base_props_p,
         {
           const char *prop_path;
 
-          SVN_ERR(svn_wc__prop_path(&prop_path, full_path,
-                                    kind, FALSE, pool));
+          SVN_ERR(svn_wc__prop_path(&prop_path, path, kind, FALSE, pool));
           *props_p = apr_hash_make(pool);
           SVN_ERR(svn_wc__load_prop_file(prop_path, *props_p, pool));
         }
       else
         *props_p = apr_hash_make(pool);
     }
-      
+
   return SVN_NO_ERROR;
 }
 
@@ -328,16 +306,13 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 svn_error_t *
 svn_wc__install_props(svn_stringbuf_t **log_accum,
                       svn_wc_adm_access_t *adm_access,
-                      const char *name,
+                      const char *path,
                       apr_hash_t *base_props,
                       apr_hash_t *working_props,
                       svn_boolean_t write_base_props,
                       apr_pool_t *pool)
 {
   const char *working_propfile_path, *working_prop_tmp_path;
-  const char *full_path;
-  const char *access_path = svn_wc_adm_access_path(adm_access);
-  int access_len = strlen(access_path);
   apr_array_header_t *prop_diffs;
   const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
@@ -345,20 +320,11 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   svn_boolean_t has_propcaching =
     svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION;
 
-  /* Non-empty path without trailing slash need an extra slash removed */
-  if (access_len != 0 && access_path[access_len - 1] != '/')
-    access_len++;
-
-  if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
-    {
-      kind = svn_node_dir;
-      full_path = access_path;
-    }
+  if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+    kind = svn_node_dir;
   else
-    {
-      kind = svn_node_file;
-      full_path = svn_path_join(access_path, name, pool);
-    }
+    kind = svn_node_file;
+
   /* Check if the props are modified. */
   SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props, pool));
   tmp_entry.has_prop_mods = (prop_diffs->nelts > 0);
@@ -366,26 +332,27 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   tmp_entry.cachable_props = SVN_WC__CACHABLE_PROPS;
   tmp_entry.present_props = build_present_props(working_props, pool);
 
-  SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, name, &tmp_entry,
+  SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access,
+                                     path, &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_HAS_PROPS
-                                     | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS 
+                                     | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                      | SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS
                                      | SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
                                      pool));
 
   if (has_propcaching)
-    SVN_ERR(svn_wc_entry(&entry, full_path, adm_access, FALSE, pool));
+    SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
   else
     entry = NULL;
 
   /* Write our property hashes into temporary files.  Notice that the
      paths computed are ABSOLUTE pathnames, which is what our disk
      routines require. */
-  SVN_ERR(svn_wc__prop_path(&working_propfile_path, full_path,
+  SVN_ERR(svn_wc__prop_path(&working_propfile_path, path,
                             kind, FALSE, pool));
   if (tmp_entry.has_prop_mods)
     {
-      SVN_ERR(svn_wc__prop_path(&working_prop_tmp_path, full_path,
+      SVN_ERR(svn_wc__prop_path(&working_prop_tmp_path, path,
                                 kind, TRUE, pool));
 
       /* Write the working prop hash to path/.svn/tmp/props/name or
@@ -417,12 +384,12 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
     {
       const char *base_propfile_path, *base_prop_tmp_path;
 
-      SVN_ERR(svn_wc__prop_base_path(&base_propfile_path, full_path,
+      SVN_ERR(svn_wc__prop_base_path(&base_propfile_path, path,
                                      kind, FALSE, pool));
 
       if (apr_hash_count(base_props) > 0)
         {
-          SVN_ERR(svn_wc__prop_base_path(&base_prop_tmp_path, full_path,
+          SVN_ERR(svn_wc__prop_base_path(&base_prop_tmp_path, path,
                                          kind, TRUE, pool));
 
           SVN_ERR(svn_wc__save_prop_file(base_prop_tmp_path, base_props,
@@ -443,6 +410,37 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                                          base_propfile_path, pool));
         }
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_wc__working_props_committed(const char *path,
+                                svn_wc_adm_access_t *adm_access,
+                                svn_boolean_t sync_entries,
+                                apr_pool_t *pool)
+{
+  const char *working_path;
+  const char *base_path;
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t mod_entry;
+  svn_wc_adm_access_t *mod_access;
+
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__prop_path(&working_path, path, entry->kind, FALSE, pool));
+  SVN_ERR(svn_wc__prop_base_path(&base_path, path, entry->kind, FALSE, pool));
+
+  /* svn_io_file_rename() retains a read-only bit, so there's no
+     need to explicitly set it. */
+  SVN_ERR(svn_io_file_rename(working_path, base_path, pool));
+
+  SVN_ERR(svn_wc_adm_probe_retrieve(&mod_access, adm_access, path, pool));
+  mod_entry.has_prop_mods = FALSE;
+  SVN_ERR(svn_wc__entry_modify(mod_access, entry->name, &mod_entry,
+                               SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS,
+                               sync_entries, pool));
 
   return SVN_NO_ERROR;
 }
@@ -541,7 +539,6 @@ svn_wc_merge_props(svn_wc_notify_state_t *state,
                    apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
-  const char *parent, *base_name;
   svn_stringbuf_t *log_accum;
 
   /* IMPORTANT: svn_wc_merge_prop_diffs relies on the fact that baseprops
@@ -555,11 +552,7 @@ svn_wc_merge_props(svn_wc_notify_state_t *state,
   switch (entry->kind)
     {
     case svn_node_dir:
-      parent = path;
-      base_name = NULL;
-      break;
     case svn_node_file:
-      svn_path_split(path, &parent, &base_name, pool);
       break;
     default:
       return SVN_NO_ERROR; /* ### svn_node_none or svn_node_unknown */
@@ -567,10 +560,10 @@ svn_wc_merge_props(svn_wc_notify_state_t *state,
 
   if (! dry_run)
     log_accum = svn_stringbuf_create("", pool);
-  
+
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
-  SVN_ERR(svn_wc__merge_props(state, adm_access, base_name, baseprops,
+  SVN_ERR(svn_wc__merge_props(state, adm_access, path, baseprops,
                               propchanges, base_merge, dry_run,
                               pool, &log_accum));
 
@@ -920,7 +913,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
 svn_error_t *
 svn_wc__merge_props(svn_wc_notify_state_t *state,
                     svn_wc_adm_access_t *adm_access,
-                    const char *name,
+                    const char *path,
                     apr_hash_t *server_baseprops,
                     const apr_array_header_t *propchanges,
                     svn_boolean_t base_merge,
@@ -931,39 +924,21 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   int i;
   svn_boolean_t is_dir;
 
-  const char *entryname;
-  const char *full_path;
   apr_hash_t *working_props;   /* all `working' properties */
   apr_hash_t *base_props;    /* all `pristine' properties */
 
-  const char *access_path = svn_wc_adm_access_path(adm_access);
-  int access_len = strlen(access_path);
   const char *reject_path = NULL;
   apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
   const char *reject_tmp_path = NULL;
 
-  /* Non-empty path without trailing slash need an extra slash removed */
-  if (access_len != 0 && access_path[access_len - 1] != '/')
-    access_len++;
-
-  if (name == NULL)
-    {
-      /* We must be merging props on the directory PATH  */
-      entryname = SVN_WC_ENTRY_THIS_DIR;
-      full_path = access_path;
-      is_dir = TRUE;
-    }
+  if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+    is_dir = TRUE;
   else
-    {
-      /* We must be merging props on the file PATH/NAME */
-      entryname = name;
-      full_path = svn_path_join(access_path, name, pool);
-      is_dir = FALSE;
-    }
+    is_dir = FALSE;
 
   /* Load the base & working property files into hashes */
   SVN_ERR(svn_wc__load_props(&base_props, &working_props,
-                             adm_access, entryname, pool));
+                             adm_access, path, pool));
   if (!server_baseprops)
     server_baseprops = base_props;
 
@@ -1036,7 +1011,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
           if (! reject_tmp_fp)
             /* This is the very first prop conflict found on this item. */
             SVN_ERR(open_reject_tmp_file(&reject_tmp_fp, &reject_tmp_path,
-                                         full_path, adm_access, is_dir,
+                                         path, adm_access, is_dir,
                                          pool));
 
           /* Append the conflict to the open tmp/PROPS/---.prej file */
@@ -1050,7 +1025,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   if (dry_run)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__install_props(entry_accum, adm_access, entryname,
+  SVN_ERR(svn_wc__install_props(entry_accum, adm_access, path,
                                 base_props, working_props, base_merge,
                                 pool));
 
@@ -1066,9 +1041,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
       SVN_ERR(get_existing_prop_reject_file(&reject_path,
-                                            adm_access,
-                                            entryname,
-                                            pool));
+                                            adm_access, path, pool));
 
       if (! reject_path)
         {
@@ -1076,8 +1049,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
              opening and closing it. */
           const char *full_reject_path;
 
-          full_reject_path = svn_path_join
-            (access_path, is_dir ? SVN_WC__THIS_DIR_PREJ : name, pool);
+          full_reject_path = (!is_dir) ? path :
+            svn_path_join(path, SVN_WC__THIS_DIR_PREJ, pool);
 
           SVN_ERR(svn_io_open_unique_file2(NULL, &reject_path,
                                            full_reject_path,
@@ -1088,8 +1061,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
              ok, because at least now we have a reservation on
              disk. */
         }
-      else
-        reject_path = svn_path_join(access_path, reject_path, pool);
 
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
@@ -1105,10 +1076,11 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       {
         svn_wc_entry_t entry;
 
-        entry.prejfile = reject_path + access_len;
+        entry.prejfile = svn_path_is_child(svn_wc_adm_access_path(adm_access),
+                                           reject_path, NULL);
         SVN_ERR(svn_wc__loggy_entry_modify(entry_accum,
                                            adm_access,
-                                           entryname,
+                                           path,
                                            &entry,
                                            SVN_WC__ENTRY_MODIFY_PREJFILE,
                                            pool));
@@ -1357,7 +1329,6 @@ wcprop_get(const svn_string_t **value,
                    svn_wc_adm_access_t *adm_access,
                    apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *prophash;
   const svn_wc_entry_t *entry;
 
@@ -1373,11 +1344,8 @@ wcprop_get(const svn_string_t **value,
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
                                 svn_path_dirname(path, pool), pool));
 
-  err = svn_wc__wcprop_list(&prophash, entry->name, adm_access, pool);
-  if (err)
-    return
-      svn_error_quick_wrap
-      (err, _("Failed to load properties from disk"));
+  SVN_ERR_W(svn_wc__wcprop_list(&prophash, entry->name, adm_access, pool),
+            _("Failed to load properties from disk"));
 
   *value = apr_hash_get(prophash, name, APR_HASH_KEY_STRING);
   return SVN_NO_ERROR;
@@ -1392,7 +1360,6 @@ svn_wc__wcprop_set(const char *name,
                    svn_boolean_t force_write,
                    apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
   apr_pool_t *cache_pool = svn_wc_adm_access_pool(adm_access);
@@ -1405,11 +1372,8 @@ svn_wc__wcprop_set(const char *name,
   else
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
                                 svn_path_dirname(path, pool), pool));
-  err = svn_wc__wcprop_list(&prophash, entry->name, adm_access, pool);
-  if (err)
-    return
-      svn_error_quick_wrap
-      (err, _("Failed to load properties from disk"));
+  SVN_ERR_W(svn_wc__wcprop_list(&prophash, entry->name, adm_access, pool),
+            _("Failed to load properties from disk"));
 
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
@@ -1428,7 +1392,7 @@ svn_wc__wcprop_set(const char *name,
       /* For backwards compatibility.  We don't use the cache in this case,
          so write to disk regardless of force_write. */
       /* Open the propfile for writing. */
-      SVN_ERR(svn_wc__open_props(&fp, 
+      SVN_ERR(svn_wc__open_props(&fp,
                                  path, /* open in PATH */
                                  (APR_WRITE | APR_CREATE | APR_BUFFERED),
                                  0, /* not base props */
@@ -1439,7 +1403,7 @@ svn_wc__wcprop_set(const char *name,
                 apr_psprintf(pool,
                              _("Cannot write property hash for '%s'"),
                              svn_path_local_style(path, pool)));
-  
+
       /* Close file, doing an atomic "move". */
       SVN_ERR(svn_wc__close_props(fp, path, 0, 1,
                                   1, /* sync! */
@@ -1566,7 +1530,7 @@ svn_wc_prop_list(apr_hash_t **props,
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access,
                                 svn_path_dirname(path, pool), pool));
 
-  return svn_wc__load_props(NULL, props, adm_access, entry->name, pool);
+  return svn_wc__load_props(NULL, props, adm_access, path, pool);
 }
 
 /* Determine if PROPNAME is contained in the list of space separated
@@ -1580,9 +1544,9 @@ string_contains_prop(const char *string, const char *propname)
 
   if (!place)
     return FALSE;
-  
+
   while (place)
-    {      
+    {
       if (place[proplen] == ' ' || place[proplen] == 0)
         return TRUE;
       place = strstr(place + 1, propname);
@@ -1597,7 +1561,6 @@ svn_wc_prop_get(const svn_string_t **value,
                 svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *prophash;
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
   const svn_wc_entry_t *entry;
@@ -1641,12 +1604,9 @@ svn_wc_prop_get(const svn_string_t **value,
     }
   else  /* regular prop */
     {
-      err = svn_wc_prop_list(&prophash, path, adm_access, pool);
-      if (err)
-        return
-          svn_error_quick_wrap
-          (err, _("Failed to load properties from disk"));
-      
+      SVN_ERR_W(svn_wc_prop_list(&prophash, path, adm_access, pool),
+                _("Failed to load properties from disk"));
+
       *value = apr_hash_get(prophash, name, APR_HASH_KEY_STRING);
 
       return SVN_NO_ERROR;
@@ -1703,7 +1663,7 @@ validate_prop_against_node_kind(const char *name,
     }
 
   return SVN_NO_ERROR;
-}                             
+}
 
 
 struct getter_baton {
@@ -1726,7 +1686,7 @@ get_file_for_validation(const svn_string_t **mime_type,
                           gb->path, gb->adm_access, pool));
 
   /* Open PATH. */
-  SVN_ERR(svn_io_file_open(&fp, gb->path, 
+  SVN_ERR(svn_io_file_open(&fp, gb->path,
                            (APR_READ | APR_BINARY | APR_BUFFERED),
                            0, pool));
 
@@ -1744,7 +1704,7 @@ get_file_for_validation(const svn_string_t **mime_type,
 
 
 static svn_error_t *
-validate_eol_prop_against_file(const char *path, 
+validate_eol_prop_against_file(const char *path,
                                svn_wc_canonicalize_svn_prop_get_file_t getter,
                                void *getter_baton,
                                apr_pool_t *pool)
@@ -1777,7 +1737,7 @@ validate_eol_prop_against_file(const char *path,
 
   /* See if this file has been determined to be binary. */
   if (mime_type && svn_mime_type_is_binary(mime_type->data))
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_ILLEGAL_TARGET, NULL,
        _("File '%s' has binary mime type property"),
        path_display);
@@ -1794,13 +1754,11 @@ svn_wc_prop_set2(const char *name,
                  svn_boolean_t skip_checks,
                  apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *prophash, *base_prophash;
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
-  const char *base_name;
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   const svn_wc_entry_t *entry;
-  
+
   if (prop_kind == svn_prop_wc_kind)
     return svn_wc__wcprop_set(name, value, path, adm_access, TRUE, pool);
   else if (prop_kind == svn_prop_entry_kind)
@@ -1812,8 +1770,6 @@ svn_wc_prop_set2(const char *name,
 
   /* Get the entry and name for this path. */
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-
-  base_name = entry->name;
 
   /* Get the access baton for the entry's directory. */
   if (entry->kind == svn_node_dir)
@@ -1831,7 +1787,7 @@ svn_wc_prop_set2(const char *name,
     {
       const svn_string_t *new_value;
       struct getter_baton *gb = apr_pcalloc(pool, sizeof(*gb));
-      
+
       gb->path = path;
       gb->adm_access = adm_access;
 
@@ -1858,16 +1814,13 @@ svn_wc_prop_set2(const char *name,
          to read-write */
       if (value == NULL)
         SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
-        
+
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  err = svn_wc__load_props(&base_prophash, &prophash, adm_access, base_name,
-                           pool);
-  if (err)
-    return
-      svn_error_quick_wrap
-      (err, _("Failed to load properties from disk"));
+  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash,
+                               adm_access, path, pool),
+            _("Failed to load properties from disk"));
 
   /* If we're changing this file's list of expanded keywords, then
    * we'll need to invalidate its text timestamp, since keyword
@@ -1898,7 +1851,7 @@ svn_wc_prop_set2(const char *name,
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
           SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
-                                             base_name, &tmp_entry,
+                                             path, &tmp_entry,
                                              SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                              pool));
         }
@@ -1907,8 +1860,8 @@ svn_wc_prop_set2(const char *name,
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
   apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
-  
-  SVN_ERR(svn_wc__install_props(&log_accum, adm_access, base_name,
+
+  SVN_ERR(svn_wc__install_props(&log_accum, adm_access, path,
                                 base_prophash, prophash, FALSE, pool));
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
   SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
@@ -1950,7 +1903,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
     };
 
   SVN_ERR(validate_prop_against_node_kind(propname, path, kind, pool));
-  
+
   if (!skip_some_checks && (strcmp(propname, SVN_PROP_EOL_STYLE) == 0))
     {
       new_value = svn_stringbuf_create_from_string(propval, pool);
@@ -1972,7 +1925,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
           new_value = svn_stringbuf_create_from_string(propval, pool);
           svn_stringbuf_appendbytes(new_value, "\n", 1);
         }
-      
+
       /* Make sure this is a valid externals property.  Do not
          allow 'skip_some_checks' to override, as there is no circumstance in
          which this is proper (because there is no circumstance in
@@ -2152,7 +2105,7 @@ modified_props(svn_boolean_t *modified_p,
   if (want_props)
     *which_props = apr_hash_make(pool);
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));  
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
 
   /* If we have no entry, we can't have any prop mods. */
   if (! entry)
@@ -2171,7 +2124,7 @@ modified_props(svn_boolean_t *modified_p,
       if (!*modified_p || !want_props)
         goto cleanup;
     }
-      
+
   /* So, we have a WC in an older format or we have propcaching
      but need to find the specific prop changes.  Either way we
      have some work to do... */
@@ -2250,7 +2203,7 @@ modified_props(svn_boolean_t *modified_p,
                                                prop_path,
                                                prop_base_path,
                                                subpool));
-          if (different_filesizes) 
+          if (different_filesizes)
             {
               *modified_p = TRUE;
 
@@ -2283,9 +2236,9 @@ modified_props(svn_boolean_t *modified_p,
      the specific changed props or we have a pre-propcaching WC version
      and still haven't figured out if we even have changes.  Regardless,
      our approach is the same in both cases.
-     
+
      In the pre-propcaching case:
-     
+
        We know that the filesizes are the same,
        but the timestamps are different.  That's still not enough
        evidence to make a correct decision;  we need to look at the
@@ -2310,10 +2263,10 @@ modified_props(svn_boolean_t *modified_p,
                                    subpool));
 
     /* Don't use the subpool is we are hanging on to the changed props. */
-    SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, 
+    SVN_ERR(svn_prop_diffs(&local_propchanges, localprops,
                            baseprops,
                            want_props ? pool : subpool));
-                                         
+
     if (local_propchanges->nelts == 0)
       {
         *modified_p = FALSE;
@@ -2336,10 +2289,10 @@ modified_props(svn_boolean_t *modified_p,
            }
       }
   }
- 
+
  cleanup:
   svn_pool_destroy(subpool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -2362,6 +2315,40 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         apr_pool_t *pool)
 {
   return modified_props(modified_p, path, NULL, adm_access, pool);
+}
+
+
+svn_error_t *
+svn_wc__has_prop_mods(svn_boolean_t *prop_mods,
+                      const char *path,
+                      svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *pool)
+{
+
+  /* For an enough recent WC, we can have a really easy out. */
+  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION)
+    {
+      const svn_wc_entry_t *entry;
+      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+      *prop_mods = entry->has_prop_mods;
+    }
+  else
+    {
+      apr_array_header_t *propmods;
+      apr_hash_t *localprops = apr_hash_make(pool);
+      apr_hash_t *baseprops = apr_hash_make(pool);
+
+      /* Load all properties into hashes */
+      SVN_ERR(svn_wc__load_props(&baseprops, &localprops,
+                                 adm_access, path, pool));
+
+      /* Get an array of local changes by comparing the hashes. */
+      SVN_ERR(svn_prop_diffs(&propmods, localprops, baseprops, pool));
+
+      *prop_mods = propmods->nelts > 0;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2404,14 +2391,13 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
     }
 
   SVN_ERR(svn_wc__load_props(&baseprops, propchanges ? &props : NULL,
-                             adm_access, entryname, pool));
+                             adm_access, path, pool));
 
   if (original_props != NULL)
     *original_props = baseprops;
 
   if (propchanges != NULL)
-    SVN_ERR(svn_prop_diffs(propchanges, props,
-                           baseprops, pool));      
+    SVN_ERR(svn_prop_diffs(propchanges, props, baseprops, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2420,159 +2406,100 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
 
 /** Externals **/
 
-/* Parse external definitions of the forms:
- *   [-rN]   URL  TARGET_DIR
- *   [-r N]  URL  TARGET_DIR
+/*
+ * Look for either
  *
- * Return FALSE if there is an error, TRUE otherwise.
- * (We avoid actually creating an error in this function, so that a generic
- *  INVALID_EXTERNALS_DESCRIPTION can be created by the caller.)
- */
-static svn_boolean_t
-parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
-                                  svn_wc_external_item2_t *item,
-                                  apr_pool_t *pool)
-{
-  svn_error_t *err;
-  const char *url;
-
-  if (line_parts->nelts == 2)
-    {
-      /* No "-r REV" given. */
-      url = APR_ARRAY_IDX(line_parts, 0, const char *);
-      item->target_dir = APR_ARRAY_IDX(line_parts, 1, const char *);
-      item->revision.kind = svn_opt_revision_unspecified;
-    }
-  else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
-    {
-      /* We're dealing with one of these two forms:
-       *
-       *    -rN   URL  TARGET_DIR
-       *    -r N  URL  TARGET_DIR
-       * 
-       * Handle either way.
-       */
-      const char *r_part_1 = NULL, *r_part_2 = NULL;
-
-      item->revision.kind = svn_opt_revision_number;
-
-      if (line_parts->nelts == 3)
-        {
-          r_part_1 = APR_ARRAY_IDX(line_parts, 0, const char *);
-          url = APR_ARRAY_IDX(line_parts, 1, const char *);
-          item->target_dir = APR_ARRAY_IDX(line_parts, 2, const char *);
-        }
-      else
-        {
-          r_part_1 = APR_ARRAY_IDX(line_parts, 0, const char *);
-          r_part_2 = APR_ARRAY_IDX(line_parts, 1, const char *);
-          url = APR_ARRAY_IDX(line_parts, 2, const char *);
-          item->target_dir = APR_ARRAY_IDX(line_parts, 3, const char *);
-        }
-
-      if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
-        return FALSE;
-
-      if (! r_part_2)  /* "rN" */
-        {
-          if (strlen(r_part_1) < 3)
-            return FALSE;
-          else
-            item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 2);
-        }
-      else             /* "r N" */
-        {
-          if (strlen(r_part_2) < 1)
-            return FALSE;
-          else
-            item->revision.value.number = SVN_STR_TO_REV(r_part_2);
-        }
-    }
-  else  /* too many items */
-    return FALSE;
-
-  err = svn_opt_parse_path(&item->peg_revision, &item->url, url, pool);
-  if (err)
-    {
-      svn_error_clear(err);
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-/* Parse one of these two forms:
- * 
- *    TARGET_DIR  [-rN]  URL
- *    TARGET_DIR  [-r N]  URL
+ *   -r N
+ *   -rN
+ * in the LINE_PARTS array and update the revision field in ITEM with
+ * the revision if the revision is found.  Set REV_IDX to the index in
+ * LINE_PARTS where the revision specification starts.  Remove from
+ * LINE_PARTS the element(s) that specify the revision.
+ * PARENT_DIRECTORY_DISPLAY and LINE are given to return a nice error
+ * string.
  *
- * Return FALSE if there is an error, TRUE otherwise.
- * (We avoid actually creating an error in this function, so that a generic
- *  INVALID_EXTERNALS_DESCRIPTION can be created by the caller.)
+ * If this function returns successfully, then LINE_PARTS will have
+ * only two elements in it.
  */
-static svn_boolean_t
-parse_external_parts(apr_array_header_t *line_parts,
-                     svn_wc_external_item2_t *item,
-                     apr_pool_t *pool)
+static svn_error_t *
+find_and_remove_externals_revision(int *rev_idx,
+                                   apr_array_header_t *line_parts,
+                                   svn_wc_external_item2_t *item,
+                                   const char *parent_directory_display,
+                                   const char *line)
 {
+  int i;
 
+  for (i = 0; i < 2; ++i)
+    {
+      const char *token = APR_ARRAY_IDX(line_parts, i, const char *);
+
+      if (token[0] == '-' && token[1] == 'r')
+        {
+          const char *digits_ptr;
+          const char *end_ptr;
+          int shift_count;
+          int j;
+
+          *rev_idx = i;
+
+          if (token[2] == '\0')
+            {
+              /* There must be a total of four elements in the line if
+                 -r N is used. */
+              if (line_parts->nelts != 4)
+                goto parse_error;
+
+              shift_count = 2;
+              digits_ptr = APR_ARRAY_IDX(line_parts, i+1, const char *);
+            }
+          else
+            {
+              /* There must be a total of three elements in the line
+                 if -rN is used. */
+              if (line_parts->nelts != 3)
+                goto parse_error;
+
+              shift_count = 1;
+              digits_ptr = token+2;
+            }
+
+          item->revision.kind = svn_opt_revision_number;
+          SVN_ERR(svn_revnum_parse(&item->revision.value.number,
+                                   digits_ptr,
+                                   &end_ptr));
+
+          /* If there's trailing garbage after the digits, then treat
+             the revision as invalid. */
+          if (*end_ptr != '\0')
+            goto parse_error;
+
+          /* Shift any line elements past the revision specification
+             down over the revision specification. */
+          for (j = i; j < line_parts->nelts-shift_count; ++j)
+            APR_ARRAY_IDX(line_parts, j, const char *) =
+              APR_ARRAY_IDX(line_parts, j+shift_count, const char *);
+          for (j = 0; j < shift_count; ++j)
+            apr_array_pop(line_parts);
+
+          /* Found the revision, so leave the function immediately, do
+           * not continue looking for additional revisions. */
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* No revision was found, so there must be exactly two items in the
+     line array. */
   if (line_parts->nelts == 2)
-    {
-      /* No "-r REV" given. */
-      item->target_dir = APR_ARRAY_IDX(line_parts, 0, const char *);
-      item->url = APR_ARRAY_IDX(line_parts, 1, const char *);
-      item->revision.kind = svn_opt_revision_head;
-    }
-  else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
-    {
-      /* We're dealing with one of these two forms:
-       *
-       *    TARGET_DIR  -rN  URL
-       *    TARGET_DIR  -r N  URL
-       * 
-       * Handle either way.
-       */
-      const char *r_part_1 = NULL, *r_part_2 = NULL;
+    return SVN_NO_ERROR;
 
-      item->target_dir = APR_ARRAY_IDX(line_parts, 0, const char *);
-      item->revision.kind = svn_opt_revision_number;
-
-      if (line_parts->nelts == 3)
-        {
-          r_part_1 = APR_ARRAY_IDX(line_parts, 1, const char *);
-          item->url = APR_ARRAY_IDX(line_parts, 2, const char *);
-        }
-      else
-        {
-          r_part_1 = APR_ARRAY_IDX(line_parts, 1, const char *);
-          r_part_2 = APR_ARRAY_IDX(line_parts, 2, const char *);
-          item->url = APR_ARRAY_IDX(line_parts, 3, const char *);
-        }
-
-      if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
-        return FALSE;
-
-      if (! r_part_2)  /* "-rN" */
-        {
-          if (strlen(r_part_1) < 3)
-            return FALSE;
-          else
-            item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 2);
-        }
-      else             /* "-r N" */
-        {
-          if (strlen(r_part_2) < 1)
-            return FALSE;
-          else
-            item->revision.value.number = SVN_STR_TO_REV(r_part_2);
-        }
-    }
-  else  /* too many items */
-    return FALSE;
-
-  item->peg_revision = item->revision;
-
-  return TRUE;
+ parse_error:
+  return svn_error_createf
+    (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+     _("Error parsing %s property on '%s': '%s'"),
+     SVN_PROP_EXTERNALS,
+     parent_directory_display,
+     line);
 }
 
 svn_error_t *
@@ -2585,7 +2512,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
   int i;
   const char *parent_directory_display = svn_path_is_url(parent_directory) ?
     parent_directory : svn_path_local_style(parent_directory, pool);
-  
+
   if (externals_p)
     *externals_p = apr_array_make(pool, 1, sizeof(svn_wc_external_item2_t *));
 
@@ -2594,6 +2521,12 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       const char *line = APR_ARRAY_IDX(lines, i, const char *);
       apr_array_header_t *line_parts;
       svn_wc_external_item2_t *item;
+      const char *token0;
+      const char *token1;
+
+      /* Index into line_parts where the revision specification
+         started. */
+      int rev_idx = -1;
 
       if ((! line) || (line[0] == '#'))
         continue;
@@ -2605,40 +2538,57 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       SVN_ERR(svn_wc_external_item_create
               ((const svn_wc_external_item2_t **) &item, pool));
       item->revision.kind = svn_opt_revision_unspecified;
+      item->peg_revision.kind = svn_opt_revision_unspecified;
 
-      if (line_parts->nelts < 2)
-        goto parse_error;
+      /*
+       * There are six different formats of externals:
+       *
+       * 1) DIR URL
+       * 2) DIR -r N URL
+       * 3) DIR -rN  URL
+       * 4) URL DIR
+       * 5) -r N URL DIR
+       * 6) -rN URL DIR
+       *
+       * The last three allow peg revisions in the URL.
+       */
+      if (line_parts->nelts < 2 || line_parts->nelts > 4)
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           _("Error parsing %s property on '%s': '%s'"),
+               SVN_PROP_EXTERNALS,
+           parent_directory_display,
+           line);
 
-      else 
+      /* To make it easy to check for the forms, find and remove -r N
+         or -rN from the line item array.  If it is found, rev_idx
+         contains the index into line_parts where '-r' was found and
+         set item->revision to the parsed revision. */
+      SVN_ERR(find_and_remove_externals_revision(&rev_idx, line_parts, item,
+                                                 parent_directory_display,
+                                                 line));
+
+      token0 = APR_ARRAY_IDX(line_parts, 0, const char *);
+      token1 = APR_ARRAY_IDX(line_parts, 1, const char *);
+
+      /* If -r is at the beginning of the line or the first token is
+         an absolute URL, then the URL supports peg revisions. */
+      if (0 == rev_idx || svn_path_is_url(token0))
         {
-          const char *token = APR_ARRAY_IDX(line_parts, 0, const char *);
-
-          if ( (token[0] == '-' && token[1] == 'r') || svn_path_is_url(token) )
-            {
-              if (! parse_external_parts_with_peg_rev(line_parts, item, pool) )
-                goto parse_error;
-
-              SVN_ERR(svn_opt_resolve_revisions(&item->peg_revision,
-                                                &item->revision, TRUE, FALSE,
-                                                pool));
-            }
-          else
-            {
-              if (! parse_external_parts(line_parts, item, pool) )
-                goto parse_error;
-            }
+          SVN_ERR(svn_opt_parse_path(&item->peg_revision, &item->url,
+                                     token0, pool));
+          item->target_dir = token1;
+        }
+      else
+        {
+          item->target_dir = token0;
+          item->url = token1;
+          item->peg_revision = item->revision;
         }
 
-      if (0)
-        {
-        parse_error:
-          return svn_error_createf
-            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
-             _("Error parsing %s property on '%s': '%s'"),
-             SVN_PROP_EXTERNALS,
-             parent_directory_display,
-             line);
-        }
+      SVN_ERR(svn_opt_resolve_revisions(&item->peg_revision,
+                                        &item->revision, TRUE, FALSE,
+                                        pool));
 
       item->target_dir = svn_path_canonicalize
         (svn_path_internal_style(item->target_dir, pool), pool);
@@ -2653,9 +2603,6 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
              parent_directory_display);
       }
 
-      SVN_ERR(svn_opt_parse_path(&item->peg_revision, &item->url, item->url,
-                                 pool));
-    
       item->url = svn_path_canonicalize(item->url, pool);
 
       if (externals_p)

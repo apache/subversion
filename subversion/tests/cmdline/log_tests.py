@@ -2,9 +2,9 @@
 #
 #  log_tests.py:  testing "svn log"
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
@@ -93,7 +93,7 @@ def guarantee_repos_and_wc(sbox):
   # is done for that.
 
   # Revision 2: edit iota
-  msg=""" Log message for revision 2 
+  msg=""" Log message for revision 2
   but with multiple lines
   to test the code"""
   svntest.main.file_write(msg_file, msg)
@@ -110,7 +110,7 @@ def guarantee_repos_and_wc(sbox):
   svntest.main.run_svn(None, 'up')
 
   # Revision 4: edit iota again, add A/C/epsilon
-  msg=""" Log message for revision 4 
+  msg=""" Log message for revision 4
   but with multiple lines
   to test the code"""
   svntest.main.file_write(msg_file, msg)
@@ -127,11 +127,11 @@ def guarantee_repos_and_wc(sbox):
   svntest.main.run_svn(None, 'up')
 
   # Revision 6: prop change on A/B, edit A/D/H/psi
-  msg=""" Log message for revision 6 
+  msg=""" Log message for revision 6
   but with multiple lines
   to test the code"""
   svntest.main.file_write(msg_file, msg)
-  svntest.main.run_svn(None, 'ps', 'blue', 'azul', B_path)  
+  svntest.main.run_svn(None, 'ps', 'blue', 'azul', B_path)
   svntest.main.file_append(psi_path, "6")
   svntest.main.run_svn(None, 'ci', '-F', msg_file)
   svntest.main.run_svn(None, 'up')
@@ -143,7 +143,7 @@ def guarantee_repos_and_wc(sbox):
   svntest.main.run_svn(None, 'up')
 
   # Revision 8: edit iota yet again, re-add A/D/G/rho
-  msg=""" Log message for revision 8 
+  msg=""" Log message for revision 8
   but with multiple lines
   to test the code"""
   svntest.main.file_write(msg_file, msg)
@@ -215,30 +215,30 @@ def parse_log_output(log_lines):
      """
 
   # Here's some log output to look at while writing this function:
-  
+
   # ------------------------------------------------------------------------
   # r5 | kfogel | Tue 6 Nov 2001 17:18:19 | 1 line
-  # 
+  #
   # Log message for revision 5.
   # ------------------------------------------------------------------------
   # r4 | kfogel | Tue 6 Nov 2001 17:18:18 | 3 lines
-  # 
+  #
   # Log message for revision 4
   # but with multiple lines
   # to test the code.
   # ------------------------------------------------------------------------
   # r3 | kfogel | Tue 6 Nov 2001 17:18:17 | 1 line
-  # 
+  #
   # Log message for revision 3.
   # ------------------------------------------------------------------------
   # r2 | kfogel | Tue 6 Nov 2001 17:18:16 | 3 lines
-  # 
-  # Log message for revision 2 
+  #
+  # Log message for revision 2
   # but with multiple lines
   # to test the code.
   # ------------------------------------------------------------------------
   # r1 | foo | Tue 6 Nov 2001 15:27:57 | 1 line
-  # 
+  #
   # Log message for revision 1.
   # ------------------------------------------------------------------------
 
@@ -391,7 +391,7 @@ def check_log_chain(chain, revlist, path_counts=[]):
     # tree tweaked by the log tests have 3-line log messages.
     if (saw_rev % 2 == 0 and log_item['lines'] != 3):
       raise SVNUnexpectedLogs('Malformed log line counts', chain, 'lines')
-       
+
     # Check that the log message looks right:
     pattern = 'Log message for revision ' + `saw_rev`
     msg_re = re.compile(pattern)
@@ -430,41 +430,6 @@ def plain_log(sbox):
 
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
-
-
-#----------------------------------------------------------------------
-def versioned_log_message(sbox):
-  "'svn commit -F foo' when foo is a versioned file"
-
-  sbox.build()
-
-  os.chdir(sbox.wc_dir)
-
-  iota_path = os.path.join('iota')
-  mu_path = os.path.join('A', 'mu')
-  log_path = os.path.join('A', 'D', 'H', 'omega')
-
-  svntest.main.file_append(iota_path, "2")
-
-  # try to check in a change using a versioned file as your log entry.
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                     'ci', '-F', log_path)
-
-  # force it.  should not produce any errors.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-F', log_path, '--force-log')
-
-  svntest.main.file_append(mu_path, "2")
-
-  # try the same thing, but specifying the file to commit explicitly.
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                     'ci', '-F', log_path, mu_path)
-
-  # force it...  should succeed.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci',
-                                     '-F', log_path,
-                                     '--force-log', mu_path)
 
 
 #----------------------------------------------------------------------
@@ -512,7 +477,7 @@ def log_to_revision_zero(sbox):
   sbox.build()
 
   # This used to segfault the server.
-  
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'log', '-v',
                                      '-r', '1:0', sbox.wc_dir)
@@ -558,7 +523,7 @@ def url_missing_in_head(sbox):
   guarantee_repos_and_wc(sbox)
 
   my_url = sbox.repo_url + "/A/B/E/alpha" + "@8"
-  
+
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'log', my_url)
   check_log_chain(parse_log_output(output), [3, 1])
@@ -575,16 +540,16 @@ def log_through_copyfrom_history(sbox):
   mu2_path = os.path.join(wc_dir, 'A', 'mu2')
   mu_URL = sbox.repo_url + '/A/mu'
   mu2_URL = sbox.repo_url + '/A/mu2'
-   
-  msg2=""" Log message for revision 2 
+
+  msg2=""" Log message for revision 2
   but with multiple lines
   to test the code"""
-  
+
   msg4=""" Log message for revision 4
   but with multiple lines
   to test the code"""
 
-  msg6=""" Log message for revision 6 
+  msg6=""" Log message for revision 6
   but with multiple lines
   to test the code"""
 
@@ -625,25 +590,25 @@ def log_through_copyfrom_history(sbox):
   # log works!
   peg_mu2_path = mu2_path + "@3"
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', '-r', '3', 
+                                                   'log', '-r', '3',
                                                    peg_mu2_path)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [3])
 
   peg_mu2_URL = mu2_URL + "@3"
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', '-r', '3', 
+                                                   'log', '-r', '3',
                                                    peg_mu2_URL)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [3])
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', '-r', '2', 
+                                                   'log', '-r', '2',
                                                    mu2_path)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2])
 
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', '-r', '2', 
+                                                   'log', '-r', '2',
                                                    mu2_URL)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2])
@@ -694,7 +659,7 @@ PROPS-END
   URL = sbox.repo_url
 
   # run log
-  output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'log',
                                                       URL)
 
   # Verify the output contains either the expected fuzzy escape
@@ -742,7 +707,7 @@ def log_xml_empty_date(sbox):
   output, errput = svntest.actions.run_and_verify_svn(None, None, [],
                                                       'log', '--xml', '-r1',
                                                       sbox.wc_dir)
-  for line in output:  
+  for line in output:
     if date_re.search(line):
       raise svntest.Failure("log contains date element when svn:date is empty")
 
@@ -787,7 +752,7 @@ def log_limit(sbox):
   svntest.actions.run_and_verify_svn(None, None, must_be_positive,
                                      'log', '--limit', '0', '--revision', '1',
                                      sbox.repo_url, 'A/B')
-                                                
+
   svntest.actions.run_and_verify_svn(None, None, must_be_positive,
                                      'log', '--limit', '-1', '--revision', '1',
                                      sbox.repo_url, 'A/B')
@@ -833,7 +798,7 @@ r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/death-ray.c
    M /trunk/frobnicator/frapnalyzer.c
- 
+
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
 r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
@@ -853,7 +818,7 @@ Fix frapnalyzer bug in frobnicator.
 ------------------------------------------------------------------------''',
   '''------------------------------------------------------------------------
 r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
- 
+
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
 r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
@@ -920,7 +885,7 @@ def check_merge_results(log_chain, expected_merges):
 
       if actual != expected:
         raise SVNUnexpectedLogs(("Merging revisions in rev %d not correct; " +
-                                 "expecting %s, found %s") % 
+                                 "expecting %s, found %s") %
                                 (rev, str(expected), str(actual)), log_chain)
     except IndexError:
       raise SVNUnexpectedLogs("Merged revision '%d' missing" % rev, log_chain)
@@ -1033,7 +998,7 @@ def log_single_change(sbox):
   guarantee_repos_and_wc(sbox)
   repo_url = sbox.repo_url
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
                                                    '-c', 4, repo_url)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [4])
@@ -1070,7 +1035,6 @@ def log_changes_list(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               plain_log,
-              versioned_log_message,
               log_with_empty_repos,
               log_where_nothing_changed,
               log_to_revision_zero,

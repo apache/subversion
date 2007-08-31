@@ -50,7 +50,7 @@ sub Main
 {
     $g_AutoRun="y" if ($ARGV[0] eq "-a");
     my $Input='';
-    
+
     if ($g_AutoRun)
       {
         system ("perl set_version.pl -a");
@@ -70,14 +70,14 @@ sub Main
           "  e) Make everything\n\n",
           "  q) quit\n\n",
           "  Please, select one item [v/d/s/e/q]: ";
-        
+
         chomp ($Input = <STDIN>);
         exit if ($Input eq "q");
 
         $g_MakeVersion='y' if ($Input eq "v" || $Input eq "e");
         $g_MakeDocs='y' if ($Input eq "d" || $Input eq "e");
         $g_MakeSetup='y' if ($Input eq "s" || $Input eq "e");
-        
+
         if (! $g_MakeVersion && ! $g_MakeDocs && ! $g_MakeSetup)
           {
             print "\nUh, you did not give me a v,d,s,e or q, please try again\n";
@@ -117,12 +117,12 @@ sub MakeSetup
 sub PathISExe
 {
     my $PathISExe = &cmn_ValuePathfile('path_is');
-  
+
     if ( ! -e "$PathISExe/ISCC.exe")
       {
         die "ERROR: Could not find path to ISCC.exe in svn_dynamics.iss\n";
       }
-    
+
     $PathISExe = "$PathISExe\\ISCC.exe";
     return $PathISExe;
 }

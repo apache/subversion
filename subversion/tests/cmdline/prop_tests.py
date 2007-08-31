@@ -2,9 +2,9 @@
 #
 #  prop_tests.py:  testing versioned properties
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -49,11 +49,11 @@ def make_local_props(sbox):
   svntest.main.run_svn(None, 'propset', 'blue', 'azul',
                        os.path.join(wc_dir, 'A', 'mu'))
   svntest.main.run_svn(None, 'propset', 'green', 'verde',
-                       os.path.join(wc_dir, 'A', 'mu'))  
+                       os.path.join(wc_dir, 'A', 'mu'))
   svntest.main.run_svn(None, 'propset', 'editme', 'the foo fighters',
-                       os.path.join(wc_dir, 'A', 'mu'))  
+                       os.path.join(wc_dir, 'A', 'mu'))
   svntest.main.run_svn(None, 'propset', 'red', 'rojo',
-                       os.path.join(wc_dir, 'A', 'D', 'G'))  
+                       os.path.join(wc_dir, 'A', 'D', 'G'))
   svntest.main.run_svn(None, 'propset', 'yellow', 'amarillo',
                        os.path.join(wc_dir, 'A', 'D', 'G'))
 
@@ -66,7 +66,7 @@ def make_local_props(sbox):
 
   # Remove one property
   svntest.main.run_svn(None, 'propdel', 'yellow',
-                       os.path.join(wc_dir, 'A', 'D', 'G'))  
+                       os.path.join(wc_dir, 'A', 'D', 'G'))
 
   svntest.main.use_editor('foo_to_bar')
   # Edit one property
@@ -81,7 +81,7 @@ def make_local_props(sbox):
 
   # Read the real disk tree.  Notice we are passing the (normally
   # disabled) "load props" flag to this routine.  This will run 'svn
-  # proplist' on every item in the working copy!  
+  # proplist' on every item in the working copy!
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
 
   # Compare actual vs. expected disk trees.
@@ -94,8 +94,8 @@ def make_local_props(sbox):
                                      [],
                                      'propedit', 'editme',
                                      os.path.join(wc_dir, 'A', 'mu'))
-                                     
-                                     
+
+
 
 #----------------------------------------------------------------------
 
@@ -107,8 +107,8 @@ def commit_props(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a property to a file and a directory
-  mu_path = os.path.join(wc_dir, 'A', 'mu') 
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H') 
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   svntest.main.run_svn(None, 'propset', 'blue', 'azul', mu_path)
   svntest.main.run_svn(None, 'propset', 'red', 'rojo', H_path)
 
@@ -130,8 +130,8 @@ def commit_props(sbox):
                                         None, None,
                                         None, None,
                                         wc_dir)
-  
-  
+
+
 
 #----------------------------------------------------------------------
 
@@ -147,8 +147,8 @@ def update_props(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Add a property to a file and a directory
-  mu_path = os.path.join(wc_dir, 'A', 'mu') 
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H') 
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   svntest.main.run_svn(None, 'propset', 'blue', 'azul', mu_path)
   svntest.main.run_svn(None, 'propset', 'red', 'rojo', H_path)
 
@@ -170,15 +170,15 @@ def update_props(sbox):
 
   # Overwrite mu_path and H_path to refer to the backup copies from
   # here on out.
-  mu_path = os.path.join(wc_backup, 'A', 'mu') 
-  H_path = os.path.join(wc_backup, 'A', 'D', 'H') 
-  
+  mu_path = os.path.join(wc_backup, 'A', 'mu')
+  H_path = os.path.join(wc_backup, 'A', 'D', 'H')
+
   # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
     'A/mu' : Item(status=' U'),
     'A/D/H' : Item(status=' U'),
     })
-  
+
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', props={'blue' : 'azul'})
@@ -204,9 +204,9 @@ def downdate_props(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota') 
+  iota_path = os.path.join(wc_dir, 'iota')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  
+
   # Add a property to a file
   svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', iota_path)
 
@@ -243,16 +243,16 @@ def downdate_props(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         wc_dir)
-  
+
   # Create expected output tree for an update.
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status=' U'),
     'A/mu' : Item(status='U '),
     })
-  
+
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state
-  
+
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
 
@@ -274,7 +274,7 @@ def remove_props(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a property to a file
-  iota_path = os.path.join(wc_dir, 'iota') 
+  iota_path = os.path.join(wc_dir, 'iota')
   svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', iota_path)
 
   # Commit the file
@@ -308,7 +308,7 @@ def update_conflict_props(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a property to a file and a directory
-  mu_path = os.path.join(wc_dir, 'A', 'mu') 
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', mu_path)
   A_path = os.path.join(wc_dir, 'A')
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', A_path)
@@ -365,7 +365,7 @@ def update_conflict_props(sbox):
 #----------------------------------------------------------------------
 def commit_conflict_dirprops(sbox):
   "commit with conflicting dirprops"
-  
+
   # Issue #2608: failure to see conflicting dirprops on root of
   # repository.
 
@@ -433,7 +433,7 @@ def commit_replacement_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now add a property to lambda.  Iota still doesn't have any.
-  svntest.main.run_svn(None, 'propset', 'capacitor', 'flux', lambda_path)  
+  svntest.main.run_svn(None, 'propset', 'capacitor', 'flux', lambda_path)
 
   # Commit, with careful output checking.  We're actually going to
   # scan the working copy for props after the commit.
@@ -489,7 +489,7 @@ def revert_replacement_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now add a property to lambda.  Iota still doesn't have any.
-  svntest.main.run_svn(None, 'propset', 'capacitor', 'flux', lambda_path)  
+  svntest.main.run_svn(None, 'propset', 'capacitor', 'flux', lambda_path)
 
   # Now revert both files.
   svntest.main.run_svn(None, 'revert', iota_path, lambda_path)
@@ -527,7 +527,7 @@ def inappropriate_props(sbox):
   # Bootstrap
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   A_path = os.path.join(wc_dir, 'A')
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   iota_path = os.path.join(wc_dir, 'iota')
@@ -565,17 +565,17 @@ def inappropriate_props(sbox):
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.SVNAnyOutput, 'propset',
                                      'svn:author', 'socrates', iota_path)
-  
+
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.SVNAnyOutput, 'propset',
                                      'svn:log', 'log message', iota_path)
- 
+
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.SVNAnyOutput, 'propset',
-                                     'svn:date', 
+                                     'svn:date',
 				     'Tue Jan 19 04:14:07 2038',
 				     iota_path)
-  
+
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.SVNAnyOutput, 'propset',
                                      'svn:original-date',
@@ -592,76 +592,76 @@ def inappropriate_props(sbox):
   expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status=' M')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-# Issue #920. Don't allow setting of svn:eol-style on binary files or files 
+# Issue #920. Don't allow setting of svn:eol-style on binary files or files
 # with inconsistent eol types.
-  
+
   path = os.path.join(wc_dir, 'binary')
   svntest.main.file_append(path, "binary")
   svntest.main.run_svn(None, 'add', path)
-  
-  svntest.main.run_svn(None, 'propset', 'svn:mime-type', 
+
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.SVNAnyOutput,
                                      'propset', 'svn:eol-style',
                                      'CRLF', path)
-   
+
   path = os.path.join(wc_dir, 'multi-eol')
   svntest.main.file_append(path, "line1\rline2\n")
   svntest.main.run_svn(None, 'add', path)
-  
+
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.SVNAnyOutput,
                                      'propset', 'svn:eol-style',
                                      'LF', path)
-    
+
   path = os.path.join(wc_dir, 'backwards-eol')
   svntest.main.file_append(path, "line1\n\r")
   svntest.main.run_svn(None, 'add', path)
-  
+
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.SVNAnyOutput,
                                      'propset', 'svn:eol-style',
                                      'native', path)
-    
+
   path = os.path.join(wc_dir, 'incomplete-eol')
   svntest.main.file_append(path, "line1\r\n\r")
   svntest.main.run_svn(None, 'add', path)
-  
+
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.SVNAnyOutput,
                                      'propset', 'svn:eol-style',
                                      'CR', path)
-    
-# Issue #2065. Do allow setting of svn:eol-style on binary files or files 
+
+# Issue #2065. Do allow setting of svn:eol-style on binary files or files
 # with inconsistent eol types if --force is passed.
-  
+
   path = os.path.join(wc_dir, 'binary')
   svntest.main.file_append(path, "binary")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'CRLF',
                                      path)
-   
+
   path = os.path.join(wc_dir, 'multi-eol')
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'LF',
                                      path)
-    
+
   path = os.path.join(wc_dir, 'backwards-eol')
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'native',
                                      path)
-    
+
   path = os.path.join(wc_dir, 'incomplete-eol')
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'CR',
                                      path)
-   
+
 
 
 #----------------------------------------------------------------------
@@ -789,7 +789,7 @@ def prop_value_conversions(sbox):
   # Bootstrap
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   A_path = os.path.join(wc_dir, 'A')
   B_path = os.path.join(wc_dir, 'A', 'B')
   iota_path = os.path.join(wc_dir, 'iota')
@@ -909,7 +909,7 @@ def binary_props(sbox):
   # Make a backup copy of the working copy
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
-  
+
   # Some path convenience vars.
   A_path = os.path.join(wc_dir, 'A')
   B_path = os.path.join(wc_dir, 'A', 'B')
@@ -927,7 +927,7 @@ def binary_props(sbox):
   prop_ff   = "This property has a form\014feed."
   prop_xml  = "This property has an <xml> tag."
   prop_binx = "This property has an <xml> tag and a zer\000 byte."
-  
+
   # Set some binary properties.
   propval_path = os.path.join(wc_dir, 'propval.tmp')
   propval_file = open(propval_path, 'wb')
@@ -938,7 +938,7 @@ def binary_props(sbox):
     valf.write(value)
     valf.flush()
     svntest.main.run_svn(None, 'propset', '-F', valp, name, path)
-      
+
   set_prop('prop_zb', prop_zb, B_path)
   set_prop('prop_ff', prop_ff, iota_path)
   set_prop('prop_xml', prop_xml, lambda_path)
@@ -956,7 +956,7 @@ def binary_props(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A', 'A/B', 'iota', 'A/B/lambda', 'A/mu',
                         wc_rev=2, status='  ')
-  
+
   # Commit the propsets.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -965,7 +965,7 @@ def binary_props(sbox):
                                         None, None,
                                         None, None,
                                         wc_dir)
-  
+
   # Create expected output, disk, and status trees for an update of
   # the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -984,7 +984,7 @@ def binary_props(sbox):
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None, 0)
-    
+
   # Now, check those properties.
   svntest.actions.check_prop('prop_zb', B_path_bak, [prop_zb])
   svntest.actions.check_prop('prop_ff', iota_path_bak, [prop_ff])
@@ -1039,19 +1039,19 @@ def recursive_base_wc_ops(sbox):
 
   # Test recursive proplist
   output, errput = svntest.main.run_svn(None, 'proplist', '-R', '-v', wc_dir,
-                                        '-rBASE') 
+                                        '-rBASE')
   verify_output([ 'old-del', 'old-keep', 'Properties on ', 'Properties on ' ],
                 output, errput)
-  
+
   output, errput = svntest.main.run_svn(None, 'proplist', '-R', '-v', wc_dir)
   verify_output([ 'new-add', 'new-keep', 'Properties on ', 'Properties on ' ],
                 output, errput)
-  
+
   # Test recursive propget
   output, errput = svntest.main.run_svn(None, 'propget', '-R', 'p', wc_dir,
-                                        '-rBASE') 
+                                        '-rBASE')
   verify_output([ 'old-del', 'old-keep' ], output, errput)
-  
+
   output, errput = svntest.main.run_svn(None, 'propget', '-R', 'p', wc_dir)
   verify_output([ 'new-add', 'new-keep' ], output, errput)
 
@@ -1064,7 +1064,7 @@ def recursive_base_wc_ops(sbox):
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '-R', 'svn:keywords', 'Date',
                                      os.path.join(wc_dir, 'A', 'B'))
   expected_status.tweak('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta', status=' M')
@@ -1159,11 +1159,11 @@ def removal_schedule_added_props(sbox):
   file_add_output = ["A         " + newfile_path + "\n"]
   propset_output = ["property 'newprop' set on '" + newfile_path + "'\n"]
   file_rm_output = ["D         " + newfile_path + "\n"]
-  propls_output = [ 
+  propls_output = [
      "Properties on '" + newfile_path + "':\n",
      "  newprop : newvalue\n",
                   ]
-   
+
   # create new fs file
   open(newfile_path, 'w').close()
   # Add it and set a property
@@ -1278,7 +1278,7 @@ def depthy_wc_proplist(sbox):
   A_path = os.path.join(wc_dir, 'A')
   iota_path = os.path.join(wc_dir, 'iota')
   mu_path = os.path.join(A_path, 'mu')
-  
+
   # Set up properties.
   svntest.main.run_svn(None, 'propset', 'p', 'prop1', wc_dir)
   svntest.main.run_svn(None, 'propset', 'p', 'prop2', iota_path)
@@ -1287,28 +1287,28 @@ def depthy_wc_proplist(sbox):
 
   # Commit.
   svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
-  
+
   # Test depth-empty proplist.
   output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'empty',
-                                        '-v', wc_dir) 
+                                        '-v', wc_dir)
   verify_output([ 'prop1', 'Properties on ' ],
                 output, errput)
 
   # Test depth-files proplist.
   output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'files',
-                                        '-v', wc_dir) 
+                                        '-v', wc_dir)
   verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
                 output, errput)
 
   # Test depth-immediates proplist.
   output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
-                                        'immediates', '-v', wc_dir) 
+                                        'immediates', '-v', wc_dir)
   verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
                 output, errput)
 
   # Test depth-infinity proplist.
   output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
-                                        'infinity', '-v', wc_dir) 
+                                        'infinity', '-v', wc_dir)
   verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
                 output, errput)
 
@@ -1324,7 +1324,7 @@ def depthy_url_proplist(sbox):
   A_path = os.path.join(wc_dir, 'A')
   iota_path = os.path.join(wc_dir, 'iota')
   mu_path = os.path.join(A_path, 'mu')
-  
+
   # Set up properties.
   svntest.main.run_svn(None, 'propset', 'p', 'prop1', wc_dir)
   svntest.main.run_svn(None, 'propset', 'p', 'prop2', iota_path)
@@ -1333,28 +1333,28 @@ def depthy_url_proplist(sbox):
 
   # Test depth-empty proplist.
   output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'empty',
-                                        '-v', repo_url) 
+                                        '-v', repo_url)
   verify_output([ 'prop1', 'Properties on ' ],
                 output, errput)
 
   # Test depth-files proplist.
   output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'files',
-                                        '-v', repo_url) 
+                                        '-v', repo_url)
   verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
                 output, errput)
 
   # Test depth-immediates proplist.
   output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
-                                        'immediates', '-v', repo_url) 
+                                        'immediates', '-v', repo_url)
   verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
                 output, errput)
 
   # Test depth-infinity proplist.
   output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
-                                        'infinity', '-v', repo_url) 
+                                        'infinity', '-v', repo_url)
   verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
                 output, errput)
-  
+
 ########################################################################
 # Run the tests
 

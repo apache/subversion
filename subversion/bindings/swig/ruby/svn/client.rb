@@ -622,12 +622,11 @@ module Svn
         Client.get_config(self)
       end
 
-      def merge_info(path_or_url, revision=nil)
+      def mergeinfo(path_or_url, revision=nil)
         info = Client.get_mergeinfo(path_or_url, revision, self)
         return nil if info.nil?
         Core::MergeInfo.new(info)
       end
-      alias_method :mergeinfo, :merge_info
 
       def add_to_change_list(change_list_name, *paths)
         paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)

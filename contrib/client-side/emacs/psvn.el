@@ -1,7 +1,7 @@
 ;;; psvn.el --- Subversion interface for emacs
 ;; Copyright (C) 2002-2007 by Stefan Reichoer
 
-;; Author: Stefan Reichoer, <stefan@xsteve.at>
+;; Author: Stefan Reichoer <stefan@xsteve.at>
 ;; $Id$
 
 ;; psvn.el is free software; you can redistribute it and/or modify
@@ -417,7 +417,7 @@ See `svn-status-message' for the meaning of values for that variable.")
 ;;                          ("doc1" . "~/docs/doc1")))
 
 (defvar svn-status-buffer-name "*svn-status*" "Name for the svn status buffer")
-(defvar svn-process-buffer-name "*svn-process*" "Name for the svn process buffer")
+(defvar svn-process-buffer-name " *svn-process*" "Name for the svn process buffer")
 (defvar svn-log-edit-buffer-name "*svn-log-edit*" "Name for the svn log-edit buffer")
 
 (defcustom svn-status-use-header-line
@@ -5913,7 +5913,7 @@ working directory."
 (defun svn-prepare-bug-report ()
   "Create the buffer *psvn-bug-report*. This buffer can be useful to debug problems with psvn.el"
   (interactive)
-  (let* ((last-output-buffer-name (or svn-status-last-output-buffer-name "*svn-process*"))
+  (let* ((last-output-buffer-name (or svn-status-last-output-buffer-name svn-process-buffer-name))
          (last-svn-cmd-output (with-current-buffer last-output-buffer-name
                                 (buffer-substring-no-properties (point-min) (point-max)))))
     (switch-to-buffer "*psvn-bug-report*")

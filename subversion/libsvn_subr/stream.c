@@ -128,7 +128,7 @@ svn_stream_printf(svn_stream_t *stream,
   va_start(ap, fmt);
   message = apr_pvsprintf(pool, fmt, ap);
   va_end(ap);
-  
+
   len = strlen(message);
   return svn_stream_write(stream, message, &len);
 }
@@ -151,7 +151,7 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
 
   SVN_ERR(svn_utf_cstring_from_utf8_ex2(&translated, message, encoding,
                                         pool));
-  
+
   len = strlen(translated);
 
   return svn_stream_write(stream, translated, &len);
@@ -247,14 +247,14 @@ svn_stream_contents_same(svn_boolean_t *same,
   char *buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t bytes_read1 = SVN__STREAM_CHUNK_SIZE;
   apr_size_t bytes_read2 = SVN__STREAM_CHUNK_SIZE;
-  
+
   *same = TRUE;  /* assume TRUE, until disproved below */
   while (bytes_read1 == SVN__STREAM_CHUNK_SIZE
          && bytes_read2 == SVN__STREAM_CHUNK_SIZE)
     {
       SVN_ERR(svn_stream_read(stream1, buf1, &bytes_read1));
       SVN_ERR(svn_stream_read(stream2, buf2, &bytes_read2));
-      
+
       if ((bytes_read1 != bytes_read2)
           || (memcmp(buf1, buf2, bytes_read1)))
         {
@@ -428,7 +428,7 @@ static voidpf
 zalloc(voidpf opaque, uInt items, uInt size)
 {
   apr_pool_t *pool = opaque;
-  
+
   return apr_palloc(pool, items * size);
 }
 
@@ -450,45 +450,45 @@ zerr_to_svn_error(int zerr, const char *function, z_stream *stream)
 
   if (zerr == Z_OK)
     return SVN_NO_ERROR;
-  
+
   switch (zerr)
     {
     case Z_STREAM_ERROR:
       status = SVN_ERR_STREAM_MALFORMED_DATA;
       message = "stream error";
       break;
-      
+
     case Z_MEM_ERROR:
       status = APR_ENOMEM;
       message = "out of memory";
       break;
-      
+
     case Z_BUF_ERROR:
       status = APR_ENOMEM;
       message = "buffer error";
       break;
-      
+
     case Z_VERSION_ERROR:
       status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
       message = "version error";
       break;
-      
+
     case Z_DATA_ERROR:
       status = SVN_ERR_STREAM_MALFORMED_DATA;
       message = "corrupted data";
       break;
-      
+
     default:
       status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
       message = "error";
       break;
     }
-  
+
   if (stream->msg != NULL)
     return svn_error_createf(status, NULL, "zlib (%s): %s: %s", function,
                              message, stream->msg);
   else
-    return svn_error_createf(status, NULL, "zlib (%s): %s", function, 
+    return svn_error_createf(status, NULL, "zlib (%s): %s", function,
                              message);
 }
 
@@ -496,7 +496,7 @@ zerr_to_svn_error(int zerr, const char *function, z_stream *stream)
 static svn_error_t *
 read_helper_gz(svn_read_fn_t read_fn,
                void *baton,
-               char *buffer, 
+               char *buffer,
                uInt *len, int *zflush)
 {
   uInt orig_len = *len;
@@ -504,17 +504,17 @@ read_helper_gz(svn_read_fn_t read_fn,
   /* There's no reason this value should grow bigger than the range of
      uInt, but Subversion's API requires apr_size_t. */
   apr_size_t apr_len = (apr_size_t) *len;
-  
+
   SVN_ERR((*read_fn)(baton, buffer, &apr_len));
-  
+
   /* Type cast back to uInt type that zlib uses.  On LP64 platforms
      apr_size_t will be bigger than uInt. */
   *len = (uInt) apr_len;
-  
+
   /* I wanted to use Z_FINISH here, but we need to know our buffer is
      big enough */
-  *zflush = (*len) < orig_len ? Z_SYNC_FLUSH : Z_SYNC_FLUSH; 
-  
+  *zflush = (*len) < orig_len ? Z_SYNC_FLUSH : Z_SYNC_FLUSH;
+
   return SVN_NO_ERROR;
 }
 
@@ -534,27 +534,27 @@ read_handler_gz(void *baton, char *buffer, apr_size_t *len)
       btn->read_buffer = apr_palloc(btn->pool, ZBUFFER_SIZE);
       btn->in->next_in = btn->read_buffer;
       btn->in->avail_in = ZBUFFER_SIZE;
-      
+
       SVN_ERR(read_helper_gz(btn->read, btn->subbaton, btn->read_buffer,
                              &btn->in->avail_in, &btn->read_flush));
-                               
+
       zerr = inflateInit(btn->in);
       SVN_ERR(zerr_to_svn_error(zerr, "inflateInit", btn->in));
     }
-  
+
   btn->in->next_out = (Bytef *) buffer;
   btn->in->avail_out = *len;
-  
-  while (btn->in->avail_out > 0) 
+
+  while (btn->in->avail_out > 0)
     {
       if (btn->in->avail_in <= 0)
         {
           btn->in->avail_in = ZBUFFER_SIZE;
           btn->in->next_in = btn->read_buffer;
-          SVN_ERR(read_helper_gz(btn->read, btn->subbaton, btn->read_buffer, 
+          SVN_ERR(read_helper_gz(btn->read, btn->subbaton, btn->read_buffer,
                                  &btn->in->avail_in, &btn->read_flush));
         }
-      
+
       zerr = inflate(btn->in, btn->read_flush);
       if (zerr == Z_STREAM_END)
         break;
@@ -582,32 +582,32 @@ write_handler_gz(void *baton, const char *buffer, apr_size_t *len)
       btn->out->zalloc = zalloc;
       btn->out->zfree = zfree;
       btn->out->opaque =  btn->pool;
-      
+
       zerr = deflateInit(btn->out, Z_DEFAULT_COMPRESSION);
       SVN_ERR(zerr_to_svn_error(zerr, "deflateInit", btn->out));
     }
-  
+
   /* The largest buffer we should need is 0.1% larger than the
      compressed data, + 12 bytes. This info comes from zlib.h.  */
   buf_size = *len + (*len / 1000) + 13;
   subpool = svn_pool_create(btn->pool);
   write_buf = apr_palloc(subpool, buf_size);
-  
+
   btn->out->next_in = (Bytef *) buffer;  /* Casting away const! */
   btn->out->avail_in = *len;
-  
+
   while (btn->out->avail_in > 0)
     {
       btn->out->next_out = write_buf;
       btn->out->avail_out = buf_size;
-      
+
       zerr = deflate(btn->out, Z_NO_FLUSH);
       SVN_ERR(zerr_to_svn_error(zerr, "deflate", btn->out));
       write_len = buf_size - btn->out->avail_out;
       if (write_len > 0)
         SVN_ERR(btn->write(btn->subbaton, write_buf, &write_len));
     }
-      
+
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
@@ -619,7 +619,7 @@ close_handler_gz(void *baton)
 {
   struct zbaton *btn = baton;
   int zerr;
-  
+
   if (btn->in != NULL)
     {
       zerr = inflateEnd(btn->in);
@@ -630,14 +630,14 @@ close_handler_gz(void *baton)
     {
       void *buf;
       apr_size_t write_len;
-      
+
       buf = apr_palloc(btn->pool, ZBUFFER_SIZE);
-      
+
       while (TRUE)
         {
           btn->out->next_out = buf;
           btn->out->avail_out = ZBUFFER_SIZE;
-          
+
           zerr = deflate(btn->out, Z_FINISH);
           if (zerr != Z_STREAM_END && zerr != Z_OK)
             return zerr_to_svn_error(zerr, "deflate", btn->out);
@@ -647,7 +647,7 @@ close_handler_gz(void *baton)
           if (zerr == Z_STREAM_END)
             break;
         }
-      
+
       zerr = deflateEnd(btn->out);
       SVN_ERR(zerr_to_svn_error(zerr, "deflateEnd", btn->out));
     }
@@ -666,7 +666,7 @@ svn_stream_compressed(svn_stream_t *stream, apr_pool_t *pool)
   struct zbaton *baton;
 
   assert(stream != NULL);
-  
+
   baton = apr_palloc(pool, sizeof(*baton));
   baton->in = baton->out = NULL;
   baton->read = stream->read_fn;
@@ -676,12 +676,12 @@ svn_stream_compressed(svn_stream_t *stream, apr_pool_t *pool)
   baton->pool = pool;
   baton->read_buffer = NULL;
   baton->read_flush = Z_SYNC_FLUSH;
-  
+
   zstream = svn_stream_create(baton, pool);
   svn_stream_set_read(zstream, read_handler_gz);
   svn_stream_set_write(zstream, write_handler_gz);
   svn_stream_set_close(zstream, close_handler_gz);
-  
+
   return zstream;
 }
 

@@ -29,9 +29,9 @@ set on it, returning success iff it does.
 """ % (os.path.basename(sys.argv[0]), core.SVN_PROP_NEEDS_LOCK))
     sys.exit(1)
 
-    
+
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         _usage_and_exit()
     sys.exit(core.run_app(main, sys.argv[1], sys.argv[2]))
-  
+

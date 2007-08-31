@@ -18,14 +18,14 @@
  * @file svn_wc_private.h
  * @brief The Subversion Working Copy Library - Internal routines
  *
- * Requires:  
+ * Requires:
  *            - A working copy
- * 
- * Provides: 
+ *
+ * Provides:
  *            - Ability to manipulate working copy's versioned data.
  *            - Ability to manipulate working copy's administrative files.
  *
- * Used By:   
+ * Used By:
  *            - Clients.
  */
 

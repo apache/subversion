@@ -158,7 +158,7 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_replaced_path:
     case ELEM_deleted_path:
     case ELEM_modified_path:
-      lb->this_path_item = apr_pcalloc(lb->subpool, 
+      lb->this_path_item = apr_pcalloc(lb->subpool,
                                        sizeof(*(lb->this_path_item)));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
 
@@ -167,7 +167,7 @@ log_start_element(int *elem, void *baton, int parent,
          about these action codes. */
       if ((elm->id == ELEM_added_path) || (elm->id == ELEM_replaced_path))
         {
-          lb->this_path_item->action 
+          lb->this_path_item->action
             = (elm->id == ELEM_added_path) ? 'A' : 'R';
           copyfrom_path = svn_xml_get_attr_value("copyfrom-path", atts);
           copyfrom_revstr = svn_xml_get_attr_value("copyfrom-rev", atts);
@@ -229,7 +229,7 @@ log_end_element(void *baton, int state,
         char *path = apr_pstrdup(lb->subpool, lb->cdata->data);
         if (! lb->log_entry->changed_paths)
           lb->log_entry->changed_paths = apr_hash_make(lb->subpool);
-        apr_hash_set(lb->log_entry->changed_paths, path, APR_HASH_KEY_STRING, 
+        apr_hash_set(lb->log_entry->changed_paths, path, APR_HASH_KEY_STRING,
                      lb->this_path_item);
         break;
       }
@@ -238,7 +238,7 @@ log_end_element(void *baton, int state,
       break;
     case ELEM_log_item:
       {
-        /* Compatability cruft so that we can provide limit functionality 
+        /* Compatability cruft so that we can provide limit functionality
            even if the server doesn't support it.
 
            If we've seen as many log entries as we're going to show just
@@ -250,7 +250,7 @@ log_end_element(void *baton, int state,
             lb->limit_compat_bailout = TRUE;
             return svn_error_create(APR_EGENERAL, NULL, NULL);
           }
- 
+
         SVN_ERR((*(lb->receiver))(lb->receiver_baton,
                                   lb->log_entry,
                                   lb->subpool));

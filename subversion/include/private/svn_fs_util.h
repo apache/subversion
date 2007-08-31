@@ -1,5 +1,5 @@
 /*
- * svn_fs_util.h: Declarations for the APIs of libsvn_fs_util to be 
+ * svn_fs_util.h: Declarations for the APIs of libsvn_fs_util to be
  * consumed by only fs_* libs.
  *
  * ====================================================================
@@ -79,7 +79,7 @@ svn_error_t *svn_fs__check_fs(svn_fs_t *fs);
     (SVN_ERR_FS_NOT_TXN_ROOT, NULL,                   \
      _("Root object must be a transaction root"))
 
-/* SVN_FS__ERR_NOT_MUTABLE: the caller attempted to change a node 
+/* SVN_FS__ERR_NOT_MUTABLE: the caller attempted to change a node
    outside of a transaction. FS is of type "svn_fs_t *". */
 #define SVN_FS__ERR_NOT_MUTABLE(fs, rev, path_in_repo)                   \
   svn_error_createf                                                      \
@@ -129,9 +129,9 @@ svn_error_t *svn_fs__check_fs(svn_fs_t *fs);
      _("No username is currently associated with filesystem '%s'"), \
      fs->path)
 
-/* SVN_FS__ERR_LOCK_OWNER_MISMATCH: trying to use a lock whose 
+/* SVN_FS__ERR_LOCK_OWNER_MISMATCH: trying to use a lock whose
    LOCK_OWNER doesn't match the USERNAME associated with FS.
-   FS is of type "svn fs_t *". */ 
+   FS is of type "svn fs_t *". */
 #define SVN_FS__ERR_LOCK_OWNER_MISMATCH(fs, username, lock_owner)  \
   svn_error_createf                                                \
     (SVN_ERR_FS_LOCK_OWNER_MISMATCH, 0,                            \

@@ -223,7 +223,7 @@ public class SVNClient implements SVNClientInterface
         MyListCallback callback = new MyListCallback();
 
         list(url, revision, pegRevision,
-             recurse ? Depth.infinity : Depth.immediates, 
+             recurse ? Depth.infinity : Depth.immediates,
              DirEntry.Fields.all, false, callback);
 
         return callback.getDirEntryArray();
@@ -421,7 +421,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return checkout(moduleName, destPath, revision, revision, 
+        return checkout(moduleName, destPath, revision, revision,
                         Depth.fromRecurse(recurse), ignoreExternals,
                         false);
     }
@@ -644,10 +644,10 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean, boolean, String)
+     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, int, boolean, boolean, String)
      * @since 1.5
      */
-    public native long commit(String[] path, String message, boolean recurse,
+    public native long commit(String[] path, String message, int depth,
                               boolean noUnlock, boolean keepChangelist,
                               String changelistName)
             throws ClientException;
@@ -888,6 +888,13 @@ public class SVNClient implements SVNClientInterface
     public native void doImport(String path, String url, String message,
                                 boolean recurse)
             throws ClientException;
+
+    /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
+     */
+    public native String[] suggestMergeSources(String path, 
+                                               Revision pegRevision)
+            throws SubversionException;
 
     /**
      * Merge changes from two paths into a new local path.
@@ -1774,7 +1781,8 @@ public class SVNClient implements SVNClientInterface
                        boolean noUnlock)
             throws ClientException
     {
-        return commit(path, message, recurse, noUnlock, false, null);
+        return commit(path, message, Depth.fromRecurse(recurse), noUnlock,
+                      false, null);
     }
 
     /**
@@ -1834,13 +1842,6 @@ public class SVNClient implements SVNClientInterface
                              Revision pegRevision, boolean recurse,
                              InfoCallback callback)
             throws ClientException;
-
-    /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String, Revision)
-     * @since 1.5
-     */
-    public native CopySource getCopySource(String path, Revision revision)
-            throws SubversionException;
 
     /**
      * A private log message callback implementation used by thin wrappers.

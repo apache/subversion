@@ -321,7 +321,7 @@ svn_cl__print_status(const char *path,
                      svn_boolean_t repos_locks,
                      apr_pool_t *pool)
 {
-  if (! status 
+  if (! status
       || (skip_unrecognized && ! status->entry)
       || (status->text_status == svn_wc_status_none
           && status->repos_text_status == svn_wc_status_none))

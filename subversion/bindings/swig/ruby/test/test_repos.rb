@@ -10,7 +10,7 @@ require "svn/client"
 
 class SvnReposTest < Test::Unit::TestCase
   include SvnTestUtil
-  
+
   def setup
     setup_basic
   end
@@ -31,7 +31,7 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(File.join(@repos_path, "conf"), @repos.conf_dir)
     assert_equal(File.join(@repos_path, "conf", "svnserve.conf"),
                  @repos.svnserve_conf)
-    
+
     locks_dir = File.join(@repos_path, "locks")
     assert_equal(locks_dir, @repos.lock_dir)
     assert_equal(File.join(locks_dir, "db.lock"),
@@ -41,14 +41,14 @@ class SvnReposTest < Test::Unit::TestCase
 
     hooks_dir = File.join(@repos_path, "hooks")
     assert_equal(hooks_dir, @repos.hook_dir)
-    
+
     assert_equal(File.join(hooks_dir, "start-commit"),
                  @repos.start_commit_hook)
     assert_equal(File.join(hooks_dir, "pre-commit"),
                  @repos.pre_commit_hook)
     assert_equal(File.join(hooks_dir, "post-commit"),
                  @repos.post_commit_hook)
-    
+
     assert_equal(File.join(hooks_dir, "pre-revprop-change"),
                  @repos.pre_revprop_change_hook)
     assert_equal(File.join(hooks_dir, "post-revprop-change"),
@@ -64,7 +64,7 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(File.join(hooks_dir, "post-unlock"),
                  @repos.post_unlock_hook)
 
-    
+
     search_path = @repos_path
     assert_equal(@repos_path, Svn::Repos.find_root_path(search_path))
     search_path = "#{@repos_path}/XXX"
@@ -193,14 +193,14 @@ class SvnReposTest < Test::Unit::TestCase
     file = "hello.txt"
     path = File.join(@wc_path, file)
     FileUtils.touch(path)
-    
+
     ctx = make_context(log)
     ctx.add(path)
     commit_info = ctx.commit(@wc_path)
     rev = commit_info.revision
-    
+
     assert_equal(log, ctx.log_message(path, rev))
-    
+
     dest_path = File.join(@tmp_path, "dest")
     backup_path = File.join(@tmp_path, "back")
     config = {}
@@ -220,13 +220,13 @@ class SvnReposTest < Test::Unit::TestCase
     Svn::Repos.hotcopy(backup_path, @repos.path)
     assert_equal(log, ctx.log_message(path, rev))
   end
-  
+
   def assert_transaction
     log = "sample log"
     ctx = make_context(log)
     ctx.checkout(@repos_uri, @wc_path)
     ctx.mkdir(["#{@wc_path}/new_dir"])
-    
+
     prev_rev = @repos.youngest_rev
     past_date = Time.now
     args = {
@@ -240,7 +240,7 @@ class SvnReposTest < Test::Unit::TestCase
     yield(:commit, @repos, args, callback)
     assert_equal(prev_rev, @repos.youngest_rev)
     assert_equal(prev_rev, @repos.dated_revision(past_date))
-    
+
     prev_rev = @repos.youngest_rev
     @repos.transaction_for_commit(@author, log) do |txn|
     end
@@ -332,7 +332,7 @@ class SvnReposTest < Test::Unit::TestCase
 
     ctx.mv(path1, path2)
     rev2 = ctx.ci(@wc_path).revision
-    
+
     ctx.cp(path2, path3)
     rev3 = ctx.ci(@wc_path).revision
 
@@ -661,7 +661,7 @@ class SvnReposTest < Test::Unit::TestCase
     path = File.join(dir3_path, file)
     source = "sample source"
     log = "sample log"
-    
+
     ctx = make_context(log)
     FileUtils.mkdir_p(dir3_path)
     FileUtils.touch(path)
@@ -689,11 +689,11 @@ class SvnReposTest < Test::Unit::TestCase
     path = File.join(@wc_path, file)
     path_in_repos = "/#{file}"
     ctx = make_context(log)
-    
+
     FileUtils.touch(path)
     ctx.add(path)
     rev = ctx.ci(@wc_path).revision
-    
+
     access = Svn::Fs::Access.new(@author)
     @repos.fs.access = access
     lock = @repos.lock(file)
@@ -713,7 +713,7 @@ class SvnReposTest < Test::Unit::TestCase
 #{@author} = r
 EOF
     end
-    
+
     authz = Svn::Repos::Authz.read(conf_path)
     assert(authz.can_access?(name, "/", @author, Svn::Repos::AUTHZ_READ))
     assert(!authz.can_access?(name, "/", @author, Svn::Repos::AUTHZ_WRITE))
@@ -750,7 +750,7 @@ EOF
     assert(started)
   end
 
-  def test_merge_info
+  def test_mergeinfo
     log = "sample log"
     file = "sample.txt"
     src = "sample\n"
@@ -775,10 +775,10 @@ EOF
     ctx.merge(branch, original_rev, branch, merged_rev, trunk)
     ctx.commit(@wc_path)
 
-    merge_info = "#{branch_path_in_repos}:#{merged_rev}"
-    assert_equal({trunk_path_in_repos => merge_info},
-                 @repos.merge_info([trunk_path_in_repos]))
-    assert_equal(merge_info, @repos.merge_info(trunk_path_in_repos))
+    mergeinfo = "#{branch_path_in_repos}:#{merged_rev}"
+    assert_equal({trunk_path_in_repos => mergeinfo},
+                 @repos.mergeinfo([trunk_path_in_repos]))
+    assert_equal(mergeinfo, @repos.mergeinfo(trunk_path_in_repos))
   end
 
   private
@@ -787,79 +787,79 @@ EOF
       STDERR.puts err if $DEBUG
     end
   end
-  
+
   class TestEditor < Svn::Delta::BaseEditor
     attr_reader :sequence
     def initialize
       @sequence = []
     end
-    
+
     def set_target_revision(target_revision)
       @sequence << [:set_target_revision, target_revision]
     end
-    
+
     def open_root(base_revision)
       @sequence << [:open_root, base_revision]
     end
-    
+
     def delete_entry(path, revision, parent_baton)
       @sequence << [:delete_entry, path, revision, parent_baton]
     end
-    
+
     def add_directory(path, parent_baton,
                       copyfrom_path, copyfrom_revision)
       @sequence << [:add_directory, path, parent_baton,
         copyfrom_path, copyfrom_revision]
     end
-    
+
     def open_directory(path, parent_baton, base_revision)
       @sequence << [:open_directory, path, parent_baton, base_revision]
     end
-    
+
     def change_dir_prop(dir_baton, name, value)
       @sequence << [:change_dir_prop, dir_baton, name, value]
     end
-    
+
     def close_directory(dir_baton)
       @sequence << [:close_directory, dir_baton]
     end
-    
+
     def absent_directory(path, parent_baton)
       @sequence << [:absent_directory, path, parent_baton]
     end
-    
+
     def add_file(path, parent_baton,
                  copyfrom_path, copyfrom_revision)
       @sequence << [:add_file, path, parent_baton,
         copyfrom_path, copyfrom_revision]
     end
-    
+
     def open_file(path, parent_baton, base_revision)
       @sequence << [:open_file, path, parent_baton, base_revision]
     end
-    
+
     # return nil or object which has `call' method.
     def apply_textdelta(file_baton, base_checksum)
       @sequence << [:apply_textdelta, file_baton, base_checksum]
       nil
     end
-    
+
     def change_file_prop(file_baton, name, value)
       @sequence << [:change_file_prop, file_baton, name, value]
     end
-    
+
     def close_file(file_baton, text_checksum)
       @sequence << [:close_file, file_baton, text_checksum]
     end
-    
+
     def absent_file(path, parent_baton)
       @sequence << [:absent_file, path, parent_baton]
     end
-    
+
     def close_edit(baton)
       @sequence << [:close_edit, baton]
     end
-    
+
     def abort_edit(baton)
       @sequence << [:abort_edit, baton]
     end

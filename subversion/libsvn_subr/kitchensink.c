@@ -24,36 +24,36 @@
 #include "svn_private_config.h"
 
 svn_error_t *
-svn_parse_revision_number(svn_revnum_t *rev_p,
-                          const char *str,
-                          const char **endptr)
+svn_revnum_parse(svn_revnum_t *rev,
+                 const char *str,
+                 const char **endptr)
 {
-  char *endptr_;
+  char *end;
 
-  svn_revnum_t result = strtol(str, &endptr_, 10);
+  svn_revnum_t result = strtol(str, &end, 10);
 
   if (endptr)
-    *endptr = endptr_;
+    *endptr = end;
 
-  if (str == endptr_)
-    return svn_error_createf(SVN_ERR_REVISION_NUMBER_PARSE_ERROR, NULL,
+  if (str == end)
+    return svn_error_createf(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
                              _("Invalid revision number found parsing '%s'"),
                              str);
 
   if (result < 0)
     {
-      /* The end pointer from strtol is valid, but a negative revision
+      /* The end pointer from strtol() is valid, but a negative revision
          number is invalid, so move the end pointer back to the
          beginning of the string. */
       if (endptr)
         *endptr = str;
 
-      return svn_error_createf(SVN_ERR_REVISION_NUMBER_PARSE_ERROR, NULL,
+      return svn_error_createf(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
                                _("Negative revision number found parsing '%s'"),
                                str);
     }
 
-  *rev_p = result;
+  *rev = result;
 
   return SVN_NO_ERROR;
 }
@@ -121,7 +121,10 @@ svn_depth_from_word(const char *word)
   if (strcmp(word, "infinity") == 0)
     return svn_depth_infinity;
   /* There's no special value for invalid depth, and no convincing
-     reason to make one yet, so just fall back to unknown depth. */
+     reason to make one yet, so just fall back to unknown depth.
+     If you ever change that convention, check callers to make sure
+     they're not depending on it (e.g., option parsing in main() ).
+  */
   return svn_depth_unknown;
 }
 

@@ -80,7 +80,7 @@ static svn_error_t *
 maybe_close_textdelta(edit_baton_t *eb)
 {
   if (eb->sending_textdelta)
-    { 
+    {
       SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
                                 "</S:apply-textdelta>" DEBUG_CR));
       eb->sending_textdelta = FALSE;
@@ -100,7 +100,7 @@ add_file_or_directory(const char *file_or_directory,
                       void **added_baton)
 {
   const char *qname = apr_xml_quote_string(pool, path, 1);
-  const char *qcopy = 
+  const char *qcopy =
     copyfrom_path ? apr_xml_quote_string(pool, copyfrom_path, 1) : NULL;
 
   SVN_ERR(maybe_close_textdelta(eb));
@@ -132,7 +132,7 @@ open_file_or_directory(const char *file_or_directory,
   SVN_ERR(maybe_close_textdelta(eb));
   *opened_baton = (void *)eb;
   return dav_svn__send_xml(eb->bb, eb->output,
-                           "<S:open-%s name=\"%s\" rev=\"%ld\"/>" DEBUG_CR, 
+                           "<S:open-%s name=\"%s\" rev=\"%ld\"/>" DEBUG_CR,
                            file_or_directory, qname, base_revision);
 }
 
@@ -223,7 +223,7 @@ add_directory(const char *path,
               apr_pool_t *pool,
               void **child_baton)
 {
-  return add_file_or_directory("directory", path, parent_baton, 
+  return add_file_or_directory("directory", path, parent_baton,
                                copyfrom_path, copyfrom_rev, pool, child_baton);
 }
 
@@ -258,7 +258,7 @@ add_file(const char *path,
          apr_pool_t *pool,
          void **file_baton)
 {
-  return add_file_or_directory("file", path, parent_baton, 
+  return add_file_or_directory("file", path, parent_baton,
                                copyfrom_path, copyfrom_rev, pool, file_baton);
 }
 
@@ -303,7 +303,7 @@ apply_textdelta(void *file_baton,
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, ">"));
 
   svn_txdelta_to_svndiff(dav_svn__make_base64_output_stream(eb->bb, eb->output,
-                                                            pool), 
+                                                            pool),
                          pool, handler, handler_baton);
 
   eb->sending_textdelta = TRUE;

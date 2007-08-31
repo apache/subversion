@@ -172,7 +172,7 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
         /* Tell the logging subsystem about the revprop change. */
         apr_table_set(db->resource->info->r->subprocess_env, "SVN-ACTION",
                       apr_psprintf(db->resource->pool,
-                                   "revprop-change r%ld '%s'", 
+                                   "revprop-change r%ld '%s'",
                                    db->resource->info->root.rev,
                                    svn_path_uri_encode(propname,
                                                        db->resource->pool)));
@@ -270,7 +270,7 @@ db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
 }
 
 static dav_error *
-db_output_value(dav_db *db, 
+db_output_value(dav_db *db,
                 const dav_prop_name *name,
                 dav_xmlns_info *xi,
                 apr_text_header *phdr,
@@ -317,7 +317,7 @@ db_output_value(dav_db *db,
           encoding = apr_pstrcat(pool, " V:encoding=\"base64\"", NULL);
         }
       else
-        {    
+        {
           svn_stringbuf_t *xmlval = NULL;
           svn_xml_escape_cdata_string(&xmlval, propval, pool);
           xml_safe = xmlval->data;
@@ -329,7 +329,7 @@ db_output_value(dav_db *db,
       /* the value is in our pool which means it has the right lifetime. */
       /* ### at least, per the current mod_dav architecture/API */
       apr_text_append(pool, phdr, xml_safe);
-      
+
       s = apr_psprintf(pool, "</%s%s>" DEBUG_CR, prefix, name->name);
       apr_text_append(pool, phdr, s);
     }
@@ -366,7 +366,7 @@ db_store(dav_db *db,
 
   propval = svn_string_create
     (dav_xml_get_cdata(elem, pool, 0 /* strip_white */), pool);
-  
+
   /* Check for special encodings of the property value. */
   while (attr)
     {
@@ -515,7 +515,7 @@ db_first_name(dav_db *db, dav_prop_name *pname)
       if (db->resource->baselined)
         {
           if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
-            serr = svn_fs_txn_proplist(&db->props, 
+            serr = svn_fs_txn_proplist(&db->props,
                                        db->resource->info->root.txn,
                                        db->p);
           else
@@ -529,9 +529,9 @@ db_first_name(dav_db *db, dav_prop_name *pname)
         }
       else
         {
-          serr = svn_fs_node_proplist(&db->props, 
+          serr = svn_fs_node_proplist(&db->props,
                                       db->resource->info->root.root,
-                                      get_repos_path(db->resource->info), 
+                                      get_repos_path(db->resource->info),
                                       db->p);
         }
       if (serr != NULL)
@@ -566,7 +566,7 @@ db_next_name(dav_db *db, dav_prop_name *pname)
 
 
 static dav_error *
-db_get_rollback(dav_db *db, 
+db_get_rollback(dav_db *db,
                 const dav_prop_name *name,
                 dav_deadprop_rollback **prollback)
 {
@@ -594,7 +594,7 @@ db_apply_rollback(dav_db *db, dav_deadprop_rollback *rollback)
     {
       return db_remove(db, &rollback->name);
     }
-  
+
   return save_value(db, &rollback->name, &rollback->value);
 }
 

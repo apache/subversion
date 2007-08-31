@@ -592,7 +592,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_FS_OUT_OF_DATE,
              SVN_ERR_FS_CATEGORY_START + 42,
              "Item is out of date")
-  
+
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_FS_SQLITE_ERROR,
              SVN_ERR_FS_CATEGORY_START + 43,
@@ -1057,7 +1057,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_NO_AUTH_FILE_PATH,
              SVN_ERR_MISC_CATEGORY_START + 18,
              "No auth file path available")
-  
+
   /** @since New in 1.1. */
   SVN_ERRDEF(SVN_ERR_VERSION_MISMATCH,
              SVN_ERR_MISC_CATEGORY_START + 19,
@@ -1074,9 +1074,9 @@ SVN_ERROR_START
              "Cease invocation of this API")
 
   /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_REVISION_NUMBER_PARSE_ERROR,
+  SVN_ERRDEF(SVN_ERR_REVNUM_PARSE_FAILURE,
              SVN_ERR_MISC_CATEGORY_START + 22,
-             "Revision number parse error")
+             "Error parsing revision number")
 
   /* command-line client errors */
 

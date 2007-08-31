@@ -89,7 +89,7 @@ add_committable(apr_hash_t *committables,
   new_item->kind           = kind;
   new_item->url            = apr_pstrdup(pool, url);
   new_item->revision       = revision;
-  new_item->copyfrom_url   = copyfrom_url 
+  new_item->copyfrom_url   = copyfrom_url
     ? apr_pstrdup(pool, copyfrom_url) : NULL;
   new_item->copyfrom_rev   = copyfrom_rev;
   new_item->state_flags    = state_flags;
@@ -140,16 +140,16 @@ look_up_committable(apr_hash_t *committables,
       void *val;
       apr_array_header_t *these_committables;
       int i;
-      
+
       apr_hash_this(hi, NULL, NULL, &val);
       these_committables = val;
-      
+
       for (i = 0; i < these_committables->nelts; i++)
         {
           svn_client_commit_item3_t *this_committable
             = APR_ARRAY_IDX(these_committables, i,
                             svn_client_commit_item3_t *);
-          
+
           if (strcmp(this_committable->path, path) == 0)
             return this_committable;
         }
@@ -178,17 +178,22 @@ add_lock_token(const char *path, const svn_wc_entry_t *entry,
 }
 
 /* Entry walker callback table to add lock tokens in an hierarchy. */
-static svn_wc_entry_callbacks_t add_tokens_callbacks = {
-  add_lock_token
+static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
+  add_lock_token,
+  svn_client__default_walker_error_handler
 };
 
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
    recognized.  COPYFROM_URL is the default copyfrom-url for children
-   of copied directories.  NONRECURSIVE indicates that this function
-   will not recurse into subdirectories of PATH when PATH is itself a
-   directory.  Lock tokens of candidates will be added to LOCK_TOKENS, if
+   of copied directories.
+
+   DEPTH indicates how to treat files and subdirectories of PATH when
+   PATH is itself a directory; see svn_client__harvest_committables()
+   for its behavior.
+
+   Lock tokens of candidates will be added to LOCK_TOKENS, if
    non-NULL.  JUST_LOCKED indicates whether to treat non-modified items with
    lock tokens as commit candidates.
 
@@ -200,9 +205,9 @@ static svn_wc_entry_callbacks_t add_tokens_callbacks = {
    when harvesting committables; that is, don't add a path to
    COMMITTABLES unless it's a member of the changelist.
 
-   If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to see 
+   If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to see
    if the user has cancelled the operation.
-   
+
    Any items added to COMMITTABLES are allocated from the COMITTABLES hash pool,
    not POOL.  POOL is used for temporary allocations. */
 static svn_error_t *
@@ -216,7 +221,7 @@ harvest_committables(apr_hash_t *committables,
                      const svn_wc_entry_t *parent_entry,
                      svn_boolean_t adds_only,
                      svn_boolean_t copy_mode,
-                     svn_boolean_t nonrecursive,
+                     svn_depth_t depth,
                      svn_boolean_t just_locked,
                      const char *changelist_name,
                      svn_client_ctx_t *ctx,
@@ -274,7 +279,7 @@ harvest_committables(apr_hash_t *committables,
                           pool));
 
   if ((((! propval) && (is_special))
-#ifdef HAVE_SYMLINK  
+#ifdef HAVE_SYMLINK
        || ((propval) && (! is_special))
 #endif /* HAVE_SYMLINK */
        ) && (kind != svn_node_none))
@@ -288,7 +293,7 @@ harvest_committables(apr_hash_t *committables,
   /* Get a fully populated entry for PATH if we can, and check for
      conflicts. If this is a directory ... */
   if (entry->kind == svn_node_dir)
-    { 
+    {
       /* ... then try to read its own entries file so we have a full
          entry for it (we were going to have to do this eventually to
          recurse anyway, so... ) */
@@ -303,11 +308,11 @@ harvest_committables(apr_hash_t *committables,
           svn_error_clear(err);
           entries = NULL;
         }
-      
+
       /* If we got an entries hash, and the "this dir" entry is
          present, override our current ENTRY with it, and check for
          conflicts. */
-      if ((entries) && ((e = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, 
+      if ((entries) && ((e = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
                                           APR_HASH_KEY_STRING))))
         {
           entry = e;
@@ -361,7 +366,7 @@ harvest_committables(apr_hash_t *committables,
     }
 
   /* Check for the trivial addition case.  Adds can be explicit
-     (schedule == add) or implicit (schedule == replace ::= delete+add).  
+     (schedule == add) or implicit (schedule == replace ::= delete+add).
      We also note whether or not this is an add with history here.  */
   if ((entry->schedule == svn_wc_schedule_add)
       || (entry->schedule == svn_wc_schedule_replace))
@@ -380,7 +385,7 @@ harvest_committables(apr_hash_t *committables,
     }
 
   /* Check for the copied-subtree addition case.  */
-  if ((entry->copied || copy_mode) 
+  if ((entry->copied || copy_mode)
       && (! entry->deleted)
       && (entry->schedule == svn_wc_schedule_normal))
     {
@@ -396,7 +401,7 @@ harvest_committables(apr_hash_t *committables,
             p_rev = parent_entry->revision;
         }
       else if (! copy_mode)
-        return svn_error_createf 
+        return svn_error_createf
           (SVN_ERR_WC_CORRUPT, NULL,
            _("Did not expect '%s' to be a working copy root"),
            svn_path_local_style(path, pool));
@@ -414,7 +419,7 @@ harvest_committables(apr_hash_t *committables,
           else if (copyfrom_url)
             cf_url = copyfrom_url;
           else /* ### See issue #830 */
-            return svn_error_createf 
+            return svn_error_createf
               (SVN_ERR_BAD_URL, NULL,
                _("Commit item '%s' has copy flag but no copyfrom URL"),
                svn_path_local_style(path, pool));
@@ -428,7 +433,7 @@ harvest_committables(apr_hash_t *committables,
       svn_boolean_t eol_prop_changed;
 
       /* See if there are property modifications to send. */
-      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path, 
+      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
                               adm_access, pool));
 
       /* Regular adds of files have text mods, but for copies we have
@@ -458,7 +463,7 @@ harvest_committables(apr_hash_t *committables,
       svn_boolean_t eol_prop_changed;
 
       /* See if there are property modifications to send. */
-      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path, 
+      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
                               adm_access, pool));
 
       /* Check for text mods on files.  If EOL_PROP_CHANGED is TRUE,
@@ -505,13 +510,10 @@ harvest_committables(apr_hash_t *committables,
         }
     }
 
-  /* For directories, recursively handle each of their entries (except
-     when the directory is being deleted, unless the deletion is part
-     of a replacement ... how confusing).  Oh, and don't recurse at
-     all if this is a nonrecursive commit.  ### We'll probably make
-     the whole 'nonrecursive' concept go away soon and be replaced
-     with the more sophisticated Depth0|Depth1|DepthInfinity. */
-  if (entries && (! nonrecursive)
+  /* For directories, recursively handle each entry according to depth
+     (except when the directory is being deleted, unless the deletion
+     is part of a replacement ... how confusing).  */
+  if (entries && (depth > svn_depth_empty)
       && ((! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
           || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
     {
@@ -540,7 +542,7 @@ harvest_committables(apr_hash_t *committables,
              entry structure. */
           apr_hash_this(hi, &key, NULL, &val);
           name = key;
-          
+
           /* Skip "this dir" */
           if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
             continue;
@@ -561,64 +563,94 @@ harvest_committables(apr_hash_t *committables,
           /* Recurse. */
           if (this_entry->kind == svn_node_dir)
             {
-              svn_error_t *lockerr;
-              lockerr = svn_wc_adm_retrieve(&dir_access, adm_access,
-                                            full_path, loop_pool);
-
-              if (lockerr)
+              if (depth <= svn_depth_files)
                 {
-                  if (lockerr->apr_err == SVN_ERR_WC_NOT_LOCKED)
+                  /* Don't bother with any of this if it's a directory
+                     and depth says not to go there. */
+                  continue;
+                }
+              else
+                {
+                  svn_error_t *lockerr;
+                  lockerr = svn_wc_adm_retrieve(&dir_access, adm_access,
+                                                full_path, loop_pool);
+
+                  if (lockerr)
                     {
-                      /* A missing, schedule-delete child dir is
-                         allowable.  Just don't try to recurse. */
-                      svn_node_kind_t childkind;
-                      svn_error_t *err = svn_io_check_path(full_path,
-                                                           &childkind,
-                                                           loop_pool);
-                      if (! err
-                          && childkind == svn_node_none
-                          && this_entry->schedule == svn_wc_schedule_delete)
+                      if (lockerr->apr_err == SVN_ERR_WC_NOT_LOCKED)
                         {
-                          if ((changelist_name == NULL)
-                              || (entry->changelist
-                                  && (strcmp(changelist_name,
-                                             entry->changelist) == 0)))
+                          /* A missing, schedule-delete child dir is
+                             allowable.  Just don't try to recurse. */
+                          svn_node_kind_t childkind;
+                          svn_error_t *err = svn_io_check_path(full_path,
+                                                               &childkind,
+                                                               loop_pool);
+                          if (! err
+                              && (childkind == svn_node_none)
+                              && (this_entry->schedule
+                                  == svn_wc_schedule_delete))
                             {
-                              add_committable(committables, full_path,
-                                              this_entry->kind, used_url,
-                                              SVN_INVALID_REVNUM,
-                                              NULL,
-                                              SVN_INVALID_REVNUM,
-                                              SVN_CLIENT_COMMIT_ITEM_DELETE);
-                              svn_error_clear(lockerr);
-                              continue; /* don't recurse! */
+                              if ((changelist_name == NULL)
+                                  || (entry->changelist
+                                      && (strcmp(changelist_name,
+                                                 entry->changelist) == 0)))
+                                {
+                                  add_committable(
+                                    committables, full_path,
+                                    this_entry->kind, used_url,
+                                    SVN_INVALID_REVNUM,
+                                    NULL,
+                                    SVN_INVALID_REVNUM,
+                                    SVN_CLIENT_COMMIT_ITEM_DELETE);
+                                  svn_error_clear(lockerr);
+                                  continue; /* don't recurse! */
+                                }
+                            }
+                          else
+                            {
+                              svn_error_clear(err);
+                              return lockerr;
                             }
                         }
                       else
-                        {
-                          svn_error_clear(err);
-                          return lockerr;
-                        }
+                        return lockerr;
                     }
-                  else
-                    return lockerr;
                 }
             }
           else
-            dir_access = adm_access;
+            {
+              dir_access = adm_access;
+            }
 
-          SVN_ERR(harvest_committables 
-                  (committables, lock_tokens, full_path, dir_access,
-                   used_url ? used_url : this_entry->url,
-                   this_cf_url,
-                   this_entry,
-                   entry,
-                   adds_only,
-                   copy_mode,
-                   FALSE, just_locked,
-                   changelist_name,
-                   ctx,
-                   loop_pool));
+          {
+            svn_depth_t depth_below_here = depth;
+
+            /* If depth is svn_depth_files, then we must be recursing
+               into a file, or else we wouldn't be here -- either way,
+               svn_depth_empty is the right depth to use.  On the
+               other hand, if depth is svn_depth_immediates, then we
+               could be recursing into a directory or a file -- in
+               which case svn_depth_empty is *still* the right depth
+               to use.  I know that sounds bizarre (one normally
+               expects to just do depth - 1) but it's correct. */
+            if (depth == svn_depth_immediates
+                || depth == svn_depth_files)
+              depth_below_here = svn_depth_empty;
+
+            SVN_ERR(harvest_committables
+                    (committables, lock_tokens, full_path, dir_access,
+                     used_url ? used_url : this_entry->url,
+                     this_cf_url,
+                     this_entry,
+                     entry,
+                     adds_only,
+                     copy_mode,
+                     depth_below_here,
+                     just_locked,
+                     changelist_name,
+                     ctx,
+                     loop_pool));
+          }
         }
 
       svn_pool_destroy(loop_pool);
@@ -628,7 +660,7 @@ harvest_committables(apr_hash_t *committables,
   if (lock_tokens && entry->kind == svn_node_dir
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      SVN_ERR(svn_wc_walk_entries2(path, adm_access, &add_tokens_callbacks,
+      SVN_ERR(svn_wc_walk_entries3(path, adm_access, &add_tokens_callbacks,
                                    lock_tokens, FALSE, ctx->cancel_func,
                                    ctx->cancel_baton, pool));
     }
@@ -642,7 +674,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
                                  svn_wc_adm_access_t *parent_dir,
                                  apr_array_header_t *targets,
-                                 svn_boolean_t nonrecursive,
+                                 svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const char *changelist_name,
                                  svn_client_ctx_t *ctx,
@@ -665,7 +697,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
    * are unversioned, then after harvesting the total commit group, we
    * check to make sure those parents are included.
    *
-   * Each key of danglers is an unversioned parent.  The (const char *) 
+   * Each key of danglers is an unversioned parent.  The (const char *)
    * value is one of that parent's children which is named as part of
    * the commit; the child is included only to make a better error
    * message.
@@ -692,10 +724,10 @@ svn_client__harvest_committables(apr_hash_t **committables,
       /* Add the relative portion of our full path (if there are no
          relative paths, TARGET will just be PARENT_DIR for a single
          iteration. */
-      target = svn_path_join_many(subpool, 
-                                  svn_wc_adm_access_path(parent_dir),  
-                                  targets->nelts 
-                                  ? APR_ARRAY_IDX(targets, i, const char *) 
+      target = svn_path_join_many(subpool,
+                                  svn_wc_adm_access_path(parent_dir),
+                                  targets->nelts
+                                  ? APR_ARRAY_IDX(targets, i, const char *)
                                   : NULL,
                                   NULL);
 
@@ -705,7 +737,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
       SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
                                      subpool));
       if (! entry->url)
-        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL, 
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Entry for '%s' has no URL"),
                                  svn_path_local_style(target, pool));
 
@@ -720,7 +752,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
           svn_error_t *err;
 
           svn_path_split(target, &parent, &base_name, subpool);
-          err = svn_wc_adm_retrieve(&parent_access, parent_dir, 
+          err = svn_wc_adm_retrieve(&parent_access, parent_dir,
                                     parent, subpool);
           if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
             {
@@ -734,11 +766,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
               return err;
             }
 
-          SVN_ERR(svn_wc_entry(&p_entry, parent, parent_access, 
+          SVN_ERR(svn_wc_entry(&p_entry, parent, parent_access,
                                FALSE, subpool));
           if (! p_entry)
-            return svn_error_createf 
-              (SVN_ERR_WC_CORRUPT, NULL, 
+            return svn_error_createf
+              (SVN_ERR_WC_CORRUPT, NULL,
                _("'%s' is scheduled for addition within unversioned parent"),
                svn_path_local_style(target, pool));
           if ((p_entry->schedule == svn_wc_schedule_add)
@@ -748,17 +780,17 @@ svn_client__harvest_committables(apr_hash_t **committables,
                  lasts only for this loop iteration, and we check
                  danglers after the loop is over. */
               apr_hash_set(danglers, apr_pstrdup(pool, parent),
-                           APR_HASH_KEY_STRING, 
+                           APR_HASH_KEY_STRING,
                            apr_pstrdup(pool, target));
             }
         }
-      
+
       /* If this entry is marked as 'copied' but scheduled normally, then
          it should be the child of something else marked for addition with
          history. */
       if ((entry->copied) && (entry->schedule == svn_wc_schedule_normal))
-        return svn_error_createf 
-          (SVN_ERR_ILLEGAL_TARGET, NULL, 
+        return svn_error_createf
+          (SVN_ERR_ILLEGAL_TARGET, NULL,
            _("Entry for '%s' is marked as 'copied' but is not itself scheduled"
              "\nfor addition.  Perhaps you're committing a target that is\n"
              "inside an unversioned (or not-yet-versioned) directory?"),
@@ -772,7 +804,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                   subpool));
       SVN_ERR(harvest_committables(*committables, *lock_tokens, target,
                                    dir_access, entry->url, NULL,
-                                   entry, NULL, FALSE, FALSE, nonrecursive,
+                                   entry, NULL, FALSE, FALSE, depth,
                                    just_locked, changelist_name,
                                    ctx, subpool));
 
@@ -798,8 +830,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
         if (! look_up_committable(*committables, dangling_parent, pool))
           {
-            return svn_error_createf 
-              (SVN_ERR_ILLEGAL_TARGET, NULL, 
+            return svn_error_createf
+              (SVN_ERR_ILLEGAL_TARGET, NULL,
                _("'%s' is not under version control "
                  "and is not part of the commit, "
                  "yet its child '%s' is part of the commit"),
@@ -830,11 +862,11 @@ svn_client__get_copy_committables(apr_hash_t **committables,
 
   *committables = apr_hash_make(pool);
 
-  /* For each copy pair, harvest the committables for that pair into the 
+  /* For each copy pair, harvest the committables for that pair into the
      committables hash. */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      svn_client__copy_pair_t *pair = 
+      svn_client__copy_pair_t *pair =
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
       svn_wc_adm_access_t *dir_access;
 
@@ -857,8 +889,8 @@ svn_client__get_copy_committables(apr_hash_t **committables,
          allocate the new commit_item, we can safely use the iterpool here. */
       SVN_ERR(harvest_committables(*committables, NULL, pair->src,
                                    dir_access, pair->dst, entry->url, entry,
-                                   NULL, FALSE, TRUE, FALSE, FALSE,
-                                   NULL, ctx, iterpool));
+                                   NULL, FALSE, TRUE, svn_depth_infinity,
+                                   FALSE, NULL, ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -887,11 +919,11 @@ svn_client__condense_commit_items(const char **base_url,
   const char *url;
   svn_client_commit_item3_t *item, *last_item = NULL;
   int i;
-  
+
   assert(ci && ci->nelts);
 
   /* Sort our commit items by their URLs. */
-  qsort(ci->elts, ci->nelts, 
+  qsort(ci->elts, ci->nelts,
         ci->elt_size, svn_client__sort_commit_item_urls);
 
   /* Loop through the URLs, finding the longest usable ancestor common
@@ -902,7 +934,7 @@ svn_client__condense_commit_items(const char **base_url,
       url = item->url;
 
       if ((last_item) && (strcmp(last_item->url, url) == 0))
-        return svn_error_createf 
+        return svn_error_createf
           (SVN_ERR_CLIENT_DUPLICATE_COMMIT_URL, NULL,
            _("Cannot commit both '%s' and '%s' as they refer to the same URL"),
            svn_path_local_style(item->path, pool),
@@ -915,7 +947,7 @@ svn_client__condense_commit_items(const char **base_url,
       if (i == 0)
         *base_url = apr_pstrdup(pool, url);
       else
-        *base_url = svn_path_get_longest_ancestor(*base_url, url, pool); 
+        *base_url = svn_path_get_longest_ancestor(*base_url, url, pool);
 
       /* If our BASE_URL is itself a to-be-committed item, and it is
          anything other than an already-versioned directory with
@@ -933,7 +965,7 @@ svn_client__condense_commit_items(const char **base_url,
       /* Stash our item here for the next iteration. */
       last_item = item;
     }
-  
+
   /* Now that we've settled on a *BASE_URL, go hack that base off
      of all of our URLs. */
   for (i = 0; i < ci->nelts; i++)
@@ -969,12 +1001,12 @@ svn_client__condense_commit_items(const char **base_url,
       flags[4] = (this_item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
                    ? 'c' : '-';
       flags[5] = '\0';
-      fprintf(stderr, "   %s  %6ld  '%s' (%s)\n", 
+      fprintf(stderr, "   %s  %6ld  '%s' (%s)\n",
               flags,
               this_item->revision,
               this_item->url ? this_item->url : "",
               this_item->copyfrom_url ? this_item->copyfrom_url : "none");
-    }  
+    }
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
 
   return SVN_NO_ERROR;
@@ -1033,7 +1065,7 @@ do_item_commit(void **dir_baton,
      around until the end of the commit.  So just lump its memory into
      a single, big, all-the-file-batons-in-here pool.  Otherwise, we
      can just use POOL, and trust our caller to clean that mess up. */
-  if ((kind == svn_node_file) 
+  if ((kind == svn_node_file)
       && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
     file_pool = apr_hash_pool_get(file_mods);
   else
@@ -1047,12 +1079,12 @@ do_item_commit(void **dir_baton,
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
     {
       if (! copyfrom_url)
-        return svn_error_createf 
+        return svn_error_createf
           (SVN_ERR_BAD_URL, NULL,
            _("Commit item '%s' has copy flag but no copyfrom URL"),
            svn_path_local_style(path, pool));
       if (! SVN_IS_VALID_REVNUM(item->copyfrom_rev))
-        return svn_error_createf 
+        return svn_error_createf
           (SVN_ERR_CLIENT_BAD_REVISION, NULL,
            _("Commit item '%s' has copy flag but an invalid revision"),
            svn_path_local_style(path, pool));
@@ -1132,7 +1164,7 @@ do_item_commit(void **dir_baton,
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     {
       assert(parent_baton);
-      SVN_ERR(editor->delete_entry(path, item->revision, 
+      SVN_ERR(editor->delete_entry(path, item->revision,
                                    parent_baton, pool));
     }
 
@@ -1142,8 +1174,8 @@ do_item_commit(void **dir_baton,
       if (kind == svn_node_file)
         {
           assert(parent_baton);
-          SVN_ERR(editor->add_file 
-                  (path, parent_baton, copyfrom_url, 
+          SVN_ERR(editor->add_file
+                  (path, parent_baton, copyfrom_url,
                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
                    file_pool, &file_baton));
         }
@@ -1178,7 +1210,7 @@ do_item_commit(void **dir_baton,
             }
         }
     }
-    
+
   /* Now handle property mods. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
     {
@@ -1190,8 +1222,8 @@ do_item_commit(void **dir_baton,
           if (! file_baton)
             {
               assert(parent_baton);
-              SVN_ERR(editor->open_file(path, parent_baton, 
-                                        item->revision, 
+              SVN_ERR(editor->open_file(path, parent_baton,
+                                        item->revision,
                                         file_pool, &file_baton));
             }
         }
@@ -1208,16 +1240,16 @@ do_item_commit(void **dir_baton,
               else
                 {
                   SVN_ERR(editor->open_directory
-                          (path, parent_baton, item->revision, 
+                          (path, parent_baton, item->revision,
                            pool, dir_baton));
                 }
             }
         }
 
       SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, TRUE, pool));
-      SVN_ERR(svn_wc_transmit_prop_deltas 
+      SVN_ERR(svn_wc_transmit_prop_deltas
               (item->path, adm_access, tmp_entry, editor,
-               (kind == svn_node_dir) ? *dir_baton : file_baton, 
+               (kind == svn_node_dir) ? *dir_baton : file_baton,
                &tempfile, pool));
       if (tempfile && tempfiles)
         {
@@ -1252,7 +1284,7 @@ do_item_commit(void **dir_baton,
   /* Finally, handle text mods (in that we need to open a file if it
      hasn't already been opened, and we need to put the file baton in
      our FILES hash). */
-  if ((kind == svn_node_file) 
+  if ((kind == svn_node_file)
       && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
     {
       struct file_mod_t *mod = apr_palloc(file_pool, sizeof(*mod));
@@ -1309,12 +1341,12 @@ svn_client__do_commit(const char *base_url,
   apr_hash_index_t *hi;
   int i;
   struct path_driver_cb_baton cb_baton;
-  apr_array_header_t *paths = 
+  apr_array_header_t *paths =
     apr_array_make(pool, commit_items->nelts, sizeof(const char *));
 
 #ifdef SVN_CLIENT_COMMIT_DEBUG
   {
-    SVN_ERR(get_test_editor(&editor, &edit_baton, 
+    SVN_ERR(get_test_editor(&editor, &edit_baton,
                             editor, edit_baton,
                             base_url, pool));
   }
@@ -1334,7 +1366,7 @@ svn_client__do_commit(const char *base_url,
      keep an array of those decoded paths, too.  */
   for (i = 0; i < commit_items->nelts; i++)
     {
-      svn_client_commit_item3_t *item = 
+      svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
       const char *path = svn_path_uri_decode(item->url, pool);
       apr_hash_set(items_hash, path, APR_HASH_KEY_STRING, item);
@@ -1366,7 +1398,7 @@ svn_client__do_commit(const char *base_url,
       unsigned char digest[APR_MD5_DIGESTSIZE];
       svn_boolean_t fulltext = FALSE;
       svn_wc_adm_access_t *item_access;
-      
+
       svn_pool_clear(subpool);
       /* Get the next entry. */
       apr_hash_this(hi, NULL, NULL, &val);
@@ -1533,7 +1565,7 @@ add_file(const char *path,
   struct item_baton *new_baton = make_baton(db->eb, NULL, path, pool);
   const char *copystuffs = "";
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
-    copystuffs = apr_psprintf(pool, 
+    copystuffs = apr_psprintf(pool,
                               " (copied from %s:%ld)",
                               copyfrom_path,
                               copyfrom_revision);
@@ -1628,7 +1660,7 @@ add_directory(const char *path,
   struct item_baton *new_baton = make_baton(db->eb, NULL, path, pool);
   const char *copystuffs = "";
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
-    copystuffs = apr_psprintf(pool, 
+    copystuffs = apr_psprintf(pool,
                               " (copied from %s:%ld)",
                               copyfrom_path,
                               copyfrom_revision);

@@ -84,7 +84,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
 
   svn_config_get(*cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
-  
+
   *pwdb = NULL;
   if (pwdb_path)
     {
@@ -118,7 +118,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
   return SVN_NO_ERROR;
 }
 
-/* Verify that URL is inside REPOS_URL and get its fs path. Assume that 
+/* Verify that URL is inside REPOS_URL and get its fs path. Assume that
    REPOS_URL and URL are already URI-decoded. */
 static svn_error_t *get_fs_path(const char *repos_url, const char *url,
                                 const char **fs_path)
@@ -560,7 +560,7 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   if (!b->err)
-    b->err = get_fs_path(svn_path_uri_decode(b->repos_url, pool), 
+    b->err = get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                          url, &fs_path);
   if (!b->err)
     b->err = svn_repos_link_path3(b->report_baton, path, fs_path, rev,
@@ -744,7 +744,7 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &url));
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool), 
+  SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           url, &fs_path));
   svn_stringbuf_set(b->fs_path, fs_path);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -915,7 +915,7 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
 {
   int i;
   apr_pool_t *iterpool;
-  
+
   iterpool = svn_pool_create(pool);
 
   for (i = 0; i < lock_tokens->nelts; ++i)
@@ -944,7 +944,7 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
       svn_error_clear(svn_repos_fs_unlock(sb->repos, full_path, token,
                                           FALSE, pool));
     }
-                                       
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -1321,7 +1321,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   full_path = svn_path_join(b->fs_path->data, target, pool);
   /* Check authorization and authenticate the user if necessary. */
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_read, full_path, FALSE));
-  
+
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
@@ -1456,7 +1456,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *path, *info, *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)w", &paths, &rev, 
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)w", &paths, &rev,
                                  &inherit_word));
   inherit = svn_inheritance_from_word(inherit_word);
 
@@ -1570,7 +1570,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     omit_log_text = omit_log_text_param;
 
   /* If we got an unspecified number then the user didn't send us anything,
-     so we assume no limit.  If it's larger than INT_MAX then someone is 
+     so we assume no limit.  If it's larger than INT_MAX then someone is
      messing with us, since we know the svn client libraries will never send
      us anything that big, so play it safe and default to no limit. */
   if (limit == SVN_RA_SVN_UNSPECIFIED_NUMBER || limit > INT_MAX)
@@ -1817,7 +1817,7 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
     }
   else
     SVN_ERR(svn_ra_svn_write_cstring(frb->conn, pool, ""));
-      
+
   return SVN_NO_ERROR;
 }
 
@@ -1832,7 +1832,7 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *full_path;
   apr_uint64_t include_merged_revs_param;
   svn_boolean_t include_merged_revisions;
-  
+
   /* Parse arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)?B",
                                  &path, &start_rev, &end_rev,
@@ -2133,8 +2133,8 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             pool);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  
-  SVN_CMD_ERR(svn_repos_fs_get_locks(&locks, b->repos, full_path, 
+
+  SVN_CMD_ERR(svn_repos_fs_get_locks(&locks, b->repos, full_path,
                                      authz_check_access_cb_func(b), b, pool));
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
@@ -2267,7 +2267,7 @@ repos_path_valid(const char *path)
 
   return TRUE;
 }
-      
+
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
  * repos_url, and fs_path fields of B. */
@@ -2389,7 +2389,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
    * send an empty mechlist. */
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwww)",
                                         (apr_uint64_t) 2, (apr_uint64_t) 2,
-                                        SVN_RA_SVN_CAP_EDIT_PIPELINE, 
+                                        SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,

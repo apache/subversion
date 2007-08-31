@@ -592,7 +592,7 @@ static int auth_checker(request_rec *r)
     if (!r->user && apr_table_get(r->notes, "authz_svn-anon-ok")) {
         return OK;
     }
-      
+
     status = req_check_access(r, conf, &repos_path, &dest_repos_path);
     if (status == DECLINED) {
         if (conf->authoritative) {

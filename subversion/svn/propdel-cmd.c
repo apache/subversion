@@ -95,13 +95,13 @@ svn_cl__propdel(apr_getopt_t *os,
       SVN_ERR(svn_client_revprop_set(pname_utf8, NULL,
                                      URL, &(opt_state->start_revision),
                                      &rev, FALSE, ctx, pool));
-      if (! opt_state->quiet) 
+      if (! opt_state->quiet)
         {
           SVN_ERR(svn_cmdline_printf(pool,
                                      _("property '%s' deleted from"
                                        " repository revision %ld\n"),
                                      pname_utf8, rev));
-        }      
+        }
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
@@ -139,11 +139,11 @@ svn_cl__propdel(apr_getopt_t *os,
                               SVN_ERR_UNVERSIONED_RESOURCE,
                               SVN_ERR_ENTRY_NOT_FOUND,
                               SVN_NO_ERROR));
-          
+
           if (success && (! opt_state->quiet))
             {
               SVN_ERR(svn_cmdline_printf
-                      (subpool, 
+                      (subpool,
                        SVN_DEPTH_TO_RECURSE(opt_state->depth)
                        ? _("property '%s' deleted (recursively) from '%s'.\n")
                        : _("property '%s' deleted from '%s'.\n"),

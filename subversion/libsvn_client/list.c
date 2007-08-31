@@ -93,7 +93,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
         lock = NULL;
 
       if (the_ent->kind == svn_node_file
-          || depth == svn_depth_immediates 
+          || depth == svn_depth_immediates
           || depth == svn_depth_infinity)
         SVN_ERR(list_func(baton, path, the_ent, lock, fs_path, iterpool));
 
@@ -383,7 +383,7 @@ svn_error_t *
 svn_client_ls(apr_hash_t **dirents,
               const char *path_or_url,
               svn_opt_revision_t *revision,
-              svn_boolean_t recurse,               
+              svn_boolean_t recurse,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool)
 {

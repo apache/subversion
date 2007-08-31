@@ -182,6 +182,16 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+/* Set REPOS_ROOT to the URL which represents the root of the
+   repository in with PATH_OR_URL (at PEG_REVISION) is versioned.  Use
+   the authentication baton cached in CTX as necessary.  Use POOL for
+   all allocations. */
+svn_error_t *
+svn_client__get_repos_root(const char **repos_root, 
+                           const char *path_or_url,
+                           const svn_opt_revision_t *peg_revision,
+                           svn_client_ctx_t *ctx, 
+                           apr_pool_t *pool);
 
 /* Return the path of PATH_OR_URL relative to the repository root
    (REPOS_ROOT) in REL_PATH (URI-decoded).
@@ -219,6 +229,14 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
                                const char *rel_path,
                                svn_revnum_t rev,
                                apr_pool_t *pool);
+
+/* A default error handler for use with svn_wc_walk_entries3().  Returns
+   ERR in all cases. */
+svn_error_t *
+svn_client__default_walker_error_handler(const char *path,
+                                         svn_error_t *err,
+                                         void *walk_baton,
+                                         apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------- */
@@ -697,8 +715,9 @@ typedef struct
    locked in the process of this crawl.  These will need to be
    unlocked again post-commit.
 
-   If NONRECURSIVE is specified, subdirectories of directory targets
-   found in TARGETS will not be crawled for modifications.
+   If DEPTH is specified, descend (or not) into each target in TARGETS
+   as specified by DEPTH; the behavior is the same as that described
+   for svn_client_commit4().
 
    If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
    commit candidates.
@@ -715,7 +734,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
                                  svn_wc_adm_access_t *parent_dir,
                                  apr_array_header_t *targets,
-                                 svn_boolean_t nonrecursive,
+                                 svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const char *changelist_name,
                                  svn_client_ctx_t *ctx,

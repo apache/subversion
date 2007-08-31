@@ -61,26 +61,14 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
                                svn_revnum_t rev,
                                apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
   *oldest_rev = SVN_INVALID_REVNUM;
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
 
   /* Trace back in history to find the revision at which this node
      was created (copied or added). */
-  err = svn_ra_get_log2(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
-                        FALSE, TRUE, revnum_receiver, oldest_rev, pool);
-  /* ### This function really shouldn't even be called on schedule-add
-     ### WC paths.  FIXME: Adjust copy.c and merge.c accordingly... */
-  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
-              err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
-    {
-      /* A locally-added but uncommitted versioned resource won't
-         exist in the repository. */
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-  return err;
+  return svn_ra_get_log2(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
+                         FALSE, TRUE, revnum_receiver, oldest_rev, pool);
 }
 
 /* The baton for use with copyfrom_info_receiver(). */
@@ -218,56 +206,66 @@ svn_client__get_copy_source(const char *path_or_url,
 }
 
 svn_error_t *
-svn_client__suggest_merge_sources(const char *path_or_url,
-                                  const svn_opt_revision_t *revision,
-                                  apr_array_header_t **suggestions,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool)
+svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
+                                 const char *path_or_url,
+                                 const svn_opt_revision_t *peg_revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool)
 {
+  const char *repos_root;
   const char *copyfrom_path;
+  apr_array_header_t *list;
   svn_revnum_t copyfrom_rev;
   apr_hash_t *mergeinfo;
   apr_hash_index_t *hi;
 
-  *suggestions = apr_array_make(pool, 1, sizeof(const char *));
+  list = apr_array_make(pool, 1, sizeof(const char *));
 
   /* In our ideal algorithm, the list of recommendations should be
      ordered by:
 
-     1) The most recent existing merge source.
-     2) The copyfrom source (which will also be listed as a merge
-        source if the copy was made with a 1.5+ client and server).
-     3) All other merge sources, most recent to least recent.
+        1. The most recent existing merge source.
+        2. The copyfrom source (which will also be listed as a merge
+           source if the copy was made with a 1.5+ client and server).
+        3. All other merge sources, most recent to least recent.
 
      However, determining the order of application of merge sources
      requires a new RA API.  Until such an API is available, our
      algorithm will be:
 
-     1) The copyfrom source.
-     2) All remaining merge sources (unordered). */
+        1. The copyfrom source.
+        2. All remaining merge sources (unordered).
+  */
 
-  /* ### TODO: Use RA APIs directly to improve efficiency. */
-  SVN_ERR(svn_client__get_copy_source(path_or_url, revision, &copyfrom_path,
-                                      &copyfrom_rev, ctx, pool));
+  /* ### TODO: Share ra_session batons to improve efficiency? */
+  SVN_ERR(svn_client__get_repos_root(&repos_root, path_or_url, peg_revision, 
+                                     ctx, pool));
+  SVN_ERR(svn_client__get_copy_source(path_or_url, peg_revision, 
+                                      &copyfrom_path, &copyfrom_rev, 
+                                      ctx, pool));
   if (copyfrom_path)
-    APR_ARRAY_PUSH(*suggestions, const char *) = copyfrom_path;
+    APR_ARRAY_PUSH(list, const char *) = 
+      svn_path_join(repos_root, 
+                    svn_path_uri_encode(copyfrom_path + 1, pool),
+                    pool);
 
-  SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, revision,
+  SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, peg_revision, 
                                    ctx, pool));
-
-  if (!mergeinfo)
-    return SVN_NO_ERROR;
-
-  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+  if (mergeinfo)
     {
-      const char *path;
-      apr_hash_this(hi, (void *) &path, NULL, NULL);
-      if (copyfrom_path == NULL || strcmp(path, copyfrom_path) != 0)
+      for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
         {
-          APR_ARRAY_PUSH(*suggestions, const char *) = apr_pstrdup(pool, path);
+          const char *merge_path;
+          apr_hash_this(hi, (void *)(&merge_path), NULL, NULL);
+          if (copyfrom_path == NULL || strcmp(merge_path, copyfrom_path) != 0)
+            APR_ARRAY_PUSH(list, const char *) = 
+              svn_path_join(repos_root, 
+                            svn_path_uri_encode(merge_path + 1, pool),
+                            pool);
         }
     }
 
+  *suggestions = list;
   return SVN_NO_ERROR;
 }
 
@@ -349,11 +347,11 @@ svn_client_log4(const apr_array_header_t *targets,
       apr_array_header_t *target_urls;
       apr_array_header_t *real_targets;
       int i;
-      
+
       /* Get URLs for each target */
       target_urls = apr_array_make(pool, 1, sizeof(const char *));
       real_targets = apr_array_make(pool, 1, sizeof(const char *));
-      for (i = 0; i < targets->nelts; i++) 
+      for (i = 0; i < targets->nelts; i++)
         {
           const svn_wc_entry_t *entry;
           const char *URL;
@@ -494,7 +492,7 @@ svn_client_log4(const apr_array_header_t *targets,
             if (start_is_local)
               SVN_ERR(svn_client__get_revision_number
                       (&start_revnum, ra_session, start, target, pool));
-            
+
             if (end_is_local)
               SVN_ERR(svn_client__get_revision_number
                       (&end_revnum, ra_session, end, target, pool));
@@ -530,7 +528,7 @@ svn_client_log4(const apr_array_header_t *targets,
                               receiver_baton,
                               pool);
       }
-  
+
     return err;
   }
 }
@@ -595,7 +593,7 @@ svn_client_log(const apr_array_header_t *targets,
   err = svn_client_log2(targets, start, end, 0, discover_changed_paths,
                         strict_node_history, receiver, receiver_baton, ctx,
                         pool);
-    
+
   /* Special case: If there have been no commits, we'll get an error
    * for requesting log of a revision higher than 0.  But the
    * default behavior of "svn log" is to give revisions HEAD through
@@ -624,7 +622,7 @@ svn_client_log(const apr_array_header_t *targets,
 
       svn_error_clear(err);
       err = SVN_NO_ERROR;
-          
+
       /* Log receivers are free to handle revision 0 specially... But
          just in case some don't, we make up a message here. */
       SVN_ERR(receiver(receiver_baton,

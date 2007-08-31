@@ -48,7 +48,7 @@ svn_cl__commit(apr_getopt_t *os,
   svn_boolean_t no_unlock = FALSE;
   svn_commit_info_t *commit_info = NULL;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments. */
@@ -65,7 +65,7 @@ svn_cl__commit(apr_getopt_t *os,
     {
       const char *parent_dir, *base_name;
 
-      SVN_ERR(svn_wc_get_actual_target(base_dir, &parent_dir, 
+      SVN_ERR(svn_wc_get_actual_target(base_dir, &parent_dir,
                                        &base_name, pool));
       if (*base_name)
         base_dir = apr_pstrdup(pool, parent_dir);
@@ -85,12 +85,12 @@ svn_cl__commit(apr_getopt_t *os,
                                 SVN_CONFIG_SECTION_MISCELLANY,
                                 SVN_CONFIG_OPTION_NO_UNLOCK, FALSE));
 
-  /* We're creating a new log message baton because we can use our base_dir 
-     to store the temp file, instead of the current working directory.  The 
-     client might not have write access to their working directory, but they 
+  /* We're creating a new log message baton because we can use our base_dir
+     to store the temp file, instead of the current working directory.  The
+     client might not have write access to their working directory, but they
      better have write access to the directory they're committing.  */
   SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
-                                     opt_state, base_dir, 
+                                     opt_state, base_dir,
                                      ctx->config, pool));
 
   ctx->revprop_table = opt_state->revprop_table;
@@ -100,7 +100,7 @@ svn_cl__commit(apr_getopt_t *os,
           (ctx->log_msg_baton3,
            svn_client_commit4(&commit_info,
                               targets,
-                              SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                              opt_state->depth,
                               no_unlock,
                               opt_state->keep_changelist,
                               opt_state->changelist,

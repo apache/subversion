@@ -418,7 +418,7 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             worker.logMessages(path, pegRevision, revisionStart,
                                revisionEnd, stopOnCopy, discoverPath,
-                               includeMergedRevisions, omitLogText, 
+                               includeMergedRevisions, omitLogText,
                                limit, callback);
         }
     }
@@ -762,14 +762,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean, boolean, String)
      * @since 1.5
      */
-    public long commit(String[] path, String message, boolean recurse,
+    public long commit(String[] path, String message, int depth,
                        boolean noUnlock, boolean keepChangelist,
                        String changelistName)
             throws ClientException
     {
         synchronized (clazz)
         {
-            return worker.commit(path, message, recurse, noUnlock,
+            return worker.commit(path, message, depth, noUnlock,
                                  keepChangelist, changelistName);
         }
     }
@@ -1070,6 +1070,18 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.doImport(path, url, message, recurse);
+        }
+    }
+
+    /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
+     */
+    public String[] suggestMergeSources(String path, Revision pegRevision)
+            throws SubversionException
+    {
+        synchronized (clazz)
+        {
+            return worker.suggestMergeSources(path, pegRevision);
         }
     }
 
@@ -2158,19 +2170,6 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized (clazz)
         {
             worker.info2(pathOrUrl, revision, pegRevision, recurse, callback);
-        }
-    }
-
-    /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String, Revision)
-     * @since 1.5
-     */
-    public CopySource getCopySource(String path, Revision revision)
-        throws SubversionException
-    {
-        synchronized (clazz)
-        {
-            return worker.getCopySource(path, revision);
         }
     }
 

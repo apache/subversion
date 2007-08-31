@@ -33,11 +33,11 @@ class MyParser(sgmllib.SGMLParser):
   def handle_starttag(self, tag, method, attrs):
     if not self.inbody: return
     self.baseclass.handle_starttag(self, tag, method, attrs)
-    
+
   def handle_endtag(self, tag, method):
     if not self.inbody: return
     self.baseclass.handle_endtag(self, tag, method)
-    
+
   def handle_data(self, data):
     if not self.inbody: return
     data = data.replace('\n','')
@@ -61,11 +61,11 @@ class MyParser(sgmllib.SGMLParser):
   def handle_charref(self, ref):
     if not self.inbody: return
     self.baseclass.handle_charref(self, ref)
-    
+
   def handle_entityref(self, ref):
     if not self.inbody: return
     self.baseclass.handle_entityref(self, ref)
-    
+
   def handle_comment(self, comment):
     if comment == ' body="start" ':
       self.inbody = True
@@ -75,7 +75,7 @@ class MyParser(sgmllib.SGMLParser):
   def handle_decl(self, data):
     if not self.inbody: return
     print "DECL: " + data
-    
+
   def unknown_starttag(self, tag, attrs):
     if not self.inbody: return
     print "UNKTAG: %s %s" % (tag, attrs)

@@ -76,6 +76,10 @@
   apr_array_header_t **paths
 }
 
+%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  apr_array_header_t **suggestions
+}
+
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
@@ -353,7 +357,7 @@ _svn_client_remove_from_changelist(const apr_array_header_t *paths,
 svn_error_t *
 _svn_client_commit4(svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *targets,
-                    svn_boolean_t recurse,
+                    svn_depth_t depth,
                     svn_boolean_t keep_locks,
                     svn_boolean_t keep_changelist,
                     const char *changelist_name_may_be_null,

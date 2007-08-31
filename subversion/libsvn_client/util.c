@@ -2,7 +2,7 @@
  * util.c :  utility functions for the libsvn_client library
  *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -129,6 +129,9 @@ svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
   return new_item;
 }
 
+/* ### FIXME: This isn't properly handling the case where PATH_OR_URL
+   ### is a WC path, and REPOS_ROOT is provided.  *REL_PATH may end up
+   ### missing information. */
 svn_error_t *
 svn_client__path_relative_to_root(const char **rel_path,
                                   const char *path_or_url,
@@ -195,5 +198,39 @@ svn_client__path_relative_to_root(const char **rel_path,
       else
         svn_error_clear(err2);
     }
+  return err;
+}
+
+svn_error_t *
+svn_client__get_repos_root(const char **repos_root, 
+                           const char *path_or_url,
+                           const svn_opt_revision_t *peg_revision,
+                           svn_client_ctx_t *ctx, 
+                           apr_pool_t *pool)
+{
+  svn_revnum_t rev;
+  svn_ra_session_t *ra_session;
+  const char *target_url;
+
+  /* ### FIXME: If PATH_OR_URL is a local path, we should first see
+     ###        if its entry already has the repository root URL. */
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                           &rev,
+                                           &target_url,
+                                           path_or_url,
+                                           peg_revision,
+                                           peg_revision,
+                                           ctx,
+                                           pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, repos_root, pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__default_walker_error_handler(const char *path,
+                                         svn_error_t *err,
+                                         void *walk_baton,
+                                         apr_pool_t *pool)
+{
   return err;
 }

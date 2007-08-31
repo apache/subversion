@@ -180,7 +180,7 @@ svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
 /* Having picked a mechanism, start authentication by writing out an
  * auth response.  MECH_ARG may be NULL for mechanisms with no
  * initial client response. */
-svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn, 
+svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
                                        const char *mech, const char *mech_arg);
 

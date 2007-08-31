@@ -129,7 +129,7 @@ def setup_pristine_repository():
 
 
 ######################################################################
-# Used by every test, so that they can run independently of  one 
+# Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
 # the `pristine repos' to a new location.
 # Note: make sure setup_pristine_repository was called once before
@@ -290,7 +290,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                             *args):
   """Checkout the URL into a new directory WC_DIR_NAME. *ARGS are any
   extra optional args to the checkout subcommand.
- 
+
   The subcommand output will be verified against OUTPUT_TREE,
   and the working copy itself will be verified against DISK_TREE.
   SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
@@ -882,7 +882,7 @@ def run_and_validate_lock(path, username, password):
 
   # Run info and check that we get the lock fields.
   output, err = run_and_verify_svn(None, None, [],
-                                   'info','-R', 
+                                   'info','-R',
                                    path)
 
   # prepare the regexs to compare against

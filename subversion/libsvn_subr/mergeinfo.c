@@ -39,7 +39,7 @@
    ranges are inheritable the result is inheritable and if both are
    non-inheritable the result is non-inheritable.
 
-   Range overlapping detection algorithm from 
+   Range overlapping detection algorithm from
    http://c2.com/cgi-bin/wiki/fullSearch?TestIfDateRangesOverlap
 */
 static svn_boolean_t
@@ -91,8 +91,8 @@ parse_pathname(const char **input, const char *end,
   to combine ranges - see combine_ranges().
 */
 static APR_INLINE void
-combine_with_lastrange(svn_merge_range_t** lastrange, 
-                       svn_merge_range_t *mrange, svn_boolean_t dup_mrange, 
+combine_with_lastrange(svn_merge_range_t** lastrange,
+                       svn_merge_range_t *mrange, svn_boolean_t dup_mrange,
                        apr_array_header_t *revlist,
                        svn_boolean_t consider_inheritance,
                        apr_pool_t *pool)
@@ -136,7 +136,7 @@ parse_revlist(const char **input, const char *end,
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
       svn_revnum_t firstrev;
 
-      SVN_ERR(svn_parse_revision_number(&firstrev, curr, &curr));
+      SVN_ERR(svn_revnum_parse(&firstrev, curr, &curr));
       if (*curr != '-' && *curr != '\n' && *curr != ',' && *curr != '*'
           && curr != end)
         return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
@@ -151,7 +151,7 @@ parse_revlist(const char **input, const char *end,
           svn_revnum_t secondrev;
 
           curr++;
-          SVN_ERR(svn_parse_revision_number(&secondrev, curr, &curr));
+          SVN_ERR(svn_revnum_parse(&secondrev, curr, &curr));
           mrange->end = secondrev;
         }
 
@@ -256,8 +256,8 @@ parse_top(const char **input, const char *end, apr_hash_t *hash,
 
 /* Parse mergeinfo.  */
 svn_error_t *
-svn_mergeinfo_parse(apr_hash_t **mergehash, 
-                    const char *input, 
+svn_mergeinfo_parse(apr_hash_t **mergehash,
+                    const char *input,
                     apr_pool_t *pool)
 {
   *mergehash = apr_hash_make(pool);
@@ -460,7 +460,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
           if (!do_remove)
               combine_with_lastrange(&lastrange, elt1, TRUE, *output,
                                      consider_inheritance, pool);
-          
+
           i++;
 
           if (elt1->start == elt2->start && elt1->end == elt2->end)
@@ -487,7 +487,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.end = elt1->end;
                 }
 
-              combine_with_lastrange(&lastrange, &tmp_range, TRUE, 
+              combine_with_lastrange(&lastrange, &tmp_range, TRUE,
                                      *output, consider_inheritance, pool);
             }
 
@@ -499,11 +499,11 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
               if (!do_remove)
                 {
                   /* Partial overlap. */
-                  svn_merge_range_t tmp_range;                  
+                  svn_merge_range_t tmp_range;
                   tmp_range.start = elt1->start;
                   tmp_range.end = elt2->end;
                   tmp_range.inheritable = elt1->inheritable;
-                  combine_with_lastrange(&lastrange, &tmp_range, TRUE, 
+                  combine_with_lastrange(&lastrange, &tmp_range, TRUE,
                                          *output, consider_inheritance, pool);
                 }
 
@@ -683,7 +683,7 @@ svn_rangelist_to_revs(apr_array_header_t **revs,
    ### libsvn_subr/sorts.c:svn_prop_diffs().  Factor out a generic
    ### hash diffing function for addition to APR's apr_hash.h API. */
 static svn_error_t *
-walk_mergeinfo_hash_for_diff(apr_hash_t *from, apr_hash_t *to, 
+walk_mergeinfo_hash_for_diff(apr_hash_t *from, apr_hash_t *to,
                              apr_hash_t *deleted, apr_hash_t *added,
                              svn_merge_range_inheritance_t consider_inheritance,
                              apr_pool_t *pool)
@@ -777,7 +777,7 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
 
 svn_error_t *
 svn_mergeinfo__equals(svn_boolean_t *is_equal,
-                      apr_hash_t *info1, 
+                      apr_hash_t *info1,
                       apr_hash_t *info2,
                       svn_merge_range_inheritance_t consider_inheritance,
                       apr_pool_t *pool)
@@ -858,7 +858,7 @@ svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
                      apr_hash_t *whiteboard, apr_pool_t *pool)
 {
   *output = apr_hash_make(pool);
-  SVN_ERR(walk_mergeinfo_hash_for_diff(whiteboard, eraser, *output, NULL, 
+  SVN_ERR(walk_mergeinfo_hash_for_diff(whiteboard, eraser, *output, NULL,
                                        TRUE, pool));
   return SVN_NO_ERROR;
 }
@@ -1060,7 +1060,7 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                     apr_palloc(pool, sizeof(*inheritable_range));
                   inheritable_range->start = range->start;
                   inheritable_range->end = range->end;
-                  inheritable_range->inheritable = TRUE;    
+                  inheritable_range->inheritable = TRUE;
                   APR_ARRAY_PUSH(*inheritable_rangelist,
                                  svn_merge_range_t *) = range;
                 }
@@ -1073,7 +1073,7 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
           apr_array_header_t *ranges_inheritable =
             apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
           svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
-      
+
           range->start = start;
           range->end = end;
           range->inheritable = FALSE;

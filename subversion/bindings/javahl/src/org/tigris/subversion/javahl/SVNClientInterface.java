@@ -517,7 +517,7 @@ public interface SVNClientInterface
      * Commits changes to the repository.
      * @param path            files to commit.
      * @param message         log message.
-     * @param recurse         whether the operation should be done recursively.
+     * @param depth           how deep to recurse in subdirectories
      * @param noUnlock        do remove any locks
      * @param keepChangelist  keep changelist associations after the commit.
      * @param changelistName  if non-null, filter paths using changelist
@@ -527,7 +527,7 @@ public interface SVNClientInterface
      * @throws ClientException
      * @since 1.5
      */
-    long commit(String[] path, String message, boolean recurse,
+    long commit(String[] path, String message, int depth,
                 boolean noUnlock, boolean keepChangelist, String changelistName)
             throws ClientException;
 
@@ -730,6 +730,17 @@ public interface SVNClientInterface
      */
     void doImport(String path, String url, String message, boolean recurse)
             throws ClientException;
+
+    /**
+     * Return an ordered list of suggested merge source URLs.
+     * @param path The merge target path for which to suggest sources.
+     * @param pegRevision Peg revision used to interpret path.
+     * @return The list of URLs, empty if there are no suggestions.
+     * @throws ClientException If an error occurs.
+     * @since 1.5
+     */
+    String[] suggestMergeSources(String path, Revision pegRevision)
+            throws SubversionException;
 
     /**
      * Merge changes from two paths into a new local path.
@@ -1454,17 +1465,4 @@ public interface SVNClientInterface
      */
     String getVersionInfo(String path, String trailUrl, boolean lastChanged)
             throws ClientException;
-
-    /**
-     * Return the source a WC path or URL was copied from.
-     * @param path The path to determine a source for.
-     * @param revision The revision at which to determine a source.
-     * @return The last source <code>path</code> was copied from, or
-     * <code>null</code> if never copied.
-     * @throws SubversionException If there is a problem determing the
-     * copy source.
-     * @since 1.5
-     */
-    CopySource getCopySource(String path, Revision revision)
-        throws SubversionException;
 }

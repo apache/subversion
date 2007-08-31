@@ -31,17 +31,18 @@ Layout of the FS directory
 The layout of the FS directory (the "db" subdirectory of the
 repository) is:
 
-  revs                Subdirectory containing revs
-    <shard>           Shard directory, if sharding is in use (see below)
+  revs/               Subdirectory containing revs
+    <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev <revnum>
-  revprops            Subdirectory containing rev-props
-    <shard>           Shard directory, if sharding is in use (see below)
+  revprops/           Subdirectory containing rev-props
+    <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
-  transactions        Subdirectory containing transactions
-    <txnid>.txn       Directory containing transaction <txnid>
+  mergeinfo.db        SQLite database containing index for svn:mergeinfo props
+  transactions/       Subdirectory containing transactions
+    <txnid>.txn/      Directory containing transaction <txnid>
   transaction-current File containing the next transaction key
-  locks               Subdirectory containing locks
-    <partial-digest>  Subdirectory named for first 3 letters of an MD5 digest
+  locks/              Subdirectory containing locks
+    <partial-digest>/ Subdirectory named for first 3 letters of an MD5 digest
       <digest>        File containing locks/children for path with <digest>
   current             File specifying current revision and next node/copy id
   fs-type             File identifying this filesystem as an FSFS filesystem
@@ -65,12 +66,14 @@ read in, mutated, and written out again.  Note that readers are never
 blocked by any operation - writers must ensure that the filesystem is
 always in a consistent state.
 
-The "transaction-current" is a file with a single line of text that
-contains only a base-36 number.  The current value will be used in the
-next transaction name, along with the revision number the transaction
-is based on.  This sequence number ensures that transaction names are
-not reused, even if the transaction is aborted and a new transaction
-based on the same revision is begun.
+The "transaction-current" file is a file with a single line of text
+that contains only a base-36 number.  The current value will be used
+in the next transaction name, along with the revision number the
+transaction is based on.  This sequence number ensures that
+transaction names are not reused, even if the transaction is aborted
+and a new transaction based on the same revision is begun.  The
+"transaction-current" file is read and written under the fs-wide
+write-lock.
 
 Filesystem formats
 ------------------
@@ -96,18 +99,23 @@ The format numbers have the following meanings:
 
 Format 1: (understood by Subversion 1.1+)
   Delta representations in revision files must contain only svndiff0
-  data.  No format options are permitted.
+  data.  No format options are permitted.  No mergeinfo index is
+  present.  No mechanism is provided to prevent transaction name
+  reuse.
 
 Format 2: (understood by Subversion 1.4+)
   Delta representations in revision files may contain either svndiff0
-  or svndiff1 data.  No format options are permitted.
+  or svndiff1 data.  No format options are permitted.  No mergeinfo
+  index is present.  No mechanism is provided to prevent transaction
+  name reuse.
 
 Format 3: (understood by Subversion 1.5+)
   Delta representations in revision files may contain either svndiff0
-  or svndiff1 data.  The 'layout' format option is permitted.  To
-  prevent transaction name reuse, transaction names are generated
-  using a transaction sequence number stored in a transaction-current
-  file.
+  or svndiff1 data.  The 'layout' format option is permitted.  The mergeinfo
+  index is present, and should be updated whenever the svn:mergeinfo property
+  is set on a node.  To prevent transaction name reuse, transaction names
+  should be generated using the transaction sequence number stored in the
+  transaction-current file.
 
 Filesystem format options
 -------------------------
@@ -305,6 +313,7 @@ A transaction directory has the following layout:
   rev                        Prototype rev file with new text reps
   rev-lock                   Lockfile for writing to the above
   props                      Transaction props
+  mergeinfo                  Transaction mergeinfo props, if any
   next-ids                   Next temporary node-ID and copy-ID
   changes                    Changed-path information so far
   node.<nid>.<cid>           New node-rev data for node
@@ -316,7 +325,11 @@ they are received from the client.  To ensure that only one client is
 writing to the file at a given time, the "rev-lock" file is locked for
 the duration of each write.
 
-The two kinds of props files are both in hash dump format.
+The three kinds of props files are all in hash dump format.  The
+"props" file will always be present.  The "mergeinfo" file may be
+absent if no svn:mergeinfo properties have been changed on any node in
+the transaction.  The "node.<nid>.<cid>.props" file will only be
+present if the node-rev properties have been changed.
 
 The "next-ids" file contains a single line "<next-temp-node-id>
 <next-temp-copy-id>\n" giving the next temporary node-ID and copy-ID
@@ -354,7 +367,7 @@ follows:
     copy root of the node-rev is part of the transaction in process.
 
 Locks layout
-------------------
+------------
 
 Locks in FSFS are stored in serialized hash format in files whose
 names are MD5 digests of the FS path which the lock is associated

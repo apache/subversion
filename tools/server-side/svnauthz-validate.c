@@ -16,7 +16,7 @@
  * ====================================================================
  *
  *
- * svnauthz-validate.c : load and validate an authz file, returns 
+ * svnauthz-validate.c : load and validate an authz file, returns
  *       value == 0 if syntax of authz file is correct
  *       value == 1 if syntax of authz file is invalid or file not found
  *       value == 2 in case of general error
@@ -37,12 +37,12 @@ main(int argc, const char **argv)
 
   if (argc <= 1)
     {
-      printf("Usage:  %s PATH \n\n", argv[0]);  
+      printf("Usage:  %s PATH \n\n", argv[0]);
       printf("Loads the authz file at PATH and validates its syntax. \n"
              "Returns:\n"
              "    0   when syntax is OK.\n"
              "    1   when syntax is invalid.\n"
-             "    2   operational error\n");              
+             "    2   operational error\n");
       return 2;
     }
 
@@ -57,7 +57,7 @@ main(int argc, const char **argv)
   /* Read the access file and validate it. */
   err = svn_repos_authz_read(&authz, authz_file, TRUE, pool);
 
-  svn_pool_destroy(pool); 
+  svn_pool_destroy(pool);
 
   if (err)
     {

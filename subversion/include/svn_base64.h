@@ -46,7 +46,7 @@ extern "C" {
 svn_stream_t *svn_base64_encode(svn_stream_t *output, apr_pool_t *pool);
 
 /** Return a writable generic stream which will decode base64-encoded
- * data and write the decoded data to @c output.  The stream is allocated 
+ * data and write the decoded data to @c output.  The stream is allocated
  * in @c pool.
  */
 svn_stream_t *svn_base64_decode(svn_stream_t *output, apr_pool_t *pool);
@@ -54,7 +54,7 @@ svn_stream_t *svn_base64_decode(svn_stream_t *output, apr_pool_t *pool);
 
 /** Encode an @c svn_stringbuf_t into base64.
  *
- * A simple interface for encoding base64 data assuming we have all of 
+ * A simple interface for encoding base64 data assuming we have all of
  * it present at once.  The returned string will be allocated from @c pool.
  */
 const svn_string_t *svn_base64_encode_string(const svn_string_t *str,
@@ -62,7 +62,7 @@ const svn_string_t *svn_base64_encode_string(const svn_string_t *str,
 
 /** Decode an @c svn_stringbuf_t from base64.
  *
- * A simple interface for decoding base64 data assuming we have all of 
+ * A simple interface for decoding base64 data assuming we have all of
  * it present at once.  The returned string will be allocated from @c pool.
  */
 const svn_string_t *svn_base64_decode_string(const svn_string_t *str,

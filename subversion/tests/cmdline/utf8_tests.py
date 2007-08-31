@@ -3,9 +3,9 @@
 #
 #  utf8_tests.py:  testing the svn client's utf8 (i18n) handling
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -77,7 +77,7 @@ def basic_utf8_conversion(sbox):
 #    *different* UTF-8.
 
 
-  
+
 #----------------------------------------------------------------------
 
 ########################################################################

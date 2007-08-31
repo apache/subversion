@@ -277,7 +277,7 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
                                     svn_path_local_style(path, pool),
                                     pool));
 #endif
-  
+
   /* Allocate the whole structure, including strings, from the heap,
      because it must survive the cache pool cleanup. */
   path_size = strlen(path) + 1;

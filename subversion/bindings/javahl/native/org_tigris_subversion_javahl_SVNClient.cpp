@@ -248,7 +248,7 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jstopOnCopy,
- jboolean jdisoverPaths, jboolean jincludeMergedRevisions, 
+ jboolean jdisoverPaths, jboolean jincludeMergedRevisions,
  jboolean jomitLogText, jlong jlimit, jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, logMessages);
@@ -277,7 +277,7 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
   LogMessageCallback callback(jlogMessageCallback);
   cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
-                  jincludeMergedRevisions ? true : false, 
+                  jincludeMergedRevisions ? true : false,
                   jomitLogText ? true : false, jlimit, &callback);
 }
 
@@ -497,7 +497,7 @@ Java_org_tigris_subversion_javahl_SVNClient_update
 JNIEXPORT jlong JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_commit
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
- jboolean jrecurse, jboolean jnoUnlock, jboolean jkeepChangelist,
+ jint jdepth, jboolean jnoUnlock, jboolean jkeepChangelist,
  jstring jchangelistName)
 {
   JNIEntry(SVNClient, commit);
@@ -516,7 +516,7 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  return cl->commit(targets, message, jrecurse ? true : false,
+  return cl->commit(targets, message, (svn_depth_t)jdepth,
                     jnoUnlock ? true : false, jkeepChangelist ? true : false,
                     changelistName);
 }
@@ -724,6 +724,29 @@ Java_org_tigris_subversion_javahl_SVNClient_doImport
     return;
 
   cl->doImport(path, url, message, jrecurse ? true : false);
+}
+
+JNIEXPORT jobjectArray JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_suggestMergeSources
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision)
+{
+  JNIEntry(SVNClient, suggestMergeSources);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  Revision pegRevision(jpegRevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return cl->suggestMergeSources(path, pegRevision);
 }
 
 JNIEXPORT void JNICALL
@@ -1566,26 +1589,4 @@ Java_org_tigris_subversion_javahl_SVNClient_info2
   InfoCallback callback(jinfoCallback);
   cl->info2(path, revision, pegRevision, jrecurse ? true : false,
             &callback);
-}
-
-JNIEXPORT jobject JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getCopySource
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision)
-{
-  JNIEntry(SVNClient, getCopySource);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError("bad C++ this");
-      return NULL;
-    }
-
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-  Revision rev(jrevision);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
- 
-  return cl->getCopySource(path, rev);
 }
