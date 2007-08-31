@@ -941,38 +941,6 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
 
 static svn_error_t *
-remove_tmpfiles(apr_hash_t *tempfiles,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-
-  /* Split if there's nothing to be done. */
-  if (! tempfiles)
-    return SVN_NO_ERROR;
-
-  /* Clean up any tempfiles. */
-  for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      svn_node_kind_t kind;
-
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
-
-      apr_hash_this(hi, &key, NULL, NULL);
-      SVN_ERR(svn_io_check_path((const char *)key, &kind, pool));
-      if (kind == svn_node_file)
-        SVN_ERR(svn_io_remove_file((const char *)key, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
-static svn_error_t *
 reconcile_errors(svn_error_t *commit_err,
                  svn_error_t *unlock_err,
                  svn_error_t *cleanup_err,
@@ -1041,12 +1009,11 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   void *edit_baton;
   svn_node_kind_t base_kind;
   void *commit_baton;
-  apr_hash_t *committables, *tempfiles = NULL;
+  apr_hash_t *committables;
   svn_wc_adm_access_t *adm_access, *dir_access;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR;
   svn_error_t *unlock_err = SVN_NO_ERROR;
-  svn_error_t *cleanup_err = SVN_NO_ERROR;
   const svn_wc_entry_t *entry;
   apr_pool_t *iterpool;
   apr_array_header_t *new_dirs = NULL;
@@ -1302,7 +1269,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   cmt_err = svn_client__do_commit(top_dst_url, commit_items, adm_access,
                                   editor, edit_baton,
                                   0, /* ### any notify_path_offset needed? */
-                                  &tempfiles, NULL, ctx, pool);
+                                  NULL, NULL, ctx, pool);
 
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
@@ -1312,13 +1279,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   /* It's only a read lock, so unlocking is harmless. */
   unlock_err = svn_wc_adm_close(adm_access);
 
-  /* Remove any outstanding temporary text-base files. */
-  if (tempfiles)
-    cleanup_err = remove_tmpfiles(tempfiles,
-                                  ctx->cancel_func, ctx->cancel_baton,
-                                  pool);
-
-  return reconcile_errors(cmt_err, unlock_err, cleanup_err, pool);
+  return reconcile_errors(cmt_err, unlock_err, SVN_NO_ERROR, pool);
 }
 
 /* Peform each individual copy operation for a repos -> wc copy.  A
