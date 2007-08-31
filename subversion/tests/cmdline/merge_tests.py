@@ -3351,12 +3351,10 @@ def cherry_pick_text_conflict(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
 
   # Change mu's text twice on the branch, producing r3 then r4.
-  svntest.main.file_append(branch_mu_path,
-                           "r3\nr3\nr3\nr3\nr3\nr3\nr3\nr3\n")
+  svntest.main.file_append(branch_mu_path, "r3\n" * 3)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'Add lines to mu.', wc_dir)
-  svntest.main.file_append(branch_mu_path,
-                           "r4\nr4\nr4\nr4\nr4\nr4\nr4\nr4\n")
+  svntest.main.file_append(branch_mu_path, "r4\n" * 3)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'Add more lines to mu.', wc_dir)
 
@@ -3368,22 +3366,8 @@ def cherry_pick_text_conflict(sbox):
     'mu'        : Item("This is the file 'mu'.\n"
                        + "<<<<<<< .working\n"
                        + "=======\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
+                       + "r3\n" * 3
+                       + "r4\n" * 3
                        + ">>>>>>> .merge-right.r4\n"
                        ),
     'B'         : Item(),
