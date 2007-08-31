@@ -3350,15 +3350,20 @@ def cherry_pick_text_conflict(sbox):
   # Update to get the branch.
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
 
-  # Change mu's text twice on the branch, producing r3 then r4.
-  svntest.main.file_append(branch_mu_path, "r3\n" * 3)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
-                                     '-m', 'Add lines to mu.', wc_dir)
-  svntest.main.file_append(branch_mu_path, "r4\n" * 3)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
-                                     '-m', 'Add more lines to mu.', wc_dir)
+  # Change mu's text on the branch, producing r3 through r6.
+  for rev in range(3, 7):
+    svntest.main.file_append(branch_mu_path, ("r%d\n" % rev) * 3)
+    svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                       'Add lines to mu in r%d.' % rev, wc_dir)
 
-  # Try to merge just r4 into trunk, without r3.  It should fail.
+  # Mark r5 as merged into trunk, to create disparate revision ranges
+  # which need to be merged.
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'merge', '-c5', '--record-only',
+                                     branch_A_url, A_path)
+
+
+  # Try to merge r4:6 into trunk, without r3.  It should fail.
   expected_output = wc.State(A_path, {
     'mu'       : Item(status='C '),
     })
@@ -3411,12 +3416,13 @@ def cherry_pick_text_conflict(sbox):
     })
   expected_status.tweak(wc_rev=2)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_merge(A_path, '3', '4', branch_A_url,
+  expected_error = "conflicts were produced while merging r3:4"
+  svntest.actions.run_and_verify_merge(A_path, '3', '6', branch_A_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, # no error expected
+                                       expected_error,
                                        svntest.tree.detect_conflict_files,
                                        ["mu\.working",
                                         "mu\.merge-right\.r4",
