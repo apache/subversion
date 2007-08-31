@@ -85,7 +85,8 @@ log_receiver(void *baton,
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                               "<D:creator-displayname>%s"
                               "</D:creator-displayname>" DEBUG_CR,
-                              apr_xml_quote_string(pool, log_entry->author, 0)));
+                              apr_xml_quote_string(pool, log_entry->author,
+                                                   0)));
 
   /* ### this should be DAV:creation-date, but we need to format
      ### that date a bit differently */
