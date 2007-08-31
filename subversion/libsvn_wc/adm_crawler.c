@@ -1051,9 +1051,6 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
           svn_error_clear(err);
           svn_error_clear(svn_io_remove_file(tmp_base, pool));
 
-          if (tempfile)
-            *tempfile = NULL;
-
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
              _("Checksum mismatch for '%s'; "
