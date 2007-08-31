@@ -1052,7 +1052,6 @@ do_item_commit(void **dir_baton,
   svn_wc_adm_access_t *adm_access = cb_baton->adm_access;
   const svn_delta_editor_t *editor = cb_baton->editor;
   apr_hash_t *file_mods = cb_baton->file_mods;
-  apr_hash_t *tempfiles = cb_baton->tempfiles;
   const char *notify_path_prefix = cb_baton->notify_path_prefix;
   svn_client_ctx_t *ctx = cb_baton->ctx;
 
@@ -1214,7 +1213,6 @@ do_item_commit(void **dir_baton,
   /* Now handle property mods. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
     {
-      const char *tempfile;
       const svn_wc_entry_t *tmp_entry;
 
       if (kind == svn_node_file)
@@ -1249,13 +1247,7 @@ do_item_commit(void **dir_baton,
       SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, TRUE, pool));
       SVN_ERR(svn_wc_transmit_prop_deltas
               (item->path, adm_access, tmp_entry, editor,
-               (kind == svn_node_dir) ? *dir_baton : file_baton,
-               &tempfile, pool));
-      if (tempfile && tempfiles)
-        {
-          tempfile = apr_pstrdup(apr_hash_pool_get(tempfiles), tempfile);
-          apr_hash_set(tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
-        }
+               (kind == svn_node_dir) ? *dir_baton : file_baton, NULL, pool));
 
       /* Make any additional client -> repository prop changes. */
       if (item->outgoing_prop_changes)
@@ -1439,10 +1431,11 @@ svn_client__do_commit(const char *base_url,
       dir_path = svn_path_dirname(item->path, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
                                   subpool));
-      SVN_ERR(svn_wc_transmit_text_deltas2(&tempfile, digest, item->path,
+      SVN_ERR(svn_wc_transmit_text_deltas2(tempfiles ? &tempfile : NULL,
+                                           digest, item->path,
                                            item_access, fulltext, editor,
                                            file_baton, subpool));
-      if (tempfile && *tempfiles)
+      if (tempfiles && tempfile && *tempfiles)
         {
           tempfile = apr_pstrdup(apr_hash_pool_get(*tempfiles), tempfile);
           apr_hash_set(*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);

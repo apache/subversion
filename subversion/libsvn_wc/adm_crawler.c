@@ -947,32 +947,35 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
      commit. */
   SVN_ERR(svn_io_file_affected_time(&wf_time, path, pool));
 
-  /* Make an untranslated copy of the working file in the
-     administrative tmp area because a) we need to detranslate eol
-     and keywords anyway, and b) after the commit, we're going to
-     copy the tmp file to become the new text base anyway. */
-
-  tmp_base = svn_wc__text_base_path(path, TRUE, pool);
-  /* Alert the caller that we have created a temporary file that might
-     need to be cleaned up. */
-  if (tempfile)
-    *tempfile = tmp_base;
-
   /* Translated input */
   SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
                                    adm_access, SVN_WC_TRANSLATE_TO_NF, pool));
 
-  /* Translation output: the new text base */
-  SVN_ERR(svn_io_file_open(&tempbasefile, tmp_base,
-                           APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
 
-  /* Wrap the translated stream with a new stream that writes the
-     translated contents into the new text base file as we read from it.
-     Note that the new text base file will be closed when the new stream
-     is closed. */
-  local_stream
-    = copying_stream(local_stream,
-                     svn_stream_from_aprfile2(tempbasefile, FALSE, pool), pool);
+
+  tmp_base = svn_wc__text_base_path(path, TRUE, pool);
+  /* Alert the caller that we have created a temporary file that might
+     need to be cleaned up, if he asked for one. */
+  if (tempfile)
+    {
+      *tempfile = tmp_base;
+
+      /* Make an untranslated copy of the working file in the
+         administrative tmp area because a) we need to detranslate eol
+         and keywords anyway, and b) after the commit, we're going to
+         copy the tmp file to become the new text base anyway. */
+      SVN_ERR(svn_io_file_open(&tempbasefile, tmp_base,
+                               APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
+
+      /* Wrap the translated stream with a new stream that writes the
+         translated contents into the new text base file as we read from it.
+         Note that the new text base file will be closed when the new stream
+         is closed. */
+      local_stream
+        = copying_stream(local_stream,
+                         svn_stream_from_aprfile2(tempbasefile, FALSE, pool),
+                         pool);
+    }
 
   if (! fulltext)
     {
