@@ -943,13 +943,12 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 static svn_error_t *
 reconcile_errors(svn_error_t *commit_err,
                  svn_error_t *unlock_err,
-                 svn_error_t *cleanup_err,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
 
   /* Early release (for good behavior). */
-  if (! (commit_err || unlock_err || cleanup_err))
+  if (! (commit_err || unlock_err))
     return SVN_NO_ERROR;
 
   /* If there was a commit error, start off our error chain with
@@ -976,17 +975,6 @@ reconcile_errors(svn_error_t *commit_err,
 
       /* Append this error to the chain. */
       svn_error_compose(err, unlock_err);
-    }
-
-  /* If there was a cleanup error... */
-  if (cleanup_err)
-    {
-      /* Wrap the error with some headers. */
-      cleanup_err = svn_error_quick_wrap
-        (cleanup_err, _("Error in post-commit clean-up (details follow):"));
-
-      /* Append this error to the chain. */
-      svn_error_compose(err, cleanup_err);
     }
 
   return err;
@@ -1279,7 +1267,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   /* It's only a read lock, so unlocking is harmless. */
   unlock_err = svn_wc_adm_close(adm_access);
 
-  return reconcile_errors(cmt_err, unlock_err, SVN_NO_ERROR, pool);
+  return reconcile_errors(cmt_err, unlock_err, pool);
 }
 
 /* Peform each individual copy operation for a repos -> wc copy.  A
