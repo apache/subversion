@@ -544,7 +544,7 @@ do_open(svn_wc_adm_access_t **adm_access,
         svn_wc_adm_access_t *associated,
         const char *path,
         svn_boolean_t write_lock,
-        int depth,
+        int levels_to_lock,
         svn_boolean_t under_construction,
         svn_cancel_func_t cancel_func,
         void *cancel_baton,
@@ -624,14 +624,14 @@ do_open(svn_wc_adm_access_t **adm_access,
         SVN_ERR(maybe_upgrade_format(lock, subpool));
     }
 
-  if (depth != 0)
+  if (levels_to_lock != 0)
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
 
-      /* Reduce depth since we are about to recurse */
-      if (depth > 0)
-        depth--;
+      /* Reduce levels_to_lock since we are about to recurse */
+      if (levels_to_lock > 0)
+        levels_to_lock--;
 
       SVN_ERR(svn_wc_entries_read(&entries, lock, FALSE, subpool));
 
@@ -669,8 +669,9 @@ do_open(svn_wc_adm_access_t **adm_access,
           entry_path = svn_path_join(lock->path, entry->name, subpool);
 
           /* Don't use the subpool pool here, the lock needs to persist */
-          err = do_open(&entry_access, lock, entry_path, write_lock, depth,
-                        FALSE, cancel_func, cancel_baton, lock->pool);
+          err = do_open(&entry_access, lock, entry_path, write_lock,
+                        levels_to_lock, FALSE, cancel_func, cancel_baton,
+                        lock->pool);
           if (err)
             {
               if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
@@ -757,11 +758,11 @@ svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
                  svn_wc_adm_access_t *associated,
                  const char *path,
                  svn_boolean_t write_lock,
-                 int depth,
+                 int levels_to_lock,
                  apr_pool_t *pool)
 {
   return svn_wc_adm_open3(adm_access, associated, path, write_lock,
-                          depth, NULL, NULL, pool);
+                          levels_to_lock, NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -769,13 +770,13 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                  svn_wc_adm_access_t *associated,
                  const char *path,
                  svn_boolean_t write_lock,
-                 int depth,
+                 int levels_to_lock,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *pool)
 {
-  return do_open(adm_access, associated, path, write_lock, depth, FALSE,
-                 cancel_func, cancel_baton, pool);
+  return do_open(adm_access, associated, path, write_lock, levels_to_lock,
+                 FALSE, cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *
@@ -807,11 +808,11 @@ svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
                        svn_wc_adm_access_t *associated,
                        const char *path,
                        svn_boolean_t write_lock,
-                       int depth,
+                       int levels_to_lock,
                        apr_pool_t *pool)
 {
   return svn_wc_adm_probe_open3(adm_access, associated, path, write_lock,
-                                depth, NULL, NULL, pool);
+                                levels_to_lock, NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -819,7 +820,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
                        svn_wc_adm_access_t *associated,
                        const char *path,
                        svn_boolean_t write_lock,
-                       int depth,
+                       int levels_to_lock,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *pool)
@@ -831,14 +832,14 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
   SVN_ERR(probe(&dir, path, &wc_format, pool));
 
   /* If we moved up a directory, then the path is not a directory, or it
-     is not under version control. In either case, the notion of a depth
-     does not apply to the provided path. Disable it so that we don't end
-     up trying to lock more than we need.  */
+     is not under version control. In either case, the notion of
+     levels_to_lock does not apply to the provided path.  Disable it so
+     that we don't end up trying to lock more than we need.  */
   if (dir != path)
-    depth = 0;
+    levels_to_lock = 0;
 
   err = svn_wc_adm_open3(adm_access, associated, dir, write_lock,
-                         depth, cancel_func, cancel_baton, pool);
+                         levels_to_lock, cancel_func, cancel_baton, pool);
   if (err)
     {
       svn_error_t *err2;
@@ -1044,11 +1045,11 @@ svn_wc_adm_probe_try2(svn_wc_adm_access_t **adm_access,
                       svn_wc_adm_access_t *associated,
                       const char *path,
                       svn_boolean_t write_lock,
-                      int depth,
+                      int levels_to_lock,
                       apr_pool_t *pool)
 {
   return svn_wc_adm_probe_try3(adm_access, associated, path, write_lock,
-                               depth, NULL, NULL, pool);
+                               levels_to_lock, NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -1056,7 +1057,7 @@ svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
                       svn_wc_adm_access_t *associated,
                       const char *path,
                       svn_boolean_t write_lock,
-                      int depth,
+                      int levels_to_lock,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
                       apr_pool_t *pool)
@@ -1072,7 +1073,7 @@ svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
     {
       svn_error_clear(err);
       err = svn_wc_adm_probe_open3(adm_access, associated,
-                                   path, write_lock, depth,
+                                   path, write_lock, levels_to_lock,
                                    cancel_func, cancel_baton,
                                    svn_wc_adm_access_pool(associated));
 
@@ -1130,7 +1131,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                        const char **target,
                        const char *path,
                        svn_boolean_t write_lock,
-                       int depth,
+                       int levels_to_lock,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *pool)
@@ -1141,8 +1142,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
       || svn_dirent_is_root(path, strlen(path))
       || ! strcmp(base_name, ".."))
     {
-      SVN_ERR(do_open(anchor_access, NULL, path, write_lock, depth, FALSE,
-                      cancel_func, cancel_baton, pool));
+      SVN_ERR(do_open(anchor_access, NULL, path, write_lock, levels_to_lock,
+                      FALSE, cancel_func, cancel_baton, pool));
       *target_access = *anchor_access;
       *target = "";
     }
@@ -1183,8 +1184,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
         }
 
       /* Try to open PATH to setup T_ACCESS */
-      err = do_open(&t_access, NULL, path, write_lock, depth, FALSE,
-                    cancel_func, cancel_baton, pool);
+      err = do_open(&t_access, NULL, path, write_lock, levels_to_lock,
+                    FALSE, cancel_func, cancel_baton, pool);
       if (err)
         {
           if (! p_access || err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)

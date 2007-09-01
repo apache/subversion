@@ -1357,7 +1357,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   SVN_ERR(svn_wc_adm_open3(&base_dir_access, NULL, base_dir,
                            TRUE,  /* Write lock */
-                           lock_base_dir_recursive ? -1 : 0, /* Depth */
+                           lock_base_dir_recursive ? -1 : 0, /* lock levels */
                            ctx->cancel_func, ctx->cancel_baton,
                            pool));
 
@@ -1396,7 +1396,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
               SVN_ERR(svn_wc_adm_open3(&adm_access, base_dir_access,
                                        target,
                                        TRUE,  /* Write lock */
-                                       0,     /* Depth */
+                                       0,     /* Levels to lock */
                                        ctx->cancel_func,
                                        ctx->cancel_baton,
                                        pool));
@@ -1413,7 +1413,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
               SVN_ERR(svn_wc_adm_open3(&adm_access, base_dir_access,
                                        target,
                                        TRUE, /* Write lock */
-                                       -1,   /* Depth */
+                                       -1,   /* Levels to lock */
                                        ctx->cancel_func,
                                        ctx->cancel_baton,
                                        pool));

@@ -2866,7 +2866,7 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
                                      TRUE, /* get write lock */
-                                     0, /* depth */
+                                     0, /* levels to lock */
                                      NULL, NULL, iterpool));
 
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, iterpool));
