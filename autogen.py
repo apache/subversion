@@ -6,6 +6,17 @@ from optparse import OptionParser
 from tempfile import mkdtemp
 from glob import glob
 
+def option_W(option, opt, value, parser):
+    if len(value) < 4 or value[0:3] != 'l,-':
+        raise optparse.BadOptionError("not in '-Wl,<opt>' form: %s%s"
+                                      % (opt, value))
+    opt = value[2:]
+    if opt not in ['-L', '-R', '--rpath']:
+        raise optparse.BadOptionError("-Wl option must be -L, -R"
+                                      " or --rpath, not " + value[2:])
+    # Push the linker option onto the list for further parsing.
+    parser.rargs.insert(0, value)
+
 parser = OptionParser()
 parser.add_option("-a", "--apr-config", dest="apr_config",
                   help="The full path to your apr-1-config or apr-config script")
@@ -15,6 +26,12 @@ parser.add_option("-p", "--prefix", dest="prefix",
 parser.add_option("", "--save-preprocessed-headers", dest="filename",
                   help="Save the preprocessed headers to the specified "
                        "FILENAME")
+parser.add_option("-W", action="callback", callback=option_W, type='str',
+                  metavar="l,OPTION",
+                  help="where OPTION is -L, -R, or --rpath")
+parser.add_option("-L", "-R", "--rpath", action="append", dest="libdirs",
+                  metavar="LIBDIR", help="Add LIBDIR to the search path")
+parser.set_defaults(libdirs=[])
 
 (options, args) = parser.parse_args()
 
@@ -48,6 +65,10 @@ def get_apr_config():
             apr_include_dir = run_cmd("%s --includedir" % apr_config).strip()
             apr_version = run_cmd("%s --version" % apr_config).strip()
             cpp  = run_cmd("%s --cpp" % apr_config).strip()
+
+            fout = run_cmd("%s --ldflags --link-ld" % apr_config)
+            if fout:
+                ldflags = fout.split()
             break
     else:
         print ferr
@@ -64,6 +85,8 @@ def get_apr_config():
     for svn_prefix in subversion_prefixes:
         svn_include_dir = "%s/include/subversion-1" % svn_prefix
         if os.path.exists("%s/svn_client.h" % svn_include_dir):
+            if svn_prefix != "/usr":
+                ldflags.append("-L%s/lib" % svn_prefix)
             flags.append("-I%s" % svn_include_dir)
             break
     else:
@@ -72,10 +95,9 @@ def get_apr_config():
                         "to your Subversion installation using the --prefix\n"
                         "option.")
 
-    ldflags = [
-        "-lapr-%s" % apr_version[0],
-        "-laprutil-%s" % apr_version[0],
-    ]
+    # TODO: Use apu-1-config, as above:
+    # ldflags.extend(run_cmd('apu-1-config --ldflags --link-ld').split())
+    ldflags.append("-laprutil-%s" % apr_version[0])
 
     # List the libraries in the order they should be loaded
     libraries = [ 
@@ -122,18 +144,33 @@ tempdir = mkdtemp()
 includes = ('%s/include/subversion-1/svn_*.h '
             '%s/ap[ru]_*.h' % (svn_prefix, apr_include_dir))
 
-os.environ["LIBRARY_PATH"] = library_path
-
-cmd = ("cd %s && %s %s/ctypesgen/wrap.py --cpp '%s %s' %s "
+cmd = ["cd %s && %s %s/ctypesgen/wrap.py --cpp '%s %s' %s "
        "%s -o svn_all.py" % (tempdir, sys.executable, os.getcwd(),
-                             cpp, flags, ldflags, includes))
+                             cpp, flags, ldflags, includes)]
+cmd.extend('-R ' + x for x in options.libdirs)
+cmd = ' '.join(cmd)
 
 if options.filename:
     cmd += " --save-preprocessed-headers=%s" % \
         os.path.abspath(options.filename)
 
 print cmd
-os.system(cmd)
+status = os.system(cmd)
+
+if os.name == "posix":
+    if os.WIFEXITED(status):
+        status = os.WEXITSTATUS(status)
+        if status != 0:
+            sys.exit(status)
+    elif os.WIFSIGNALED(status):
+        print >>sys.stderr, "wrap.py killed with signal %d" % os.WTERMSIG(status)
+        sys.exit(2)
+    elif os.WIFSTOPPED(status):
+        print >>sys.stderr, "wrap.py stopped with signal %d" % os.WSTOPSIG(status)
+        sys.exit(2)
+    else:
+        print >>sys.stderr, "wrap.py exited with invalid status %d" % status
+        sys.exit(2)
 
 func_re = re.compile(r"CFUNCTYPE\(POINTER\((\w+)\)")
 out = file("%s/svn_all2.py" % tempdir, "w")
