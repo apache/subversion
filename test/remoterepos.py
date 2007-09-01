@@ -91,7 +91,7 @@ class RemoteRepositoryTestCase(unittest.TestCase):
         f = open(newfile, "w")
         f.write("Some new stuff\n")
         f.close()
-        commit_info = self.repos.svnimport(newfile, log_func=self._log_func)
+        commit_info = self.repos.svnimport(newfile, "%s/newfile.txt" % repos_url, log_func=self._log_func)
         self.assertEqual(commit_info.revision, 10)
         
 def suite():

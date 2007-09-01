@@ -303,18 +303,17 @@ class RemoteRepository(object):
         
     def _log_func_wrapper(log_msg, tmp_file, commit_items, baton, pool):
         self = cast(baton, py_object).value
+
+        log_msg[0].raw = NULL
+        tmp_file[0].raw = NULL
+
         if self._log_func:
             [log, file] = self._log_func(_types.Array(String, commit_items))
             
             if log:
-                log_msg = pointer(c_char_p(log))
-            else:
-                log_msg = NULL
-                
+                log_msg[0].raw = apr_pstrdup(pool, String(log)).raw
             if file:
-                tmp_file = pointer(c_char_p(file))
-            else:
-                tmp_file = NULL
+                tmp_file[0].raw = apr_pstrdup(pool, String(file)).raw
                 
     _log_func_wrapper = staticmethod(_log_func_wrapper)
         
