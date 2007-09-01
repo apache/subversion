@@ -122,7 +122,7 @@ typedef struct svn_config_t svn_config_t;
 
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
     "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo" \
-    " .*.rej *.rej .*~ *~ #*# .#* .*.swp .DS_Store"
+    " *.rej *~ #*# .#* .*.swp .DS_Store"
 
 #define SVN_CONFIG_TRUE  "true"
 #define SVN_CONFIG_FALSE "false"
