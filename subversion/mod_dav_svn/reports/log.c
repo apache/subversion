@@ -44,6 +44,10 @@ struct log_receiver_baton
   /* Whether we've written the <S:log-report> header.  Allows for lazy
      writes to support mod_dav-based error handling. */
   svn_boolean_t needs_header;
+
+  /* How deep we are in the log message tree.  We only need to surpress the
+     SVN_INVALID_REVNUM message if the stack_depth is 0. */
+  int stack_depth;
 };
 
 
@@ -77,6 +81,16 @@ log_receiver(void *baton,
 
   SVN_ERR(maybe_send_header(lrb));
 
+  if (log_entry->revision == SVN_INVALID_REVNUM)
+    {
+      /* If the stack depth is zero, we've seen the last revision, so don't
+         send it, just return.  The footer will be sent later. */
+      if (lrb->stack_depth == 0)
+        return SVN_NO_ERROR;
+      else
+        lrb->stack_depth--;
+    }
+
   SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                             "<S:log-item>" DEBUG_CR "<D:version-name>%ld"
                             "</D:version-name>" DEBUG_CR, log_entry->revision));
@@ -102,11 +116,12 @@ log_receiver(void *baton,
                               (pool, svn_xml_fuzzy_escape(log_entry->message,
                                                           pool), 0)));
 
-  if (log_entry->nbr_children)
-    SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                              "<S:nbr-children>%" APR_INT64_T_FMT
-                              "</S:nbr-children>" DEBUG_CR,
-                              log_entry->nbr_children));
+  if (log_entry->has_children)
+    {
+      SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
+                                "<S:has-children/>"));
+      lrb->stack_depth++;
+    }
 
   if (log_entry->changed_paths)
     {
@@ -291,6 +306,7 @@ dav_svn__log_report(const dav_resource *resource,
                               output->c->bucket_alloc);
   lrb.output = output;
   lrb.needs_header = TRUE;
+  lrb.stack_depth = 0;
 
   /* Our svn_log_message_receiver_t sends the <S:log-report> header in
      a lazy fashion.  Before writing the first log message, it assures

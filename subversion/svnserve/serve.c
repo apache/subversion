@@ -62,6 +62,7 @@ typedef struct {
 typedef struct {
   const char *fs_path;
   svn_ra_svn_conn_t *conn;
+  int stack_depth;
 } log_baton_t;
 
 typedef struct {
@@ -1511,7 +1512,22 @@ static svn_error_t *log_receiver(void *baton,
   void *val;
   const char *path;
   svn_log_changed_path_t *change;
+  svn_boolean_t invalid_revnum = FALSE;
   char action[2];
+
+  if (log_entry->revision == SVN_INVALID_REVNUM)
+    {
+      /* If the stack depth is zero, we've seen the last revision, so don't
+         send it, just return. */
+      if (b->stack_depth == 0)
+        return SVN_NO_ERROR;
+
+      /* Because the svn protocol won't let us send an invalid revnum, we have
+         to fudge here and send an additional flag. */
+      log_entry->revision = 0;
+      invalid_revnum = TRUE;
+      b->stack_depth--;
+    }
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(!"));
   if (log_entry->changed_paths)
@@ -1529,12 +1545,17 @@ static svn_error_t *log_receiver(void *baton,
                                          change->copyfrom_rev));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)n",
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)bb",
                                  log_entry->revision,
                                  log_entry->author,
                                  log_entry->date,
                                  log_entry->message,
-                                 log_entry->nbr_children));
+                                 log_entry->has_children,
+                                 invalid_revnum));
+
+  if (log_entry->has_children)
+    b->stack_depth++;
+
   return SVN_NO_ERROR;
 }
 
@@ -1594,6 +1615,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path->data;
   lb.conn = conn;
+  lb.stack_depth = 0;
   err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
                             include_merged_revisions, omit_log_text,

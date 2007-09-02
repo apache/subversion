@@ -1191,7 +1191,9 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   svn_revnum_t rev, copy_rev;
   svn_log_changed_path_t *change;
   int nreceived = 0;
-  apr_uint64_t nbr_children;
+  apr_uint64_t has_children_param, invalid_revnum_param;
+  svn_boolean_t has_children;
+  svn_log_entry_t *log_entry;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "log"));
   if (paths)
@@ -1219,11 +1221,22 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log entry not a list"));
-      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr(?c)(?c)(?c)?n",
+      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr(?c)(?c)(?c)?BB",
                                      &cplist, &rev, &author, &date,
-                                     &message, &nbr_children));
-      if (nbr_children == SVN_RA_SVN_UNSPECIFIED_NUMBER)
-        nbr_children = 0;
+                                     &message, &has_children_param,
+                                     &invalid_revnum_param));
+
+      if (has_children_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+        has_children = FALSE;
+      else
+        has_children = has_children_param;
+
+      /* Because the svn protocol won't let us send an invalid revnum, we have
+         to recover that fact using the extra parameter. */
+      if (invalid_revnum_param != SVN_RA_SVN_UNSPECIFIED_NUMBER
+            && invalid_revnum_param == TRUE)
+        rev = SVN_INVALID_REVNUM;
+
       if (cplist->nelts > 0)
         {
           /* Interpret the changed-paths list. */
@@ -1252,20 +1265,26 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
 
       if (! (limit && ++nreceived > limit))
         {
-          svn_log_entry_t *log_entry = svn_log_entry_create(subpool);
+          log_entry = svn_log_entry_create(subpool);
 
           log_entry->changed_paths = cphash;
           log_entry->revision = rev;
           log_entry->author = author;
           log_entry->date = date;
           log_entry->message = message;
-          log_entry->nbr_children = nbr_children;
+          log_entry->has_children = has_children;
 
           SVN_ERR(receiver(receiver_baton, log_entry, subpool));
         }
 
       apr_pool_clear(subpool);
     }
+
+  /* Send the "end of messages" sentinal. */
+  log_entry = svn_log_entry_create(subpool);
+  log_entry->revision = SVN_INVALID_REVNUM;
+  SVN_ERR(receiver(receiver_baton, log_entry, subpool));
+
   apr_pool_destroy(subpool);
 
   /* Read the response. */
