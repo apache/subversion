@@ -50,7 +50,9 @@ revnum_receiver(void *baton,
                 svn_log_entry_t *log_entry,
                 apr_pool_t *pool)
 {
-  *((svn_revnum_t *) baton) = log_entry->revision;
+  if (SVN_IS_VALID_REVNUM(log_entry->revision))
+    *((svn_revnum_t *) baton) = log_entry->revision;
+
   return SVN_NO_ERROR;
 }
 

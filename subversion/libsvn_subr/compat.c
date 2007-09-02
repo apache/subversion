@@ -77,7 +77,7 @@ log_wrapper_callback(void *baton,
 {
   struct log_wrapper_baton *lwb = baton;
 
-  if (lwb->receiver)
+  if (lwb->receiver && SVN_IS_VALID_REVNUM(log_entry->revision))
     return lwb->receiver(lwb->baton,
                          log_entry->changed_paths,
                          log_entry->revision,
