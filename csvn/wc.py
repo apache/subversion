@@ -23,17 +23,17 @@ class WC(object):
 
         self.client[0].notify_func2 = \
             svn_wc_notify_func2_t(self._notify_func_wrapper)
-        self.client[0].notify_baton2 = cast(id(self), c_void_p)
+        self.client[0].notify_baton2 = c_void_p()
         self._notify_func = None
         
         self.client[0].cancel_func = \
             svn_cancel_func_t(self._cancel_func_wrapper)
-        self.client[0].cancel_baton = cast(id(self), c_void_p)
+        self.client[0].cancel_baton = c_void_p()
         self._cancel_func = None
         
         self.client[0].progress_func = \
             svn_ra_progress_notify_func_t(self._progress_func_wrapper)
-        self.client[0].progress_baton =  cast(id(self), c_void_p)
+        self.client[0].progress_baton =  c_void_p()
         self._progress_func = None
         
         self._status_func = \
@@ -50,7 +50,7 @@ class WC(object):
         
         self.client[0].log_msg_func2 = \
             svn_client_get_commit_log2_t(self._log_func_wrapper)
-        self.client[0].log_msg_baton2 = cast(id(self), c_void_p)
+        self.client[0].log_msg_baton2 = c_void_p()
         self._log_func = None
 
     def copy(self, src, dest, rev = ""):
@@ -131,11 +131,9 @@ class WC(object):
 
     # A helper function which invokes the user notify function with
     # the appropriate arguments.
-    def _notify_func_wrapper(baton, notify, pool):
-        self = cast(baton, py_object).value
+    def _notify_func_wrapper(self, baton, notify, pool):
         if self._notify_func:
             self._notify_func(notify[0])
-    _notify_func_wrapper = staticmethod(_notify_func_wrapper)
     
     def set_cancel_func(self, cancel_func):
         """Setup a callback so that you can cancel operations. At
@@ -145,11 +143,9 @@ class WC(object):
         self._cancel_func = cancel_func
         
     #Just like _notify_func_wrapper, above.
-    def _cancel_func_wrapper(baton):
-        self = cast(baton, py_object).value
+    def _cancel_func_wrapper(self, baton):
         if self._cancel_func:
             self._cancel_func()
-    _cancel_func_wrapper = staticmethod(_cancel_func_wrapper)
     
     def set_progress_func(self, progress_func):
         """Setup a callback for network progress information. This callback
@@ -160,11 +156,9 @@ class WC(object):
         
         self._progress_func = progress_func
         
-    def _progress_func_wrapper(progress, total, baton, pool):
-        self = cast(baton, py_object).value
+    def _progress_func_wrapper(self, progress, total, baton, pool):
         if self._progress_func:
             self._progress_func(progress, total)
-    _progress_func_wrapper = staticmethod(_progress_func_wrapper)
 
     def diff(self, path1="", revnum1=None, path2=None, revnum2=None,
              diff_options=[], recurse=True, ignore_ancestry=True,
@@ -356,12 +350,9 @@ class WC(object):
         return props
     
     # Internal method to wrap status callback.
-    def _status_wrapper(baton, path, status):
-        self = cast(baton, py_object).value
-        
+    def _status_wrapper(self, baton, path, status):
         if self._status:
             self._status(path, status.contents)
-    _status_wrapper = staticmethod(_status_wrapper)
     
     def set_status_func(self, status):
         """Set a callback function to be used the next time the status method
@@ -403,7 +394,7 @@ class WC(object):
         result_rev = svn_revnum_t()
         svn_client_status2(byref(result_rev), self._build_path(path),
                             byref(rev), self._status_func,
-                            cast(id(self), c_void_p), recurse, get_all,
+                            c_void_p(), recurse, get_all,
                             update, no_ignore, ignore_externals, self.client,
                             self.iterpool)
                             
@@ -411,12 +402,9 @@ class WC(object):
                             
         return result_rev
         
-    def _info_wrapper(baton, path, info, pool):
-        self = cast(baton, py_object).value
-        
+    def _info_wrapper(self, baton, path, info, pool):
         if self._info:
             self._info(path, info.contents)
-    _info_wrapper = staticmethod(_info_wrapper)
     
     def set_info_func(self, info):
         """Set a callback to be used to process svn_info_t objects during
@@ -438,7 +426,7 @@ class WC(object):
             self.set_info_func(info_func)
         
         svn_client_info(self._build_path(path), NULL, NULL, self._info_func,
-                cast(id(self), c_void_p), recurse, self.client,
+                c_void_p(), recurse, self.client,
                 self.iterpool)
         
     def checkout(self, url, revnum=None, path=None, recurse=True,
@@ -484,8 +472,7 @@ class WC(object):
         temporary file holding the temporary commit message."""
         self._log_func = log_func
         
-    def _log_func_wrapper(log_msg, tmp_file, commit_items, baton, pool):
-        self = cast(baton, py_object).value
+    def _log_func_wrapper(self, log_msg, tmp_file, commit_items, baton, pool):
         if self._log_func:
             [log, file] = self._log_func(_types.Array(String, commit_items))
             
@@ -499,8 +486,6 @@ class WC(object):
             else:
                 tmp_file = NULL
                 
-    _log_func_wrapper = staticmethod(_log_func_wrapper)
-    
     def commit(self, paths="", recurse=True, keep_locks=False):
         """Commit changes in the working copy. Changes to PATHS will be
         commited. If RECURSE is True (True by default), the contents of
@@ -543,11 +528,9 @@ class WC(object):
         return result_revs
     
     #internal method to wrap ls callbacks
-    def _list_wrapper(baton, path, dirent, abs_path, pool):
-        self = cast(baton, py_object).value
+    def _list_wrapper(self, baton, path, dirent, abs_path, pool):
         if self._list:
             self._list(path, dirent.contents, lock.contents, abs_path)
-    _list_wrapper = staticmethod(_list_wrapper)
         
     def set_list_func(self, list_func):
         """Set the callback function for list operations."""
@@ -573,7 +556,7 @@ class WC(object):
         
         svn_client_list(self._build_path(path), byref(peg), byref(rev),
             recurse, SVN_DIRENT_ALL, fetch_locks, self._list_func,
-            cast(id(self), c_void_p), self.client, self.iterpool)
+            c_void_p(), self.client, self.iterpool)
 
     def relocate(self, from_url, to_url, dir="", recurse=True):
          """Modify a working copy directory DIR (defaults to WC root),

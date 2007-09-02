@@ -71,7 +71,7 @@ class RemoteRepository(object):
                                    
         self.client[0].log_msg_func2 = \
             svn_client_get_commit_log2_t(self._log_func_wrapper)
-        self.client[0].log_msg_baton2 = cast(id(self), c_void_p)
+        self.client[0].log_msg_baton2 = c_void_p()
         self._log_func = None
 
     def txn(self):
@@ -301,9 +301,7 @@ class RemoteRepository(object):
         temporary file holding the temporary commit message."""
         self._log_func = log_func
         
-    def _log_func_wrapper(log_msg, tmp_file, commit_items, baton, pool):
-        self = cast(baton, py_object).value
-
+    def _log_func_wrapper(self, log_msg, tmp_file, commit_items, baton, pool):
         log_msg[0].raw = NULL
         tmp_file[0].raw = NULL
 
@@ -315,8 +313,6 @@ class RemoteRepository(object):
             if file:
                 tmp_file[0].raw = apr_pstrdup(pool, String(file)).raw
                 
-    _log_func_wrapper = staticmethod(_log_func_wrapper)
-        
     def svnimport(self, path, url=None, nonrecursive=False, no_ignore=True, log_func=None):
         
         if not url:
@@ -480,7 +476,7 @@ class LocalRepository(object):
         svn_repos_load_fs2(self._as_parameter_, stream_dump, stream_feedback,
                                 uuid_action, parent_dir, use_pre_commit_hook,
                                 use_post_commit_hook, cancel_func,
-                                cast(id(self), c_void_p), self.pool)
+                                c_void_p(), self.pool)
                                 
         apr_dump.close()
         if feedbackfile:
@@ -585,15 +581,13 @@ class _LogMessageReceiver(CallbackReceiver):
                 stop_on_copy):
         self.verbose = verbose
         pool = Pool()
-        baton = c_void_p(id(self))
+        baton = c_void_p()
         receiver = svn_log_message_receiver_t(self.receive)
         svn_ra_get_log(session, paths, start_rev, end_rev,
                        limit, verbose, stop_on_copy, receiver,
                        baton, pool)
 
-    def receive(baton, changed_paths, revision, author, date, message, pool):
-        self = cast(baton, py_object).value
-
+    def receive(self, baton, changed_paths, revision, author, date, message, pool):
         entry = LogEntry()
 
         # Save information about the log entry
@@ -609,5 +603,4 @@ class _LogMessageReceiver(CallbackReceiver):
             entry.changed_paths = None
 
         self.send(entry)
-    receive = staticmethod(receive)
 

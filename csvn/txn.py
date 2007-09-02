@@ -212,6 +212,8 @@ class Txn(object):
                 local_file = os.path.join(root, name)
                 self._upload_file(remote_file, local_file)
 
+    def _txn_commit_callback(self, info, baton, pool):
+        self._txn_committed(info[0])
 
     def commit(self, message, base_rev = None):
         """Commit all changes to the remote repository"""
@@ -219,9 +221,9 @@ class Txn(object):
         if base_rev is None:
             base_rev = self.session.latest_revnum()
 
-        commit_baton = cast(id(self), c_void_p)
+        commit_baton = c_void_p()
 
-        self.commit_callback = svn_commit_callback2_t(_txn_commit_callback)
+        self.commit_callback = svn_commit_callback2_t(self._txn_commit_callback)
         (editor, editor_baton) = self.session._get_commit_editor(message,
             self.commit_callback, commit_baton, self.pool)
 
@@ -296,9 +298,6 @@ class Txn(object):
         return (kind, parent)
 
 
-def _txn_commit_callback(info, baton, pool):
-    client_txn = cast(baton, py_object).value
-    client_txn._txn_committed(info[0])
 
 class _txn_operation(object):
     def __init__(self, path, action, kind, copyfrom_path = None,

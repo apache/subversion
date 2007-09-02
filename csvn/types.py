@@ -222,8 +222,7 @@ class Stream(object):
 
         self.pool = Pool()
         self.buffer = buffer
-        baton = c_void_p(id(buffer))
-        self.stream = svn_stream_create(baton, self.pool)
+        self.stream = svn_stream_create(c_void_p(), self.pool)
         svn_stream_set_read(self.stream, svn_read_fn_t(self._read))
         svn_stream_set_write(self.stream, svn_write_fn_t(self._write))
         if not disown:
@@ -231,26 +230,20 @@ class Stream(object):
 
     _as_parameter_ = property(fget=lambda self: self.stream)
 
-    def _read(baton, buffer, l):
-        f = cast(baton, py_object).value
-        s = f.read(l[0])
+    def _read(self, baton, buffer, l):
+        s = self.buffer.read(l[0])
         memmove(buffer, string, len(s))
         l[0] = len(s)
         return SVN_NO_ERROR
-    _read = staticmethod(_read)
 
-    def _write(baton, data, l):
-        f = cast(baton, py_object).value
+    def _write(self, baton, data, l):
         s = string_at(data.raw, l[0])
-        f.write(s)
+        self.buffer.write(s)
         return SVN_NO_ERROR
-    _write = staticmethod(_write)
 
-    def _close(baton):
-        f = cast(baton, py_object).value
-        f.close()
+    def _close(self, baton):
+        self.buffer.close()
         return SVN_NO_ERROR
-    _close = staticmethod(_close)
 
 class SvnStringPtr(object):
 
