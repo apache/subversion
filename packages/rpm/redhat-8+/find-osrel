@@ -1,5 +1,10 @@
 #!/bin/sh
-if [ -f /etc/fedora-release ]; then
+if [ -f /etc/aurora-release ]; then
+  case `rpm -q fedora-release` in
+    fedora-release-2.0*) echo al2;;
+    *) echo Unknown;;
+  esac
+elif [ -f /etc/fedora-release ]; then
    case `rpm -q fedora-release` in
       fedora-release-1*) echo fc1;;
       *) echo Unknown;;
@@ -11,14 +16,17 @@ elif [ -f /etc/whitebox-release ]; then
      *) echo Unknown;;
    esac
 elif [ -f /etc/redhat-release ]; then
-   if [ `rpm -q centos-release` ]; then
+   if rpm -q centos-release > /dev/null; then
      case `rpm -q centos-release` in
        centos-release-3*) echo rhel3;;
        centos-release-4*) echo rhel4;;
+       centos-release-5*) echo rhel5;;
        *) echo Unknown;;
      esac
    else
      case `rpm -q redhat-release` in
+       redhat-release-4*) echo rhel4;;
+       redhat-release-5*) echo rhel5;;
        redhat-release-7*) echo rh7x;;
        redhat-release-8*) echo rh80;;
        redhat-release-9-*) echo rh90;;
