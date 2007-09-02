@@ -1625,7 +1625,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (!checked_in_url &&
           (!SVN_IS_VALID_REVNUM(info->dir->base_rev) || info->dir->fetch_props))
         {
-          abort();
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested checked-in value."));
         }
 
       info->dir->url = checked_in_url;
@@ -2142,7 +2144,10 @@ finish_report(void *report_baton,
 
   if (!vcc_url)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested version-controlled-configuration "
+                                "value."));
     }
 
   /* create and deliver request */
