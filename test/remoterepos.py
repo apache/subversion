@@ -2,6 +2,7 @@ import unittest
 import os
 import shutil
 import tempfile
+import sys
 from csvn.core import *
 from urllib import pathname2url
 from csvn.repos import LocalRepository, RemoteRepository
@@ -71,6 +72,11 @@ class RemoteRepositoryTestCase(unittest.TestCase):
         f.write("#!/bin/sh\nexit 0;")
         f.close()
         os.chmod(hook, S_IRWXU)
+
+        if sys.platform == "cygwin":
+            ### FIXME: When you try to set revprops, cygwin crashes
+            ###        with a fatal error, so we skip this test for now.
+            return
         
         revnum = self.repos.revprop_set("svn:log", "Changed log")
         self.assertEqual(revnum, 9)
