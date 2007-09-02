@@ -996,7 +996,9 @@ open_root(void *edit_baton,
 
   if (!activity_str)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested activity-collection-set value."));
     }
 
   ctx->activity_url = svn_path_url_add_component(activity_str,
