@@ -213,7 +213,7 @@ class APRFile(object):
     def __del__(self):
         if self.pool:
             self.close()
-        
+
 
 class Stream(object):
 

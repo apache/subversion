@@ -68,7 +68,7 @@ class RemoteRepository(object):
         self._as_parameter_ = POINTER(svn_ra_session_t)()
         svn_client_open_ra_session(byref(self._as_parameter_), url,
                                    self.client, self.pool)
-                                   
+
         self.client[0].log_msg_func2 = \
             svn_client_get_commit_log2_t(self._log_func_wrapper)
         self.client[0].log_msg_baton2 = c_void_p()
@@ -242,36 +242,36 @@ class RemoteRepository(object):
             rev.value.number = revnum
         else:
             rev.kind = svn_opt_revision_head
-        
+
         props = _types.Hash(POINTER(svn_string_t), None,
                    wrapper=_types.SvnStringPtr)
-                   
+
         set_rev = svn_revnum_t()
-        
+
         svn_client_revprop_list(props.byref(),
                         self.url,
                         byref(rev),
                         byref(set_rev),
                         self.client,
                         self.iterpool)
-                        
+
         return props
-        
+
     def revprop_get(self, propname, revnum=None):
         """Returns the value of PROPNAME at REVNUM. If REVNUM is not
         provided, it defaults to the head revision."""
         return self.revprop_list(revnum)[propname]
-        
+
     def revprop_set(self, propname, propval=NULL, revnum=None, force=False):
         """Set PROPNAME to PROPVAL for REVNUM. If REVNUM is not given, it
         defaults to the head revision. Returns the actual revision number
         effected.
-        
+
         If PROPVAL is not provided, the property will be deleted.
-        
+
         If FORCE is True (False by default), newlines will be allowed in the
         author property.
-        
+
         Be careful, this is a lossy operation."""
         rev = svn_opt_revision_t()
         if revnum is not None:
@@ -279,18 +279,18 @@ class RemoteRepository(object):
             rev.value.number = revnum
         else:
             rev.kind = svn_opt_revision_head
-            
+
         set_rev = svn_revnum_t()
-        
+
         svn_client_revprop_set(propname,
                 svn_string_create(propval, self.iterpool), self.url,
                 byref(rev), byref(set_rev), force, self.client,
                 self.iterpool)
-                
+
         self.iterpool.clear()
-        
+
         return set_rev.value
-        
+
     def set_log_func(self, log_func):
         """Register a callback to get a log message for commit and
         commit-like operations. LOG_FUNC should take an array as an argument,
@@ -300,31 +300,31 @@ class RemoteRepository(object):
         the operation will be canceled and FILE will be treated as the
         temporary file holding the temporary commit message."""
         self._log_func = log_func
-        
+
     def _log_func_wrapper(self, log_msg, tmp_file, commit_items, baton, pool):
         log_msg[0].raw = NULL
         tmp_file[0].raw = NULL
 
         if self._log_func:
             [log, file] = self._log_func(_types.Array(String, commit_items))
-            
+
             if log:
                 log_msg[0].raw = apr_pstrdup(pool, String(log)).raw
             if file:
                 tmp_file[0].raw = apr_pstrdup(pool, String(file)).raw
-                
+
     def svnimport(self, path, url=None, nonrecursive=False, no_ignore=True, log_func=None):
-        
+
         if not url:
             url = self.url
-            
+
         if log_func:
             self.set_log_func(log_func)
-        
+
         commit_info = pointer(svn_commit_info_t())
         svn_client_import2(byref(commit_info), path, url, nonrecursive,
                             no_ignore, self.client, self.iterpool)
-                            
+
         return commit_info.contents
 
 class LocalRepository(object):
@@ -391,17 +391,17 @@ class LocalRepository(object):
                                       svn_repos_authz_func_t(),
                                       None, self.iterpool)
         self.iterpool.clear()
-        
+
     def get_rev_prop(self, rev, name):
         """Returns the value of NAME in REV. If NAME does not exist in REV,
         returns None."""
         rev = svn_revnum_t(rev)
         value = pointer(svn_string_t())
-        
+
         svn_repos_fs_revision_prop(byref(value), self, rev, name,
                                     svn_repos_authz_func_t(), None,
                                     self.iterpool)
-        
+
         if value:
             return _types.SvnStringPtr.from_param(value)
         else:
@@ -435,7 +435,7 @@ class LocalRepository(object):
     # copyfrom URI
     def _abs_copyfrom_path(self, path):
         return path
-        
+
     def load(self, dumpfile, feedbackfile=None,
             uuid_action=svn_repos_load_uuid_default, parent_dir="",
             use_pre_commit_hook=False, use_post_commit_hook=False,
@@ -444,27 +444,27 @@ class LocalRepository(object):
         filesystem revisions. Dumpfile should be an open python file object
         or file like object. UUID will be handled according to UUID_ACTION
         which defaults to svn_repos_load_uuid_default.
-        
+
         If FEEDBACKFILE is provided (in the form of a python file object or
         file like object), feedback will be sent to it.
-        
+
         If PARENT_DIR is provided, everything loaded from the dump will be
         reparented to PARENT_DIR.
-        
+
         USE_PRE_COMMIT_HOOK and USE_POST_COMMIT_HOOK are False by default,
         if either is set to True that hook will be used.
-        
+
         If CANCEL_FUNC is provided, it will be called at various points to
         allow the operation to be cancelled. The cancel baton will be the
         LocalRepository object."""
-        
+
         if not cancel_func:
             cancel_func = svn_cancel_func_t()
-            
+
         apr_dump = _types.APRFile(dumpfile)
         stream_dump = svn_stream_from_aprfile2(apr_dump._as_parameter_,
                                         False, self.pool)
-                                        
+
         if feedbackfile:
             apr_feedback = _types.APRFile(feedbackfile)
             stream_feedback = svn_stream_from_aprfile2(
@@ -472,12 +472,12 @@ class LocalRepository(object):
                                 self.pool)
         else:
             stream_feedback = NULL
-        
+
         svn_repos_load_fs2(self._as_parameter_, stream_dump, stream_feedback,
                                 uuid_action, parent_dir, use_pre_commit_hook,
                                 use_post_commit_hook, cancel_func,
                                 c_void_p(), self.pool)
-                                
+
         apr_dump.close()
         if feedbackfile:
             apr_feedback.close()
