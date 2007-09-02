@@ -1050,7 +1050,9 @@ open_root(void *edit_baton,
 
   if (!ctx->baseline_url)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested checked-in value."));
     }
 
   dir = apr_pcalloc(dir_pool, sizeof(*dir));
@@ -1274,7 +1276,9 @@ add_directory(const char *path,
 
       if (!basecoll_url)
         {
-          abort();
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested baseline-collection value."));
         }
 
       req_url = svn_path_url_add_component(basecoll_url, rel_copy_path,
@@ -1660,7 +1664,9 @@ close_file(void *file_baton,
 
       if (!basecoll_url)
         {
-          abort();
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested baseline-collection value."));
         }
 
       req_url = svn_path_url_add_component(basecoll_url, rel_copy_path, pool);

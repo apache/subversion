@@ -1121,7 +1121,10 @@ svn_ra_serf__discover_root(const char **vcc_url,
 
   if (!*vcc_url)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested version-controlled-configuration "
+                                "value."));
     }
 
   /* Store our VCC in our cache. */
