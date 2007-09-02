@@ -108,6 +108,7 @@ def get_apr_config():
         "svn_fs_fs-1",
         "svn_fs_base-1",
         "svn_fs-1",
+        "svn_repos-1",
         "svn_wc-1",
         "svn_ra_local-1",
         "svn_ra_svn-1",
