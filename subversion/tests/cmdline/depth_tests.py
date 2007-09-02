@@ -652,9 +652,33 @@ def depth_update_to_more_depth(sbox):
   svntest.actions.run_and_verify_svn(None, "Depth: immediates", [], "info")
   svntest.actions.run_and_verify_svn(None, "Depth: empty", [], "info", "A")
 
-  # Run 'svn up --depth=infinity' in the now depth-immediates working copy.
+  # Upgrade 'A' to depth-files.
   expected_output = svntest.wc.State('', {
     'A/mu'           : Item(status='A '),
+    })
+  expected_status = svntest.wc.State('', {
+    '' : Item(status='  ', wc_rev=1),
+    'iota' : Item(status='  ', wc_rev=1),
+    'A' : Item(status='  ', wc_rev=1),
+    'A/mu' : Item(status='  ', wc_rev=1),
+    })
+  expected_disk = svntest.wc.State('', {
+    'iota' : Item("This is the file 'iota'.\n"),
+    'A'    : Item(),
+    'A/mu' : Item("This is the file 'mu'.\n"),
+    })
+  svntest.actions.run_and_verify_update('',
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--depth', 'files', 'A')
+  svntest.actions.run_and_verify_svn(None, "Depth: immediates", [], "info")
+  svntest.actions.run_and_verify_svn(None, "Depth: files", [], "info", "A")
+
+  # Run 'svn up --depth=infinity' in the working copy.
+  expected_output = svntest.wc.State('', {
     'A/B'            : Item(status='A '),
     'A/B/lambda'     : Item(status='A '),
     'A/B/E'          : Item(status='A '),
