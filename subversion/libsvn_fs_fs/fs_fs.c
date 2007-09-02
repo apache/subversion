@@ -4863,7 +4863,9 @@ commit_body(void *baton, apr_pool_t *pool)
       if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
                        APR_HASH_KEY_STRING))
         {
-          SVN_ERR(svn_fs_fs__txn_mergeinfo(&target_mergeinfo, cb->txn, pool));
+          target_mergeinfo = apr_hash_make(pool);
+          SVN_ERR(get_txn_mergeinfo(target_mergeinfo, cb->txn->fs, cb->txn->id,
+                                    pool));
           SVN_ERR(svn_fs_fs__change_txn_prop
                   (cb->txn, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
                    NULL, pool));
@@ -5498,18 +5500,6 @@ svn_fs_fs__txn_proplist(apr_hash_t **table_p,
   apr_hash_t *proplist = apr_hash_make(pool);
   SVN_ERR(get_txn_proplist(proplist, txn->fs, txn->id, pool));
   *table_p = proplist;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_fs__txn_mergeinfo(apr_hash_t **table_p,
-                         svn_fs_txn_t *txn,
-                         apr_pool_t *pool)
-{
-  apr_hash_t *mergeinfo = apr_hash_make(pool);
-  SVN_ERR(get_txn_mergeinfo(mergeinfo, txn->fs, txn->id, pool));
-  *table_p = mergeinfo;
 
   return SVN_NO_ERROR;
 }
