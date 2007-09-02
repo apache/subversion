@@ -647,31 +647,6 @@ svn_fs_base__change_txn_prop(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
-/* txn_vtable's get_mergeinfo hook.  Set TABLE_P to a mergeinfo hash
-   (possibly empty), or NULL if there are no transaction properties. */
-static svn_error_t *
-svn_fs_base__txn_mergeinfo(apr_hash_t **table_p,
-                           svn_fs_txn_t *txn,
-                           apr_pool_t *pool)
-{
-  svn_string_t *serialized_str;
-  apr_hash_t *target_mergeinfo = NULL;
-
-  SVN_ERR(svn_fs_base__txn_prop(&serialized_str, txn,
-                                SVN_FS_PROP_TXN_MERGEINFO, pool));
-  if (serialized_str)
-    {
-      svn_stringbuf_t *buf =
-        svn_stringbuf_create_from_string(serialized_str, pool);
-      svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
-      target_mergeinfo = apr_hash_make(pool);
-      SVN_ERR(svn_hash_read2(target_mergeinfo, stream, NULL, pool));
-    }
-  *table_p = target_mergeinfo;
-  return SVN_NO_ERROR;
-}
-
-
 
 /* Creating a transaction */
 
@@ -681,8 +656,7 @@ txn_vtable_t txn_vtable = {
   svn_fs_base__txn_prop,
   svn_fs_base__txn_proplist,
   svn_fs_base__change_txn_prop,
-  svn_fs_base__txn_root,
-  svn_fs_base__txn_mergeinfo
+  svn_fs_base__txn_root
 };
 
 
