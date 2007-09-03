@@ -64,7 +64,7 @@ struct log_receiver_baton
   "------------------------------------------------------------------------\n"
 
 
-/* Implement `svn_log_message_receiver_t', printing the logs in
+/* Implement `svn_log_message_receiver2_t', printing the logs in
  * a human-readable and machine-parseable format.
  *
  * BATON is of type `struct log_receiver_baton'.
@@ -267,7 +267,7 @@ log_message_receiver(void *baton,
 }
 
 
-/* This implements `svn_log_message_receiver_t', printing the logs in XML.
+/* This implements `svn_log_message_receiver2_t', printing the logs in XML.
  *
  * BATON is of type `struct log_receiver_baton'.
  *
