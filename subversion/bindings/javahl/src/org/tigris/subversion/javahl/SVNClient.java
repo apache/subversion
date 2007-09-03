@@ -1856,14 +1856,18 @@ public class SVNClient implements SVNClientInterface
                                   String author,
                                   long timeMicros,
                                   String message,
-                                  long numberChildren)
+                                  boolean hasChildren)
         {
             LogMessage msg = new LogMessage(changedPaths,
                                             revision,
                                             author,
                                             timeMicros,
                                             message);
-            messages.add(msg);
+
+            /* Filter out the SVN_INVALID_REVNUM message which pre-1.5
+               clients won't expect, nor understand. */
+            if (revision != -1)
+              messages.add(msg);
         }
 
         public LogMessage[] getMessages()
