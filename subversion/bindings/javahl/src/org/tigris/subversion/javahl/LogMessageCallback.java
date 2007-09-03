@@ -34,15 +34,13 @@ public interface LogMessageCallback
      *                       number of microseconds since 00:00:00
      *                       January 1, 1970 UTC
      * @param message        the log message for the commit
-     * @param numberChildren when merge sensitive option was requested
-     *                       the number of child entries.  The next
-     *                       calls to the function will be the child
-     *                       entries
+     * @param hasChildren    when merge sensitive option was requested,
+     *                       whether or not this entry has child entries.
      */
     public void singleMessage(ChangePath[] changedPaths,
                               long revision,
                               String author,
                               long timeMicros,
                               String message,
-                              long numberChildren);
+                              boolean hasChildren);
 }
