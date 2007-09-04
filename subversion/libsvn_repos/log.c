@@ -1032,11 +1032,11 @@ send_logs(const apr_array_header_t *paths,
                                 authz_read_func, authz_read_baton, pool));
         }
 
-        empty_log_entry = svn_log_entry_create(iterpool);
-        empty_log_entry->revision = SVN_INVALID_REVNUM;
-        SVN_ERR((*receiver)(receiver_baton, empty_log_entry, iterpool));
+      empty_log_entry = svn_log_entry_create(iterpool);
+      empty_log_entry->revision = SVN_INVALID_REVNUM;
+      SVN_ERR((*receiver)(receiver_baton, empty_log_entry, iterpool));
 
-        svn_pool_destroy(iterpool);
+      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;
