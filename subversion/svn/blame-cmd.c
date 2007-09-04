@@ -130,7 +130,7 @@ print_line_info(svn_stream_t *out,
                                 time_stdout));
 
       if (path)
-        SVN_ERR(svn_stream_printf(out, pool, "%-16s ", path));
+        SVN_ERR(svn_stream_printf(out, pool, "%-14s ", path));
     }
   else
     {
@@ -160,8 +160,15 @@ blame_receiver(void *baton,
   svn_stream_t *out = ((blame_baton_t *)baton)->out;
 
   if (opt_state->use_merge_history)
-    SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
-                            merged_path, opt_state->verbose, pool));
+    {
+      if (revision != merged_revision)
+        svn_stream_printf(out, pool, "G ");
+      else
+        svn_stream_printf(out, pool, "  ");
+
+      SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
+                              merged_path, opt_state->verbose, pool));
+    }
   else
     SVN_ERR(print_line_info(out, revision, author, date, NULL,
                             opt_state->verbose, pool));
