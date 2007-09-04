@@ -65,13 +65,13 @@ class WCTestCase(unittest.TestCase):
         self.assertEqual(svn_wc_schedule_delete, self.last_info.schedule)
         
     def test_delete(self):
-        self.wc.delete("trunk/README.txt")
+        self.wc.delete(["trunk/README.txt"])
         self.wc.info(path="trunk/README.txt",
             info_func=self._info_reciever)
         self.assertEqual(svn_wc_schedule_delete, self.last_info.schedule)
         
     def test_mkdir(self):
-        self.wc.mkdir("trunk/plank")
+        self.wc.mkdir(["trunk/plank"])
         self.wc.info(path="trunk/plank",
             info_func=self._info_reciever)
         self.assertEqual(svn_wc_schedule_add, self.last_info.schedule)

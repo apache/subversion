@@ -95,7 +95,7 @@ class WC(object):
         """Schedule paths to be deleted.
 
         Keyword arguments:
-        paths -- path or list of paths to marked for deletion
+        paths -- list of paths to marked for deletion
         force -- if True, operation will be forced (default False)"""
 
         svn_client_delete2(NULL, self._build_path_list(paths),
@@ -134,7 +134,7 @@ class WC(object):
         """Revert paths to the most recent version.
         
         Keyword arguments:
-        paths -- single path or list of paths to be reverted
+        paths -- list of paths to be reverted
         recurse -- if True, directories will be recursed (default True)"""
 
         svn_client_revert(self._build_path_list(paths), recurse,
@@ -150,9 +150,7 @@ class WC(object):
         Returns an array of canonicalized paths.
         
         Keyword arguments:
-        paths -- a path or list of paths to be canonicalized"""
-        if isinstance(paths, (str, unicode, String)):
-            paths = [paths]
+        paths -- list of paths to be canonicalized"""
         canonicalized_paths = [self._build_path(path) for path in paths]
         return _types.Array(String, canonicalized_paths)
 
@@ -336,10 +334,10 @@ class WC(object):
         self.iterpool.clear()
 
     def mkdir(self, paths):
-        """Create a directory or directories in the working copy.
+        """Create directories in the working copy.
         
         Keyword arguments:
-        paths -- path or list of paths to be created"""
+        paths -- list of paths to be created"""
         paths = self._build_path_list(paths)
 
         # The commit info shouldn't matter, this is a method of the WC
@@ -568,12 +566,11 @@ class WC(object):
             else:
                 tmp_file = NULL
 
-    def commit(self, paths="", recurse=True, keep_locks=False):
+    def commit(self, paths=[""], recurse=True, keep_locks=False):
         """Commit changes in the working copy.
         
         Keyword arguments:
-        paths -- path or list of paths that should be commited (defaults to WC
-            root)
+        paths -- list of paths that should be commited (defaults to WC root)
         recurse -- if True, the contents of directories to be committed will
             also be commited (default True)
         keep_locks -- if True, locks will not be released during commit
@@ -584,7 +581,7 @@ class WC(object):
 
         return commit_info.value
 
-    def update(self, paths="", revnum=None, recurse=True,
+    def update(self, paths=[""], revnum=None, recurse=True,
                 ignore_externals=True):
         """Update paths to a given revision number.
         
@@ -592,7 +589,7 @@ class WC(object):
         resolved.
         
         Keyword arguments:
-        paths -- path or list of path to be updated (defaults to WC root)
+        paths -- list of path to be updated (defaults to WC root)
         revnum -- revision number to update to (defaults to head revision)
         recurse -- if True, the contents of directories will also be update
             (default True)
@@ -691,7 +688,7 @@ class WC(object):
         """Lock items.
         
         Keyword arguments:
-        pahts -- path or list of paths to be locked, may be WC paths (in which
+        pahts -- list of paths to be locked, may be WC paths (in which
             case this is a local operation) or urls (in which case this is a
             network operation)
         comment -- comment for the lock (default no comment)
@@ -704,7 +701,7 @@ class WC(object):
         """Unlock items.
         
         Keyword arguments:
-        paths - path or list of paths to be unlocked, may be WC paths (in which
+        paths - list of paths to be unlocked, may be WC paths (in which
             case this is a local operation) or urls (in which case this is a
             network operation)
         break_lock -- if True, locks will be broken (default False)"""
