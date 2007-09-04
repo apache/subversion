@@ -1866,8 +1866,8 @@ public class SVNClient implements SVNClientInterface
 
             /* Filter out the SVN_INVALID_REVNUM message which pre-1.5
                clients won't expect, nor understand. */
-            if (revision != -1)
-              messages.add(msg);
+            if (revision != Revision.SVN_INVALID_REVNUM)
+                messages.add(msg);
         }
 
         public LogMessage[] getMessages()
