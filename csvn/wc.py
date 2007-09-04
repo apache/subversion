@@ -694,7 +694,7 @@ class WC(object):
         comment -- comment for the lock (default no comment)
         steal_lock -- if True, the lock will be created even if the file is
             already locked (default False)"""
-        targets = _types.Array(c_char_p, paths)
+        targets = self._build_path_list(paths)
         svn_client_lock(targets, comment, steal_lock, self.client, self.pool)
 
     def unlock(self, paths, break_lock=False):
@@ -705,7 +705,7 @@ class WC(object):
             case this is a local operation) or urls (in which case this is a
             network operation)
         break_lock -- if True, locks will be broken (default False)"""
-        targets = _types.Array(c_char_p, paths)
+        targets = self._build_path_list(paths)
         svn_client_unlock(targets, break_lock, self.client, self.pool)
 
     def merge(self, source1, revnum1, source2, revnum2, target_wcpath,
