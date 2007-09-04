@@ -1586,8 +1586,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           svn_wc_adm_access_t *adm_access;
           svn_boolean_t remove_lock;
 
-          /* Clear the subpool here because there are some 'continue'
-             statements in this loop. */
           svn_pool_clear(iterpool);
 
           if (item->kind == svn_node_dir)
@@ -1629,6 +1627,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           assert(*commit_info_p);
           /* Allocate the queue in pool instead of iterpool:
              we want it to survive the next iteration. */
+          /* ### TODO: Use a subpool -- which can be a parent of iterpool --
+             ### instead of pool to improve memory usage. */
           if ((bump_err = svn_wc_queue_committed
                (&queue,
                 item->path, adm_access, loop_recurse,
