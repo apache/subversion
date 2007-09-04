@@ -197,7 +197,7 @@ end_207_element(void *baton, int state,
     {
     case ELEM_multistatus:
       if (b->contains_error)
-                {
+        {
           if (svn_stringbuf_isempty(b->description))
             return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                     _("The request response contained at least "
