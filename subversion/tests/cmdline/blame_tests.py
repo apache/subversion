@@ -29,18 +29,25 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 # Helper function to validate the output of a particular run of blame.
-def parse_and_verify_blame(output, expected_blame):
+def parse_and_verify_blame(output, expected_blame, with_merged=0):
   "tokenize and validate the output of blame"
 
   max_split = 2
   keys = ['revision', 'author', 'text']
+  if with_merged:
+    keys.append('merged')
 
   results = []
 
   # Tokenize and parse each line
   for line_str in output:
-    tokens = line_str.split(None, max_split)
     this_line = {}
+
+    if with_merged:
+      this_line['merged'] = (line_str[0] == 'G')
+      line_str = line_str[2:]
+
+    tokens = line_str.split(None, max_split)
 
     if tokens[0] == '-':
       this_line['revision'] = None
@@ -466,13 +473,15 @@ def blame_merge_info(sbox):
       { 'revision' : 2,
         'author' : 'jrandom',
         'text' : "This is the file 'iota'.\n",
+        'merged' : 0,
       },
       { 'revision' : 11,
         'author' : 'jrandom',
         'text' : "'A' has changed a bit, with 'upsilon', and 'xi'.\n",
+        'merged' : 1,
       },
     ]
-  parse_and_verify_blame(output, expected_blame)
+  parse_and_verify_blame(output, expected_blame, 1)
 
 
 def blame_merge_out_of_range(sbox):
@@ -492,13 +501,15 @@ def blame_merge_out_of_range(sbox):
       { 'revision' : 4,
         'author' : 'jrandom',
         'text' : "This is the file 'upsilon'.\n",
+        'merged' : 1,
       },
       { 'revision' : 11,
         'author': 'jrandom',
         'text' : "There is also the file 'xi'.\n",
+        'merged' : 1,
       },
     ]
-  parse_and_verify_blame(output, expected_blame)
+  parse_and_verify_blame(output, expected_blame, 1)
 
 # test for issue #2888: 'svn blame' aborts over ra_serf
 def blame_peg_rev_file_not_in_head(sbox):
