@@ -21,6 +21,19 @@ package org.tigris.subversion.javahl;
 /**
  * This interface is used to receive every log message for the log
  * messages found by a SVNClientInterface.logMessages call.
+ *
+ * All log messages are returned in a list, which is terminated by an
+ * invocation of this callback with the revision set to SVN_INVALID_REVNUM.
+ *
+ * If the includeMergedRevisions parameter to SVNClientInterface.logMessages
+ * is true, then messages returned through this callback may have the
+ * hasChildren parameter set.  This parameter indicates that a separate list,
+ * which includes messages for merged revisions, will immediately follow.
+ * This list is also terminated with SVN_INVALID_REVNUM, after which the
+ * previous log message list continues.
+ *
+ * Log message lists may be nested arbitrarily deep, depending on the ancestry
+ * of the requested paths.
  */
 public interface LogMessageCallback
 {
