@@ -1622,6 +1622,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                                svn_client_copy_source_t *);
           svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
           const char *src_basename;
+          svn_boolean_t src_is_url = svn_path_is_url(source->path);
 
           svn_pool_clear(iterpool);
 
@@ -1631,14 +1632,14 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
           SVN_ERR(svn_opt_resolve_revisions(&pair->src_peg_revision,
                                             &pair->src_op_revision,
-                                            svn_path_is_url(pair->src),
+                                            src_is_url,
                                             TRUE,
                                             iterpool));
           src_basename = svn_path_basename(pair->src, iterpool);
 
           /* Check to see if all the sources are urls or all working copy
            * paths. */
-          if (svn_path_is_url(pair->src) != srcs_are_urls)
+          if (src_is_url != srcs_are_urls)
             return svn_error_create
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot mix repository and working copy sources"));
