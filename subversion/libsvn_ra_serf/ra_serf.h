@@ -525,14 +525,14 @@ typedef struct {
   /* Have we seen an error tag? */
   svn_boolean_t in_error;
 
-  /* Should we be collecting the XML cdata for the error message? */
-  svn_boolean_t collect_message;
+  /* Should we be collecting the XML cdata? */
+  svn_boolean_t collect_cdata;
+
+  /* Collected cdata. NULL if cdata not needed. */
+  svn_stringbuf_t *cdata;
 
   /* XML parser and namespace used to parse the remote response */
   svn_ra_serf__xml_parser_t parser;
-
-  /* The length of the error message we received. */
-  apr_size_t message_len;
 } svn_ra_serf__server_error_t;
 
 /* A simple request context that can be passed to handle_status_only. */
