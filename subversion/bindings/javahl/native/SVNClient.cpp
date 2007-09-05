@@ -396,7 +396,8 @@ jlong SVNClient::commit(Targets &targets, const char *message,
 }
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
-                     const char *message, bool copyAsChild, bool makeParents)
+                     const char *message, bool copyAsChild, bool makeParents,
+                     bool withMergeHistory)
 {
     Pool requestPool;
 
@@ -417,14 +418,14 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
-                                 copyAsChild, makeParents, ctx,
-                                 requestPool.pool()),
+                                 copyAsChild, makeParents, withMergeHistory,
+                                 ctx, requestPool.pool()),
                 );
 }
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
                      const char *message, bool force, bool moveAsChild,
-                     bool makeParents)
+                     bool makeParents, bool withMergeHistory)
 {
     Pool requestPool;
 
@@ -441,7 +442,8 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_move5(&commit_info, (apr_array_header_t *) srcs,
                                  destinationPath.c_str(), force, moveAsChild,
-                                 makeParents, ctx, requestPool.pool()), );
+                                 makeParents, withMergeHistory, ctx,
+                                 requestPool.pool()), );
 }
 
 void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents)

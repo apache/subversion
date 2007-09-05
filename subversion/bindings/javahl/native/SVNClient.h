@@ -108,9 +108,10 @@ class SVNClient :public SVNBase
   void mkdir(Targets &targets, const char *message, bool makeParents);
   void move(Targets &srcPaths, const char *destPath,
             const char *message, bool force, bool moveAsChild,
-            bool makeParents);
+            bool makeParents, bool withMergeHistory);
   void copy(CopySources &copySources, const char *destPath,
-            const char *message, bool copyAsChild, bool makeParents);
+            const char *message, bool copyAsChild, bool makeParents,
+            bool withMergeHistory);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
                const char *changelistName);

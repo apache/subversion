@@ -777,25 +777,18 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * Copy versioned paths with the history preserved.
      *
-     * @param sources A list of <code>CopySource</code> objects.
-     * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
-     * @param copyAsChild Whether to copy <code>srcPaths</code> as
-     * children of <code>destPath</code>.
-     * @param makeParents Whether to create intermediate parents
-     * @throws ClientException If the copy operation fails.
+     * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, boolean, boolean, boolean)
      * @since 1.5
-     * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
      */
     public void copy(CopySource[] sources, String destPath, String message,
-                     boolean copyAsChild, boolean makeParents)
+                     boolean copyAsChild, boolean makeParents,
+                     boolean withMergeHistory)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.copy(sources, destPath, message, copyAsChild,
-                        makeParents);
+                        makeParents, withMergeHistory);
         }
     }
 
@@ -821,28 +814,18 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * Move or rename versioned paths.
      *
-     * @param srcPaths Source paths or URLs.
-     * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
-     * @param force Whether to perform the move even if local
-     * modifications exist.
-     * @param moveAsChild Whether to move <code>srcPaths</code> as
-     * children of <code>destPath</code>.
-     * @param makeParents Whether to create intermediate parents
-     * @throws ClientException If the move operation fails.
+     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean, boolean)
      * @since 1.5
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
      */
     public void move(String[] srcPaths, String destPath, String message,
                      boolean force, boolean moveAsChild,
-                     boolean makeParents)
+                     boolean makeParents, boolean withMergeHistory)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.move(srcPaths, destPath, message, force, moveAsChild,
-                        makeParents);
+                        makeParents, withMergeHistory);
         }
     }
 
