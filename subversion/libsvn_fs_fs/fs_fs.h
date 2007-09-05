@@ -334,13 +334,6 @@ svn_error_t *svn_fs_fs__txn_proplist(apr_hash_t **proplist,
                                      svn_fs_txn_t *txn,
                                      apr_pool_t *pool);
 
-/* Return the changed mergeinfo list from transaction TXN and store it
-   in *MINFOLIST (never NULL), allocating the mergeinfo list from
-   POOL.  */
-svn_error_t *svn_fs_fs__txn_mergeinfo(apr_hash_t **minfolist,
-                                      svn_fs_txn_t *txn,
-                                      apr_pool_t *pool);
-
 /* Delete the mutable node-revision referenced by ID, along with any
    mutable props or directory contents associated with it.  Perform
    temporary allocations in POOL. */
