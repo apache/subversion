@@ -3120,6 +3120,69 @@ def mergeinfo_update_elision(sbox):
                                         None, None, None,
                                         None, None, 1, E_COPY_path)
 
+
+#----------------------------------------------------------------------
+
+def update_handles_copyfrom(sbox):
+  "update should understand copyfrom"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy.
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Copy 'rho' to 'glub'
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  glub_path = os.path.join(wc_dir, 'A', 'D', 'G', 'glub')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', rho_path, glub_path)
+
+  # Commit that change, creating r2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/glub' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/G/glub' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Make a local edit to rho in the backup working copy.
+  rho2_path = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(rho2_path, "Some new text.\n")
+
+  # Now try updating our backup working copy: it should receive glub,
+  # but with copyfrom args of rho@1, and thus copy the existing
+  # (edited) rho to glub.  In other words, both rho and glub should be
+  # identical and contain the same local edits.
+
+  expected_output = svntest.wc.State(wc_backup, { })
+  expected_output = wc.State(wc_backup, {
+    'A/D/G/glub' : Item(status='A '),  ### perhaps update should show 'A +' ??
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'rho'.\Some new text.\n")
+  expected_disk.add({
+    'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/D/G/rho', wc_rev=2, status='M ')
+  expected_status.add({
+    'A/D/G/glub' : Item(status='M ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
 #######################################################################
 # Run the tests
 
@@ -3162,6 +3225,7 @@ test_list = [ None,
               update_with_obstructing_additions,
               update_conflicted,
               mergeinfo_update_elision,
+              XFail(update_handles_copyfrom),
              ]
 
 if __name__ == '__main__':

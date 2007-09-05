@@ -42,6 +42,26 @@
 
 /*** Code. ***/
 
+
+/* Implementation of svn_wc_get_file_t.  A feeble callback wrapper
+   around svn_ra_get_file(), so that the update_editor can use it to
+   fetch any file, any time. */
+static svn_error_t *
+file_fetcher(void *baton,
+             const char *path,
+             svn_revnum_t revision,
+             svn_stream_t *stream,
+             svn_revnum_t *fetched_rev,
+             apr_hash_t **props,
+             apr_pool_t *pool)
+{
+  svn_ra_session_t *session = (svn_ra_session_t *)baton;
+  SVN_ERR(svn_ra_get_file(session, path, revision, stream,
+                          fetched_rev, props, pool));
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -69,7 +89,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const char *diff3_cmd;
-  svn_ra_session_t *ra_session;
+  svn_ra_session_t *ra_session, *ra_session2;
   svn_wc_adm_access_t *dir_access;
   svn_wc_adm_access_t *path_adm_access;
   apr_hash_t *children_with_mergeinfo;
@@ -162,6 +182,14 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
   SVN_ERR(svn_wc_maybe_set_repos_root(dir_access, path, repos_root, pool));
 
+  /* Open a *second* RA session to the root of the repository, so that
+     we have the ability to fetch any file.  This is a fallback in
+     case the server passes 'copyfrom' args to editor->add_file(), and
+     we don't already have that file in the working copy.  */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, repos_root,
+                                               NULL, NULL, NULL, FALSE, TRUE,
+                                               ctx, pool));
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc_get_update_editor3(&revnum, adm_access, target,
@@ -170,6 +198,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->conflict_func, ctx->conflict_baton,
+                                    file_fetcher, ra_session2,
                                     diff3_cmd, preserved_exts,
                                     &update_editor, &update_edit_baton,
                                     traversal_info,

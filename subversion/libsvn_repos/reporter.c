@@ -608,6 +608,71 @@ is_depth_upgrade(svn_depth_t wc_depth,
 }
 
 
+/* Call the B->editor's add_file() function to create PATH as a child
+   of PARENT_BATON, returning a new baton in *NEW_FILE_BATON.
+   However, make an attempt to send 'copyfrom' arguments if they're
+   available, by examining the closest copy of the original file
+   O_PATH within B->t_root.  If any copyfrom args are discovered,
+   return those in *COPYFROM_PATH and *COPYFROM_REV;  otherwise leave
+   those return args untouched. */
+static svn_error_t *
+add_file_smartly(report_baton_t *b,
+                 const char *path,
+                 void *parent_baton,
+                 const char *o_path,
+                 void **new_file_baton,
+                 const char **copyfrom_path,
+                 svn_revnum_t *copyfrom_rev,
+                 apr_pool_t *pool)
+{
+  /* ### TODO:  use a subpool to do this work, clear it at the end? */
+  svn_fs_t *fs = svn_repos_fs(b->repos);
+  svn_fs_root_t *closest_copy_root = NULL;
+  const char *closest_copy_path = NULL;
+
+  /* Pre-emptively assume no copyfrom args exist. */
+  *copyfrom_path = NULL;
+  *copyfrom_rev = SVN_INVALID_REVNUM;
+
+  /* Find the destination of the nearest 'copy event' which may have
+     caused o_path@t_root to exist.  */
+  SVN_ERR(svn_fs_closest_copy(&closest_copy_root, &closest_copy_path,
+                              b->t_root, o_path, pool));
+  if (closest_copy_root != NULL)
+    {
+      /* If the destination of the copy event is the same path as
+         o_path, then we've found something interesting that should
+         have 'copyfrom' history. */
+      if (strcmp(closest_copy_path + 1, o_path) == 0)
+        {
+          SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
+                                     closest_copy_root, closest_copy_path,
+                                     pool));
+          if (b->authz_read_func)
+            {
+              svn_boolean_t allowed;
+              svn_fs_root_t *copyfrom_root;
+              SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
+                                           *copyfrom_rev, pool));
+              SVN_ERR(b->authz_read_func(&allowed, copyfrom_root,
+                                         *copyfrom_path, b->authz_read_baton,
+                                         pool));
+              if (! allowed)
+                {
+                  *copyfrom_path = NULL;
+                  *copyfrom_rev = SVN_INVALID_REVNUM;
+                }
+            }
+        }
+    }
+
+  SVN_ERR(b->editor->add_file(path, parent_baton,
+                              *copyfrom_path, *copyfrom_rev,
+                              pool, new_file_baton));
+  return SVN_NO_ERROR;
+}
+
+
 /* Emit a series of editing operations to transform a source entry to
    a target entry.
 
@@ -742,13 +807,30 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   else
     {
       if (related)
-        SVN_ERR(b->editor->open_file(e_path, dir_baton, s_rev, pool,
-                                     &new_baton));
+        {
+          SVN_ERR(b->editor->open_file(e_path, dir_baton, s_rev, pool,
+                                       &new_baton));
+          SVN_ERR(delta_files(b, new_baton, s_rev, s_path, t_path,
+                              info ? info->lock_token : NULL, pool));
+        }
       else
-        SVN_ERR(b->editor->add_file(e_path, dir_baton, NULL,
-                                    SVN_INVALID_REVNUM, pool, &new_baton));
-      SVN_ERR(delta_files(b, new_baton, s_rev, s_path, t_path,
-                          info ? info->lock_token : NULL, pool));
+        {
+          svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
+          const char *copyfrom_path = NULL;
+          SVN_ERR(add_file_smartly(b, e_path, dir_baton, t_path, &new_baton,
+                                   &copyfrom_path, &copyfrom_rev, pool));
+          if (! copyfrom_path)
+            /* Send txdelta between empty file (s_path@s_rev doesn't
+               exist) and added file (t_path@t_root). */
+            SVN_ERR(delta_files(b, new_baton, s_rev, s_path, t_path,
+                                info ? info->lock_token : NULL, pool));
+          else
+            /* Send txdelta between copied file (copyfrom_path@copyfrom_rev)
+               and added file (tpath@t_root). */
+            SVN_ERR(delta_files(b, new_baton, copyfrom_rev, copyfrom_path,
+                                t_path, info ? info->lock_token : NULL, pool));
+        }
+
       SVN_ERR(svn_fs_file_md5_checksum(digest, b->t_root, t_path, pool));
       hex_digest = svn_md5_digest_to_cstring(digest, pool);
       return b->editor->close_file(new_baton, hex_digest, pool);
