@@ -1699,6 +1699,7 @@ add_file(const char *path,
   const svn_wc_entry_t *entry;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
+  apr_pool_t *subpool;
 
   if (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev))
     {
@@ -1720,7 +1721,7 @@ add_file(const char *path,
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
-  apr_pool_t *subpool = svn_pool_create(pool);
+  subpool = svn_pool_create(pool);
 
   fb = make_file_baton(pb, path, TRUE, pool);
 
