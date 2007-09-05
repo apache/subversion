@@ -3364,53 +3364,16 @@ svn_wc_add_repos_file2(const char *dst_path,
   SVN_ERR(svn_wc_entry(&dst_entry, dst_path, adm_access, FALSE, pool));
   if (dst_entry && dst_entry->schedule == svn_wc_schedule_delete)
     {
-      const char *full_path = svn_wc_adm_access_path(adm_access);
       const char *dst_rtext = svn_wc__text_revert_path(dst_path, FALSE,
                                                        pool);
       const char *dst_txtb = svn_wc__text_base_path(dst_path, FALSE, pool);
-      const char *dst_rprop;
-      const char *dst_bprop;
-      svn_node_kind_t kind;
-
-      SVN_ERR(svn_wc__prop_revert_path(&dst_rprop, dst_path,
-                                       svn_node_file, FALSE, pool));
-
-      SVN_ERR(svn_wc__prop_base_path(&dst_bprop, dst_path,
-                                     svn_node_file, FALSE, pool));
 
       SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
                                  adm_access, dst_txtb, dst_rtext,
                                  FALSE, pool));
-
-      /* If prop base exist, copy it to revert base. */
-      SVN_ERR(svn_io_check_path(dst_bprop, &kind, pool));
-      if (kind == svn_node_file)
-        SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
-                                   adm_access, dst_bprop, dst_rprop,
-                                   FALSE, pool));
-      else if (kind == svn_node_none)
-        {
-          /* If there wasn't any prop base we still need an empty revert
-             propfile, otherwise a revert won't know that a change to the
-             props needs to be made (it'll just see no file, and do nothing).
-             So manufacture an empty propfile and force it to be written out. */
-
-          apr_hash_t *empty_hash = apr_hash_make(pool);
-          const char *propfile_path;
-
-          SVN_ERR(svn_wc_create_tmp_file2(NULL,
-                                          &propfile_path,
-                                          full_path,
-                                          svn_io_file_del_none,
-                                          pool));
-
-          SVN_ERR(svn_wc__save_prop_file(propfile_path,
-                                         empty_hash, TRUE, pool));
-
-          SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
-                                     adm_access, propfile_path, dst_rprop,
-                                     FALSE, pool));
-        }
+      SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum,
+                                                dst_path, adm_access,
+                                                TRUE, pool));
     }
 
   /* Schedule this for addition first, before the entry exists.

@@ -459,7 +459,7 @@ copy_file_administratively(const char *src_path,
       }
 
     /* Load source base and working props. */
-    SVN_ERR(svn_wc__load_props(&base_props, &props, src_access,
+    SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, src_access,
                                src_path, pool));
 
     /* Copy pristine text-base to temporary location. */
@@ -521,7 +521,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
   const char *path = svn_wc_adm_access_path(adm_access);
 
   /* Remove wcprops. */
-  SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, FALSE, pool));
+  SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool));
 
   /* Read this directory's entries file. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));

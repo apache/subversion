@@ -36,6 +36,7 @@
 #include "adm_files.h"
 #include "questions.h"
 #include "entries.h"
+#include "props.h"
 #include "translate.h"
 
 #include "svn_md5.h"
@@ -190,10 +191,9 @@ svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
 
   else if (timestamp_kind == svn_wc__prop_time)
     {
-      const char *prop_path;
-
-      SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind, FALSE, pool));
-      SVN_ERR(svn_io_file_affected_time(&wfile_time, prop_path, pool));
+      SVN_ERR(svn_wc__props_last_modified(&wfile_time,
+                                          path, svn_wc__props_working,
+                                          adm_access, pool));
       entrytime = entry->prop_time;
     }
 
