@@ -542,7 +542,7 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   baton.to_url = to_url;
   baton.from_url = from_url;
   baton.config = opt_baton->config;
-  baton.quiet = opt_baton ->quiet;
+  baton.quiet = opt_baton->quiet;
 
   source_callbacks.open_tmp_file = open_tmp_file;
   source_callbacks.auth_baton = opt_baton->source_auth_baton;
