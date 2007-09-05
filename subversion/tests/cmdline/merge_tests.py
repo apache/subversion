@@ -7688,8 +7688,6 @@ def merge_to_sparse_directories(sbox):
 
   # Merges into sparse working copies should set non-inheritable mergeinfo
   # on the deepest directories present in the WC.
-  #
-  # Marked as XFail until issue #2827 is fixed.
 
   sbox.build()
   wc_dir = sbox.wc_dir
