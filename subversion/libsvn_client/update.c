@@ -82,7 +82,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
-  int adm_open_depth;
+  int levels_to_lock;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t use_commit_times;
@@ -99,11 +99,11 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
 
-  /* ### Ah, the irony.  We'd like to base our adm_open depth on the
+  /* ### Ah, the irony.  We'd like to base our levels_to_lock on the
      ### depth we're going to use for the update.  But that may depend
      ### on the depth in the working copy, which we can't discover
      ### without calling adm_open.  We could expend an extra call,
-     ### with adm_open_depth=0, to get the real depth (but only if we
+     ### with levels_to_lock=0, to get the real depth (but only if we
      ### need to) and then make the real call... but it's not worth
      ### the complexity right now.  Locking the entire tree when we
      ### didn't need to is a performance hit, but (except for access
@@ -111,9 +111,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   if (depth == svn_depth_empty
       || depth == svn_depth_files)
-    adm_open_depth = 0;
+    levels_to_lock = 0;
   else
-    adm_open_depth = -1;
+    levels_to_lock = -1;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert(path);
@@ -125,7 +125,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* Use PATH to get the update's anchor and targets and get a write lock */
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
-                                 TRUE, adm_open_depth,
+                                 TRUE, levels_to_lock,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   anchor = svn_wc_adm_access_path(adm_access);
@@ -242,7 +242,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   if (sleep_here)
     svn_sleep_for_timestamps();
 
-  if (adm_open_depth)
+  if (levels_to_lock)
     {
       SVN_ERR(svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path,
                                         pool));
@@ -282,7 +282,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                                    adm_access, ctx, pool));
     }
 
-  SVN_ERR(svn_wc_adm_close(adm_open_depth ? path_adm_access : adm_access));
+  SVN_ERR(svn_wc_adm_close(levels_to_lock ? path_adm_access : adm_access));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

@@ -160,6 +160,12 @@ struct merge_cmd_baton {
      dry_run mode. */
   apr_hash_t *dry_run_deletions;
 
+  /* The list of any paths which remained in conflict after a
+     resolution attempt was made.  We track this in-memory, rather
+     than just using WC entry state, since the latter doesn't help us
+     when in dry_run mode. */
+  apr_hash_t *conflicted_paths;
+
   /* The diff3_cmd in ctx->config, if any, else null.  We could just
      extract this as needed, but since more than one caller uses it,
      we just set it up when this baton is created. */
@@ -188,6 +194,14 @@ dry_run_deleted_p(struct merge_cmd_baton *merge_b, const char *wcpath)
                        APR_HASH_KEY_STRING) != NULL);
 }
 
+/* Return whether any WC path was put in conflict by the merge
+   operation corresponding to MERGE_B. */
+static APR_INLINE svn_boolean_t
+is_path_conflicted_by_merge(struct merge_cmd_baton *merge_b)
+{
+  return (merge_b->conflicted_paths &&
+          apr_hash_count(merge_b->conflicted_paths) > 0);
+}
 
 /* A svn_wc_diff_callbacks2_t function.  Used for both file and directory
    property merges. */
@@ -240,6 +254,55 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
+}
+
+/* Contains any state collected while resolving conflicts. */
+typedef struct
+{
+  /* The wrapped callback and baton. */
+  svn_wc_conflict_resolver_func_t wrapped_func;
+  void *wrapped_baton;
+
+  /* The list of any paths which remained in conflict after a
+     resolution attempt was made. */
+  apr_hash_t **conflicted_paths;
+
+  /* Pool used in notification_receiver() to avoid the iteration
+     sub-pool which is passed in, then subsequently destroyed. */
+  apr_pool_t *pool;
+} conflict_resolver_baton_t;
+
+/* An implementation of the svn_wc_conflict_resolver_func_t interface.
+   We keep a record of paths which remain in conflict after any
+   resolution attempt from BATON->wrapped_func. */
+static svn_error_t *
+conflict_resolver(svn_wc_conflict_result_t *result,
+                  const svn_wc_conflict_description_t *description,
+                  void *baton, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  conflict_resolver_baton_t *conflict_b = baton;
+
+  if (conflict_b->wrapped_func)
+    err = (*conflict_b->wrapped_func)(result, description,
+                                      conflict_b->wrapped_baton, pool);
+  else
+    err = SVN_NO_ERROR;
+
+  /* Keep a record of paths still in conflict after the resolution attempt. */
+  if (*result == svn_wc_conflict_result_conflicted)
+    {
+      const char *conflicted_path = apr_pstrdup(conflict_b->pool,
+                                                description->path);
+
+      if (*conflict_b->conflicted_paths == NULL)
+        *conflict_b->conflicted_paths = apr_hash_make(conflict_b->pool);
+
+      apr_hash_set(*conflict_b->conflicted_paths, conflicted_path,
+                   APR_HASH_KEY_STRING, conflicted_path);
+    }
+
+  return err;
 }
 
 /* A svn_wc_diff_callbacks2_t function. */
@@ -298,6 +361,19 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
         return SVN_NO_ERROR;
       }
   }
+
+  /* ### TODO: Thwart attempts to merge into a path that has
+     ### unresolved conflicts.  This needs to be smart enough to deal
+     ### with tree conflicts!
+  if (is_path_conflicted_by_merge(merge_b, mine))
+    {
+      *content_state = svn_wc_notify_state_conflicted;
+      return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                               _("Path '%s' is in conflict, and must be "
+                                 "resolved before the remainder of the "
+                                 "requested merge can be applied"), mine);
+    }
+  */
 
   /* This callback is essentially no more than a wrapper around
      svn_wc_merge3().  Thank goodness that all the
@@ -360,13 +436,15 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
           const char *right_label = apr_psprintf(subpool,
                                                  _(".merge-right.r%ld"),
                                                  yours_rev);
+          conflict_resolver_baton_t conflict_baton =
+            { merge_b->ctx->conflict_func, merge_b->ctx->conflict_baton,
+              &merge_b->conflicted_paths, merge_b->pool };
           SVN_ERR(svn_wc_merge3(&merge_outcome,
                                 older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
                                 merge_b->dry_run, merge_b->diff3_cmd,
                                 merge_b->merge_options, prop_changes,
-                                merge_b->ctx->conflict_func,
-                                merge_b->ctx->conflict_baton,
+                                conflict_resolver, &conflict_baton,
                                 subpool));
         }
 
@@ -1736,22 +1814,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
     (*notify_b->wrapped_func)(notify_b->wrapped_baton, notify, pool);
 }
 
-#if 0
-/* An implementation of the svn_wc_conflict_resolver_func_t
-   interface.  Our default conflict resolution approach is to
-   complain, and error out. */
-static svn_error_t *
-default_conflict_resolver(const char *path, void *baton, apr_pool_t *pool)
-{
-  return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
-                           _("Path '%s' is in conflict, and must be resolved "
-                             "before the remainder of the requested merge "
-                             "can be applied"), path);
-}
-#endif
-
-/* Create mergeinfo describing the merge of RANGE into our target,
-   without including mergeinfo for skips or conflicts from
+/* Create mergeinfo describing the merge of RANGE into our target, accounting
+   for paths unaffected by the merge due to skips or conflicts from
    NOTIFY_B.  Note in MERGE_B->OPERATIVE_MERGE if an operative merge
    is discovered.  If TARGET_WCPATH is a directory and it is missing
    an immediate child then TARGET_MISSING_CHILD should be true,
@@ -1785,41 +1849,34 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
   rangelist = apr_array_make(pool, 1, sizeof(range));
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
 
-  /* Set the mergeinfo for the root of the target tree unless we skipped
-     everything or TARGET_WCPATH is missing children (in the latter case
-     we need to set non-inheritable mergeinfo on TARGET_WCPATH). */
-  if (nbr_skips == 0 || notify_b->nbr_operative_notifications > 0
-      || target_missing_child)
+  /* Note in the merge baton when the first operative merge is found. */
+  if (notify_b->nbr_operative_notifications > 0
+      && !merge_b->operative_merge)
+    merge_b->operative_merge = TRUE;
+
+  apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
+  if (nbr_skips > 0)
     {
-      /* Note in the merge baton when the first operative merge is found. */
-      if (notify_b->nbr_operative_notifications > 0
-          && !merge_b->operative_merge)
-        merge_b->operative_merge = TRUE;
+      apr_hash_index_t *hi;
+      const void *skipped_path;
 
-      apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
-      if (nbr_skips > 0)
+      /* Override the mergeinfo for child paths which weren't
+         actually merged. */
+      for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
+           hi = apr_hash_next(hi))
         {
-          apr_hash_index_t *hi;
-          const void *skipped_path;
+          apr_hash_this(hi, &skipped_path, NULL, NULL);
 
-          /* Override the mergeinfo for child paths which weren't
-             actually merged. */
-          for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
-               hi = apr_hash_next(hi))
-            {
-              apr_hash_this(hi, &skipped_path, NULL, NULL);
+          /* Add an empty range list for this path. */
+          apr_hash_set(*merges, (const char *) skipped_path,
+                       APR_HASH_KEY_STRING,
+                       apr_array_make(pool, 0, sizeof(range)));
 
-              /* Add an empty range list for this path. */
-              apr_hash_set(*merges, (const char *) skipped_path,
-                           APR_HASH_KEY_STRING,
-                           apr_array_make(pool, 0, sizeof(range)));
-
-              if (nbr_skips < notify_b->nbr_notifications)
-                /* ### Use RANGELIST as the mergeinfo for all children of
-                   ### this path which were not also explicitly
-                   ### skipped? */
-                ;
-            }
+          if (nbr_skips < notify_b->nbr_notifications)
+            /* ### Use RANGELIST as the mergeinfo for all children of
+               ### this path which were not also explicitly
+               ### skipped? */
+            ;
         }
     }
 
@@ -2049,6 +2106,22 @@ assume_default_rev_range(const svn_opt_revision_t *revision1,
   return SVN_NO_ERROR;
 }
 
+/* Create and return an error structure appropriate for the unmerged
+   revisions range(s). */
+static APR_INLINE svn_error_t *
+make_merge_conflict_error(const char *target_wcpath,
+                          svn_merge_range_t *r,
+                          apr_pool_t *pool)
+{
+  return svn_error_createf
+    (SVN_ERR_WC_FOUND_CONFLICT, NULL,
+     _("One or more conflicts were produced while merging r%ld:%ld into\n"
+       "'%s' --\n"
+       "resolve all conflicts and rerun the merge to apply the remaining\n"
+       "unmerged revisions"),
+     r->start, r->end, svn_path_local_style(target_wcpath, pool));
+}
+
 /* URL1, URL2, and TARGET_WCPATH all better be directories.  For the
    single file case, the caller does the merging manually.
 
@@ -2085,6 +2158,7 @@ do_merge(const char *initial_URL1,
          int target_index,
          apr_pool_t *pool)
 {
+  svn_error_t *err = SVN_NO_ERROR;
   apr_hash_t *target_mergeinfo;
   apr_array_header_t *remaining_ranges;
   svn_merge_range_t range;
@@ -2348,8 +2422,16 @@ do_merge(const char *initial_URL1,
           if (notify_b.skipped_paths != NULL)
             svn_hash__clear(notify_b.skipped_paths);
         }
+
+      if (i < remaining_ranges->nelts - 1 &&
+          is_path_conflicted_by_merge(merge_b))
+        {
+          err = make_merge_conflict_error(target_wcpath, r, pool);
+          goto finalize_mergeinfo;
+        }
     }
 
+ finalize_mergeinfo:
   /* Check if we need to make non-inheritable ranges inheritable. */
   if (target_mergeinfo
       && notify_b.same_urls
@@ -2423,7 +2505,7 @@ do_merge(const char *initial_URL1,
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
@@ -2486,6 +2568,7 @@ do_single_file_merge(const char *initial_URL1,
                      svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool)
 {
+  svn_error_t *err = SVN_NO_ERROR;
   apr_hash_t *props1, *props2;
   const char *tmpfile1, *tmpfile2;
   const char *mimetype1, *mimetype2;
@@ -2497,7 +2580,6 @@ do_single_file_merge(const char *initial_URL1,
   notification_receiver_baton_t notify_b =
     { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, 0, NULL, pool };
   const char *rel_path;
-  svn_error_t *err;
   svn_merge_range_t range;
   svn_ra_session_t *ra_session1, *ra_session2;
   enum merge_type merge_type;
@@ -2729,14 +2811,18 @@ do_single_file_merge(const char *initial_URL1,
         }
 
       /* Ignore if temporary file not found. It may have been renamed. */
+      /* (This is where we complain about missing Lisp, or better yet,
+         Python...) */
       err = svn_io_remove_file(tmpfile1, subpool);
       if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
         return err;
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       err = svn_io_remove_file(tmpfile2, subpool);
       if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
         return err;
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
 
       if (notify_b.same_urls)
         {
@@ -2777,10 +2863,18 @@ do_single_file_merge(const char *initial_URL1,
           if (notify_b.skipped_paths != NULL)
             svn_hash__clear(notify_b.skipped_paths);
         }
+
+      if (i < remaining_ranges->nelts - 1 &&
+          is_path_conflicted_by_merge(merge_b))
+        {
+          err = make_merge_conflict_error(target_wcpath, r, pool);
+          goto finalize_mergeinfo;
+        }
     }
 
   apr_pool_destroy(subpool);
 
+ finalize_mergeinfo:
   /* MERGE_B->TARGET hasn't been merged yet so only elide as
      far MERGE_B->TARGET's immediate children.  If TARGET_WCPATH
      is an immdediate child of MERGE_B->TARGET don't even attempt to
@@ -2804,7 +2898,7 @@ do_single_file_merge(const char *initial_URL1,
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 /* A baton for get_mergeinfo_walk_cb. */
@@ -3646,6 +3740,7 @@ svn_client_merge3(const char *source1,
   merge_cmd_baton.added_path = NULL;
   merge_cmd_baton.add_necessitated_merge = FALSE;
   merge_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool) : NULL);
+  merge_cmd_baton.conflicted_paths = NULL;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.existing_mergeinfo = FALSE;
   merge_cmd_baton.pool = pool;
@@ -3846,6 +3941,7 @@ svn_client_merge_peg3(const char *source,
   merge_cmd_baton.added_path = NULL;
   merge_cmd_baton.add_necessitated_merge = FALSE;
   merge_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool) : NULL);
+  merge_cmd_baton.conflicted_paths = NULL;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.existing_mergeinfo = FALSE;
   merge_cmd_baton.pool = pool;

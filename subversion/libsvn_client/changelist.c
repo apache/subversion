@@ -131,7 +131,7 @@ svn_client_get_changelist(apr_array_header_t **paths,
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, root_path,
                                  FALSE, /* no write lock */
-                                 -1, /* infinite depth */
+                                 -1, /* levels to lock == infinity */
                                  ctx->cancel_func, ctx->cancel_baton, pool));
 
   SVN_ERR(svn_wc_walk_entries3(root_path, adm_access,
@@ -167,7 +167,7 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, root_path,
                                  FALSE, /* no write lock */
-                                 -1, /* infinite depth */
+                                 -1, /* levels to lock == infinity */
                                  ctx->cancel_func, ctx->cancel_baton, pool));
 
   SVN_ERR(svn_wc_walk_entries3(root_path, adm_access,

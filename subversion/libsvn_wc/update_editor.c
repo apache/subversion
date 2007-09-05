@@ -469,9 +469,9 @@ complete_directory(struct edit_baton *eb,
 
   /* After a depth upgrade the entry must reflect the new depth.
      Upgrading to infinity changes the depth of *all* directories,
-     upgrading to something else only changes the root dir. */
+     upgrading to something else only changes the target. */
   if (eb->depth == svn_depth_infinity
-      || (is_root_dir && eb->depth > entry->depth))
+      || (strcmp(path, eb->target) == 0 && eb->depth > entry->depth))
     entry->depth = eb->depth;
 
   /* Remove any deleted or missing entries. */

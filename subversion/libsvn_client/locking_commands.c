@@ -217,7 +217,7 @@ organize_lock_targets(const char **common_parent,
     }
   else  /* common parent is a local path */
     {
-      int max_depth = 0;
+      int max_levels_to_lock = 0;
       apr_array_header_t *rel_urls;
       apr_array_header_t *urls = apr_array_make(pool, 1,
                                                 sizeof(const char *));
@@ -231,14 +231,15 @@ organize_lock_targets(const char **common_parent,
           const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
           int n = svn_path_component_count(target);
 
-          if (n > max_depth)
-            max_depth = n;
+          if (n > max_levels_to_lock)
+            max_levels_to_lock = n;
         }
 
       SVN_ERR(svn_wc_adm_probe_open3(parent_adm_access_p, NULL,
                                      *common_parent,
-                                     TRUE, max_depth, ctx->cancel_func,
-                                     ctx->cancel_baton, pool));
+                                     TRUE, max_levels_to_lock,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     pool));
 
       /* Get the url for each target and verify all paths. */
       for (i = 0; i < rel_targets->nelts; i++)

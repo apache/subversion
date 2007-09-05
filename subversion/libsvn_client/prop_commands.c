@@ -1129,15 +1129,15 @@ svn_client_proplist3(const char *target,
       /* Initialize the administrative area lock depth to -1 for the
          svn_depth_infinity case, and override it below for the other
          depths. */
-      int adm_depth = -1;
+      int levels_to_lock = -1;
 
       if (depth == svn_depth_empty || depth == svn_depth_files)
-        adm_depth = 0;
+        levels_to_lock = 0;
       else if (depth == svn_depth_immediates)
-        adm_depth = 1;
+        levels_to_lock = 1;
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
-                                     FALSE, adm_depth,
+                                     FALSE, levels_to_lock,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
       SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));

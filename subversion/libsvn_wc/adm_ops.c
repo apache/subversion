@@ -1970,7 +1970,7 @@ svn_wc_revert2(const char *path,
 
   /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR_W(svn_wc__entry_versioned(&entry, path, dir_access, FALSE, pool),
-            "Cannot revert.");
+            _("Cannot revert."));
 
   /* Safeguard 1.5: is this a missing versioned directory? */
   if (entry->kind == svn_node_dir)
@@ -2866,7 +2866,7 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
                                      TRUE, /* get write lock */
-                                     0, /* depth */
+                                     0, /* levels to lock */
                                      NULL, NULL, iterpool));
 
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, iterpool));

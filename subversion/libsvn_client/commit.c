@@ -1357,7 +1357,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   SVN_ERR(svn_wc_adm_open3(&base_dir_access, NULL, base_dir,
                            TRUE,  /* Write lock */
-                           lock_base_dir_recursive ? -1 : 0, /* Depth */
+                           lock_base_dir_recursive ? -1 : 0, /* lock levels */
                            ctx->cancel_func, ctx->cancel_baton,
                            pool));
 
@@ -1396,7 +1396,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
               SVN_ERR(svn_wc_adm_open3(&adm_access, base_dir_access,
                                        target,
                                        TRUE,  /* Write lock */
-                                       0,     /* Depth */
+                                       0,     /* Levels to lock */
                                        ctx->cancel_func,
                                        ctx->cancel_baton,
                                        pool));
@@ -1413,7 +1413,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
               SVN_ERR(svn_wc_adm_open3(&adm_access, base_dir_access,
                                        target,
                                        TRUE, /* Write lock */
-                                       -1,   /* Depth */
+                                       -1,   /* Levels to lock */
                                        ctx->cancel_func,
                                        ctx->cancel_baton,
                                        pool));
@@ -1571,7 +1571,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   if ((! cmt_err)
       || (cmt_err->apr_err == SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
     {
-      apr_pool_t *iterpool = svn_pool_create(pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(subpool);
       svn_wc_committed_queue_t *queue = svn_wc_committed_queue_create(pool);
 
       /* Make a note that our commit is finished. */
@@ -1586,8 +1587,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           svn_wc_adm_access_t *adm_access;
           svn_boolean_t remove_lock;
 
-          /* Clear the subpool here because there are some 'continue'
-             statements in this loop. */
           svn_pool_clear(iterpool);
 
           if (item->kind == svn_node_dir)
@@ -1627,7 +1626,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                           & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
 
           assert(*commit_info_p);
-          /* Allocate the queue in pool instead of iterpool:
+          /* Allocate the queue in a longer-lived pool than iterpool:
              we want it to survive the next iteration. */
           if ((bump_err = svn_wc_queue_committed
                (&queue,
@@ -1635,7 +1634,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                 item->incoming_prop_changes,
                 remove_lock, (! keep_changelist),
                 apr_hash_get(digests, item->path, APR_HASH_KEY_STRING),
-                pool)))
+                subpool)))
             break;
 
         }
@@ -1645,10 +1644,10 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                          (*commit_info_p)->revision,
                                          (*commit_info_p)->date,
                                          (*commit_info_p)->author,
-                                         iterpool);
+                                         subpool);
 
-      /* Destroy the subpool. */
       svn_pool_destroy(iterpool);
+      svn_pool_destroy(subpool);
     }
 
   /* Sleep to ensure timestamp integrity. */

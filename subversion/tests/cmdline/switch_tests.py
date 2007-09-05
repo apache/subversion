@@ -1689,6 +1689,178 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status,
                                         None, None, None, None, None, 1)
 
+#----------------------------------------------------------------------  
+
+def switch_with_depth(sbox):
+  "basic tests to verify switch along with depth"
+
+  sbox.build()
+
+  # Form some paths and URLs required
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+  AD_url = repo_url + '/A/D'
+  AB_url = repo_url + '/A/B'
+  AB_path = os.path.join(wc_dir, 'A', 'B')
+  
+  # Set up expected results of 'switch --depth=empty'
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B', switched='S')
+  expected_status.tweak('A/B/lambda', switched='S')
+  expected_status.tweak('A/B/E', switched='S')
+  expected_status.tweak('A/B/F', switched='S')
+
+  # Do 'switch --depth=empty' and check the results in three ways.
+  svntest.actions.run_and_verify_switch(wc_dir, AB_path, AD_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status, None,
+                                        None, None, None, None, 0,
+                                        '--depth', 'empty')
+
+  # Set up expected results for reverting 'switch --depth=empty'
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  svntest.actions.run_and_verify_switch(wc_dir, AB_path, AB_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status, None,
+                                        None, None, None, None, 0,
+                                        '--depth', 'empty')
+
+  # Set up expected results of 'switch --depth=files'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/lambda'  : Item(status='D '),
+    'A/B/gamma'   : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/lambda')
+  expected_disk.add({
+    'A/B/gamma'   : Item("This is the file 'gamma'.\n")
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/lambda')
+  expected_status.add({
+    'A/B/gamma'   : Item(status='  ', wc_rev=1)
+    })
+  expected_status.tweak('A/B', switched='S')
+  expected_status.tweak('A/B/E', switched='S')
+  expected_status.tweak('A/B/F', switched='S')
+
+  # Do 'switch --depth=files' and check the results in three ways.
+  svntest.actions.run_and_verify_switch(wc_dir, AB_path, AD_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status, None,
+                                        None, None, None, None, 0,
+                                        '--depth', 'files')
+
+  # Set up expected results for reverting 'switch --depth=files'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/gamma'   : Item(status='D '),
+    'A/B/lambda'  : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  svntest.actions.run_and_verify_switch(wc_dir, AB_path, AB_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status, None,
+                                        None, None, None, None, 0,
+                                        '--depth', 'files')
+
+  # Putting the depth=immediates stuff in a subroutine, because we're
+  # going to run it at least twice.
+  def sw_depth_imm():
+    # Set up expected results of 'switch --depth=immediates'
+    expected_output = svntest.wc.State(wc_dir, {
+        'A/B/lambda'  : Item(status='D '),
+        'A/B/E'       : Item(status='D '),
+        'A/B/F'       : Item(status='D '),
+        'A/B/gamma'   : Item(status='A '),
+        'A/B/G'       : Item(status='A '),
+        'A/B/H'       : Item(status='A '),
+        })
+    expected_disk = svntest.main.greek_state.copy()
+    expected_disk.remove('A/B/lambda', 'A/B/E/beta', 'A/B/E/alpha',
+                         'A/B/E', 'A/B/F')
+    expected_disk.add({
+        'A/B/gamma'   : Item("This is the file 'gamma'.\n"),
+        'A/B/G'       : Item(),
+        'A/B/H'       : Item(),
+        })
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    expected_status.remove('A/B/lambda', 'A/B/E/beta', 'A/B/E/alpha',
+                           'A/B/E', 'A/B/F')
+    expected_status.add({
+        'A/B/gamma'   : Item(status='  ', wc_rev=1),
+        'A/B/G'       : Item(status='  ', wc_rev=1),
+        'A/B/H'       : Item(status='  ', wc_rev=1)
+        })
+    expected_status.tweak('A/B', switched='S')
+    
+    # Do 'switch --depth=immediates' and check the results in three ways.
+    svntest.actions.run_and_verify_switch(wc_dir, AB_path, AD_url,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status, None,
+                                          None, None, None, None, 0,
+                                          '--depth', 'immediates')
+
+  sw_depth_imm()
+    
+  # Set up expected results for reverting 'switch --depth=immediates'.
+  # (Reverting with default [infinite] depth, so that the result is a
+  # standard Greek Tree working copy again.)
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B/gamma'   : Item(status='D '),
+      'A/B/G'       : Item(status='D '),
+      'A/B/H'       : Item(status='D '),
+      'A/B/lambda'  : Item(status='A '),
+      'A/B/E'       : Item(status='A '),
+      'A/B/E/alpha' : Item(status='A '),
+      'A/B/E/beta'  : Item(status='A '),
+      'A/B/F'       : Item(status='A '),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_switch(wc_dir, AB_path, AB_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status, None,
+                                        None, None, None, None, 0)
+
+  # Okay, repeat 'switch --depth=immediates'.  (Afterwards we'll
+  # 'switch --depth=infinity', to test going all the way.)
+  sw_depth_imm()
+
+  # Set up expected results of 'switch --depth=infinity'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/gamma'   : Item(status='D '),
+    'A/B/G'       : Item(status='D '),
+    'A/B/H'       : Item(status='D '),
+    'A/B/lambda'  : Item(status='A '),
+    'A/B/E'       : Item(status='A '),
+    'A/B/E/alpha' : Item(status='A '),
+    'A/B/E/beta'  : Item(status='A '),    
+    'A/B/F'       : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Do the 'switch --depth=infinity' and check the results in three ways.
+  svntest.actions.run_and_verify_switch(wc_dir, AB_path, AB_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status, None,
+                                        None, None, None, None, 0,
+                                        '--depth', 'infinity')
+
 ########################################################################
 # Run the tests
 
@@ -1718,6 +1890,7 @@ test_list = [ None,
               switch_scheduled_add,
               mergeinfo_switch_elision,
               switch_with_obstructing_local_adds,
+              switch_with_depth,
              ]
 
 if __name__ == '__main__':

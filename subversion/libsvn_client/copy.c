@@ -941,92 +941,6 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
 
 static svn_error_t *
-remove_tmpfiles(apr_hash_t *tempfiles,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-
-  /* Split if there's nothing to be done. */
-  if (! tempfiles)
-    return SVN_NO_ERROR;
-
-  /* Clean up any tempfiles. */
-  for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      svn_node_kind_t kind;
-
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
-
-      apr_hash_this(hi, &key, NULL, NULL);
-      SVN_ERR(svn_io_check_path((const char *)key, &kind, pool));
-      if (kind == svn_node_file)
-        SVN_ERR(svn_io_remove_file((const char *)key, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
-static svn_error_t *
-reconcile_errors(svn_error_t *commit_err,
-                 svn_error_t *unlock_err,
-                 svn_error_t *cleanup_err,
-                 apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  /* Early release (for good behavior). */
-  if (! (commit_err || unlock_err || cleanup_err))
-    return SVN_NO_ERROR;
-
-  /* If there was a commit error, start off our error chain with
-     that. */
-  if (commit_err)
-    {
-      commit_err = svn_error_quick_wrap
-        (commit_err, _("Commit failed (details follow):"));
-      err = commit_err;
-    }
-
-  /* Else, create a new "general" error that will lead off the errors
-     that follow. */
-  else
-    err = svn_error_create(SVN_ERR_BASE, NULL,
-                           _("Commit succeeded, but other errors follow:"));
-
-  /* If there was an unlock error... */
-  if (unlock_err)
-    {
-      /* Wrap the error with some headers. */
-      unlock_err = svn_error_quick_wrap
-        (unlock_err, _("Error unlocking locked dirs (details follow):"));
-
-      /* Append this error to the chain. */
-      svn_error_compose(err, unlock_err);
-    }
-
-  /* If there was a cleanup error... */
-  if (cleanup_err)
-    {
-      /* Wrap the error with some headers. */
-      cleanup_err = svn_error_quick_wrap
-        (cleanup_err, _("Error in post-commit clean-up (details follow):"));
-
-      /* Append this error to the chain. */
-      svn_error_compose(err, cleanup_err);
-    }
-
-  return err;
-}
-
-
-
-static svn_error_t *
 wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                  const apr_array_header_t *copy_pairs,
                  svn_boolean_t make_parents,
@@ -1041,12 +955,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   void *edit_baton;
   svn_node_kind_t base_kind;
   void *commit_baton;
-  apr_hash_t *committables, *tempfiles = NULL;
+  apr_hash_t *committables;
   svn_wc_adm_access_t *adm_access, *dir_access;
   apr_array_header_t *commit_items;
-  svn_error_t *cmt_err = SVN_NO_ERROR;
-  svn_error_t *unlock_err = SVN_NO_ERROR;
-  svn_error_t *cleanup_err = SVN_NO_ERROR;
   const svn_wc_entry_t *entry;
   apr_pool_t *iterpool;
   apr_array_header_t *new_dirs = NULL;
@@ -1181,7 +1092,10 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
                                       ctx, pool));
       if (! message)
-        return SVN_NO_ERROR;
+        {
+          SVN_ERR(svn_wc_adm_close(adm_access));
+          return SVN_NO_ERROR;
+        }
     }
   else
     message = "";
@@ -1195,12 +1109,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   else
     dir_access = adm_access;
 
-  if ((cmt_err = svn_client__get_copy_committables(&committables,
-                                                   copy_pairs,
-                                                   dir_access,
-                                                   ctx,
-                                                   pool)))
-    goto cleanup;
+  SVN_ERR(svn_client__get_copy_committables(&committables,
+                                            copy_pairs, dir_access,
+                                            ctx, pool));
 
   /* ### todo: There should be only one hash entry, which currently
      has a hacked name until we have the entries files storing
@@ -1210,7 +1121,10 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   if (! (commit_items = apr_hash_get(committables,
                                      SVN_CLIENT__SINGLE_REPOS_NAME,
                                      APR_HASH_KEY_STRING)))
-    goto cleanup;
+    {
+      SVN_ERR(svn_wc_adm_close(adm_access));
+      return SVN_NO_ERROR;
+    }
 
   /* If we are creating intermediate directories, tack them onto the list
      of committables. */
@@ -1275,50 +1189,37 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     }
 
   /* Sort and condense our COMMIT_ITEMS. */
-  if ((cmt_err = svn_client__condense_commit_items(&top_dst_url,
-                                                   commit_items,
-                                                   pool)))
-    goto cleanup;
+  SVN_ERR(svn_client__condense_commit_items(&top_dst_url,
+                                            commit_items, pool));
 
   /* Open an RA session to DST_URL. */
-  if ((cmt_err = svn_client__open_ra_session_internal(&ra_session, top_dst_url,
-                                                      NULL, NULL,
-                                                      commit_items,
-                                                      FALSE, FALSE,
-                                                      ctx, pool)))
-    goto cleanup;
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_dst_url,
+                                               NULL, NULL, commit_items,
+                                               FALSE, FALSE, ctx, pool));
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
-  if ((cmt_err = svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
-                                           revprop_table,
-                                           svn_client__commit_callback,
-                                           commit_baton,
-                                           NULL, TRUE, /* No lock tokens */
-                                           pool)))
-    goto cleanup;
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    revprop_table, svn_client__commit_callback,
+                                    commit_baton, NULL,
+                                    TRUE, /* No lock tokens */
+                                    pool));
 
   /* Perform the commit. */
-  cmt_err = svn_client__do_commit(top_dst_url, commit_items, adm_access,
+  SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items, adm_access,
                                   editor, edit_baton,
                                   0, /* ### any notify_path_offset needed? */
-                                  &tempfiles, NULL, ctx, pool);
+                                  NULL, NULL, ctx, pool),
+            _("Commit failed (details follow):"));
 
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
 
- cleanup:
-
   /* It's only a read lock, so unlocking is harmless. */
-  unlock_err = svn_wc_adm_close(adm_access);
+  SVN_ERR(svn_wc_adm_close(adm_access));
 
-  /* Remove any outstanding temporary text-base files. */
-  if (tempfiles)
-    cleanup_err = remove_tmpfiles(tempfiles,
-                                  ctx->cancel_func, ctx->cancel_baton,
-                                  pool);
 
-  return reconcile_errors(cmt_err, unlock_err, cleanup_err, pool);
+  return SVN_NO_ERROR;
 }
 
 /* Peform each individual copy operation for a repos -> wc copy.  A
@@ -1686,27 +1587,27 @@ setup_copy(svn_commit_info_t **commit_info_p,
   svn_boolean_t srcs_are_urls, dst_is_url;
   int i;
 
-  /* Are either of our paths URLs?
-   * Just check the first src_path.  If there are more than one, we'll check
-   * for homogeneity amoung them down below. */
-  srcs_are_urls = svn_path_is_url(APR_ARRAY_IDX(sources, 0,
-                                  svn_client_copy_source_t *)->path);
-  dst_is_url = svn_path_is_url(dst_path_in);
-
   /* Check to see if the supplied peg revisions make sense. */
   for (i = 0; i < sources->nelts; i++)
     {
       svn_client_copy_source_t *source =
         ((svn_client_copy_source_t **) (sources->elts))[i];
 
-      if ( svn_path_is_url(source->path)
+      if (svn_path_is_url(source->path)
           && (source->peg_revision->kind == svn_opt_revision_base
               || source->peg_revision->kind == svn_opt_revision_committed
-              || source->peg_revision->kind == svn_opt_revision_previous) )
+              || source->peg_revision->kind == svn_opt_revision_previous))
         return svn_error_create
           (SVN_ERR_CLIENT_BAD_REVISION, NULL,
            _("Revision type requires a working copy path, not a URL"));
     }
+
+  /* Are either of our paths URLs?
+   * Just check the first src_path.  If there are more than one, we'll check
+   * for homogeneity amoung them down below. */
+  srcs_are_urls = svn_path_is_url(APR_ARRAY_IDX(sources, 0,
+                                  svn_client_copy_source_t *)->path);
+  dst_is_url = svn_path_is_url(dst_path_in);
 
   /* If we have multiple source paths, it implies the dst_path is a directory
    * we are moving or copying into.  Populate the dst_paths array to contain
@@ -1721,6 +1622,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                                svn_client_copy_source_t *);
           svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
           const char *src_basename;
+          svn_boolean_t src_is_url = svn_path_is_url(source->path);
 
           svn_pool_clear(iterpool);
 
@@ -1730,14 +1632,14 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
           SVN_ERR(svn_opt_resolve_revisions(&pair->src_peg_revision,
                                             &pair->src_op_revision,
-                                            svn_path_is_url(pair->src),
+                                            src_is_url,
                                             TRUE,
                                             iterpool));
           src_basename = svn_path_basename(pair->src, iterpool);
 
           /* Check to see if all the sources are urls or all working copy
            * paths. */
-          if (svn_path_is_url(pair->src) != srcs_are_urls)
+          if (src_is_url != srcs_are_urls)
             return svn_error_create
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot mix repository and working copy sources"));
@@ -1750,6 +1652,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
     }
   else
     {
+      /* Only one source path. */
       svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
       svn_client_copy_source_t *source =
         APR_ARRAY_IDX(sources, 0, svn_client_copy_source_t *);
@@ -1869,7 +1772,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                   if (! entry->url)
                     return svn_error_createf
                       (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                       _("'%s' does not seem to have a URL associated with it"),
+                       _("'%s' does not have a URL associated with it"),
                        svn_path_local_style(pair->src, pool));
 
                   pair->src = apr_pstrdup(pool, entry->url);

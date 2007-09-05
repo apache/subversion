@@ -88,7 +88,7 @@ reset_log_item(struct log_baton *lb)
   lb->log_entry->date          = NULL;
   lb->log_entry->message       = NULL;
   lb->log_entry->changed_paths = NULL;
-  lb->log_entry->nbr_children  = 0;
+  lb->log_entry->has_children  = FALSE;
 
   svn_pool_clear(lb->subpool);
 }
@@ -121,7 +121,7 @@ log_start_element(int *elem, void *baton, int parent,
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
         SVN_RA_NEON__XML_CDATA },
       { "DAV:", "comment", ELEM_comment, SVN_RA_NEON__XML_CDATA },
-      { SVN_XML_NAMESPACE, "nbr-children", ELEM_nbr_children,
+      { SVN_XML_NAMESPACE, "has-children", ELEM_has_children,
         SVN_RA_NEON__XML_CDATA },
       { NULL }
     };
@@ -142,9 +142,11 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_deleted_path:
     case ELEM_modified_path:
     case ELEM_comment:
-    case ELEM_nbr_children:
       lb->want_cdata = lb->cdata;
       svn_stringbuf_setempty(lb->cdata);
+      break;
+    case ELEM_has_children:
+      lb->log_entry->has_children = TRUE;
       break;
 
     default:
@@ -212,9 +214,6 @@ log_end_element(void *baton, int state,
     case ELEM_version_name:
       lb->log_entry->revision = SVN_STR_TO_REV(lb->cdata->data);
       break;
-    case ELEM_nbr_children:
-      lb->log_entry->nbr_children = atol(lb->cdata->data);
-      break;
     case ELEM_creator_displayname:
       lb->log_entry->author = apr_pstrdup(lb->subpool, lb->cdata->data);
       break;
@@ -259,50 +258,10 @@ log_end_element(void *baton, int state,
       break;
     case ELEM_log_report:
       {
-        /* Do nothing.  But...
-         *
-         * ### Possibility:
-         *
-         * Greg Stein mused that we could treat log_receivers the way
-         * we treat delta window consumers -- "no more calls" would be
-         * indicated by a special last call that passes
-         * SVN_INVALID_REVNUM as the revision number.  That would work
-         * fine, but right now most of the code just handles the
-         * first-call/last-call thing by having one-time code on
-         * either side of the iterator, which works just as well.
-         *
-         * I don't feel any compelling need to change this right now.
-         * If we do change it, the hot spots are:
-         *
-         *    - libsvn_repos/log.c:
-         *         svn_repos_get_logs() would need a new post-loop
-         *         call to (*receiver)(), passing SVN_INVALID_REVNUM.
-         *         Make sure not to destroy that subpool until
-         *         after the new call! :-)
-         *
-         *    - mod_dav_svn/log.c:
-         *        `struct log_receiver_baton' would need a first_call
-         *         flag; dav_svn__log_report() would set it up, and
-         *         then log_receiver() would be responsible for
-         *         emitting "<S:log-report>" and "</S:log-report>"
-         *         instead.
-         *
-         *    - svn/log-cmd.c:
-         *         svn_cl__log() would no longer be responsible for
-         *         emitting the "<log>" and "</log>" elements.  The
-         *         body of this function would get a lot simpler, mmm!
-         *         Instead, log_message_receiver_xml() would pay
-         *         attention to baton->first_call, and handle
-         *         SVN_INVALID_REVNUM, to emit those elements
-         *         instead.  The old log_message_receiver() function
-         *         wouldn't need to change at all, though, I think.
-         *
-         *    - Right here:
-         *      We'd have a new call to (*(lb->receiver)), passing
-         *      SVN_INVALID_REVNUM, of course.
-         *
-         * There, I think that's the change.  Thoughts? :-)
-         */
+        svn_log_entry_t *log_entry = svn_log_entry_create(lb->subpool);
+
+        log_entry->revision = SVN_INVALID_REVNUM;
+        SVN_ERR((*(lb->receiver))(lb->receiver_baton, log_entry, lb->subpool));
       }
       break;
     }
@@ -460,8 +419,13 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
 
   if (err && lb.limit_compat_bailout)
     {
+      svn_log_entry_t *log_entry;
+
       svn_error_clear(err);
-      return SVN_NO_ERROR;
+
+      log_entry = svn_log_entry_create(pool);
+      log_entry->revision = SVN_INVALID_REVNUM;
+      return receiver(receiver_baton, log_entry, pool);
     }
 
   return err;

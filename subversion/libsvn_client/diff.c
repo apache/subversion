@@ -1030,17 +1030,17 @@ unsupported_diff_error(svn_error_t *child_err)
 
 /* For a given DEPTH, return the value that should be passed as the
    depth parameter to svn_wc_adm_open() and friends. */
-static int adm_depth_from_depth(svn_depth_t depth)
+static int levels_to_lock_from_depth(svn_depth_t depth)
 {
-  int adm_depth;
+  int levels_to_lock;
 
   if (depth == svn_depth_immediates)
-    adm_depth = 1;
+    levels_to_lock = 1;
   else if (depth == svn_depth_empty || depth == svn_depth_files)
-    adm_depth = 0;
+    levels_to_lock = 0;
   else
-    adm_depth = -1;
-  return adm_depth;
+    levels_to_lock = -1;
+  return levels_to_lock;
 }
 
 
@@ -1065,7 +1065,7 @@ diff_wc_wc(const apr_array_header_t *options,
 {
   svn_wc_adm_access_t *adm_access, *target_access;
   const char *target;
-  int adm_depth = adm_depth_from_depth(depth);
+  int levels_to_lock = levels_to_lock_from_depth(depth);
 
   /* Assert that we have valid input. */
   assert(! svn_path_is_url(path1));
@@ -1083,7 +1083,7 @@ diff_wc_wc(const apr_array_header_t *options,
           "and its working files are supported at this time")));
 
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &target_access, &target,
-                                 path1, FALSE, adm_depth,
+                                 path1, FALSE, levels_to_lock,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
@@ -1206,7 +1206,7 @@ diff_repos_wc(const apr_array_header_t *options,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
-  int adm_depth = adm_depth_from_depth(depth);
+  int levels_to_lock = levels_to_lock_from_depth(depth);
 
   /* Assert that we have valid input. */
   assert(! svn_path_is_url(path2));
@@ -1215,7 +1215,7 @@ diff_repos_wc(const apr_array_header_t *options,
   SVN_ERR(convert_to_url(&url1, path1, pool));
 
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target,
-                                 path2, FALSE, adm_depth,
+                                 path2, FALSE, levels_to_lock,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   anchor = svn_wc_adm_access_path(adm_access);

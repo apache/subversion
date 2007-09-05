@@ -1077,7 +1077,8 @@ handle_propchange_only(report_info_t *info)
   return SVN_NO_ERROR;
 }
 
-static void fetch_file(report_context_t *ctx, report_info_t *info)
+static svn_error_t *
+fetch_file(report_context_t *ctx, report_info_t *info)
 {
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__handler_t *handler;
@@ -1092,7 +1093,9 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
 
   if (!info->url)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                        _("The OPTIONS response did not include the "
+                          "requested checked-in value."));
     }
 
   /* If needed, create the PROPFIND to retrieve the file's properties. */
@@ -1157,15 +1160,11 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
     }
   else
     {
-      svn_error_t *err;
-
       /* No propfind or GET request.  Just handle the prop changes now. */
-      err = handle_propchange_only(info);
-      if (err)
-        {
-          abort();
-        }
+      SVN_ERR(handle_propchange_only(info));
     }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1625,7 +1624,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (!checked_in_url &&
           (!SVN_IS_VALID_REVNUM(info->dir->base_rev) || info->dir->fetch_props))
         {
-          abort();
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested checked-in value."));
         }
 
       info->dir->url = checked_in_url;
@@ -1748,13 +1749,13 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           info->delta_base = svn_string_create_from_buf(path, info->pool);
         }
 
-      fetch_file(ctx, info);
+      SVN_ERR(fetch_file(ctx, info));
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == ADD_FILE && strcmp(name.name, "add-file") == 0)
     {
       /* We should have everything we need to fetch the file. */
-      fetch_file(ctx, parser->state->private);
+      SVN_ERR(fetch_file(ctx, parser->state->private));
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == PROP)
@@ -2142,7 +2143,10 @@ finish_report(void *report_baton,
 
   if (!vcc_url)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested version-controlled-configuration "
+                                "value."));
     }
 
   /* create and deliver request */

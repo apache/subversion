@@ -595,20 +595,23 @@ typedef struct svn_log_entry_t
   /** The log message of the commit. */
   const char *message;
 
-  /** The number of children of this log entry.
+  /**
+   * Whether or not this message has children.
+   *
    * When a log operation requests additional merge information, extra log
    * entries may be returned as a result of this entry.  The new entries, are
-   * considered children of the original entry, with CHILD_COUNT cardinality
-   * The child entries are returned through the receiver interface right after
-   * the parent.
+   * considered children of the original entry, and will follow it.  When
+   * the HAS_CHILDREN flag is set, the receiver should increment its stack
+   * depth, and wait until an entry is provided with SVN_INVALID_REVNUM which
+   * indicates the end of the children.
    *
    * For log operations which do not request additional merge information, the
-   * CHILD_COUNT is always zero.
+   * HAS_CHILDREN flag is always FALSE.
    *
    * For more information see:
    * http://subversion.tigris.org/merge-tracking/design.html#commutative-reporting
    */
-  apr_uint64_t nbr_children;
+  svn_boolean_t has_children;
 } svn_log_entry_t;
 
 /**
@@ -627,7 +630,8 @@ svn_log_entry_create(apr_pool_t *pool);
  * @c svn_ra_plugin_t.get_log() and svn_repos_get_logs().
  *
  * This function is invoked once on each log message, in the order
- * determined by the caller (see above-mentioned functions).
+ * determined by the caller (see above-mentioned functions).  When all
+ * messages are finished, it is invoked with a revision of SVN_INVALID_REVNUM.
  *
  * @a baton is what you think it is, and @a log_entry contains relevent
  * information for the log message.  Any of @a log_entry->author,
@@ -640,6 +644,11 @@ svn_log_entry_create(apr_pool_t *pool);
  * If @a log_entry->changed_paths is non-@c NULL, then it contains as keys
  * every path committed in @a log_entry->revision; the values are
  * (@c svn_log_changed_path_t *) structures.
+ *
+ * If @a log_entry->has_children is @c TRUE, the message will be followed
+ * immediately by any number of merged revisions (child messages), which are
+ * terminated by an invocation with SVN_INVALID_REVNUM.  This usage may
+ * be recursive.
  *
  * Use @a pool for temporary allocation.  If the caller is iterating
  * over log messages, invoking this receiver on each, we recommend the
