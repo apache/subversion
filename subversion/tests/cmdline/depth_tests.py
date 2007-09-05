@@ -770,6 +770,101 @@ def commit_propmods_with_depth_empty(sbox):
                                         '--depth=empty',
                                         wc_dir, D_path)
 
+# Test for issue #2845.
+def diff_in_depthy_wc(sbox):
+  "diff at various depths in non-infinity wc"
+
+  wc_empty, ign_a, ign_b, wc = set_up_depthy_working_copies(sbox, empty=True,
+                                                            infinity=True)
+
+  iota_path = os.path.join(wc, 'iota')
+  A_path = os.path.join(wc, 'A')
+  mu_path = os.path.join(wc, 'A', 'mu')
+  gamma_path = os.path.join(wc, 'A', 'D', 'gamma')
+
+  # Make some changes in the depth-infinity wc, and commit them
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo-val', wc)
+  svntest.main.file_write(iota_path, "new text\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'bar', 'bar-val', A_path)  
+  svntest.main.file_write(mu_path, "new text\n")
+  svntest.main.file_write(gamma_path, "new text\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit', '-m', '', wc)
+
+  diff = [
+    "\n",
+    "Property changes on: .\n",
+    "___________________________________________________________________\n",
+    "Name: foo\n",
+    "   - foo-val\n",
+    "\n",
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 2)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1 +1 @@\n",
+    "-new text\n",
+    "+This is the file 'iota'.\n",
+    "Property changes on: A\n",
+    "___________________________________________________________________\n",
+    "Name: bar\n",
+    "   - bar-val\n",
+    "\n",
+    "\n",
+    "Index: A/mu\n",
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -1 +1 @@\n",
+    "-new text\n",
+    "+This is the file 'mu'.\n" ]
+
+  os.chdir(wc_empty)
+
+  expected_output = svntest.actions.UnorderedOutput(diff[:6])
+  # The diff should contain only the propchange on '.'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-rHEAD')
+
+  # Upgrade to depth-files.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--depth', 'files', '-r1')
+  # The diff should contain only the propchange on '.' and the
+  # contents change on iota.
+  expected_output = svntest.actions.UnorderedOutput(diff[:13])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-rHEAD')
+  # Do a diff at --depth empty.
+  expected_output = svntest.actions.UnorderedOutput(diff[:6])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--depth', 'empty', '-rHEAD')
+
+  # Upgrade to depth-immediates.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--depth', 'immediates', '-r1')
+  # The diff should contain the propchanges on '.' and 'A' and the
+  # contents change on iota.
+  expected_output = svntest.actions.UnorderedOutput(diff[:19])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'diff', '-rHEAD')
+  # Do a diff at --depth files.
+  expected_output = svntest.actions.UnorderedOutput(diff[:13])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--depth', 'files', '-rHEAD')
+
+  # Upgrade A to depth-files.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--depth', 'files', '-r1', 'A')
+  # The diff should contain everything but the contents change on
+  # gamma (which does not exist in this working copy).
+  expected_output = svntest.actions.UnorderedOutput(diff)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-rHEAD')
+  # Do a diff at --depth immediates.
+  expected_output = svntest.actions.UnorderedOutput(diff[:19])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'diff', '--depth', 'immediates', '-rHEAD')
 
 #----------------------------------------------------------------------
 
@@ -794,6 +889,7 @@ test_list = [ None,
               depth_immediates_subdir_propset_1,
               depth_immediates_subdir_propset_2,
               commit_propmods_with_depth_empty,
+              diff_in_depthy_wc,
             ]
 
 if __name__ == "__main__":
