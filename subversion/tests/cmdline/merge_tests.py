@@ -7693,9 +7693,6 @@ def merge_to_sparse_directories(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  immediates_dir = wc_dir + ".immediates"
-  files_dir = wc_dir + ".files"
-  empty_dir = wc_dir + ".empty"
   wc_disk, wc_status = setup_branch(sbox, False, 1)
 
   # Some paths we'll care about
@@ -7748,6 +7745,7 @@ def merge_to_sparse_directories(sbox):
                                         None, None, None, None, None, wc_dir)
 
   # Do an --immediates checkout of A_COPY
+  immediates_dir = sbox.add_wc_path('immediates')
   expected_output = wc.State(immediates_dir, {
     'B'  : Item(status='A '),
     'mu' : Item(status='A '),
@@ -7820,6 +7818,7 @@ def merge_to_sparse_directories(sbox):
   os.chdir(saved_cwd)
 
   # Do a --files checkout of A_COPY
+  files_dir = sbox.add_wc_path('files')
   expected_output = wc.State(files_dir, {
     'mu' : Item(status='A '),
     ''   : Item(status=' U'),
@@ -7867,6 +7866,7 @@ def merge_to_sparse_directories(sbox):
   os.chdir(saved_cwd)
 
   # Do an --empty checkout of A_COPY
+  empty_dir = sbox.add_wc_path('empty')
   expected_output = wc.State(empty_dir, {
     ''   : Item(status=' U'),
     })
