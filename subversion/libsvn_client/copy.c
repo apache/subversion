@@ -1772,7 +1772,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                   if (! entry->url)
                     return svn_error_createf
                       (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                       _("'%s' does not seem to have a URL associated with it"),
+                       _("'%s' does not have a URL associated with it"),
                        svn_path_local_style(pair->src, pool));
 
                   pair->src = apr_pstrdup(pool, entry->url);
