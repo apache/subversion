@@ -805,36 +805,11 @@ log_do_modify_entry(struct log_runner *loggy,
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
       && (! strcmp(valuestr, SVN_WC__TIMESTAMP_WC)))
     {
-      const char *pfile;
       apr_time_t prop_time;
-      const svn_wc_entry_t *tfile_entry;
 
-      err = svn_wc_entry(&tfile_entry, tfile, loggy->adm_access,
-                         FALSE, loggy->pool);
-
-      if (err)
-        SIGNAL_ERROR(loggy, err);
-
-      if (! tfile_entry)
-        return SVN_NO_ERROR;
-
-      err = svn_wc__prop_path(&pfile, tfile, tfile_entry->kind, FALSE,
-                              loggy->pool);
-      if (err)
-        SIGNAL_ERROR(loggy, err);
-
-      err = svn_io_file_affected_time(&prop_time, pfile, loggy->pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          svn_error_clear(err);
-          prop_time = 0;
-        }
-      else if (err)
-        return svn_error_createf
-          (pick_error_code(loggy), NULL,
-            _("Error getting 'affected time' on '%s'"),
-            svn_path_local_style(pfile, loggy->pool));
-
+      SVN_ERR(svn_wc__props_last_modified(&prop_time,
+                                          tfile, svn_wc__props_working,
+                                          loggy->adm_access, loggy->pool));
       entry->prop_time = prop_time;
     }
 

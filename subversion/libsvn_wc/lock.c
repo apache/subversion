@@ -143,7 +143,7 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
       svn_pool_clear(subpool);
 
       entrypath = svn_path_join(adm_path, entry->name, subpool);
-      SVN_ERR(svn_wc__load_props(&base_props, &props, adm_access,
+      SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, adm_access,
                                  entrypath, subpool));
       SVN_ERR(svn_wc__install_props(&log_accum, adm_access, entrypath,
                                     base_props, props, TRUE, subpool));

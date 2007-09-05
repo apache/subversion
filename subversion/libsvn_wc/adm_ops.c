@@ -205,15 +205,17 @@ remove_revert_file(svn_stringbuf_t **logtags,
   svn_node_kind_t kind;
 
   if (is_prop)
-    SVN_ERR(svn_wc__prop_revert_path(&revert_file, path, svn_node_file,
-                                     FALSE, pool));
+    SVN_ERR(svn_wc__loggy_props_delete(logtags, path, svn_wc__props_revert,
+                                       adm_access, pool));
   else
-    revert_file = svn_wc__text_revert_path(path, FALSE, pool);
+    {
+      revert_file = svn_wc__text_revert_path(path, FALSE, pool);
 
-  SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
+      SVN_ERR(svn_io_check_path(revert_file, &kind, pool));
 
-  if (kind == svn_node_file)
-    SVN_ERR(svn_wc__loggy_remove(logtags, adm_access, revert_file, pool));
+      if (kind == svn_node_file)
+        SVN_ERR(svn_wc__loggy_remove(logtags, adm_access, revert_file, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -937,6 +939,11 @@ mark_tree(svn_wc_adm_access_t *adm_access,
                                | SVN_WC__ENTRY_MODIFY_COPIED),
                TRUE, subpool));
 
+      if (copied)
+        /* Remove now obsolete wcprops */
+        SVN_ERR(svn_wc__props_delete(fullpath, svn_wc__props_wcprop,
+                                     adm_access, subpool));
+
       /* Tell someone what we've done. */
       if (schedule == svn_wc_schedule_delete && notify_func != NULL)
         (*notify_func)(notify_baton,
@@ -1259,12 +1266,6 @@ svn_wc_delete3(const char *path,
             svn_wc__text_base_path(path, FALSE, pool);
           const char *text_revert =
             svn_wc__text_revert_path(path, FALSE, pool);
-          const char *prop_base, *prop_revert;
-
-          SVN_ERR(svn_wc__prop_base_path(&prop_base, path,
-                                         was_kind, FALSE, pool));
-          SVN_ERR(svn_wc__prop_revert_path(&prop_revert, path,
-                                           was_kind, FALSE, pool));
 
           if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
             /* Restore the original text-base */
@@ -1272,20 +1273,13 @@ svn_wc_delete3(const char *path,
                                        text_revert, text_base,
                                        FALSE, pool));
 
-          SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
-                                     adm_access, prop_revert, prop_base,
-                                     TRUE, pool));
+          SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum,
+                                                     path, adm_access, pool));
         }
       if (was_schedule == svn_wc_schedule_add)
-        {
-          /* remove the properties file */
-          const char *svn_prop_file_path;
-          SVN_ERR(svn_wc__prop_path(&svn_prop_file_path, path,
-                                    was_kind, FALSE, pool));
-          SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                       svn_prop_file_path, pool));
-        }
-
+        SVN_ERR(svn_wc__loggy_props_delete(&log_accum, path,
+                                           svn_wc__props_base,
+                                           adm_access, pool));
 
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
 
@@ -1511,12 +1505,8 @@ svn_wc_add2(const char *path,
   /* If this is a replacement without history, we need to reset the
      properties for PATH. */
   if (orig_entry && (! copyfrom_url))
-    {
-      const char *prop_path;
-      SVN_ERR(svn_wc__prop_path(&prop_path, path,
-                                orig_entry->kind, FALSE, pool));
-      SVN_ERR(remove_file_if_present(prop_path, pool));
-    }
+    SVN_ERR(svn_wc__props_delete(path, svn_wc__props_working,
+                                 adm_access, pool));
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
@@ -1613,7 +1603,8 @@ svn_wc_add2(const char *path,
                             pool));
 
           /* Clean out the now-obsolete wcprops. */
-          SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, TRUE, pool));
+          SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop,
+                                       adm_access, pool));
         }
     }
 
@@ -1731,32 +1722,21 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   /* Deal with properties. */
   if (entry->schedule == svn_wc_schedule_replace)
     {
-      const char *rprop;
-      svn_node_kind_t kind;
-
-      revert_base = TRUE;
+       revert_base = entry->copied;
       /* Use the revertpath as the new propsbase if it exists. */
-      SVN_ERR(svn_wc__prop_revert_path(&rprop, fullpath, entry->kind, FALSE,
-                                       pool));
-      SVN_ERR(svn_io_check_path(rprop, &kind, pool));
 
-      /* If the revert-base doesn't exist, check for a normal propsbase */
-      if (kind != svn_node_file)
-        {
-          SVN_ERR(svn_wc__prop_base_path(&rprop, fullpath, entry->kind, FALSE,
-                                         pool));
-          SVN_ERR(svn_io_check_path(rprop, &kind, pool));
-          revert_base = FALSE;
-        }
-      if (kind == svn_node_file)
-        {
-          baseprops = apr_hash_make(pool);
-          SVN_ERR(svn_wc__load_prop_file(rprop, baseprops, pool));
-          /* Ensure the revert propfile gets removed. */
-          if (revert_base)
-            SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access, rprop, pool));
-          *reverted = TRUE;
-        }
+      baseprops = apr_hash_make(pool);
+      SVN_ERR(svn_wc__load_props((! revert_base) ? &baseprops : NULL,
+                                 NULL,
+                                 revert_base ? &baseprops : NULL,
+                                 adm_access, fullpath, pool));
+
+      /* Ensure the revert propfile gets removed. */
+      if (revert_base)
+        SVN_ERR(svn_wc__loggy_props_delete(&log_accum,
+                                           fullpath, svn_wc__props_revert,
+                                           adm_access, pool));
+      *reverted = TRUE;
     }
 
   /* If not schedule replace, or no revert props, use the normal
@@ -2276,35 +2256,22 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
         }
 
       /* Remove the wcprops. */
-      SVN_ERR(svn_wc__remove_wcprops(adm_access, name, FALSE, pool));
+      SVN_ERR(svn_wc__props_delete(full_path, svn_wc__props_wcprop,
+                                   adm_access, pool));
+      /* Remove prop/NAME, prop-base/NAME.svn-base. */
+      SVN_ERR(svn_wc__props_delete(full_path, svn_wc__props_working,
+                                   adm_access, pool));
+      SVN_ERR(svn_wc__props_delete(full_path, svn_wc__props_base,
+                                   adm_access, pool));
 
       /* Remove NAME from PATH's entries file: */
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
       svn_wc__entry_remove(entries, name);
       SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
 
-      /* Remove text-base/NAME.svn-base, prop/NAME, prop-base/NAME.svn-base. */
-      {
-        const char *svn_thang;
-
-        /* Text base. */
-        svn_thang = svn_wc__text_base_path(full_path, 0, pool);
-        SVN_ERR(remove_file_if_present(svn_thang, pool));
-
-        /* Working prop file. */
-        SVN_ERR(svn_wc__prop_path(&svn_thang, full_path,
-                                  is_file ? svn_node_file : svn_node_dir,
-                                  FALSE, pool));
-        SVN_ERR(remove_file_if_present(svn_thang, pool));
-
-        /* Prop base file. */
-        SVN_ERR(svn_wc__prop_base_path(&svn_thang, full_path,
-                                       is_file ? svn_node_file
-                                       : svn_node_dir,
-                                       FALSE, pool));
-        SVN_ERR(remove_file_if_present(svn_thang, pool));
-
-      }
+      /* Remove text-base/NAME.svn-base */
+      SVN_ERR(remove_file_if_present(svn_wc__text_base_path(full_path, 0, pool),
+                                     pool));
 
       /* If we were asked to destroy the working file, do so unless
          it has local mods. */
@@ -2342,7 +2309,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       /* Get rid of all the wcprops in this directory.  This avoids rewriting
          the wcprops file over and over (meaning O(n^2) complexity)
          below. */
-      SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, FALSE, pool));
+      SVN_ERR(svn_wc__props_delete(full_path, svn_wc__props_wcprop,
+                                   adm_access, pool));
 
       /* Walk over every entry. */
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));

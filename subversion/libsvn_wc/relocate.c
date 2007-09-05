@@ -181,7 +181,7 @@ svn_wc_relocate3(const char *path,
 
   svn_pool_destroy(subpool);
 
-  SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, FALSE, pool));
+  SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool));
   SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
   return SVN_NO_ERROR;
 }

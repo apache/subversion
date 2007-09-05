@@ -399,24 +399,15 @@ svn_wc__text_revert_path(const char *path,
                               NULL);
 }
 
-/* Kind for prop_path_internal. */
-typedef enum prop_path_kind_t
+svn_error_t *
+svn_wc__prop_path(const char **prop_path,
+                  const char *path,
+                  svn_node_kind_t node_kind,
+                  svn_wc__props_kind_t props_kind,
+                  svn_boolean_t tmp,
+                  apr_pool_t *pool)
 {
-  prop_path_kind_base = 0,
-  prop_path_kind_revert,
-  prop_path_kind_wcprop,
-  prop_path_kind_working
-} prop_path_kind_t;
-
-static svn_error_t *
-prop_path_internal(const char **prop_path,
-                   const char *path,
-                   svn_node_kind_t kind,
-                   prop_path_kind_t path_kind,
-                   svn_boolean_t tmp,
-                   apr_pool_t *pool)
-{
-  if (kind == svn_node_dir)  /* It's a working copy dir */
+  if (node_kind == svn_node_dir)  /* It's a working copy dir */
     {
       static const char * names[] = {
         SVN_WC__ADM_DIR_PROP_BASE,    /* prop_path_kind_base */
@@ -430,7 +421,7 @@ prop_path_internal(const char **prop_path,
          NULL,
          tmp,
          pool,
-         names[path_kind],
+         names[props_kind],
          NULL);
     }
   else  /* It's a file */
@@ -454,67 +445,15 @@ prop_path_internal(const char **prop_path,
       svn_path_split(path, prop_path, &base_name, pool);
       *prop_path = extend_with_adm_name
         (*prop_path,
-         extensions[path_kind],
+         extensions[props_kind],
          tmp,
          pool,
-         dirs[path_kind],
+         dirs[props_kind],
          base_name,
          NULL);
     }
 
   return SVN_NO_ERROR;
-}
-
-
-
-/* Return a path to the 'wcprop' file for PATH, possibly in TMP area.  */
-svn_error_t *
-svn_wc__wcprop_path(const char **wcprop_path,
-                    const char *path,
-                    svn_node_kind_t kind,
-                    svn_boolean_t tmp,
-                    apr_pool_t *pool)
-{
-  return prop_path_internal(wcprop_path, path, kind,
-                            prop_path_kind_wcprop, tmp, pool);
-}
-
-
-
-
-svn_error_t *
-svn_wc__prop_path(const char **prop_path,
-                  const char *path,
-                  svn_node_kind_t kind,
-                  svn_boolean_t tmp,
-                  apr_pool_t *pool)
-{
-  return prop_path_internal(prop_path, path, kind,
-                            prop_path_kind_working, tmp, pool);
-}
-
-
-svn_error_t *
-svn_wc__prop_base_path(const char **prop_path,
-                       const char *path,
-                       svn_node_kind_t kind,
-                       svn_boolean_t tmp,
-                       apr_pool_t *pool)
-{
-  return prop_path_internal(prop_path, path, kind,
-                            prop_path_kind_base, tmp, pool);
-}
-
-
-svn_error_t *
-svn_wc__prop_revert_path(const char **prop_path,
-                         const char *path,
-                         svn_node_kind_t kind,
-                         svn_boolean_t tmp,
-                         apr_pool_t *pool)
-{
-  return prop_path_internal(prop_path, path, kind,
-                            prop_path_kind_revert, tmp, pool);
 }
 
 
