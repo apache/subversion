@@ -2503,93 +2503,6 @@ merge_file(svn_wc_notify_state_t *content_state,
 }
 
 
-/* Similar to add_file(), but not actually part of the editor vtable.
-
-   Adding a file with history means:
-      - doing a normal add_file() with no history
-      - downloading the file from the repository
-      - installing the file as usual.
-      - doing an open_file(), so that subsequent apply_txdelta() calls
-        from the server apply to the copied file.
- */
-static svn_error_t *
-add_file_with_history(const char *path,
-                      void *parent_baton,
-                      const char *copyfrom_path,
-                      svn_revnum_t copyfrom_rev,
-                      void **file_baton,
-                      apr_pool_t *pool)
-{
-  void *fb;
-  struct file_baton *tfb;
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
-  const svn_wc_entry_t *entry;
-  svn_node_kind_t kind;
-  svn_wc_adm_access_t *adm_access;
-  apr_hash_t *props;
-  apr_hash_index_t *hi;
-  apr_file_t *textbase_file;
-  svn_stream_t *textbase_stream;
-  svn_wc_notify_state_t content_state, prop_state;
-  svn_wc_notify_lock_state_t lock_state;
-
-  if (! eb->fetch_func)
-    return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-                            _("No fetch_func supplied to update_editor."));
-
-  /* First, fake an add_file() call, just to generate a temporary
-     file_baton that we can push data at.  Notice that we don't send
-     any copyfrom args, lest we end up infinitely recursing.  :-)  */
-  SVN_ERR(add_file(path, parent_baton, NULL, SVN_INVALID_REVNUM, pool, &fb));
-  tfb = (struct file_baton *)fb;
-
-  /* Initialize the text-base for a nonexistent file, the same way
-     apply_textdelta() does. */
-  tfb->text_base_path = svn_wc__text_base_path(tfb->path, FALSE, tfb->pool);
-  SVN_ERR(svn_wc__open_text_base(&textbase_file, tfb->path,
-                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                 pool));
-
-  /* Fetch the repository file into the text-base; svn_stream_close()
-     should automatically close the file for us. */
-  props = apr_hash_make(pool);
-  SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path, copyfrom_rev,
-                         svn_stream_from_aprfile(textbase_file, pool),
-                         NULL, &props, pool));
-
-  /* Loop over received properties, faking change_file_prop() calls
-     against the file baton. */
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      const char *propname;
-      svn_string_t *propval;
-      apr_hash_this(hi, &key, NULL, &val);
-      propname = key;
-      propval = val;
-
-      SVN_ERR(change_file_prop(tfb, propname, propval, pool));
-    }
-
-  /* Now 'install' the file, so that it's fully under version
-     control.  We're ignoring the various states that come back,
-     because we're not interested in sending an 'add' notification to
-     the client here;  this is secret stuff. */
-  SVN_ERR(merge_file(&content_state, &prop_state, &lock_state, tfb, pool));
-
-  /* At this point we've successfully simulated the normal addition of
-     a file.  However, any forthcoming apply_textdelta() calls from
-     the server are deltas against this new file.  This means the
-     editor-driver needs a file_baton that can be safely passed to
-     apply_textdelta(), which means re-opening the file. */
-  SVN_ERR(open_file(path, parent_baton, SVN_INVALID_REVNUM, pool, file_baton));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Mostly a wrapper around merge_file. */
 static svn_error_t *
 close_file(void *file_baton,
@@ -2650,6 +2563,99 @@ close_file(void *file_baton,
       /* ### use merge_file() mimetype here */
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
+  return SVN_NO_ERROR;
+}
+
+
+/* Similar to add_file(), but not actually part of the editor vtable.
+
+   Adding a file with history means:
+      - doing a normal add_file() with no history
+      - downloading the file from the repository
+      - installing the file as usual.
+      - doing an open_file(), so that subsequent apply_txdelta() calls
+        from the server apply to the copied file.
+ */
+static svn_error_t *
+add_file_with_history(const char *path,
+                      void *parent_baton,
+                      const char *copyfrom_path,
+                      svn_revnum_t copyfrom_rev,
+                      void **file_baton,
+                      apr_pool_t *pool)
+{
+  void *fb;
+  struct file_baton *tfb;
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  const svn_wc_entry_t *entry;
+  svn_node_kind_t kind;
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_t *props;
+  apr_hash_index_t *hi;
+  apr_file_t *textbase_file;
+  svn_stream_t *textbase_stream;
+  svn_wc_notify_state_t content_state, prop_state;
+  svn_wc_notify_lock_state_t lock_state;
+
+  if (! eb->fetch_func)
+    return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+                            _("No fetch_func supplied to update_editor."));
+
+  /* First, fake an add_file() call, just to generate a temporary
+     file_baton that we can push data at.  Notice that we don't send
+     any copyfrom args, lest we end up infinitely recursing.  :-)  */
+  SVN_ERR(add_file(path, parent_baton, NULL, SVN_INVALID_REVNUM, pool, &fb));
+  tfb = (struct file_baton *)fb;
+
+  /* Initialize the text-bases for an incoming file, the same way
+     apply_textdelta() does. */
+  tfb->text_base_path = svn_wc__text_base_path(tfb->path, FALSE, tfb->pool);
+  tfb->new_text_base_path = svn_wc__text_base_path(tfb->path, TRUE, tfb->pool);
+  SVN_ERR(svn_wc__open_text_base(&textbase_file, tfb->path,
+                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
+                                 pool));
+
+  /* Fetch the repository file into the text-base; svn_stream_close()
+     should automatically close the file for us. */
+  props = apr_hash_make(pool);
+  SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path, copyfrom_rev,
+                         svn_stream_from_aprfile(textbase_file, pool),
+                         NULL, &props, pool));
+
+  /* Loop over received properties, faking change_file_prop() calls
+     against the file baton. */
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *propname;
+      svn_string_t *propval;
+      apr_hash_this(hi, &key, NULL, &val);
+      propname = key;
+      propval = val;
+
+      SVN_ERR(change_file_prop(tfb, propname, propval, pool));
+    }
+
+  /* Now 'install' the file, so that it's fully under version control. */
+  SVN_ERR(close_file(tfb, NULL, pool));
+
+  /* Execute the parent-dir's logs, so that the file *actually* comes
+     into existence, rather than at close_directory() time.  */
+  SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
+                              pb->path, pb->pool));
+  SVN_ERR(flush_log(pb, pool));
+  SVN_ERR(svn_wc__run_log(adm_access, pb->edit_baton->diff3_cmd, pb->pool));
+  pb->log_number = 0;
+
+  /* At this point we've successfully simulated the normal addition of
+     a file.  However, any forthcoming apply_textdelta() calls from
+     the server are deltas against this new file.  This means the
+     editor-driver needs a file_baton that can be safely passed to
+     apply_textdelta(), which means re-opening the file. */
+  SVN_ERR(open_file(path, parent_baton, SVN_INVALID_REVNUM, pool, file_baton));
+
   return SVN_NO_ERROR;
 }
 
