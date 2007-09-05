@@ -611,6 +611,10 @@ struct file_baton
      scheduled for addition without history. */
   svn_boolean_t add_existed;
 
+  /* Whether or not we should call the notification callback when
+     close_file() is invoked on this baton. */
+  svn_boolean_t send_notification;
+
   /* The path to the current text base, if any.
      This gets set if there are file content changes. */
   const char *text_base_path;
@@ -675,6 +679,7 @@ make_file_baton(struct dir_baton *pb,
   f->added        = adding;
   f->existed      = FALSE;
   f->add_existed  = FALSE;
+  f->send_notification = TRUE;
   f->dir_baton    = pb;
 
   /* No need to initialize f->digest, since we used pcalloc(). */
@@ -2539,8 +2544,9 @@ close_file(void *file_baton,
 
   if (((content_state != svn_wc_notify_state_unchanged) ||
        (prop_state != svn_wc_notify_state_unchanged) ||
-       (lock_state != svn_wc_notify_lock_state_unchanged)) &&
-      eb->notify_func)
+       (lock_state != svn_wc_notify_lock_state_unchanged)) 
+      && eb->notify_func
+      && fb->send_notification)
     {
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
@@ -2654,8 +2660,15 @@ add_file_with_history(const char *path,
      the server are deltas against this new file.  This means the
      editor-driver needs a file_baton that can be safely passed to
      apply_textdelta(), which means re-opening the file. */
-  SVN_ERR(open_file(path, parent_baton, SVN_INVALID_REVNUM, pool, file_baton));
+  SVN_ERR(open_file(path, parent_baton, SVN_INVALID_REVNUM, pool, &fb));
 
+  /* We don't want this trailing open_file()/close_file() combo to be
+     signaled to the client, however.  The general policy is to call
+     the notification callback only -once- per file. */
+  tfb = (struct file_baton *)fb;
+  tfb->send_notification = FALSE;
+
+  *file_baton = tfb;
   return SVN_NO_ERROR;
 }
 
