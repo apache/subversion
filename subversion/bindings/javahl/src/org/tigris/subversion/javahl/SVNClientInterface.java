@@ -541,11 +541,14 @@ public interface SVNClientInterface
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
+     * @param withMergeHistory Whether to propagate merge history from
+     * <code>srcPaths</code> to <code>destPath</code>.
      * @throws ClientException If the copy operation fails.
      * @since 1.5
      */
     void copy(CopySource[] sources, String destPath, String message,
-              boolean copyAsChild, boolean makeParents)
+              boolean copyAsChild, boolean makeParents,
+              boolean withMergeHistory)
         throws ClientException;
 
     /**
@@ -572,12 +575,15 @@ public interface SVNClientInterface
      * modifications exist.
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
-     * @param makeParents Whether to create intermediate parents
+     * @param makeParents Whether to create intermediate parents.
+     * @param withMergeHistory Whether to propagate merge history from
+     * <code>srcPaths</code> to <code>destPath</code>.
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
     void move(String[] srcPaths, String destPath, String message,
-              boolean force, boolean moveAsChild, boolean makeParents)
+              boolean force, boolean moveAsChild, boolean makeParents,
+              boolean withMergeHistory)
         throws ClientException;
 
     /**

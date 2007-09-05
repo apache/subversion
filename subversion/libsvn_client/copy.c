@@ -1821,6 +1821,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
+                 svn_boolean_t with_merge_history,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1899,7 +1900,7 @@ svn_client_copy3(svn_commit_info_t **commit_info_p,
   return svn_client_copy4(commit_info_p,
                           sources,
                           dst_path,
-                          FALSE, FALSE,
+                          FALSE, FALSE, FALSE,
                           ctx,
                           pool);
 }
@@ -1962,6 +1963,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
+                 svn_boolean_t with_merge_history,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -2041,12 +2043,13 @@ svn_client_move4(svn_commit_info_t **commit_info_p,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  apr_array_header_t *src_paths = apr_array_make(pool, 1, sizeof(const char *));
+  apr_array_header_t *src_paths =
+    apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(src_paths, const char *) = src_path;
 
   return svn_client_move5(commit_info_p,
                           src_paths, dst_path, force, FALSE,
-                          FALSE, ctx, pool);
+                          FALSE, FALSE, ctx, pool);
 }
 
 svn_error_t *
