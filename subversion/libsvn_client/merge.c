@@ -1814,8 +1814,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
     (*notify_b->wrapped_func)(notify_b->wrapped_baton, notify, pool);
 }
 
-/* Create mergeinfo describing the merge of RANGE into our target,
-   without including mergeinfo for skips or conflicts from
+/* Create mergeinfo describing the merge of RANGE into our target, accounting
+   for paths unaffected by the merge due to skips or conflicts from
    NOTIFY_B.  Note in MERGE_B->OPERATIVE_MERGE if an operative merge
    is discovered.  If TARGET_WCPATH is a directory and it is missing
    an immediate child then TARGET_MISSING_CHILD should be true,
@@ -1849,41 +1849,34 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
   rangelist = apr_array_make(pool, 1, sizeof(range));
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
 
-  /* Set the mergeinfo for the root of the target tree unless we skipped
-     everything or TARGET_WCPATH is missing children (in the latter case
-     we need to set non-inheritable mergeinfo on TARGET_WCPATH). */
-  if (nbr_skips == 0 || notify_b->nbr_operative_notifications > 0
-      || target_missing_child)
+  /* Note in the merge baton when the first operative merge is found. */
+  if (notify_b->nbr_operative_notifications > 0
+      && !merge_b->operative_merge)
+    merge_b->operative_merge = TRUE;
+
+  apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
+  if (nbr_skips > 0)
     {
-      /* Note in the merge baton when the first operative merge is found. */
-      if (notify_b->nbr_operative_notifications > 0
-          && !merge_b->operative_merge)
-        merge_b->operative_merge = TRUE;
+      apr_hash_index_t *hi;
+      const void *skipped_path;
 
-      apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
-      if (nbr_skips > 0)
+      /* Override the mergeinfo for child paths which weren't
+         actually merged. */
+      for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
+           hi = apr_hash_next(hi))
         {
-          apr_hash_index_t *hi;
-          const void *skipped_path;
+          apr_hash_this(hi, &skipped_path, NULL, NULL);
 
-          /* Override the mergeinfo for child paths which weren't
-             actually merged. */
-          for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
-               hi = apr_hash_next(hi))
-            {
-              apr_hash_this(hi, &skipped_path, NULL, NULL);
+          /* Add an empty range list for this path. */
+          apr_hash_set(*merges, (const char *) skipped_path,
+                       APR_HASH_KEY_STRING,
+                       apr_array_make(pool, 0, sizeof(range)));
 
-              /* Add an empty range list for this path. */
-              apr_hash_set(*merges, (const char *) skipped_path,
-                           APR_HASH_KEY_STRING,
-                           apr_array_make(pool, 0, sizeof(range)));
-
-              if (nbr_skips < notify_b->nbr_notifications)
-                /* ### Use RANGELIST as the mergeinfo for all children of
-                   ### this path which were not also explicitly
-                   ### skipped? */
-                ;
-            }
+          if (nbr_skips < notify_b->nbr_notifications)
+            /* ### Use RANGELIST as the mergeinfo for all children of
+               ### this path which were not also explicitly
+               ### skipped? */
+            ;
         }
     }
 
