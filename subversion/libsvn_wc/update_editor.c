@@ -2595,15 +2595,10 @@ add_file_with_history(const char *path,
   struct file_baton *tfb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  const svn_wc_entry_t *entry;
-  svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *props;
   apr_hash_index_t *hi;
   apr_file_t *textbase_file;
-  svn_stream_t *textbase_stream;
-  svn_wc_notify_state_t content_state, prop_state;
-  svn_wc_notify_lock_state_t lock_state;
 
   if (! eb->fetch_func)
     return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
