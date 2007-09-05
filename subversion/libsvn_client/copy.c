@@ -1651,6 +1651,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
     }
   else
     {
+      /* Only one source path. */
       svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
       svn_client_copy_source_t *source =
         APR_ARRAY_IDX(sources, 0, svn_client_copy_source_t *);
