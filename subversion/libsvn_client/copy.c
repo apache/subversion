@@ -1587,27 +1587,27 @@ setup_copy(svn_commit_info_t **commit_info_p,
   svn_boolean_t srcs_are_urls, dst_is_url;
   int i;
 
-  /* Are either of our paths URLs?
-   * Just check the first src_path.  If there are more than one, we'll check
-   * for homogeneity amoung them down below. */
-  srcs_are_urls = svn_path_is_url(APR_ARRAY_IDX(sources, 0,
-                                  svn_client_copy_source_t *)->path);
-  dst_is_url = svn_path_is_url(dst_path_in);
-
   /* Check to see if the supplied peg revisions make sense. */
   for (i = 0; i < sources->nelts; i++)
     {
       svn_client_copy_source_t *source =
         ((svn_client_copy_source_t **) (sources->elts))[i];
 
-      if ( svn_path_is_url(source->path)
+      if (svn_path_is_url(source->path)
           && (source->peg_revision->kind == svn_opt_revision_base
               || source->peg_revision->kind == svn_opt_revision_committed
-              || source->peg_revision->kind == svn_opt_revision_previous) )
+              || source->peg_revision->kind == svn_opt_revision_previous))
         return svn_error_create
           (SVN_ERR_CLIENT_BAD_REVISION, NULL,
            _("Revision type requires a working copy path, not a URL"));
     }
+
+  /* Are either of our paths URLs?
+   * Just check the first src_path.  If there are more than one, we'll check
+   * for homogeneity amoung them down below. */
+  srcs_are_urls = svn_path_is_url(APR_ARRAY_IDX(sources, 0,
+                                  svn_client_copy_source_t *)->path);
+  dst_is_url = svn_path_is_url(dst_path_in);
 
   /* If we have multiple source paths, it implies the dst_path is a directory
    * we are moving or copying into.  Populate the dst_paths array to contain
