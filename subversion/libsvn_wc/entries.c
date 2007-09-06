@@ -178,6 +178,22 @@ read_str(const char **result,
   return SVN_NO_ERROR;
 }
 
+/* This is wrapper around read_str() (which see for details); it
+   simply asks svn_path_is_canonical() of the string it reads,
+   returning an error if the test fails. */
+static svn_error_t *
+read_path(const char **result,
+          char **buf, const char *end,
+          apr_pool_t *pool)
+{
+  SVN_ERR(read_str(result, buf, end, pool));
+  if (*result && **result && (! svn_path_is_canonical(*result, pool)))
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Entry contains non-canonical path '%s'"),
+                             *result);
+  return SVN_NO_ERROR;
+}
+
 /* Read a field from [*BUF, END), terminated by a newline character.
    The field may not contain escape sequences.  The field is not
    copyed and the buffer is modified in place, by replacing the
@@ -291,7 +307,7 @@ read_entry(svn_wc_entry_t **new_entry,
 #define MAYBE_DONE if (**buf == '\f') goto done
 
   /* Find the name and set up the entry under that name. */
-  SVN_ERR(read_str(&name, buf, end, pool));
+  SVN_ERR(read_path(&name, buf, end, pool));
   entry->name = name ? name : SVN_WC_ENTRY_THIS_DIR;
 
   /* Set up kind. */
@@ -320,11 +336,11 @@ read_entry(svn_wc_entry_t **new_entry,
   MAYBE_DONE;
 
   /* Attempt to set up url path (again, see resolve_to_defaults). */
-  SVN_ERR(read_str(&entry->url, buf, end, pool));
+  SVN_ERR(read_path(&entry->url, buf, end, pool));
   MAYBE_DONE;
 
   /* Set up repository root.  Make sure it is a prefix of url. */
-  SVN_ERR(read_str(&entry->repos, buf, end, pool));
+  SVN_ERR(read_path(&entry->repos, buf, end, pool));
   if (entry->repos && entry->url
       && ! svn_path_is_ancestor(entry->repos, entry->url))
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
@@ -398,13 +414,13 @@ read_entry(svn_wc_entry_t **new_entry,
 
   /* Is this entry in a state of mental torment (conflict)? */
   {
-    SVN_ERR(read_str(&entry->prejfile, buf, end, pool));
+    SVN_ERR(read_path(&entry->prejfile, buf, end, pool));
     MAYBE_DONE;
-    SVN_ERR(read_str(&entry->conflict_old, buf, end, pool));
+    SVN_ERR(read_path(&entry->conflict_old, buf, end, pool));
     MAYBE_DONE;
-    SVN_ERR(read_str(&entry->conflict_new, buf, end, pool));
+    SVN_ERR(read_path(&entry->conflict_new, buf, end, pool));
     MAYBE_DONE;
-    SVN_ERR(read_str(&entry->conflict_wrk, buf, end, pool));
+    SVN_ERR(read_path(&entry->conflict_wrk, buf, end, pool));
     MAYBE_DONE;
   }
 
@@ -412,7 +428,7 @@ read_entry(svn_wc_entry_t **new_entry,
   SVN_ERR(read_bool(&entry->copied, SVN_WC__ENTRY_ATTR_COPIED, buf, end));
   MAYBE_DONE;
 
-  SVN_ERR(read_str(&entry->copyfrom_url, buf, end, pool));
+  SVN_ERR(read_path(&entry->copyfrom_url, buf, end, pool));
   MAYBE_DONE;
   SVN_ERR(read_revnum(&entry->copyfrom_rev, buf, end, pool));
   MAYBE_DONE;
