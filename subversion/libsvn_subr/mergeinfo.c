@@ -865,7 +865,7 @@ svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
 
 /* Convert a single svn_merge_range_t * back into an svn_stringbuf_t *.  */
 static svn_error_t *
-svn_range_to_stringbuf(svn_stringbuf_t **result, svn_merge_range_t *range,
+range_to_stringbuf(svn_stringbuf_t **result, svn_merge_range_t *range,
                        apr_pool_t *pool)
 {
   if (range->start == range->end - 1)
@@ -895,14 +895,14 @@ svn_rangelist_to_stringbuf(svn_stringbuf_t **output, apr_array_header_t *input,
       for (i = 0; i < input->nelts - 1; i++)
         {
           range = APR_ARRAY_IDX(input, i, svn_merge_range_t *);
-          SVN_ERR(svn_range_to_stringbuf(&toappend, range, pool));
+          SVN_ERR(range_to_stringbuf(&toappend, range, pool));
           svn_stringbuf_appendstr(*output, toappend);
           svn_stringbuf_appendcstr(*output, ",");
         }
 
       /* Now handle the last element, which needs no comma.  */
       range = APR_ARRAY_IDX(input, i, svn_merge_range_t *);
-      SVN_ERR(svn_range_to_stringbuf(&toappend, range, pool));
+      SVN_ERR(range_to_stringbuf(&toappend, range, pool));
       svn_stringbuf_appendstr(*output, toappend);
     }
 
