@@ -470,7 +470,10 @@ use the following value:
 
 (defcustom svn-status-default-blame-arguments '("-x" "--ignore-eol-style")
   "*A list of arguments that is passed to the svn blame command.
-See `svn-status-default-diff-arguments' for some examples.")
+See `svn-status-default-diff-arguments' for some examples."
+  :type '(repeat string)
+  :group 'psvn)
+
 (put 'svn-status-default-blame-arguments 'risky-local-variable t)
 
 (defvar svn-trac-project-root nil
@@ -1370,6 +1373,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
            (message "svn process had unknown event: %s" event))
           (svn-status-show-process-output nil t))))
 
+(defvar svn-process-handle-error-msg nil)
 (defun svn-process-handle-error (error-msg)
   (let ((svn-process-handle-error-msg error-msg))
     (electric-helpify 'svn-process-help-with-error-msg)))
@@ -2980,7 +2984,7 @@ The string in parentheses is shown in the status line to show the state."
 When called with a prefix argument advance the given number of lines."
   (interactive "p")
   (while (progn
-           (next-line nr-of-lines)
+           (forward-line nr-of-lines)
            (and (not (eobp))
                 (not (svn-status-get-line-information)))))
   (when (svn-status-get-line-information)
@@ -2991,7 +2995,7 @@ When called with a prefix argument advance the given number of lines."
 When called with a prefix argument go back the given number of lines."
   (interactive "p")
   (while (progn
-           (previous-line nr-of-lines)
+           (forward-line (- nr-of-lines))
            (and (not (bobp))
                 (not (svn-status-get-line-information)))))
   (when (svn-status-get-line-information)
@@ -5021,6 +5025,7 @@ entry for file with defun.
   "Basic keywords in `svn-log-view-mode'.")
 (put 'svn-log-view-font-basic-lock-keywords 'risky-local-variable t) ;for Emacs 20.7
 
+(defvar svn-log-view-font-lock-keywords)
 (define-derived-mode svn-log-view-mode fundamental-mode "svn-log-view"
   "Major Mode to show the output from svn log.
 Commands:
