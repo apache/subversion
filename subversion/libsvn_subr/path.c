@@ -1237,6 +1237,13 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
 }
 
 
+svn_boolean_t
+svn_path_is_canonical(const char *path, apr_pool_t *pool)
+{
+  return (strcmp(path, svn_path_canonicalize(path, pool)) == 0);
+}
+
+
 
 /** Get APR's internal path encoding. */
 static svn_error_t *
