@@ -1470,7 +1470,9 @@ typedef struct svn_wc_entry_t
   /** scheduling (add, delete, replace ...) */
   svn_wc_schedule_t schedule;
 
-  /** in a copied state */
+  /** in a copied state (possibly because the entry is a child of a
+      path that is @c svn_wc_schedule_add or @c svn_wc_schedule_replace,
+      when the entry itself is @c svn_wc_schedule_normal) */
   svn_boolean_t copied;
 
   /** deleted, but parent rev lags behind */
