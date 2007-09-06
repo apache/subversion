@@ -7571,7 +7571,7 @@ def merge_with_depth_files(sbox):
   expected_status = wc.State(short_A_COPY_path, {
     ''          : Item(status=' M'),
     'B'         : Item(status='  '),
-    'mu'        : Item(status='M '),
+    'mu'        : Item(status='MM'),
     'B/E'       : Item(status='  '),
     'B/E/alpha' : Item(status='  '),
     'B/E/beta'  : Item(status='  '),
@@ -7594,7 +7594,7 @@ def merge_with_depth_files(sbox):
     ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,2-3*'}),
     'B'         : Item(),
     'mu'        : Item("this is file 'mu' modified.\n",
-                       props={SVN_PROP_MERGE_INFO : '/A:1-3'}),
+                       props={SVN_PROP_MERGE_INFO : '/A/mu:1-3'}),
     'B/E'       : Item(),
     'B/E/alpha' : Item("This is the file 'alpha'.\n"),
     'B/E/beta'  : Item("This is the file 'beta'.\n"),
