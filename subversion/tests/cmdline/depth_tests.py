@@ -866,6 +866,77 @@ def diff_in_depthy_wc(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '--depth', 'immediates', '-rHEAD')
 
+def commit_depth_immediates(sbox):
+  "commit some files with --depth=immediates"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Test the fix for some bugs Mike Pilato reported here:
+  #
+  #    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=128509
+  #    From: "C. Michael Pilato" <cmpilato@collab.net>
+  #    To: Karl Fogel <kfogel@red-bean.com>
+  #    CC: dev@subversion.tigris.org
+  #    References: <87d4yzcrro.fsf@red-bean.com>
+  #    Subject: Re: [PATCH] Make 'svn commit --depth=foo' work.
+  #    Message-ID: <46968831.2070906@collab.net>
+  #    Date: Thu, 12 Jul 2007 15:59:45 -0400
+  #
+  # See also http://subversion.tigris.org/issues/show_bug.cgi?id=2882.
+  #
+  # Outline of the test:
+  # ====================
+  #
+  # Modify these three files:
+  #
+  #    M      A/mu
+  #    M      A/D/G/rho
+  #    M      iota
+  # 
+  # Then commit some of them using --depth=immediates:
+  #
+  #    svn ci -m "log msg" --depth=immediates wc_dir wc_dir/A/D/G/rho
+  #
+  # Before the bugfix, that would result in an error:
+  #
+  #    subversion/libsvn_wc/lock.c:570: (apr_err=155004)
+  #    svn: Working copy '/blah/blah/blah/wc' locked
+  #    svn: run 'svn cleanup' to remove locks \
+  #         (type 'svn help cleanup' for details)
+  #
+  # After the bugfix, it correctly commits two of the three files:
+  #
+  #    Sending        A/D/G/rho
+  #    Sending        iota
+  #    Transmitting file data ..
+  #    Committed revision 2.
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path   = os.path.join(wc_dir, 'A', 'mu')
+  G_path    = os.path.join(wc_dir, 'A', 'D', 'G')
+  rho_path  = os.path.join(G_path, 'rho')
+
+  svntest.main.file_append(iota_path, "new text in iota\n")
+  svntest.main.file_append(mu_path,   "new text in mu\n")
+  svntest.main.file_append(rho_path,  "new text in rho\n")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    'A/D/G/rho' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota',       status='  ',  wc_rev=2)
+  expected_status.tweak('A/mu',       status='M ',  wc_rev=1)
+  expected_status.tweak('A/D/G/rho',  status='  ',  wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        '--depth', 'immediates',
+                                        wc_dir, G_path)
+
 #----------------------------------------------------------------------
 
 # list all tests here, starting with None:
@@ -890,6 +961,7 @@ test_list = [ None,
               depth_immediates_subdir_propset_2,
               commit_propmods_with_depth_empty,
               diff_in_depthy_wc,
+              commit_depth_immediates,
             ]
 
 if __name__ == "__main__":

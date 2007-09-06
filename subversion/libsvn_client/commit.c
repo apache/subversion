@@ -1226,23 +1226,69 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
            _("'%s' is a URL, but URLs cannot be commit targets"), target);
     }
 
-  /* Condense the target list.
-
-     ### TODO(sd): Back when svn_path_condense_targets() was written,
-     ### there was no depth, only a recurse boolean, so condensation
-     ### was a yes-no proposition.
-     ###
-     ### Nowadays things are a little more complex.  For example, if
-     ### depth is svn_depth_files, and two targets are "foo" and
-     ### "foo/bar", we should ideally condense out the latter if
-     ### "foo/bar" is a file but not if it is a directory.
-     ###
-     ### However, the code isn't that smart yet, which might mean
-     ### we'll grab more/deeper recursive adm locks than we really
-     ### need.
-  */
+  /* Condense the target list. */
   SVN_ERR(svn_path_condense_targets(&base_dir, &rel_targets, targets,
                                     depth == svn_depth_infinity, pool));
+
+  /* When svn_path_condense_targets() was written, we didn't have real
+   * depths, we just had recursive / nonrecursive.
+   *
+   * Nowadays things are more complex.  If depth == svn_depth_files,
+   * for example, and two targets are "foo" and "foo/bar", then
+   * ideally we should condense out "foo/bar" if it's a file and not
+   * if it's a directory.  And, of course, later when we get adm
+   * access batons for the commit, we'd ideally lock directories to
+   * precisely the depth required and no deeper.
+   * 
+   * But for now we don't do that.  Instead, we lock recursively from
+   * base_dir, if depth indicates that we might need anything below
+   * there (but note that above, we don't condense away targets that
+   * need to be named explicitly when depth != svn_depth_infinity).
+   * 
+   * Here's a case where this all matters:
+   *
+   *    $ svn st -q
+   *    M      A/D/G/rho
+   *    M      iota
+   *    $ svn ci -m "log msg" --depth=immediates . A/D/G
+   *
+   * If we don't lock base_dir recursively, then it will get an error... 
+   * 
+   *    subversion/libsvn_wc/lock.c:570: (apr_err=155004)
+   *    svn: Working copy '/blah/blah/blah/wc' locked
+   *    svn: run 'svn cleanup' to remove locks \
+   *         (type 'svn help cleanup' for details)
+   * 
+   * ...because later (see dirs_to_lock_recursively and dirs_to_lock)
+   * we'd call svn_wc_adm_open3() to get access objects for "" and
+   * "A/D/G", but the request for "" would fail because base_dir_access
+   * would already be open for that directory.  (In that circumstance,
+   * you're supposed to use svn_wc_adm_retrieve() instead; but it
+   * would be clumsy to have a conditional path just to decide between
+   * open3() and retrieve().)
+   *
+   * (Note that the results would be the same if even the working copy
+   * were an explicit argument, e.g.:
+   * 'svn ci -m "log msg" --depth=immediates wc wc/A/D/G'.)
+   *
+   * So we set lock_base_dir_recursive=TRUE now, and end up locking
+   * more than we need to, but this keeps the code simple and correct.
+   *
+   * In an inspired bit of foresight, the adm locking code anticipated
+   * the eventual addition of svn_depth_immediates, and allows us to
+   * set the exact number of lock levels.  So optimizing the code here
+   * at least shouldn't require any changes to the adm locking system.
+   */
+  if (depth == svn_depth_files || depth == svn_depth_immediates)
+    {
+      const char *rel_target;
+      for (i = 0; i < rel_targets->nelts; ++i)
+        {
+          rel_target = APR_ARRAY_IDX(rel_targets, i, const char *);
+          if (rel_target[0] == '\0')
+            lock_base_dir_recursive = TRUE;
+        }
+    }
 
   /* No targets means nothing to commit, so just return. */
   if (! base_dir)
@@ -1290,11 +1336,11 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
         }
       else
         {
-          /* This will recursively lock the base_dir further down */
+          /* Unconditionally lock recursively down from base_dir. */
           lock_base_dir_recursive = TRUE;
         }
     }
-  else
+  else if (! lock_base_dir_recursive)
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -1318,6 +1364,10 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           /* If the final target is a dir, we want to lock it */
           if (kind == svn_node_dir)
             {
+              /* Notice how here we test infinity||immediates, but up
+                 in the call to svn_path_condense_targets(), we only
+                 tested depth==infinity.  That's because condensation
+                 and adm lock acquisition serve different purposes. */ 
               if (depth == svn_depth_infinity || depth == svn_depth_immediates)
                 APR_ARRAY_PUSH(dirs_to_lock_recursive,
                                const char *) = apr_pstrdup(pool, target);
