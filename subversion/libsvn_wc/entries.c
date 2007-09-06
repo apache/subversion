@@ -38,6 +38,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_flowcontrol.h"
 
 
 /** Overview **/
@@ -304,7 +305,7 @@ read_entry(svn_wc_entry_t **new_entry,
   svn_wc_entry_t *entry = alloc_entry(pool);
   const char *name;
 
-#define MAYBE_DONE if (**buf == '\f') goto done
+#define MAYBE_DONE    MAYBE_GOTO(done, **buf == '\f')
 
   /* Find the name and set up the entry under that name. */
   SVN_ERR(read_path(&name, buf, end, pool));
