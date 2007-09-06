@@ -1742,16 +1742,13 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                                 svn_client__copy_pair_t *);
 
               if (NEED_REPOS_REVNUM(pair->src_op_revision))
-                {
-                  need_repos_op_rev = TRUE;
-                  break;
-                }
+                need_repos_op_rev = TRUE;
 
               if (NEED_REPOS_REVNUM(pair->src_peg_revision))
-                {
-                  need_repos_peg_rev = TRUE;
-                  break;
-                }
+                need_repos_peg_rev = TRUE;
+
+              if (need_repos_op_rev || need_repos_peg_rev)
+                break;
             }
 
           if (need_repos_op_rev || need_repos_peg_rev)
@@ -1760,6 +1757,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
               for (i = 0; i < copy_pairs->nelts; i++)
                 {
+                  const char *url;
                   svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
 
@@ -1779,19 +1777,21 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                                  FALSE, iterpool));
                   SVN_ERR(svn_wc_adm_close(adm_access));
 
-                  if (! entry->url)
+                  url = (entry->copied ? entry->copyfrom_url : entry->url);
+                  if (url == NULL)
                     return svn_error_createf
                       (SVN_ERR_ENTRY_MISSING_URL, NULL,
                        _("'%s' does not have a URL associated with it"),
                        svn_path_local_style(pair->src, pool));
 
-                  pair->src = apr_pstrdup(pool, entry->url);
+                  pair->src = apr_pstrdup(pool, url);
 
                   if (!need_repos_peg_rev)
                     {
                       /* Default the peg revision to that of the WC entry. */
                       pair->src_peg_revision.kind = svn_opt_revision_number;
-                      pair->src_peg_revision.value.number = entry->revision;
+                      pair->src_peg_revision.value.number =
+                        (entry->copied ? entry->copyfrom_rev : entry->revision);
                     }
                 }
 
