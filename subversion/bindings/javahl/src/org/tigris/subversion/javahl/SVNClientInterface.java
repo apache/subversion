@@ -541,11 +541,14 @@ public interface SVNClientInterface
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
+     * @param withMergeHistory Whether to propagate merge history from
+     * <code>srcPaths</code> to <code>destPath</code>.
      * @throws ClientException If the copy operation fails.
      * @since 1.5
      */
     void copy(CopySource[] sources, String destPath, String message,
-              boolean copyAsChild, boolean makeParents)
+              boolean copyAsChild, boolean makeParents,
+              boolean withMergeHistory)
         throws ClientException;
 
     /**
@@ -572,12 +575,15 @@ public interface SVNClientInterface
      * modifications exist.
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
-     * @param makeParents Whether to create intermediate parents
+     * @param makeParents Whether to create intermediate parents.
+     * @param withMergeHistory Whether to propagate merge history from
+     * <code>srcPaths</code> to <code>destPath</code>.
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
     void move(String[] srcPaths, String destPath, String message,
-              boolean force, boolean moveAsChild, boolean makeParents)
+              boolean force, boolean moveAsChild, boolean makeParents,
+              boolean withMergeHistory)
         throws ClientException;
 
     /**
@@ -730,6 +736,17 @@ public interface SVNClientInterface
      */
     void doImport(String path, String url, String message, boolean recurse)
             throws ClientException;
+
+    /**
+     * Return an ordered list of suggested merge source URLs.
+     * @param path The merge target path for which to suggest sources.
+     * @param pegRevision Peg revision used to interpret path.
+     * @return The list of URLs, empty if there are no suggestions.
+     * @throws ClientException If an error occurs.
+     * @since 1.5
+     */
+    String[] suggestMergeSources(String path, Revision pegRevision)
+            throws SubversionException;
 
     /**
      * Merge changes from two paths into a new local path.
@@ -1454,17 +1471,4 @@ public interface SVNClientInterface
      */
     String getVersionInfo(String path, String trailUrl, boolean lastChanged)
             throws ClientException;
-
-    /**
-     * Return the source a WC path or URL was copied from.
-     * @param path The path to determine a source for.
-     * @param revision The revision at which to determine a source.
-     * @return The last source <code>path</code> was copied from, or
-     * <code>null</code> if never copied.
-     * @throws SubversionException If there is a problem determing the
-     * copy source.
-     * @since 1.5
-     */
-    CopySource getCopySource(String path, Revision revision)
-        throws SubversionException;
 }

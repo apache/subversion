@@ -66,7 +66,7 @@ relocate_entry(svn_wc_adm_access_t *adm_access,
          to specify a redundant part of the fs path in from and to, but only
          if this part is identical in both strings. */
       apr_size_t repos_len = strlen(entry->repos);
-           
+
       if (from_len >= repos_len)
         {
           apr_size_t to_len = strlen(to);
@@ -169,10 +169,10 @@ svn_wc_relocate3(const char *path,
           const char *subdir = svn_path_join(path, key, subpool);
           if (svn_wc__adm_missing(adm_access, subdir))
             continue;
-          SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, 
+          SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access,
                                       subdir, subpool));
           SVN_ERR(svn_wc_relocate3(subdir, subdir_access, from, to,
-                                   recurse, validator, 
+                                   recurse, validator,
                                    validator_baton, subpool));
         }
       SVN_ERR(relocate_entry(adm_access, entry, from, to,
@@ -181,7 +181,7 @@ svn_wc_relocate3(const char *path,
 
   svn_pool_destroy(subpool);
 
-  SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, FALSE, pool));
+  SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool));
   SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
   return SVN_NO_ERROR;
 }

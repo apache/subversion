@@ -214,9 +214,9 @@ svn_error_t *svn_fs_base__txn_proplist(apr_hash_t **table_p,
                                        svn_fs_txn_t *txn,
                                        apr_pool_t *pool);
 
-/* Helper func:  variant of __txn_proplist that uses an existing TRAIL. 
+/* Helper func:  variant of __txn_proplist that uses an existing TRAIL.
  * TXN_ID identifies the transaction.
- * *TABLE_P will be non-null upon success. 
+ * *TABLE_P will be non-null upon success.
  */
 svn_error_t *svn_fs_base__txn_proplist_in_trail(apr_hash_t **table_p,
                                                 const char *txn_id,

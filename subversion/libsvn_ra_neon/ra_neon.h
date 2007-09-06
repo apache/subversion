@@ -89,7 +89,7 @@ typedef struct {
 
   const svn_ra_callbacks2_t *callbacks; /* callbacks to get auth data */
   void *callback_baton;
- 
+
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
   const char *auth_username;            /* last authenticated username used */
 
@@ -418,12 +418,12 @@ svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
 /* Shared helper func: given a public URL which may not exist in HEAD,
    use SESS to search up parent directories until we can retrieve a
    *RSRC (allocated in POOL) containing a standard set of "starting"
-   props: {VCC, resourcetype, baseline-relative-path}.  
+   props: {VCC, resourcetype, baseline-relative-path}.
 
    Also return *MISSING_PATH (allocated in POOL), which is the
    trailing portion of the URL that did not exist.  If an error
    occurs, *MISSING_PATH isn't changed. */
-svn_error_t * 
+svn_error_t *
 svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
                                        const char **missing_path,
                                        svn_ra_neon__session_t *sess,
@@ -494,7 +494,7 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
                                              apr_pool_t *pool);
 
 /* Fetch the repository's unique Version-Controlled-Configuration url.
-   
+
    Given a session SESS and a URL, set *VCC to the url of the
    repository's version-controlled-configuration resource.
  */
@@ -716,7 +716,7 @@ enum {
   ELEM_absent_file,
   ELEM_add_directory,
   ELEM_add_file,
-  ELEM_baseline_relpath, 
+  ELEM_baseline_relpath,
   ELEM_md5_checksum,
   ELEM_deleted_path,  /* used in log reports */
   ELEM_replaced_path,  /* used in log reports */
@@ -774,7 +774,7 @@ enum {
   ELEM_mergeinfo_item,
   ELEM_mergeinfo_path,
   ELEM_mergeinfo_info,
-  ELEM_nbr_children,
+  ELEM_has_children,
   ELEM_merged_revision
 };
 

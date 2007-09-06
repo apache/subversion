@@ -54,7 +54,6 @@ class SVNClient :public SVNBase
  public:
   void info2(const char *path, Revision &revision, Revision &pegRevision,
              bool recurse, InfoCallback *callback);
-  jobject getCopySource(const char *path, Revision &revision);
   void unlock(Targets &targets, bool force);
   void lock(Targets &targets, const char *comment, bool force);
   jobjectArray revProperties(jobject jthis, const char *path,
@@ -88,6 +87,7 @@ class SVNClient :public SVNBase
                   Revision &pegRevision, svn_depth_t depth,
                   ProplistCallback *callback);
   jobject getMergeInfo(const char *target, Revision &rev);
+  jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
              svn_depth_t depth, bool ignoreAncestry, bool dryRun);
@@ -108,9 +108,10 @@ class SVNClient :public SVNBase
   void mkdir(Targets &targets, const char *message, bool makeParents);
   void move(Targets &srcPaths, const char *destPath,
             const char *message, bool force, bool moveAsChild,
-            bool makeParents);
+            bool makeParents, bool withMergeHistory);
   void copy(CopySources &copySources, const char *destPath,
-            const char *message, bool copyAsChild, bool makeParents);
+            const char *message, bool copyAsChild, bool makeParents,
+            bool withMergeHistory);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
                const char *changelistName);
@@ -131,7 +132,7 @@ class SVNClient :public SVNBase
   void logMessages(const char *path, Revision &pegRevision,
                    Revision &revisionStart,
                    Revision &revisionEnd, bool stopOnCopy,
-                   bool discoverPaths, bool includeMergedRevisions, 
+                   bool discoverPaths, bool includeMergedRevisions,
                    bool omitLogText, long limit,
                    LogMessageCallback *callback);
   void setPrompt(Prompter *prompter);
@@ -203,7 +204,7 @@ class SVNClient :public SVNBase
             bool noDiffDelete, bool force);
 
   jobject createJavaInfo(const svn_wc_entry_t *entry);
-    
+
   Notify *m_notify;
   Notify2 *m_notify2;
   ConflictResolverCallback *m_conflictResolver;

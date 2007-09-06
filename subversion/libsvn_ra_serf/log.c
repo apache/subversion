@@ -49,7 +49,7 @@ typedef enum {
   CREATOR,
   DATE,
   COMMENT,
-  NBR_CHILDREN,
+  HAS_CHILDREN,
   ADDED_PATH,
   REPLACED_PATH,
   DELETED_PATH,
@@ -172,9 +172,9 @@ start_log(svn_ra_serf__xml_parser_t *parser,
         {
           push_state(parser, log_ctx, COMMENT);
         }
-      else if (strcmp(name.name, "nbr-children") == 0)
+      else if (strcmp(name.name, "has-children") == 0)
         {
-          push_state(parser, log_ctx, NBR_CHILDREN);
+          push_state(parser, log_ctx, HAS_CHILDREN);
         }
       else if (strcmp(name.name, "added-path") == 0)
         {
@@ -250,7 +250,13 @@ end_log(svn_ra_serf__xml_parser_t *parser,
   if (state == REPORT &&
       strcmp(name.name, "log-report") == 0)
     {
+      svn_log_entry_t *log_entry = svn_log_entry_create(log_ctx->pool);
+
+      log_entry->revision = SVN_INVALID_REVNUM;
+      SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton, log_entry,
+                                log_ctx->pool));
       svn_ra_serf__xml_pop_state(parser);
+
     }
   else if (state == ITEM &&
            strcmp(name.name, "log-item") == 0)
@@ -293,11 +299,10 @@ end_log(svn_ra_serf__xml_parser_t *parser,
       info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == NBR_CHILDREN &&
-           strcmp(name.name, "nbr-children") == 0)
+  else if (state == HAS_CHILDREN &&
+           strcmp(name.name, "has-children") == 0)
     {
-      info->log_entry->nbr_children = atol(info->tmp);
-      info->tmp_len = 0;
+      info->log_entry->has_children = TRUE;
       svn_ra_serf__xml_pop_state(parser);
     }
   else if ((state == ADDED_PATH &&
@@ -343,7 +348,6 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
       case CREATOR:
       case DATE:
       case COMMENT:
-      case NBR_CHILDREN:
       case ADDED_PATH:
       case REPLACED_PATH:
       case DELETED_PATH:
@@ -455,7 +459,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
       for (i = 0; i < paths->nelts; i++)
         {
           svn_ra_serf__add_tag_buckets(buckets,
-                                       "S:path", APR_ARRAY_IDX(paths, i, 
+                                       "S:path", APR_ARRAY_IDX(paths, i,
                                                                const char*),
                                        session->bkt_alloc);
         }
@@ -495,7 +499,9 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                                "DAV:", "checked-in");
       if (!baseline_url)
         {
-          abort();
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested checked-in value."));
         }
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
@@ -508,7 +514,9 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   if (!basecoll_url)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested baseline-collection value."));
     }
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);

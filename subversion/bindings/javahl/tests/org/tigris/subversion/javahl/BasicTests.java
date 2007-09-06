@@ -752,8 +752,6 @@ public class BasicTests extends SVNTests
         throws SubversionException, IOException
     {
         OneTest thisTest = new OneTest();
-        // Test that getCopySource properly returns null here
-        assertNull(client.getCopySource(thisTest.getWCPath(), Revision.HEAD));
 
         WC wc = thisTest.getWc();
         final Revision firstRevision = Revision.getInstance(1);
@@ -781,7 +779,7 @@ public class BasicTests extends SVNTests
         }
         client.copy(sources,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, true, false);
+                    null, true, false, false);
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
@@ -790,7 +788,7 @@ public class BasicTests extends SVNTests
                      2);
         thisTest.checkStatus();
 
-        assertExpectedCopySource(sources[0], "A/B/F/alpha", thisTest);
+        assertExpectedSuggestion(sources[0].getPath(), "A/B/F/alpha", thisTest);
     }
 
     /**
@@ -826,7 +824,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, false, true, false);
+                    null, false, true, false, false);
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
@@ -834,33 +832,42 @@ public class BasicTests extends SVNTests
                                    "Move files", true), 2);
         thisTest.checkStatus();
 
-        assertExpectedCopySource(new CopySource(srcPaths[0],
-                                                Revision.getInstance(1), null),
-                                 "A/B/F/alpha", thisTest);
+        assertExpectedSuggestion(srcPaths[0], "A/B/F/alpha", thisTest);
     }
 
     /**
-     * Assert that the copy source discovered for
-     * <code>destPath</code> at {@link Revision#HEAD} is equivalent to
-     * <code>expectedSrc</code>.
+     * Assert that the first merge source suggested for
+     * <code>destPath</code> at {@link Revision#WORKING} and {@link
+     * Revision#HEAD} is equivalent to <code>expectedSrc</code>.
      * @exception SubversionException If retrieval of the copy source fails.
      * @since 1.5
      */
-    private void assertExpectedCopySource(CopySource expectedSrc,
+    private void assertExpectedSuggestion(String expectedSrc,
                                           String destPath, OneTest thisTest)
         throws SubversionException
     {
         String wcPath = new File(thisTest.getWCPath(), destPath).getPath();
-        CopySource src = client.getCopySource(wcPath, Revision.HEAD);
-        // ### FIXME: We really want consistent path formats:
-        //assertEquals("Unexpected copy source path",
-         //             expectedSrc.getPath(), src.getPath());
-        assertTrue("Unexpected copy source path",
-                   expectedSrc.getPath().endsWith(src.getPath()));
-        assertEquals("Unexpected copy source revision",
-                     expectedSrc.getRevision(), src.getRevision());
-        assertEquals("Unexpected copy source peg revision",
-                     expectedSrc.getPegRevision(), src.getPegRevision());
+        String[] suggestions = client.suggestMergeSources(wcPath, 
+                                                          Revision.WORKING);
+        assertNotNull(suggestions);
+        assertTrue(suggestions.length >= 1);
+        String suggestedSrc = suggestions[0];
+        // ### Improve rigor of (pathetically weak) path assertion.
+        assertTrue("Unexpected copy source path, expected " +
+                   expectedSrc + ", got " + suggestions[0],
+                   suggestions[0].endsWith(new File(wcPath).getName()));
+
+        // Same test using URL
+        String url = thisTest.getUrl() + "/" + destPath;
+        suggestions = client.suggestMergeSources(url, Revision.HEAD);
+        assertNotNull(suggestions);
+        assertTrue(suggestions.length >= 1);
+        suggestedSrc = suggestions[0];
+        // ### Improve rigor of (pathetically weak) path assertion.
+        assertTrue("Unexpected copy source path, expected " +
+                   expectedSrc + ", got " + suggestions[0],
+                   suggestions[0].endsWith(new File(wcPath).getName()));
+    
     }
 
     /**
@@ -2161,6 +2168,13 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
+        // Verify that there are now potential merge sources.
+        String[] suggestedSrcs =
+            client.suggestMergeSources(thisTest.getWCPath() + "/branches/A",
+                                       Revision.WORKING);
+        assertNotNull(suggestedSrcs);
+        assertEquals(1, suggestedSrcs.length);
+
         // Test that getMergeInfo() returns null.
         assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
                                        .toString(), Revision.HEAD));
@@ -2316,6 +2330,13 @@ public class BasicTests extends SVNTests
         throws Exception
     {
         OneTest thisTest = new OneTest();
+
+        // Verify that there are initially no potential merge sources.
+        String[] suggestedSrcs =
+            client.suggestMergeSources(thisTest.getWCPath(),
+                                       Revision.WORKING);
+        assertNotNull(suggestedSrcs);
+        assertEquals(0, suggestedSrcs.length);
 
         // create branches directory in the repository (r2)
         addExpectedCommitItem(null, thisTest.getUrl(), "branches",
@@ -2717,7 +2738,7 @@ public class BasicTests extends SVNTests
             assertEquals("jrandom", line.getAuthor());
         }
     }
-    
+
     /**
      * @return <code>file</code> converted into a -- possibly
      * <code>canonical</code>-ized -- Subversion-internal path
@@ -2742,7 +2763,7 @@ public class BasicTests extends SVNTests
             return file.getPath().replace('\\', '/');
         }
     }
-    
+
 
     /**
      * A DiffSummaryReceiver implementation which collects all DiffSummary

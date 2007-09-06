@@ -317,7 +317,7 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
     svn_txdelta_to_svndiff2(wh, wh_baton, diff_stream, 0, pool);
   return SVN_NO_ERROR;
 }
-  
+
 static svn_error_t *ra_svn_change_file_prop(void *file_baton,
                                             const char *name,
                                             const svn_string_t *value,

@@ -72,7 +72,7 @@ SVN_ERRDEF(SVN_ERR_CMDLINE__TMPFILE_WRITE,
                   "Failed opening temporary file.")
 
   /* END Client errors */
-  
+
 
 SVN_ERROR_END
 

@@ -32,7 +32,7 @@ Item = svntest.wc.StateItem
 # Helper function
 def check_proplist(path, exp_out, config_dir):
   """Verify that property list on PATH has a value of EXP_OUT"""
-  
+
   out, err = svntest.main.run_svn(None, 'proplist', '--verbose', path,
                                   '--config-dir', config_dir)
 
@@ -66,7 +66,7 @@ enable-auto-props = %s
 *.jpg = jpgfile=ja
 fubar* = tarfile=si
 foobar.lha = lhafile=da;lzhfile=niet
-spacetest = abc = def ; ghi = ; = j 
+spacetest = abc = def ; ghi = ; = j
 * = auto=oui
 ''' % (enable_flag and 'yes' or 'no')
 
@@ -102,7 +102,7 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
   else:
     parameters = ['add']
     files_dir = wc_dir
-  
+
   parameters = parameters + ['--config-dir', config_dir]
 
   create_config(config_dir, cfgenable)
@@ -155,7 +155,7 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
 
   # do an svn co if needed
   if cmd == 'import':
-    svntest.main.run_svn(None, 'checkout', repos_url, files_wc_dir, 
+    svntest.main.run_svn(None, 'checkout', repos_url, files_wc_dir,
                         '--config-dir', config_dir)
 
   # check the properties

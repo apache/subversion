@@ -27,7 +27,7 @@
 apr_time_t test_timestamp = APR_TIME_C(1021316450966679);
 const char *test_timestring =
 "2002-05-13T19:00:50.966679Z";
-const char *test_old_timestring = 
+const char *test_old_timestring =
 "Mon 13 May 2002 22:00:50.966679 (day 133, dst 1, gmt_off 010800)";
 
 
@@ -96,7 +96,7 @@ static const char *failure_old_tests[] = {
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
   " 3 Oct 2000 HH:MM:SS.UUU (day 277, dst 1, gmt_off -18000)",
-  
+
   /* Overflow Month */
   "Tue 3 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -176,7 +176,7 @@ test_time_invariant(const char **msg,
     {
       return svn_error_createf
         (SVN_ERR_TEST_FAILED, NULL,
-         "svn_time_from_cstring ( svn_time_to_cstring (n) ) returned time '%" 
+         "svn_time_from_cstring ( svn_time_to_cstring (n) ) returned time '%"
          APR_TIME_T_FMT
          "' instead of '%" APR_TIME_T_FMT "'",
          timestamp,current_timestamp);

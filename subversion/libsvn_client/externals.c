@@ -672,7 +672,11 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                      status_func, status_baton,
                                      /* ### TODO(sd): Is it really correct
                                         ### to unconditionally recurse
-                                        ### here? */
+                                        ### here?  Hmm, I think not, 
+                                        ### because then we might
+                                        ### recurse farther into an
+                                        ### external subdir than the
+                                        ### user requested... */ 
                                      svn_depth_infinity, get_all, update,
                                      no_ignore, FALSE, ctx, iterpool));
         }

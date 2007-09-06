@@ -76,7 +76,7 @@ svn_prop_array_dup(const apr_array_header_t *array, apr_pool_t *pool);
  * particularly on the client-side.  There is no "unknown" kind; if
  * there's nothing special about a property name, the default category
  * is @c svn_prop_regular_kind.
- */ 
+ */
 typedef enum svn_prop_kind
 {
   /** In .svn/entries, i.e., author, date, etc. */
@@ -85,10 +85,10 @@ typedef enum svn_prop_kind
   /** Client-side only, stored by specific RA layer. */
   svn_prop_wc_kind,
 
-  /** Seen if user does "svn proplist"; note that this includes some "svn:" 
+  /** Seen if user does "svn proplist"; note that this includes some "svn:"
    * props and all user props, i.e. ones stored in the repository fs.
    */
-  svn_prop_regular_kind 
+  svn_prop_regular_kind
 } svn_prop_kind_t;
 
 /** Return the prop kind of a property named @a prop_name, and
@@ -144,7 +144,7 @@ svn_boolean_t svn_prop_needs_translation(const char *prop_name);
  * ### Hmmm, maybe a better future interface is to return an array of
  *     arrays, where the index into the array represents the index
  *     into @c svn_prop_kind_t.  That way we can add more prop kinds
- *     in the future without changing this interface... 
+ *     in the future without changing this interface...
  */
 svn_error_t *svn_categorize_props(const apr_array_header_t *proplist,
                                   apr_array_header_t **entry_props,
@@ -153,9 +153,9 @@ svn_error_t *svn_categorize_props(const apr_array_header_t *proplist,
                                   apr_pool_t *pool);
 
 
-/** Given two property hashes (<tt>const char *name</tt> -> <tt>const 
- * svn_string_t *value</tt>), deduce the differences between them (from 
- * @a source_props -> @c target_props).  Return these changes as a series of 
+/** Given two property hashes (<tt>const char *name</tt> -> <tt>const
+ * svn_string_t *value</tt>), deduce the differences between them (from
+ * @a source_props -> @c target_props).  Return these changes as a series of
  * @c svn_prop_t structures stored in @a propdiffs, allocated from @a pool.
  *
  * For note, here's a quick little table describing the logic of this
@@ -201,7 +201,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  * LF line-endings.  It is the burden of svn library users to enforce
  * this.  Use svn_prop_needs_translation() to discover if a
  * certain property needs translation, and you can use
- * svn_subst_translate_string()/svn_subst_detranslate_string() 
+ * svn_subst_translate_string()/svn_subst_detranslate_string()
  * to do the translation.
  *
  * @defgroup svn_prop_visible_props Visible properties
@@ -259,7 +259,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  */
 #define SVN_PROP_SPECIAL_VALUE SVN_PROP_BOOLEAN_TRUE
 
-/** Describes external items to check out into this directory. 
+/** Describes external items to check out into this directory.
  *
  * The format is a series of lines, such as:
  *
@@ -294,7 +294,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  * @{
  */
 
-/** The property name *prefix* that makes a property a "WC property". 
+/** The property name *prefix* that makes a property a "WC property".
  *
  * For example, WebDAV RA implementations might store a versioned-resource url as a WC
  * prop like this:
@@ -309,7 +309,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
 #define SVN_PROP_WC_PREFIX     SVN_PROP_PREFIX "wc:"
 
 /** Another type of non-user-visible property.  "Entry properties" are
- * stored as fields with the administrative 'entries' file.  
+ * stored as fields with the administrative 'entries' file.
  */
 #define SVN_PROP_ENTRY_PREFIX  SVN_PROP_PREFIX "entry:"
 
@@ -401,7 +401,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
 
 /**
  * This is a list of all revision properties.
- */ 
+ */
 #define SVN_PROP_REVISION_ALL_PROPS SVN_PROP_REVISION_AUTHOR, \
                                     SVN_PROP_REVISION_LOG, \
                                     SVN_PROP_REVISION_DATE, \

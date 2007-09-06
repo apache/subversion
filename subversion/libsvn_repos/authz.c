@@ -123,10 +123,10 @@ authz_access_is_determined(svn_repos_authz_access_t allow,
     return FALSE;
 }
 
-/* Return TRUE is USER equals ALIAS. The alias definitions are in the 
+/* Return TRUE is USER equals ALIAS. The alias definitions are in the
    "aliases" sections of CFG. Use POOL for temporary allocations during
    the lookup. */
-static svn_boolean_t 
+static svn_boolean_t
 authz_alias_is_user(svn_config_t *cfg,
                     const char *alias,
                     const char *user,
@@ -247,7 +247,7 @@ authz_line_applies_to_user(const char *rule_match_string,
  * authz_baton accordingly.
  */
 static svn_boolean_t
-authz_parse_line(const char *name, const char *value, 
+authz_parse_line(const char *name, const char *value,
                  void *baton, apr_pool_t *pool)
 {
   struct authz_lookup_baton *b = baton;

@@ -148,7 +148,7 @@ main (int argc, const char **argv)
 
   if (argc <= 1)
     {
-      printf ("Usage:  %s URL\n", argv[0]);  
+      printf ("Usage:  %s URL\n", argv[0]);
       printf ("    Print HEAD revision of URL's repository.\n");
       return EXIT_FAILURE;
     }
@@ -167,13 +167,13 @@ main (int argc, const char **argv)
   err = svn_fs_initialize (pool);
   if (err) goto hit_error;
 
-  /* Make sure the ~/.subversion run-time config files exist, and load. */  
+  /* Make sure the ~/.subversion run-time config files exist, and load. */
   err = svn_config_ensure (NULL, pool);
   if (err) goto hit_error;
 
   err = svn_config_get_config (&cfg_hash, NULL, pool);
   if (err) goto hit_error;
-    
+
   /* Build an authentication baton. */
   {
     /* There are many different kinds of authentication back-end
@@ -181,21 +181,21 @@ main (int argc, const char **argv)
     svn_auth_provider_object_t *provider;
     apr_array_header_t *providers
       = apr_array_make (pool, 4, sizeof (svn_auth_provider_object_t *));
-    
+
     svn_client_get_simple_prompt_provider (&provider,
                                            my_simple_prompt_callback,
                                            NULL, /* baton */
                                            2, /* retry limit */ pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    
+
     svn_client_get_username_prompt_provider (&provider,
                                              my_username_prompt_callback,
                                              NULL, /* baton */
                                              2, /* retry limit */ pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    
+
     /* Register the auth-providers into the context's auth_baton. */
-    svn_auth_open (&auth_baton, providers, pool);      
+    svn_auth_open (&auth_baton, providers, pool);
   }
 
   /* Create a table of callbacks for the RA session, mostly nonexistent. */

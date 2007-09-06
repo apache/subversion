@@ -112,7 +112,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         statchar_buf[1] = 'C';
       else if (n->prop_state == svn_wc_notify_state_merged)
         statchar_buf[1] = 'G';
-      
+
       if ((err = svn_cmdline_printf(pool, "%s %s\n", statchar_buf, path_local)))
         goto print_error;
       break;
@@ -131,7 +131,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_failed_revert:
       if (( err = svn_cmdline_printf(pool, _("Failed to revert '%s' -- "
-                                             "try updating instead.\n"), 
+                                             "try updating instead.\n"),
                                      path_local)))
         goto print_error;
       break;
@@ -187,7 +187,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                 else if (n->content_state == svn_wc_notify_state_changed)
                   statchar_buf[0] = 'U';
               }
-            
+
             if (n->prop_state == svn_wc_notify_state_conflicted)
               statchar_buf[1] = 'C';
             else if (n->prop_state == svn_wc_notify_state_merged)
@@ -309,7 +309,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_status_external:
       if ((err = svn_cmdline_printf
-           (pool, _("\nPerforming status on external item at '%s'\n"), 
+           (pool, _("\nPerforming status on external item at '%s'\n"),
             path_local)))
         goto print_error;
       break;

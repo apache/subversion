@@ -52,7 +52,7 @@ extern "C" {
    implements the BDB filesystem type.  Consult the dev list for
    details on the "FSP-level" abstraction concept.
 */
-   
+
 
 
 /*** Top-level library vtable type ***/
@@ -198,8 +198,6 @@ typedef struct txn_vtable_t
                               const svn_string_t *value, apr_pool_t *pool);
   svn_error_t *(*root)(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
                        apr_pool_t *pool);
-  svn_error_t *(*get_mergeinfo)(apr_hash_t **minfoprops, svn_fs_txn_t *txn,
-                                apr_pool_t *pool);
 } txn_vtable_t;
 
 
@@ -308,7 +306,7 @@ typedef struct root_vtable_t
                                    apr_hash_t *info,
                                    apr_pool_t *pool);
   svn_error_t *(*get_mergeinfo)(apr_hash_t **minfohash,
-                                svn_fs_root_t *root, 
+                                svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
                                 apr_pool_t *pool);

@@ -275,7 +275,7 @@ class SubversionNode(Node):
         #          * the node existed at (created_path,created_rev)
         # TODO: check node id
         self.rev = self.created_rev
-        
+
         Node.__init__(self, path, self.rev, _kindmap[node_type])
 
     def get_content(self):
@@ -414,11 +414,11 @@ class SubversionChangeset(Changeset):
 # Note 2: the 'dir_baton' is the path of the parent directory
 #
 
-class DiffChangeEditor(delta.Editor): 
+class DiffChangeEditor(delta.Editor):
 
     def __init__(self):
         self.deltas = []
-    
+
     # -- svn.delta.Editor callbacks
 
     def open_root(self, base_revision, dir_pool):

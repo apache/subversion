@@ -276,7 +276,7 @@ txn_body_change_rev_prop(void *baton, trail_t *trail)
   struct change_rev_prop_args *args = baton;
 
   SVN_ERR(svn_fs_base__set_rev_prop(trail->fs, args->rev,
-                                    args->name, args->value, 
+                                    args->name, args->value,
                                     trail, trail->pool));
 
   return SVN_NO_ERROR;
@@ -612,7 +612,7 @@ svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
   serialized_str = svn_string_create_from_buf(serialized_buf, pool);
 
   /* Set the property. */
-  apr_hash_set(txn->proplist, SVN_FS_PROP_TXN_MERGEINFO, 
+  apr_hash_set(txn->proplist, SVN_FS_PROP_TXN_MERGEINFO,
                APR_HASH_KEY_STRING, serialized_str);
 
   /* Now overwrite the transaction. */
@@ -647,31 +647,6 @@ svn_fs_base__change_txn_prop(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
-/* txn_vtable's get_mergeinfo hook.  Set TABLE_P to a mergeinfo hash
-   (possibly empty), or NULL if there are no transaction properties. */
-static svn_error_t *
-svn_fs_base__txn_mergeinfo(apr_hash_t **table_p,
-                           svn_fs_txn_t *txn,
-                           apr_pool_t *pool)
-{
-  svn_string_t *serialized_str;
-  apr_hash_t *target_mergeinfo = NULL;
-
-  SVN_ERR(svn_fs_base__txn_prop(&serialized_str, txn, 
-                                SVN_FS_PROP_TXN_MERGEINFO, pool));
-  if (serialized_str)
-    {
-      svn_stringbuf_t *buf = 
-        svn_stringbuf_create_from_string(serialized_str, pool);
-      svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
-      target_mergeinfo = apr_hash_make(pool);
-      SVN_ERR(svn_hash_read2(target_mergeinfo, stream, NULL, pool));
-    }
-  *table_p = target_mergeinfo;
-  return SVN_NO_ERROR;
-}
-
-
 
 /* Creating a transaction */
 
@@ -681,8 +656,7 @@ txn_vtable_t txn_vtable = {
   svn_fs_base__txn_prop,
   svn_fs_base__txn_proplist,
   svn_fs_base__change_txn_prop,
-  svn_fs_base__txn_root,
-  svn_fs_base__txn_mergeinfo
+  svn_fs_base__txn_root
 };
 
 
@@ -721,9 +695,9 @@ txn_body_begin_txn(void *baton, trail_t *trail)
   const svn_fs_id_t *root_id;
   const char *txn_id;
 
-  SVN_ERR(svn_fs_base__rev_get_root(&root_id, trail->fs, args->rev, 
+  SVN_ERR(svn_fs_base__rev_get_root(&root_id, trail->fs, args->rev,
                                     trail, trail->pool));
-  SVN_ERR(svn_fs_bdb__create_txn(&txn_id, trail->fs, root_id, 
+  SVN_ERR(svn_fs_bdb__create_txn(&txn_id, trail->fs, root_id,
                                  trail, trail->pool));
 
   if (args->flags & SVN_FS_TXN_CHECK_OOD)
@@ -747,7 +721,7 @@ txn_body_begin_txn(void *baton, trail_t *trail)
 
       SVN_ERR(txn_body_change_txn_prop(&cpargs, trail));
     }
-    
+
   *args->txn_p = make_txn(trail->fs, txn_id, args->rev, trail->pool);
   return SVN_NO_ERROR;
 }
@@ -813,7 +787,7 @@ txn_body_open_txn(void *baton, trail_t *trail)
       SVN_ERR(svn_fs_base__txn_get_revision(&base_rev, trail->fs, txn_id,
                                             trail, trail->pool));
     }
-  
+
   *args->txn_p = make_txn(trail->fs, args->name, base_rev, trail->pool);
   return SVN_NO_ERROR;
 }
@@ -850,7 +824,7 @@ static svn_error_t *
 txn_body_cleanup_txn(void *baton, trail_t *trail)
 {
   struct cleanup_txn_args *args = baton;
-  return get_txn(args->txn_p, trail->fs, args->name, TRUE, 
+  return get_txn(args->txn_p, trail->fs, args->name, TRUE,
                  trail, trail->pool);
 }
 
@@ -858,7 +832,7 @@ txn_body_cleanup_txn(void *baton, trail_t *trail)
 static svn_error_t *
 txn_body_cleanup_txn_copy(void *baton, trail_t *trail)
 {
-  svn_error_t *err = svn_fs_bdb__delete_copy(trail->fs, baton, trail, 
+  svn_error_t *err = svn_fs_bdb__delete_copy(trail->fs, baton, trail,
                                              trail->pool);
 
   /* Copy doesn't exist?  No sweat. */
@@ -893,7 +867,7 @@ txn_body_get_dirents(void *baton, trail_t *trail)
   dag_node_t *node;
 
   /* Get the node. */
-  SVN_ERR(svn_fs_base__dag_get_node(&node, trail->fs, args->id, 
+  SVN_ERR(svn_fs_base__dag_get_node(&node, trail->fs, args->id,
                                     trail, trail->pool));
 
   /* If immutable, do nothing and return. */
@@ -906,7 +880,7 @@ txn_body_get_dirents(void *baton, trail_t *trail)
     return SVN_NO_ERROR;
 
   /* Else it's mutable.  Get its dirents. */
-  return svn_fs_base__dag_dir_entries(args->dirents, node, 
+  return svn_fs_base__dag_dir_entries(args->dirents, node,
                                       trail, trail->pool);
 }
 
@@ -1079,7 +1053,7 @@ static svn_error_t *
 txn_body_list_transactions(void* baton, trail_t *trail)
 {
   struct list_transactions_args *args = baton;
-  return svn_fs_bdb__get_txn_list(args->names_p, trail->fs, 
+  return svn_fs_bdb__get_txn_list(args->names_p, trail->fs,
                                   trail, args->pool);
 }
 

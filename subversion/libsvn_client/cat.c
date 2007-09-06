@@ -82,7 +82,7 @@ cat_local_file(const char *path,
   else
     {
       svn_wc_status2_t *status;
-      
+
       base = path;
       SVN_ERR(svn_wc_prop_list(&props, path, adm_access, pool));
       SVN_ERR(svn_wc_status2(&status, path, adm_access, pool));
@@ -96,10 +96,10 @@ cat_local_file(const char *path,
                           APR_HASH_KEY_STRING);
   special = apr_hash_get(props, SVN_PROP_SPECIAL,
                          APR_HASH_KEY_STRING);
-  
+
   if (eol_style)
     svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
-  
+
   if (local_mod && (! special))
     {
       /* Use the modified time from the working copy if
@@ -130,9 +130,9 @@ cat_local_file(const char *path,
           fmt = "%ld";
           author = entry->cmt_author;
         }
-      
+
       SVN_ERR(svn_subst_build_keywords2
-              (&kw, keywords->data, 
+              (&kw, keywords->data,
                apr_psprintf(pool, fmt, entry->cmt_rev),
                entry->url, tm, author, pool));
     }
@@ -180,7 +180,7 @@ svn_client_cat2(svn_stream_t *out,
           || revision->kind == svn_opt_revision_unspecified))
     {
       svn_wc_adm_access_t *adm_access;
-    
+
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL,
                                svn_path_dirname(path_or_url, pool), FALSE,
                                0, ctx->cancel_func, ctx->cancel_baton,
@@ -204,7 +204,7 @@ svn_client_cat2(svn_stream_t *out,
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              _("URL '%s' refers to a directory"), url);
 
-  /* Grab some properties we need to know in order to figure out if anything 
+  /* Grab some properties we need to know in order to figure out if anything
      special needs to be done with this file. */
   SVN_ERR(svn_ra_get_file(ra_session, "", rev, NULL, NULL, &props, pool));
 

@@ -1,6 +1,6 @@
-/* 
+/*
  * text-delta.c -- Internal text delta representation
- * 
+ *
  * ====================================================================
  * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
@@ -55,7 +55,7 @@ struct txdelta_baton {
   /* Calculated digest from MD5 operations.
      NOTE:  This is only valid after this stream has returned the NULL
      (final) window.  */
-  unsigned char digest[APR_MD5_DIGESTSIZE]; 
+  unsigned char digest[APR_MD5_DIGESTSIZE];
 };
 
 
@@ -151,7 +151,7 @@ compute_window(const char *data, apr_size_t source_len, apr_size_t target_len,
     svn_txdelta__vdelta(&build_baton, data, source_len, target_len, pool);
   else
     svn_txdelta__xdelta(&build_baton, data, source_len, target_len, pool);
-  
+
   /* Create and return the delta window. */
   window = svn_txdelta__make_window(&build_baton, pool);
   window->sview_offset = source_offset;
@@ -349,7 +349,7 @@ txdelta_next_window(svn_txdelta_window_t **window,
 
   *window = compute_window(b->buf, source_len, target_len,
                            b->pos - source_len, pool);
-  
+
   /* That's it. */
   return SVN_NO_ERROR;
 }
@@ -709,7 +709,7 @@ svn_txdelta_apply(svn_stream_t *source,
 
 /* Convenience routines */
 
-svn_error_t * 
+svn_error_t *
 svn_txdelta_send_string(const svn_string_t *string,
                         svn_txdelta_window_handler_t handler,
                         void *handler_baton,
@@ -731,10 +731,10 @@ svn_txdelta_send_string(const svn_string_t *string,
 
   /* Push the one window at the handler. */
   SVN_ERR((*handler)(&window, handler_baton));
-  
+
   /* Push a NULL at the handler, because we're done. */
   SVN_ERR((*handler)(NULL, handler_baton));
-  
+
   return SVN_NO_ERROR;
 }
 

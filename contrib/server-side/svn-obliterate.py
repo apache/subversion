@@ -18,7 +18,7 @@ from svn import repos, fs, core
 def die(msg):
     sys.stderr.write(msg + '\n')
     sys.exit(1)
-                     
+
 
 def get_rep_keys(skel):
     # PROP-KEY and NODE-KEY (and maybe EDIT-KEY) follow the header,
@@ -90,7 +90,7 @@ def fix_affected_dirlists(node, reps_db, strings_db, affected_nodes, dirlists):
     if not data_key:
         return
     data_rep = reps_db[data_key]
-    
+
     # See if this is a fulltext rep.  If so, the STRING-KEY is a
     # pretty easy find.  Well wipe that STRING-KEY, and clear the
     # checksum from the REPRESENTATION.
@@ -117,7 +117,7 @@ def fix_affected_dirlists(node, reps_db, strings_db, affected_nodes, dirlists):
                             str(len(string_key)) + ' ' + string_key + ')'
         ### end txn!
     return kill_count
-    
+
 
 def parse_node_skel(skel):
     # PREV-ID immediately follows the COMMITTED-PATH, unless there is
@@ -169,7 +169,7 @@ def main():
     print "This script will, at the moment, destroy your repository."
     print "You don't really want that, right?"
     sys.exit(0)
-    
+
     # Parse the commandline arguments.
     argc = len(sys.argv)
     if argc < 4:
@@ -257,6 +257,6 @@ def main():
     reps_db.close()
     nodes_db.close()
 
-        
+
 if __name__ == '__main__':
     main()

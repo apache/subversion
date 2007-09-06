@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     {
       svn_boolean_t has_changes;
 
-      svn_err = do_diff3(ostream, argv[2], argv[1], argv[3], 
+      svn_err = do_diff3(ostream, argv[2], argv[1], argv[3],
                          &has_changes, pool);
       if (svn_err == NULL)
         {

@@ -52,7 +52,7 @@ class SvnLook
   end
 
   private
-  
+
   # Dispatch all commands to appropriate subroutines
   def dispatch(cmd, *args)
     if respond_to?("cmd_#{cmd}", true)
@@ -82,12 +82,12 @@ class SvnLook
   # Not implemented yet
   def cmd_cat
   end
-  
+
   # Find out what has changed in the specified revision or transaction
   def cmd_changed
     print_tree(ChangedEditor, nil, true)
   end
-  
+
   # Output the date that the current revision was committed.
   def cmd_date
     if @txn
@@ -112,17 +112,17 @@ class SvnLook
   def cmd_diff
     print_tree(DiffEditor, nil, true)
   end
-  
+
   # Output what directories changed in the specified revision / transaction
   def cmd_dirs_changed
     print_tree(DirsChangedEditor)
   end
-  
+
   # Output the tree, with node ids
   def cmd_ids
     print_tree(Editor, 0, true)
   end
-  
+
   # Output the author, date, and the log associated with the specified
   # revision / transaction
   def cmd_info
@@ -154,7 +154,7 @@ class SvnLook
   end
 
   # Return a property of the specified revision or transaction.
-  # Name: the ID of the property you want to retrieve. 
+  # Name: the ID of the property you want to retrieve.
   #       E.g. Svn::Core::PROP_REVISION_LOG
   def property(name)
     if @txn
@@ -196,22 +196,22 @@ class SvnLook
       editor = editor_class.new
     end
 
-    # Do a directory delta between the two roots with 
+    # Do a directory delta between the two roots with
     # the specified editor
     base_root.dir_delta('', '', root, '', editor)
   end
 
-  # Output the current tree for a specified revision 
+  # Output the current tree for a specified revision
   class Editor < Svn::Delta::BaseEditor
 
     # Initialize the Editor object
     def initialize(root=nil, base_root=nil)
       @root = root
       # base_root ignored
-      
+
       @indent = ""
     end
-    
+
     # Recurse through the root (and increase the indent level)
     def open_root(base_revision)
       puts "/#{id('/')}"
@@ -236,7 +236,7 @@ class SvnLook
     def add_file(path, *args)
       puts "#{@indent}#{basename(path)}#{id(path)}"
     end
-    
+
     alias open_file add_file
 
     # Private methods
@@ -253,7 +253,7 @@ class SvnLook
     end
   end
 
-  
+
   # Output directories that have been changed.
   # In this class, methods such as open_root and add_file
   # are inherited from Svn::Delta::ChangedDirsEditor.
@@ -276,7 +276,7 @@ class SvnLook
       end
     end
   end
-    
+
   # Output files that have been changed between two roots
   class ChangedEditor < Svn::Delta::BaseEditor
 
@@ -294,7 +294,7 @@ class SvnLook
 
     # Output deleted files
     def delete_entry(path, revision, parent_baton)
-      # Output deleted paths with a D in front of them        
+      # Output deleted paths with a D in front of them
       print "D   #{path}"
 
       # If we're deleting a directory,
@@ -344,7 +344,7 @@ class SvnLook
       ['_', ' ', nil]
     end
 
-    
+
     def open_file(path, parent_baton, base_revision)
       # Changes have been made -- return '_' to indicate as such
       ['_', ' ', path]
@@ -360,7 +360,7 @@ class SvnLook
       # The file has been changed -- we'll print that out later.
       file_baton[1] = 'U'
     end
-    
+
     def close_file(file_baton, text_checksum)
       text_mod, prop_mod, path = file_baton
       # Test the path. It will be nil if we added this file.
@@ -373,7 +373,7 @@ class SvnLook
       end
     end
   end
-        
+
   # Output diffs of files that have been changed
   class DiffEditor < Svn::Delta::BaseEditor
 
@@ -417,13 +417,13 @@ class SvnLook
 
     private
 
-    # Print out a diff between two paths 
+    # Print out a diff between two paths
     def do_diff(base_path, path)
       if base_path.nil?
         # If there's no base path, then the file
         # must have been added
         puts("Added: #{path}")
-        name = path      
+        name = path
       elsif path.nil?
         # If there's no new path, then the file
         # must have been deleted
@@ -434,11 +434,11 @@ class SvnLook
         puts "Modified: #{path}"
         name = path
       end
-      
+
       # Set up labels for the two files
       base_label = "#{name} (original)"
       label = "#{name} (new)"
-      
+
       # Output a unified diff between the two files
       puts "=" * 78
       differ = Svn::Fs::FileDiff.new(@base_root, base_path, @root, path)
@@ -490,7 +490,7 @@ cmd = ARGV.shift
 rev = nil
 txn = nil
 
-case cmd  
+case cmd
 when "rev"
   rev = Integer(ARGV.shift)
   cmd = ARGV.shift
@@ -505,5 +505,5 @@ cmd ||= "default"
 # Replace dashes in the command with underscores
 cmd = cmd.gsub(/-/, '_')
 
-# Start SvnLook with the specified command 
+# Start SvnLook with the specified command
 SvnLook.new(path, rev, txn).run(cmd)

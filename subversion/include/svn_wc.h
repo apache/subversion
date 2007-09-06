@@ -138,11 +138,7 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * to the set containing @a associated.  @a associated can be @c NULL, in
  * which case @a adm_access is the start of a new set.
  *
- * ### TODO(sd): We should change the name of the @a depth parameter here,
- * ### so as not to confuse it with all the @c svn_depth_t depths
- * ### elsewhere in the code.  Maybe @a levels_to_lock or something.
- *
- * @a depth specifies how much to lock.  Zero means just the specified
+ * @a levels_to_lock specifies how far to lock.  Zero means just the specified
  * directory.  Any negative value means to lock the entire working copy
  * directory hierarchy under @a path.  A positive value indicates the number of
  * levels of directories to lock -- 1 means just immediate subdirectories, 2
@@ -174,7 +170,7 @@ svn_error_t *svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                               svn_wc_adm_access_t *associated,
                               const char *path,
                               svn_boolean_t write_lock,
-                              int depth,
+                              int levels_to_lock,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_pool_t *pool);
@@ -188,12 +184,13 @@ svn_error_t *svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
                               svn_wc_adm_access_t *associated,
                               const char *path,
                               svn_boolean_t write_lock,
-                              int depth,
+                              int levels_to_lock,
                               apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_adm_open2(), but with @a tree_lock instead of
- * @a depth.  @a depth is set to -1 if @a tree_lock is @c TRUE, else 0.
+ * @a levels_to_lock.  @a levels_to_lock is set to -1 if @a tree_lock
+ * is @c TRUE, else 0.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
@@ -221,7 +218,7 @@ svn_error_t *svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
                                     svn_wc_adm_access_t *associated,
                                     const char *path,
                                     svn_boolean_t write_lock,
-                                    int depth,
+                                    int levels_to_lock,
                                     svn_cancel_func_t cancel_func,
                                     void *cancel_baton,
                                     apr_pool_t *pool);
@@ -236,12 +233,13 @@ svn_error_t *svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
                                     svn_wc_adm_access_t *associated,
                                     const char *path,
                                     svn_boolean_t write_lock,
-                                    int depth,
+                                    int levels_to_lock,
                                     apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_adm_probe_open2(), but with @a tree_lock instead of
- * @a depth.  @a depth is set to -1 if @a tree_lock is @c TRUE, else 0.
+ * @a levels_to_lock.  @a levels_to_lock is set to -1 if @a tree_lock
+ * is @c TRUE, else 0.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
@@ -259,9 +257,10 @@ svn_error_t *svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
  * same as @a *anchor_access.  All the access batons will be in the
  * @a *anchor_access set.
  *
- * @a depth determines the depth used when opening @a path if @a path is a
- * versioned directory, @a depth is ignored otherwise.  If @a write_lock is
- * @c TRUE the access batons will hold write locks.
+ * @a levels_to_lock determines the levels_to_lock used when opening
+ * @a path if @a path is a versioned directory, @a levels_to_lock is
+ * ignored otherwise.  If @a write_lock is  @c TRUE the access batons
+ * will hold write locks.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
@@ -277,7 +276,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                        const char **target,
                        const char *path,
                        svn_boolean_t write_lock,
-                       int depth,
+                       int levels_to_lock,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *pool);
@@ -314,7 +313,7 @@ svn_error_t *svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
  * First, try to obtain @a *adm_access via svn_wc_adm_probe_retrieve(),
  * but if this fails because @a associated can't give a baton for
  * @a path or @a path's parent, then try svn_wc_adm_probe_open3(),
- * this time passing @a write_lock and @a depth.  If there is
+ * this time passing @a write_lock and @a levels_to_lock.  If there is
  * still no access because @a path is not a versioned directory, then
  * just set @a *adm_access to NULL and return success.  But if it is
  * because @a path is locked, then return the error @c SVN_ERR_WC_LOCKED,
@@ -336,7 +335,7 @@ svn_error_t *svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
                                    svn_wc_adm_access_t *associated,
                                    const char *path,
                                    svn_boolean_t write_lock,
-                                   int depth,
+                                   int levels_to_lock,
                                    svn_cancel_func_t cancel_func,
                                    void *cancel_baton,
                                    apr_pool_t *pool);
@@ -351,12 +350,13 @@ svn_error_t *svn_wc_adm_probe_try2(svn_wc_adm_access_t **adm_access,
                                    svn_wc_adm_access_t *associated,
                                    const char *path,
                                    svn_boolean_t write_lock,
-                                   int depth,
+                                   int levels_to_lock,
                                    apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_adm_probe_try2(), but with @a tree_lock instead of
- * @a depth.  @a depth is set to -1 if @a tree_lock is @c TRUE, else 0.
+ * @a levels_to_lock.  @a levels_to_lock is set to -1 if @a tree_lock
+ * is @c TRUE, else 0.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
@@ -910,6 +910,25 @@ typedef void (*svn_wc_notify_func_t)(void *baton,
                                      svn_revnum_t revision);
 
 /** @} */
+
+
+/**
+ * A simple callback type to wrap svn_ra_get_file();  see that
+ * docstring for more information.
+ *
+ * This technique allows libsvn_client to 'wrap' svn_ra_get_file() and
+ * pass it down into libsvn_wc functions, thus allowing the WC layer
+ * to legally call the RA function via (blind) callback.
+ *
+ * @since New in 1.5
+ */
+typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
+                                          const char *path,
+                                          svn_revnum_t revision,
+                                          svn_stream_t *stream,
+                                          svn_revnum_t *fetched_rev,
+                                          apr_hash_t **props,
+                                          apr_pool_t *pool);
 
 
 /**
@@ -3018,6 +3037,10 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * more drastic measures (such as marking a file conflicted, or
  * bailing out of the update).
  *
+ * If @a fetch_func is non-NULL, then use it (with @a fetch_baton) as
+ * a fallback for retrieving repository files whenever 'copyfrom' args
+ * are sent into editor->add_file().
+ *
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
@@ -3071,6 +3094,8 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                        svn_wc_conflict_resolver_func_t
                                                             conflict_func,
                                        void *conflict_baton,
+                                       svn_wc_get_file_t fetch_func,
+                                       void *fetch_baton,
                                        const char *diff3_cmd,
                                        apr_array_header_t *preserved_exts,
                                        const svn_delta_editor_t **editor,
@@ -3082,9 +3107,10 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
 /**
  * Similar to svn_wc_get_update_editor3() but with the @a
  * allow_unver_obstructions parameter always set to false, @a
- * conflict_func and baton set to NULL, @a preserved_exts set to NULL,
- * and @a depth set according to @a recurse: if @a recurse is true,
- * pass @c svn_depth_infinity, if false, pass @c svn_depth_files.
+ * conflict_func and baton set to NULL, @a fetch_func and baton set to
+ * NULL, @a preserved_exts set to NULL, and @a depth set according to
+ * @a recurse: if @a recurse is true, pass @c svn_depth_infinity, if
+ * false, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -4183,6 +4209,9 @@ svn_error_t *svn_wc_transmit_text_deltas(const char *path,
  * If a temporary file remains after this function is finished, the
  * path to that file is returned in @a *tempfile (so the caller can
  * clean this up if it wishes to do so).
+ *
+ * @note Starting version 1.5, no tempfile will ever be returned
+ *       anymore.  If @a *tempfile is passed, its value is set to @c NULL.
  */
 svn_error_t *svn_wc_transmit_prop_deltas(const char *path,
                                          svn_wc_adm_access_t *adm_access,

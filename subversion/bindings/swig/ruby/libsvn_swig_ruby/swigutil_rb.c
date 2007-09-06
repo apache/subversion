@@ -136,6 +136,7 @@ DECLARE_ID(link_path);
 DECLARE_ID(finish_report);
 DECLARE_ID(abort_report);
 DECLARE_ID(to_s);
+DECLARE_ID(upcase);
 
 
 typedef void *(*r2c_func)(VALUE value, void *ctx, apr_pool_t *pool);
@@ -303,6 +304,20 @@ rb_svn_ra_reporter3(void)
 }
 
 
+/* constant resolver */
+static VALUE
+resolve_constant(VALUE parent, const char *prefix, VALUE name)
+{
+    VALUE const_name;
+
+    const_name = rb_str_new2(prefix);
+    rb_str_concat(const_name,
+                  rb_funcall(rb_funcall(name, id_to_s, 0),
+                             id_upcase, 0));
+    return rb_const_get(parent, rb_intern(StringValuePtr(const_name)));
+}
+
+
 /* initialize */
 static VALUE
 svn_swig_rb_converter_to_locale_encoding(VALUE self, VALUE str)
@@ -428,6 +443,7 @@ svn_swig_rb_initialize_ids(void)
   DEFINE_ID(finish_report);
   DEFINE_ID(abort_report);
   DEFINE_ID(to_s);
+  DEFINE_ID(upcase);
 }
 
 void
@@ -851,6 +867,25 @@ svn_swig_rb_to_depth(VALUE value)
              "'%s' must be DEPTH_STRING (e.g. \"infinity\" or :infinity) "
              "or Svn::Core::DEPTH_*",
              r2c_inspect(value));
+  }
+}
+
+svn_merge_range_inheritance_t
+svn_swig_rb_to_merge_range_inheritance(VALUE value)
+{
+  if (NIL_P(value)) {
+    return svn_rangelist_ignore_inheritance;
+  } else if (RTEST(rb_obj_is_kind_of(value, rb_cString)) ||
+             RTEST(rb_obj_is_kind_of(value, rb_cSymbol))) {
+    return NUM2INT(resolve_constant(rb_svn_core(), "RANGELIST_", value));
+  } else if (RTEST(rb_obj_is_kind_of(value, rb_cInteger))) {
+    return NUM2INT(value);
+  } else {
+    rb_raise(rb_eArgError,
+       "'%s' must be RANGELIST_STRING (e.g. \"ignore_inheritance\" or"
+       " :ignore_inheritance) "
+       "or Svn::Core::RANGELIST_*",
+       r2c_inspect(value));
   }
 }
 
@@ -2151,19 +2186,20 @@ svn_swig_rb_notify_func2(void *baton,
 
 svn_error_t *
 svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
-                           const svn_wc_conflict_description_t *description,
-                           void *baton,
-                           apr_pool_t *pool)
+                                   const svn_wc_conflict_description_t *description,
+                                   void *baton,
+                                   apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool, rb_result;
-  
+
   *result = svn_wc_conflict_result_conflicted;
 
   svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
 
   if (!NIL_P(proc)) {
     callback_baton_t cbb;
+    void *converted_result;
 
     cbb.receiver = proc;
     cbb.message = id_call;
@@ -2171,9 +2207,10 @@ svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
              c2r_swig_type((void *)description,
                            (void *)"const svn_wc_conflict_description_t *"));
     rb_result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
-    r2c_swig_type2(rb_result, "svn_wc_conflict_result_t *", &result);
+    converted_result = result;
+    r2c_swig_type2(rb_result, "svn_wc_conflict_result_t *", &converted_result);
   }
-  
+
   return err;
 }
 

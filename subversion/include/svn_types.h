@@ -39,7 +39,7 @@ extern "C" {
 
 /** Subversion error object.
  *
- * Defined here, rather than in svn_error.h, to avoid a recursive @#include 
+ * Defined here, rather than in svn_error.h, to avoid a recursive @#include
  * situation.
  */
 typedef struct svn_error_t
@@ -150,7 +150,7 @@ typedef long int svn_revnum_t;
  * own unique value, for now, just make it the same as
  * @c SVN_INVALID_REVNUM.
  */
-#define SVN_IGNORED_REVNUM ((svn_revnum_t) -1) 
+#define SVN_IGNORED_REVNUM ((svn_revnum_t) -1)
 
 /** Convert null-terminated C string @a str to a revision number. */
 #define SVN_STR_TO_REV(str) ((svn_revnum_t) atol(str))
@@ -253,7 +253,7 @@ svn_accept_t
 svn_accept_from_word(const char *word);
 
 /** The concept of depth for directories.
- * 
+ *
  * @note This is similar to, but not exactly the same as, the WebDAV
  * and LDAP concepts of depth.
  *
@@ -283,7 +283,7 @@ typedef enum
      any files or subdirectories not already present; those
      subdirectories' this_dir entries will have depth-empty. */
   svn_depth_immediates =  2,
-  
+
   /* D + all descendants (full recursion from D).  Updates will pull
      in any files or subdirectories not already present; those
      subdirectories' this_dir entries will have depth-infinity.
@@ -304,7 +304,8 @@ svn_depth_to_word(svn_depth_t depth);
 
 
 /** Return the appropriate depth for @a depth_str.  @a word is as
- * returned from svn_depth_to_word().
+ * returned from svn_depth_to_word().  If @a depth_str does not
+ * represent a recognized depth, return @c svn_depth_unknown.
  *
  * @since New in 1.5.
  */
@@ -418,11 +419,11 @@ svn_dirent_t *svn_dirent_dup(const svn_dirent_t *dirent,
 /** Keyword substitution.
  *
  * All the keywords Subversion recognizes.
- * 
+ *
  * Note that there is a better, more general proposal out there, which
  * would take care of both internationalization issues and custom
  * keywords (e.g., $NetBSD$).  See
- * 
+ *
  *<pre>    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8921
  *    =====
  *    From: "Jonathan M. Manning" <jmanning@alisa-jon.net>
@@ -562,8 +563,8 @@ svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
                          apr_pool_t *pool);
 
-/** 
- * A structure to represent all the information about a particular log entry. 
+/**
+ * A structure to represent all the information about a particular log entry.
  *
  * @note To allow for extending the @c svn_log_entry_t structure in future
  * releases, always use svn_log_entry_create() to allocate the structure.
@@ -594,20 +595,23 @@ typedef struct svn_log_entry_t
   /** The log message of the commit. */
   const char *message;
 
-  /** The number of children of this log entry.
+  /**
+   * Whether or not this message has children.
+   *
    * When a log operation requests additional merge information, extra log
    * entries may be returned as a result of this entry.  The new entries, are
-   * considered children of the original entry, with CHILD_COUNT cardinality
-   * The child entries are returned through the receiver interface right after
-   * the parent.
+   * considered children of the original entry, and will follow it.  When
+   * the HAS_CHILDREN flag is set, the receiver should increment its stack
+   * depth, and wait until an entry is provided with SVN_INVALID_REVNUM which
+   * indicates the end of the children.
    *
    * For log operations which do not request additional merge information, the
-   * CHILD_COUNT is always zero.
+   * HAS_CHILDREN flag is always FALSE.
    *
    * For more information see:
    * http://subversion.tigris.org/merge-tracking/design.html#commutative-reporting
    */
-  apr_uint64_t nbr_children;
+  svn_boolean_t has_children;
 } svn_log_entry_t;
 
 /**
@@ -626,9 +630,10 @@ svn_log_entry_create(apr_pool_t *pool);
  * @c svn_ra_plugin_t.get_log() and svn_repos_get_logs().
  *
  * This function is invoked once on each log message, in the order
- * determined by the caller (see above-mentioned functions).
+ * determined by the caller (see above-mentioned functions).  When all
+ * messages are finished, it is invoked with a revision of SVN_INVALID_REVNUM.
  *
- * @a baton is what you think it is, and @a log_entry contains relevent 
+ * @a baton is what you think it is, and @a log_entry contains relevent
  * information for the log message.  Any of @a log_entry->author,
  * @a log_entry->date, or @a log_entry->message may be @c NULL.
  *
@@ -639,6 +644,11 @@ svn_log_entry_create(apr_pool_t *pool);
  * If @a log_entry->changed_paths is non-@c NULL, then it contains as keys
  * every path committed in @a log_entry->revision; the values are
  * (@c svn_log_changed_path_t *) structures.
+ *
+ * If @a log_entry->has_children is @c TRUE, the message will be followed
+ * immediately by any number of merged revisions (child messages), which are
+ * terminated by an invocation with SVN_INVALID_REVNUM.  This usage may
+ * be recursive.
  *
  * Use @a pool for temporary allocation.  If the caller is iterating
  * over log messages, invoking this receiver on each, we recommend the
@@ -766,7 +776,7 @@ void svn_compat_wrap_log_receiver(svn_log_message_receiver2_t *receiver2,
  *
  * If @a mime_type does not contain a "/", or ends with non-alphanumeric
  * data, return @c SVN_ERR_BAD_MIME_TYPE, else return success.
- * 
+ *
  * Use @a pool only to find error allocation.
  *
  * Goal: to match both "foo/bar" and "foo/bar; charset=blah", without
@@ -780,16 +790,16 @@ svn_error_t *svn_mime_type_validate(const char *mime_type,
 
 /** Return false iff @a mime_type is a textual type.
  *
- * All mime types that start with "text/" are textual, plus some special 
+ * All mime types that start with "text/" are textual, plus some special
  * cases (for example, "image/x-xbitmap").
  */
 svn_boolean_t svn_mime_type_is_binary(const char *mime_type);
 
 
 
-/** A user defined callback that subversion will call with a user defined 
- * baton to see if the current operation should be continued.  If the operation 
- * should continue, the function should return @c SVN_NO_ERROR, if not, it 
+/** A user defined callback that subversion will call with a user defined
+ * baton to see if the current operation should be continued.  If the operation
+ * should continue, the function should return @c SVN_NO_ERROR, if not, it
  * should return @c SVN_ERR_CANCELLED.
  */
 typedef svn_error_t *(*svn_cancel_func_t)(void *cancel_baton);
@@ -855,10 +865,10 @@ svn_lock_dup(const svn_lock_t *lock, apr_pool_t *pool);
 const char *
 svn_uuid_generate(apr_pool_t *pool);
 
-/** 
+/**
  * Merge info representing a merge of a range of revisions.
  * @since New in 1.5
- */ 
+ */
 typedef struct svn_merge_range_t
 {
   svn_revnum_t start;

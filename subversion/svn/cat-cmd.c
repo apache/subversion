@@ -64,7 +64,7 @@ svn_cl__cat(apr_getopt_t *os,
       /* Get peg revisions. */
       SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                  subpool));
-      
+
       SVN_ERR(svn_cl__try( svn_client_cat2(out, truepath, &peg_revision,
                                            &(opt_state->start_revision),
                                            ctx, subpool),

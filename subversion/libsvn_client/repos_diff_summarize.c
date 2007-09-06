@@ -198,7 +198,7 @@ close_directory(void *dir_baton,
 {
   struct item_baton *ib = dir_baton;
   struct edit_baton *eb = ib->edit_baton;
-  
+
   if (ib->summarize)
     SVN_ERR(eb->summarize_func(ib->summarize, eb->summarize_func_baton,
                                pool));

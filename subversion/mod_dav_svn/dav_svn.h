@@ -359,7 +359,7 @@ dav_svn__create_working_resource(dav_resource *base,
                                  const char *activity_id,
                                  const char *txn_name,
                                  int tweak_in_place);
-/* 
+/*
    Convert a working RESOURCE back into a regular one, in-place.
 
    In particular: change the resource type to regular, removing the
@@ -369,7 +369,7 @@ dav_svn__create_working_resource(dav_resource *base,
 dav_error *
 dav_svn__working_to_regular_resource(dav_resource *resource);
 
-/* 
+/*
    Given a version-resource URI, construct a new version-resource in
    POOL and return it in  *VERSION_RES.
 */
@@ -546,7 +546,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
 /*** authz.c ***/
 
 /* A baton needed by dav_svn__authz_read_func(). */
-typedef struct 
+typedef struct
 {
   /* The original request, needed to generate a subrequest. */
   request_rec *r;
@@ -659,7 +659,7 @@ dav_svn__build_uri(const dav_svn_repos *repos,
 /* Simple parsing of a URI. This is used for URIs which appear within a
    request body. It enables us to verify and break out the necessary pieces
    to figure out what is being referred to.
-  
+
    ### this is horribly duplicative with the parsing functions in repos.c
    ### for now, this implements only a minor subset of the full range of
    ### URIs which we may need to parse. it also ignores any scheme, host,

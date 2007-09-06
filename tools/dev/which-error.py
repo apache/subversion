@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# 
+#
 # which-error.py: Print semantic Subversion error code names mapped from
 #                 their numeric error code values
 #
@@ -76,7 +76,7 @@ def print_error(code):
     print '%08d  %s' % (code, __svn_error_codes[code])
   except KeyError:
     print '%08d  *** UNKNOWN ERROR CODE ***' % (code)
-  
+
 if __name__ == "__main__":
   global __svn_error_codes
   __svn_error_codes = get_errors()

@@ -101,7 +101,7 @@ svn_sort_compare_revisions(const void *a, const void *b)
 }
 
 
-int 
+int
 svn_sort_compare_paths(const void *a, const void *b)
 {
   const char *item1 = *((const char * const *) a);
@@ -116,14 +116,14 @@ svn_sort_compare_ranges(const void *a, const void *b)
 {
   const svn_merge_range_t *item1 = *((const svn_merge_range_t * const *) a);
   const svn_merge_range_t *item2 = *((const svn_merge_range_t * const *) b);
-  
+
   if (item1->start == item2->start
       && item1->end == item2->end)
     return 0;
 
   if (item1->start == item2->start)
     return item1->end < item2->end ? -1 : 1;
-  
+
   return item1->start < item2->start ? -1 : 1;
 }
 
@@ -146,7 +146,7 @@ svn_sort__hash(apr_hash_t *ht,
 
       apr_hash_this(hi, &item->key, &item->klen, &item->value);
     }
-  
+
   /* now quicksort the array.  */
   qsort(ary->elts, ary->nelts, ary->elt_size,
         (int (*)(const void *, const void *))comparison_func);
