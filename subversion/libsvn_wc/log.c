@@ -1816,7 +1816,8 @@ run_log(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access, pool));
     }
   if (loggy->wcprops_modified)
-    SVN_ERR(svn_wc__wcprops_write(loggy->adm_access, pool));
+    SVN_ERR(svn_wc__props_flush(svn_wc_adm_access_path(adm_access),
+                                svn_wc__props_wcprop, loggy->adm_access, pool));
 
   /* Check for a 'killme' file in the administrative area. */
   SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only, pool));
