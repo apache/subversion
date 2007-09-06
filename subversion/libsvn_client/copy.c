@@ -1571,6 +1571,10 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
+#define NEED_REPOS_REVNUM(revision) \
+        ((revision.kind != svn_opt_revision_unspecified) \
+          && (revision.kind != svn_opt_revision_working))
+
 /* Perform all allocations in POOL. */
 static svn_error_t *
 setup_copy(svn_commit_info_t **commit_info_p,
@@ -1727,7 +1731,8 @@ setup_copy(svn_commit_info_t **commit_info_p,
              repo->* move, because we're going to need to get the rev from the
              repo. */
 
-          svn_boolean_t need_repo_rev = FALSE;
+          svn_boolean_t need_repos_op_rev = FALSE;
+          svn_boolean_t need_repos_peg_rev = FALSE;
 
           /* Check to see if any revision is something other than
              svn_opt_revision_unspecified or svn_opt_revision_working. */
@@ -1736,15 +1741,20 @@ setup_copy(svn_commit_info_t **commit_info_p,
               svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                 svn_client__copy_pair_t *);
 
-              if ((pair->src_op_revision.kind != svn_opt_revision_unspecified)
-                   && (pair->src_op_revision.kind != svn_opt_revision_working))
+              if (NEED_REPOS_REVNUM(pair->src_op_revision))
                 {
-                  need_repo_rev = TRUE;
+                  need_repos_op_rev = TRUE;
+                  break;
+                }
+
+              if (NEED_REPOS_REVNUM(pair->src_peg_revision))
+                {
+                  need_repos_peg_rev = TRUE;
                   break;
                 }
             }
 
-          if (need_repo_rev)
+          if (need_repos_op_rev || need_repos_peg_rev)
             {
               apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -1776,8 +1786,13 @@ setup_copy(svn_commit_info_t **commit_info_p,
                        svn_path_local_style(pair->src, pool));
 
                   pair->src = apr_pstrdup(pool, entry->url);
-                  pair->src_peg_revision.kind = svn_opt_revision_number;
-                  pair->src_peg_revision.value.number = entry->revision;
+
+                  if (!need_repos_peg_rev)
+                    {
+                      /* Default the peg revision to that of the WC entry. */
+                      pair->src_peg_revision.kind = svn_opt_revision_number;
+                      pair->src_peg_revision.value.number = entry->revision;
+                    }
                 }
 
               svn_pool_destroy(iterpool);
