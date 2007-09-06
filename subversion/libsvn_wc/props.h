@@ -101,12 +101,6 @@ svn_error_t *svn_wc__wcprop_set(const char *name,
                                 svn_boolean_t force_write,
                                 apr_pool_t *pool);
 
-/* Write the wcprops cached in ADM_ACCESS, if any, to disk using POOL for
-   temporary allocations. */
-svn_error_t *
-svn_wc__wcprops_write(svn_wc_adm_access_t *adm_access, apr_pool_t *pool);
-
-
 /* Returns TRUE if PROPS contains the svn:special property */
 svn_boolean_t svn_wc__has_special_property(apr_hash_t *props);
 
@@ -162,6 +156,14 @@ svn_wc__props_delete(const char *path,
                      svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool);
 
+
+/* Flushes props for PATH of PROPS_KIND cached in ADM_ACCESS to disk
+   using POOL for temporary allocations. */
+svn_error_t *
+svn_wc__props_flush(const char *path,
+                    svn_wc__props_kind_t props_kind,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_pool_t *pool);
 
 /* Install PATHs working props as base props, clearing the
    has_prop_mods cache value in the entries file.
