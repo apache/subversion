@@ -163,10 +163,10 @@ class Skip(TestCase):
     """Create an Skip instance based on TEST_CASE.  COND_FUNC is a
     callable that is evaluated at test run time and should return a
     boolean value.  If COND_FUNC returns true, then TEST_CASE is
-    skipped; otherwise, TEST_CASE is run normally.  
-    The evaluation of COND_FUNC is deferred so that it can base its 
-    decision on useful bits of information that are not available at 
-    __init__ time (like the fact that we're running over a 
+    skipped; otherwise, TEST_CASE is run normally.
+    The evaluation of COND_FUNC is deferred so that it can base its
+    decision on useful bits of information that are not available at
+    __init__ time (like the fact that we're running over a
     particular RA layer)."""
 
     TestCase.__init__(self)

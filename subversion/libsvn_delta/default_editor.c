@@ -1,6 +1,6 @@
-/* 
+/*
  * default_editor.c -- provide a basic svn_delta_editor_t
- * 
+ *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
@@ -25,7 +25,7 @@
 
 
 static svn_error_t *
-set_target_revision(void *edit_baton, 
+set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
                     apr_pool_t *pool)
 {
@@ -131,7 +131,7 @@ close_file(void *file_baton,
 
 static const svn_delta_editor_t default_editor =
 {
-  set_target_revision,  
+  set_target_revision,
   open_root,
   delete_entry,
   add_item,

@@ -22,13 +22,13 @@ package org.tigris.subversion.javahl;
  * The concept of depth for directories.
  *
  * Note:
- * This is similar to, but not exactly the same as, the WebDAV and LDAP 
+ * This is similar to, but not exactly the same as, the WebDAV and LDAP
  * concepts of depth.
  *
  */
 public final class Depth
 {
-    /** Depth undetermined or ignored. 
+    /** Depth undetermined or ignored.
      * ### TODO(sd): If this gets removed in svn_types.h, remove it here. */
     public static final int unknown = -2;
 

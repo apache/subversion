@@ -29,7 +29,7 @@ import getopt
 
 ####
 # IMPORTANT NOTE TO TEST AUTHORS
-# 
+#
 # Any quoted strings inside the arguments of the parameter "cmd" must
 # be enclosed in double-, not single-quotes, so that the command parser
 # knows to keep them together. For example, do not write this:
@@ -812,7 +812,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         """ Run various scenarios w/ svnmerge.py init and verify
         the default values that are set as the integrated
         revisions."""
-        
+
         # Run init with branch as merge source and trunk as merge target
         os.chdir("..")
         os.chdir("trunk")
@@ -828,15 +828,15 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Verify range ends at rev of trunk which was copied to create branch
         self.launch("svn proplist -v", match=r":1-6")
         self.revert()
-        
+
         # Same thing, but with no explicit parameter (should work implicitly)
         self.svnmerge("init")
         # Verify range ends at rev of trunk which was copied to create branch
         self.launch("svn proplist -v", match=r":1-6")
         self.revert()
-        
-        # Run init with TRUNK as merge src, & any other branch which is not 
-        # a copy of trunk (or the source from which trunk was copied) 
+
+        # Run init with TRUNK as merge src, & any other branch which is not
+        # a copy of trunk (or the source from which trunk was copied)
         # as the merge target.
         os.chdir("../trunk")
         os.chdir("..")
@@ -848,7 +848,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # the time of initialization:
         self.launch("svn proplist -v", match=r":1-14")
         self.revert()
-        
+
         # Run init w/ explicit parms; verify them
         self.svnmerge("init -r 1-999 ../trunk")
         self.launch("svn proplist -v", match=r":1-999")
@@ -907,7 +907,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 16")
 
         # test-branch was copied from trunk's r6.  So non-phantom revs
-        # since that point should still be available to merge from 
+        # since that point should still be available to merge from
         # trunk to test-branch:
         self.svnmerge("avail -vv --bidirectional", match=r"\n9-10,16$")
         self.svnmerge("merge -vv --bidirectional", match=r"svn merge --force -r 15:16")

@@ -15,6 +15,7 @@ at_exit {FileUtils.rm_rf(ext_dir)}
 
 $LOAD_PATH.unshift(test_dir)
 require 'util'
+require 'test-unit-ext'
 
 SvnTestUtil.setup_test_environment(top_dir, base_dir, ext_svn_ext_dir)
 

@@ -233,8 +233,14 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
                     {
                       SVN_ERR(svn_cmdline_printf(subpool,
                                                  eerr->message ? eerr->message :
-                                                 _("No editor found.")));
-                      SVN_ERR(svn_cmdline_printf(subpool, "\n"));
+                                                 _("No editor found.\n")));
+                      svn_error_clear(eerr);
+                    }
+                  else if (eerr && (eerr->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
+                    {
+                      SVN_ERR(svn_cmdline_printf(subpool,
+                                                 eerr->message ? eerr->message :
+                                                 _("Error running editor.\n")));
                       svn_error_clear(eerr);
                     }
                   else if (eerr)

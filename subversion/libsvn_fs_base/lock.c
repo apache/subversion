@@ -40,9 +40,9 @@ add_lock_and_token(svn_lock_t *lock,
                    const char *path,
                    trail_t *trail)
 {
-  SVN_ERR(svn_fs_bdb__lock_add(trail->fs, lock_token, lock, 
+  SVN_ERR(svn_fs_bdb__lock_add(trail->fs, lock_token, lock,
                                trail, trail->pool));
-  SVN_ERR(svn_fs_bdb__lock_token_add(trail->fs, path, lock_token, 
+  SVN_ERR(svn_fs_bdb__lock_token_add(trail->fs, path, lock_token,
                                      trail, trail->pool));
   return SVN_NO_ERROR;
 }
@@ -55,7 +55,7 @@ delete_lock_and_token(const char *lock_token,
                       const char *path,
                       trail_t *trail)
 {
-  SVN_ERR(svn_fs_bdb__lock_delete(trail->fs, lock_token, 
+  SVN_ERR(svn_fs_bdb__lock_delete(trail->fs, lock_token,
                                   trail, trail->pool));
   SVN_ERR(svn_fs_bdb__lock_token_delete(trail->fs, path,
                                         trail, trail->pool));
@@ -115,7 +115,7 @@ txn_body_lock(void *baton, trail_t *trail)
       /* SVN_INVALID_REVNUM means the path doesn't exist.  So
          apparently somebody is trying to lock something in their
          working copy, but somebody else has deleted the thing
-         from HEAD.  That counts as being 'out of date'. */     
+         from HEAD.  That counts as being 'out of date'. */
       if (! SVN_IS_VALID_REVNUM(created_rev))
         return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
                                  "Path '%s' doesn't exist in HEAD revision",
@@ -135,7 +135,7 @@ txn_body_lock(void *baton, trail_t *trail)
     {
       svn_lock_t *lock_from_token;
       svn_error_t *err = svn_fs_bdb__lock_get(&lock_from_token, trail->fs,
-                                              args->token, trail, 
+                                              args->token, trail,
                                               trail->pool);
       if (err && ((err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
                   || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
@@ -152,7 +152,7 @@ txn_body_lock(void *baton, trail_t *trail)
         }
     }
 
-  /* Is the path already locked?   
+  /* Is the path already locked?
 
      Note that this next function call will automatically ignore any
      errors about {the path not existing as a key, the path's token
@@ -161,7 +161,7 @@ txn_body_lock(void *baton, trail_t *trail)
      acceptable to ignore; it means that the path is now free and
      clear for locking, because the bdb funcs just cleared out both
      of the tables for us.   */
-  SVN_ERR(svn_fs_base__get_lock_helper(&existing_lock, args->path, 
+  SVN_ERR(svn_fs_base__get_lock_helper(&existing_lock, args->path,
                                        trail, trail->pool));
   if (existing_lock)
     {
@@ -177,15 +177,15 @@ txn_body_lock(void *baton, trail_t *trail)
              lock from lock->owner.  Destroy the existing lock. */
           SVN_ERR(delete_lock_and_token(existing_lock->token,
                                         existing_lock->path, trail));
-        }          
+        }
     }
 
-  /* Create a new lock, and add it to the tables. */    
+  /* Create a new lock, and add it to the tables. */
   lock = svn_lock_create(trail->pool);
   if (args->token)
     lock->token = apr_pstrdup(trail->pool, args->token);
   else
-    SVN_ERR(svn_fs_base__generate_lock_token(&(lock->token), trail->fs, 
+    SVN_ERR(svn_fs_base__generate_lock_token(&(lock->token), trail->fs,
                                              trail->pool));
   lock->path = apr_pstrdup(trail->pool, args->path);
   lock->owner = apr_pstrdup(trail->pool, trail->fs->access_ctx->username);
@@ -240,7 +240,7 @@ svn_fs_base__generate_lock_token(const char **token,
      want to use the fs UUID + some incremented number?  For now, we
      generate a URI that matches the DAV RFC.  We could change this to
      some other URI scheme someday, if we wish. */
-  *token = apr_pstrcat(pool, "opaquelocktoken:", 
+  *token = apr_pstrcat(pool, "opaquelocktoken:",
                        svn_uuid_generate(pool), NULL);
   return SVN_NO_ERROR;
 }
@@ -274,7 +274,7 @@ txn_body_unlock(void *baton, trail_t *trail)
       else if (strcmp(lock_token, args->token) != 0)
         return SVN_FS__ERR_NO_SUCH_LOCK(trail->fs, args->path);
 
-      SVN_ERR(svn_fs_bdb__lock_get(&lock, trail->fs, lock_token, 
+      SVN_ERR(svn_fs_bdb__lock_get(&lock, trail->fs, lock_token,
                                    trail, trail->pool));
 
       /* There better be a username attached to the fs. */
@@ -321,7 +321,7 @@ svn_fs_base__get_lock_helper(svn_lock_t **lock_p,
 {
   const char *lock_token;
   svn_error_t *err;
-  
+
   err = svn_fs_bdb__lock_token_get(&lock_token, trail->fs, path,
                                    trail, pool);
 
@@ -365,7 +365,7 @@ static svn_error_t *
 txn_body_get_lock(void *baton, trail_t *trail)
 {
   struct lock_token_get_args *args = baton;
-  return svn_fs_base__get_lock_helper(args->lock_p, args->path, 
+  return svn_fs_base__get_lock_helper(args->lock_p, args->path,
                                       trail, trail->pool);
 }
 
@@ -379,9 +379,9 @@ svn_fs_base__get_lock(svn_lock_t **lock,
   struct lock_token_get_args args;
 
   SVN_ERR(svn_fs__check_fs(fs));
-  
+
   args.path = svn_fs__canonicalize_abspath(path, pool);
-  args.lock_p = lock;  
+  args.lock_p = lock;
   return svn_fs_base__retry_txn(fs, txn_body_get_lock, &args, pool);
 }
 
@@ -440,24 +440,24 @@ verify_lock(svn_fs_t *fs,
             apr_pool_t *pool)
 {
   if ((! fs->access_ctx) || (! fs->access_ctx->username))
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_FS_NO_USER, NULL,
        _("Cannot verify lock on path '%s'; no username available"),
        lock->path);
-  
+
   else if (strcmp(fs->access_ctx->username, lock->owner) != 0)
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
        _("User %s does not own lock on path '%s' (currently locked by %s)"),
        fs->access_ctx->username, lock->path, lock->owner);
 
   else if (apr_hash_get(fs->access_ctx->lock_tokens, lock->token,
                         APR_HASH_KEY_STRING) == NULL)
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
        _("Cannot verify lock on path '%s'; no matching lock-token available"),
        lock->path);
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -465,8 +465,8 @@ verify_lock(svn_fs_t *fs,
 /* This implements the svn_fs_get_locks_callback_t interface, where
    BATON is just an svn_fs_t object. */
 static svn_error_t *
-get_locks_callback(void *baton, 
-                   svn_lock_t *lock, 
+get_locks_callback(void *baton,
+                   svn_lock_t *lock,
                    apr_pool_t *pool)
 {
   return verify_lock(baton, lock, pool);
@@ -483,7 +483,7 @@ svn_fs_base__allow_locked_operation(const char *path,
   if (recurse)
     {
       /* Discover all locks at or below the path. */
-      SVN_ERR(svn_fs_bdb__locks_get(trail->fs, path, get_locks_callback, 
+      SVN_ERR(svn_fs_bdb__locks_get(trail->fs, path, get_locks_callback,
                                     trail->fs, trail, pool));
     }
   else

@@ -60,7 +60,7 @@ create_berkeley_filesystem(const char **msg,
   /* Create and close a repository. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-create-berkeley",
                               "bdb", pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -129,7 +129,7 @@ check_entry(svn_fs_root_t *root,
 
 /* Return an error if entry NAME is absent in directory PATH under ROOT. */
 static svn_error_t *
-check_entry_present(svn_fs_root_t *root, const char *path, 
+check_entry_present(svn_fs_root_t *root, const char *path,
                     const char *name, apr_pool_t *pool)
 {
   svn_boolean_t present;
@@ -146,7 +146,7 @@ check_entry_present(svn_fs_root_t *root, const char *path,
 
 /* Return an error if entry NAME is present in directory PATH under ROOT. */
 static svn_error_t *
-check_entry_absent(svn_fs_root_t *root, const char *path, 
+check_entry_absent(svn_fs_root_t *root, const char *path,
                    const char *name, apr_pool_t *pool)
 {
   svn_boolean_t present;
@@ -176,7 +176,7 @@ txn_body_check_id(void *baton, trail_t *trail)
   node_revision_t *noderev;
   svn_error_t *err;
 
-  err = svn_fs_bdb__get_node_revision(&noderev, args->fs, args->id, 
+  err = svn_fs_bdb__get_node_revision(&noderev, args->fs, args->id,
                                       trail, trail->pool);
 
   if (err && (err->apr_err == SVN_ERR_FS_ID_NOT_FOUND))
@@ -288,7 +288,7 @@ abort_txn(const char **msg,
   /* Save their names for later. */
   SVN_ERR(svn_fs_txn_name(&txn1_name, txn1, pool));
   SVN_ERR(svn_fs_txn_name(&txn2_name, txn2, pool));
-  
+
   /* Create greek trees in them. */
   SVN_ERR(svn_test__create_greek_tree(txn1_root, pool));
   SVN_ERR(svn_test__create_greek_tree(txn2_root, pool));
@@ -329,7 +329,7 @@ abort_txn(const char **msg,
       *t1_pi_id,      *t2_pi_id,
       *t1_rho_id,     *t2_rho_id,
       *t1_tau_id,     *t2_tau_id;
-    
+
     SVN_ERR(svn_fs_node_id(&t1_root_id, txn1_root, "", pool));
     SVN_ERR(svn_fs_node_id(&t2_root_id, txn2_root, "", pool));
     SVN_ERR(svn_fs_node_id(&t1_iota_id, txn1_root, "iota", pool));
@@ -377,7 +377,7 @@ abort_txn(const char **msg,
     SVN_ERR(svn_fs_abort_txn(txn2, pool));
 
     /* Now test that all the nodes in txn2 at the time of the abort
-     * are gone, but all of the ones in txn1 are still there. 
+     * are gone, but all of the ones in txn1 are still there.
      */
 
     /* Check that every node rev in t2 has vanished from the fs. */
@@ -402,7 +402,7 @@ abort_txn(const char **msg,
     SVN_ERR(check_id_absent(fs, t2_pi_id, pool));
     SVN_ERR(check_id_absent(fs, t2_rho_id, pool));
     SVN_ERR(check_id_absent(fs, t2_tau_id, pool));
-    
+
     /* Check that every node rev in t1 is still in the fs. */
     SVN_ERR(check_id_present(fs, t1_root_id, pool));
     SVN_ERR(check_id_present(fs, t1_iota_id, pool));
@@ -494,9 +494,9 @@ abort_txn(const char **msg,
 
 /* This tests deleting of mutable nodes.  We build a tree in a
  * transaction, then try to delete various items in the tree.  We
- * never commit the tree, so every entry being deleted points to a 
- * mutable node. 
- * 
+ * never commit the tree, so every entry being deleted points to a
+ * mutable node.
+ *
  * ### todo: this test was written before commits worked.  It might
  * now be worthwhile to combine it with delete().
  */
@@ -521,7 +521,7 @@ delete_mutables(const char **msg,
                               "bdb", pool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  
+
   /* Create the greek tree. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
 
@@ -683,7 +683,7 @@ delete_mutables(const char **msg,
 
 
 /* This tests deleting in general.
- * 
+ *
  * ### todo: this test was written after (and independently of)
  * delete_mutables().  It might be worthwhile to combine them.
  */
@@ -963,7 +963,7 @@ delete(const char **msg,
         /* path, contents (0 = dir) */
         { "iota",        "This is the file 'iota'.\n" }
       };
-      
+
       SVN_ERR(svn_test__validate_tree(txn_root, expected_entries, 1, pool));
     }
   }
@@ -1126,9 +1126,9 @@ canonicalize_abspath(const char **msg,
                      svn_boolean_t msg_only,
                      svn_test_opts_t *opts,
                      apr_pool_t *pool)
-{ 
+{
   apr_size_t i;
-  const char *paths[21][2] = 
+  const char *paths[21][2] =
     /* in                      out */
   { { NULL,                    NULL },
     { "",                      "/" },
@@ -1163,7 +1163,7 @@ canonicalize_abspath(const char **msg,
       const char *input = paths[i][0];
       const char *output = paths[i][1];
       const char *actual = svn_fs__canonicalize_abspath(input, pool);
-      
+
       if ((! output) && (! actual))
         continue;
       if ((! output) && actual)
@@ -1186,14 +1186,14 @@ create_within_copy(const char **msg,
                    svn_boolean_t msg_only,
                    svn_test_opts_t *opts,
                    apr_pool_t *pool)
-{ 
+{
   apr_pool_t *spool = svn_pool_create(pool);
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
   int i;
   svn_revnum_t youngest_rev = 0;
-  
+
   *msg = "create new items within a copied directory";
 
   if (msg_only)
@@ -1314,14 +1314,14 @@ skip_deltas(const char **msg,
             svn_boolean_t msg_only,
             svn_test_opts_t *opts,
             apr_pool_t *pool)
-{ 
+{
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_revnum_t youngest_rev = 0;
   const char *one_line = "This is a line in file 'f'.\n";
-  svn_stringbuf_t *f = svn_stringbuf_create(one_line, pool); 
+  svn_stringbuf_t *f = svn_stringbuf_create(one_line, pool);
 
   *msg = "test skip deltas";
 
@@ -1345,7 +1345,7 @@ skip_deltas(const char **msg,
   while (youngest_rev <= 128)
     {
       /* Append another line to the ever-growing file contents. */
-      svn_stringbuf_appendcstr(f, one_line); 
+      svn_stringbuf_appendcstr(f, one_line);
 
       /* Commit the new contents. */
       SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
@@ -1361,8 +1361,8 @@ skip_deltas(const char **msg,
   SVN_ERR(svn_test__get_file_contents(rev_root, "f", &f, pool));
   if (strcmp(one_line, f->data) != 0)
     return svn_error_createf
-      (SVN_ERR_TEST_FAILED, NULL, 
-       "Wrong contents.  Expected:\n   '%s'\nGot:\n   '%s'\n", 
+      (SVN_ERR_TEST_FAILED, NULL,
+       "Wrong contents.  Expected:\n   '%s'\nGot:\n   '%s'\n",
        one_line, f->data);
 
   svn_pool_destroy(subpool);
@@ -1382,7 +1382,7 @@ static svn_error_t *
 txn_body_get_txn(void *baton, trail_t *trail)
 {
   struct get_txn_args *args = baton;
-  return svn_fs_bdb__get_txn(args->txn, args->fs, args->txn_name, 
+  return svn_fs_bdb__get_txn(args->txn, args->fs, args->txn_name,
                              trail, trail->pool);
 }
 
@@ -1392,7 +1392,7 @@ redundant_copy(const char **msg,
                svn_boolean_t msg_only,
                svn_test_opts_t *opts,
                apr_pool_t *pool)
-{ 
+{
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   const char *txn_name;
@@ -1401,7 +1401,7 @@ redundant_copy(const char **msg,
   const svn_fs_id_t *old_D_id, *new_D_id;
   svn_revnum_t youngest_rev = 0;
   struct get_txn_args args;
-  
+
   *msg = "ensure no-op for redundant copies";
 
   if (msg_only)
@@ -1455,7 +1455,7 @@ redundant_copy(const char **msg,
   SVN_ERR(svn_fs_node_id(&new_D_id, txn_root, "A/D", pool));
   if (! svn_string_compare(svn_fs_unparse_id(old_D_id, pool),
                            svn_fs_unparse_id(new_D_id, pool)))
-    return svn_error_create 
+    return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "Expected equivalent node-rev-ids; got differing ones");
 

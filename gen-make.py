@@ -38,7 +38,7 @@ def main(fname, gentype, verfname=None,
     generator.compute_hdr_deps()
 
   generator.write()
-  
+
   if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
       sorted_targets = target_dict.keys(); sorted_targets.sort()

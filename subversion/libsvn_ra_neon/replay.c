@@ -96,7 +96,7 @@ static const svn_ra_neon__xml_elm_t editor_report_elements[] =
   { NULL }
 };
 
-static svn_error_t * 
+static svn_error_t *
 start_element(int *elem, void *baton, int parent_state, const char *nspace,
               const char *elt_name, const char **atts)
 {

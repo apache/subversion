@@ -1,4 +1,4 @@
-/* svn-push.c --- propagate changesets from one (networked) repository to 
+/* svn-push.c --- propagate changesets from one (networked) repository to
  * a different (networked) repository.
  *
  * ====================================================================
@@ -48,7 +48,7 @@ open_tmp_file (apr_file_t **fp, void *callback_baton, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-  
+
 
 svn_error_t *(*old_change_file_prop) (void *file_baton,
                                       const char *name,

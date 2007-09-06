@@ -24,7 +24,7 @@ def test_props(props):
 def test_path_change(path, change):
   """Validate the CHANGE made to PATH in the transaction.  Return 0
   if all is well, non-zero otherwise."""
-  
+
   # The svn_node_kind of the path.
   item_kind = change.item_kind
 
@@ -73,7 +73,7 @@ def main(pool, repos_dir, txn):
     retval = test_path_change(path, change)
     if retval:
       return retval
-    
+
   return 0
 
 
@@ -86,4 +86,4 @@ if __name__ == '__main__':
   if len(sys.argv) < 3:
     _usage_and_exit()
   sys.exit(core.run_app(main, sys.argv[1], sys.argv[2]))
-  
+

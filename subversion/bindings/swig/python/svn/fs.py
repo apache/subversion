@@ -1,9 +1,9 @@
 #
 # fs.py: public Python interface for fs components
 #
-# Subversion is a tool for revision control. 
+# Subversion is a tool for revision control.
 # See http://subversion.tigris.org for more information.
-#    
+#
 ######################################################################
 #
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -76,8 +76,8 @@ class FileDiff:
       finally:
         _svncore.svn_stream_close(stream)
     fp.close()
-    
-    
+
+
   def get_files(self):
     if self.tempfile1:
       # no need to do more. we ran this already.
@@ -100,7 +100,7 @@ class FileDiff:
     cmd = ["diff"] \
           + self.diffoptions \
           + [self.tempfile1, self.tempfile2]
-          
+
     # the windows implementation of popen2 requires a string
     if _sys.platform == "win32":
       cmd = _svncore.argv_to_command_string(cmd)

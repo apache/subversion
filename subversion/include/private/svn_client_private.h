@@ -47,18 +47,6 @@ svn_client__get_copy_source(const char *path_or_url,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
-/**
- * Return an ordered list of potential merge sources for @a
- * path_or_url at @a *revision in @a *recommendations (empty if no
- * recommendations are available).  Use @a pool for all allocations.
- */
-svn_error_t *
-svn_client__suggest_merge_sources(const char *path_or_url,
-                                  const svn_opt_revision_t *revision,
-                                  apr_array_header_t **suggestions,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

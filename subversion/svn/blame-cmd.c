@@ -82,7 +82,7 @@ blame_receiver_xml(void *baton,
 
       /* "</merged>" */
       svn_xml_make_close_tag(&sb, pool, "merged");
-      
+
     }
 
   /* "</entry>" */
@@ -107,7 +107,7 @@ print_line_info(svn_stream_t *out,
   apr_time_t atime;
   const char *time_utf8;
   const char *time_stdout;
-  const char *rev_str = SVN_IS_VALID_REVNUM(revision) 
+  const char *rev_str = SVN_IS_VALID_REVNUM(revision)
     ? apr_psprintf(pool, "%6ld", revision)
                         : "     -";
 
@@ -125,16 +125,16 @@ print_line_info(svn_stream_t *out,
              abbreviations for the month and weekday names.  Else, the
              line contents will be misaligned. */
           time_stdout = "                                           -";
-      SVN_ERR(svn_stream_printf(out, pool, "%s %10s %s ", rev_str, 
+      SVN_ERR(svn_stream_printf(out, pool, "%s %10s %s ", rev_str,
                                 author ? author : "         -",
                                 time_stdout));
 
       if (path)
-        SVN_ERR(svn_stream_printf(out, pool, "%-16s ", path));
+        SVN_ERR(svn_stream_printf(out, pool, "%-14s ", path));
     }
   else
     {
-      return svn_stream_printf(out, pool, "%s %10s ", rev_str, 
+      return svn_stream_printf(out, pool, "%s %10s ", rev_str,
                                author ? author : "         -");
     }
 
@@ -158,17 +158,24 @@ blame_receiver(void *baton,
   svn_cl__opt_state_t *opt_state =
     ((blame_baton_t *) baton)->opt_state;
   svn_stream_t *out = ((blame_baton_t *)baton)->out;
- 
+
   if (opt_state->use_merge_history)
-    SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
-                            merged_path, opt_state->verbose, pool));
+    {
+      if (revision != merged_revision)
+        svn_stream_printf(out, pool, "G ");
+      else
+        svn_stream_printf(out, pool, "  ");
+
+      SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
+                              merged_path, opt_state->verbose, pool));
+    }
   else
     SVN_ERR(print_line_info(out, revision, author, date, NULL,
                             opt_state->verbose, pool));
 
   return svn_stream_printf(out, pool, "%s%s", line, APR_EOL_STR);
 }
- 
+
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *

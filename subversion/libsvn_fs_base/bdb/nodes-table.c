@@ -137,7 +137,7 @@ svn_fs_bdb__new_successor_id(svn_fs_id_t **successor_p,
 
   /* Create and return the new successor ID.  */
   new_id = svn_fs_base__id_create(svn_fs_base__id_node_id(id),
-                                  copy_id ? copy_id 
+                                  copy_id ? copy_id
                                   : svn_fs_base__id_copy_id(id),
                                   txn_id, pool);
 

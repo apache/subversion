@@ -198,7 +198,7 @@ get_category_config(svn_config_t **cfg,
 {
   const char *usr_reg_path = NULL, *sys_reg_path = NULL;
   const char *usr_cfg_path, *sys_cfg_path;
-  
+
   *cfg = NULL;
 
   if (! config_dir)
@@ -233,7 +233,7 @@ svn_config_get_config(apr_hash_t **cfg_hash,
 {
   svn_config_t *cfg;
   *cfg_hash = apr_hash_make(pool);
-  
+
 #define CATLEN (sizeof(SVN_CONFIG_CATEGORY_SERVERS) - 1)
   SVN_ERR(get_category_config(&cfg, config_dir, SVN_CONFIG_CATEGORY_SERVERS,
                               pool));

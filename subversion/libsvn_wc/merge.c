@@ -403,8 +403,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
              up the conflict before we mark the file 'conflicted' */
           if (conflict_func)
             {
+              svn_wc_conflict_result_t result =
+                svn_wc_conflict_result_conflicted;
               svn_wc_conflict_description_t cdesc;
-              svn_wc_conflict_result_t result;
 
               cdesc.path = merge_target;
               cdesc.node_kind = svn_node_file;
@@ -634,8 +635,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
          up the conflict before we mark the file 'conflicted' */
       if (conflict_func)
         {
+          svn_wc_conflict_result_t result =
+            svn_wc_conflict_result_conflicted;
           svn_wc_conflict_description_t cdesc;
-          svn_wc_conflict_result_t result;
 
           cdesc.path = merge_target;
           cdesc.node_kind = svn_node_file;

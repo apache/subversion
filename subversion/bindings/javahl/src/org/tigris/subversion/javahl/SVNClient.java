@@ -223,7 +223,7 @@ public class SVNClient implements SVNClientInterface
         MyListCallback callback = new MyListCallback();
 
         list(url, revision, pegRevision,
-             recurse ? Depth.infinity : Depth.immediates, 
+             recurse ? Depth.infinity : Depth.immediates,
              DirEntry.Fields.all, false, callback);
 
         return callback.getDirEntryArray();
@@ -421,7 +421,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return checkout(moduleName, destPath, revision, revision, 
+        return checkout(moduleName, destPath, revision, revision,
                         Depth.fromRecurse(recurse), ignoreExternals,
                         false);
     }
@@ -655,20 +655,12 @@ public class SVNClient implements SVNClientInterface
     /**
      * Copy versioned paths with the history preserved.
      *
-     * @param sources A list of <code>CopySource</code> objects.
-     * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
-     * @param copyAsChild Whether to copy <code>srcPaths</code> as
-     * children of <code>destPath</code>.
-     * @param makeParents Whether to create intermediate parents
-     * @throws ClientException If the copy operation fails.
-     * @since 1.5
      * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
+     * @since 1.5
      */
     public native void copy(CopySource[] sources, String destPath,
                             String message, boolean copyAsChild,
-                            boolean makeParents)
+                            boolean makeParents, boolean withMergeHistory)
             throws ClientException;
 
     /**
@@ -687,7 +679,7 @@ public class SVNClient implements SVNClientInterface
     {
         copy(new CopySource[] { new CopySource(srcPath, revision,
                                                Revision.HEAD) },
-             destPath, message, true, false);
+             destPath, message, true, false, false);
     }
 
     /**
@@ -708,7 +700,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void move(String[] srcPaths, String destPath, String message,
                             boolean force, boolean moveAsChild,
-                            boolean makeParents)
+                            boolean makeParents, boolean withMergeHistory)
             throws ClientException;
 
     /**
@@ -720,7 +712,8 @@ public class SVNClient implements SVNClientInterface
                      Revision ignored, boolean force)
             throws ClientException
     {
-        move(new String[] { srcPath }, destPath, message, force, true, false);
+        move(new String[] { srcPath }, destPath, message, force, true, false,
+             false);
     }
 
     /**
@@ -738,7 +731,8 @@ public class SVNClient implements SVNClientInterface
                      boolean force)
             throws ClientException
     {
-        move(new String[] { srcPath }, destPath, message, force, true, false);
+        move(new String[] { srcPath }, destPath, message, force, true, false,
+             false);
     }
 
     /**
@@ -888,6 +882,13 @@ public class SVNClient implements SVNClientInterface
     public native void doImport(String path, String url, String message,
                                 boolean recurse)
             throws ClientException;
+
+    /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
+     */
+    public native String[] suggestMergeSources(String path, 
+                                               Revision pegRevision)
+            throws SubversionException;
 
     /**
      * Merge changes from two paths into a new local path.
@@ -1837,13 +1838,6 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String, Revision)
-     * @since 1.5
-     */
-    public native CopySource getCopySource(String path, Revision revision)
-            throws SubversionException;
-
-    /**
      * A private log message callback implementation used by thin wrappers.
      * Instances of this class are not thread-safe.
      */
@@ -1856,14 +1850,18 @@ public class SVNClient implements SVNClientInterface
                                   String author,
                                   long timeMicros,
                                   String message,
-                                  long numberChildren)
+                                  boolean hasChildren)
         {
             LogMessage msg = new LogMessage(changedPaths,
                                             revision,
                                             author,
                                             timeMicros,
                                             message);
-            messages.add(msg);
+
+            /* Filter out the SVN_INVALID_REVNUM message which pre-1.5
+               clients won't expect, nor understand. */
+            if (revision != Revision.SVN_INVALID_REVNUM)
+                messages.add(msg);
         }
 
         public LogMessage[] getMessages()

@@ -5,10 +5,10 @@ ezt templates are very similar to standard HTML files.  But additionally
 they contain directives sprinkled in between.  With these directives
 it is possible to generate the dynamic content from the ezt templates.
 
-These directives are enclosed in square brackets.  If you are a 
+These directives are enclosed in square brackets.  If you are a
 C-programmer, you might be familar with the #ifdef directives of the
-C preprocessor 'cpp'.  ezt provides a similar concept for HTML.  Additionally 
-EZT has a 'for' directive, which allows to iterate (repeat) certain 
+C preprocessor 'cpp'.  ezt provides a similar concept for HTML.  Additionally
+EZT has a 'for' directive, which allows to iterate (repeat) certain
 subsections of the template according to sequence of data items
 provided by the application.
 
@@ -18,7 +18,7 @@ EZT files (convention: use the suffix .ezt for such files):
 
     >>> template = Template("../templates/log.ezt")
 
-or by calling the parse() method of a template instance directly with 
+or by calling the parse() method of a template instance directly with
 a EZT template string:
 
     >>> template = Template()
@@ -52,7 +52,7 @@ with the output fileobject to the templates generate method:
     </body>
     </html>
 
-Template syntax error reporting should be improved.  Currently it is 
+Template syntax error reporting should be improved.  Currently it is
 very sparse (template line numbers would be nice):
 
     >>> Template().parse("[if-any where] foo [else] bar [end unexpected args]")
@@ -77,7 +77,7 @@ Directives
 ==========
 
  Several directives allow the use of dotted qualified names refering to objects
- or attributes of objects contained in the data dictionary given to the 
+ or attributes of objects contained in the data dictionary given to the
  .generate() method.
 
  Simple directives
@@ -85,7 +85,7 @@ Directives
 
    [QUAL_NAME]
 
-   This directive is simply replaced by the value of identifier from the data 
+   This directive is simply replaced by the value of identifier from the data
    dictionary.  QUAL_NAME might be a dotted qualified name refering to some
    instance attribute of objects contained in the dats dictionary.
    Numbers are converted to string though.
@@ -98,15 +98,15 @@ Directives
  ----------------
 
    [for QUAL_NAME] ... [end]
-   
+
    The text within the [for ...] directive and the corresponding [end]
    is repeated for each element in the sequence referred to by the qualified
-   name in the for directive.  Within the for block this identifiers now 
+   name in the for directive.  Within the for block this identifiers now
    refers to the actual item indexed by this loop iteration.
 
    [if-any QUAL_NAME [QUAL_NAME2 ...]] ... [else] ... [end]
 
-   Test if any QUAL_NAME value is not None or an empty string or list.  
+   Test if any QUAL_NAME value is not None or an empty string or list.
    The [else] clause is optional.  CAUTION: Numeric values are converted to
    string, so if QUAL_NAME refers to a numeric value 0, the then-clause is
    substituted!
@@ -117,9 +117,9 @@ Directives
    [if-index INDEX_FROM_FOR last] ... [else] ... [end]
    [if-index INDEX_FROM_FOR NUMBER] ... [else] ... [end]
 
-   These five directives work similar to [if-any], but are only useful 
-   within a [for ...]-block (see above).  The odd/even directives are 
-   for example useful to choose different background colors for adjacent rows 
+   These five directives work similar to [if-any], but are only useful
+   within a [for ...]-block (see above).  The odd/even directives are
+   for example useful to choose different background colors for adjacent rows
    in a table.  Similar the first/last directives might be used to
    remove certain parts (for example "Diff to previous" doesn't make sense,
    if there is no previous).
@@ -130,32 +130,32 @@ Directives
    The [is ...] directive is similar to the other conditional directives
    above.  But it allows to compare two value references or a value reference
    with some constant string.
- 
+
 """
 #
 # Copyright (C) 2001-2002 Greg Stein. All Rights Reserved.
 #
-# Redistribution and use in source and binary forms, with or without 
-# modification, are permitted provided that the following conditions are 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
 # met:
 #
-# * Redistributions of source code must retain the above copyright 
-#   notice, this list of conditions and the following disclaimer. 
+# * Redistributions of source code must retain the above copyright
+#   notice, this list of conditions and the following disclaimer.
 #
-# * Redistributions in binary form must reproduce the above copyright 
-#   notice, this list of conditions and the following disclaimer in the 
-#   documentation and/or other materials provided with the distribution. 
+# * Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
-# IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, 
-# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
-# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE 
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+# IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
 #
@@ -449,7 +449,7 @@ def _prepare_ref(refname, for_names, file_args):
   """refname -> a string containing a dotted identifier. example:"foo.bar.bang"
   for_names -> a list of active for sequences.
 
-  Returns a `value reference', a 3-Tupel made out of (refname, start, rest), 
+  Returns a `value reference', a 3-Tupel made out of (refname, start, rest),
   for fast access later.
   """
   # is the reference a string constant?
@@ -483,8 +483,8 @@ def _get_value((refname, start, rest), ctx):
   """(refname, start, rest) -> a prepared `value reference' (see above).
   ctx -> an execution context instance.
 
-  Does a name space lookup within the template name space.  Active 
-  for blocks take precedence over data dictionary members with the 
+  Does a name space lookup within the template name space.  Active
+  for blocks take precedence over data dictionary members with the
   same name.
   """
   if rest is None:
@@ -575,7 +575,7 @@ def test_parse():
          ['', '["a \\"b[foo]" c.d f]', None, '']
 
 def _test(argv):
-  import doctest, ezt           
+  import doctest, ezt
   verbose = "-v" in argv
   return doctest.testmod(ezt, verbose=verbose)
 

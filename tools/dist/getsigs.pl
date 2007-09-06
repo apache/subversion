@@ -16,7 +16,7 @@ my %good_sigs;
 foreach my $filename (glob("subversion-*.asc")) {
 	my $gpg_output = `gpg --logger-fd 1 --verify $filename`;
   if ($? >> 8 ) {
-	  # gpg exited with a non zero exit value, die with an error 
+	  # gpg exited with a non zero exit value, die with an error
 	  print $gpg_output;
 	  die "BAD SIGNATURE in $filename";
 	}
@@ -25,7 +25,7 @@ foreach my $filename (glob("subversion-*.asc")) {
 		my ($keyid) = $line =~ /^gpg: Signature made .*? using \w+ key ID (\w+)/;
 		if (defined($keyid)) {
 			# Put the resulting key in a hash to remove duplicates.
-      $good_sigs{$keyid}++; 
+      $good_sigs{$keyid}++;
 		}
 	}
 }
@@ -33,7 +33,7 @@ foreach my $filename (glob("subversion-*.asc")) {
 foreach my $keyid (keys %good_sigs) {
 	my $gpg_output = `gpg --fingerprint $keyid`;
 	if ($? >> 8 ) {
-	  # gpg exited with a non zero exit value, die with an error 
+	  # gpg exited with a non zero exit value, die with an error
 		print $gpg_output;
 		die "UNABLE TO GET FINGERPRINT FOR $keyid";
 	}

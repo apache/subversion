@@ -18,7 +18,7 @@
 
 
 
-/* Advice to those adding new tests to this file: 
+/* Advice to those adding new tests to this file:
  * ==============================================
  *
  * Read the doc string for substitute_and_verify(), then read the
@@ -63,7 +63,7 @@ const char *lines[] =
     "Line 18: fairly boring subst test data... blah blah.",
     "Line 19: Invalid expanded keyword spanning two lines: $Author: ",
     /* The idea here is that, were it not broken across two lines,
-       "$Author: Line 20: jrandom$" would be a valid if odd, keyword. */ 
+       "$Author: Line 20: jrandom$" would be a valid if odd, keyword. */
     "Line 20: jrandom$ remainder of invalid keyword spanning two lines.",
     "Line 21: fairly boring subst test data... blah blah.",
     "Line 22: an unknown keyword $LastChangedSocks$.",
@@ -128,7 +128,7 @@ const char *lines[] =
     /* Line 74-75 test for keywords containing '$', issue #1780 */
     "Line 74: Valid $Author: jran$dom $, started expanded.",
     "Line 75: Valid $URL: http://tomato/mau$ve $, started expanded.",
-    /* Line 76-78 tests for a string with an unknown keyword of 252-254 bytes 
+    /* Line 76-78 tests for a string with an unknown keyword of 252-254 bytes
        long */
     "$                                                                       "
     "                                                                        "
@@ -189,7 +189,7 @@ random_eol_marker(void)
 
   /* ### todo: allowing '\r' to be in this list of possible random
      eol_markers causes problems for the current testing framework
-     which expects a 1:1 ratio of input-line-count to output-line-count.  
+     which expects a 1:1 ratio of input-line-count to output-line-count.
      Problems occur when there are two consecutive line ending markers
      where the first is '\r' and the second is '\n' -- our
      translation routine reads that as a single '\r\n' which throws
@@ -225,15 +225,15 @@ create_file(const char *fname, const char *eol_str, apr_pool_t *pool)
                           APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_create(apr_err, NULL, fname);
-  
+
   for (i = 0; i < (sizeof(lines) / sizeof(*lines)); i++)
     {
       const char *this_eol_str = eol_str ? eol_str : random_eol_marker();
-          
+
       apr_err = apr_file_printf(f, lines[i]);
 
       /* Is it overly paranoid to use putc(), because of worry about
-         fprintf() doing a newline conversion? */ 
+         fprintf() doing a newline conversion? */
       for (j = 0; this_eol_str[j]; j++)
         {
           apr_err = apr_file_putc(this_eol_str[j], f);
@@ -245,7 +245,7 @@ create_file(const char *fname, const char *eol_str, apr_pool_t *pool)
   apr_err = apr_file_close(f);
   if (apr_err)
     return svn_error_create(apr_err, NULL, fname);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -286,7 +286,7 @@ remove_file(const char *fname, apr_pool_t *pool)
  *
  * If the verification succeeds, remove both files and return
  * SVN_NO_ERROR.
- * 
+ *
  * If the verification fails, leave the files for post-mortem.  If the
  * failure is due to non-eol data being wrong, return
  * SVN_ERR_MALFORMED_FILE.  If the problem is an incorrect eol marker,
@@ -395,7 +395,7 @@ substitute_and_verify(const char *test_name,
   else if (err)
     return err;
 
-      
+
   /** Verify that the conversion worked. **/
 
   for (i = 0; i < (sizeof(expect) / sizeof(*expect)); i++)
@@ -436,7 +436,7 @@ substitute_and_verify(const char *test_name,
       else  /* unexpand */
         {
           /* Lines 3 and 5 remain unchanged. */
-          expect[26 - 1] = 
+          expect[26 - 1] =
             "Line 26: Emptily expanded keyword $Rev$.";
           expect[29 - 1] =
             "Line 29: Valid $LastChangedRevision$, started expanded.";
@@ -510,7 +510,7 @@ substitute_and_verify(const char *test_name,
                         NULL);
           expect[37 - 1] =
             apr_pstrcat(pool, "Line 37: ",
-                        "Valid $LastChangedBy: ", author, 
+                        "Valid $LastChangedBy: ", author,
                         " $, started expanded.", NULL);
           expect[38 - 1] =
             apr_pstrcat(pool, "Line 38: ",
@@ -552,7 +552,7 @@ substitute_and_verify(const char *test_name,
           expect[38 - 1] =
             "Line 38: Valid $Author$, started expanded.";
           expect[46 - 1] =
-            "Line 46: Empty $Author$, started expanded.";          
+            "Line 46: Empty $Author$, started expanded.";
           expect[74 - 1] =
             "Line 74: Valid $Author$, started expanded.";
           expect[79 - 1] =
@@ -639,7 +639,7 @@ substitute_and_verify(const char *test_name,
                         "One keyword, one not, back to back: "
                         "$Author$Rev: ", rev, " $.",
                         NULL);
-          expect[70 - 1] = 
+          expect[70 - 1] =
             apr_pstrcat(pool, "$Author$Rev: ", rev, " $.", NULL);
         }
       /* Else Lines 48, 49, and 70 remain unchanged. */
@@ -729,13 +729,13 @@ substitute_and_verify(const char *test_name,
       if (contents->len < idx)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, NULL,
-           "'%s' has short contents at line %" APR_SIZE_T_FMT, 
+           "'%s' has short contents at line %" APR_SIZE_T_FMT,
            dst_fname, i + 1);
 
       if (strncmp(contents->data + idx, expect[i], strlen(expect[i])) != 0)
         return svn_error_createf
-          (SVN_ERR_MALFORMED_FILE, NULL, 
-           "'%s' has wrong contents at line %" APR_SIZE_T_FMT, 
+          (SVN_ERR_MALFORMED_FILE, NULL,
+           "'%s' has wrong contents at line %" APR_SIZE_T_FMT,
            dst_fname, i + 1);
 
       /* Else, the data is correct, at least up to the next eol. */
@@ -746,7 +746,7 @@ substitute_and_verify(const char *test_name,
         {
           if (strncmp(contents->data + idx, dst_eol, strlen(dst_eol)) != 0)
             return svn_error_createf
-              (SVN_ERR_IO_UNKNOWN_EOL, NULL, 
+              (SVN_ERR_IO_UNKNOWN_EOL, NULL,
                "'%s' has wrong eol style at line %" APR_SIZE_T_FMT, dst_fname,
                i + 1);
           else

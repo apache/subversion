@@ -25,7 +25,7 @@ def getfile(path, filename, rev=None):
   if rev is None:
     rev = fs.youngest_rev(fsob)
     print "Using youngest revision ", rev
-    
+
   root = fs.revision_root(fsob, rev)
   file = fs.file_contents(root, filename)
   while 1:

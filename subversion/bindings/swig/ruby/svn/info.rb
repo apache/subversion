@@ -77,7 +77,7 @@ module Svn
     def teardown
       @repos = @root = @fs = nil
     end
-    
+
     def get_info
       @author = force_to_utf8(prop(Core::PROP_REVISION_AUTHOR))
       @date = prop(Core::PROP_REVISION_DATE)
@@ -118,14 +118,14 @@ module Svn
       [:delete?, :deleted],
       [:replace?, :modified],
     ]
-    
+
     def get_type(node)
       TYPE_TABLE.each do |meth, type|
         return type if node.__send__(meth)
       end
       nil
     end
-    
+
     def get_diff_recurse(node, base_root, path, base_path)
       if node.copy?
         base_path = node.copyfrom_path.sub(/\A\//, '')
@@ -135,7 +135,7 @@ module Svn
       if node.file?
         try_diff(node, base_root, path, base_path)
       end
-      
+
       if node.prop_mod? and !node.delete?
         get_prop_diff(node, base_root, path, base_path)
       end
@@ -170,7 +170,7 @@ module Svn
         entry.body << "   + #{force_to_utf8(value)}\n" if value
       end
     end
-    
+
     def try_diff(node, base_root, path, base_path)
       if node.replace? and node.text_mod?
         differ = Fs::FileDiff.new(base_root, base_path, @root, path)
@@ -185,7 +185,7 @@ module Svn
         diff_entry(path, get_type(node))
       end
     end
-    
+
     def do_diff(node, base_root, path, base_path, differ)
       entry = diff_entry(path, get_type(node))
 
@@ -225,7 +225,7 @@ module Svn
         end
       end
     end
-    
+
     def dump_contents(root, path)
       root.file_contents(path) do |f|
         if block_given?
@@ -242,12 +242,12 @@ module Svn
       @diffs[target][type] ||= DiffEntry.new(type)
       @diffs[target][type]
     end
-    
+
     def get_sha256
       sha = Digest::SHA256.new
       @sha256 = {}
       [
-        @added_files, 
+        @added_files,
 #        @deleted_files,
         @updated_files,
       ].each do |files|
@@ -263,11 +263,11 @@ module Svn
       end
       @entire_sha256 = sha.hexdigest
     end
-    
+
     def prop(name)
       @fs.prop(name, @revision)
     end
-    
+
     def force_to_utf8(str)
       str = str.to_s
       begin
@@ -296,11 +296,11 @@ module Svn
       formatted << (" %+03d:00" % (date.hour - date.getutc.hour))
       formatted
     end
-    
+
     class DiffEntry
       attr_reader :type, :added_line, :deleted_line
       attr_accessor :body
-      
+
       def initialize(type)
         @type = type
         @added_line = 0
@@ -311,7 +311,7 @@ module Svn
       def count_up_added_line!
         @added_line += 1
       end
-      
+
       def count_up_deleted_line!
         @deleted_line += 1
       end

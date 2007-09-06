@@ -3,7 +3,7 @@
  *              (This code doesn't know where any adm information is
  *              located.  The caller always passes in a path obtained
  *              by using the adm_files.h API.)
- *        
+ *
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -53,17 +53,15 @@ extern "C" {
 
    If DEPTH is svn_depth_infinity, perform the following actions on
    every entry below PATH; if svn_depth_immediates, svn_depth_files,
-   or svn_depth_empty, perform them only on PATH:
+   or svn_depth_empty, perform them only on PATH.
 
    If NEW_REVISION is valid, then tweak every entry to have this new
    working revision (excluding files that are scheduled for addition
    or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
    all urls to be "telescoping" children of the base_url.
 
-   ### TODO(sd): See README.branch about depth behavior above!
-
-   If REMOVE_MISSING_DIRS is TRUE, then delete the entries for any 
-   missing directories.  If NOTIFY_FUNC is non-null, invoke it with 
+   If REMOVE_MISSING_DIRS is TRUE, then delete the entries for any
+   missing directories.  If NOTIFY_FUNC is non-null, invoke it with
    NOTIFY_BATON for each missing entry deleted.
 
    EXCLUDE_PATHS is a hash containing const char * pathnames.  Entries

@@ -43,7 +43,7 @@ svn_cl__cleanup(apr_getopt_t *os,
   apr_pool_t *subpool;
   int i;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments */

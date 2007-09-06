@@ -44,7 +44,7 @@ svn_cl__delete(apr_getopt_t *os,
   svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
   if (! targets->nelts)
@@ -85,6 +85,6 @@ svn_cl__delete(apr_getopt_t *os,
 
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
-      
+
   return SVN_NO_ERROR;
 }

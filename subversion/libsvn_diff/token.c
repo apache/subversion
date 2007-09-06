@@ -155,7 +155,7 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
   hash = 0; /* The callback fn doesn't need to touch it per se */
   while (1)
     {
-      SVN_ERR(vtable->datasource_get_next_token(&hash, &token, 
+      SVN_ERR(vtable->datasource_get_next_token(&hash, &token,
                                                 diff_baton, datasource));
       if (token == NULL)
         break;

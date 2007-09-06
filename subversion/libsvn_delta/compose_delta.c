@@ -680,7 +680,7 @@ copy_source_ops(apr_size_t offset, apr_size_t limit,
                 {
                   /* Issue second subrange in the pattern. */
                   const apr_size_t length =
-                    MIN(op->length - fix_off - fix_limit, 
+                    MIN(op->length - fix_off - fix_limit,
                         ptn_length - ptn_overlap);
                   copy_source_ops(op->offset + ptn_overlap,
                                   op->offset + ptn_overlap + length,

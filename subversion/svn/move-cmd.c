@@ -46,7 +46,7 @@ svn_cl__move(apr_getopt_t *os,
   svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
   if (targets->nelts < 2)
@@ -84,7 +84,8 @@ svn_cl__move(apr_getopt_t *os,
   ctx->revprop_table = opt_state->revprop_table;
 
   err = svn_client_move5(&commit_info, targets, dst_path, opt_state->force,
-                         TRUE, opt_state->parents, ctx, pool);
+                         TRUE, opt_state->parents,
+                         opt_state->use_merge_history, ctx, pool);
 
   if (err)
     err = svn_cl__may_need_force(err);

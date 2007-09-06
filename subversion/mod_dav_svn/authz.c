@@ -124,7 +124,7 @@ authz_read(svn_boolean_t *allowed,
     {
       /* This means svn_repos_dir_delta2 is comparing two txn trees,
          rather than a txn and revision.  It's probably updating a
-         working copy that contains 'disjoint urls'.  
+         working copy that contains 'disjoint urls'.
 
          Because the 2nd transaction is likely to have all sorts of
          paths linked in from random places, we need to find the
@@ -133,7 +133,7 @@ authz_read(svn_boolean_t *allowed,
 
       svn_stringbuf_t *path_s = svn_stringbuf_create(path, pool);
       const char *lopped_path = "";
-      
+
       /* The path might be copied implicitly, because it's down in a
          copied tree.  So we start at path and walk up its parents
          asking if anyone was copied, and if so where from.  */
@@ -148,7 +148,7 @@ authz_read(svn_boolean_t *allowed,
               revpath = svn_path_join(revpath, lopped_path, pool);
               break;
             }
-          
+
           /* Lop off the basename and try again. */
           lopped_path = svn_path_join(svn_path_basename
                                       (path_s->data, pool), lopped_path, pool);
@@ -171,7 +171,7 @@ authz_read(svn_boolean_t *allowed,
 
   /* We have a (rev, path) pair to check authorization on. */
   *allowed = allow_read(arb->r, arb->repos, revpath, rev, pool);
-  
+
   return SVN_NO_ERROR;
 }
 
