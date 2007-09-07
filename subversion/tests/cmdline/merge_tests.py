@@ -4077,7 +4077,7 @@ def create_deep_trees(wc_dir):
 
   # Deepen the directory structure we're working with by moving E to
   # underneath F and committing, creating revision 2.
-  svntest.main.run_svn(None, 'mv', A_B_E_path, A_B_F_path)
+  svntest.main.run_svn(None, 'mv', '-g', A_B_E_path, A_B_F_path)
   expected_output = wc.State(wc_dir, {
     'A/B/E'   : Item(verb='Deleting'),
     'A/B/F/E' : Item(verb='Adding')
@@ -4093,7 +4093,7 @@ def create_deep_trees(wc_dir):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
 
-  svntest.main.run_svn(None, 'cp', A_B_F_E_path, A_B_F_E1_path)
+  svntest.main.run_svn(None, 'cp', '-g', A_B_F_E_path, A_B_F_E1_path)
   expected_output = wc.State(wc_dir, {
     'A/B/F/E1' : Item(verb='Adding')
     })
@@ -4112,7 +4112,7 @@ def create_deep_trees(wc_dir):
 
   # Copy B and commit, creating revision 4.
   copy_of_B_path = os.path.join(A_path, 'copy-of-B')
-  svntest.main.run_svn(None, "cp", A_B_path, copy_of_B_path)
+  svntest.main.run_svn(None, "cp", "-g", A_B_path, copy_of_B_path)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/copy-of-B' : Item(verb='Adding'),
@@ -4185,11 +4185,12 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
     'F'          : Item(status='  ', wc_rev=4),
     })
   expected_disk = wc.State('', {
-    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5'}),
-    'F/E'        : Item(),
+    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3,5'}),
+    'F/E'        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1'}),
     'F/E/alpha'  : Item(new_content_for_alpha),
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
-    'F/E1'       : Item(),
+    'F/E1'       : Item(props={SVN_PROP_MERGE_INFO :
+                               '/A/B/E:1\n/A/B/F/E:2\n'}),
     'F/E1/alpha' : Item("This is the file 'alpha'.\n"),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
@@ -4243,6 +4244,7 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
     'beta'  : Item(status='  ', wc_rev=6),
     })
   expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1'}),
     'alpha'   : Item(new_content_for_alpha),
     'beta'    : Item("This is the file 'beta'.\n"),
     })
@@ -4294,8 +4296,9 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
                                         None, None, None, None, wc_dir)
 
 
-  for path in ('E', 'E1'):
-    path_name = os.path.join(copy_of_B_path, 'F', path)
+  for path_and_mergeinfo in (('E', '/A/B/E:1\n/A/B/F/E:5\n'),
+                             ('E1', '/A/B/E:1\n/A/B/F/E:2,5\n')):
+    path_name = os.path.join(copy_of_B_path, 'F', path_and_mergeinfo[0])
     # Search for the comment entitled "The Merge Kluge" elsewhere in
     # this file, to understand why we shorten and chdir() below.
     short_path_name = shorten_path_kludge(path_name)
@@ -4310,7 +4313,7 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
       'beta'  : Item(status='  ', wc_rev=4),
       })
     expected_disk = wc.State('', {
-      ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F/E:5'}),
+      ''        : Item(props={SVN_PROP_MERGE_INFO : path_and_mergeinfo[1]}),
       'alpha'   : Item(new_content_for_alpha1),
       'beta'    : Item("This is the file 'beta'.\n"),
       })
@@ -4383,13 +4386,14 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
     'F'          : Item(status='  ', wc_rev=8)
     })
   expected_disk = wc.State('', {
-    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5-8'}),
-    'F/E'        : Item(),
+    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3,5-8'}),
+    'F/E'        : Item(props={SVN_PROP_MERGE_INFO :
+                               '/A/B/E:1\n/A/B/F/E:5-8\n'}),
     'F/E/alpha'  : Item(new_content_for_alpha),
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
     'F/E1'       : Item(props={SVN_PROP_MERGE_INFO :
-                                             '/A/B/F/E:5'}),
+                               '/A/B/E:1\n/A/B/F/E:2,5\n'}),
     'F/E1/alpha' : Item(new_content_for_alpha1),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'lambda'     : Item("This is the file 'lambda'.\n")
@@ -4477,7 +4481,7 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
   A_D_path = os.path.join(wc_dir, 'A', 'D')
   copy_of_A_D_path = os.path.join(wc_dir, 'A', 'copy-of-D')
 
-  svntest.main.run_svn(None, "cp", A_D_path, copy_of_A_D_path)
+  svntest.main.run_svn(None, "cp", "-g", A_D_path, copy_of_A_D_path)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/copy-of-D' : Item(verb='Adding'),
@@ -4554,7 +4558,7 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
     'umlaut'  : Item(status='A ', copied='+', wc_rev='-'),
     })
 
-  merged_rangelist = "3-%d" % rev_to_merge_to_copy_of_D
+  merged_rangelist = "1,3-%d" % rev_to_merge_to_copy_of_D
 
 
   expected_disk = wc.State('', {
