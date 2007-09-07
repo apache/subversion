@@ -6897,11 +6897,9 @@ def mergeinfo_and_skipped_paths(sbox):
   #      This isn't technically part of issue #2893 but we handle this case
   #      and it didn't warrant its own test).
   #
-  # This test is marked as XFail until issue #2893 is fixed.
-  #
   # Eventually we should also test(?):
   #
-  #   2) Dir path is versioned but is missing from disk due to an OS deletion.
+  #   5) Dir path is versioned but is missing from disk due to an OS deletion.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -8122,8 +8120,8 @@ test_list = [ None,
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
               avoid_reflected_revs,
-              XFail(Skip(mergeinfo_and_skipped_paths,
-                         svntest.main.is_ra_type_file)),
+              Skip(mergeinfo_and_skipped_paths,
+                   svntest.main.is_ra_type_file),
               update_loses_mergeinfo,
               merge_loses_mergeinfo,
               single_file_replace_style_merge_capability,
