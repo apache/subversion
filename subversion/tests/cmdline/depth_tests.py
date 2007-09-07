@@ -514,14 +514,81 @@ def depth_immediates_unreceive_delete(sbox):
   "depth-immediates working copy ignores a deletion"
   # Check out a depth-immediates greek tree to wc1.  In wc2, delete
   # A/mu and commit.  Update wc1; should not receive the delete.
-  raise svntest.Failure("<test not yet written>")
+
+  ign_a, ign_b, wc_immed, wc = set_up_depthy_working_copies(sbox,
+                                                            immediates=True,
+                                                            infinity=True)
+
+  mu_path = os.path.join(wc, 'A', 'mu')
+
+  # Commit in the "other" wc.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu_path)
+  expected_output = svntest.wc.State(wc, { 'A/mu' : Item(verb='Deleting'), })
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
+  expected_status.remove('A/mu')
+  svntest.actions.run_and_verify_commit(wc,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None, wc)
+
+  # Update the depth-immediates wc, expecting not to receive the deletion
+  # of A/mu.
+  expected_output = svntest.wc.State(wc_immed, { })
+  expected_disk = svntest.wc.State('', {
+    'iota' : Item(contents="This is the file 'iota'.\n"),
+    'A' : Item()
+    })
+  expected_status = svntest.wc.State(wc_immed, {
+    '' : Item(status='  ', wc_rev=2),
+    'iota' : Item(status='  ', wc_rev=2),
+    'A' : Item(status='  ', wc_rev=2)
+    })
+  svntest.actions.run_and_verify_update(wc_immed,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None)
 
 #----------------------------------------------------------------------
 def depth_immediates_receive_delete(sbox):
   "depth-1 working copy receives a deletion"
-  # Check out a depth-immediates greek tree to wc1.  In wc2, delete iota and
+  # Check out a depth-immediates greek tree to wc1.  In wc2, delete A and
   # commit.  Update wc1  should receive the delete.
-  raise svntest.Failure("<test not yet written>")
+
+  ign_a, ign_b, wc_immed, wc = set_up_depthy_working_copies(sbox,
+                                                            immediates=True,
+                                                            infinity=True)
+
+  A_path = os.path.join(wc, 'A')
+
+  # Commit in the "other" wc.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', A_path)
+  expected_output = svntest.wc.State(wc, { 'A' : Item(verb='Deleting'), })
+  expected_status = svntest.wc.State(wc, {
+    '' : Item(status='  ', wc_rev=1),
+    'iota' : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_commit(wc,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None, wc)
+
+  # Update the depth-immediates wc, expecting to receive the deletion of A.
+  expected_output = svntest.wc.State(wc_immed, {
+    'A'    : Item(status='D ')
+    })
+  expected_disk = svntest.wc.State('', {
+    'iota' : Item(contents="This is the file 'iota'.\n"),
+    })
+  expected_status = svntest.wc.State(wc_immed, {
+    ''     : Item(status='  ', wc_rev=2),
+    'iota' : Item(status='  ', wc_rev=2)
+    })
+  svntest.actions.run_and_verify_update(wc_immed,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None)
 
 #----------------------------------------------------------------------
 def depth_immediates_subdir_propset_1(sbox):
@@ -954,8 +1021,8 @@ test_list = [ None,
               depth_immediates_fill_in_dir,
               depth_mixed_bring_in_dir,
               depth_empty_unreceive_delete,
-              XFail(depth_immediates_unreceive_delete),
-              XFail(depth_immediates_receive_delete),
+              depth_immediates_unreceive_delete,
+              depth_immediates_receive_delete,
               depth_update_to_more_depth,
               depth_immediates_subdir_propset_1,
               depth_immediates_subdir_propset_2,
