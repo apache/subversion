@@ -752,8 +752,6 @@ diff_dir_added(svn_wc_adm_access_t *adm_access,
                svn_revnum_t rev,
                void *diff_baton)
 {
-  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
-
   if (state)
     *state = svn_wc_notify_state_unknown;
 
@@ -768,8 +766,6 @@ diff_dir_deleted(svn_wc_adm_access_t *adm_access,
                  const char *path,
                  void *diff_baton)
 {
-  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
-
   if (state)
     *state = svn_wc_notify_state_unknown;
 

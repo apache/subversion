@@ -1028,7 +1028,6 @@ apply_textdelta(void *file_baton,
                 void **handler_baton)
 {
   struct file_baton *b = file_baton;
-  struct edit_baton *eb = b->edit_baton;
   svn_wc_adm_access_t *adm_access;
 
   /* Open the file to be used as the base for second revision */

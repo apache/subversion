@@ -47,6 +47,7 @@
 
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_md5.h"
 
 #include "private/svn_wc_private.h"
 
@@ -932,8 +933,6 @@ transmit_svndiff(const char *path,
   struct edit_baton *eb = fb->edit_baton;
   svn_txdelta_window_handler_t handler;
   svn_txdelta_stream_t *txdelta_stream;
-  const char *empty_file;
-  apr_file_t *empty_f;
   svn_stream_t *base_stream;
   svn_stream_t *local_stream;
   void *wh_baton;
@@ -2279,8 +2278,6 @@ close_file(void *file_baton,
           /* svnpatch-related */
           if (eb->svnpatch_stream)
             {
-              svn_boolean_t file_need_close = TRUE;
-
               SVN_ERR(transmit_prop_deltas
                       (b->propchanges, NULL, b, eb,
                        eb->diff_editor->change_file_prop, b->pool));
@@ -2292,7 +2289,7 @@ close_file(void *file_baton,
                   SVN_ERR(transmit_svndiff(temp_file_path, adm_access,
                                            eb->diff_editor, b, pool));
 
-              /* Last change to write a close-file command as a return
+              /* Last chance to write a close-file command as a return
                * statement follows. */
               SVN_ERR(eb->diff_editor->close_file(b, binary_file ? text_checksum : NULL, pool));
             }
@@ -2389,7 +2386,6 @@ close_file(void *file_baton,
           if (binary_file)
             {
               unsigned char tmp_digest[APR_MD5_DIGESTSIZE];
-              const char *base_digest_hex = NULL;
               const char *the_right_path = eb->reverse_order ?
                                            temp_file_path : localfile;
 
@@ -2434,7 +2430,6 @@ change_file_prop(void *file_baton,
                  apr_pool_t *pool)
 {
   struct file_baton *b = file_baton;
-  struct edit_baton *eb = b->edit_baton;
   svn_prop_t *propchange;
 
   propchange = apr_array_push(b->propchanges);
@@ -2453,7 +2448,6 @@ change_dir_prop(void *dir_baton,
                 apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
-  struct edit_baton *eb = db->edit_baton;
   svn_prop_t *propchange;
 
   propchange = apr_array_push(db->propchanges);
