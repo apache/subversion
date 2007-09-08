@@ -32,6 +32,7 @@
 #include "svn_pools.h"
 #include "svn_base64.h"
 #include "svn_string.h"
+#include "svn_hash.h"
 #include <assert.h>
 
 #include "svn_private_config.h"
@@ -301,8 +302,6 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   struct patch_cmd_baton *patch_b = baton;
   apr_pool_t *subpool = svn_pool_create(patch_b->pool);
   svn_node_kind_t kind;
-  const char *copyfrom_url;
-  const char *child;
   int i;
   apr_hash_t *new_props;
 
@@ -370,7 +369,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
              * it was just moved, set it to empty so that later get_empty_file()
              * calls don't get it wrong with the cache, i.e.  create another
              * empty file again. */
-            sprintf((char *)yours, ""); /* awful cast */
+            *(char *)yours = '\0';
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
@@ -996,7 +995,7 @@ get_empty_file(struct edit_baton *eb,
   /* Create the file if it does not exist or is empty path. */
   /* Note that we tried to use /dev/null in r17220, but
      that won't work on Windows: it's impossible to stat NUL */
-  if (!eb->empty_file || (eb->empty_file && strlen(eb->empty_file) < 1))
+  if (!eb->empty_file || !*(eb->empty_file))
     SVN_ERR(create_empty_file(NULL, &(eb->empty_file), eb->adm_access,
                               svn_io_file_del_on_pool_cleanup, eb->pool));
 
@@ -1173,7 +1172,6 @@ open_directory(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct dir_baton *b;
-  struct edit_baton *eb = pb->edit_baton;
 
   b = make_dir_baton(path, pb, pb->edit_baton, FALSE, pool);
   *child_baton = b;
@@ -1191,7 +1189,6 @@ add_file(const char *path,
          void **file_baton)
 {
   struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
   struct file_baton *b;
 
   /* ### TODO: support copyfrom? */
@@ -1215,7 +1212,6 @@ open_file(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct file_baton *b;
-  struct edit_baton *eb = pb->edit_baton;
 
   b = make_file_baton(path, FALSE, pb->edit_baton, pb, pool);
   *file_baton = b;
@@ -1247,7 +1243,6 @@ apply_textdelta(void *file_baton,
                 void **handler_baton)
 {
   struct file_baton *b = file_baton;
-  struct edit_baton *eb = b->edit_baton;
   svn_wc_adm_access_t *adm_access;
 
   /* This must be a binary file since, in a svnpatch context, we're only
@@ -1460,7 +1455,6 @@ change_file_prop(void *file_baton,
                  apr_pool_t *pool)
 {
   struct file_baton *b = file_baton;
-  struct edit_baton *eb = b->edit_baton;
   svn_prop_t *propchange;
 
   propchange = apr_array_push(b->propchanges);
@@ -1478,7 +1472,6 @@ change_dir_prop(void *dir_baton,
                 apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
-  struct edit_baton *eb = db->edit_baton;
   svn_prop_t *propchange;
 
   propchange = apr_array_push(db->propchanges);
