@@ -7955,10 +7955,7 @@ def merge_to_sparse_directories(sbox):
     'D'         : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,5-9*',
                               "prop:name" : "propval"}),
     })
-  expected_skip = wc.State(short_immediates_dir, {
-    'B/E' : Item(),
-    'D/H' : Item(),
-    })
+  expected_skip = wc.State(short_immediates_dir, {})
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_merge(short_immediates_dir, '4', '9',
@@ -8130,7 +8127,7 @@ test_list = [ None,
               merge_loses_mergeinfo,
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
-              XFail(merge_with_depth_files),
+              merge_with_depth_files,
               merge_fails_if_subtree_is_deleted_on_src,
               no_mergeinfo_from_no_op_merge,
               merge_to_sparse_directories,
