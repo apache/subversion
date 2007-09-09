@@ -112,13 +112,6 @@ Candidate changes:
     Votes:
       +1: dionisos, dlr
 
-  * r25654, r24711, r24710
-    Fix issue #2765, 'diff --summarize file' displays erroneous output.
-    Justification:
-      Bug fix for user-reported error.  Includes test case.
-    Votes:
-      +1: dlr, vgeorgescu
-
   * r26115
     Enable compression (svndiff1 deltas) for ra_svn's get-file-revs command.
     Justification:
@@ -220,3 +213,10 @@ Approved changes:
     Branch: 1.4.x-issue-2804
     Votes:
       +1: dlr, lgo, vgeorgescu
+
+  * r25654, r24711, r24710
+    Fix issue #2765, 'diff --summarize file' displays erroneous output.
+    Justification:
+      Bug fix for user-reported error.  Includes test case.
+    Votes:
+      +1: dlr, vgeorgescu, lgo
