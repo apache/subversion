@@ -3544,11 +3544,14 @@ When called from a file buffer, go to the current line in the resulting blame ou
 If the current file is a directory, compare it recursively.
 If there is a newer revision in the repository, the diff is done against HEAD,
 otherwise compare the working copy with BASE.
-If ARG then prompt for revision to diff against."
+If ARG then prompt for revision to diff against (unless arg is '-)
+When called with a negative prefix argument, do a non recursive diff."
   (interactive "P")
-  (svn-status-ensure-cursor-on-file)
-  (svn-status-show-svn-diff-internal (list (svn-status-get-line-information)) t
-                                     (if arg :ask :auto)))
+  (let ((non-recursive (or (and (numberp arg) (< arg 0)) (eq arg '-)))
+        (revision (if (and (not (eq arg '-)) arg) :ask :auto)))
+    (svn-status-ensure-cursor-on-file)
+    (svn-status-show-svn-diff-internal (list (svn-status-get-line-information)) (not non-recursive)
+                                       revision)))
 
 (defun svn-file-show-svn-diff (arg)
   "Run `svn diff' on the current file.
