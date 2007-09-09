@@ -897,7 +897,7 @@ PREWRITTEN_HOOKS_TEXT
 "PROPNAME=\"$4\""                                                            NL
 "ACTION=\"$5\""                                                              NL
 ""                                                                           NL
-"propchange-email.pl \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
+"commit-email.pl --revprop-change \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
 "watchers@example.org"                                                       NL;
 
 #undef SCRIPT_NAME
