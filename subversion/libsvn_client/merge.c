@@ -3335,12 +3335,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
                                          merge_path_t *);
       merge_path_t *curr_copy = apr_palloc(children_with_mergeinfo->pool,
                                            sizeof(*curr_copy));
-      curr_copy->path = curr->path;
-      curr_copy->missing_child = curr->missing_child;
-      curr_copy->switched = curr->switched;
-      curr_copy->has_noninheritable = curr->has_noninheritable;
-      curr_copy->absent = curr->absent;
-      curr_copy->propval = curr->propval;
+      *curr_copy = *curr;
       APR_ARRAY_PUSH(children_with_mergeinfo, merge_path_t *) = curr_copy;
 
       /* Move all elements from INSERT_INDEX to the end of the array forward
@@ -3350,24 +3345,12 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
           merge_path_t *prev;
           curr = APR_ARRAY_IDX(children_with_mergeinfo, j, merge_path_t *);
           if (j == insert_index)
-            {
-              curr->path = insert_element->path;
-              curr->missing_child = insert_element->missing_child;
-              curr->switched = insert_element->switched;
-              curr->has_noninheritable = insert_element->has_noninheritable;
-              curr->absent = insert_element->absent;
-              curr->propval = insert_element->propval;
-            }
+            *curr = *insert_element;
           else
             {
               prev = APR_ARRAY_IDX(children_with_mergeinfo, j - 1,
                                    merge_path_t *);
-              curr->path = prev->path;
-              curr->missing_child = prev->missing_child;
-              curr->switched = prev->switched;
-              curr->has_noninheritable = prev->has_noninheritable;
-              curr->absent = prev->absent;
-              curr->propval = prev->propval;
+              *curr = *prev;
             }
         }
     }
