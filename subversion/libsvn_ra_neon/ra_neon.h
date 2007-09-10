@@ -257,6 +257,7 @@ svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                                      svn_revnum_t revision_to_update_to,
                                      const char *update_target,
                                      svn_depth_t depth,
+                                     svn_boolean_t send_copyfrom_args,
                                      const svn_delta_editor_t *wc_update,
                                      void *wc_update_baton,
                                      apr_pool_t *pool);

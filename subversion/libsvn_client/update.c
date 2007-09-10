@@ -211,6 +211,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             revnum,
                             target,
                             depth,
+                            TRUE, /* send copyfrom args, please */
                             update_editor, update_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within

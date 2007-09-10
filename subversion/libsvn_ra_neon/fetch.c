@@ -195,6 +195,9 @@ typedef struct {
   /* The depth requested from the server. */
   svn_depth_t depth;
 
+  /* Whether the server should try to send copyfrom arguments. */
+  svn_boolean_t send_copyfrom_args;
+
   /* Use an intermediate tmpfile for the REPORT response. */
   svn_boolean_t spool_response;
 
@@ -2999,6 +3002,9 @@ static const svn_ra_reporter3_t ra_neon_reporter = {
 
    ### TODO(sd): document DEPTH behavior
 
+   If SEND_COPYFROM_ARGS is set, then ask the server to transmit
+   copyfrom args in add_file() in add_directory() calls.
+
    If IGNORE_ANCESTRY is set, the server will transmit real diffs
    between the working copy and the target even if those objects are
    not historically related.  Otherwise, the response will generally
@@ -3028,6 +3034,7 @@ make_reporter(svn_ra_session_t *session,
               const char *target,
               const char *dst_path,
               svn_depth_t depth,
+              svn_boolean_t send_copyfrom_args,
               svn_boolean_t ignore_ancestry,
               svn_boolean_t resource_walk,
               const svn_delta_editor_t *editor,
@@ -3061,6 +3068,7 @@ make_reporter(svn_ra_session_t *session,
   rb->base64_decoder = NULL;
   rb->cdata_accum = svn_stringbuf_create("", pool);
   rb->depth = (depth == svn_depth_unknown ? svn_depth_infinity : depth);
+  rb->send_copyfrom_args = send_copyfrom_args;
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use
@@ -3149,6 +3157,17 @@ make_reporter(svn_ra_session_t *session,
                                      NULL, pool));
     }
 
+  /* mod_dav_svn 1.5 and later won't send copyfrom args unless it
+     finds this element.  older mod_dav_svn modules should just
+     ignore the unknown element. */
+  if (ignore_ancestry)
+    {
+      const char *data =
+        "<S:send-copyfrom-args>yes</S:send-copyfrom_args>" DEBUG_CR;
+      SVN_ERR(svn_io_file_write_full(rb->tmpfile, data, strlen(data),
+                                     NULL, pool));
+    }
+
   /* If we want a resource walk to occur, note that now. */
   if (resource_walk)
     {
@@ -3185,6 +3204,7 @@ svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                                      svn_revnum_t revision_to_update_to,
                                      const char *update_target,
                                      svn_depth_t depth,
+                                     svn_boolean_t send_copyfrom_args,
                                      const svn_delta_editor_t *wc_update,
                                      void *wc_update_baton,
                                      apr_pool_t *pool)
@@ -3196,6 +3216,7 @@ svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                        update_target,
                        NULL,
                        depth,
+                       send_copyfrom_args,
                        FALSE,
                        FALSE,
                        wc_update,
@@ -3226,6 +3247,7 @@ svn_error_t * svn_ra_neon__do_status(svn_ra_session_t *session,
                        depth,
                        FALSE,
                        FALSE,
+                       FALSE,
                        wc_status,
                        wc_status_baton,
                        FALSE, /* fetch_content */
@@ -3253,6 +3275,7 @@ svn_error_t * svn_ra_neon__do_switch(svn_ra_session_t *session,
                        update_target,
                        switch_url,
                        depth,
+                       FALSE,  /* ### TODO(sussman): no copyfrom args */
                        TRUE,
                        FALSE, /* ### Disabled, pre-1.2 servers sometimes
                                  return incorrect resource-walk data */
@@ -3285,6 +3308,7 @@ svn_error_t * svn_ra_neon__do_diff(svn_ra_session_t *session,
                        diff_target,
                        versus_url,
                        depth,
+                       FALSE,
                        ignore_ancestry,
                        FALSE,
                        wc_diff,
