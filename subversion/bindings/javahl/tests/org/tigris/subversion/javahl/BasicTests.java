@@ -843,7 +843,7 @@ public class BasicTests extends SVNTests
      * @since 1.5
      */
     private void assertExpectedSuggestion(String expectedSrc,
-                                           String destPath, OneTest thisTest)
+                                          String destPath, OneTest thisTest)
         throws SubversionException
     {
         String wcPath = fileToSVNPath(new File(thisTest.getWCPath(),
