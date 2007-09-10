@@ -3482,22 +3482,18 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                hi = apr_hash_next(hi))
             {
               const void *key;
-              void *val;
-              const svn_wc_entry_t *current_entry;
               merge_path_t *child_of_noninheritable;
               const char *child_path;
 
-              apr_hash_this(hi, &key, NULL, &val);
-               current_entry = val;
+              apr_hash_this(hi, &key, NULL, NULL);
 
-              if (strcmp(current_entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+              if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
                 continue;
 
               /* Does this child already exist in CHILDREN_WITH_MERGEINFO?  If
                  not, create it and insert it into CHILDREN_WITH_MERGEINFO and
                  set override mergeinfo on it. */
-              child_path = svn_path_join(child->path, current_entry->name,
-                                         iterpool);
+              child_path = svn_path_join(child->path, key, iterpool);
               insert_index = find_child_or_parent(children_with_mergeinfo,
                                                   &child_of_noninheritable,
                                                   child_path, TRUE, i,
@@ -3594,21 +3590,16 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                hi = apr_hash_next(hi))
             {
               const void *key;
-              void *val;
-              const svn_wc_entry_t *current_entry;
               merge_path_t *sibling_of_missing;
               const char *child_path;
 
-              apr_hash_this(hi, &key, NULL, &val);
-              current_entry = val;
+              apr_hash_this(hi, &key, NULL, NULL);
 
-              if (strcmp(current_entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+              if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
                 continue;
 
               /* Does this child already exist in CHILDREN_WITH_MERGEINFO? */
-              child_path = svn_path_join(parent->path,
-                                         current_entry->name,
-                                         iterpool);
+              child_path = svn_path_join(parent->path, key, iterpool);
               insert_index = find_child_or_parent(children_with_mergeinfo,
                                                   &sibling_of_missing,
                                                   child_path, TRUE,
