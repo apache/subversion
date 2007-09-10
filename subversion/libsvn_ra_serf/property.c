@@ -23,6 +23,7 @@
 #include "svn_path.h"
 #include "svn_base64.h"
 
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -827,7 +828,7 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
     prop_name = name;
   else if (strcmp(name, "version-name") == 0)
     prop_name = SVN_PROP_ENTRY_COMMITTED_REV;
-  else if (strcmp(name, "creationdate") == 0)
+  else if (strcmp(name, SVN_DAV__CREATIONDATE) == 0)
     prop_name = SVN_PROP_ENTRY_COMMITTED_DATE;
   else if (strcmp(name, "creator-displayname") == 0)
     prop_name = SVN_PROP_ENTRY_LAST_AUTHOR;

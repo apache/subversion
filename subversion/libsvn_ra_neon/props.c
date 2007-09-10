@@ -2,7 +2,7 @@
  * props.c :  routines for fetching DAV properties
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,7 @@
 #include "svn_props.h"
 #include "../libsvn_ra/ra_loader.h"
 
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -132,7 +133,7 @@ static const svn_ra_neon__xml_elm_t propfind_elements[] =
   { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "getcontentlength", ELEM_get_content_length,
     SVN_RA_NEON__XML_CDATA },
-  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", SVN_DAV__CREATIONDATE, ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "creator-displayname", ELEM_creator_displayname,
     SVN_RA_NEON__XML_CDATA },
 

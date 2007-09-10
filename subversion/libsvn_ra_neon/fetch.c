@@ -46,6 +46,7 @@
 #include "svn_time.h"
 #include "svn_props.h"
 
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -235,7 +236,7 @@ static const svn_ra_neon__xml_elm_t report_elements[] =
     SVN_RA_NEON__XML_CDATA },
 
   { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
-  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", SVN_DAV__CREATIONDATE, ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "creator-displayname", ELEM_creator_displayname,
      SVN_RA_NEON__XML_CDATA },
 
@@ -262,7 +263,7 @@ static const svn_ra_neon__xml_elm_t getlocks_report_elements[] =
   { SVN_XML_NAMESPACE, "token", ELEM_lock_token, SVN_RA_NEON__XML_CDATA },
   { SVN_XML_NAMESPACE, "owner", ELEM_lock_owner, SVN_RA_NEON__XML_CDATA },
   { SVN_XML_NAMESPACE, "comment", ELEM_lock_comment, SVN_RA_NEON__XML_CDATA },
-  { SVN_XML_NAMESPACE, "creationdate",
+  { SVN_XML_NAMESPACE, SVN_DAV__CREATIONDATE,
     ELEM_lock_creationdate, SVN_RA_NEON__XML_CDATA },
   { SVN_XML_NAMESPACE, "expirationdate",
     ELEM_lock_expirationdate, SVN_RA_NEON__XML_CDATA },
@@ -939,7 +940,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
           if (dirent_fields & SVN_DIRENT_TIME)
             {
               which_props[num_props].nspace = "DAV:";
-              which_props[num_props--].name = "creationdate";
+              which_props[num_props--].name = SVN_DAV__CREATIONDATE;
             }
 
           if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
@@ -1213,8 +1214,8 @@ svn_error_t *svn_ra_neon__get_dated_revision(svn_ra_session_t *session,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
                       "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                       "xmlns:D=\"DAV:\">"
-                      "<D:creationdate>%s</D:creationdate>"
-                      "</S:dated-rev-report>",
+                      "<D:" SVN_DAV__CREATIONDATE ">%s</D:"
+                      SVN_DAV__CREATIONDATE "></S:dated-rev-report>",
                       svn_time_to_cstring(timestamp, pool));
 
   err = svn_ra_neon__parsed_request(ras, "REPORT",
@@ -3160,7 +3161,7 @@ make_reporter(svn_ra_session_t *session,
   /* mod_dav_svn 1.5 and later won't send copyfrom args unless it
      finds this element.  older mod_dav_svn modules should just
      ignore the unknown element. */
-  if (send_copyfrom_args)
+  if (send_copyfrom_args && FALSE)
     {
       const char *data =
         "<S:send-copyfrom-args>yes</S:send-copyfrom_args>" DEBUG_CR;
