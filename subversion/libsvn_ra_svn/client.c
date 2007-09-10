@@ -1071,6 +1071,7 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
                                   const svn_ra_reporter3_t **reporter,
                                   void **report_baton, svn_revnum_t rev,
                                   const char *target, svn_depth_t depth,
+                                  svn_boolean_t send_copyfrom_args,
                                   const svn_delta_editor_t *update_editor,
                                   void *update_baton, apr_pool_t *pool)
 {
@@ -1079,8 +1080,9 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start an update. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cbw", rev, target,
-                               recurse, svn_depth_to_word(depth)));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cbwb", rev, target,
+                               recurse, svn_depth_to_word(depth),
+                               send_copyfrom_args));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive

@@ -392,6 +392,10 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  * @a ignore_ancestry instructs the driver to ignore node ancestry
  * when determining how to transmit differences.
  *
+ * @a send_copyfrom_args instructs the driver to send 'copyfrom'
+ * arguments to the editor's add_file() and add_directory() methods,
+ * whenever it deems feasible.
+ *
  * The @a authz_read_func and @a authz_read_baton are passed along to
  * svn_repos_dir_delta2(); see that function for how they are used.
  *
@@ -439,6 +443,7 @@ svn_repos_begin_report2(void **report_baton,
                         svn_boolean_t text_deltas,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
+                        svn_boolean_t send_copyfrom_args,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
                         svn_repos_authz_func_t authz_read_func,
@@ -447,7 +452,7 @@ svn_repos_begin_report2(void **report_baton,
 
 /**
  * The same as svn_repos_begin_report2(), but taking a boolean
- * @a recurse flag.
+ * @a recurse flag, and sending FALSE for @a send_copyfrom_args.
  *
  * If @a recurse is true, the editor driver will drive the editor with
  * a depth of @c svn_depth_infinity; if false, then with a depth of

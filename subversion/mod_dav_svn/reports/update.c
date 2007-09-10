@@ -923,6 +923,7 @@ dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t saw_recursive = FALSE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
+  svn_boolean_t send_copyfrom_args = FALSE;
   dav_svn__authz_read_baton arb;
   apr_pool_t *subpool = svn_pool_create(resource->pool);
 
@@ -1061,6 +1062,14 @@ dav_svn__update_report(const dav_resource *resource,
           if (strcmp(cdata, "no") != 0)
             ignore_ancestry = TRUE;
         }
+      if (child->ns == ns && strcmp(child->name, "send-copyfrom-args") == 0)
+        {
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          if (strcmp(cdata, "no") != 0)
+            send_copyfrom_args = TRUE;
+        }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
@@ -1182,6 +1191,7 @@ dav_svn__update_report(const dav_resource *resource,
                                       dst_path,
                                       text_deltas,
                                       requested_depth,
+                                      send_copyfrom_args,
                                       ignore_ancestry,
                                       editor, &uc,
                                       dav_svn__authz_read_func(&arb),
