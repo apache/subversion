@@ -31,6 +31,7 @@
 #include "svn_props.h"
 #include "svn_xml.h"
 
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -56,7 +57,7 @@ static const svn_ra_neon__xml_elm_t merge_elements[] =
   { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
   { SVN_XML_NAMESPACE, "post-commit-err",
     ELEM_post_commit_err, SVN_RA_NEON__XML_CDATA },
-  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", SVN_DAV__CREATIONDATE, ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "creator-displayname", ELEM_creator_displayname,
     SVN_RA_NEON__XML_CDATA },
 
@@ -747,7 +748,7 @@ svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
                       "<D:no-auto-merge/><D:no-checkout/>"
                       "<D:prop>"
                       "<D:checked-in/><D:version-name/><D:resourcetype/>"
-                      "<D:creationdate/><D:creator-displayname/>"
+                      "<D:" SVN_DAV__CREATIONDATE "/><D:creator-displayname/>"
                       "</D:prop>"
                       "%s"
                       "</D:merge>",

@@ -33,6 +33,8 @@
 #include "svn_dav.h"
 #include "svn_base64.h"
 
+#include "private/svn_dav_protocol.h"
+
 #include "../dav_svn.h"
 
 
@@ -60,7 +62,8 @@ dav_svn__dated_rev_report(const dav_resource *resource,
     {
       for (child = doc->root->first_child; child != NULL; child = child->next)
         {
-          if (child->ns != ns || strcmp(child->name, "creationdate") != 0)
+          if (child->ns != ns ||
+              strcmp(child->name, SVN_DAV__CREATIONDATE) != 0)
             continue;
           /* If this fails, we'll notice below, so ignore any error for now. */
           svn_error_clear
@@ -74,7 +77,7 @@ dav_svn__dated_rev_report(const dav_resource *resource,
     {
       return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
                            "The request does not contain a valid "
-                           "'DAV:creationdate' element.");
+                           "'DAV:" SVN_DAV__CREATIONDATE "' element.");
     }
 
   /* Do the actual work of finding the revision by date. */
