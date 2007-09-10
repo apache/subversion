@@ -1004,6 +1004,61 @@ def commit_depth_immediates(sbox):
                                         '--depth', 'immediates',
                                         wc_dir, G_path)
 
+def depth_immediates_receive_new_dir(sbox):
+  "depth-1 working copy receives a new directory"
+
+  ign_a, ign_b, wc_immed, wc = set_up_depthy_working_copies(sbox,
+                                                            immediates=True,
+                                                            infinity=True)
+
+  I_path = os.path.join(wc, 'I')
+  zeta_path = os.path.join(wc, 'I', 'zeta')
+  other_I_path = os.path.join(wc_immed, 'I')
+
+  os.mkdir(I_path)
+  svntest.main.file_write(zeta_path, "This is the file 'zeta'.\n")
+
+  # Commit in the "other" wc.
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', I_path)
+  expected_output = svntest.wc.State(wc, {
+    'I'      : Item(verb='Adding'),
+    'I/zeta' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
+  expected_status.add({
+    'I'      : Item(status='  ', wc_rev=2),
+    'I/zeta' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None, wc)
+
+  # Update the depth-immediates wc, expecting to receive just the
+  # new directory, without the file.
+  expected_output = svntest.wc.State(wc_immed, {
+    'I'    : Item(status='A '),
+    })
+  expected_disk = svntest.wc.State('', {
+    'iota' : Item(contents="This is the file 'iota'.\n"),
+    'A'    : Item(),
+    'I'    : Item(),
+    })
+  expected_status = svntest.wc.State(wc_immed, {
+    ''     : Item(status='  ', wc_rev=2),
+    'iota' : Item(status='  ', wc_rev=2),
+    'A'    : Item(status='  ', wc_rev=2),
+    'I'    : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_update(wc_immed,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None)
+  # Check that the new directory was added at depth=empty.
+  svntest.actions.run_and_verify_svn(None, "Depth: empty", [], "info",
+                                     other_I_path)
+
 #----------------------------------------------------------------------
 
 # list all tests here, starting with None:
@@ -1029,6 +1084,7 @@ test_list = [ None,
               commit_propmods_with_depth_empty,
               diff_in_depthy_wc,
               commit_depth_immediates,
+              depth_immediates_receive_new_dir,
             ]
 
 if __name__ == "__main__":
