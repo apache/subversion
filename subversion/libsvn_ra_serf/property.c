@@ -826,7 +826,7 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
     prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
   else if (strcmp(ns, "") == 0)
     prop_name = name;
-  else if (strcmp(name, "version-name") == 0)
+  else if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
     prop_name = SVN_PROP_ENTRY_COMMITTED_REV;
   else if (strcmp(name, SVN_DAV__CREATIONDATE) == 0)
     prop_name = SVN_PROP_ENTRY_COMMITTED_DATE;

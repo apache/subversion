@@ -28,8 +28,9 @@
 #include "svn_ra.h"
 #include "svn_delta.h"
 #include "svn_version.h"
-
 #include "svn_dav.h"
+
+#include "private/svn_dav_protcol.h"
 
 
 /** Use this to silence compiler warnings about unused parameters. */
@@ -186,7 +187,7 @@ static const svn_ra_serf__dav_props_t checked_in_props[] =
 static const svn_ra_serf__dav_props_t baseline_props[] =
 {
   { "DAV:", "baseline-collection" },
-  { "DAV:", "version-name" },
+  { "DAV:", SVN_DAV__VERSION_NAME },
   { NULL }
 };
 

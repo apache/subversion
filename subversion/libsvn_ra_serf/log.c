@@ -33,6 +33,8 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_path.h"
+
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -156,7 +158,7 @@ start_log(svn_ra_serf__xml_parser_t *parser,
     {
       log_info_t *info;
 
-      if (strcmp(name.name, "version-name") == 0)
+      if (strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
         {
           push_state(parser, log_ctx, VERSION);
         }
@@ -269,7 +271,7 @@ end_log(svn_ra_serf__xml_parser_t *parser,
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == VERSION &&
-           strcmp(name.name, "version-name") == 0)
+           strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
     {
       info->log_entry->revision = SVN_STR_TO_REV(info->tmp);
       info->tmp_len = 0;

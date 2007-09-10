@@ -30,6 +30,8 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+
+#include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
 
 #include "ra_neon.h"
@@ -117,7 +119,8 @@ log_start_element(int *elem, void *baton, int parent,
         SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path,
         SVN_RA_NEON__XML_CDATA },
-      { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
+      { "DAV:", SVN_DAV__VERSION_NAME, ELEM_version_name,
+        SVN_RA_NEON__XML_CDATA },
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
         SVN_RA_NEON__XML_CDATA },
       { "DAV:", "comment", ELEM_comment, SVN_RA_NEON__XML_CDATA },
