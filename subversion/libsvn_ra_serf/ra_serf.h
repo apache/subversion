@@ -30,7 +30,7 @@
 #include "svn_version.h"
 #include "svn_dav.h"
 
-#include "private/svn_dav_protcol.h"
+#include "private/svn_dav_protocol.h"
 
 
 /** Use this to silence compiler warnings about unused parameters. */
