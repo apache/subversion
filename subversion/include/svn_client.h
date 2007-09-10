@@ -1060,10 +1060,6 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * If @a depth is @c svn_depth_unknown, take the working depth from
  * @a paths and then behave as described above.
  *
- * ### TODO(sd): In the @c svn_depth_immediates case, shouldn't we update
- * ### the presence/absence of subdirs, even though we don't update
- * ### inside the subdirs themselves?
- *
  * If @a allow_unver_obstructions is true then the update tolerates
  * existing unversioned items that obstruct added paths from @a URL.  Only
  * obstructions of the same type (file or dir) as the added item are
@@ -2013,9 +2009,6 @@ svn_client_blame(const char *path_or_url,
  * the named paths and their file children (if any), but no
  * subdirectories.  Else if @c svn_depth_empty, diff just the named
  * paths but nothing underneath them.
- *
- * ### TODO(sd): If svn_depth_immediates, would it perhaps be more correct
- * ### to diff file children and subdirs' properties?
  *
  * Use @a ignore_ancestry to control whether or not items being
  * diffed will be checked for relatedness first.  Unrelated items
