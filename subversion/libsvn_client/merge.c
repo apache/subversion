@@ -3335,8 +3335,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
                                          merge_path_t *);
       merge_path_t *curr_copy = apr_palloc(children_with_mergeinfo->pool,
                                            sizeof(*curr_copy));
-      curr_copy->path = apr_pstrdup(children_with_mergeinfo->pool,
-                                    curr->path);
+      curr_copy->path = curr->path;
       curr_copy->missing_child = curr->missing_child;
       curr_copy->switched = curr->switched;
       curr_copy->has_noninheritable = curr->has_noninheritable;
