@@ -3161,7 +3161,7 @@ make_reporter(svn_ra_session_t *session,
   /* mod_dav_svn 1.5 and later won't send copyfrom args unless it
      finds this element.  older mod_dav_svn modules should just
      ignore the unknown element. */
-  if (send_copyfrom_args && FALSE)
+  if (send_copyfrom_args)
     {
       const char *data =
         "<S:send-copyfrom-args>yes</S:send-copyfrom_args>" DEBUG_CR;
