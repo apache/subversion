@@ -1471,7 +1471,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                                       info->dir->dir_baton,
                                       info->dir->pool);
     }
-  else if ((state == OPEN_DIR || state == ADD_DIR))
+  else if (state == OPEN_DIR || state == ADD_DIR)
     {
       report_info_t *info;
 
@@ -1531,7 +1531,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         }
 
     }
-  else if ((state == OPEN_FILE || state == ADD_FILE))
+  else if (state == OPEN_FILE || state == ADD_FILE)
     {
       report_info_t *info;
 
@@ -1881,7 +1881,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                 ns->namespace, ns->url, set_val_str, pool);
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if ((state == IGNORE_PROP_NAME || state == NEED_PROP_NAME))
+  else if (state == IGNORE_PROP_NAME || state == NEED_PROP_NAME)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
