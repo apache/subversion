@@ -1448,6 +1448,29 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                                            info->dir->dir_baton,
                                            info->dir->pool);
     }
+  else if ((state == OPEN_DIR || state == ADD_DIR) &&
+           strcmp(name.name, "absent-file") == 0)
+    {
+      const char *file_name;
+      report_info_t *info;
+
+      file_name = svn_ra_serf__find_attr(attrs, "name");
+
+      if (!file_name)
+        {
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing name attr in absent-file element"));
+        }
+
+      info = parser->state->private;
+
+      SVN_ERR(open_dir(info->dir));
+
+      ctx->update_editor->absent_file(file_name,
+                                      info->dir->dir_baton,
+                                      info->dir->pool);
+    }
   else if ((state == OPEN_DIR || state == ADD_DIR))
     {
       report_info_t *info;
