@@ -2541,7 +2541,7 @@ do_merge(const char *initial_URL1,
                           SVN_ERR(svn_wc__entry_versioned(&child_entry,
                                                           merged_path,
                                                           adm_access, FALSE,
-                                                          pool));
+                                                          subpool));
                           if (((child_entry->kind == svn_node_dir) && 
                                (strcmp(merge_b->target, merged_path) == 0) &&
                                (depth == svn_depth_immediates))
@@ -3772,7 +3772,7 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
         }
 
       /* If the path is getting deleted don't bother doing subtree merge.
-       * Just remove it from children_sw_or_with_mergeinfo, so that merge
+       * Just remove it from children_with_mergeinfo, so that merge
        * on a parent can handle it in a usual way.
        */
       if (apr_hash_get(sb.deleted_paths, child->path, APR_HASH_KEY_STRING))
