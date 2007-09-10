@@ -31,6 +31,7 @@ extern "C" {
 
 /** Names for XML child elements of the custom HTTP REPORTs understood
     by mod_dav_svn, sans namespace. */
+#define SVN_DAV__CREATIONDATE "creationdate"
 #define SVN_DAV__MERGEINFO_ITEM "mergeinfo-item"
 #define SVN_DAV__MERGEINFO_PATH "mergeinfo-path"
 #define SVN_DAV__MERGEINFO_INFO "mergeinfo-info"
