@@ -2388,7 +2388,7 @@ def basic_diff_summarize(sbox):
                                         None, None, None, None,
                                         wc_dir)
 
-  # Get the differences between two files.
+  # Get the differences between two versions of a file.
   expected_diff = svntest.wc.State(wc_dir, {
     'iota': Item(status=' M'),
     })
