@@ -94,8 +94,8 @@ dav_svn__dated_rev_report(const dav_resource *resource,
                        DAV_XML_HEADER DEBUG_CR
                        "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                        "xmlns:D=\"DAV:\">" DEBUG_CR
-                       "<D:version-name>%ld</D:version-name>"
-                       "</S:dated-rev-report>", rev);
+                       "<D:" SVN_DAV__VERSION_NAME ">%ld</D:"
+                       SVN_DAV__VERSION_NAME ">""</S:dated-rev-report>", rev);
   if (apr_err)
     derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
                                 HTTP_INTERNAL_SERVER_ERROR,

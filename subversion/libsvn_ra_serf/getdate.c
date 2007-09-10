@@ -101,7 +101,7 @@ start_getdate(svn_ra_serf__xml_parser_t *parser,
   state = parser->state->current_state;
 
   if (state == NONE &&
-      strcmp(name.name, "version-name") == 0)
+      strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
     {
       push_state(parser, date_ctx, VERSION_NAME);
     }
@@ -122,7 +122,7 @@ end_getdate(svn_ra_serf__xml_parser_t *parser,
   info = parser->state->private;
 
   if (state == VERSION_NAME &&
-      strcmp(name.name, "version-name") == 0)
+      strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
     {
       *date_ctx->revision = SVN_STR_TO_REV(info->tmp);
       svn_ra_serf__xml_pop_state(parser);

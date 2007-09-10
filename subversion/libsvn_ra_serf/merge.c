@@ -261,8 +261,8 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
         {
           const char *str;
 
-          str = apr_hash_get(info->props, "version-name",
-                                 APR_HASH_KEY_STRING);
+          str = apr_hash_get(info->props, SVN_DAV__VERSION_NAME,
+                             APR_HASH_KEY_STRING);
           if (str)
             {
               ctx->commit_info->revision = SVN_STR_TO_REV(str);
@@ -466,7 +466,7 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
 }
 
 #define MERGE_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:merge xmlns:D=\"DAV:\"><D:source><D:href>"
-#define MERGE_BODY "</D:href></D:source><D:no-auto-merge/><D:no-checkout/><D:prop><D:checked-in/><D:version-name/><D:resourcetype/><D:" SVN_DAV__CREATIONDATE "/><D:creator-displayname/></D:prop>"
+#define MERGE_BODY "</D:href></D:source><D:no-auto-merge/><D:no-checkout/><D:prop><D:checked-in/><D:" SVN_DAV__VERSION_NAME "/><D:resourcetype/><D:" SVN_DAV__CREATIONDATE "/><D:creator-displayname/></D:prop>"
 #define MERGE_TRAILER "</D:merge>"
 
 static serf_bucket_t*
