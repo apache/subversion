@@ -843,10 +843,11 @@ public class BasicTests extends SVNTests
      * @since 1.5
      */
     private void assertExpectedSuggestion(String expectedSrc,
-                                          String destPath, OneTest thisTest)
+                                           String destPath, OneTest thisTest)
         throws SubversionException
     {
-        String wcPath = new File(thisTest.getWCPath(), destPath).getPath();
+        String wcPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                               destPath), false);
         String[] suggestions = client.suggestMergeSources(wcPath, 
                                                           Revision.WORKING);
         assertNotNull(suggestions);
