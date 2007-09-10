@@ -1307,20 +1307,24 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *target, *full_path, *depth_word;
   svn_boolean_t recurse;
-  svn_boolean_t send_copyfrom_args = FALSE;
+  svn_boolean_t send_copyfrom_args;
+  apr_uint64_t send_copyfrom_param;
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?w?b", &rev, &target,
-                                 &recurse, &depth_word, &send_copyfrom_args));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?w?B", &rev, &target,
+                                 &recurse, &depth_word, &send_copyfrom_param));
   target = svn_path_canonicalize(target, pool);
 
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
     depth = SVN_DEPTH_FROM_RECURSE(recurse);
+
+  send_copyfrom_args = (send_copyfrom_param == SVN_RA_SVN_UNSPECIFIED_NUMBER) ?
+      FALSE : send_copyfrom_param;
 
   full_path = svn_path_join(b->fs_path->data, target, pool);
   /* Check authorization and authenticate the user if necessary. */
