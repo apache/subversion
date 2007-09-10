@@ -964,6 +964,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Set global-ignores to a set of whitespace-delimited globs"      NL
         "### which Subversion will ignore in its 'status' output, and"       NL
         "### while importing or adding files and directories."               NL
+        "### '*' matches leading dots, e.g. '*.rej' matches '.foo.rej'."     NL
         "# global-ignores = " SVN_CONFIG_DEFAULT_GLOBAL_IGNORES ""           NL
         "### Set log-encoding to the default encoding for log messages"      NL
         "# log-encoding = latin1"                                            NL
