@@ -120,6 +120,7 @@ typedef struct svn_config_t svn_config_t;
 
 /*** Configuration Default Values ***/
 
+/* '*' matches leading dots, e.g. '*.rej' matches '.foo.rej'. */
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
     "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo" \
     " *.rej *~ #*# .#* .*.swp .DS_Store"
