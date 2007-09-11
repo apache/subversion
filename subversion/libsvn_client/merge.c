@@ -3367,6 +3367,98 @@ compare_merge_path_t_as_paths(const void *a,
   return svn_path_compare_paths(child1->path, child2->path);
 }
 
+/* Helper for get_mergeinfo_paths(). 
+ * If CHILD->PATH is switched or absent make sure its
+ * parent is marked as missing a child.
+ * Start looking up for parent from *CURR_INDEX in CHILDREN_WITH_MERGEINFO.
+ * Create the parent and insert it into CHILDREN_WITH_MERGEINFO if necessary
+ * (and increment *CURR_INDEX so that caller don't process the inserted 
+ *  element).
+ * Also ensure that CHILD->PATH's
+ * siblings which are not already present in CHILDREN_WITH_MERGEINFO
+ * are also added to the array. Use POOL for all temporary allocations.*/
+static svn_error_t *
+insert_parent_and_siblings_of_switched_or_absent_entry(
+                                   apr_array_header_t *children_with_mergeinfo,
+                                   struct merge_cmd_baton *merge_cmd_baton,
+                                   int *curr_index,
+                                   merge_path_t *child,
+                                   svn_wc_adm_access_t *adm_access,
+                                   apr_pool_t *pool)
+{
+  merge_path_t *parent;
+  const char *parent_path = svn_path_dirname(child->path, pool);
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  svn_wc_adm_access_t *parent_access;
+  int insert_index, parent_index;
+
+  if (!(child->absent
+          || (child->switched
+              && strcmp(merge_cmd_baton->target, child->path) != 0)))
+    return SVN_NO_ERROR;
+
+  parent_index = find_child_or_parent(children_with_mergeinfo, &parent,
+                                      parent_path, FALSE, *curr_index, pool);
+  if (parent)
+    {
+      parent->missing_child = TRUE;
+    }
+  else
+    {
+      /* Create a new element to insert into CHILDREN_WITH_MERGEINFO. */
+      parent = apr_palloc(children_with_mergeinfo->pool, sizeof(*parent));
+      parent->path = apr_pstrdup(children_with_mergeinfo->pool, parent_path);
+      parent->missing_child = TRUE;
+      parent->switched = FALSE;
+      parent->has_noninheritable = FALSE;
+      parent->absent = FALSE;
+      parent->propval = NULL;
+      /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
+      insert_child_to_merge(children_with_mergeinfo, parent, parent_index);
+      /* Increment for loop index so we don't process the inserted element. */
+      (*curr_index)++;
+    } /*(parent == NULL) */
+
+  /* Add all of PARENT's non-missing children that are not already present.*/
+  SVN_ERR(svn_wc_adm_probe_try3(&parent_access, adm_access, parent->path,
+                                TRUE, -1, merge_cmd_baton->ctx->cancel_func,
+                                merge_cmd_baton->ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc_entries_read(&entries, parent_access, FALSE, pool));
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      merge_path_t *sibling_of_missing;
+      const char *child_path;
+
+      apr_hash_this(hi, &key, NULL, NULL);
+
+      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+        continue;
+
+      /* Does this child already exist in CHILDREN_WITH_MERGEINFO? */
+      child_path = svn_path_join(parent->path, key, pool);
+      insert_index = find_child_or_parent(children_with_mergeinfo,
+                                          &sibling_of_missing, child_path,
+                                          TRUE, parent_index, pool);
+      /* Create the missing child and insert it into CHILDREN_WITH_MERGEINFO.*/
+      if (!sibling_of_missing)
+        {
+          sibling_of_missing = apr_palloc(children_with_mergeinfo->pool,
+                                          sizeof(*sibling_of_missing));
+          sibling_of_missing->path = apr_pstrdup(children_with_mergeinfo->pool,
+                                                 child_path);
+          sibling_of_missing->missing_child = FALSE;
+          sibling_of_missing->switched = FALSE;
+          sibling_of_missing->has_noninheritable = FALSE;
+          sibling_of_missing->absent = FALSE;
+          sibling_of_missing->propval = NULL;
+          insert_child_to_merge(children_with_mergeinfo, sibling_of_missing,
+                                insert_index);
+        }
+    }
+  return SVN_NO_ERROR;
+}
 /* Helper for discover_and_merge_children()
 
    Perform a depth first walk of the working copy tree rooted at TARGET (with
@@ -3386,6 +3478,8 @@ compare_merge_path_t_as_paths(const void *a,
         sibling is switched or absent, or missing due to a sparse checkout.
      6) Path is absent from disk due to an authz restriction.
 
+   Criteria 4 and 5 are handled by 
+   'insert_parent_and_siblings_of_switched_or_absent_entry'.
    Store the merge_path_ts in *CHILDREN_WITH_MERGEINFO.
    *CHILDREN_WITH_MERGEINFO is guaranteed to be in depth-first order based
    on the merge_path_t *s path member.  Cascade MERGE_SRC_CANON_PATH. */
@@ -3435,7 +3529,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   iterpool = svn_pool_create(pool);
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
-      int insert_index, parent_index;
+      int insert_index;
       merge_path_t *child = APR_ARRAY_IDX(children_with_mergeinfo, i,
                                           merge_path_t *);
       svn_pool_clear(iterpool);
@@ -3532,99 +3626,12 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                 }
             }
         }
-
-      /* Cover cases 4) and 5) If PATH is switched or absent make sure its
-         parent is marked as missing a child.  Create the parent and insert it
-         into CHILDREN_WITH_MERGEINFO if necessary.  Also ensure that PATH's
-         siblings which are not already present in CHILDREN_WITH_MERGEINFO
-         are also added to the array. */
-      if (child->absent
-          || (child->switched
-              && strcmp(merge_cmd_baton->target, child->path) != 0))
-        {
-          merge_path_t *parent;
-          const char *parent_path = svn_path_dirname(child->path, iterpool);
-          apr_hash_t *entries;
-          apr_hash_index_t *hi;
-          svn_wc_adm_access_t *parent_access;
-
-          parent_index = find_child_or_parent(children_with_mergeinfo,
-                                              &parent, parent_path, FALSE, i,
-                                              iterpool);
-          if (parent)
-            {
-              parent->missing_child = TRUE;
-            }
-          else
-            {
-              /* Create a new element to insert into
-                 CHILDREN_WITH_MERGEINFO. */
-              parent = apr_palloc(children_with_mergeinfo->pool,
-                                  sizeof(*parent));
-              parent->path =
-                apr_pstrdup(children_with_mergeinfo->pool,
-                            parent_path);
-              parent->missing_child = TRUE;
-              parent->switched = FALSE;
-              parent->has_noninheritable = FALSE;
-              parent->absent = FALSE;
-              parent->propval = NULL;
-              /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
-              insert_child_to_merge(children_with_mergeinfo, parent,
-                                    parent_index);
-              /* Increment for loop index so we don't process the inserted
-                 element. */
-              i++;
-            } /*(parent == NULL) */
-
-          /* Add all of PARENT's non-missing children that are not
-             already present. */
-          SVN_ERR(svn_wc_adm_probe_try3(&parent_access, adm_access,
-                                        parent->path, TRUE, -1,
-                                        merge_cmd_baton->ctx->cancel_func,
-                                        merge_cmd_baton->ctx->cancel_baton,
-                                        iterpool));
-          SVN_ERR(svn_wc_entries_read(&entries, parent_access, FALSE,
-                                      iterpool));
-          for (hi = apr_hash_first(iterpool, entries); hi;
-               hi = apr_hash_next(hi))
-            {
-              const void *key;
-              merge_path_t *sibling_of_missing;
-              const char *child_path;
-
-              apr_hash_this(hi, &key, NULL, NULL);
-
-              if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
-                continue;
-
-              /* Does this child already exist in CHILDREN_WITH_MERGEINFO? */
-              child_path = svn_path_join(parent->path, key, iterpool);
-              insert_index = find_child_or_parent(children_with_mergeinfo,
-                                                  &sibling_of_missing,
-                                                  child_path, TRUE,
-                                                  parent_index, iterpool);
-              /* Create the missing child and insert it into
-                 CHILDREN_WITH_MERGEINFO. */
-              if (!sibling_of_missing)
-                {
-                  sibling_of_missing =
-                    apr_palloc(children_with_mergeinfo->pool,
-                               sizeof(*sibling_of_missing));
-                  sibling_of_missing->path =
-                    apr_pstrdup(children_with_mergeinfo->pool, child_path);
-                  sibling_of_missing->missing_child = FALSE;
-                  sibling_of_missing->switched = FALSE;
-                  sibling_of_missing->has_noninheritable = FALSE;
-                  sibling_of_missing->absent = FALSE;
-                  sibling_of_missing->propval = NULL;
-                  insert_child_to_merge(children_with_mergeinfo,
-                                        sibling_of_missing, insert_index);
-                }
-            }
-        } /* child->absent
-             || (child->switched
-                 && strcmp(merge_cmd_baton->target, child->path) != 0) */
+      /* Case 4 and Case 5 are handled by the following function.*/
+      SVN_ERR(insert_parent_and_siblings_of_switched_or_absent_entry(
+                                                      children_with_mergeinfo,
+                                                      merge_cmd_baton, &i,
+                                                      child, adm_access,
+                                                      iterpool));
     } /* i < children_with_mergeinfo->nelts */
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
