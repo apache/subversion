@@ -439,7 +439,9 @@ svn_client__get_diff_editor(const char *target,
  * repository version against the other and only providing information
  * about the changed items without the text deltas.
  *
- * @a summarize_func is called with @a summarize_baton as parameter by the
+ * TARGET is the target of the diff, relative to the root of the edit.
+ *
+ * SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
  * created svn_delta_editor_t for each changed item.
  *
  * See svn_client__get_diff_editor() for a description of the other

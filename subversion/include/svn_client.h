@@ -527,7 +527,8 @@ typedef enum svn_client_diff_summarize_kind_t
  */
 typedef struct svn_client_diff_summarize_t
 {
-  /** Path relative to the target. */
+  /** Path relative to the target.  If the target is a file, path is
+   * the empty string. */
   const char *path;
 
   /** Change kind */

@@ -2354,10 +2354,9 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
           (&extra_ra_session, drr.anchor1, NULL, NULL, NULL, FALSE, TRUE,
            ctx, pool));
 
-  /* Set up the repos_diff editor on BASE_PATH, if available.
-     Otherwise, we just use "". */
+  /* Set up the repos_diff editor. */
   SVN_ERR(svn_client__get_diff_summarize_editor
-          (drr.base_path ? drr.base_path : "", summarize_func,
+          (drr.target2, summarize_func,
            summarize_baton, extra_ra_session, drr.rev1, ctx->cancel_func,
            ctx->cancel_baton, &diff_editor, &diff_edit_baton, pool));
   
