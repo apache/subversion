@@ -2426,6 +2426,41 @@ def versioned_log_message(sbox):
                                      '-F', log_path,
                                      '--force-log', mu_path)
 
+#----------------------------------------------------------------------
+
+def changelist(sbox):
+  "'svn commit --changelist=foo' above a conflict"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, "A", "mu")
+  gloo_path = os.path.join(wc_dir, "A", "D", "H", "gloo")
+
+  make_standard_slew_of_changes(wc_dir)
+
+  # Create a changelist.
+  changelist_name = "logical-changeset"
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "changelist", changelist_name,
+                                     mu_path, gloo_path)
+
+  # Create a conflict.
+  ### TODO
+
+  # Commit the changelist.
+  expected_output = svntest.wc.State(wc_dir, {
+    "A/D/H/gloo" : Item(verb='Adding'),
+    })
+  expected_status = get_standard_state(wc_dir)
+  expected_status.tweak("A/D/H/gloo", wc_rev=2, status="  ")
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        "--changelist=" + changelist_name,
+                                        "-m", "msg", wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -2484,6 +2519,7 @@ test_list = [ None,
               start_commit_hook_test,
               pre_commit_hook_test,
               versioned_log_message,
+              changelist,
              ]
 
 if __name__ == '__main__':
