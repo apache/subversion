@@ -1783,7 +1783,7 @@ svn_wc__wcprop_set(const char *name,
          so write to disk regardless of force_write. */
       /* Open the propfile for writing. */
       SVN_ERR(svn_wc__open_props(&fp,
-                                 path, /* open in PATH */
+                                 path, /* open in PATH */ entry->kind,
                                  (APR_WRITE | APR_CREATE | APR_BUFFERED),
                                  0, /* not base props */
                                  1, /* we DO want wcprops */
@@ -1795,7 +1795,7 @@ svn_wc__wcprop_set(const char *name,
                              svn_path_local_style(path, pool)));
 
       /* Close file, doing an atomic "move". */
-      SVN_ERR(svn_wc__close_props(fp, path, 0, 1,
+      SVN_ERR(svn_wc__close_props(fp, path, entry->kind, 0, 1,
                                   1, /* sync! */
                                   pool));
     }
