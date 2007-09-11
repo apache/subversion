@@ -134,7 +134,7 @@ Candidate changes:
       There's no reason to complicate building by requiring that
       --disable-neon-version-check be passed to configure.
     Votes:
-      +1: dlr
+      +1: dlr, hwright
 
   * r26018
     When producing unidiffs, don't translate output required by patch(1).
