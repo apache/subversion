@@ -3436,7 +3436,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
       int insert_index, parent_index;
-      merge_path_t *parent;
       merge_path_t *child = APR_ARRAY_IDX(children_with_mergeinfo, i,
                                           merge_path_t *);
       svn_pool_clear(iterpool);
@@ -3543,6 +3542,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
           || (child->switched
               && strcmp(merge_cmd_baton->target, child->path) != 0))
         {
+          merge_path_t *parent;
           const char *parent_path = svn_path_dirname(child->path, iterpool);
           apr_hash_t *entries;
           apr_hash_index_t *hi;
