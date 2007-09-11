@@ -961,7 +961,7 @@ remove_redundancies(apr_array_header_t **punique_targets,
 {
   apr_pool_t *temp_pool;
   apr_array_header_t *abs_recursive_targets = NULL;
-  apr_array_header_t *abs_targets;
+  apr_hash_t *abs_targets;
   apr_array_header_t *rel_targets;
   int i;
 
@@ -978,8 +978,7 @@ remove_redundancies(apr_array_header_t **punique_targets,
   temp_pool = svn_pool_create(pool);
 
   /* Create our list of absolute paths for our "keepers" */
-  abs_targets = apr_array_make(temp_pool, nonrecursive_targets->nelts,
-                               sizeof(const char *));
+  abs_targets = apr_hash_make(temp_pool);
 
   /* Create our list of absolute paths for our recursive targets */
   if (recursive_targets)
@@ -1050,28 +1049,13 @@ remove_redundancies(apr_array_header_t **punique_targets,
             }
         }
 
-      if (keep_me)
-        {
-          for (j = 0; j < abs_targets->nelts; j++)
-            {
-              const char *keeper =
-                APR_ARRAY_IDX(abs_targets, j, const char *);
-
-              /* Quit here if we find this path already in the keepers. */
-              if (strcmp(keeper, abs_path) == 0)
-                {
-                  keep_me = FALSE;
-                  break;
-                }
-            }
-        }
-
       /* If this is a new keeper, add its absolute path to ABS_TARGETS
          and its original path to REL_TARGETS. */
-      if (keep_me)
+      if (keep_me
+          && apr_hash_get(abs_targets, abs_path, APR_HASH_KEY_STRING) == NULL)
         {
           APR_ARRAY_PUSH(rel_targets, const char *) = rel_path;
-          APR_ARRAY_PUSH(abs_targets, const char *) = abs_path;
+          apr_hash_set(abs_targets, abs_path, APR_HASH_KEY_STRING, abs_path);
         }
     }
 
