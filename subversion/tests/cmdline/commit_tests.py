@@ -63,8 +63,8 @@ def get_standard_state(wc_dir):
 
 def make_standard_slew_of_changes(wc_dir):
   """Make a specific set of local mods to WC_DIR.  These will be used
-  by every commit-test.  Verify the 'svn status' output, return on
-  success."""
+  by every commit-test.  Verify the 'svn status' output, and return the
+  (pre-commit) status tree."""
 
   # Cache current working directory, move into wc_dir
   was_cwd = os.getcwd()
@@ -123,6 +123,8 @@ def make_standard_slew_of_changes(wc_dir):
   # Verify status -- all local mods should be present.
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+  return expected_status
+
 
 ######################################################################
 # Tests
@@ -138,18 +140,14 @@ def commit_one_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make standard slew of changes to working copy.
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
 
-  # Create expected output tree.
+  # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/omega' : Item(verb='Sending'),
     })
-
-  # Created expected status tree.
-  expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.tweak('A/D/H/omega', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -170,18 +168,14 @@ def commit_one_new_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make standard slew of changes to working copy.
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
   gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
 
-  # Create expected output tree.
+  # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/gloo' : Item(verb='Adding'),
     })
-
-  # Created expected status tree.
-  expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -202,20 +196,16 @@ def commit_one_new_binary_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make standard slew of changes to working copy.
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
   gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', gloo_path)
 
-  # Create expected output tree.
+  # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/gloo' : Item(verb='Adding  (bin)'),
     })
-
-  # Created expected status tree.
-  expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -350,12 +340,11 @@ def commit_inclusive_dir(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make standard slew of changes to working copy.
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
-  # Create expected output tree.
   D_path = os.path.join(wc_dir, 'A', 'D')
 
+  # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D' : Item(verb='Sending'),
     'A/D/G/pi' : Item(verb='Sending'),
@@ -365,9 +354,6 @@ def commit_inclusive_dir(sbox):
     'A/D/H/omega' : Item(verb='Sending'),
     'A/D/gamma' : Item(verb='Deleting'),
     })
-
-  # Created expected status tree.
-  expected_status = get_standard_state(wc_dir) # pre-commit status
 
   expected_status.remove('A/D/G/rho', 'A/D/gamma')
   expected_status.tweak('A/D', 'A/D/G/pi', 'A/D/H/omega',
@@ -391,10 +377,9 @@ def commit_top_dir(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make standard slew of changes to working copy.
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
-  # Create expected output tree.
+  # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
     '' : Item(verb='Sending'),
     'Q' : Item(verb='Adding'),
@@ -412,8 +397,6 @@ def commit_top_dir(sbox):
     'A/D/gamma' : Item(verb='Deleting'),
     })
 
-  # Created expected status tree.
-  expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.remove('A/D/G/rho', 'A/D/gamma', 'A/C',
                          'A/B/E/alpha', 'A/B/E/beta')
   expected_status.tweak('A/D', 'A/D/G/pi', 'A/D/H/omega', 'Q/floo', '',
@@ -2075,7 +2058,7 @@ def commit_with_revprop(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
@@ -2084,7 +2067,6 @@ def commit_with_revprop(sbox):
     'A/D/H/gloo' : Item(verb='Adding'),
     })
 
-  expected_status = get_standard_state(wc_dir)
   expected_status.tweak('A/D/H/omega', wc_rev=2, status='  ')
   expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
@@ -2437,7 +2419,7 @@ def changelist(sbox):
   mu_path = os.path.join(wc_dir, "A", "mu")
   gloo_path = os.path.join(wc_dir, "A", "D", "H", "gloo")
 
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
   # Create a changelist.
   changelist_name = "logical-changeset"
@@ -2452,7 +2434,6 @@ def changelist(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     "A/D/H/gloo" : Item(verb='Adding'),
     })
-  expected_status = get_standard_state(wc_dir)
   expected_status.tweak("A/D/H/gloo", wc_rev=2, status="  ")
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
