@@ -1078,6 +1078,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 22,
              "Error parsing revision number")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_ITER_BREAK,
+             SVN_ERR_MISC_CATEGORY_START + 23,
+             "Iteration terminated before completion")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,

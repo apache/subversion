@@ -41,6 +41,7 @@
 #include "svn_time.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
+#include "svn_iter.h"
 
 #include "client.h"
 
@@ -1185,6 +1186,165 @@ collect_lock_tokens(apr_hash_t **result,
   return SVN_NO_ERROR;
 }
 
+struct post_commit_baton
+{
+  svn_wc_committed_queue_t *queue;
+  apr_pool_t *qpool;
+  svn_wc_adm_access_t *base_dir_access;
+  svn_boolean_t keep_changelist;
+  svn_boolean_t keep_locks;
+  apr_hash_t *digests;
+};
+
+static svn_error_t *
+post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
+{
+  struct post_commit_baton *btn = baton;
+  apr_pool_t *subpool = btn->qpool;
+
+  svn_client_commit_item3_t *item =
+    *(svn_client_commit_item3_t **)this_item;
+  svn_boolean_t loop_recurse = FALSE;
+  const char *adm_access_path;
+  svn_wc_adm_access_t *adm_access;
+  svn_boolean_t remove_lock;
+  svn_error_t *bump_err;
+
+  if (item->kind == svn_node_dir)
+    adm_access_path = item->path;
+  else
+    svn_path_split(item->path, &adm_access_path, NULL, pool);
+
+  bump_err = svn_wc_adm_retrieve(&adm_access, btn->base_dir_access,
+                                 adm_access_path, pool);
+  if (bump_err
+      && bump_err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+    {
+      /* Is it a directory that was deleted in the commit?
+         Then we probably committed a missing directory. */
+      if (item->kind == svn_node_dir
+          && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+        {
+          /* Mark it as deleted in the parent. */
+          svn_error_clear(bump_err);
+          return svn_wc_mark_missing_deleted(item->path,
+                                             btn->base_dir_access, pool);
+        }
+    }
+  if (bump_err)
+    return bump_err;
+
+
+  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+      && (item->kind == svn_node_dir)
+      && (item->copyfrom_url))
+    loop_recurse = TRUE;
+
+  remove_lock = (! btn->keep_locks && (item->state_flags
+                                       & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
+
+  /* Allocate the queue in a longer-lived pool than (iter)pool:
+     we want it to survive the next iteration. */
+  SVN_ERR(svn_wc_queue_committed
+          (&(btn->queue),
+           item->path, adm_access, loop_recurse,
+           item->incoming_prop_changes,
+           remove_lock, (! btn->keep_changelist),
+           apr_hash_get(btn->digests, item->path, APR_HASH_KEY_STRING),
+           subpool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+commit_item_is_changed(void *baton, void *this_item, apr_pool_t *pool)
+{
+  svn_client_commit_item3_t **item = this_item;
+
+  if ((*item)->state_flags != SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+    svn_iter_break(pool);
+
+  return SVN_NO_ERROR;
+}
+
+struct lock_dirs_baton
+{
+  svn_client_ctx_t *ctx;
+  svn_wc_adm_access_t *base_dir_access;
+  int levels_to_lock;
+};
+
+static svn_error_t *
+lock_dirs_for_commit(void *baton, void *this_item, apr_pool_t *pool)
+{
+  struct lock_dirs_baton *btn = baton;
+  svn_wc_adm_access_t *adm_access;
+
+  return svn_wc_adm_open3(&adm_access, btn->base_dir_access,
+                          *(const char **)this_item,
+                          TRUE, /* Write lock */
+                          btn->levels_to_lock,   /* Levels to lock */
+                          btn->ctx->cancel_func,
+                          btn->ctx->cancel_baton,
+                          pool);
+}
+
+struct check_dir_delete_baton
+{
+  svn_wc_adm_access_t *base_dir_access;
+  svn_depth_t depth;
+};
+
+static svn_error_t *
+check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
+{
+  struct check_dir_delete_baton *btn = baton;
+  svn_wc_adm_access_t *adm_access;
+  const char *target;
+
+  SVN_ERR(svn_path_get_absolute(&target, *(const char **)this_item, pool));
+  SVN_ERR_W(svn_wc_adm_probe_retrieve(&adm_access, btn->base_dir_access,
+                                      target, pool),
+            _("Are all the targets part of the same working copy?"));
+
+  /* ### TODO(sd): This check is slightly too strict.  It should be
+     ### possible to:
+     ###
+     ###   * delete an empty directory when depth==svn_depth_empty;
+     ###
+     ###   * delete a directory containing only files when
+     ###     depth==svn_depth_files;
+     ###
+     ###   * delete a directory containing only files and empty
+     ###     subdirs when depth==svn_depth_immediates.
+     ###
+     ### But for now, we insist on svn_depth_infinity if you're
+     ### going to delete a directory, because we're lazy and
+     ### trying to get depthy commits working in the first place.
+     ###
+     ### This would be fairly easy to fix, though: just, well,
+     ### check the above conditions!
+  */
+  if (btn->depth != svn_depth_infinity)
+    {
+      svn_wc_status2_t *status;
+      svn_node_kind_t kind;
+
+      SVN_ERR(svn_io_check_path(target, &kind, pool));
+
+      if (kind == svn_node_dir)
+        {
+          SVN_ERR(svn_wc_status2(&status, target, adm_access, pool));
+          if (status->text_status == svn_wc_status_deleted ||
+              status->text_status == svn_wc_status_replaced)
+            return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                    _("Cannot non-recursively commit a "
+                                      "directory deletion"));
+        }
+    }
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client_commit4(svn_commit_info_t **commit_info_p,
@@ -1413,8 +1573,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   if (!lock_base_dir_recursive)
     {
-      svn_wc_adm_access_t *adm_access;
       apr_array_header_t *unique_dirs_to_lock;
+      struct lock_dirs_baton btn;
 
       /* Sort the paths in a depth-last directory-ish order. */
       qsort(dirs_to_lock->elts, dirs_to_lock->nelts,
@@ -1436,39 +1596,19 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                   pool));
       dirs_to_lock = unique_dirs_to_lock;
 
+      btn.base_dir_access = base_dir_access;
+      btn.ctx = ctx;
+      btn.levels_to_lock = 0;
       /* First lock all the dirs to be locked non-recursively */
       if (dirs_to_lock)
-        {
-          for (i = 0; i < dirs_to_lock->nelts ; ++i)
-            {
-              target = APR_ARRAY_IDX(dirs_to_lock, i, const char *);
-
-              SVN_ERR(svn_wc_adm_open3(&adm_access, base_dir_access,
-                                       target,
-                                       TRUE,  /* Write lock */
-                                       0,     /* Levels to lock */
-                                       ctx->cancel_func,
-                                       ctx->cancel_baton,
-                                       pool));
-            }
-        }
+        SVN_ERR(svn_iter_apr_array(NULL, dirs_to_lock,
+                                   lock_dirs_for_commit, &btn, pool));
 
       /* Lock the rest of the targets (recursively) */
+      btn.levels_to_lock = -1;
       if (dirs_to_lock_recursive)
-        {
-          for (i = 0; i < dirs_to_lock_recursive->nelts ; ++i)
-            {
-              target = APR_ARRAY_IDX(dirs_to_lock_recursive, i, const char *);
-
-              SVN_ERR(svn_wc_adm_open3(&adm_access, base_dir_access,
-                                       target,
-                                       TRUE, /* Write lock */
-                                       -1,   /* Levels to lock */
-                                       ctx->cancel_func,
-                                       ctx->cancel_baton,
-                                       pool));
-            }
-        }
+        SVN_ERR(svn_iter_apr_array(NULL, dirs_to_lock_recursive,
+                                   lock_dirs_for_commit, &btn, pool));
     }
 
   /* One day we might support committing from multiple working copies, but
@@ -1477,53 +1617,15 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
      At the same time, if a non-recursive commit is desired, do not
      allow a deleted directory as one of the targets. */
-  for (i = 0; i < targets->nelts; ++i)
-    {
-      svn_wc_adm_access_t *adm_access;
+  {
+    struct check_dir_delete_baton btn;
 
-      SVN_ERR(svn_path_get_absolute(&target,
-                                    APR_ARRAY_IDX(targets, i, const char *),
-                                    pool));
-      SVN_ERR_W(svn_wc_adm_probe_retrieve(&adm_access, base_dir_access,
-                                          target, pool),
-                _("Are all the targets part of the same working copy?"));
-
-      /* ### TODO(sd): This check is slightly too strict.  It should be
-         ### possible to:
-         ###
-         ###   * delete an empty directory when depth==svn_depth_empty;
-         ###
-         ###   * delete a directory containing only files when
-         ###     depth==svn_depth_files;
-         ###
-         ###   * delete a directory containing only files and empty
-         ###     subdirs when depth==svn_depth_immediates.
-         ###
-         ### But for now, we insist on svn_depth_infinity if you're
-         ### going to delete a directory, because we're lazy and
-         ### trying to get depthy commits working in the first place.
-         ###
-         ### This would be fairly easy to fix, though: just, well,
-         ### check the above conditions!
-       */
-      if (depth != svn_depth_infinity)
-        {
-          svn_wc_status2_t *status;
-          svn_node_kind_t kind;
-
-          SVN_ERR(svn_io_check_path(target, &kind, pool));
-
-          if (kind == svn_node_dir)
-            {
-              SVN_ERR(svn_wc_status2(&status, target, adm_access, pool));
-              if (status->text_status == svn_wc_status_deleted ||
-                  status->text_status == svn_wc_status_replaced)
-                return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                        _("Cannot non-recursively commit a "
-                                          "directory deletion"));
-            }
-        }
-    }
+    btn.base_dir_access = base_dir_access;
+    btn.depth = depth;
+    SVN_ERR(svn_iter_apr_array(NULL, targets,
+                               check_nonrecursive_dir_delete, &btn,
+                               pool));
+  }
 
   /* Crawl the working copy for commit items. */
   if ((cmt_err = svn_client__harvest_committables(&committables,
@@ -1552,21 +1654,13 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      or prop modifications), then we return here to avoid committing a
      revision with no changes. */
   {
-    svn_boolean_t found_changed_path = FALSE;
+    svn_boolean_t not_found_changed_path = TRUE;
 
-    for (i = 0; i < commit_items->nelts; ++i)
-      {
-        svn_client_commit_item3_t *item =
-          APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
 
-        if (item->state_flags != SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
-          {
-            found_changed_path = TRUE;
-            break;
-          }
-      }
-
-    if (!found_changed_path)
+    cmt_err = svn_iter_apr_array(&not_found_changed_path,
+                                 commit_items,
+                                 commit_item_is_changed, NULL, pool);
+    if (not_found_changed_path || cmt_err)
       goto cleanup;
   }
 
@@ -1621,83 +1715,32 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   if ((! cmt_err)
       || (cmt_err->apr_err == SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
-      apr_pool_t *iterpool = svn_pool_create(subpool);
       svn_wc_committed_queue_t *queue = svn_wc_committed_queue_create(pool);
+      struct post_commit_baton btn;
+
+      btn.queue = queue;
+      btn.qpool = pool;
+      btn.base_dir_access = base_dir_access;
+      btn.keep_changelist = keep_changelist;
+      btn.keep_locks = keep_locks;
+      btn.digests = digests;
 
       /* Make a note that our commit is finished. */
       commit_in_progress = FALSE;
 
-      for (i = 0; i < commit_items->nelts; i++)
-        {
-          svn_client_commit_item3_t *item
-            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
-          svn_boolean_t loop_recurse = FALSE;
-          const char *adm_access_path;
-          svn_wc_adm_access_t *adm_access;
-          svn_boolean_t remove_lock;
+      bump_err = svn_iter_apr_array(NULL, commit_items,
+                                    post_process_commit_item, &btn,
+                                    pool);
+      if (bump_err)
+        goto cleanup;
 
-          svn_pool_clear(iterpool);
-
-          if (item->kind == svn_node_dir)
-            adm_access_path = item->path;
-          else
-            svn_path_split(item->path, &adm_access_path, NULL, iterpool);
-
-          bump_err = svn_wc_adm_retrieve(&adm_access, base_dir_access,
-                                         adm_access_path, iterpool);
-          if (bump_err
-              && bump_err->apr_err == SVN_ERR_WC_NOT_LOCKED)
-            {
-              /* Is it a directory that was deleted in the commit?
-                 Then we probably committed a missing directory. */
-              if (item->kind == svn_node_dir
-                  && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-                {
-                  /* Mark it as deleted in the parent. */
-                  svn_error_clear(bump_err);
-                  bump_err = svn_wc_mark_missing_deleted(item->path,
-                                                         base_dir_access,
-                                                         iterpool);
-                  if (bump_err)
-                    goto cleanup;
-                  continue;
-                }
-
-              goto cleanup;
-            }
-
-          if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
-              && (item->kind == svn_node_dir)
-              && (item->copyfrom_url))
-            loop_recurse = TRUE;
-
-          remove_lock = (! keep_locks && (item->state_flags
-                                          & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
-
-          assert(*commit_info_p);
-          /* Allocate the queue in a longer-lived pool than iterpool:
-             we want it to survive the next iteration. */
-          if ((bump_err = svn_wc_queue_committed
-               (&queue,
-                item->path, adm_access, loop_recurse,
-                item->incoming_prop_changes,
-                remove_lock, (! keep_changelist),
-                apr_hash_get(digests, item->path, APR_HASH_KEY_STRING),
-                subpool)))
-            break;
-
-        }
-
+      assert(*commit_info_p);
       bump_err
         = svn_wc_process_committed_queue(queue, base_dir_access,
                                          (*commit_info_p)->revision,
                                          (*commit_info_p)->date,
                                          (*commit_info_p)->author,
-                                         subpool);
-
-      svn_pool_destroy(iterpool);
-      svn_pool_destroy(subpool);
+                                         pool);
     }
 
   /* Sleep to ensure timestamp integrity. */
