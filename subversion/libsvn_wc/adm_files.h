@@ -199,6 +199,7 @@ svn_error_t *svn_wc__close_revert_base(apr_file_t *fp,
  */
 svn_error_t *svn_wc__open_props(apr_file_t **handle,
                                 const char *path,
+                                svn_node_kind_t kind,
                                 apr_int32_t flags,
                                 svn_boolean_t base,
                                 svn_boolean_t wcprops,
@@ -214,20 +215,12 @@ svn_error_t *svn_wc__open_props(apr_file_t **handle,
  */
 svn_error_t *svn_wc__close_props(apr_file_t *fp,
                                  const char *path,
+                                 svn_node_kind_t kind,
                                  svn_boolean_t base,
                                  svn_boolean_t wcprops,
                                  int sync,
                                  apr_pool_t *pool);
 
-/* Atomically rename a temporary property file to its canonical
-   location.  The tmp file should be closed already.
-
-   Again, BASE and WCPROPS flags should be identical to those used to
-   open the file. */
-svn_error_t *svn_wc__sync_props(const char *path,
-                                svn_boolean_t base,
-                                svn_boolean_t wcprops,
-                                apr_pool_t *pool);
 
 /* Blow away the admistrative directory associated with the access baton
    ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS
