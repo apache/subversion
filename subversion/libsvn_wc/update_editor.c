@@ -995,7 +995,8 @@ open_root(void *edit_baton,
     {
       /* For an update with a NULL target, this is equivalent to open_dir(): */
       svn_wc_adm_access_t *adm_access;
-      svn_wc_entry_t tmp_entry, *entry;
+      svn_wc_entry_t tmp_entry;
+      const svn_wc_entry_t *entry;
       apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
         SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
 
