@@ -530,7 +530,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         None, None, None, None,
                                         '--depth', 'empty',
                                         C_path)
-  # Check that A/B was added at depth=empty.
+  # Check that A/C was added at depth=empty.
   svntest.actions.run_and_verify_svn(None, "Depth: empty", [], "info",
                                      C_path)
 
