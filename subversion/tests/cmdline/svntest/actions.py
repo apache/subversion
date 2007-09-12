@@ -204,7 +204,7 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
 
   want_err = None
   if expected_stderr is not None and expected_stderr is not []:
-    want_err = 1
+    want_err = True
 
   out, err = main.run_svn(want_err, *varargs)
 
@@ -371,7 +371,7 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   # Create a tree by scanning the working copy.  Don't ignore
   # the .svn directories so that we generate an error if they
   # happen to show up.
-  actual = tree.build_tree_from_wc (export_dir_name, ignore_svn=0)
+  actual = tree.build_tree_from_wc (export_dir_name, ignore_svn=False)
 
   # Verify expected disk against actual disk.
   tree.compare_trees (actual, disk_tree,
@@ -419,7 +419,7 @@ def run_and_verify_update(wc_dir_name,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
-                          check_props = 0,
+                          check_props = False,
                           *args):
 
   """Update WC_DIR_NAME.  *ARGS are any extra optional args to the
@@ -481,8 +481,8 @@ def run_and_verify_merge(dir, rev1, rev2, url,
                          a_baton = None,
                          singleton_handler_b = None,
                          b_baton = None,
-                         check_props = 0,
-                         dry_run = 1,
+                         check_props = False,
+                         dry_run = True,
                          *args):
   """Run 'svn merge -rREV1:REV2 URL DIR', leaving off the '-r'
   argument if both REV1 and REV2 are None."""
@@ -505,8 +505,8 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
-                          check_props = 0,
-                          dry_run = 1,
+                          check_props = False,
+                          dry_run = True,
                           *args):
   """Run 'svn merge URL1@REV1 URL2@REV2 DIR' if URL2 is not None
   (for a three-way merge between URLs and WC).
@@ -627,7 +627,7 @@ def run_and_verify_switch(wc_dir_name,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
-                          check_props = 0,
+                          check_props = False,
                           *args):
 
   """Switch WC_TARGET (in working copy dir WC_DIR_NAME) to SWITCH_URL.
