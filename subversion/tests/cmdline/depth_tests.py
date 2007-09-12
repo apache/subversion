@@ -450,24 +450,52 @@ def depth_mixed_bring_in_dir(sbox):
   # Run 'svn up --depth=immediates A' in a depth-empty working copy.
   wc_empty, ign_a, ign_b, wc = set_up_depthy_working_copies(sbox, empty=True)
   A_path = os.path.join(wc_empty, 'A')
+  B_path = os.path.join(wc_empty, 'A', 'B')
+  C_path = os.path.join(wc_empty, 'A', 'C')
 
   expected_output = svntest.wc.State(wc_empty, {
     'A'              : Item(status='A '),
     'A/mu'           : Item(status='A '),
-    'A/B'            : Item(status='A '),
-    'A/C'            : Item(status='A '),
-    'A/D'            : Item(status='A '),
     })
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('iota', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                       'A/B/E/beta', 'A/B/F', 'A/D/gamma', 'A/D/G',
-                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H',
-                       'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
+  expected_disk.remove('iota', 'A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
+                       'A/B/E/beta', 'A/B/F', 'A/C', 'A/D', 'A/D/gamma',
+                       'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                       'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
   expected_status = svntest.actions.get_virginal_state(wc_empty, 1)
-  expected_status.remove('iota', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                         'A/B/E/beta', 'A/B/F', 'A/D/gamma', 'A/D/G',
-                         'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H',
-                         'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
+  expected_status.remove('iota', 'A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
+                         'A/B/E/beta', 'A/B/F', 'A/C', 'A/D', 'A/D/gamma',
+                         'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                         'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
+  svntest.actions.run_and_verify_update(wc_empty,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--depth', 'files',
+                                        A_path)
+  # Check that A was added at depth=files.
+  svntest.actions.run_and_verify_svn(None, "Depth: files", [], "info",
+                                     A_path)
+
+  # Now, bring in A/B at depth-immediates.
+  expected_output = svntest.wc.State(wc_empty, {
+    'A/B'            : Item(status='A '),
+    'A/B/lambda'     : Item(status='A '),
+    'A/B/E'          : Item(status='A '),
+    'A/B/F'          : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota', 'A/B/E/alpha', 'A/B/E/beta', 'A/C',
+                       'A/D', 'A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho',
+                       'A/D/G/tau', 'A/D/H', 'A/D/H/chi', 'A/D/H/psi',
+                       'A/D/H/omega')
+  expected_status = svntest.actions.get_virginal_state(wc_empty, 1)
+  expected_status.remove('iota', 'A/B/E/alpha', 'A/B/E/beta', 'A/C',
+                         'A/D', 'A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho',
+                         'A/D/G/tau', 'A/D/H', 'A/D/H/chi', 'A/D/H/psi',
+                         'A/D/H/omega')
   svntest.actions.run_and_verify_update(wc_empty,
                                         expected_output,
                                         expected_disk,
@@ -475,7 +503,36 @@ def depth_mixed_bring_in_dir(sbox):
                                         None, None,
                                         None, None, None, None,
                                         '--depth', 'immediates',
-                                        A_path)
+                                        B_path)
+  # Check that A/B was added at depth=immediates.
+  svntest.actions.run_and_verify_svn(None, "Depth: immediates", [], "info",
+                                     B_path)
+
+  # Now, bring in A/C at depth-empty.
+  expected_output = svntest.wc.State(wc_empty, {
+    'A/C'            : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota', 'A/B/E/alpha', 'A/B/E/beta',
+                       'A/D', 'A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho',
+                       'A/D/G/tau', 'A/D/H', 'A/D/H/chi', 'A/D/H/psi',
+                       'A/D/H/omega')
+  expected_status = svntest.actions.get_virginal_state(wc_empty, 1)
+  expected_status.remove('iota', 'A/B/E/alpha', 'A/B/E/beta',
+                         'A/D', 'A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho',
+                         'A/D/G/tau', 'A/D/H', 'A/D/H/chi', 'A/D/H/psi',
+                         'A/D/H/omega')
+  svntest.actions.run_and_verify_update(wc_empty,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--depth', 'empty',
+                                        C_path)
+  # Check that A/B was added at depth=empty.
+  svntest.actions.run_and_verify_svn(None, "Depth: empty", [], "info",
+                                     C_path)
 
 #----------------------------------------------------------------------
 def depth_empty_unreceive_delete(sbox):
