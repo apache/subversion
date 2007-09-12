@@ -79,9 +79,9 @@ Candidate changes:
       +1: hwright, lgo
 
   * r25178, -461
-    Fix issue 2712: If 'anon-access' is 'read' but anonymous access is disallowed
-    via authz rules, updates/checkouts won't work, even for users with appropriate
-    permissions.
+    Fix issue 2712: If 'anon-access' is 'read' but anonymous access is
+    disallowed via authz rules, updates/checkouts won't work, even for users
+    with appropriate permissions.
     Justification:
       User reported problem, small fix, includes test.
     Branch: 1.4.x-r25178
