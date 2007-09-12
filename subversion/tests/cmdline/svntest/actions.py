@@ -1101,4 +1101,104 @@ def check_prop(name, path, exp_out):
     print "Actual standard output: ", out, "\n"
     raise Failure
 
-### End of file.
+def fill_file_with_lines(wc_path, line_nbr, line_descrip=None,
+                         append=True):
+  """Change the file at WC_PATH (adding some lines), and return its
+  new contents.  LINE_NBR indicates the line number at which the new
+  contents should assume that it's being appended.  LINE_DESCRIP is
+  something like 'This is line' (the default) or 'Conflicting line'."""
+
+  if line_descrip is None:
+    line_descrip = "This is line"
+
+  # Generate the new contents for the file.
+  contents = ""
+  for n in range(line_nbr, line_nbr + 3):
+    contents = contents + line_descrip + " " + `n` + " in '" + \
+               os.path.basename(wc_path) + "'.\n"
+
+  # Write the new contents to the file.
+  if append:
+    main.file_append(wc_path, contents)
+  else:
+    main.file_write(wc_path, contents)
+
+  return contents
+
+def inject_conflict_into_wc(sbox, state_path, file_path,
+                            expected_disk, expected_status, merged_rev):
+  """Create a conflict at FILE_PATH by replacing its contents,
+  committing the change, backdating it to its previous revision,
+  changing its contents again, then updating it to merge in the
+  previous change."""
+
+  wc_dir = sbox.wc_dir
+
+  # Make a change to the file.
+  contents = fill_file_with_lines(file_path, 1, "This is line", append=False)
+
+  # Commit the changed file, first taking note of the current revision.
+  prev_rev = expected_status.desc[state_path].wc_rev
+  expected_output = wc.State(wc_dir, {
+    state_path : wc.StateItem(verb='Sending'),
+    })
+  if expected_status:
+    expected_status.tweak(state_path, wc_rev=merged_rev)
+  run_and_verify_commit(wc_dir, expected_output, expected_status,
+                        None, None, None, None, None,
+                        file_path)
+
+  # Backdate the file.
+  output, errput = main.run_svn(None, "up", "-r1", file_path)
+  if expected_status:
+    expected_status.tweak(state_path, wc_rev=prev_rev)
+
+  # Make a conflicting change to the file, and backdate the file.
+  conflicting_contents = fill_file_with_lines(file_path, 1, "Conflicting line",
+                                              append=False)
+
+  # Merge the previous change into the file to produce a conflict.
+  if expected_disk:
+    expected_disk.tweak(state_path, contents="")
+  expected_output = wc.State(wc_dir, {
+    state_path : wc.StateItem(status='C '),
+    })
+  inject_conflict_into_expected_state(state_path,
+                                      expected_disk, expected_status,
+                                      conflicting_contents, contents,
+                                      merged_rev)
+  output, errput = main.run_svn(None, "up", "-r", str(merged_rev),
+                                sbox.repo_url + "/" + state_path, file_path)
+  if expected_status:
+    expected_status.tweak(state_path, wc_rev=merged_rev)
+
+def ignore_conflict_files_singleton_handler(node, path):
+  """An implementation of a tree comparison 'singleton' handler.  PATH
+  is supplied as the baton."""
+  if not re.match(path + ".*\.(r\d+|working)", node.name):
+    raise tree.SVNTreeUnequal("Merge encountered unexpected path '" + 
+                              node.name + "'")
+
+def inject_conflict_into_expected_state(state_path,
+                                        expected_disk, expected_status,
+                                        wc_text, merged_text, merged_rev):
+  """Update the EXPECTED_DISK and EXPECTED_STATUS trees for the
+  conflict at STATE_PATH (ignored if None).  WC_TEXT, MERGED_TEXT, and
+  MERGED_REV are used to determine the contents of the conflict (the
+  text parameters should be newline-terminated)."""
+  if expected_disk:
+    conflict_marker = make_conflict_marker_text(wc_text, merged_text,
+                                                merged_rev)
+    existing_text = expected_disk.desc[state_path].contents or ""
+    expected_disk.tweak(state_path, contents=existing_text + conflict_marker)
+
+  if expected_status:
+    expected_status.tweak(state_path, status='C ')
+
+def make_conflict_marker_text(wc_text, merged_text, merged_rev):
+  """Return the conflict marker text described by WC_TEXT (the current
+  text in the working copy, MERGED_TEXT (the conflicting text merged
+  in), and MERGED_REV (the revision from whence the conflicting text
+  came)."""
+  return "<<<<<<< .working\n" + wc_text + "=======\n" + \
+         merged_text + ">>>>>>> .merge-right.r" + str(merged_rev) + "\n"
