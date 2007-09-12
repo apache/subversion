@@ -51,7 +51,7 @@ Candidate changes:
       Bug was found in production on svn.apache.org, currently requires
       a local patch whenever we upgrade that machine's svn install.
     Votes:
-      +1: rooneg
+      +1: rooneg, hwright
 
   * r24697, -9, 24793, 24827
     Fix issue 2743: fix property handling for locally replaced files
@@ -101,17 +101,6 @@ Candidate changes:
     Votes:
       +1: djh
 
-  * r25833
-    Fix administrative property file handling for prop changes to a
-    file which is subsequently copied/moved over another
-    schedule-delete file, where the original doesn't have any props
-    (e.g. 'svn mv a b; svn ps name val b; svn mv b a' is a
-    1.5-specific way to trigger this problem).
-    Justification:
-      WC library bug fix.
-    Votes:
-      +1: dionisos, dlr
-
   * r26115
     Enable compression (svndiff1 deltas) for ra_svn's get-file-revs command.
     Justification:
@@ -126,7 +115,7 @@ Candidate changes:
       Bug fix for user report; and while conditions for reproduction are pretty
       rare, patch is straightforward.
     Votes:
-      +1: malcolm
+      +1: malcolm, hwright
 
   * r26077
     Alow Subversion to be built against Neon 0.26.4 (by default).
@@ -144,7 +133,7 @@ Candidate changes:
       r26018 includes a change to diff_memory.c which doesn't exist in 1.4.x,
       but that can be safely ignored.
     Votes:
-      +1: malcolm
+      +1: malcolm, hwright
 
 Veto-blocked changes:
 
@@ -195,3 +184,14 @@ Veto-blocked changes:
      -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
 
 Approved changes:
+
+  * r25833
+    Fix administrative property file handling for prop changes to a
+    file which is subsequently copied/moved over another
+    schedule-delete file, where the original doesn't have any props
+    (e.g. 'svn mv a b; svn ps name val b; svn mv b a' is a
+    1.5-specific way to trigger this problem).
+    Justification:
+      WC library bug fix.
+    Votes:
+      +1: dionisos, dlr, hwright
