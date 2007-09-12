@@ -2223,6 +2223,38 @@ remove_absent_children(const char *target_wcpath,
     }
 }
 
+/* Populate *REMAINING_RANGES with after removing reflective merge ranges
+ * and already merged ranges from *RANGE.
+ * Cascade TARGET_MERGEINFO, IS_ROLLBACK, REL_PATH, INITIAL_URL1, RA_SESSION,
+ * ENTRY, ADM_ACCESS, CTX, POOL.
+ */
+static svn_error_t *
+calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
+                           svn_merge_range_t *range,
+                           apr_hash_t *target_mergeinfo,
+                           svn_boolean_t is_rollback,
+                           const char *rel_path,
+                           const char *initial_URL1,
+                           svn_ra_session_t *ra_session,
+                           const svn_wc_entry_t *entry,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool)
+{
+  apr_array_header_t *requested_rangelist;
+  /* Determine which of the requested ranges to consider merging... */
+  SVN_ERR(calculate_requested_ranges(&requested_rangelist, range,
+                                     initial_URL1, entry, adm_access,
+                                     ra_session, ctx, pool));
+
+  /* ...and of those ranges, determine which ones actually still
+     need merging. */
+  SVN_ERR(calculate_merge_ranges(remaining_ranges, rel_path,
+                                 target_mergeinfo, requested_rangelist,
+                                 is_rollback, pool));
+  return SVN_NO_ERROR;
+}
+
 /* URL1, URL2, and TARGET_WCPATH all better be directories.  For the
    single file case, the caller does the merging manually.
 
@@ -2326,8 +2358,6 @@ do_merge(const char *initial_URL1,
 
   if (notify_b.same_urls && merge_b->same_repos)
     {
-      apr_array_header_t *requested_rangelist;
-
       /* Reparent ra_session to WC target url. */
       svn_ra_reparent(ra_session, entry->url, pool);
       SVN_ERR(get_wc_or_repos_mergeinfo(&target_mergeinfo, entry,
@@ -2371,16 +2401,10 @@ do_merge(const char *initial_URL1,
                                      ctx, pool);
         }
 
-      /* Determine which of the requested ranges to consider merging... */
-      SVN_ERR(calculate_requested_ranges(&requested_rangelist, &range,
-                                         initial_URL1, entry, adm_access,
-                                         ra_session, ctx, pool));
-
-      /* ...and of those ranges, determine which ones actually still
-         need merging. */
-      SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path,
-                                     target_mergeinfo, requested_rangelist,
-                                     is_rollback, pool));
+      SVN_ERR(calculate_remaining_ranges(&remaining_ranges, &range,
+                                         target_mergeinfo, is_rollback,
+                                         rel_path, initial_URL1, ra_session,
+                                         entry, adm_access, ctx, pool));
     }
   else
     {
@@ -2825,8 +2849,6 @@ do_single_file_merge(const char *initial_URL1,
                                              pool));
   if (notify_b.same_urls && merge_b->same_repos)
     {
-      apr_array_header_t *requested_rangelist;
-
       if (merge_type == merge_type_no_op)
         return SVN_NO_ERROR;
 
@@ -2872,15 +2894,10 @@ do_single_file_merge(const char *initial_URL1,
                                      ctx, pool);
         }
 
-      /* Determine which of the requested ranges to consider merging... */
-      SVN_ERR(calculate_requested_ranges(&requested_rangelist, &range,
-                                         initial_URL1, entry, adm_access,
-                                         ra_session1, ctx, pool));
-      /* ...and of those ranges, determine which ones actually still
-         need merging. */
-      SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path,
-                                     target_mergeinfo, requested_rangelist,
-                                     is_rollback, pool));
+      SVN_ERR(calculate_remaining_ranges(&remaining_ranges, &range,
+                                         target_mergeinfo, is_rollback,
+                                         rel_path, initial_URL1, ra_session1,
+                                         entry, adm_access, ctx, pool));
     }
   else
     {
