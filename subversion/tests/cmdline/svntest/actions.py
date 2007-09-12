@@ -388,7 +388,7 @@ def verify_update(actual_output, wc_dir_name,
 
   The subcommand output (found in ACTUAL_OUTPUT) will be verified
   against OUTPUT_TREE, and the working copy itself will be verified
-  against DISK_TREE.  If optional STATUS_OUTPUT_TREE is given, then
+  against DISK_TREE.  If optional STATUS_TREE is given, then
   'svn status' output will be compared.  (This is a good way to check
   that revision numbers were bumped.)  SINGLETON_HANDLER_A and
   SINGLETON_HANDLER_B will be passed to tree.compare_trees - see that
@@ -639,7 +639,7 @@ def run_and_verify_switch(wc_dir_name,
 
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional
-  STATUS_OUTPUT_TREE is given, then 'svn status' output will be
+  STATUS_TREE is given, then 'svn status' output will be
   compared.  (This is a good way to check that revision numbers were
   bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
   tree.compare_trees - see that function's doc string for more details.
@@ -676,7 +676,7 @@ def run_and_verify_switch(wc_dir_name,
                  check_props)
 
 
-def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
+def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
                           error_re_string = None,
                           singleton_handler_a = None,
                           a_baton = None,
@@ -687,7 +687,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   sending ARGS to the commit subcommand.
 
   The subcommand output will be verified against OUTPUT_TREE.  If
-  optional STATUS_OUTPUT_TREE is given, then 'svn status' output will
+  optional STATUS_TREE is given, then 'svn status' output will
   be compared.  (This is a good way to check that revision numbers
   were bumped.)
 
@@ -701,8 +701,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
-  if isinstance(status_output_tree, wc.State):
-    status_output_tree = status_output_tree.old_tree()
+  if isinstance(status_tree, wc.State):
+    status_tree = status_tree.old_tree()
 
   # Commit.
   output, errput = main.run_svn(error_re_string, 'ci',
@@ -760,8 +760,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
       raise
 
   # Verify via 'status' command too, if possible.
-  if status_output_tree:
-    run_and_verify_status(wc_dir_name, status_output_tree)
+  if status_tree:
+    run_and_verify_status(wc_dir_name, status_tree)
 
 
 # This function always passes '-q' to the status command, which
