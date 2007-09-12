@@ -1651,7 +1651,6 @@ static svn_error_t *
 calculate_requested_ranges(apr_array_header_t **requested_rangelist,
                            svn_merge_range_t *unrefined_range,
                            const char *src_url, const svn_wc_entry_t *entry,
-                           svn_wc_adm_access_t *adm_access,
                            svn_ra_session_t *ra_session,
                            svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
@@ -1681,11 +1680,11 @@ calculate_requested_ranges(apr_array_header_t **requested_rangelist,
 
   if (added_mergeinfo)
     {
-      const char *src_rel_path;
-      SVN_ERR(svn_client__path_relative_to_root(&src_rel_path, entry->url,
+      const char *target_rel_path;
+      SVN_ERR(svn_client__path_relative_to_root(&target_rel_path, entry->url,
                                                 entry->repos, ra_session,
-                                                adm_access, pool));
-      src_rangelist_for_tgt = apr_hash_get(added_mergeinfo, src_rel_path,
+                                                NULL, pool));
+      src_rangelist_for_tgt = apr_hash_get(added_mergeinfo, target_rel_path,
                                            APR_HASH_KEY_STRING);
     }
 
@@ -2226,7 +2225,7 @@ remove_absent_children(const char *target_wcpath,
 /* Populate *REMAINING_RANGES with after removing reflective merge ranges
  * and already merged ranges from *RANGE.
  * Cascade TARGET_MERGEINFO, IS_ROLLBACK, REL_PATH, INITIAL_URL1, RA_SESSION,
- * ENTRY, ADM_ACCESS, CTX, POOL.
+ * ENTRY, CTX, POOL.
  */
 static svn_error_t *
 calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
@@ -2237,15 +2236,14 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                            const char *initial_URL1,
                            svn_ra_session_t *ra_session,
                            const svn_wc_entry_t *entry,
-                           svn_wc_adm_access_t *adm_access,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
   apr_array_header_t *requested_rangelist;
   /* Determine which of the requested ranges to consider merging... */
   SVN_ERR(calculate_requested_ranges(&requested_rangelist, range,
-                                     initial_URL1, entry, adm_access,
-                                     ra_session, ctx, pool));
+                                     initial_URL1, entry, ra_session,
+                                     ctx, pool));
 
   /* ...and of those ranges, determine which ones actually still
      need merging. */
@@ -2404,7 +2402,7 @@ do_merge(const char *initial_URL1,
       SVN_ERR(calculate_remaining_ranges(&remaining_ranges, &range,
                                          target_mergeinfo, is_rollback,
                                          rel_path, initial_URL1, ra_session,
-                                         entry, adm_access, ctx, pool));
+                                         entry, ctx, pool));
     }
   else
     {
@@ -2897,7 +2895,7 @@ do_single_file_merge(const char *initial_URL1,
       SVN_ERR(calculate_remaining_ranges(&remaining_ranges, &range,
                                          target_mergeinfo, is_rollback,
                                          rel_path, initial_URL1, ra_session1,
-                                         entry, adm_access, ctx, pool));
+                                         entry, ctx, pool));
     }
   else
     {
