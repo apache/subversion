@@ -352,12 +352,26 @@ make_dir_baton(const char *path,
   if (pb && (! path))
     abort();
 
-  if (added
-      && (eb->depth == svn_depth_immediates
-          || (eb->depth == svn_depth_unknown
-              && pb->depth == svn_depth_immediates)))
+  if (added)
     {
-      d->depth = svn_depth_empty;
+      if (strcmp(eb->target, path) == 0)
+        {
+          /* The target of the edit is being added, give it the requested
+             depth of the edit (but convert svn_depth_unknown to
+             svn_depth_infinity). */
+          d->depth = (eb->depth == svn_depth_unknown) ?
+                     svn_depth_infinity : eb->depth;
+        }
+      else if (eb->depth == svn_depth_immediates
+               || (eb->depth == svn_depth_unknown
+                   && pb->depth == svn_depth_immediates))
+        {
+          d->depth = svn_depth_empty;
+        }
+      else
+        {
+          d->depth = svn_depth_infinity;
+        }
     }
   else
     {
