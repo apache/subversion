@@ -3337,8 +3337,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
 {
   if (insert_index == children_with_mergeinfo->nelts)
     {
-      APR_ARRAY_PUSH(children_with_mergeinfo,
-                     merge_path_t *) = insert_element;
+      APR_ARRAY_PUSH(children_with_mergeinfo, merge_path_t *) = insert_element;
     }
   else
     {
