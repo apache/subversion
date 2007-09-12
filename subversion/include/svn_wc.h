@@ -3065,16 +3065,13 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * obstructions when adding a path.
  *
  * If @a depth is @c svn_depth_infinity, update fully recursively.
- * Else if it is @c svn_depth_files, update the uppermost directory and
- * its immediate entries, but not subdirectories.  Else if it is
- * @c svn_depth_immediates, update the uppermost directory, its file
- * entries, and the presence or absence of subdirectories (but do not
- * descend into the subdirectories).  Else if it is @c
- * svn_depth_empty, update exactly the uppermost target, and don't
- * touch its entries.
- *
- * ### TODO(sd): Are those extravagent claims of sophisticated depth
- * ### behavior above really true?
+ * Else if it is @c svn_depth_immediates, update the uppermost
+ * directory, its file entries, and the presence or absence of
+ * subdirectories (but do not descend into the subdirectories).
+ * Else if it is @c svn_depth_files, update the uppermost directory
+ * and its immediate file entries, but not subdirectories.  
+ * Else if it is @c svn_depth_empty, update exactly the uppermost
+ * target, and don't touch its entries.
  *
  * @note @a depth overrides whatever depth is already set in @a anchor
  * or @a target.  To use those depths, the caller should detect them
