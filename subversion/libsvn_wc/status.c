@@ -1765,10 +1765,8 @@ close_directory(void *dir_baton,
           tgt_status = apr_hash_get(db->statii, path, APR_HASH_KEY_STRING);
           if (tgt_status)
             {
-              if (eb->default_depth != svn_depth_exclude
-                  /* ### TODO(sd): above condition "can't happen", right? */
-                  && (tgt_status->entry)
-                  && (tgt_status->entry->kind == svn_node_dir))
+              if (tgt_status->entry
+                  && tgt_status->entry->kind == svn_node_dir)
                 {
                   svn_wc_adm_access_t *dir_access;
                   SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,
