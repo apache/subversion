@@ -1148,9 +1148,6 @@ svn_client_update(svn_revnum_t *result_rev,
  * ignoring subdirectories completely.  Else if @c svn_depth_empty,
  * switch just @a path and touch nothing underneath it.
  *
- * ### TODO(sd): But, I think the svn_depth_immediates behavior is not
- * ### actually implemented yet.
- *
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
