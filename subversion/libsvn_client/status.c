@@ -380,11 +380,17 @@ svn_client_status3(svn_revnum_t *result_rev,
      all the statuses, we will change unversioned status items that
      are interesting to an svn:externals property to
      svn_wc_status_unversioned, otherwise we'll just remove the status
-     item altogether. */
+     item altogether.
+
+     We only descend into an external if depth==svn_depth_infinity.
+     However, there are conceivable behaviors that would involve
+     descending under other circumstances; thus, we pass depth anyway,
+     so the code will DTRT if we change the conditional in the future.
+  */
   if ((depth == svn_depth_infinity) && (! ignore_externals))
     SVN_ERR(svn_client__do_external_status(traversal_info, status_func,
-                                           status_baton, get_all, update,
-                                           no_ignore, ctx, pool));
+                                           status_baton, depth, get_all,
+                                           update, no_ignore, ctx, pool));
 
   return SVN_NO_ERROR;
 }

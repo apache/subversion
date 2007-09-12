@@ -868,6 +868,7 @@ svn_error_t *
 svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_wc_status_func2_t status_func,
                                void *status_baton,
+                               svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
