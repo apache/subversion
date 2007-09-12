@@ -195,21 +195,3 @@ Veto-blocked changes:
      -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
 
 Approved changes:
-
-  * r25586, r25587, r25613, r25616, r25640, -41
-    Fix issue #2804: 'svn status' reports a missing directory that was
-    previously scheduled for deletion and then reverted as 'D' rather
-    than '!'.
-    Justification:
-      User reported bug.  Trivial fix that includes a test case.
-    Notes:
-      r25586 had to be retrofitted for svntest API differences.
-      r25587 contains an unrelated refactoring which simplifies merging.
-      r25616 contains a formatting tweak (a follow-up to r25613).
-      r25640 adds an extra regression test for this issue
-             This test was adapted slightly on the backport branch to make it
-             work on 1.4.x.
-      r25641 contains a small comment update to r25640
-    Branch: 1.4.x-issue-2804
-    Votes:
-      +1: dlr, lgo, vgeorgescu

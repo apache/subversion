@@ -632,6 +632,135 @@ def revert_propdel__file(sbox):
                                      iota_path)
 
 
+#----------------------------------------------------------------------
+# Test for issue #2804.
+def status_of_missing_dir_after_revert(sbox):
+  "status after schedule-delete, revert, and local rm"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_D_G_path = os.path.join(wc_dir, "A", "D", "G")
+
+  svntest.actions.run_and_verify_svn(None, None, [], "rm", A_D_G_path)
+  expected_output = re.escape("Reverted '" + A_D_G_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     A_D_G_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "status", wc_dir)
+
+  svntest.main.safe_rmtree(A_D_G_path)
+
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
+                                                      "status", wc_dir)
+  expected_output = "!      " + A_D_G_path + "\n"
+  if expected_output not in output:
+    raise svntest.Failure("Expected output '%s'" % expected_output)
+    
+
+#----------------------------------------------------------------------
+# Test for issue #2804 with replaced directory
+def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
+  "status after replace+, revert, and local rm"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # delete A/D/G and commit
+  G_path = os.path.join(wc_dir, "A", "D", "G")
+  svntest.actions.run_and_verify_svn(None, None, [], "rm", G_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G': Item(verb='Deleting'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # copy A/D/G from A/B/E and commit
+  E_path = os.path.join(wc_dir, "A", "B", "E")
+  svntest.actions.run_and_verify_svn(None, None, [], "cp", E_path, G_path)
+  expected_status.add({
+    'A/D/G' : Item(status='  ', wc_rev='3'),
+    'A/D/G/alpha' : Item(status='  ', wc_rev='3'),
+    'A/D/G/beta' : Item(status='  ', wc_rev='3')
+    })
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G': Item(verb='Adding'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # now rollback to r1, thereby reinstating the old 'G'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G': Item(status='D '),
+    'A/D/G/alpha': Item(status='D '),
+    'A/D/G/beta': Item(status='D '),
+    'A/D/G': Item(status='A '),
+    'A/D/G/rho': Item(status='A '),
+    'A/D/G/pi': Item(status='A '),
+    'A/D/G/tau': Item(status='A '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G', status='R ', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/rho', status='A ', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/pi',  status='A ', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/tau', status='A ', copied='+', wc_rev='-')
+  expected_status.add({
+    'A/D/G/alpha' : Item(status='D ', copied='+', wc_rev='-'),
+    'A/D/G/beta' : Item(status='D ', copied='+', wc_rev='-')
+    })
+  expected_skip = wc.State(wc_dir, { })
+  expected_disk   = svntest.main.greek_state.copy()
+  svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
+                                       sbox.repo_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       dry_run = 0)
+
+  # now test if the revert works ok
+  expected_output =\
+   ["Reverted '" + G_path + "'\n",
+    "Reverted '" + os.path.join(G_path, 'pi') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'rho') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'tau') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'alpha') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'beta') + "'\n"]
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [], "revert", "-R",
+                                                G_path)
+  for line in out:
+    if not line in expected_output:
+      raise svntest.Failure("Expected output '%s'" % expected_output)
+
+  expected_output =\
+    ["?      " + os.path.join(G_path, "pi") + "\n",
+     "?      " + os.path.join(G_path, "rho") + "\n",
+     "?      " + os.path.join(G_path, "tau") + "\n"]
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                "status", wc_dir)
+  for line in out:
+    if not line in expected_output:
+      raise svntest.Failure("Expected output '%s'" % expected_output)
+
+  svntest.main.safe_rmtree(G_path)
+
+  expected_output = ["!      " + G_path + "\n"]
+  out, err = svntest.actions.run_and_verify_svn(None, None, [], "status",
+                                                wc_dir)
+  for line in out:
+    if not line in expected_output:
+      raise svntest.Failure("Expected output '%s'" % expected_output)
+
 ########################################################################
 # Run the tests
 
@@ -652,6 +781,8 @@ test_list = [ None,
               revert_propset__file,
               revert_propdel__dir,
               revert_propdel__file,
+              status_of_missing_dir_after_revert,
+              status_of_missing_dir_after_revert_replaced_with_history_dir,
              ]
 
 if __name__ == '__main__':
