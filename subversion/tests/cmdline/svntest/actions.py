@@ -323,16 +323,16 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
                                  URL, wc_dir_name, *args)
-  mytree = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees (mytree, output_tree)
+  tree.compare_trees (actual, output_tree)
 
   # Create a tree by scanning the working copy
-  mytree = tree.build_tree_from_wc (wc_dir_name)
+  actual = tree.build_tree_from_wc (wc_dir_name)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (mytree, disk_tree,
+  tree.compare_trees (actual, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
 
@@ -363,18 +363,18 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
                                  URL, export_dir_name, *args)
-  mytree = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees (mytree, output_tree)
+  tree.compare_trees (actual, output_tree)
 
   # Create a tree by scanning the working copy.  Don't ignore
   # the .svn directories so that we generate an error if they
   # happen to show up.
-  mytree = tree.build_tree_from_wc (export_dir_name, ignore_svn=0)
+  actual = tree.build_tree_from_wc (export_dir_name, ignore_svn=0)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (mytree, disk_tree,
+  tree.compare_trees (actual, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
 
@@ -400,10 +400,10 @@ def verify_update(actual_output, wc_dir_name,
   tree.compare_trees (actual_output, output_tree)
 
   # Create a tree by scanning the working copy
-  mytree = tree.build_tree_from_wc (wc_dir_name, check_props)
+  actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (mytree, disk_tree,
+  tree.compare_trees (actual_disk, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
 
@@ -466,8 +466,8 @@ def run_and_verify_update(wc_dir_name,
         return
     raise main.SVNUnmatchedError
 
-  mytree = tree.build_tree_from_checkout (output)
-  verify_update (mytree, wc_dir_name,
+  actual = tree.build_tree_from_checkout (output)
+  verify_update (actual, wc_dir_name,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
@@ -610,8 +610,8 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   tree.compare_trees(myskiptree, skip_tree,
                      extra_skip, None, missing_skip, None)
 
-  mytree = tree.build_tree_from_checkout(out, 0)
-  verify_update (mytree, dir,
+  actual = tree.build_tree_from_checkout(out, 0)
+  verify_update (actual, dir,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
@@ -667,9 +667,9 @@ def run_and_verify_switch(wc_dir_name,
         return
     raise main.SVNUnmatchedError
 
-  mytree = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout (output)
 
-  verify_update (mytree, wc_dir_name,
+  verify_update (actual, wc_dir_name,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
@@ -749,14 +749,14 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
       output.append(lastline)
 
   # Convert the output into a tree.
-  mytree = tree.build_tree_from_commit (output)
+  actual = tree.build_tree_from_commit (output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (mytree, output_tree)
+    tree.compare_trees (actual, output_tree)
   except tree.SVNTreeError:
       display_trees("Output of commit is unexpected.",
-                    "OUTPUT TREE", output_tree, mytree)
+                    "OUTPUT TREE", output_tree, actual)
       raise
 
   # Verify via 'status' command too, if possible.
@@ -785,15 +785,15 @@ def run_and_verify_status(wc_dir_name, output_tree,
                                  '--password', main.wc_passwd,
                                  wc_dir_name)
 
-  mytree = tree.build_tree_from_status (output)
+  actual = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (mytree, output_tree,
+    tree.compare_trees (actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
-    display_trees(None, 'STATUS OUTPUT TREE', output_tree, mytree)
+    display_trees(None, 'STATUS OUTPUT TREE', output_tree, actual)
     raise
 
 
@@ -815,15 +815,15 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
 
   output, errput = main.run_svn (None, 'status', '-v', '-u', wc_dir_name)
 
-  mytree = tree.build_tree_from_status (output)
+  actual = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
   if (singleton_handler_a or singleton_handler_b):
-    tree.compare_trees (mytree, output_tree,
+    tree.compare_trees (actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   else:
-    tree.compare_trees (mytree, output_tree)
+    tree.compare_trees (actual, output_tree)
 
 
 def run_and_verify_diff_summarize(output_tree, error_re_string = None,
@@ -858,15 +858,15 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
         return
     raise main.SVNUnmatchedError
 
-  mytree = tree.build_tree_from_diff_summarize (output)
+  actual = tree.build_tree_from_diff_summarize (output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (mytree, output_tree,
+    tree.compare_trees (actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
-    display_trees(None, 'DIFF OUTPUT TREE', output_tree, mytree)
+    display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
     raise
 
 def run_and_validate_lock(path, username, password):
