@@ -2253,6 +2253,86 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+drive_merge_report_editor(const char *target_wcpath,
+                          svn_ra_session_t *ra_session,
+                          const char *initial_URL1,
+                          const char *initial_URL2,
+                          apr_array_header_t *children_with_mergeinfo,
+                          svn_revnum_t start,
+                          svn_revnum_t end,
+                          svn_depth_t depth,
+                          svn_boolean_t ignore_ancestry,
+                          notification_receiver_baton_t *notify_b,
+                          svn_wc_adm_access_t *adm_access,
+                          const svn_wc_diff_callbacks2_t *callbacks,
+                          struct merge_cmd_baton *merge_b,
+                          apr_pool_t *pool)
+{
+  const svn_ra_reporter3_t *reporter;
+  svn_ra_session_t *ra_session2;
+  const svn_delta_editor_t *diff_editor;
+  void *diff_edit_baton;
+  void *report_baton;
+  /* Open a second session used to request individual file
+     contents. Although a session can be used for multiple requests, it
+     appears that they must be sequential. Since the first request, for
+     the diff, is still being processed the first session cannot be
+     reused. This applies to ra_neon, ra_local does not appears to have
+     this limitation. */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, initial_URL1,
+                                               NULL, NULL, NULL, FALSE, TRUE,
+                                               merge_b->ctx, pool));
+  SVN_ERR(svn_client__get_diff_editor(target_wcpath, adm_access, callbacks,
+                                      merge_b, depth, merge_b->dry_run,
+                                      ra_session2, start,
+                                      notification_receiver, notify_b,
+                                      merge_b->ctx->cancel_func,
+                                      merge_b->ctx->cancel_baton,
+                                      &diff_editor, &diff_edit_baton,
+                                      pool));
+
+  SVN_ERR(svn_ra_do_diff3(ra_session, &reporter, &report_baton, end, "",
+                          depth, ignore_ancestry, TRUE,  /* text_deltas */
+                          initial_URL2, diff_editor, diff_edit_baton, pool));
+
+  SVN_ERR(reporter->set_path(report_baton, "", start, depth,
+                             FALSE, NULL, pool));
+  if (notify_b->same_urls && children_with_mergeinfo
+      && children_with_mergeinfo->nelts > 0)
+    {
+      /* Describe children with mergeinfo overlapping this merge
+         operation such that no diff is retrieved for them from
+         the repository. */
+      apr_size_t target_wcpath_len = strlen(target_wcpath);
+      int i;
+      for (i = 0; i < children_with_mergeinfo->nelts; i++)
+        {
+          const char *child_repos_path;
+          merge_path_t *child = APR_ARRAY_IDX(children_with_mergeinfo, i,
+                                              merge_path_t *);
+
+          if (!child || child->absent)
+            continue;
+
+          /* svn_path_is_ancestor returns true if paths are same,
+             so make sure paths are not same. */
+          if (svn_path_is_ancestor(target_wcpath, child->path) &&
+              strcmp(child->path, target_wcpath) != 0)
+            {
+              child_repos_path = child->path +
+                              (target_wcpath_len ? target_wcpath_len + 1 : 0);
+              SVN_ERR(reporter->set_path(report_baton, child_repos_path,
+                                         end, depth, FALSE, NULL, pool));
+            }
+        }
+    }
+
+  SVN_ERR(reporter->finish_report(report_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* URL1, URL2, and TARGET_WCPATH all better be directories.  For the
    single file case, the caller does the merging manually.
 
@@ -2295,11 +2375,7 @@ do_merge(const char *initial_URL1,
   svn_merge_range_t range;
   enum merge_type merge_type;
   svn_boolean_t is_rollback;
-  svn_ra_session_t *ra_session, *ra_session2;
-  const svn_ra_reporter3_t *reporter;
-  void *report_baton;
-  const svn_delta_editor_t *diff_editor;
-  void *diff_edit_baton;
+  svn_ra_session_t *ra_session;
   svn_client_ctx_t *ctx = merge_b->ctx;
   notification_receiver_baton_t notify_b =
     { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, 0, NULL, NULL, pool };
@@ -2344,15 +2420,6 @@ do_merge(const char *initial_URL1,
   if (merge_b->record_only && merge_b->dry_run)
     return SVN_NO_ERROR;
 
-  /* Open a second session used to request individual file
-     contents. Although a session can be used for multiple requests, it
-     appears that they must be sequential. Since the first request, for
-     the diff, is still being processed the first session cannot be
-     reused. This applies to ra_neon, ra_local does not appears to have
-     this limitation. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, initial_URL1,
-                                               NULL, NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
 
   if (notify_b.same_urls && merge_b->same_repos)
     {
@@ -2449,69 +2516,12 @@ do_merge(const char *initial_URL1,
          ### already in conflict down into the API which requests or
          ### applies the diff. */
 
-      SVN_ERR(svn_client__get_diff_editor(target_wcpath,
-                                          adm_access,
-                                          callbacks,
-                                          merge_b,
-                                          depth,
-                                          merge_b->dry_run,
-                                          ra_session2,
-                                          r->start,
-                                          notification_receiver,
-                                          &notify_b,
-                                          ctx->cancel_func,
-                                          ctx->cancel_baton,
-                                          &diff_editor,
-                                          &diff_edit_baton,
-                                          subpool));
-
-      SVN_ERR(svn_ra_do_diff3(ra_session,
-                              &reporter, &report_baton,
-                              r->end,
-                              "",
-                              depth,
-                              ignore_ancestry,
-                              TRUE,  /* text_deltas */
-                              initial_URL2,
-                              diff_editor, diff_edit_baton, subpool));
-
-      SVN_ERR(reporter->set_path(report_baton, "",
-                                 r->start,
-                                 depth, FALSE, NULL, subpool));
-      if (notify_b.same_urls
-          && children_with_mergeinfo
-          && children_with_mergeinfo->nelts > 0)
-        {
-          /* Describe children with mergeinfo overlapping this merge
-             operation such that no diff is retrieved for them from
-             the repository. */
-          apr_size_t target_wcpath_len = strlen(target_wcpath);
-          int j;
-          for (j = 0; j < children_with_mergeinfo->nelts; j++)
-            {
-              const char *child_repos_path;
-              merge_path_t *child =
-                APR_ARRAY_IDX(children_with_mergeinfo, j, merge_path_t *);
-
-              if (!child || child->absent)
-                continue;
-
-              /* svn_path_is_ancestor returns true if paths are same,
-                 so make sure paths are not same. */
-              if (svn_path_is_ancestor(target_wcpath, child->path) &&
-                  strcmp(child->path, target_wcpath) != 0)
-                {
-                  child_repos_path = child->path +
-                    (target_wcpath_len ? target_wcpath_len + 1 : 0);
-                  SVN_ERR(reporter->set_path(report_baton, child_repos_path,
-                                             r->end,
-                                             depth, FALSE, NULL, subpool));
-                }
-            }
-        }
-
-      SVN_ERR(reporter->finish_report(report_baton, subpool));
-
+      SVN_ERR(drive_merge_report_editor(target_wcpath, ra_session,
+                                        initial_URL1, initial_URL2,
+                                        children_with_mergeinfo,
+                                        r->start, r->end, depth, 
+                                        ignore_ancestry, &notify_b, adm_access,
+                                        callbacks, merge_b, subpool));
       if (notify_b.same_urls)
         {
           if (!merge_b->dry_run && merge_b->same_repos)
