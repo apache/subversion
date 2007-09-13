@@ -433,9 +433,10 @@ def detect_conflict_files(node, extra_files):
       extra_files.pop(extra_files.index(pattern)) # delete pattern from list
       break
   else:
-    print "Found unexpected disk object:", node.name
+    msg = "Encountered unexpected disk path '" + node.name + "'"
+    print msg
     node.pprint()
-    raise SVNTreeUnequal
+    raise SVNTreeUnequal(msg)
 
 ###########################################################################
 ###########################################################################
