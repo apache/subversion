@@ -3001,7 +3001,15 @@ static const svn_ra_reporter3_t ra_neon_reporter = {
    in the directory represented by the SESSION's URL, or empty if the
    entire directory is meant to be the target.
 
-   ### TODO(sd): document DEPTH behavior
+   DEPTH is the requested depth of the operation.  It will be
+   transmitted to the server, which (if it understands depths) can use
+   the information to limit the information it sends back.  Also store
+   DEPTH in the REPORT_BATON: that way, if the server is old and does
+   not understand depth requests, the client can notice this when the
+   response starts streaming in, and adjust accordingly (as of this
+   writnig, by wrapping REPORTER->editor and REPORTER->edit_baton in a
+   filtering editor that simply tosses out the data the client doesn't
+   want).
 
    If SEND_COPYFROM_ARGS is set, then ask the server to transmit
    copyfrom args in add_file() in add_directory() calls.
