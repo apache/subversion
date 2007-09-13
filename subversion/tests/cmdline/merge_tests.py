@@ -31,6 +31,9 @@ Skip = svntest.testcase.Skip
 from svntest.main import SVN_PROP_MERGE_INFO
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
+from svntest.actions import fill_file_with_lines
+from svntest.actions import make_conflict_marker_text
+from svntest.actions import inject_conflict_into_expected_state
 
 def shorten_path_kludge(path):
   '''Search for the comment entitled "The Merge Kluge" elsewhere in
@@ -116,13 +119,8 @@ def textual_merges_galore(sbox):
   # Change mu and rho for revision 2
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  mu_text = ""
-  rho_text = ""
-  for x in range(2,11):
-    mu_text = mu_text + 'This is line ' + `x` + ' in mu\n'
-    rho_text = rho_text + 'This is line ' + `x` + ' in rho\n'
-  svntest.main.file_append(mu_path, mu_text)
-  svntest.main.file_append(rho_path, rho_text)
+  mu_text = fill_file_with_lines(mu_path, 2)
+  rho_text = fill_file_with_lines(rho_path, 2)
 
   # Create expected output tree for initial commit
   expected_output = wc.State(wc_dir, {
@@ -152,20 +150,11 @@ def textual_merges_galore(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
-  lambda_text = ""
-  pi_text = ""
-  tau_text = ""
-  additional_rho_text = ""  # saving rho text changes from previous commit
-  for x in range(2,11):
-    lambda_text = lambda_text + 'This is line ' + `x` + ' in lambda\n'
-    pi_text = pi_text + 'This is line ' + `x` + ' in pi\n'
-    tau_text = tau_text + 'This is line ' + `x` + ' in tau\n'
-    additional_rho_text = additional_rho_text \
-                          + 'This is additional line ' + `x` + ' in rho\n'
-  svntest.main.file_append(lambda_path, lambda_text)
-  svntest.main.file_append(pi_path, pi_text)
-  svntest.main.file_append(tau_path, tau_text)
-  svntest.main.file_append(rho_path, additional_rho_text)
+
+  lambda_text = fill_file_with_lines(lambda_path, 2)
+  pi_text = fill_file_with_lines(pi_path, 2)
+  tau_text = fill_file_with_lines(tau_path, 2)
+  additional_rho_text = fill_file_with_lines(rho_path, 2)
 
   # Created expected output tree for 'svn ci'
   expected_output = wc.State(wc_dir, {
@@ -208,10 +197,8 @@ def textual_merges_galore(sbox):
 
   # For A/D/G/tau, we append ten different lines, to conflict with the
   # ten lines appended in revision 3.
-  other_tau_text = ""
-  for x in range(2,11):
-    other_tau_text = other_tau_text + 'Conflicting line ' + `x` + ' in tau\n'
-  svntest.main.file_append(other_tau_path, other_tau_text)
+  other_tau_text = fill_file_with_lines(other_tau_path, 2,
+                                        line_descrip="Conflicting line")
 
   # Do the first merge, revs 1:3.  This tests all the cases except
   # case 4, which we'll handle in a second pass.
@@ -233,13 +220,6 @@ def textual_merges_galore(sbox):
   expected_disk.tweak('A/D/G/pi',
                       contents=expected_disk.desc['A/D/G/pi'].contents
                       + pi_text)
-  expected_disk.tweak('A/D/G/tau',
-                      contents=expected_disk.desc['A/D/G/tau'].contents
-                      + "<<<<<<< .working\n"
-                      + other_tau_text
-                      + "=======\n"
-                      + tau_text
-                      + ">>>>>>> .merge-right.r3\n")
 
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
   expected_status.tweak('', status=' M')
@@ -247,17 +227,16 @@ def textual_merges_galore(sbox):
   expected_status.tweak('A/B/lambda', status='M ')
   expected_status.tweak('A/D/G/pi', status='M ')
   expected_status.tweak('A/D/G/rho', status='M ')
-  expected_status.tweak('A/D/G/tau', status='C ')
+
+  inject_conflict_into_expected_state('A/D/G/tau', expected_disk,
+                                      expected_status, other_tau_text, tau_text,
+                                      3)
+
   expected_skip = wc.State('', { })
 
-  ### I'd prefer to use a lambda expression here, but these handlers
-  ### could get arbitrarily complicated.  Even this simple one still
-  ### has a conditional.
-  def merge_singleton_handler(a, ignored_baton):
-    "Accept expected tau.* singletons in a conflicting merge."
-    if (not re.match("tau.*\.(r\d+|working)", a.name)):
-      print "Merge got unexpected singleton", a.name
-      raise svntest.tree.SVNTreeUnequal
+  tau_conflict_support_files = ["tau\.working",
+                                "tau\.merge-right\.r3",
+                                "tau\.merge-left\.r1"]
 
   svntest.actions.run_and_verify_merge(other_wc, '1', '3',
                                        sbox.repo_url,
@@ -266,7 +245,8 @@ def textual_merges_galore(sbox):
                                        expected_status,
                                        expected_skip,
                                        None,
-                                       merge_singleton_handler)
+                                       svntest.tree.detect_conflict_files,
+                                       list(tau_conflict_support_files))
 
   # Now reverse merge r3 into A/D/G/rho, give it non-conflicting local
   # mods, then merge in the 2:3 change.  ### Not bothering to do the
@@ -312,14 +292,6 @@ def textual_merges_galore(sbox):
   expected_disk.tweak('pi',
                       contents=expected_disk.desc['pi'].contents
                       + pi_text)
-  expected_disk.tweak('tau',
-                      contents=expected_disk.desc['tau'].contents
-                      + "<<<<<<< .working\n"
-                      + other_tau_text
-                      + "=======\n"
-                      + tau_text
-                      + ">>>>>>> .merge-right.r3\n"
-                      )
 
   expected_status = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
                              { ''     : Item(wc_rev=1, status='  '),
@@ -327,6 +299,9 @@ def textual_merges_galore(sbox):
                                'pi'   : Item(wc_rev=1, status='M '),
                                'tau'  : Item(wc_rev=1, status='C '),
                                })
+
+  inject_conflict_into_expected_state('tau', expected_disk, expected_status,
+                                      other_tau_text, tau_text, 3)
 
   # Do the merge, but check svn:mergeinfo props separately since
   # run_and_verify_merge would attempt to proplist tau's conflict
@@ -339,7 +314,9 @@ def textual_merges_galore(sbox):
     expected_disk,
     expected_status,
     expected_skip,
-    None, merge_singleton_handler)
+    None,
+    svntest.tree.detect_conflict_files, list(tau_conflict_support_files))
+
 
   svntest.actions.run_and_verify_svn(None, ["/A/D/G/rho:2-3\n"], [],
                                      'propget', SVN_PROP_MERGE_INFO,
@@ -3369,12 +3346,7 @@ def cherry_pick_text_conflict(sbox):
     })
   expected_disk = wc.State('', {
     'mu'        : Item("This is the file 'mu'.\n"
-                       + "<<<<<<< .working\n"
-                       + "=======\n"
-                       + "r3\n" * 3
-                       + "r4\n" * 3
-                       + ">>>>>>> .merge-right.r4\n"
-                       ),
+                       + make_conflict_marker_text("r3\n" * 3, "r4\n" * 3, 4)),
     'B'         : Item(),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/E'       : Item(),
@@ -3771,6 +3743,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
   new_alpha_path = os.path.join(wc_dir, 'A', 'C', 'alpha')
 
   # Create a new "alpha" file, with enough differences to cause a conflict.
+  ### TODO: Leverage inject_conflict_into_wc() here.
   svntest.main.file_write(new_alpha_path, 'new alpha content\n')
 
   # Add and commit the new "alpha" file, creating revision 2.
@@ -3797,11 +3770,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
     'alpha'   : Item(status='C '),
     })
   expected_disk = wc.State('', {
-    'alpha'    : Item("<<<<<<< .working\n" +
-                    "This is the file 'alpha'.\n" +
-                    "=======\n" +
-                    "new alpha content\n" +
-                    ">>>>>>> .merge-right.r2\n"),
+    'alpha'    : Item(""),  # state filled in below
     'beta'    : Item("This is the file 'beta'.\n"),
     })
   expected_status = wc.State(short_E_path, {
@@ -3809,6 +3778,10 @@ def merge_add_over_versioned_file_conflicts(sbox):
     'alpha'  : Item(status='C ', wc_rev=1),
     'beta'   : Item(status='  ', wc_rev=1),
     })
+
+  inject_conflict_into_expected_state('alpha', expected_disk, expected_status,
+                                      "This is the file 'alpha'.\n",
+                                      "new alpha content\n", 2)
   expected_skip = wc.State(short_E_path, { })
 
   os.chdir(svntest.main.work_dir)
