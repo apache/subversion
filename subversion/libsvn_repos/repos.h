@@ -237,6 +237,35 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
                              apr_pool_t *pool);
 
 
+/*** Ancestry Walking ***/
+typedef struct svn_repos__ancestry_callbacks_t
+{
+  /* An ancestor was found in PATH at REV. */
+  svn_error_t *(*found_ancestor)(void *walk_baton,
+                                 const char *path,
+                                 svn_revnum_t rev,
+                                 svn_boolean_t is_merge,
+                                 svn_boolean_t *halt,
+                                 apr_pool_t *pool);
+
+} svn_repos__ancestry_callbacks_t;
+
+/* Walk the ancestry of PATH, from END to START, calling CALLBACKS as
+   needed. */
+svn_error_t *
+svn_repos__walk_ancestry(const char *end_path,
+                         svn_fs_t *fs,
+                         svn_revnum_t start,
+                         svn_revnum_t end,
+                         svn_boolean_t include_merges,
+                         svn_boolean_t stop_on_copy,
+                         const svn_repos__ancestry_callbacks_t *callbacks,
+                         void *callbacks_baton,
+                         svn_repos_authz_func_t authz_read_func,
+                         void *authz_read_baton,
+                         apr_pool_t *pool);
+
+
 /*** Utility Functions ***/
 
 /* Set *CHANGED_P to TRUE if ROOT1/PATH1 and ROOT2/PATH2 have
