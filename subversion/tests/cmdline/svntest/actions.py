@@ -1172,13 +1172,6 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
   if expected_status:
     expected_status.tweak(state_path, wc_rev=merged_rev)
 
-def ignore_conflict_files_singleton_handler(node, path):
-  """An implementation of a tree comparison 'singleton' handler.  PATH
-  is supplied as the baton."""
-  if not re.match(path + ".*\.(r\d+|working)", node.name):
-    raise tree.SVNTreeUnequal("Merge encountered unexpected path '" + 
-                              node.name + "'")
-
 def inject_conflict_into_expected_state(state_path,
                                         expected_disk, expected_status,
                                         wc_text, merged_text, merged_rev):
