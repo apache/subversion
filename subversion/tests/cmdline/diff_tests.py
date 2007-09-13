@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -2747,6 +2747,42 @@ def diff_with_depth(sbox):
   svntest.actions.run_and_verify_svn(None, expected_infinity, [],
                                      'diff', '-rHEAD', '--depth', 'infinity')
 
+# test for issue 2920: ignore eol-style on empty lines
+def diff_ignore_eolstyle_empty_lines(sbox):
+  "ignore eol styles when diffing empty lines"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  svntest.main.file_write(file_path,
+                          "Aa\n"
+                          "\n"
+                          "Bb\n"
+                          "\n"
+                          "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # commit only eol changes
+  svntest.main.file_write(file_path,
+                          "Aa\012"
+                          "\012"
+                          "Bb\r"
+                          "\r"
+                          "Cc\012",
+                          mode="wb")
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'diff', '-x', '--ignore-eol-style',
+                                     file_path)
+
 ########################################################################
 #Run the tests
 
@@ -2795,6 +2831,7 @@ test_list = [ None,
               diff_ignore_eolstyle,
               diff_in_renamed_folder,
               diff_with_depth,
+              XFail(diff_ignore_eolstyle_empty_lines),
               ]
 
 if __name__ == '__main__':
