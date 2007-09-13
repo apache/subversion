@@ -184,9 +184,9 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
   svn_client__default_walker_error_handler
 };
 
+/* Whether ENTRY->changelist (which may be NULL) matches CHANGELIST_NAME. */
 #define CHANGELIST_MATCHES(changelist_name, entry) \
-        (changelist_name == NULL || \
-         (entry->changelist && strcmp(changelist_name, entry->changelist) == 0))
+        (entry->changelist && strcmp(changelist_name, entry->changelist) == 0)
 
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
