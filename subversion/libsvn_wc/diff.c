@@ -237,12 +237,11 @@ struct callbacks_wrapper_baton {
 /* Create a new edit baton. TARGET/ANCHOR are working copy paths that
  * describe the root of the comparison. CALLBACKS/CALLBACK_BATON
  * define the callbacks to compare files. DEPTH defines if and how to
- * descend into subdirectories.  IGNORE_ANCESTRY defines whether to
- * utilize node ancestry when calculating diffs.  USE_TEXT_BASE
- * defines whether to compare against working files or text-bases.
- * REVERSE_ORDER defines which direction to perform the diff.
- *
- * ### TODO(sd): document depth's behavior more precisely.
+ * descend into subdirectories; see public doc string for exactly how.
+ * IGNORE_ANCESTRY defines whether to utilize node ancestry when
+ * calculating diffs.  USE_TEXT_BASE defines whether to compare
+ * against working files or text-bases.  REVERSE_ORDER defines which
+ * direction to perform the diff.
  */
 static struct edit_baton *
 make_editor_baton(svn_wc_adm_access_t *anchor,

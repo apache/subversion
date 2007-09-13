@@ -2002,10 +2002,13 @@ svn_client_blame(const char *path_or_url,
  * is a file, @a path2 must also be.
  *
  * If @a depth is @c svn_depth_infinity, diff fully recursively.
- * Else if it is @c svn_depth_immediates or @c svn_depth_files, diff
- * the named paths and their file children (if any), but no
- * subdirectories.  Else if @c svn_depth_empty, diff just the named
- * paths but nothing underneath them.
+ * Else if it is @c svn_depth_immediates, diff the named paths and
+ * their file children (if any), and diff properties of
+ * subdirectories, but do not descend further into the subdirectories.
+ * Else if @c svn_depth_files, behave as if for @c svn_depth_immediates
+ * except don't diff properties of subdirectories.  If @c
+ * svn_depth_empty, diff exactly the named paths but nothing
+ * underneath them.
  *
  * Use @a ignore_ancestry to control whether or not items being
  * diffed will be checked for relatedness first.  Unrelated items
@@ -2358,17 +2361,14 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
  * If either @a revision1 or @a revision2 has an `unspecified' or
  * unrecognized `kind', return @c SVN_ERR_CLIENT_BAD_REVISION.
  *
- * If @a depth is @c svn_depth_infinity and the URLs are
- * directories, apply changes fully recursively.  Else if it is
- * @c svn_depth_immediates and the URLs are directories, apply changes only
- * to files that are immediate children of @a target_wcpath and
- * to subdirectory properties.  Else if @c svn_depth_files, apply
- * changes only to immediate file children @a target_wcpath.  Else if
- * @c svn_depth_empty, apply changes only to @a target_wcpath (i.e.,
- * property changes only)
- *
- * ### TODO(sd): Improve above wording when figure out exactly what all
- * ### that means.
+ * If @a depth is @c svn_depth_infinity, merge fully recursively.
+ * Else if @c svn_depth_immediates, merge changes at most to files
+ * that are immediate children of @a target_wcpath and to directory
+ * properties of @a target_wcpath and its immediate subdirectory children.
+ * Else if @c svn_depth_files, merge at most to immediate file
+ * children of @a target_wcpath and to @a target_wcpath itself.
+ * Else if @c svn_depth_empty, apply changes only to @a target_wcpath
+ * (i.e., directory property changes only)
  *
  * If @a depth is @c svn_depth_unknown, use the depth of @a target_wcpath.
  *

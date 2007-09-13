@@ -2896,8 +2896,6 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * to @a reporter/@a report_baton.  Obviously, if @a path is a file
  * instead of a directory, this depth-first crawl will be a short one.
  *
- * ### TODO(sd): document @a depth parameter.
- *
  * No locks are or logs are created, nor are any animals harmed in the
  * process.  No cleanup is necessary.  @a adm_access must be an access
  * baton for the @a path hierarchy, it does not require a write lock.
@@ -2906,6 +2904,16 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * called, which immediately causes the RA layer to update the working
  * copy.  Thus the return value may very well reflect the result of
  * the update!
+ *
+ * If @a depth is @c svn_depth_empty, then report state only for
+ * @a path itself.  If @c svn_depth_files, do the same and include
+ * immediate file children of @a path.  If @c svn_depth_immediates,
+ * then behave as if for @c svn_depth_files but also report the
+ * property states of immediate subdirectories.  If @a depth is
+ * @c svn_depth_infinity, then report state fully recursively.  All
+ * descents are only as deep as @a path's own depth permits, of
+ * course.  If @a depth is @c svn_depth_unknown, then just use
+ * @c svn_depth_infinity, which in practice means depth of @a path.
  *
  * If @a restore_files is true, then unexpectedly missing working files
  * will be restored from the administrative directory's cache. For each
@@ -3440,7 +3448,6 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * top-level subdirectories at @c svn_depth_empty.  If @c svn_depth_infinity,
  * then diff fully recursively.  In the latter case, @a anchor should be part
  * of an access baton set for the @a target hierarchy.
- * ### TODO(sd): I'm not sure what the last part of that last sentence means.
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
