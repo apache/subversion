@@ -196,7 +196,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
     # Setup ra_ctx.
     ra.initialize()
-    callbacks = ra.callbacks2_t()
+    callbacks = ra.Callbacks()
     ra_ctx = ra.open2(REPOS_URL, callbacks, None, None)
 
     # Get commit editor.
