@@ -2253,6 +2253,8 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
   return SVN_NO_ERROR;
 }
 
+/* Sets up the diff editor report and drives it by properly negating
+   subtree that could have a conflicting merge history.*/
 static svn_error_t *
 drive_merge_report_editor(const char *target_wcpath,
                           svn_ra_session_t *ra_session,
