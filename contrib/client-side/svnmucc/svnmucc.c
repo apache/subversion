@@ -21,6 +21,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_ra.h"
+#include "svn_config.h"
 #include <apr_lib.h>
 #include <stdio.h>
 #include <string.h>
@@ -445,6 +446,7 @@ execute(const apr_array_header_t *actions,
         const char *message,
         const char *username,
         const char *password,
+        const char *config_dir,
         svn_boolean_t non_interactive,
         svn_revnum_t base_revision,
         apr_pool_t *pool)
@@ -455,10 +457,13 @@ execute(const apr_array_header_t *actions,
   void *editor_baton;
   struct operation root;
   svn_error_t *err;
+  apr_hash_t *config;
   int i;
+
+  SVN_ERR(svn_config_get_config(&config, config_dir, pool));
   SVN_ERR(svn_ra_open(&session, anchor,
                       ra_callbacks(username, password, non_interactive, pool),
-                      NULL, NULL, pool));
+                      NULL, config, pool));
 
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
   if (SVN_IS_VALID_REVNUM(base_revision))
@@ -555,7 +560,8 @@ usage(apr_pool_t *pool, int exit_val)
     "  -r, --revision ARG    use revision ARG as baseline for changes\n"
     "  -n, --non-interactive don't prompt the user about anything\n"
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
-    "                        use \"-\" to read from standard input)\n";
+    "                        use \"-\" to read from standard input)\n"
+    "  --config-dir ARG      use ARG to override the config directory\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
   exit(exit_val);
@@ -578,6 +584,9 @@ main(int argc, const char **argv)
   const char *anchor = NULL;
   svn_error_t *err = SVN_NO_ERROR;
   apr_getopt_t *getopt;
+  enum {
+    config_dir_opt = SVN_OPT_FIRST_LONGOPT_ID
+  };
   const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
     {"file", 'F', 1, ""},
@@ -588,11 +597,13 @@ main(int argc, const char **argv)
     {"extra-args", 'X', 1, ""},
     {"help", 'h', 0, ""},
     {"non-interactive", 'n', 0, ""},
+    {"config-dir", config_dir_opt, 1, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = "committed using svnmucc";
   const char *username = NULL, *password = NULL;
   const char *root_url = NULL, *extra_args_file = NULL;
+  const char *config_dir = NULL;
   svn_boolean_t non_interactive = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
@@ -662,6 +673,11 @@ main(int argc, const char **argv)
           break;
         case 'n':
           non_interactive = TRUE;
+          break;
+        case config_dir_opt:
+          err = svn_utf_cstring_to_utf8(&config_dir, arg, pool);
+          if (err)
+            handle_error(err, pool);
           break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
@@ -804,7 +820,7 @@ main(int argc, const char **argv)
     usage(pool, EXIT_FAILURE);
 
   if ((err = execute(actions, anchor, message, username, password,
-                     non_interactive, base_revision, pool)))
+                     config_dir, non_interactive, base_revision, pool)))
     handle_error(err, pool);
 
   svn_pool_destroy(pool);
