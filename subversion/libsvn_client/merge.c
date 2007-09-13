@@ -2357,14 +2357,14 @@ do_merge(const char *initial_URL1,
   if (notify_b.same_urls && merge_b->same_repos)
     {
       /* Reparent ra_session to WC target url. */
-      svn_ra_reparent(ra_session, entry->url, pool);
+      SVN_ERR(svn_ra_reparent(ra_session, entry->url, pool));
       SVN_ERR(get_wc_or_repos_mergeinfo(&target_mergeinfo, entry,
                                         &indirect, FALSE,
                                         svn_mergeinfo_inherited, ra_session,
                                         target_wcpath, adm_access,
                                         ctx, pool));
       /* Reparent ra_session back to initial_URL1. */
-      svn_ra_reparent(ra_session, initial_URL1, pool);
+      SVN_ERR(svn_ra_reparent(ra_session, initial_URL1, pool));
 
       is_rollback = (merge_type == merge_type_rollback);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, initial_URL1, NULL,
@@ -2854,7 +2854,7 @@ do_single_file_merge(const char *initial_URL1,
         return SVN_NO_ERROR;
 
       /* Reparent ra_session1 to WC target url. */
-      svn_ra_reparent(ra_session1, entry->url, pool);
+      SVN_ERR(svn_ra_reparent(ra_session1, entry->url, pool));
 
       SVN_ERR(get_wc_or_repos_mergeinfo(&target_mergeinfo, entry,
                                         &indirect, FALSE,
@@ -2863,7 +2863,7 @@ do_single_file_merge(const char *initial_URL1,
                                         ctx, pool));
 
       /* Reparent ra_session1 back to initial_URL1. */
-      svn_ra_reparent(ra_session1, initial_URL1, pool);
+      SVN_ERR(svn_ra_reparent(ra_session1, initial_URL1, pool));
 
       is_rollback = (merge_type == merge_type_rollback);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, initial_URL1, NULL,
