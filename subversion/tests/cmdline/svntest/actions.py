@@ -1149,7 +1149,10 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
                         file_path)
 
   # Backdate the file.
-  output, errput = main.run_svn(None, "up", "-r", str(prev_rev), file_path)
+  output, errput = main.run_svn(None, "up", "-r", str(prev_rev),
+                                "--username", main.wc_author,
+                                "--password", main.wc_passwd,
+                                 file_path)
   if expected_status:
     expected_status.tweak(state_path, wc_rev=prev_rev)
 
@@ -1168,6 +1171,8 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
                                       conflicting_contents, contents,
                                       merged_rev)
   output, errput = main.run_svn(None, "up", "-r", str(merged_rev),
+                                "--username", main.wc_author,
+                                "--password", main.wc_passwd,
                                 sbox.repo_url + "/" + state_path, file_path)
   if expected_status:
     expected_status.tweak(state_path, wc_rev=merged_rev)
