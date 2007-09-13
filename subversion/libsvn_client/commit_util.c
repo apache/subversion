@@ -184,6 +184,10 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
   svn_client__default_walker_error_handler
 };
 
+#define CHANGELIST_MATCHES(changelist_name, entry) \
+        (changelist_name == NULL || \
+         (entry->changelist && strcmp(changelist_name, entry->changelist) == 0))
+
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
@@ -337,9 +341,15 @@ harvest_committables(apr_hash_t *committables,
 
   /* Bail now if any conflicts exist for the ENTRY. */
   if (tc || pc)
-    return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
-                             _("Aborting commit: '%s' remains in conflict"),
-                             svn_path_local_style(path, pool));
+    {
+      /* Paths in conflict which are not part of our changelist should
+         be ignored. */
+      if (changelist_name == NULL &&
+          !CHANGELIST_MATCHES(changelist_name, entry))
+        return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                                 _("Aborting commit: '%s' remains in conflict"),
+                                 svn_path_local_style(path, pool));
+    }
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
      the telescoping one(s).  In COPY_MODE, URL will always be the
@@ -494,9 +504,7 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if ((changelist_name == NULL)
-          || (entry->changelist
-              && (strcmp(changelist_name, entry->changelist) == 0)))
+      if (changelist_name == NULL || CHANGELIST_MATCHES(changelist_name, entry))
         {
           /* Finally, add the committable item. */
           add_committable(committables, path, entry->kind, url,
@@ -592,9 +600,7 @@ harvest_committables(apr_hash_t *committables,
                                   == svn_wc_schedule_delete))
                             {
                               if ((changelist_name == NULL)
-                                  || (entry->changelist
-                                      && (strcmp(changelist_name,
-                                                 entry->changelist) == 0)))
+                                  || CHANGELIST_MATCHES(changelist_name, entry))
                                 {
                                   add_committable(
                                     committables, full_path,
