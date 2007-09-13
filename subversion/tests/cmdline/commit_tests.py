@@ -28,7 +28,9 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
-server_has_revprop_commit = svntest.main.server_has_revprop_commit
+
+from svntest.main import server_has_revprop_commit
+from svntest.actions import inject_conflict_into_wc
 
 ######################################################################
 # Utilities
@@ -2416,6 +2418,7 @@ def changelist(sbox):
   sbox.build()
 
   wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, "iota")
   mu_path = os.path.join(wc_dir, "A", "mu")
   gloo_path = os.path.join(wc_dir, "A", "D", "H", "gloo")
 
@@ -2427,14 +2430,15 @@ def changelist(sbox):
                                      "changelist", changelist_name,
                                      mu_path, gloo_path)
 
-  # Create a conflict.
-  ### TODO
+  # Create a conflict (making r2 in the process).
+  inject_conflict_into_wc(sbox, 'iota', iota_path,
+                          None, expected_status, 2)
 
   # Commit the changelist.
   expected_output = svntest.wc.State(wc_dir, {
     "A/D/H/gloo" : Item(verb='Adding'),
     })
-  expected_status.tweak("A/D/H/gloo", wc_rev=2, status="  ")
+  expected_status.tweak("A/D/H/gloo", wc_rev=3, status="  ")
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
