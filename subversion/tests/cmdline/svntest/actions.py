@@ -1149,7 +1149,7 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
                         file_path)
 
   # Backdate the file.
-  output, errput = main.run_svn(None, "up", "-r1", file_path)
+  output, errput = main.run_svn(None, "up", "-r", str(prev_rev), file_path)
   if expected_status:
     expected_status.tweak(state_path, wc_rev=prev_rev)
 
