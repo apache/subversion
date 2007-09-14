@@ -2831,7 +2831,7 @@ test_list = [ None,
               diff_ignore_eolstyle,
               diff_in_renamed_folder,
               diff_with_depth,
-              XFail(diff_ignore_eolstyle_empty_lines),
+              XFail(diff_ignore_eolstyle_empty_lines, svntest.main.is_os_windows),
               ]
 
 if __name__ == '__main__':
