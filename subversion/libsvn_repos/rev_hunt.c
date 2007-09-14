@@ -205,7 +205,42 @@ svn_repos_history(svn_fs_t *fs,
                             start, end, cross_copies, pool);
 }
 
+/* Baton for svn_repos_history2() */
+struct history_cb_baton
+{
+  svn_repos_history_func_t history_func;
+  void *history_baton;
+};
 
+/* Callback for ancestry walking in svn_repos_history2(). */
+static svn_error_t *
+history_ancestor(void *baton,
+                 const char *path,
+                 svn_revnum_t rev,
+                 svn_boolean_t is_merge,
+                 svn_boolean_t *halt,
+                 apr_pool_t *pool)
+{
+  struct history_cb_baton *hcb = baton;
+  svn_error_t *err;
+
+  *halt = FALSE;
+  err = hcb->history_func(hcb->history_baton, path, rev, pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_CEASE_INVOCATION)
+        {
+          svn_error_clear(err);
+          *halt = TRUE;
+        }
+      else
+        {
+          return err;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_repos_history2(svn_fs_t *fs,
@@ -219,12 +254,9 @@ svn_repos_history2(svn_fs_t *fs,
                    svn_boolean_t cross_copies,
                    apr_pool_t *pool)
 {
-  svn_fs_history_t *history;
-  apr_pool_t *oldpool = svn_pool_create(pool);
-  apr_pool_t *newpool = svn_pool_create(pool);
-  const char *history_path;
-  svn_revnum_t history_rev;
-  svn_fs_root_t *root;
+  svn_repos__ancestry_callbacks_t walk_callbacks =
+    { history_ancestor };
+  struct history_cb_baton hcb;
 
   /* Validate the revisions. */
   if (! SVN_IS_VALID_REVNUM(start))
@@ -244,84 +276,15 @@ svn_repos_history2(svn_fs_t *fs,
       end = tmprev;
     }
 
-  /* Get a revision root for END, and an initial HISTORY baton.  */
-  SVN_ERR(svn_fs_revision_root(&root, fs, end, pool));
+  hcb.history_func = history_func;
+  hcb.history_baton = history_baton;
 
-  if (authz_read_func)
-    {
-      svn_boolean_t readable;
-      SVN_ERR(authz_read_func(&readable, root, path,
-                              authz_read_baton, pool));
-      if (! readable)
-        return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
-    }
+  /* Walk the ancestry. */
+  SVN_ERR(svn_repos__walk_ancestry(path, fs, start, end, FALSE,
+                                   !cross_copies, &walk_callbacks,
+                                   &hcb, authz_read_func, authz_read_baton,
+                                   pool));
 
-  SVN_ERR(svn_fs_node_history(&history, root, path, oldpool));
-
-  /* Now, we loop over the history items, calling svn_fs_history_prev(). */
-  do
-    {
-      /* Note that we have to do some crazy pool work here.  We can't
-         get rid of the old history until we use it to get the new, so
-         we alternate back and forth between our subpools.  */
-      apr_pool_t *tmppool;
-      svn_error_t *err;
-
-      SVN_ERR(svn_fs_history_prev(&history, history, cross_copies, newpool));
-
-      /* Only continue if there is further history to deal with. */
-      if (! history)
-        break;
-
-      /* Fetch the location information for this history step. */
-      SVN_ERR(svn_fs_history_location(&history_path, &history_rev,
-                                      history, newpool));
-
-      /* If this history item predates our START revision, quit
-         here. */
-      if (history_rev < start)
-        break;
-
-      /* Is the history item readable?  If not, quit. */
-      if (authz_read_func)
-        {
-          svn_boolean_t readable;
-          svn_fs_root_t *history_root;
-          SVN_ERR(svn_fs_revision_root(&history_root, fs,
-                                       history_rev, newpool));
-          SVN_ERR(authz_read_func(&readable, history_root, history_path,
-                                  authz_read_baton, newpool));
-          if (! readable)
-            break;
-        }
-
-      /* Call the user-provided callback function. */
-      err = history_func(history_baton, history_path, history_rev, newpool);
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_CEASE_INVOCATION)
-            {
-              svn_error_clear(err);
-              goto cleanup;
-            }
-          else
-            {
-              return err;
-            }
-        }
-
-      /* We're done with the old history item, so we can clear its
-         pool, and then toggle our notion of "the old pool". */
-      svn_pool_clear(oldpool);
-      tmppool = oldpool;
-      oldpool = newpool;
-      newpool = tmppool;
-    }
-  while (history); /* shouldn't hit this */
-
- cleanup:
-  svn_pool_destroy(oldpool);
-  svn_pool_destroy(newpool);
   return SVN_NO_ERROR;
 }
 
@@ -1072,6 +1035,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
     { found_ancestor };
   apr_hash_t *last_props;
   svn_fs_root_t *last_root;
+  svn_node_kind_t kind;
   struct ancestry_walker_baton awb;
   const char *last_path;
   int i;
@@ -1080,6 +1044,13 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
      the last iteration to be available. */
   iter_pool = svn_pool_create(pool);
   last_pool = svn_pool_create(pool);
+
+  /* Check to make sure we are operating on a file. */
+  SVN_ERR(svn_fs_revision_root(&last_root, repos->fs, end, last_pool));
+  SVN_ERR(svn_fs_check_path(&kind, last_root, path, last_pool));
+  if (kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+      _("'%s' is not a file in revision %ld"), path, end);
 
   /* Setup the ancesty walker baton. */
   awb.path_revisions = apr_array_make(pool, 0, sizeof(struct path_revision *));

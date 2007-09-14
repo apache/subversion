@@ -82,18 +82,12 @@ svn_repos__walk_ancestry(const char *end_path,
 {
   svn_fs_history_t *history;
   svn_fs_root_t *root;
-  svn_node_kind_t kind;
   apr_pool_t *iterpool, *lastpool;
 
   iterpool = svn_pool_create(pool);
   lastpool = svn_pool_create(pool);
 
   SVN_ERR(svn_fs_revision_root(&root, fs, end, lastpool));
-  SVN_ERR(svn_fs_check_path(&kind, root, end_path, lastpool));
-  if (kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
-      _("'%s' is not a file in revision %ld"), end_path, end);
-
   SVN_ERR(svn_fs_node_history(&history, root, end_path, lastpool));
 
   while (1)
