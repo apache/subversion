@@ -101,9 +101,10 @@ svn_iter_apr_array(svn_boolean_t *completed,
                    apr_pool_t *pool);
 
 
-/**
+/** Internal routine used by svn_iter_break() macro.
  */
-#define SVN_ITER_BREAK SVN_NO_ERROR + 1
+svn_error_t *
+svn_iter__break(void);
 
 /** Helper macro to break looping in svn_iter_apr_array() and
  * svn_iter_apr_hash() driven loops.
@@ -114,11 +115,7 @@ svn_iter_apr_array(svn_boolean_t *completed,
  *
  * @since New in 1.5.
  */
-#define svn_iter_break(pool) \
-  do { \
-    svn_error_t *tmp__err = apr_pcalloc((pool), sizeof(*tmp__err));     \
-    tmp__err->apr_err = SVN_ERR_ITER_BREAK;                       \
-    return tmp__err;                                              \
-  } while (0)
+#define svn_iter_break(pool) return svn_iter__break()
+
 
 
