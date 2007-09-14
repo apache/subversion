@@ -100,11 +100,13 @@ svn_repos__walk_ancestry(const char *end_path,
 
       svn_pool_clear(iterpool);
 
+      /* Walk the history object, looking for the previous node. */
       SVN_ERR(svn_fs_history_prev(&history, history, !stop_on_copy, iterpool));
       if (!history)
         break;
       SVN_ERR(svn_fs_history_location(&path, &rev, history, iterpool));
 
+      /* Check authorization. */
       if (authz_read_func)
         {
           svn_boolean_t readable;
@@ -117,6 +119,7 @@ svn_repos__walk_ancestry(const char *end_path,
             break;
         }
 
+      /* Report the ancestor we've found. */
       if (callbacks->found_ancestor)
         SVN_ERR(callbacks->found_ancestor(callbacks_baton, path, rev, &halt,
                                           iterpool));
@@ -140,12 +143,15 @@ svn_repos__walk_ancestry(const char *end_path,
           SVN_ERR(walk_merged_history(iterpool));
       }
 
+      /* Swap the temporary pools. */
       tmp_pool = iterpool;
       iterpool = lastpool;
       lastpool = tmp_pool;
     }
 
+  /* Cleanup */
   svn_pool_destroy(iterpool);
+  svn_pool_destroy(lastpool);
 
   return SVN_NO_ERROR;
 }
