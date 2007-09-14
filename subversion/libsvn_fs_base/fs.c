@@ -320,7 +320,7 @@ base_bdb_set_errcall(svn_fs_t *fs,
 
 /* Write the DB_CONFIG file. */
 static svn_error_t *
-bdb_write_config  (svn_fs_t *fs)
+bdb_write_config(svn_fs_t *fs)
 {
   const char *dbconfig_file_name =
     svn_path_join(fs->path, BDB_CONFIG_FILE, fs->pool);
