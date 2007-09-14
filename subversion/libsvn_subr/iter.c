@@ -19,6 +19,16 @@
 #include "svn_iter.h"
 #include "svn_error_codes.h"
 
+static svn_error_t internal_break_error =
+  {
+    SVN_ERR_ITER_BREAK, /* APR status */
+    NULL, /* message */
+    NULL, /* child error */
+    NULL, /* pool */
+    __FILE__, /* file name */
+    __LINE__ /* line number */
+  };
+
 svn_error_t *
 svn_iter_apr_hash(svn_boolean_t *completed,
                   apr_hash_t *hash,
@@ -48,7 +58,7 @@ svn_iter_apr_hash(svn_boolean_t *completed,
 
   if (err && err->apr_err == SVN_ERR_ITER_BREAK)
     {
-      if (err->pool)
+      if (err != &internal_break_error)
         /* Errors - except those created by svn_iter_break() -
            need to be cleared when not further propagated. */
         svn_error_clear(err);
@@ -88,7 +98,7 @@ svn_iter_apr_array(svn_boolean_t *completed,
 
   if (err && err->apr_err == SVN_ERR_ITER_BREAK)
     {
-      if (err->pool)
+      if (err != &internal_break_error)
         /* Errors - except those created by svn_iter_break() -
            need to be cleared when not further propagated. */
         svn_error_clear(err);
@@ -103,3 +113,8 @@ svn_iter_apr_array(svn_boolean_t *completed,
   return err;
 }
 
+svn_error_t *
+svn_iter__break(void)
+{
+  return &internal_break_error;
+}
