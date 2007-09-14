@@ -7939,10 +7939,7 @@ def merge_to_sparse_directories(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1,
-                                       0) # Don't dry-run for now, skips don't
-                                          # show when merging into sparse dir.
-                                          # Add an issue?
+                                       None, 1)
   os.chdir(saved_cwd)
 
   # Do a --files checkout of A_COPY
@@ -7990,7 +7987,7 @@ def merge_to_sparse_directories(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 0)
+                                       None, 1)
   os.chdir(saved_cwd)
 
   # Do an --empty checkout of A_COPY
@@ -8029,7 +8026,7 @@ def merge_to_sparse_directories(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 0)
+                                       None, 1)
   os.chdir(saved_cwd)
 
 def faulty_reflective_merges(sbox):
