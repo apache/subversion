@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os
+import sys, re, os, time
 
 # Our testing module
 import svntest
@@ -2770,6 +2770,9 @@ def diff_ignore_eolstyle_empty_lines(sbox):
                                         None, None, None, None,
                                         None, None, wc_dir)
 
+  # sleep to guarantee timestamp change
+  time.sleep(1)
+
   # commit only eol changes
   svntest.main.file_write(file_path,
                           "Aa\012"
@@ -2831,7 +2834,8 @@ test_list = [ None,
               diff_ignore_eolstyle,
               diff_in_renamed_folder,
               diff_with_depth,
-              XFail(diff_ignore_eolstyle_empty_lines, svntest.main.is_os_windows),
+              XFail(diff_ignore_eolstyle_empty_lines, svntest.main.is_os_windows or
+                                                      svntest.main.is_os_darwin),
               ]
 
 if __name__ == '__main__':
