@@ -96,7 +96,6 @@ svn_repos__walk_ancestry(const char *end_path,
       svn_revnum_t rev;
       const char *path;
       svn_boolean_t halt;
-      svn_boolean_t merging_rev = FALSE;
       apr_hash_t *mergeinfo;
 
       svn_pool_clear(iterpool);
@@ -118,26 +117,28 @@ svn_repos__walk_ancestry(const char *end_path,
             break;
         }
 
-       /* Check for merge revs here, so that we can tell the callback. */
+      if (callbacks->found_ancestor)
+        SVN_ERR(callbacks->found_ancestor(callbacks_baton, path, rev, &halt,
+                                          iterpool));
+
+      if (halt || rev <= start)
+        break;
+
+       /* Check for merges */
       if (include_merges)
         {
-          SVN_ERR(get_merged_rev_mergeinfo(&mergeinfo, fs, path, rev, iterpool));
+          svn_boolean_t merging_rev = FALSE;
 
+          SVN_ERR(get_merged_rev_mergeinfo(&mergeinfo, fs, path, rev, iterpool));
           if (apr_hash_count(mergeinfo) > 0)
             {
               /* First, check branchingness. */
               merging_rev = TRUE;
             }
-        }
 
-      SVN_ERR(callbacks->found_ancestor(callbacks_baton, path, rev, merging_rev,
-                                        &halt, iterpool));
-
-      if (include_merges && merging_rev)
-        SVN_ERR(walk_merged_history(iterpool));
-
-      if (halt || rev <= start)
-        break;
+        if (merging_rev)
+          SVN_ERR(walk_merged_history(iterpool));
+      }
 
       tmp_pool = iterpool;
       iterpool = lastpool;

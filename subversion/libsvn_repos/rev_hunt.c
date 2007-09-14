@@ -217,7 +217,6 @@ static svn_error_t *
 history_ancestor(void *baton,
                  const char *path,
                  svn_revnum_t rev,
-                 svn_boolean_t is_merge,
                  svn_boolean_t *halt,
                  apr_pool_t *pool)
 {
@@ -255,7 +254,7 @@ svn_repos_history2(svn_fs_t *fs,
                    apr_pool_t *pool)
 {
   svn_repos__ancestry_callbacks_t walk_callbacks =
-    { history_ancestor };
+    { history_ancestor, NULL, NULL, NULL };
   struct history_cb_baton hcb;
 
   /* Validate the revisions. */
@@ -966,7 +965,6 @@ static svn_error_t *
 found_ancestor(void *baton,
                const char *path,
                svn_revnum_t rev,
-               svn_boolean_t is_merge,
                svn_boolean_t *halt,
                apr_pool_t *pool)
 {
@@ -1032,7 +1030,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 {
   apr_pool_t *iter_pool, *last_pool;
   svn_repos__ancestry_callbacks_t walk_callbacks =
-    { found_ancestor };
+    { found_ancestor, NULL, NULL, NULL };
   apr_hash_t *last_props;
   svn_fs_root_t *last_root;
   svn_node_kind_t kind;
