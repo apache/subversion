@@ -55,7 +55,6 @@ struct context {
   svn_repos_authz_func_t authz_read_func;
   void *authz_read_baton;
   svn_boolean_t text_deltas;
-  svn_depth_t depth;
   svn_boolean_t entry_props;
   svn_boolean_t ignore_ancestry;
 };
@@ -128,6 +127,7 @@ static svn_error_t *delete(struct context *c,
 
 static svn_error_t *add_file_or_dir(struct context *c,
                                     void *dir_baton,
+                                    svn_depth_t depth,
                                     const char *target_path,
                                     const char *edit_path,
                                     svn_node_kind_t tgt_kind,
@@ -135,6 +135,7 @@ static svn_error_t *add_file_or_dir(struct context *c,
 
 static svn_error_t *replace_file_or_dir(struct context *c,
                                         void *dir_baton,
+                                        svn_depth_t depth,
                                         const char *source_path,
                                         const char *target_path,
                                         const char *edit_path,
@@ -149,11 +150,17 @@ static svn_error_t *absent_file_or_dir(struct context *c,
 
 static svn_error_t *delta_dirs(struct context *c,
                                void *dir_baton,
+                               svn_depth_t depth,
                                const char *source_path,
                                const char *target_path,
                                const char *edit_path,
                                apr_pool_t *pool);
 
+
+#define MAYBE_DEMOTE_DEPTH(depth)                      \
+  ((depth) == svn_depth_immediates ? svn_depth_files : \
+   (depth) == svn_depth_files ? svn_depth_empty :      \
+   (depth))
 
 
 /* Return the error 'SVN_ERR_AUTHZ_ROOT_UNREADABLE' if PATH in ROOT is
@@ -278,7 +285,6 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
   c.authz_read_func = authz_read_func;
   c.authz_read_baton = authz_read_baton;
   c.text_deltas = text_deltas;
-  c.depth = depth;
   c.entry_props = entry_props;
   c.ignore_ancestry = ignore_ancestry;
 
@@ -304,7 +310,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
       SVN_ERR(authz_root_check(tgt_root, authz_root_path,
                                authz_read_func, authz_read_baton, pool));
       SVN_ERR(editor->open_root(edit_baton, rootrev, pool, &root_baton));
-      SVN_ERR(add_file_or_dir(&c, root_baton, tgt_fullpath,
+      SVN_ERR(add_file_or_dir(&c, root_baton, depth, tgt_fullpath,
                               src_entry, tgt_kind, pool));
       goto cleanup;
     }
@@ -331,7 +337,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
                                    authz_read_func, authz_read_baton, pool));
           SVN_ERR(editor->open_root(edit_baton, rootrev, pool, &root_baton));
           SVN_ERR(delete(&c, root_baton, src_entry, pool));
-          SVN_ERR(add_file_or_dir(&c, root_baton, tgt_fullpath,
+          SVN_ERR(add_file_or_dir(&c, root_baton, depth, tgt_fullpath,
                                   src_entry, tgt_kind, pool));
         }
       /* Otherwise, we just replace the one with the other. */
@@ -340,7 +346,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
           SVN_ERR(authz_root_check(tgt_root, authz_root_path,
                                    authz_read_func, authz_read_baton, pool));
           SVN_ERR(editor->open_root(edit_baton, rootrev, pool, &root_baton));
-          SVN_ERR(replace_file_or_dir(&c, root_baton, src_fullpath,
+          SVN_ERR(replace_file_or_dir(&c, root_baton, depth, src_fullpath,
                                       tgt_fullpath, src_entry,
                                       tgt_kind, pool));
         }
@@ -351,7 +357,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
       SVN_ERR(authz_root_check(tgt_root, authz_root_path,
                                authz_read_func, authz_read_baton, pool));
       SVN_ERR(editor->open_root(edit_baton, rootrev, pool, &root_baton));
-      SVN_ERR(delta_dirs(&c, root_baton, src_fullpath,
+      SVN_ERR(delta_dirs(&c, root_baton, depth, src_fullpath,
                          tgt_fullpath, "", pool));
     }
 
@@ -807,9 +813,10 @@ delete(struct context *c,
 /* If authorized, emit a delta to create the entry named TARGET_ENTRY
    at the location EDIT_PATH.  If not authorized, indicate that
    EDIT_PATH is absent.  Pass DIR_BATON through to editor functions
-   that require it. */
+   that require it.  DEPTH is the depth from this point downward. */
 static svn_error_t *
 add_file_or_dir(struct context *c, void *dir_baton,
+                svn_depth_t depth,
                 const char *target_path,
                 const char *edit_path,
                 svn_node_kind_t tgt_kind,
@@ -836,7 +843,7 @@ add_file_or_dir(struct context *c, void *dir_baton,
       SVN_ERR(context->editor->add_directory(edit_path, dir_baton, NULL,
                                              SVN_INVALID_REVNUM, pool,
                                              &subdir_baton));
-      SVN_ERR(delta_dirs(context, subdir_baton,
+      SVN_ERR(delta_dirs(context, subdir_baton, MAYBE_DEMOTE_DEPTH(depth),
                          NULL, target_path, edit_path, pool));
       SVN_ERR(context->editor->close_directory(subdir_baton, pool));
     }
@@ -862,10 +869,11 @@ add_file_or_dir(struct context *c, void *dir_baton,
 /* If authorized, emit a delta to modify EDIT_PATH with the changes
    from SOURCE_PATH to TARGET_PATH.  If not authorized, indicate that
    EDIT_PATH is absent.  Pass DIR_BATON through to editor functions
-   that require it. */
+   that require it.  DEPTH is the depth from this point downward. */
 static svn_error_t *
 replace_file_or_dir(struct context *c,
                     void *dir_baton,
+                    svn_depth_t depth,
                     const char *source_path,
                     const char *target_path,
                     const char *edit_path,
@@ -896,8 +904,8 @@ replace_file_or_dir(struct context *c,
       SVN_ERR(c->editor->open_directory(edit_path, dir_baton,
                                         base_revision, pool,
                                         &subdir_baton));
-      SVN_ERR(delta_dirs(c, subdir_baton, source_path, target_path,
-                         edit_path, pool));
+      SVN_ERR(delta_dirs(c, subdir_baton, MAYBE_DEMOTE_DEPTH(depth),
+                         source_path, target_path, edit_path, pool));
       SVN_ERR(c->editor->close_directory(subdir_baton, pool));
     }
   else
@@ -945,6 +953,7 @@ absent_file_or_dir(struct context *c,
 static svn_error_t *
 delta_dirs(struct context *c,
            void *dir_baton,
+           svn_depth_t depth,
            const char *source_path,
            const char *target_path,
            const char *edit_path,
@@ -1011,9 +1020,10 @@ delta_dirs(struct context *c,
           s_fullpath = svn_path_join(source_path, t_entry->name, subpool);
           src_kind = s_entry->kind;
 
-          /* ### TODO(sd): for now, the simplest kind of depth logic.
-             ### Eventually we may want a trinary conditional. */
-          if ((c->depth == svn_depth_infinity) || (src_kind != svn_node_dir))
+          if (depth == svn_depth_infinity
+              || src_kind != svn_node_dir
+              || (src_kind == svn_node_dir
+                  && depth == svn_depth_immediates))
             {
               /* Use svn_fs_compare_ids() to compare our current
                  source and target ids.
@@ -1032,14 +1042,18 @@ delta_dirs(struct context *c,
                        || ((distance == -1) && (! c->ignore_ancestry)))
                 {
                   SVN_ERR(delete(c, dir_baton, e_fullpath, subpool));
-                  SVN_ERR(add_file_or_dir(c, dir_baton, t_fullpath,
-                                          e_fullpath, tgt_kind, subpool));
+                  SVN_ERR(add_file_or_dir(c, dir_baton,
+                                          MAYBE_DEMOTE_DEPTH(depth),
+                                          t_fullpath, e_fullpath, tgt_kind,
+                                          subpool));
                 }
               else
                 {
-                  SVN_ERR(replace_file_or_dir(c, dir_baton, s_fullpath,
-                                              t_fullpath, e_fullpath,
-                                              tgt_kind, subpool));
+                  SVN_ERR(replace_file_or_dir(c, dir_baton,
+                                              MAYBE_DEMOTE_DEPTH(depth),
+                                              s_fullpath, t_fullpath,
+                                              e_fullpath, tgt_kind,
+                                              subpool));
                 }
             }
 
@@ -1048,12 +1062,15 @@ delta_dirs(struct context *c,
         }
       else
         {
-          /* ### TODO(sd): for now, the simplest kind of depth logic.
-             ### Eventually we may want a trinary conditional. */
-          if ((c->depth == svn_depth_infinity) || (tgt_kind != svn_node_dir))
+          if (depth == svn_depth_infinity
+              || tgt_kind != svn_node_dir
+              || (tgt_kind == svn_node_dir
+                  && depth == svn_depth_immediates))
             {
-              SVN_ERR(add_file_or_dir(c, dir_baton, t_fullpath,
-                                      e_fullpath, tgt_kind, subpool));
+              SVN_ERR(add_file_or_dir(c, dir_baton,
+                                      MAYBE_DEMOTE_DEPTH(depth),
+                                      t_fullpath, e_fullpath, tgt_kind,
+                                      subpool));
             }
         }
     }
@@ -1078,11 +1095,14 @@ delta_dirs(struct context *c,
           src_kind = s_entry->kind;
           e_fullpath = svn_path_join(edit_path, s_entry->name, subpool);
 
-          /* Do we actually want to delete the dir if we're non-recursive?
-             ### TODO(sd): for now, the simplest kind of depth logic.
-             ### Eventually we may want a trinary conditional. */
-          if ((c->depth == svn_depth_infinity) || (src_kind != svn_node_dir))
-            SVN_ERR(delete(c, dir_baton, e_fullpath, subpool));
+          /* Do we actually want to delete the dir if we're non-recursive? */
+          if (depth == svn_depth_infinity
+              || src_kind != svn_node_dir
+              || (src_kind == svn_node_dir
+                  && depth == svn_depth_immediates))
+            {
+              SVN_ERR(delete(c, dir_baton, e_fullpath, subpool));
+            }
         }
     }
 
