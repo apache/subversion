@@ -169,7 +169,7 @@ static const svn_auth_provider_t ssl_server_trust_file_provider = {
 
 
 /*** Public API to SSL file providers. ***/
-void 
+void
 svn_auth_get_ssl_server_trust_file_provider
   (svn_auth_provider_object_t **provider, apr_pool_t *pool)
 {
@@ -184,7 +184,7 @@ svn_auth_get_ssl_server_trust_file_provider
 /* Prompt provider                                                       */
 /*-----------------------------------------------------------------------*/
 
-/* Baton type for prompting to verify server ssl creds. 
+/* Baton type for prompting to verify server ssl creds.
    There is no iteration baton type. */
 typedef struct
 {
@@ -205,7 +205,7 @@ ssl_server_trust_prompt_first_cred(void **credentials_p,
   apr_uint32_t *failures = apr_hash_get(parameters,
                                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                                         APR_HASH_KEY_STRING);
-  const char *no_auth_cache = apr_hash_get(parameters, 
+  const char *no_auth_cache = apr_hash_get(parameters,
                                            SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                            APR_HASH_KEY_STRING);
   const svn_auth_ssl_server_cert_info_t *cert_info =
@@ -227,7 +227,7 @@ static const svn_auth_provider_t ssl_server_trust_prompt_provider = {
   SVN_AUTH_CRED_SSL_SERVER_TRUST,
   ssl_server_trust_prompt_first_cred,
   NULL,
-  NULL  
+  NULL
 };
 
 
@@ -327,7 +327,7 @@ windows_ssl_server_trust_first_credentials(void **credentials,
       return SVN_NO_ERROR;
     }
 
-  createcertcontext = 
+  createcertcontext =
     (createcertcontext_fn_t)GetProcAddress(cryptodll,
                                            "CertCreateCertificateContext");
   getcertchain =
@@ -335,7 +335,7 @@ windows_ssl_server_trust_first_credentials(void **credentials,
   freecertchain =
     (freecertchain_fn_t)GetProcAddress(cryptodll, "CertFreeCertificateChain");
   freecertcontext =
-    (freecertcontext_fn_t)GetProcAddress(cryptodll, 
+    (freecertcontext_fn_t)GetProcAddress(cryptodll,
                                          "CertFreeCertificateContext");
 
   if (!createcertcontext || !getcertchain || !freecertchain
@@ -346,7 +346,7 @@ windows_ssl_server_trust_first_credentials(void **credentials,
     {
       int cert_len;
       char *binary_cert;
-      
+
       /* Use apr-util as CryptStringToBinaryA is available only on XP+. */
       binary_cert = apr_palloc(pool,
                                apr_base64_decode_len(cert_info->ascii_cert));
@@ -356,10 +356,10 @@ windows_ssl_server_trust_first_credentials(void **credentials,
       cert_context = createcertcontext
         (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, binary_cert, cert_len);
 
-      if (!cert_context) 
+      if (!cert_context)
         ok = FALSE; /* Windows does not think the certificate is valid. */
     }
-    
+
   if (ok)
     {
        /* Retrieve the certificate chain of the certificate
@@ -383,7 +383,7 @@ windows_ssl_server_trust_first_credentials(void **credentials,
        else
          ok = FALSE;
     }
-    
+
   if (chain_context)
     freecertchain(chain_context);
   if (cert_context)

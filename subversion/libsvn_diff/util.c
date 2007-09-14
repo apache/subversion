@@ -33,7 +33,7 @@
  * "The Adler-32 algorithm is much faster than the CRC32 algorithm yet
  * still provides an extremely low probability of undetected errors"
  */
- 
+
 /*
  * 65521 is the largest prime less than 65536.
  * "That 65521 is prime is important to avoid a possible large class of
@@ -60,7 +60,7 @@ svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_size_t len)
   apr_uint32_t s2 = checksum >> 16;
   apr_uint32_t b;
   apr_size_t blocks = len / ADLER_MOD_BLOCK_SIZE;
-  
+
   len %= ADLER_MOD_BLOCK_SIZE;
 
   while (blocks--)

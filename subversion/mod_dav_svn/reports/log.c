@@ -44,6 +44,10 @@ struct log_receiver_baton
   /* Whether we've written the <S:log-report> header.  Allows for lazy
      writes to support mod_dav-based error handling. */
   svn_boolean_t needs_header;
+
+  /* How deep we are in the log message tree.  We only need to surpress the
+     SVN_INVALID_REVNUM message if the stack_depth is 0. */
+  int stack_depth;
 };
 
 
@@ -77,6 +81,16 @@ log_receiver(void *baton,
 
   SVN_ERR(maybe_send_header(lrb));
 
+  if (log_entry->revision == SVN_INVALID_REVNUM)
+    {
+      /* If the stack depth is zero, we've seen the last revision, so don't
+         send it, just return.  The footer will be sent later. */
+      if (lrb->stack_depth == 0)
+        return SVN_NO_ERROR;
+      else
+        lrb->stack_depth--;
+    }
+
   SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                             "<S:log-item>" DEBUG_CR "<D:version-name>%ld"
                             "</D:version-name>" DEBUG_CR, log_entry->revision));
@@ -85,7 +99,8 @@ log_receiver(void *baton,
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                               "<D:creator-displayname>%s"
                               "</D:creator-displayname>" DEBUG_CR,
-                              apr_xml_quote_string(pool, log_entry->author, 0)));
+                              apr_xml_quote_string(pool, log_entry->author,
+                                                   0)));
 
   /* ### this should be DAV:creation-date, but we need to format
      ### that date a bit differently */
@@ -101,11 +116,12 @@ log_receiver(void *baton,
                               (pool, svn_xml_fuzzy_escape(log_entry->message,
                                                           pool), 0)));
 
-  if (log_entry->nbr_children)
-    SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                              "<S:nbr-children>%" APR_INT64_T_FMT 
-                              "</S:nbr-children>" DEBUG_CR,
-                              log_entry->nbr_children));
+  if (log_entry->has_children)
+    {
+      SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
+                                "<S:has-children/>"));
+      lrb->stack_depth++;
+    }
 
   if (log_entry->changed_paths)
     {
@@ -118,7 +134,7 @@ log_receiver(void *baton,
         {
           void *val;
           svn_log_changed_path_t *log_item;
-          
+
           apr_hash_this(hi, (void *) &path, NULL, &val);
           log_item = val;
 
@@ -127,15 +143,15 @@ log_receiver(void *baton,
           switch (log_item->action)
             {
             case 'A':
-              if (log_item->copyfrom_path 
+              if (log_item->copyfrom_path
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
-                SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output, 
+                SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                           "<S:added-path"
-                                          " copyfrom-path=\"%s\"" 
+                                          " copyfrom-path=\"%s\""
                                           " copyfrom-rev=\"%ld\">"
                                           "%s</S:added-path>" DEBUG_CR,
                                           apr_xml_quote_string
-                                          (pool, 
+                                          (pool,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
                                           log_item->copyfrom_rev,
@@ -143,22 +159,22 @@ log_receiver(void *baton,
                                                                path, 0)));
               else
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                                          "<S:added-path>%s</S:added-path>" 
-                                          DEBUG_CR, 
+                                          "<S:added-path>%s</S:added-path>"
+                                          DEBUG_CR,
                                           apr_xml_quote_string(pool, path,
                                                                0)));
               break;
 
             case 'R':
-              if (log_item->copyfrom_path 
+              if (log_item->copyfrom_path
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                           "<S:replaced-path"
-                                          " copyfrom-path=\"%s\"" 
+                                          " copyfrom-path=\"%s\""
                                           " copyfrom-rev=\"%ld\">"
                                           "%s</S:replaced-path>" DEBUG_CR,
                                           apr_xml_quote_string
-                                          (pool, 
+                                          (pool,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
                                           log_item->copyfrom_rev,
@@ -174,7 +190,7 @@ log_receiver(void *baton,
 
             case 'D':
               SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                                        "<S:deleted-path>%s</S:deleted-path>" 
+                                        "<S:deleted-path>%s</S:deleted-path>"
                                         DEBUG_CR,
                                         apr_xml_quote_string(pool, path, 0)));
               break;
@@ -185,7 +201,7 @@ log_receiver(void *baton,
                                         "</S:modified-path>" DEBUG_CR,
                                         apr_xml_quote_string(pool, path, 0)));
               break;
-              
+
             default:
               break;
             }
@@ -238,7 +254,7 @@ dav_svn__log_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_NAMESPACE,
                                     SVN_DAV_ERROR_TAG);
     }
-  
+
   /* ### todo: okay, now go fill in svn_ra_dav__get_log() based on the
      syntax implied below... */
   for (child = doc->root->first_child; child != NULL; child = child->next)
@@ -266,7 +282,7 @@ dav_svn__log_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          target = svn_path_join(resource->info->repos_path, rel_path, 
+          target = svn_path_join(resource->info->repos_path, rel_path,
                                  resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
 
@@ -290,6 +306,7 @@ dav_svn__log_report(const dav_resource *resource,
                               output->c->bucket_alloc);
   lrb.output = output;
   lrb.needs_header = TRUE;
+  lrb.stack_depth = 0;
 
   /* Our svn_log_message_receiver_t sends the <S:log-report> header in
      a lazy fashion.  Before writing the first log message, it assures
@@ -317,7 +334,7 @@ dav_svn__log_report(const dav_resource *resource,
                                   resource->pool);
       goto cleanup;
     }
-  
+
   if ((serr = maybe_send_header(&lrb)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -325,7 +342,7 @@ dav_svn__log_report(const dav_resource *resource,
                                   resource->pool);
       goto cleanup;
     }
-    
+
   if ((serr = dav_svn__send_xml(lrb.bb, lrb.output, "</S:log-report>"
                                 DEBUG_CR)))
     {

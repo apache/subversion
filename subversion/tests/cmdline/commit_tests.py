@@ -2,9 +2,9 @@
 #
 #  commit_tests.py:  testing fancy commit cases.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
@@ -28,7 +28,9 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
-server_has_revprop_commit = svntest.main.server_has_revprop_commit
+
+from svntest.main import server_has_revprop_commit
+from svntest.actions import inject_conflict_into_wc
 
 ######################################################################
 # Utilities
@@ -59,12 +61,12 @@ def get_standard_state(wc_dir):
     })
 
   return state
-  
+
 
 def make_standard_slew_of_changes(wc_dir):
   """Make a specific set of local mods to WC_DIR.  These will be used
-  by every commit-test.  Verify the 'svn status' output, return on
-  success."""
+  by every commit-test.  Verify the 'svn status' output, and return the
+  (pre-commit) status tree."""
 
   # Cache current working directory, move into wc_dir
   was_cwd = os.getcwd()
@@ -73,18 +75,18 @@ def make_standard_slew_of_changes(wc_dir):
   # Add a directory
   os.mkdir('Q')
   svntest.main.run_svn(None, 'add', 'Q')
-  
+
   # Remove two directories
   svntest.main.run_svn(None, 'rm', os.path.join('A', 'B', 'E'))
   svntest.main.run_svn(None, 'rm', os.path.join('A', 'C'))
-  
+
   # Replace one of the removed directories
   svntest.main.run_svn(None, 'add', os.path.join('A', 'B', 'E'))
-  
+
   # Make property mods to two directories
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', os.curdir)
   svntest.main.run_svn(None, 'propset', 'foo2', 'bar2', os.path.join('A', 'D'))
-  
+
   # Add three files
   svntest.main.file_append(os.path.join('A', 'B', 'E', 'bloo'), "hi")
   svntest.main.file_append(os.path.join('A', 'D', 'H', 'gloo'), "hello")
@@ -92,36 +94,38 @@ def make_standard_slew_of_changes(wc_dir):
   svntest.main.run_svn(None, 'add', os.path.join('A', 'B', 'E', 'bloo'))
   svntest.main.run_svn(None, 'add', os.path.join('A', 'D', 'H', 'gloo'))
   svntest.main.run_svn(None, 'add', os.path.join('Q', 'floo'))
-  
+
   # Remove three files
   svntest.main.run_svn(None, 'rm', os.path.join('A', 'D', 'G', 'rho'))
   svntest.main.run_svn(None, 'rm', os.path.join('A', 'D', 'H', 'chi'))
   svntest.main.run_svn(None, 'rm', os.path.join('A', 'D', 'gamma'))
-  
+
   # Replace one of the removed files
   svntest.main.file_append(os.path.join('A', 'D', 'H', 'chi'), "chi")
   svntest.main.run_svn(None, 'add', os.path.join('A', 'D', 'H', 'chi'))
-  
+
   # Make textual mods to two files
   svntest.main.file_append(os.path.join('A', 'B', 'lambda'), "new ltext")
   svntest.main.file_append(os.path.join('A', 'D', 'H', 'omega'), "new otext")
-  
+
   # Make property mods to three files
   svntest.main.run_svn(None, 'propset', 'blue', 'azul',
-                       os.path.join('A', 'D', 'H', 'omega'))  
+                       os.path.join('A', 'D', 'H', 'omega'))
   svntest.main.run_svn(None, 'propset', 'green', 'verde',
                        os.path.join('Q', 'floo'))
   svntest.main.run_svn(None, 'propset', 'red', 'rojo',
-                       os.path.join('A', 'D', 'G', 'pi'))  
+                       os.path.join('A', 'D', 'G', 'pi'))
 
   # Restore the CWD.
   os.chdir(was_cwd)
-  
+
   # Build an expected status tree.
   expected_status = get_standard_state(wc_dir)
 
   # Verify status -- all local mods should be present.
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  return expected_status
 
 
 ######################################################################
@@ -138,18 +142,14 @@ def commit_one_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make standard slew of changes to working copy.
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega') 
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
 
-  # Create expected output tree.
+  # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/omega' : Item(verb='Sending'),
     })
-
-  # Created expected status tree.
-  expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.tweak('A/D/H/omega', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -161,7 +161,7 @@ def commit_one_file(sbox):
                                         None, None,
                                         omega_path)
 
-  
+
 #----------------------------------------------------------------------
 
 def commit_one_new_file(sbox):
@@ -170,18 +170,14 @@ def commit_one_new_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make standard slew of changes to working copy.
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
-  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
+  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
 
-  # Create expected output tree.
+  # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/gloo' : Item(verb='Adding'),
     })
-
-  # Created expected status tree.
-  expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -202,20 +198,16 @@ def commit_one_new_binary_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make standard slew of changes to working copy.
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
   gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', gloo_path)
 
-  # Create expected output tree.
+  # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/gloo' : Item(verb='Adding  (bin)'),
     })
-
-  # Created expected status tree.
-  expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -257,7 +249,7 @@ def commit_multiple_targets(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', ADG_path)
 
   # Create expected output tree for 'svn ci'.  We should see changes
-  # only on these three targets, no others.  
+  # only on these three targets, no others.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/psi' : Item(verb='Sending'),
     'A/B/lambda' : Item(verb='Sending'),
@@ -313,7 +305,7 @@ def commit_multiple_targets_2(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', ADG_path)
 
   # Created expected output tree for 'svn ci'.  We should see changes
-  # only on these three targets, no others.  
+  # only on these three targets, no others.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/psi' : Item(verb='Sending'),
     'A/B/lambda' : Item(verb='Sending'),
@@ -350,12 +342,11 @@ def commit_inclusive_dir(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make standard slew of changes to working copy.
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
-  # Create expected output tree.
   D_path = os.path.join(wc_dir, 'A', 'D')
-  
+
+  # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D' : Item(verb='Sending'),
     'A/D/G/pi' : Item(verb='Sending'),
@@ -365,9 +356,6 @@ def commit_inclusive_dir(sbox):
     'A/D/H/omega' : Item(verb='Sending'),
     'A/D/gamma' : Item(verb='Deleting'),
     })
-
-  # Created expected status tree.
-  expected_status = get_standard_state(wc_dir) # pre-commit status
 
   expected_status.remove('A/D/G/rho', 'A/D/gamma')
   expected_status.tweak('A/D', 'A/D/G/pi', 'A/D/H/omega',
@@ -391,10 +379,9 @@ def commit_top_dir(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make standard slew of changes to working copy.
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
-  # Create expected output tree.
+  # Create expected state.
   expected_output = svntest.wc.State(wc_dir, {
     '' : Item(verb='Sending'),
     'Q' : Item(verb='Adding'),
@@ -412,8 +399,6 @@ def commit_top_dir(sbox):
     'A/D/gamma' : Item(verb='Deleting'),
     })
 
-  # Created expected status tree.
-  expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.remove('A/D/G/rho', 'A/D/gamma', 'A/C',
                          'A/B/E/alpha', 'A/B/E/beta')
   expected_status.tweak('A/D', 'A/D/G/pi', 'A/D/H/omega', 'Q/floo', '',
@@ -433,13 +418,13 @@ def commit_top_dir(sbox):
 #----------------------------------------------------------------------
 
 # Regression test for bug reported by Jon Trowbridge:
-# 
+#
 #    From: Jon Trowbridge <trow@ximian.com>
 #    Subject:  svn segfaults if you commit a file that hasn't been added
 #    To: dev@subversion.tigris.org
 #    Date: 17 Jul 2001 03:20:55 -0500
 #    Message-Id: <995358055.16975.5.camel@morimoto>
-#   
+#
 #    The problem is that report_single_mod in libsvn_wc/adm_crawler.c is
 #    called with its entry parameter as NULL, but the code doesn't
 #    check that entry is non-NULL before trying to dereference it.
@@ -463,7 +448,7 @@ def commit_unversioned_thing(sbox):
                                         None, None,
                                         None, None,
                                         os.path.join(wc_dir,'blorg'))
-  
+
 #----------------------------------------------------------------------
 
 # regression test for bug #391
@@ -478,11 +463,11 @@ def nested_dir_replacements(sbox):
   svntest.main.run_svn(None, 'rm', os.path.join(wc_dir, 'A', 'D'))
   svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D'))
   svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D', 'H'))
-                       
+
   # For kicks, add new file A/D/bloo.
   svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi")
   svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D', 'bloo'))
-  
+
   # Verify pre-commit status:
   #
   #    - A/D and A/D/H should both be scheduled as "R" at rev 1
@@ -545,18 +530,18 @@ def hudson_part_1(sbox):
   wc_dir = sbox.wc_dir
 
   # Remove gamma from the working copy.
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Deleting'),
     })
-  
+
   # After committing, status should show no sign of gamma.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma')
-  
+
   # Commit the deletion of gamma and verify.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -567,14 +552,14 @@ def hudson_part_1(sbox):
   # Now gamma should be marked as `deleted' under the hood.  When we
   # update, we should no output, and a perfect, virginal status list
   # at revision 2.  (The `deleted' entry should be removed.)
-  
+
   # Expected output of update:  nothing.
   expected_output = svntest.wc.State(wc_dir, {})
 
   # Expected disk tree:  everything but gamma
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/gamma')
-  
+
   # Expected status after update:  totally clean revision 2, minus gamma.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.remove('A/D/gamma')
@@ -604,11 +589,11 @@ def hudson_part_1_variation_1(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H' : Item(verb='Deleting'),
     })
-  
+
   # After committing, status should show no sign of H or its contents
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
-  
+
   # Commit the deletion of H and verify.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -619,7 +604,7 @@ def hudson_part_1_variation_1(sbox):
   # Now H should be marked as `deleted' under the hood.  When we
   # update, we should no see output, and a perfect, virginal status
   # list at revision 2.  (The `deleted' entry should be removed.)
-  
+
   # Expected output of update:  H gets a no-op deletion.
   expected_output = svntest.wc.State(wc_dir, {})
 
@@ -649,18 +634,18 @@ def hudson_part_1_variation_2(sbox):
   wc_dir = sbox.wc_dir
 
   # Remove gamma from the working copy.
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Deleting'),
     })
-  
+
   # After committing, status should show no sign of gamma.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma')
-  
+
   # Commit the deletion of gamma and verify.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -684,7 +669,7 @@ def hudson_part_1_variation_2(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Adding'),
     })
-  
+
   # After committing, status should show only gamma at revision 3.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', wc_rev=3)
@@ -711,18 +696,18 @@ def hudson_part_2(sbox):
 
   # Remove gamma from the working copy.
   D_path = os.path.join(wc_dir, 'A', 'D')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Deleting'),
     })
-  
+
   # After committing, status should show no sign of gamma.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma')
-  
+
   # Commit the deletion of gamma and verify.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -765,12 +750,12 @@ def hudson_part_2_1(sbox):
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   chi_path = os.path.join(H_path, 'chi')
   psi_path = os.path.join(H_path, 'psi')
-  omega_path = os.path.join(H_path, 'omega') 
+  omega_path = os.path.join(H_path, 'omega')
 
   svntest.main.run_svn(None, 'mv', chi_path, G_path)
   svntest.main.run_svn(None, 'mv', psi_path, G_path)
   svntest.main.run_svn(None, 'mv', omega_path, G_path)
-  
+
   # Create expected commit output.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/chi' : Item(verb='Deleting'),
@@ -780,7 +765,7 @@ def hudson_part_2_1(sbox):
     'A/D/G/omega' : Item(verb='Adding'),
     'A/D/G/psi' : Item(verb='Adding'),
     })
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/H/chi')
   expected_status.remove('A/D/H/omega')
@@ -820,7 +805,7 @@ def hudson_part_2_1(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)  
+                                        expected_status)
 
 #----------------------------------------------------------------------
 
@@ -841,15 +826,15 @@ fp.close()"""
 
   # Setup the hook configs to log data to a file
   start_commit_hook = svntest.main.get_start_commit_hook_path(repo_dir)
-  svntest.main.create_python_hook_script(start_commit_hook, 
+  svntest.main.create_python_hook_script(start_commit_hook,
                                          hook_format % "start_commit_hook")
 
   pre_commit_hook = svntest.main.get_pre_commit_hook_path(repo_dir)
-  svntest.main.create_python_hook_script(pre_commit_hook, 
+  svntest.main.create_python_hook_script(pre_commit_hook,
                                          hook_format % "pre_commit_hook")
 
   post_commit_hook = svntest.main.get_post_commit_hook_path(repo_dir)
-  svntest.main.create_python_hook_script(post_commit_hook, 
+  svntest.main.create_python_hook_script(post_commit_hook,
                                          hook_format % "post_commit_hook")
 
   # Modify iota just so there is something to commit.
@@ -874,7 +859,7 @@ fp.close()"""
   actual_data = fp.readlines()
   fp.close()
   os.unlink(logfilename)
-  svntest.actions.compare_and_display_lines('wrong hook logfile content',  
+  svntest.actions.compare_and_display_lines('wrong hook logfile content',
                                             'STDERR',
                                             expected_data, actual_data)
 
@@ -898,7 +883,7 @@ def merge_mixed_revisions(sbox):
 
   # Here's the reproduction formula, in 5 parts.
   # Hoo, what a buildup of state!
-  
+
   # 1. echo "moo" >> iota; echo "moo" >> A/D/H/chi; svn ci
   svntest.main.file_append(iota_path, "moo")
   svntest.main.file_append(chi_path, "moo")
@@ -1043,7 +1028,7 @@ def commit_uri_unsafe(sbox):
   else:
     angle_name = '<angle>'
     nasty_name = '#![]{}()<>%'
-  
+
   # Make some convenient paths.
   hash_dir = os.path.join(wc_dir, '#hash#')
   nasty_dir = os.path.join(wc_dir, nasty_name)
@@ -1143,7 +1128,7 @@ def commit_deleted_edited(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         wc_dir)
-  
+
 #----------------------------------------------------------------------
 
 def commit_in_dir_scheduled_for_addition(sbox):
@@ -1167,14 +1152,14 @@ def commit_in_dir_scheduled_for_addition(sbox):
                                         None, None,
                                         None, None,
                                         mu_path)
-  
+
   Q_path = os.path.join(wc_dir, 'Q')
   bloo_path = os.path.join(Q_path, 'bloo')
 
   os.mkdir(Q_path)
   svntest.main.file_append(bloo_path, "New contents.")
   svntest.main.run_svn(None, 'add', Q_path)
-  
+
   # Commit a regular added thing inside an added directory,
   # expecting a specific error to occur!
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1184,7 +1169,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
                                         None, None,
                                         None, None,
                                         bloo_path)
-  
+
 #----------------------------------------------------------------------
 
 # Does this make sense now that deleted files are always removed from the wc?
@@ -1213,7 +1198,7 @@ def commit_add_file_twice(sbox):
   wc_dir = sbox.wc_dir
 
   # Create a file
-  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
+  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
   svntest.main.file_append(gloo_path, "hello")
   svntest.main.run_svn(None, 'add', gloo_path)
 
@@ -1267,7 +1252,7 @@ def commit_from_long_dir(sbox):
 
   was_dir = os.getcwd()
   abs_wc_dir = os.path.join(was_dir, wc_dir)
-  
+
   # something to commit
   svntest.main.file_append(os.path.join(wc_dir, 'iota'), "modified iota")
 
@@ -1292,7 +1277,7 @@ def commit_from_long_dir(sbox):
                                         None, None,
                                         None, None,
                                         abs_wc_dir)
-  
+
 #----------------------------------------------------------------------
 
 def commit_with_lock(sbox):
@@ -1315,7 +1300,7 @@ def commit_with_lock(sbox):
                                         None, None,
                                         None, None,
                                         wc_dir)
-                                           
+
   # unlock directory
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
                                      [], [],
@@ -1461,7 +1446,7 @@ def commit_multiple_wc(sbox):
 
 def commit_nonrecursive(sbox):
   "commit named targets with -N (issues #1195, #1239)"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -1476,7 +1461,7 @@ def commit_nonrecursive(sbox):
   ###    dir1/file3
   ###    dir1/dir2
   ###    dir1/dir2/file4
-  ###   
+  ###
   ### 2. run 'svn add -N <all of the above>'
   ###
   ### 3. run 'svn ci -N <all of the above>'
@@ -1560,14 +1545,14 @@ def commit_nonrecursive(sbox):
   ###       dirA/dirB
   ###       dirA/dirB/fileC
   ###       dirA/dirB/nocommit
-  ###   
+  ###
   ###    2. run 'svn add -N <all of the above>'
   ###
   ###    3. run 'svn ci -N <all but nocommit>'
   ###
   ### Issue #1239 claimed a two-part bug: that step 3 would try to
   ### commit the file `nocommit' when it shouldn't, and that it would
-  ### get an error anyway: 
+  ### get an error anyway:
   ###
   ###       Adding         wc/dirA
   ###       Adding         wc/dirA/fileA
@@ -1586,8 +1571,8 @@ def commit_nonrecursive(sbox):
   ###       'F:/Programmation/Projets/subversion/svnant/test/wc/dirA'
   ###       svn: Working copy not locked
   ###       svn: directory not locked
-  ###       (F:/Programmation/Projets/subversion/svnant/test/wc)  
-  ### 
+  ###       (F:/Programmation/Projets/subversion/svnant/test/wc)
+  ###
   ### However, this was all in the days before --depth, and depended
   ### on an idiosyncratic interpretation of -N, one which required
   ### commit to behave differently from other commands taking -N.
@@ -1685,7 +1670,7 @@ def commit_out_of_date_deletions(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Change omega's text, and make a propchange to A/C directory
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega') 
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   C_path = os.path.join(wc_dir, 'A', 'C')
   svntest.main.file_append(omega_path, 'appended omega text')
   svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', C_path)
@@ -1707,9 +1692,9 @@ def commit_out_of_date_deletions(sbox):
                                         wc_dir)
 
   # Now, in the second working copy, schedule both omega and C for deletion.
-  omega_path = os.path.join(wc_backup, 'A', 'D', 'H', 'omega') 
+  omega_path = os.path.join(wc_backup, 'A', 'D', 'H', 'omega')
   C_path = os.path.join(wc_backup, 'A', 'C')
-  svntest.main.run_svn(None, 'rm', omega_path, C_path) 
+  svntest.main.run_svn(None, 'rm', omega_path, C_path)
 
   # Attempt to delete omega.  This should return an (expected)
   # out-of-dateness error.
@@ -1735,13 +1720,13 @@ def commit_with_bad_log_message(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   iota_path = os.path.join(wc_dir, 'iota')
-  log_msg_path = os.path.join(wc_dir, 'log-message') 
+  log_msg_path = os.path.join(wc_dir, 'log-message')
 
   # Make a random change, so there's something to commit.
   svntest.main.file_append(iota_path, 'fish')
-  
+
   # Create a log message containing a zero-byte.
   svntest.main.file_append(log_msg_path, '\x00')
 
@@ -1779,7 +1764,7 @@ def from_wc_top_with_bad_editor(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   svntest.actions.run_and_verify_svn("Unexpected failure from propset.",
                                      SVNAnyOutput, [],
                                      'pset', 'fish', 'food', wc_dir)
@@ -1794,7 +1779,7 @@ def from_wc_top_with_bad_editor(sbox):
           and re.match(".*Commit failed.*", err)):
     print "Commit failed, but not in the way expected."
     raise svntest.Failure
-  
+
 
 def mods_in_schedule_delete(sbox):
   "commit with mods in schedule delete"
@@ -1849,7 +1834,7 @@ def tab_test(sbox):
         break
     else:
       raise svntest.Failure("Failed to find match_re in " + str(errlines))
-    
+
   # add file to wc
   outlines, errlines = svntest.main.run_svn(1, 'add', tab_file)
   match_bad_tab_path(tab_file, errlines)
@@ -1934,7 +1919,7 @@ def hook_failure_message(hookname):
     return "'%s' hook failed (exited with a " \
            "non-zero exitcode of 1).  The following error output " \
            "was produced by the hook:\n" % hookname
-    
+
 
 #----------------------------------------------------------------------
 # Test if the post-commit error message is returned back to the svn
@@ -1971,7 +1956,7 @@ def post_commit_hook_test(sbox):
                                      'ci', '-m', 'log msg', iota_path)
 
 #----------------------------------------------------------------------
-# Commit two targets non-recursively, but both targets should be the 
+# Commit two targets non-recursively, but both targets should be the
 # same folder (in multiple variations). Test that svn handles this correctly.
 def commit_same_folder_in_targets(sbox):
   "commit two targets, both the same folder"
@@ -1979,10 +1964,10 @@ def commit_same_folder_in_targets(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota') 
+  iota_path = os.path.join(wc_dir, 'iota')
 
   svntest.main.file_append(iota_path, "added extra line to file iota")
-  
+
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
@@ -2014,10 +1999,10 @@ def commit_inconsistent_eol(sbox):
   wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota')
-  mu_path = os.path.join(wc_dir, 'A', 'mu') 
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'native', iota_path)
-  svntest.main.file_append_binary(iota_path, 
+  svntest.main.file_append_binary(iota_path,
                                   "added extra line to file iota\012"
                                   "added extra line to file iota\015")
   svntest.main.file_append(mu_path, "added extra line to file mu\n"
@@ -2043,7 +2028,7 @@ def mkdir_with_revprop(sbox):
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '42', [], 'propget', 'bug',
                                      '--revprop', '-r', 2, sbox.repo_url)
@@ -2064,7 +2049,7 @@ def delete_with_revprop(sbox):
                   ['Unversioned properties on revision 3:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 3, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '52', [], 'propget', 'bug',
                                      '--revprop', '-r', 3, sbox.repo_url)
@@ -2075,16 +2060,15 @@ def commit_with_revprop(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  make_standard_slew_of_changes(wc_dir)
+  expected_status = make_standard_slew_of_changes(wc_dir)
 
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega') 
-  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/omega' : Item(verb='Sending'),
     'A/D/H/gloo' : Item(verb='Adding'),
     })
 
-  expected_status = get_standard_state(wc_dir)
   expected_status.tweak('A/D/H/omega', wc_rev=2, status='  ')
   expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
@@ -2100,7 +2084,7 @@ def commit_with_revprop(sbox):
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '62', [], 'propget', 'bug',
                                      '--revprop', '-r', 2, sbox.repo_url)
@@ -2123,7 +2107,7 @@ def import_with_revprop(sbox):
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '72', [], 'propget', 'bug',
                                      '--revprop', '-r', 2, sbox.repo_url)
@@ -2146,7 +2130,7 @@ def copy_R2R_with_revprop(sbox):
                   ['Unversioned properties on revision 3:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 3, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '82', [], 'propget', 'bug',
                                      '--revprop', '-r', 3, sbox.repo_url)
@@ -2168,7 +2152,7 @@ def copy_WC2R_with_revprop(sbox):
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '92', [], 'propget', 'bug',
                                      '--revprop', '-r', 2, sbox.repo_url)
@@ -2191,7 +2175,7 @@ def move_R2R_with_revprop(sbox):
                   ['Unversioned properties on revision 3:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 3, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '102', [], 'propget', 'bug',
                                      '--revprop', '-r', 3, sbox.repo_url)
@@ -2211,7 +2195,7 @@ def propedit_with_revprop(sbox):
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '112', [], 'propget', 'bug',
                                      '--revprop', '-r', 2, sbox.repo_url)
@@ -2231,7 +2215,7 @@ def set_multiple_props_with_revprop(sbox):
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n', '  ref\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '32', [], 'propget', 'bug',
                                      '--revprop', '-r', 2, sbox.repo_url)
@@ -2253,7 +2237,7 @@ def use_empty_value_in_revprop_pair(sbox):
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n', '  ref\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '', [], 'propget', 'bug',
                                      '--revprop', '-r', 2, sbox.repo_url)
@@ -2274,7 +2258,7 @@ def no_equals_in_revprop_pair(sbox):
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n', '  ref\n'])
-  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist', 
+  svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '', [], 'propget', 'bug',
                                      '--revprop', '-r', 2, sbox.repo_url)
@@ -2334,7 +2318,7 @@ sys.exit(1)"""
                                                       '-m', 'log msg', wc_dir)
 
   # No stdout expected
-  svntest.actions.compare_and_display_lines('Start-commit hook test',  
+  svntest.actions.compare_and_display_lines('Start-commit hook test',
                                             'STDOUT', [], actual_stdout)
 
   # Compare only the last two lines of stderr since the preceding ones
@@ -2344,8 +2328,8 @@ sys.exit(1)"""
   expected_stderr = [ "svn: " + hook_failure_message('start-commit'),
                       "Start-commit hook failed\n"
                     ]
-  svntest.actions.compare_and_display_lines('Start-commit hook test',  
-                                            'STDERR', 
+  svntest.actions.compare_and_display_lines('Start-commit hook test',
+                                            'STDERR',
                                             expected_stderr, actual_stderr)
 
 #----------------------------------------------------------------------
@@ -2377,7 +2361,7 @@ sys.exit(1)"""
                                                       '-m', 'log msg', wc_dir)
 
   # No stdout expected
-  svntest.actions.compare_and_display_lines('Pre-commit hook test',  
+  svntest.actions.compare_and_display_lines('Pre-commit hook test',
                                             'STDOUT', [], actual_stdout)
 
   # Compare only the last two lines of stderr since the preceding ones
@@ -2387,8 +2371,8 @@ sys.exit(1)"""
   expected_stderr = [ "svn: " + hook_failure_message('pre-commit'),
                       "Pre-commit hook failed\n"
                     ]
-  svntest.actions.compare_and_display_lines('Pre-commit hook test',  
-                                            'STDERR', 
+  svntest.actions.compare_and_display_lines('Pre-commit hook test',
+                                            'STDERR',
                                             expected_stderr, actual_stderr)
 
 #----------------------------------------------------------------------
@@ -2425,6 +2409,42 @@ def versioned_log_message(sbox):
                                      'ci',
                                      '-F', log_path,
                                      '--force-log', mu_path)
+
+#----------------------------------------------------------------------
+
+def changelist(sbox):
+  "'svn commit --changelist=foo' above a conflict"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, "iota")
+  mu_path = os.path.join(wc_dir, "A", "mu")
+  gloo_path = os.path.join(wc_dir, "A", "D", "H", "gloo")
+
+  expected_status = make_standard_slew_of_changes(wc_dir)
+
+  # Create a changelist.
+  changelist_name = "logical-changeset"
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "changelist", changelist_name,
+                                     mu_path, gloo_path)
+
+  # Create a conflict (making r2 in the process).
+  inject_conflict_into_wc(sbox, 'iota', iota_path,
+                          None, expected_status, 2)
+
+  # Commit the changelist.
+  expected_output = svntest.wc.State(wc_dir, {
+    "A/D/H/gloo" : Item(verb='Adding'),
+    })
+  expected_status.tweak("A/D/H/gloo", wc_rev=3, status="  ")
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        "--changelist=" + changelist_name,
+                                        "-m", "msg", wc_dir)
 
 ########################################################################
 # Run the tests
@@ -2484,6 +2504,7 @@ test_list = [ None,
               start_commit_hook_test,
               pre_commit_hook_test,
               versioned_log_message,
+              changelist,
              ]
 
 if __name__ == '__main__':

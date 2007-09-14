@@ -26,6 +26,8 @@
 #include <apr_pools.h>
 #include "svn_types.h"
 
+#include "props.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -98,49 +100,18 @@ svn_wc__text_revert_path(const char *path,
                          apr_pool_t *pool);
 
 
-/* Return a path to the 'wcprop' file for PATH, possibly in TMP area.
-   Valid values for KIND are svn_node_dir and svn_node_file. */
-svn_error_t *svn_wc__wcprop_path(const char **wcprop_path,
-                                 const char *path,
-                                 svn_node_kind_t kind,
-                                 svn_boolean_t tmp,
-                                 apr_pool_t *pool);
-
-
-/* Set *PROP_PATH to PATH's working properties file.
-   If TMP is set, return a path to the tmp working property file. 
+/* Set *PROP_PATH to PATH's PROPS_KIND properties file.
+   If TMP is set, return a path to the tmp working property file.
    PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. Valid values for KIND are svn_node_dir
+   working copy's adm knowledge. Valid values for NODE_KIND are svn_node_dir
    and svn_node_file. */
 svn_error_t *svn_wc__prop_path(const char **prop_path,
                                const char *path,
-                               svn_node_kind_t kind,
+                               svn_node_kind_t node_kind,
+                               svn_wc__props_kind_t props_kind,
                                svn_boolean_t tmp,
                                apr_pool_t *pool);
 
-
-/* Set *PROP_PATH to PATH's `pristine' properties file.
-   If TMP is set, return a path to the tmp working property file. 
-   PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. Valid values for KIND are svn_node_dir
-   and svn_node_file. */
-svn_error_t *svn_wc__prop_base_path(const char **prop_path,
-                                    const char *path,
-                                    svn_node_kind_t kind,
-                                    svn_boolean_t tmp,
-                                    apr_pool_t *pool);
-
-
-/* Set *PROP_PATH to PATH's revert properties file.
-   If TMP is set, return a path to the tmp working property file. 
-   PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. Valid values for KIND are svn_node_dir
-   and svn_node_file. */
-svn_error_t *svn_wc__prop_revert_path(const char **prop_path,
-                                      const char *path,
-                                      svn_node_kind_t kind,
-                                      svn_boolean_t tmp,
-                                      apr_pool_t *pool);
 
 
 /*** Opening all kinds of adm files ***/
@@ -228,6 +199,7 @@ svn_error_t *svn_wc__close_revert_base(apr_file_t *fp,
  */
 svn_error_t *svn_wc__open_props(apr_file_t **handle,
                                 const char *path,
+                                svn_node_kind_t kind,
                                 apr_int32_t flags,
                                 svn_boolean_t base,
                                 svn_boolean_t wcprops,
@@ -243,20 +215,12 @@ svn_error_t *svn_wc__open_props(apr_file_t **handle,
  */
 svn_error_t *svn_wc__close_props(apr_file_t *fp,
                                  const char *path,
+                                 svn_node_kind_t kind,
                                  svn_boolean_t base,
                                  svn_boolean_t wcprops,
                                  int sync,
                                  apr_pool_t *pool);
 
-/* Atomically rename a temporary property file to its canonical
-   location.  The tmp file should be closed already. 
-
-   Again, BASE and WCPROPS flags should be identical to those used to
-   open the file. */
-svn_error_t *svn_wc__sync_props(const char *path, 
-                                svn_boolean_t base,
-                                svn_boolean_t wcprops,
-                                apr_pool_t *pool);
 
 /* Blow away the admistrative directory associated with the access baton
    ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS

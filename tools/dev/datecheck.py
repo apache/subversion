@@ -39,7 +39,7 @@ while line:
   #
   # "r1 | svn | 2001-08-30 23:24:14 -0500 (Thu, 30 Aug 2001)"
   #
-  # Parse out 
+  # Parse out
 
   rev, ignored, date_full = line.split("|")
   rev = rev.strip()
@@ -76,7 +76,7 @@ while line:
   ok_not_ok = "    OK"
   if last_date > date_as_int:
     ok_not_ok = "NOT OK"
-  
+
   print "%-8s  %s  %s %s" % (rev, ok_not_ok, date, offset)
   last_date = date_as_int
   line = sys.stdin.readline()

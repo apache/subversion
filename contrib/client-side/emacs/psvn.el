@@ -1,7 +1,7 @@
 ;;; psvn.el --- Subversion interface for emacs
 ;; Copyright (C) 2002-2007 by Stefan Reichoer
 
-;; Author: Stefan Reichoer, <stefan@xsteve.at>
+;; Author: Stefan Reichoer <stefan@xsteve.at>
 ;; $Id$
 
 ;; psvn.el is free software; you can redistribute it and/or modify
@@ -417,7 +417,7 @@ See `svn-status-message' for the meaning of values for that variable.")
 ;;                          ("doc1" . "~/docs/doc1")))
 
 (defvar svn-status-buffer-name "*svn-status*" "Name for the svn status buffer")
-(defvar svn-process-buffer-name "*svn-process*" "Name for the svn process buffer")
+(defvar svn-process-buffer-name " *svn-process*" "Name for the svn process buffer")
 (defvar svn-log-edit-buffer-name "*svn-log-edit*" "Name for the svn log-edit buffer")
 
 (defcustom svn-status-use-header-line
@@ -470,7 +470,10 @@ use the following value:
 
 (defcustom svn-status-default-blame-arguments '("-x" "--ignore-eol-style")
   "*A list of arguments that is passed to the svn blame command.
-See `svn-status-default-diff-arguments' for some examples.")
+See `svn-status-default-diff-arguments' for some examples."
+  :type '(repeat string)
+  :group 'psvn)
+
 (put 'svn-status-default-blame-arguments 'risky-local-variable t)
 
 (defvar svn-trac-project-root nil
@@ -1370,6 +1373,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
            (message "svn process had unknown event: %s" event))
           (svn-status-show-process-output nil t))))
 
+(defvar svn-process-handle-error-msg nil)
 (defun svn-process-handle-error (error-msg)
   (let ((svn-process-handle-error-msg error-msg))
     (electric-helpify 'svn-process-help-with-error-msg)))
@@ -2980,7 +2984,7 @@ The string in parentheses is shown in the status line to show the state."
 When called with a prefix argument advance the given number of lines."
   (interactive "p")
   (while (progn
-           (next-line nr-of-lines)
+           (forward-line nr-of-lines)
            (and (not (eobp))
                 (not (svn-status-get-line-information)))))
   (when (svn-status-get-line-information)
@@ -2991,7 +2995,7 @@ When called with a prefix argument advance the given number of lines."
 When called with a prefix argument go back the given number of lines."
   (interactive "p")
   (while (progn
-           (previous-line nr-of-lines)
+           (forward-line (- nr-of-lines))
            (and (not (bobp))
                 (not (svn-status-get-line-information)))))
   (when (svn-status-get-line-information)
@@ -3540,11 +3544,14 @@ When called from a file buffer, go to the current line in the resulting blame ou
 If the current file is a directory, compare it recursively.
 If there is a newer revision in the repository, the diff is done against HEAD,
 otherwise compare the working copy with BASE.
-If ARG then prompt for revision to diff against."
+If ARG then prompt for revision to diff against (unless arg is '-)
+When called with a negative prefix argument, do a non recursive diff."
   (interactive "P")
-  (svn-status-ensure-cursor-on-file)
-  (svn-status-show-svn-diff-internal (list (svn-status-get-line-information)) t
-                                     (if arg :ask :auto)))
+  (let ((non-recursive (or (and (numberp arg) (< arg 0)) (eq arg '-)))
+        (revision (if (and (not (eq arg '-)) arg) :ask :auto)))
+    (svn-status-ensure-cursor-on-file)
+    (svn-status-show-svn-diff-internal (list (svn-status-get-line-information)) (not non-recursive)
+                                       revision)))
 
 (defun svn-file-show-svn-diff (arg)
   "Run `svn diff' on the current file.
@@ -4113,10 +4120,9 @@ When the function is called without a prefix argument: get all marked files.
 With a prefix argument: get only the actual file."
   (interactive "P")
   (svn-status-get-specific-revision-internal
-   (svn-status-get-file-list (not arg))
-   :ask))
+   (svn-status-get-file-list (not arg)) :ask t))
 
-(defun svn-status-get-specific-revision-internal (line-infos revision)
+(defun svn-status-get-specific-revision-internal (line-infos revision handle-relative-svn-status-dir)
   "Retrieve older revisions of files.
 LINE-INFOS is a list of line-info structures (see
 `svn-status-get-line-information').
@@ -4167,15 +4173,24 @@ names are relative to the directory where `svn-status' was run."
              ;; and if users often want to know the revision numbers of such
              ;; files, they can use svn:keywords.
              (file-name-with-revision (concat (file-name-nondirectory file-name) ".~" revision "~"))
-             (default-directory (concat (svn-status-base-dir) (file-name-directory file-name))))
+             (default-directory (concat (svn-status-base-dir)
+                                        (if handle-relative-svn-status-dir
+                                            (file-relative-name default-directory (svn-status-base-dir))
+                                          "")
+                                        (file-name-directory file-name))))
         ;; `add-to-list' would unnecessarily check for duplicates.
-        (push (cons file-name (concat (file-name-directory file-name) file-name-with-revision)) svn-status-get-specific-revision-file-info)
-        ;; (message "file-name-with-revision: %s %S" file-name-with-revision (file-exists-p file-name-with-revision))
+        (push (cons file-name (concat (file-name-directory file-name) file-name-with-revision))
+              svn-status-get-specific-revision-file-info)
+        (svn-status-message 3 "svn-status-get-specific-revision-internal: file: %s, default-directory: %s"
+                            file-name default-directory)
+        (svn-status-message 3 "svn-status-get-specific-revision-internal: file-name-with-revision: %s %S"
+                            file-name-with-revision (file-exists-p file-name-with-revision))
         (save-excursion
           (if (or (not (file-exists-p file-name-with-revision)) ;; file does not exist
                   (not (string= (number-to-string (string-to-number revision)) revision))) ;; revision is not a number
               (progn
-                (message "getting revision %s for %s" revision file-name)
+                (message "Getting revision %s of %s, target: %s" revision file-name
+                         (expand-file-name(concat default-directory file-name-with-revision)))
                 (let ((content
                        (with-temp-buffer
                          (if (string= revision "BASE")
@@ -4214,7 +4229,8 @@ If ARG then prompt for revision to diff against."
                    (svn-status-base-dir))
                   nil nil nil nil nil nil
                   (svn-status-line-info->update-available (svn-status-get-line-information))))
-           (if arg :ask :auto)))
+           (if arg :ask :auto)
+           nil))
          (ediff-after-quit-destination-buffer (current-buffer))
          (default-directory (svn-status-base-dir))
          (my-buffer (find-file-noselect (caar svn-status-get-specific-revision-file-info)))
@@ -5012,6 +5028,7 @@ entry for file with defun.
   "Basic keywords in `svn-log-view-mode'.")
 (put 'svn-log-view-font-basic-lock-keywords 'risky-local-variable t) ;for Emacs 20.7
 
+(defvar svn-log-view-font-lock-keywords)
 (define-derived-mode svn-log-view-mode fundamental-mode "svn-log-view"
   "Major Mode to show the output from svn log.
 Commands:
@@ -5098,7 +5115,8 @@ When called with a prefix argument, ask the user for the revision."
   (let ((default-directory (svn-status-base-dir)))
     (svn-status-get-specific-revision-internal
      (list (svn-status-make-line-info (svn-log-file-name-at-point nil)))
-     (svn-log-revision-at-point))))
+     (svn-log-revision-at-point)
+     nil)))
 
 (defun svn-log-ediff-specific-revision ()
   "Call ediff for the file at point to view a changeset"
@@ -5111,10 +5129,10 @@ When called with a prefix argument, ask the user for the revision."
          (default-directory (svn-status-base-dir))
          (upper-rev-file-name (when file-name
                                 (cdar (svn-status-get-specific-revision-internal
-                                       (list (svn-status-make-line-info file-name)) upper-rev))))
+                                       (list (svn-status-make-line-info file-name)) upper-rev nil))))
          (lower-rev-file-name (when file-name
                                 (cdar (svn-status-get-specific-revision-internal
-                                       (list (svn-status-make-line-info file-name)) lower-rev)))))
+                                       (list (svn-status-make-line-info file-name)) lower-rev nil)))))
     ;;(message "%S %S" upper-rev-file-name lower-rev-file-name)
     (if file-name
         (let* ((ediff-after-quit-destination-buffer cur-buf)
@@ -5913,7 +5931,7 @@ working directory."
 (defun svn-prepare-bug-report ()
   "Create the buffer *psvn-bug-report*. This buffer can be useful to debug problems with psvn.el"
   (interactive)
-  (let* ((last-output-buffer-name (or svn-status-last-output-buffer-name "*svn-process*"))
+  (let* ((last-output-buffer-name (or svn-status-last-output-buffer-name svn-process-buffer-name))
          (last-svn-cmd-output (with-current-buffer last-output-buffer-name
                                 (buffer-substring-no-properties (point-min) (point-max)))))
     (switch-to-buffer "*psvn-bug-report*")

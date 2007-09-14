@@ -270,8 +270,8 @@ svn_fs_bdb__string_read(svn_fs_t *fs,
 
 /* Get the current 'next-key' value and bump the record. */
 static svn_error_t *
-get_key_and_bump(svn_fs_t *fs, 
-                 const char **key, 
+get_key_and_bump(svn_fs_t *fs,
+                 const char **key,
                  trail_t *trail,
                  apr_pool_t *pool)
 {

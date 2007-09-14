@@ -154,7 +154,7 @@ find_block(const struct blocks *blocks, apr_uint32_t adlersum)
 
   return blocks->slots[h].pos;
 }
-      
+
 /* Initialize the matches table from DATA of size DATALEN.  This goes
    through every block of MATCH_BLOCKSIZE bytes in the source and
    checksums it, inserting the result into the BLOCKS table.  */
@@ -327,7 +327,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
       apr_size_t next;
       svn_boolean_t match;
 
-      match = find_match(&blocks, &rolling, a, asize, b, bsize, lo, &apos, 
+      match = find_match(&blocks, &rolling, a, asize, b, bsize, lo, &apos,
                          &alen, &badvance, &pending_insert_len);
 
       /* If we didn't find a real match, insert the byte at the target

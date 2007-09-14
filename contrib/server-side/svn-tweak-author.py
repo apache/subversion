@@ -30,7 +30,7 @@ def error_and_exit(errmsg):
     """Print ERRMSG as an error, and exit with a non-zero error code."""
     sys.stderr.write("\nERROR: %s\n" % (errmsg))
     sys.exit(1)
-    
+
 def usage_and_exit(errmsg=None):
     """Print the usage message, to stderr if ERRMSG is provided, to
     stdout otherwise.  If ERRMSG is provided, print it as an error,

@@ -150,7 +150,7 @@ main (int argc, const char **argv)
 
   if (argc <= 1)
     {
-      printf ("Usage:  %s URL\n", argv[0]);  
+      printf ("Usage:  %s URL\n", argv[0]);
       printf ("    Print all locks at or below URL.\n");
       return EXIT_FAILURE;
     }
@@ -168,13 +168,13 @@ main (int argc, const char **argv)
   err = svn_fs_initialize (pool);
   if (err) goto hit_error;
 
-  /* Make sure the ~/.subversion run-time config files exist, and load. */  
+  /* Make sure the ~/.subversion run-time config files exist, and load. */
   err = svn_config_ensure (NULL, pool);
   if (err) goto hit_error;
 
   err = svn_config_get_config (&cfg_hash, NULL, pool);
   if (err) goto hit_error;
-    
+
   /* Build an authentication baton. */
   {
     /* There are many different kinds of authentication back-end
@@ -182,21 +182,21 @@ main (int argc, const char **argv)
     svn_auth_provider_object_t *provider;
     apr_array_header_t *providers
       = apr_array_make (pool, 4, sizeof (svn_auth_provider_object_t *));
-    
+
     svn_client_get_simple_prompt_provider (&provider,
                                            my_simple_prompt_callback,
                                            NULL, /* baton */
                                            2, /* retry limit */ pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    
+
     svn_client_get_username_prompt_provider (&provider,
                                              my_username_prompt_callback,
                                              NULL, /* baton */
                                              2, /* retry limit */ pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    
+
     /* Register the auth-providers into the context's auth_baton. */
-    svn_auth_open (&auth_baton, providers, pool);      
+    svn_auth_open (&auth_baton, providers, pool);
   }
 
   /* Create a table of callbacks for the RA session, mostly nonexistent. */
@@ -205,7 +205,7 @@ main (int argc, const char **argv)
   cbtable->open_tmp_file = open_tmp_file;
 
   /* Now do the real work. */
-  
+
   err = svn_ra_open (&session, URL, cbtable, NULL, cfg_hash, pool);
   if (err) goto hit_error;
 
@@ -214,14 +214,14 @@ main (int argc, const char **argv)
 
   err = svn_cmdline_printf (pool, "\n");
   if (err) goto hit_error;
-  
+
   for (hi = apr_hash_first (pool, locks); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
       const char *path, *cr_date, *exp_date;
       svn_lock_t *lock;
-      
+
       apr_hash_this (hi, &key, NULL, &val);
       path = key;
       lock = val;
@@ -243,16 +243,16 @@ main (int argc, const char **argv)
       err = svn_cmdline_printf (pool,
                                 "          Owner: %s\n", lock->owner);
       if (err) goto hit_error;
-      
+
       err = svn_cmdline_printf (pool,
                                 "        Comment: %s\n",
                                 lock->comment ? lock->comment : "none");
       if (err) goto hit_error;
-      
+
       err = svn_cmdline_printf (pool,
                                 "        Created: %s\n", cr_date);
       if (err) goto hit_error;
-      
+
       err = svn_cmdline_printf (pool,
                                 "        Expires: %s\n\n", exp_date);
       if (err) goto hit_error;

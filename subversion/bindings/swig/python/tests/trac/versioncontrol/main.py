@@ -39,7 +39,7 @@ class Repository(object):
         Tell if there's a node at the specified (path,rev) combination.
         """
         raise NotImplementedError
-    
+
     def get_node(self, path, rev=None):
         """
         Retrieve a Node (directory or file) from the repository at the
@@ -240,7 +240,7 @@ class Authorizer(object):
 
     def has_permission(self, path):
         return 1
-    
+
     def has_permission_for_changeset(self, rev):
         return 1
 

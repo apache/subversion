@@ -19,11 +19,11 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     self.path = core.svn_path_canonicalize(tempfile.mktemp())
 
     client_ctx = client.create_context()
-    
+
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    client.checkout2(REPOS_URL, self.path, rev, rev, True, True, 
+    client.checkout2(REPOS_URL, self.path, rev, rev, True, True,
             client_ctx)
 
     self.wc = wc.adm_open3(None, self.path, True, -1, None)
@@ -169,7 +169,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
   def test_get_prop_diffs(self):
       wc.prop_set("foreign:foo", "bla", self.path, self.wc)
-      self.assertEquals([{"foreign:foo": "bla"}, {}], 
+      self.assertEquals([{"foreign:foo": "bla"}, {}],
               wc.get_prop_diffs(self.path, self.wc))
 
   def test_get_pristine_copy_path(self):
@@ -180,7 +180,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
   def test_entries_read(self):
       entries = wc.entries_read(self.wc, True)
-        
+
       self.assertEqual(['', 'tags', 'branches', 'trunk'], entries.keys())
 
   def test_get_ignores(self):
@@ -196,7 +196,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
     # Setup ra_ctx.
     ra.initialize()
-    callbacks = ra.callbacks2_t()
+    callbacks = ra.Callbacks()
     ra_ctx = ra.open2(REPOS_URL, callbacks, None, None)
 
     # Get commit editor.

@@ -2,9 +2,9 @@
 #
 #  svnadmin_tests.py:  testing the 'svnadmin' tool.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
@@ -39,7 +39,7 @@ Item = svntest.wc.StateItem
 #                        root node has a proper created-revision,
 #                        because there was once a bug where it
 #                        didn't.
-# 
+#
 #                        Note also that "svnadmin create" is tested
 #                        implicitly every time we run a python test
 #                        script.  (An empty repository is always
@@ -268,7 +268,7 @@ def empty_date(sbox):
 
 def dump_copied_dir(sbox):
   "'svnadmin dump' on copied directory"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
@@ -302,7 +302,7 @@ def dump_move_dir_modify_child(sbox):
   Q_path = os.path.join(wc_dir, 'A', 'Q')
   svntest.main.run_svn(None, 'cp', B_path, Q_path)
   svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', 
+  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
                        '-m', 'log msg')
@@ -368,16 +368,16 @@ def hotcopy_format(sbox):
   if errput:
     print "Error: hotcopy failed"
     raise svntest.Failure
-  
+
   # verify that the db/format files are the same
   fp = open(os.path.join(sbox.repo_dir, "db", "format"))
   contents1 = fp.read()
   fp.close()
-  
+
   fp2 = open(os.path.join(backup_dir, "db", "format"))
   contents2 = fp2.read()
   fp2.close()
-  
+
   if contents1 != contents2:
     print "Error: db/format file contents do not match after hotcopy"
     raise svntest.Failure
@@ -428,7 +428,7 @@ def verify_windows_paths_in_repos(sbox):
   repo_url       = sbox.repo_url
   chi_url = sbox.repo_url + '/c:hi'
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'log_msg', 
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'log_msg',
                                      chi_url)
 
   output, errput = svntest.main.run_svnadmin("verify", sbox.repo_dir)

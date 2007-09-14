@@ -48,7 +48,7 @@ extern "C" {
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input, 
+svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input,
                     apr_pool_t *pool);
 
 /** Calculate the delta between two hashes of mergeinfo (with
@@ -112,14 +112,16 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
                    apr_pool_t *pool);
 
 /** Merge two rangelists consisting of @c svn_merge_range_t *
- * elements, @a *in1 and @a in2, placing the results in @a *in1.
+ * elements, @a *rangelist and @a changes, placing the results in
+ * @a *rangelist.
  *
  * @a consider_inheritance determines how to account for the inheritability
  * of @a changes and @a *rangelist when merging.
  *
  * Note: @a *rangelist and @a changes must be sorted as said by @c
- * svn_sort_compare_ranges(). @a *in1 is guaranteed to remain in
- * sorted order.
+ * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain
+ * in sorted order.
+ * 
  * @since New in 1.5.
  */
 svn_error_t *

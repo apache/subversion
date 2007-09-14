@@ -87,7 +87,7 @@ hash_store(apr_hash_t *hash,
     return;
   if (value_len == APR_HASH_KEY_STRING)
     value_len = strlen(value);
-  apr_hash_set(hash, key, key_len, 
+  apr_hash_set(hash, key, key_len,
                svn_string_ncreate(value, value_len, pool));
 }
 
@@ -114,8 +114,8 @@ digest_path_from_digest(svn_fs_t *fs,
                         const char *digest,
                         apr_pool_t *pool)
 {
-  return svn_path_join_many(pool, fs->path, PATH_LOCKS_DIR, 
-                            apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN), 
+  return svn_path_join_many(pool, fs->path, PATH_LOCKS_DIR,
+                            apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN),
                             digest, NULL);
 }
 
@@ -129,8 +129,8 @@ digest_path_from_path(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   const char *digest = make_digest(path, pool);
-  return svn_path_join_many(pool, fs->path, PATH_LOCKS_DIR, 
-                            apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN), 
+  return svn_path_join_many(pool, fs->path, PATH_LOCKS_DIR,
+                            apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN),
                             digest, NULL);
 }
 
@@ -175,7 +175,7 @@ write_digest_file(apr_hash_t *children,
   apr_hash_t *hash = apr_hash_make(pool);
   const char *tmp_path;
 
-  SVN_ERR(ensure_dir_exists(svn_path_join(fs->path, PATH_LOCKS_DIR, pool), 
+  SVN_ERR(ensure_dir_exists(svn_path_join(fs->path, PATH_LOCKS_DIR, pool),
                             fs, pool));
   SVN_ERR(ensure_dir_exists(svn_path_dirname(digest_path, pool), fs, pool));
   SVN_ERR(svn_io_open_unique_file2
@@ -189,13 +189,13 @@ write_digest_file(apr_hash_t *children,
       if (lock->expiration_date)
         expiration_date = svn_time_to_cstring(lock->expiration_date, pool);
       hash_store(hash, PATH_KEY, sizeof(PATH_KEY)-1,
-                 lock->path, APR_HASH_KEY_STRING, pool); 
+                 lock->path, APR_HASH_KEY_STRING, pool);
       hash_store(hash, TOKEN_KEY, sizeof(TOKEN_KEY)-1,
-                 lock->token, APR_HASH_KEY_STRING, pool); 
+                 lock->token, APR_HASH_KEY_STRING, pool);
       hash_store(hash, OWNER_KEY, sizeof(OWNER_KEY)-1,
-                 lock->owner, APR_HASH_KEY_STRING, pool); 
+                 lock->owner, APR_HASH_KEY_STRING, pool);
       hash_store(hash, COMMENT_KEY, sizeof(COMMENT_KEY)-1,
-                 lock->comment, APR_HASH_KEY_STRING, pool); 
+                 lock->comment, APR_HASH_KEY_STRING, pool);
       hash_store(hash, IS_DAV_COMMENT_KEY, sizeof(IS_DAV_COMMENT_KEY)-1,
                  lock->is_dav_comment ? "1" : "0", 1, pool);
       hash_store(hash, CREATION_DATE_KEY, sizeof(CREATION_DATE_KEY)-1,
@@ -206,7 +206,7 @@ write_digest_file(apr_hash_t *children,
   if (apr_hash_count(children))
     {
       svn_stringbuf_t *children_list = svn_stringbuf_create("", pool);
-      for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi)) 
+      for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
         {
           const void *key;
           apr_ssize_t klen;
@@ -216,9 +216,9 @@ write_digest_file(apr_hash_t *children,
         }
       hash_store(hash, CHILDREN_KEY, sizeof(CHILDREN_KEY)-1,
                  children_list->data, children_list->len, pool);
-    } 
+    }
 
-  if ((err = svn_hash_write2(hash, 
+  if ((err = svn_hash_write2(hash,
                              svn_stream_from_aprfile(fd, pool),
                              SVN_HASH_TERMINATOR, pool)))
     {
@@ -231,7 +231,7 @@ write_digest_file(apr_hash_t *children,
 
   SVN_ERR(svn_io_file_close(fd, pool));
   SVN_ERR(svn_io_file_rename(tmp_path, digest_path, pool));
-  SVN_ERR(svn_fs_fs__dup_perms 
+  SVN_ERR(svn_fs_fs__dup_perms
           (digest_path, svn_fs_fs__path_rev(fs, 0, pool), pool));
 
   return SVN_NO_ERROR;
@@ -274,7 +274,7 @@ read_digest_file(apr_hash_t **children_p,
     return svn_io_file_close(fd, pool);
 
   hash = apr_hash_make(pool);
-  if ((err = svn_hash_read2(hash, 
+  if ((err = svn_hash_read2(hash,
                             svn_stream_from_aprfile(fd, pool),
                             SVN_HASH_TERMINATOR, pool)))
     {
@@ -355,7 +355,7 @@ set_lock(svn_fs_t *fs,
 
   /* Iterate in reverse, creating the lock for LOCK->path, and then
      just adding entries for its parent, until we reach a parent
-     that's already listed in *its* parent. */ 
+     that's already listed in *its* parent. */
   subpool = svn_pool_create(pool);
   while (1729)
     {
@@ -370,7 +370,7 @@ set_lock(svn_fs_t *fs,
       digest_path = digest_path_from_path(fs, this_path->data, subpool);
       svn_path_split(digest_path, &parent_dir, &digest_file, subpool);
 
-      SVN_ERR(read_digest_file(&this_children, &this_lock, fs, 
+      SVN_ERR(read_digest_file(&this_children, &this_lock, fs,
                                digest_path, subpool));
 
       /* We're either writing a new lock (first time through only) or
@@ -386,16 +386,16 @@ set_lock(svn_fs_t *fs,
           /* If we already have an entry for this path, we're done. */
           if (apr_hash_get(this_children, last_child->data, last_child->len))
             break;
-          apr_hash_set(this_children, last_child->data, 
+          apr_hash_set(this_children, last_child->data,
                        last_child->len, (void *)1);
         }
-      SVN_ERR(write_digest_file(this_children, this_lock, fs, 
+      SVN_ERR(write_digest_file(this_children, this_lock, fs,
                                 digest_path, subpool));
 
       /* Prep for next iteration, or bail if we're done. */
       if ((this_path->len == 1) && (this_path->data[0] == '/'))
         break;
-      svn_stringbuf_set(this_path, 
+      svn_stringbuf_set(this_path,
                         svn_path_dirname(this_path->data, subpool));
     }
 
@@ -405,7 +405,7 @@ set_lock(svn_fs_t *fs,
 
 /* Delete LOCK from FS in the actual OS filesystem. */
 static svn_error_t *
-delete_lock(svn_fs_t *fs, 
+delete_lock(svn_fs_t *fs,
             svn_lock_t *lock,
             apr_pool_t *pool)
 {
@@ -431,15 +431,15 @@ delete_lock(svn_fs_t *fs,
       digest_path = digest_path_from_path(fs, this_path->data, subpool);
       svn_path_split(digest_path, &parent_dir, &digest_file, subpool);
 
-      SVN_ERR(read_digest_file(&this_children, &this_lock, fs, 
+      SVN_ERR(read_digest_file(&this_children, &this_lock, fs,
                                digest_path, subpool));
 
       /* If we are supposed to drop the last entry from this path's
          children list, do so. */
       if (child_to_kill->len)
-        apr_hash_set(this_children, child_to_kill->data, 
+        apr_hash_set(this_children, child_to_kill->data,
                      child_to_kill->len, NULL);
-        
+
       /* Delete the lock (first time through only). */
       if (lock)
         {
@@ -451,13 +451,13 @@ delete_lock(svn_fs_t *fs,
         {
           /* Special case:  no goodz, no file.  And remember to nix
              the entry for it in its parent. */
-          svn_stringbuf_set(child_to_kill, 
+          svn_stringbuf_set(child_to_kill,
                             svn_path_basename(digest_path, subpool));
           SVN_ERR(svn_io_remove_file(digest_path, subpool));
         }
       else
         {
-          SVN_ERR(write_digest_file(this_children, this_lock, fs, 
+          SVN_ERR(write_digest_file(this_children, this_lock, fs,
                                     digest_path, subpool));
           svn_stringbuf_setempty(child_to_kill);
         }
@@ -465,7 +465,7 @@ delete_lock(svn_fs_t *fs,
       /* Prep for next iteration, or bail if we're done. */
       if ((this_path->len == 1) && (this_path->data[0] == '/'))
         break;
-      svn_stringbuf_set(this_path, 
+      svn_stringbuf_set(this_path,
                         svn_path_dirname(this_path->data, subpool));
     }
 
@@ -499,9 +499,9 @@ get_lock(svn_lock_t **lock_p,
       if (have_write_lock)
         SVN_ERR(delete_lock(fs, lock, pool));
       *lock_p = NULL;
-      return SVN_FS__ERR_LOCK_EXPIRED(fs, lock->token); 
+      return SVN_FS__ERR_LOCK_EXPIRED(fs, lock->token);
     }
-  
+
   *lock_p = lock;
   return SVN_NO_ERROR;
 }
@@ -520,7 +520,7 @@ get_lock_helper(svn_fs_t *fs,
 {
   svn_lock_t *lock;
   svn_error_t *err;
-  
+
   err = get_lock(&lock, fs, path, have_write_lock, pool);
 
   /* We've deliberately decided that this function doesn't tell the
@@ -545,7 +545,7 @@ get_lock_helper(svn_fs_t *fs,
    HAVE_WRITE_LOCK should be true if the caller (directly or indirectly)
    has the FS write lock. */
 static svn_error_t *
-walk_digest_files(svn_fs_t *fs, 
+walk_digest_files(svn_fs_t *fs,
                   const char *digest_path,
                   svn_fs_get_locks_callback_t get_locks_func,
                   void *get_locks_baton,
@@ -581,12 +581,12 @@ walk_digest_files(svn_fs_t *fs,
   if (! apr_hash_count(children))
     return SVN_NO_ERROR;
   subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi)) 
+  for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, NULL);
-      SVN_ERR(walk_digest_files 
+      SVN_ERR(walk_digest_files
               (fs, digest_path_from_digest(fs, key, subpool),
                get_locks_func, get_locks_baton, have_write_lock, subpool));
     }
@@ -608,24 +608,24 @@ verify_lock(svn_fs_t *fs,
             apr_pool_t *pool)
 {
   if ((! fs->access_ctx) || (! fs->access_ctx->username))
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_FS_NO_USER, NULL,
        _("Cannot verify lock on path '%s'; no username available"),
        lock->path);
-  
+
   else if (strcmp(fs->access_ctx->username, lock->owner) != 0)
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
        _("User %s does not own lock on path '%s' (currently locked by %s)"),
        fs->access_ctx->username, lock->path, lock->owner);
 
   else if (apr_hash_get(fs->access_ctx->lock_tokens, lock->token,
                         APR_HASH_KEY_STRING) == NULL)
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
        _("Cannot verify lock on path '%s'; no matching lock-token available"),
        lock->path);
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -633,8 +633,8 @@ verify_lock(svn_fs_t *fs,
 /* This implements the svn_fs_get_locks_callback_t interface, where
    BATON is just an svn_fs_t object. */
 static svn_error_t *
-get_locks_callback(void *baton, 
-                   svn_lock_t *lock, 
+get_locks_callback(void *baton,
+                   svn_lock_t *lock,
                    apr_pool_t *pool)
 {
   return verify_lock(baton, lock, pool);
@@ -657,7 +657,7 @@ svn_fs_fs__allow_locked_operation(const char *path,
       SVN_ERR(walk_digest_files(fs, digest_path, get_locks_callback,
                                 fs, have_write_lock, pool));
     }
-  else 
+  else
     {
       /* Discover and verify any lock attached to the path. */
       svn_lock_t *lock;
@@ -727,7 +727,7 @@ lock_body(void *baton, apr_pool_t *pool)
       /* SVN_INVALID_REVNUM means the path doesn't exist.  So
          apparently somebody is trying to lock something in their
          working copy, but somebody else has deleted the thing
-         from HEAD.  That counts as being 'out of date'. */     
+         from HEAD.  That counts as being 'out of date'. */
       if (! SVN_IS_VALID_REVNUM(created_rev))
         return svn_error_createf
           (SVN_ERR_FS_OUT_OF_DATE, NULL,
@@ -746,7 +746,7 @@ lock_body(void *baton, apr_pool_t *pool)
   /* ### TODO:  actually do this check.  This is tough, because the
      schema doesn't supply a lookup-by-token mechanism. */
 
-  /* Is the path already locked?   
+  /* Is the path already locked?
 
      Note that this next function call will automatically ignore any
      errors about {the path not existing as a key, the path's token
@@ -768,7 +768,7 @@ lock_body(void *baton, apr_pool_t *pool)
           /* STEAL_LOCK was passed, so fs_username is "stealing" the
              lock from lock->owner.  Destroy the existing lock. */
           SVN_ERR(delete_lock(lb->fs, existing_lock, pool));
-        }          
+        }
     }
 
   /* Create our new lock, and add it to the tables.
@@ -810,7 +810,7 @@ unlock_body(void *baton, apr_pool_t *pool)
 
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
   SVN_ERR(get_lock(&lock, ub->fs, ub->path, TRUE, pool));
-  
+
   /* Unless breaking the lock, we do some checks. */
   if (! ub->break_lock)
     {
@@ -826,7 +826,7 @@ unlock_body(void *baton, apr_pool_t *pool)
       if (strcmp(ub->fs->access_ctx->username, lock->owner) != 0)
         return SVN_FS__ERR_LOCK_OWNER_MISMATCH
           (ub->fs, ub->fs->access_ctx->username, lock->owner);
-    }  
+    }
 
   /* Remove lock and lock token files. */
   SVN_ERR(delete_lock(ub->fs, lock, pool));
@@ -882,7 +882,7 @@ svn_fs_fs__generate_lock_token(const char **token,
      want to use the fs UUID + some incremented number?  For now, we
      generate a URI that matches the DAV RFC.  We could change this to
      some other URI scheme someday, if we wish. */
-  *token = apr_pstrcat(pool, "opaquelocktoken:", 
+  *token = apr_pstrcat(pool, "opaquelocktoken:",
                        svn_uuid_generate(pool), NULL);
   return SVN_NO_ERROR;
 }
@@ -937,6 +937,6 @@ svn_fs_fs__get_locks(svn_fs_t *fs,
 
   /* Get the top digest path in our tree of interest, and then walk it. */
   digest_path = digest_path_from_path(fs, path, pool);
-  return walk_digest_files(fs, digest_path, get_locks_func, 
+  return walk_digest_files(fs, digest_path, get_locks_func,
                            get_locks_baton, FALSE, pool);
 }

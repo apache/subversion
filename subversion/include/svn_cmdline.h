@@ -113,7 +113,7 @@ svn_error_t *svn_cmdline_fputs(const char *string,
 
 /** Flush output buffers of the stdio @a stream, returning an error if that
  * fails.  This is just a wrapper for the standard fflush() function for
- * consistent error handling. 
+ * consistent error handling.
  *
  * @since New in 1.1.
  */
@@ -242,7 +242,7 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
 
 /** Initialize auth baton @a ab with the standard set of authentication
  * providers used by the command line client.  @a non_interactive,
- * @a username, @a password, @a config_dir, and @a no_auth_cache are the 
+ * @a username, @a password, @a config_dir, and @a no_auth_cache are the
  * values of the command line options of the same names.  @a cfg is the
  * @c SVN_CONFIG_CATEGORY_CONFIG configuration, and @a cancel_func and
  * @a cancel_baton control the cancellation of the prompting providers
@@ -265,7 +265,7 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 /** Wrapper for apr_getopt_init(), which see.
  *
  * @since New in 1.4.
- * 
+ *
  * On OS400 V5R4, prior to calling apr_getopt_init(), converts each of the
  * @a argc strings in @a argv[] in place from EBCDIC to UTF-8, allocating
  * each new UTF-8 string in @a pool.

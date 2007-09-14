@@ -99,11 +99,11 @@ class Permission:
     def __init__(self):
         self._group = {}
         self._permlist = []
-    
+
     def parse_groups(self, groupsiter):
         for option, value in groupsiter:
             self._group[option] = value.split()
-            
+
     def parse_perms(self, permsiter):
         for option, value in permsiter:
             # Paths never start with /, so remove it if provided
@@ -303,7 +303,7 @@ def parse_options():
             os.path.isfile(os.path.join(obj.repository, "format"))):
         raise Error, "path '%s' doesn't look like a repository" % \
                      obj.repository
-        
+
     return obj
 
 def main():

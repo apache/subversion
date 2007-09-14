@@ -47,10 +47,10 @@ svn_diff__diff(svn_diff__lcs_t *lcs,
 
           (*diff_ref)->type = svn_diff__type_diff_modified;
           (*diff_ref)->original_start = original_start - 1;
-          (*diff_ref)->original_length = 
+          (*diff_ref)->original_length =
             lcs->position[0]->offset - original_start;
           (*diff_ref)->modified_start = modified_start - 1;
-          (*diff_ref)->modified_length = 
+          (*diff_ref)->modified_length =
             lcs->position[1]->offset - modified_start;
           (*diff_ref)->latest_start = 0;
           (*diff_ref)->latest_length = 0;

@@ -62,6 +62,7 @@ typedef struct {
 typedef struct {
   const char *fs_path;
   svn_ra_svn_conn_t *conn;
+  int stack_depth;
 } log_baton_t;
 
 typedef struct {
@@ -84,7 +85,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
 
   svn_config_get(*cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
-  
+
   *pwdb = NULL;
   if (pwdb_path)
     {
@@ -118,7 +119,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
   return SVN_NO_ERROR;
 }
 
-/* Verify that URL is inside REPOS_URL and get its fs path. Assume that 
+/* Verify that URL is inside REPOS_URL and get its fs path. Assume that
    REPOS_URL and URL are already URI-decoded. */
 static svn_error_t *get_fs_path(const char *repos_url, const char *url,
                                 const char **fs_path)
@@ -560,7 +561,7 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   if (!b->err)
-    b->err = get_fs_path(svn_path_uri_decode(b->repos_url, pool), 
+    b->err = get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                          url, &fs_path);
   if (!b->err)
     b->err = svn_repos_link_path3(b->report_baton, path, fs_path, rev,
@@ -608,6 +609,7 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   const char *target, const char *tgt_path,
                                   svn_boolean_t text_deltas,
                                   svn_depth_t depth,
+                                  svn_boolean_t send_copyfrom_args,
                                   svn_boolean_t ignore_ancestry)
 {
   const svn_delta_editor_t *editor;
@@ -621,6 +623,7 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_repos_begin_report2(&report_baton, rev, b->repos,
                                       b->fs_path->data, target, tgt_path,
                                       text_deltas, depth, ignore_ancestry,
+                                      send_copyfrom_args,
                                       editor, edit_baton,
                                       authz_check_access_cb_func(b),
                                       b, pool));
@@ -744,7 +747,7 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &url));
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool), 
+  SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           url, &fs_path));
   svn_stringbuf_set(b->fs_path, fs_path);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -915,7 +918,7 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
 {
   int i;
   apr_pool_t *iterpool;
-  
+
   iterpool = svn_pool_create(pool);
 
   for (i = 0; i < lock_tokens->nelts; ++i)
@@ -944,7 +947,7 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
       svn_error_clear(svn_repos_fs_unlock(sb->repos, full_path, token,
                                           FALSE, pool));
     }
-                                       
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -1304,13 +1307,15 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *target, *full_path, *depth_word;
   svn_boolean_t recurse;
+  svn_boolean_t send_copyfrom_args;
+  apr_uint64_t send_copyfrom_param;
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?w", &rev, &target,
-                                 &recurse, &depth_word));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?w?B", &rev, &target,
+                                 &recurse, &depth_word, &send_copyfrom_param));
   target = svn_path_canonicalize(target, pool);
 
   if (depth_word)
@@ -1318,14 +1323,18 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   else
     depth = SVN_DEPTH_FROM_RECURSE(recurse);
 
+  send_copyfrom_args = (send_copyfrom_param == SVN_RA_SVN_UNSPECIFIED_NUMBER) ?
+      FALSE : send_copyfrom_param;
+
   full_path = svn_path_join(b->fs_path->data, target, pool);
   /* Check authorization and authenticate the user if necessary. */
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_read, full_path, FALSE));
-  
+
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
-  return accept_report(conn, pool, b, rev, target, NULL, TRUE, depth, FALSE);
+  return accept_report(conn, pool, b, rev, target, NULL, TRUE,
+                       depth, send_copyfrom_args, FALSE);
 }
 
 static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -1359,7 +1368,9 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           &switch_path));
 
   return accept_report(conn, pool, b, rev, target, switch_path, TRUE,
-                       depth, TRUE);
+                       depth,
+                       FALSE /* TODO(sussman): no copyfrom args for now */,
+                       TRUE);
 }
 
 static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -1387,7 +1398,8 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
-  return accept_report(conn, pool, b, rev, target, NULL, FALSE, depth, FALSE);
+  return accept_report(conn, pool, b, rev, target, NULL, FALSE,
+                       depth, FALSE, FALSE);
 }
 
 static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -1435,7 +1447,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           &versus_path));
 
   return accept_report(conn, pool, b, rev, target, versus_path,
-                       text_deltas, depth, ignore_ancestry);
+                       text_deltas, depth, FALSE, ignore_ancestry);
 }
 
 /* Regardless of whether a client's capabilities indicate an
@@ -1456,7 +1468,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *path, *info, *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)w", &paths, &rev, 
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)w", &paths, &rev,
                                  &inherit_word));
   inherit = svn_inheritance_from_word(inherit_word);
 
@@ -1511,7 +1523,22 @@ static svn_error_t *log_receiver(void *baton,
   void *val;
   const char *path;
   svn_log_changed_path_t *change;
+  svn_boolean_t invalid_revnum = FALSE;
   char action[2];
+
+  if (log_entry->revision == SVN_INVALID_REVNUM)
+    {
+      /* If the stack depth is zero, we've seen the last revision, so don't
+         send it, just return. */
+      if (b->stack_depth == 0)
+        return SVN_NO_ERROR;
+
+      /* Because the svn protocol won't let us send an invalid revnum, we have
+         to fudge here and send an additional flag. */
+      log_entry->revision = 0;
+      invalid_revnum = TRUE;
+      b->stack_depth--;
+    }
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(!"));
   if (log_entry->changed_paths)
@@ -1529,12 +1556,17 @@ static svn_error_t *log_receiver(void *baton,
                                          change->copyfrom_rev));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)n",
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)bb",
                                  log_entry->revision,
                                  log_entry->author,
                                  log_entry->date,
                                  log_entry->message,
-                                 log_entry->nbr_children));
+                                 log_entry->has_children,
+                                 invalid_revnum));
+
+  if (log_entry->has_children)
+    b->stack_depth++;
+
   return SVN_NO_ERROR;
 }
 
@@ -1570,7 +1602,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     omit_log_text = omit_log_text_param;
 
   /* If we got an unspecified number then the user didn't send us anything,
-     so we assume no limit.  If it's larger than INT_MAX then someone is 
+     so we assume no limit.  If it's larger than INT_MAX then someone is
      messing with us, since we know the svn client libraries will never send
      us anything that big, so play it safe and default to no limit. */
   if (limit == SVN_RA_SVN_UNSPECIFIED_NUMBER || limit > INT_MAX)
@@ -1594,6 +1626,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path->data;
   lb.conn = conn;
+  lb.stack_depth = 0;
   err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
                             include_merged_revisions, omit_log_text,
@@ -1817,7 +1850,7 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
     }
   else
     SVN_ERR(svn_ra_svn_write_cstring(frb->conn, pool, ""));
-      
+
   return SVN_NO_ERROR;
 }
 
@@ -1832,7 +1865,7 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *full_path;
   apr_uint64_t include_merged_revs_param;
   svn_boolean_t include_merged_revisions;
-  
+
   /* Parse arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)?B",
                                  &path, &start_rev, &end_rev,
@@ -2133,8 +2166,8 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             pool);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  
-  SVN_CMD_ERR(svn_repos_fs_get_locks(&locks, b->repos, full_path, 
+
+  SVN_CMD_ERR(svn_repos_fs_get_locks(&locks, b->repos, full_path,
                                      authz_check_access_cb_func(b), b, pool));
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
@@ -2267,7 +2300,7 @@ repos_path_valid(const char *path)
 
   return TRUE;
 }
-      
+
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
  * repos_url, and fs_path fields of B. */
@@ -2389,7 +2422,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
    * send an empty mechlist. */
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwww)",
                                         (apr_uint64_t) 2, (apr_uint64_t) 2,
-                                        SVN_RA_SVN_CAP_EDIT_PIPELINE, 
+                                        SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,

@@ -212,7 +212,7 @@ class SVNTreeNode:
     s = StringIO.StringIO()
     self.pprint(s)
     return s.getvalue()
-    
+
 
 # reserved name of the root of the tree
 root_node_name = "__SVN_ROOT_NODE"
@@ -284,7 +284,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
     raise SVNTreeError
 
   root_node = None
-  
+
   # if this is Windows: if the path contains a drive name (X:), make it
   # the root node.
   if os.name == 'nt':
@@ -293,7 +293,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
       root_node = SVNTreeNode(m.group(1), None)
       elements[0] = m.group(2)
       add_elements_as_path(root_node, elements[0:])
-  
+
   if not root_node:
     root_node = SVNTreeNode(elements[0], None)
     add_elements_as_path(root_node, elements[1:])
@@ -433,9 +433,10 @@ def detect_conflict_files(node, extra_files):
       extra_files.pop(extra_files.index(pattern)) # delete pattern from list
       break
   else:
-    print "Found unexpected disk object:", node.name
+    msg = "Encountered unexpected disk path '" + node.name + "'"
+    print msg
     node.pprint()
-    raise SVNTreeUnequal
+    raise SVNTreeUnequal(msg)
 
 ###########################################################################
 ###########################################################################

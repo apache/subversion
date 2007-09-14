@@ -17,7 +17,7 @@
 #
 #   export VERIFY=/path/to/verify-history.py
 #   export MYREPOS=/path/to/repos
-#   
+#
 #   # List the paths in HEAD of the repos (filtering out the directories)
 #   for VCFILE in `svn ls -R file://${MYREPOS} | grep -v '/$'`; do
 #     echo "Checking ${VCFILE}"
@@ -31,7 +31,7 @@ from svn import core, repos, fs
 class HistoryChecker:
   def __init__(self, fs_ptr):
     self.fs_ptr = fs_ptr
-        
+
   def _check_history(self, path, revision):
     root = fs.revision_root(self.fs_ptr, revision)
     changes = fs.paths_changed(root)

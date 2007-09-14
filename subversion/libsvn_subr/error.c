@@ -325,7 +325,7 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
   svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
                                       ": (apr_err=%d)\n", err->apr_err));
 #endif /* SVN_DEBUG */
-  
+
   /* Only print the same APR error string once. */
   if (err->message)
     {
@@ -346,7 +346,7 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
           svn_error_clear(temp_err);
           err_string = _("Can't recode error string from APR");
         }
-      
+
       svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
                                           "%s%s\n", prefix, err_string));
     }
@@ -399,7 +399,7 @@ svn_handle_error2(svn_error_t *err,
                 }
             }
         }
-      
+
       if (! printed_already)
         {
           print_error(err, stream, prefix);

@@ -465,7 +465,7 @@ AC_HELP_STRING([--enable-maintainer-mode],
       fi
       enable_debugging=yes
       if test "$GCC" = "yes"; then
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
+        CFLAGS="$CFLAGS -std=c89 -Wpointer-arith -Wwrite-strings -Wshadow"
       fi
     fi
 ])
@@ -802,7 +802,7 @@ installed and linked to APR-UTIL.  We have created Makefiles which
 will build without the Berkeley DB back-end; your repositories will
 use FSFS as the default back-end.  You can find the latest version of
 Berkeley DB here:
-  http://www.sleepycat.com/download/index.shtml
+  http://www.oracle.com/technology/software/products/berkeley-db/index.html
 ])
 ;;
 esac

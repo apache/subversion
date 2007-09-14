@@ -30,8 +30,9 @@
 #include "svn_ra.h"
 #include "svn_delta.h"
 #include "svn_version.h"
-
 #include "svn_dav.h"
+
+#include "private/svn_dav_protocol.h"
 
 
 /** Use this to silence compiler warnings about unused parameters. */
@@ -202,7 +203,7 @@ static const svn_ra_serf__dav_props_t checked_in_props[] =
 static const svn_ra_serf__dav_props_t baseline_props[] =
 {
   { "DAV:", "baseline-collection" },
-  { "DAV:", "version-name" },
+  { "DAV:", SVN_DAV__VERSION_NAME },
   { NULL }
 };
 
@@ -409,7 +410,7 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler);
 typedef struct svn_ra_serf__xml_state_t {
   /* A numeric value that represents the current state in parsing.
    *
-   * Value 0 is reserved for use as the default state. 
+   * Value 0 is reserved for use as the default state.
    */
   int current_state;
 
@@ -541,21 +542,21 @@ typedef struct {
   /* Have we seen an error tag? */
   svn_boolean_t in_error;
 
-  /* Should we be collecting the XML cdata for the error message? */
-  svn_boolean_t collect_message;
+  /* Should we be collecting the XML cdata? */
+  svn_boolean_t collect_cdata;
+
+  /* Collected cdata. NULL if cdata not needed. */
+  svn_stringbuf_t *cdata;
 
   /* XML parser and namespace used to parse the remote response */
   svn_ra_serf__xml_parser_t parser;
-
-  /* The length of the error message we received. */
-  apr_size_t message_len;
 } svn_ra_serf__server_error_t;
 
 /* A simple request context that can be passed to handle_status_only. */
 typedef struct {
   /* The HTTP status code of the response */
   int status;
-  
+
   /* The HTTP status line of the response */
   const char *reason;
 
@@ -720,7 +721,7 @@ svn_ra_serf__bucket_propfind_create(svn_ra_serf__connection_t *conn,
  *
  * This function will not block waiting for the response.  If the
  * request can be satisfied from a local cache, set PROP_CTX to NULL
- * as a signal to callers of that fact.  Otherwise, callers are 
+ * as a signal to callers of that fact.  Otherwise, callers are
  * expected to call svn_ra_serf__wait_for_props().
  */
 svn_error_t *
@@ -747,17 +748,17 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
 
 /* Shared helper func: given a public URL which may not exist in HEAD,
    use SESSION to search up parent directories until we can retrieve a
-   *PROPS (allocated in POOL) containing a standard set of base props: 
-   {VCC, resourcetype, baseline-relative-path}.  
+   *PROPS (allocated in POOL) containing a standard set of base props:
+   {VCC, resourcetype, baseline-relative-path}.
 
    Also return:
-   *MISSING_PATH (allocated in POOL), which is the trailing portion of 
-     the URL that did not exist.  If an error occurs, *MISSING_PATH isn't 
+   *MISSING_PATH (allocated in POOL), which is the trailing portion of
+     the URL that did not exist.  If an error occurs, *MISSING_PATH isn't
      changed.
    *REMAINING_PATH (allocated in POOL), which is the parent path on which
      we found the PROPS.
    */
-svn_error_t * 
+svn_error_t *
 svn_ra_serf__search_for_base_props(apr_hash_t *props,
                                    const char **remaining_path,
                                    const char **missing_path,
@@ -1006,6 +1007,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        svn_revnum_t revision_to_update_to,
                        const char *update_target,
                        svn_depth_t depth,
+                       svn_boolean_t send_copyfrom_args,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
                        apr_pool_t *pool);

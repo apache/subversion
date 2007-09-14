@@ -116,6 +116,7 @@ typedef struct svn_ra__vtable_t {
                             svn_revnum_t revision_to_update_to,
                             const char *update_target,
                             svn_depth_t depth,
+                            svn_boolean_t send_copyfrom_args,
                             const svn_delta_editor_t *update_editor,
                             void *update_baton,
                             apr_pool_t *pool);
@@ -196,13 +197,13 @@ typedef struct svn_ra__vtable_t {
                        apr_hash_t *path_revs,
                        const char *comment,
                        svn_boolean_t force,
-                       svn_ra_lock_callback_t lock_func, 
+                       svn_ra_lock_callback_t lock_func,
                        void *lock_baton,
                        apr_pool_t *pool);
   svn_error_t *(*unlock)(svn_ra_session_t *session,
                          apr_hash_t *path_tokens,
                          svn_boolean_t force,
-                         svn_ra_lock_callback_t lock_func, 
+                         svn_ra_lock_callback_t lock_func,
                          void *lock_baton,
                          apr_pool_t *pool);
   svn_error_t *(*get_lock)(svn_ra_session_t *session,

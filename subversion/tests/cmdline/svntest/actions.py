@@ -129,7 +129,7 @@ def setup_pristine_repository():
 
 
 ######################################################################
-# Used by every test, so that they can run independently of  one 
+# Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
 # the `pristine repos' to a new location.
 # Note: make sure setup_pristine_repository was called once before
@@ -204,7 +204,7 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
 
   want_err = None
   if expected_stderr is not None and expected_stderr is not []:
-    want_err = 1
+    want_err = True
 
   out, err = main.run_svn(want_err, *varargs)
 
@@ -290,7 +290,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                             *args):
   """Checkout the URL into a new directory WC_DIR_NAME. *ARGS are any
   extra optional args to the checkout subcommand.
- 
+
   The subcommand output will be verified against OUTPUT_TREE,
   and the working copy itself will be verified against DISK_TREE.
   SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
@@ -323,16 +323,16 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
                                  URL, wc_dir_name, *args)
-  mytree = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees (mytree, output_tree)
+  tree.compare_trees (actual, output_tree)
 
   # Create a tree by scanning the working copy
-  mytree = tree.build_tree_from_wc (wc_dir_name)
+  actual = tree.build_tree_from_wc (wc_dir_name)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (mytree, disk_tree,
+  tree.compare_trees (actual, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
 
@@ -363,18 +363,18 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
                                  URL, export_dir_name, *args)
-  mytree = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees (mytree, output_tree)
+  tree.compare_trees (actual, output_tree)
 
   # Create a tree by scanning the working copy.  Don't ignore
   # the .svn directories so that we generate an error if they
   # happen to show up.
-  mytree = tree.build_tree_from_wc (export_dir_name, ignore_svn=0)
+  actual = tree.build_tree_from_wc (export_dir_name, ignore_svn=False)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (mytree, disk_tree,
+  tree.compare_trees (actual, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
 
@@ -388,7 +388,7 @@ def verify_update(actual_output, wc_dir_name,
 
   The subcommand output (found in ACTUAL_OUTPUT) will be verified
   against OUTPUT_TREE, and the working copy itself will be verified
-  against DISK_TREE.  If optional STATUS_OUTPUT_TREE is given, then
+  against DISK_TREE.  If optional STATUS_TREE is given, then
   'svn status' output will be compared.  (This is a good way to check
   that revision numbers were bumped.)  SINGLETON_HANDLER_A and
   SINGLETON_HANDLER_B will be passed to tree.compare_trees - see that
@@ -400,10 +400,10 @@ def verify_update(actual_output, wc_dir_name,
   tree.compare_trees (actual_output, output_tree)
 
   # Create a tree by scanning the working copy
-  mytree = tree.build_tree_from_wc (wc_dir_name, check_props)
+  actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (mytree, disk_tree,
+  tree.compare_trees (actual_disk, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
 
@@ -419,7 +419,7 @@ def run_and_verify_update(wc_dir_name,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
-                          check_props = 0,
+                          check_props = False,
                           *args):
 
   """Update WC_DIR_NAME.  *ARGS are any extra optional args to the
@@ -466,8 +466,8 @@ def run_and_verify_update(wc_dir_name,
         return
     raise main.SVNUnmatchedError
 
-  mytree = tree.build_tree_from_checkout (output)
-  verify_update (mytree, wc_dir_name,
+  actual = tree.build_tree_from_checkout (output)
+  verify_update (actual, wc_dir_name,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
@@ -481,8 +481,8 @@ def run_and_verify_merge(dir, rev1, rev2, url,
                          a_baton = None,
                          singleton_handler_b = None,
                          b_baton = None,
-                         check_props = 0,
-                         dry_run = 1,
+                         check_props = False,
+                         dry_run = True,
                          *args):
   """Run 'svn merge -rREV1:REV2 URL DIR', leaving off the '-r'
   argument if both REV1 and REV2 are None."""
@@ -505,8 +505,8 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
-                          check_props = 0,
-                          dry_run = 1,
+                          check_props = False,
+                          dry_run = True,
                           *args):
   """Run 'svn merge URL1@REV1 URL2@REV2 DIR' if URL2 is not None
   (for a three-way merge between URLs and WC).
@@ -578,7 +578,9 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
       match = rm.search(line)
       if match:
         return
-    raise main.SVNUnmatchedError
+    raise main.SVNUnmatchedError("Expected pattern '%s' failed to match any "
+                                 "lines from error output '%s'" %
+                                 (error_re_string, err))
   elif err:
     ### we should raise a less generic error here. which?
     raise Failure(err)
@@ -608,8 +610,8 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   tree.compare_trees(myskiptree, skip_tree,
                      extra_skip, None, missing_skip, None)
 
-  mytree = tree.build_tree_from_checkout(out, 0)
-  verify_update (mytree, dir,
+  actual = tree.build_tree_from_checkout(out, 0)
+  verify_update (actual, dir,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
@@ -625,7 +627,7 @@ def run_and_verify_switch(wc_dir_name,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
-                          check_props = 0,
+                          check_props = False,
                           *args):
 
   """Switch WC_TARGET (in working copy dir WC_DIR_NAME) to SWITCH_URL.
@@ -637,7 +639,7 @@ def run_and_verify_switch(wc_dir_name,
 
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional
-  STATUS_OUTPUT_TREE is given, then 'svn status' output will be
+  STATUS_TREE is given, then 'svn status' output will be
   compared.  (This is a good way to check that revision numbers were
   bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
   tree.compare_trees - see that function's doc string for more details.
@@ -665,16 +667,16 @@ def run_and_verify_switch(wc_dir_name,
         return
     raise main.SVNUnmatchedError
 
-  mytree = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout (output)
 
-  verify_update (mytree, wc_dir_name,
+  verify_update (actual, wc_dir_name,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
                  check_props)
 
 
-def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
+def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
                           error_re_string = None,
                           singleton_handler_a = None,
                           a_baton = None,
@@ -685,7 +687,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   sending ARGS to the commit subcommand.
 
   The subcommand output will be verified against OUTPUT_TREE.  If
-  optional STATUS_OUTPUT_TREE is given, then 'svn status' output will
+  optional STATUS_TREE is given, then 'svn status' output will
   be compared.  (This is a good way to check that revision numbers
   were bumped.)
 
@@ -699,8 +701,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
-  if isinstance(status_output_tree, wc.State):
-    status_output_tree = status_output_tree.old_tree()
+  if isinstance(status_tree, wc.State):
+    status_tree = status_tree.old_tree()
 
   # Commit.
   output, errput = main.run_svn(error_re_string, 'ci',
@@ -747,19 +749,19 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
       output.append(lastline)
 
   # Convert the output into a tree.
-  mytree = tree.build_tree_from_commit (output)
+  actual = tree.build_tree_from_commit (output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (mytree, output_tree)
+    tree.compare_trees (actual, output_tree)
   except tree.SVNTreeError:
       display_trees("Output of commit is unexpected.",
-                    "OUTPUT TREE", output_tree, mytree)
+                    "OUTPUT TREE", output_tree, actual)
       raise
 
   # Verify via 'status' command too, if possible.
-  if status_output_tree:
-    run_and_verify_status(wc_dir_name, status_output_tree)
+  if status_tree:
+    run_and_verify_status(wc_dir_name, status_tree)
 
 
 # This function always passes '-q' to the status command, which
@@ -783,15 +785,15 @@ def run_and_verify_status(wc_dir_name, output_tree,
                                  '--password', main.wc_passwd,
                                  wc_dir_name)
 
-  mytree = tree.build_tree_from_status (output)
+  actual = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (mytree, output_tree,
+    tree.compare_trees (actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
-    display_trees(None, 'STATUS OUTPUT TREE', output_tree, mytree)
+    display_trees(None, 'STATUS OUTPUT TREE', output_tree, actual)
     raise
 
 
@@ -813,15 +815,15 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
 
   output, errput = main.run_svn (None, 'status', '-v', '-u', wc_dir_name)
 
-  mytree = tree.build_tree_from_status (output)
+  actual = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
   if (singleton_handler_a or singleton_handler_b):
-    tree.compare_trees (mytree, output_tree,
+    tree.compare_trees (actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   else:
-    tree.compare_trees (mytree, output_tree)
+    tree.compare_trees (actual, output_tree)
 
 
 def run_and_verify_diff_summarize(output_tree, error_re_string = None,
@@ -856,15 +858,15 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
         return
     raise main.SVNUnmatchedError
 
-  mytree = tree.build_tree_from_diff_summarize (output)
+  actual = tree.build_tree_from_diff_summarize (output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (mytree, output_tree,
+    tree.compare_trees (actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
-    display_trees(None, 'DIFF OUTPUT TREE', output_tree, mytree)
+    display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
     raise
 
 def run_and_validate_lock(path, username, password):
@@ -882,7 +884,7 @@ def run_and_validate_lock(path, username, password):
 
   # Run info and check that we get the lock fields.
   output, err = run_and_verify_svn(None, None, [],
-                                   'info','-R', 
+                                   'info','-R',
                                    path)
 
   # prepare the regexs to compare against
@@ -1099,4 +1101,102 @@ def check_prop(name, path, exp_out):
     print "Actual standard output: ", out, "\n"
     raise Failure
 
-### End of file.
+def fill_file_with_lines(wc_path, line_nbr, line_descrip=None,
+                         append=True):
+  """Change the file at WC_PATH (adding some lines), and return its
+  new contents.  LINE_NBR indicates the line number at which the new
+  contents should assume that it's being appended.  LINE_DESCRIP is
+  something like 'This is line' (the default) or 'Conflicting line'."""
+
+  if line_descrip is None:
+    line_descrip = "This is line"
+
+  # Generate the new contents for the file.
+  contents = ""
+  for n in range(line_nbr, line_nbr + 3):
+    contents = contents + line_descrip + " " + `n` + " in '" + \
+               os.path.basename(wc_path) + "'.\n"
+
+  # Write the new contents to the file.
+  if append:
+    main.file_append(wc_path, contents)
+  else:
+    main.file_write(wc_path, contents)
+
+  return contents
+
+def inject_conflict_into_wc(sbox, state_path, file_path,
+                            expected_disk, expected_status, merged_rev):
+  """Create a conflict at FILE_PATH by replacing its contents,
+  committing the change, backdating it to its previous revision,
+  changing its contents again, then updating it to merge in the
+  previous change."""
+
+  wc_dir = sbox.wc_dir
+
+  # Make a change to the file.
+  contents = fill_file_with_lines(file_path, 1, "This is line", append=False)
+
+  # Commit the changed file, first taking note of the current revision.
+  prev_rev = expected_status.desc[state_path].wc_rev
+  expected_output = wc.State(wc_dir, {
+    state_path : wc.StateItem(verb='Sending'),
+    })
+  if expected_status:
+    expected_status.tweak(state_path, wc_rev=merged_rev)
+  run_and_verify_commit(wc_dir, expected_output, expected_status,
+                        None, None, None, None, None,
+                        file_path)
+
+  # Backdate the file.
+  output, errput = main.run_svn(None, "up", "-r", str(prev_rev),
+                                "--username", main.wc_author,
+                                "--password", main.wc_passwd,
+                                 file_path)
+  if expected_status:
+    expected_status.tweak(state_path, wc_rev=prev_rev)
+
+  # Make a conflicting change to the file, and backdate the file.
+  conflicting_contents = fill_file_with_lines(file_path, 1, "Conflicting line",
+                                              append=False)
+
+  # Merge the previous change into the file to produce a conflict.
+  if expected_disk:
+    expected_disk.tweak(state_path, contents="")
+  expected_output = wc.State(wc_dir, {
+    state_path : wc.StateItem(status='C '),
+    })
+  inject_conflict_into_expected_state(state_path,
+                                      expected_disk, expected_status,
+                                      conflicting_contents, contents,
+                                      merged_rev)
+  output, errput = main.run_svn(None, "up", "-r", str(merged_rev),
+                                "--username", main.wc_author,
+                                "--password", main.wc_passwd,
+                                sbox.repo_url + "/" + state_path, file_path)
+  if expected_status:
+    expected_status.tweak(state_path, wc_rev=merged_rev)
+
+def inject_conflict_into_expected_state(state_path,
+                                        expected_disk, expected_status,
+                                        wc_text, merged_text, merged_rev):
+  """Update the EXPECTED_DISK and EXPECTED_STATUS trees for the
+  conflict at STATE_PATH (ignored if None).  WC_TEXT, MERGED_TEXT, and
+  MERGED_REV are used to determine the contents of the conflict (the
+  text parameters should be newline-terminated)."""
+  if expected_disk:
+    conflict_marker = make_conflict_marker_text(wc_text, merged_text,
+                                                merged_rev)
+    existing_text = expected_disk.desc[state_path].contents or ""
+    expected_disk.tweak(state_path, contents=existing_text + conflict_marker)
+
+  if expected_status:
+    expected_status.tweak(state_path, status='C ')
+
+def make_conflict_marker_text(wc_text, merged_text, merged_rev):
+  """Return the conflict marker text described by WC_TEXT (the current
+  text in the working copy, MERGED_TEXT (the conflicting text merged
+  in), and MERGED_REV (the revision from whence the conflicting text
+  came)."""
+  return "<<<<<<< .working\n" + wc_text + "=======\n" + \
+         merged_text + ">>>>>>> .merge-right.r" + str(merged_rev) + "\n"

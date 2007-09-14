@@ -2,7 +2,7 @@
  * getdate.c :  entry point for get_dated_revision for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,8 @@
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_time.h"
+
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -99,7 +101,7 @@ start_getdate(svn_ra_serf__xml_parser_t *parser,
   state = parser->state->current_state;
 
   if (state == NONE &&
-      strcmp(name.name, "version-name") == 0)
+      strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
     {
       push_state(parser, date_ctx, VERSION_NAME);
     }
@@ -120,7 +122,7 @@ end_getdate(svn_ra_serf__xml_parser_t *parser,
   info = parser->state->private;
 
   if (state == VERSION_NAME &&
-      strcmp(name.name, "version-name") == 0)
+      strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
     {
       *date_ctx->revision = SVN_STR_TO_REV(info->tmp);
       svn_ra_serf__xml_pop_state(parser);
@@ -176,7 +178,7 @@ create_getdate_body(void *baton,
   serf_bucket_aggregate_append(buckets, tmp);
 
   svn_ra_serf__add_tag_buckets(buckets,
-                               "D:creationdate",
+                               "D:" SVN_DAV__CREATIONDATE,
                                svn_time_to_cstring(date_ctx->time, pool),
                                alloc);
 

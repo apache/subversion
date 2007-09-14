@@ -76,7 +76,7 @@ svn_fs_id_t *svn_fs_fs__id_rev_create(const char *node_id,
                                       apr_pool_t *pool);
 
 /* Return a copy of ID, allocated from POOL. */
-svn_fs_id_t *svn_fs_fs__id_copy(const svn_fs_id_t *id, 
+svn_fs_id_t *svn_fs_fs__id_copy(const svn_fs_id_t *id,
                                 apr_pool_t *pool);
 
 /* Return an ID resulting from parsing the string DATA (with length

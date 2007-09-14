@@ -19,7 +19,7 @@ module Svn
         print_modules("")
       end
     end
-    
+
     Session = SWIG::TYPE_p_svn_ra_session_t
 
     class Session
@@ -244,7 +244,7 @@ module Svn
         Ra.reparent(self, url)
       end
 
-      def merge_info(paths, revision=nil, inherit=nil)
+      def mergeinfo(paths, revision=nil, inherit=nil)
         paths = [paths] unless paths.is_a?(Array)
         revision ||= Svn::Core::INVALID_REVNUM
         info = Ra.get_mergeinfo(self, paths, revision, inherit)
@@ -255,7 +255,6 @@ module Svn
         end
         info
       end
-      alias_method :mergeinfo, :merge_info
 
       private
       def props_filter(props)

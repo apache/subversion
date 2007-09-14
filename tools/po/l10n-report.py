@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Usage: l10n-report.py [OPTION...] 
+"""Usage: l10n-report.py [OPTION...]
 
 Send the l10n translation status report to an email address. If the
 email address is not specified, print in stdout.
@@ -45,7 +45,7 @@ class l10nReport:
         [stdout, stderr] = subprocess.Popen(cmd_and_args, \
                            stdin=subprocess.PIPE, \
                            stdout=subprocess.PIPE, \
-                           stderr=subprocess.PIPE).communicate(input=cmd_in) 
+                           stderr=subprocess.PIPE).communicate(input=cmd_in)
         return stdout, stderr
 
     def match(self, pattern, string):
@@ -165,7 +165,7 @@ def main():
         l10n.safe_command(cmd, msg)
         print "The report is sent to '%s' email id." % to_email_id
     else:
-        print "\nYou have not passed '-m' option, so email is not sent." 
+        print "\nYou have not passed '-m' option, so email is not sent."
 
 if __name__ == "__main__":
     main()
