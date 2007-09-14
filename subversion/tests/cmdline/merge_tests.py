@@ -8178,11 +8178,8 @@ def faulty_reflective_merges(sbox):
   # Merge 2:7 from A_COPY(feature branch) to A(trunk).
   short_A_path = shorten_path_kludge(A_path)
   expected_output = wc.State(short_A_path, {
-    ''       : Item(status=' U'),
     'bfile2' : Item(status='A '),
     'bfile1' : Item(status='A '),
-    'tfile2' : Item(status='A '),
-    'tfile1' : Item(status='A '),
     })
   expected_status = wc.State(short_A_path, {
     ''          : Item(status=' M', wc_rev=5),
@@ -8210,7 +8207,7 @@ def faulty_reflective_merges(sbox):
     'D/H/psi'   : Item(status='  ', wc_rev=5),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:3-5\n/A_COPY:6-7\n'}),
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY:3-5,7\n'}),
     'bfile2'    : Item(bfile2_content),
     'bfile1'    : Item(bfile1_content),
     'tfile2'    : Item(tfile2_content),
