@@ -399,12 +399,6 @@ def depth_immediates_bring_in_file(sbox):
   raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
-def depth_immediates_bring_in_dir(sbox):
-  "bring a dir into a depth-immediates working copy"
-  # Run 'svn up A/B' to bring A/B permanently into the working copy.
-  raise svntest.Failure("<test not yet written>")
-
-#----------------------------------------------------------------------
 def depth_immediates_fill_in_dir(sbox):
   "bring a dir into a depth-immediates working copy"
 
@@ -1129,7 +1123,6 @@ test_list = [ None,
               depth_empty_with_file,
               depth_empty_with_dir,
               XFail(depth_immediates_bring_in_file),
-              XFail(depth_immediates_bring_in_dir),
               depth_immediates_fill_in_dir,
               depth_mixed_bring_in_dir,
               depth_empty_unreceive_delete,
