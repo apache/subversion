@@ -212,7 +212,8 @@ struct history_cb_baton
   void *history_baton;
 };
 
-/* Callback for ancestry walking in svn_repos_history2(). */
+/* Callback for ancestry walking in svn_repos_history2().
+   This implements svn_repos__ancestry_callbacks_t.found_ancestor() */
 static svn_error_t *
 history_ancestor(void *baton,
                  const char *path,
@@ -961,6 +962,7 @@ struct ancestry_walker_baton
   apr_pool_t *mainpool;
 };
 
+/* This implements svn_repos__ancestry_callbacks_t.found_ancestor() */
 static svn_error_t *
 found_ancestor(void *baton,
                const char *path,
