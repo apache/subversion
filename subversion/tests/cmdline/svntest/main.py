@@ -726,6 +726,9 @@ def is_os_windows():
 def is_posix_os():
   return (os.name == 'posix')
 
+def is_os_darwin():
+  return (sys.platform == 'darwin')
+
 def server_has_mergeinfo():
   _check_command_line_parsed()
   return server_minor_version >= 5
