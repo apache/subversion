@@ -2215,6 +2215,35 @@ svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
 }
 
 svn_error_t *
+svn_swig_rb_fetch_func(void *baton,
+                       const char *path,
+                       svn_revnum_t revision,
+                       svn_stream_t *stream,
+                       svn_revnum_t *fetched_rev,
+                       apr_hash_t **props,
+                       apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+  if (!NIL_P(proc)) {
+    /* ### TODO(rb support fetch_fun): implement */
+    err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                           "svn_swig_rb_fetch_func not yet implemented");
+  }
+
+  return err;
+}
+
+
+svn_wc_get_file_t svn_swig_rb_fetch_func_getter()
+{
+  return &svn_swig_rb_fetch_func;
+}
+
+svn_error_t *
 svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                             const char *date,
                             const char *author,
