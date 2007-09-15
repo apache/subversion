@@ -542,13 +542,13 @@ public class SVNClient implements SVNClientInterface
     public void add(String path, boolean recurse, boolean force)
             throws ClientException
     {
-        add(path, recurse, force, false, false);
+        add(path, Depth.fromRecurse(recurse), force, false, false);
     }
 
     /**
      * Adds a file to the repository.
      * @param path      path to be added.
-     * @param recurse   recurse into subdirectories
+     * @param depth     the depth to recurse into subdirectories
      * @param force     if adding a directory and recurse true and path is a
      *                  directory, all not already managed files are added.
      * @param noIgnores if false, don't add files or directories matching
@@ -557,7 +557,7 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.5
      */
-    public native void add(String path, boolean recurse, boolean force,
+    public native void add(String path, int depth, boolean force,
                            boolean noIgnores, boolean addParents)
         throws ClientException;
 
