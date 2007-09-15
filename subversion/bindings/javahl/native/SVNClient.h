@@ -95,7 +95,7 @@ class SVNClient :public SVNBase
              Revision &revision2, const char *localPath, bool force,
              svn_depth_t depth, bool ignoreAncestry, bool dryRun);
   void doImport(const char *path, const char *url, const char *message,
-                bool recurse);
+                svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  svn_depth_t depth, bool ignoreExternals,
                  bool allowUnverObstructions);

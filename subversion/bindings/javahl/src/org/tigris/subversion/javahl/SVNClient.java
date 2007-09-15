@@ -879,8 +879,31 @@ public class SVNClient implements SVNClientInterface
      * @param recurse   traverse into subdirectories
      * @throws ClientException
      */
+    public void doImport(String path, String url, String message,
+                         boolean recurse)
+            throws ClientException
+    {
+        doImport(path, url, message, Depth.fromRecurse(recurse),
+                 false, false);
+    }
+
+    /**
+     * Import a file or directory into a repository directory  at
+     * head.
+     * @param path      the local path
+     * @param url       the target url
+     * @param message   the log message.
+     * @param depth     depth to traverse into subdirectories
+     * @param noIgnore  whether to add files matched by ignore patterns
+     * @param ignoreUnknownNodeTypes whether to ignore files which
+     *                  the node type is not konwn, just as pipes
+     * @throws ClientException
+     *
+     * @since 1.5
+     */
     public native void doImport(String path, String url, String message,
-                                boolean recurse)
+                                int depth, boolean noIgnore,
+                                boolean ignoreUnknownNodeTypes)
             throws ClientException;
 
     /**

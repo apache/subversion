@@ -738,6 +738,24 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
+     * Import a file or directory into a repository directory  at
+     * head.
+     * @param path      the local path
+     * @param url       the target url
+     * @param message   the log message.
+     * @param depth     depth to traverse into subdirectories
+     * @param noIgnore  whether to add files matched by ignore patterns
+     * @param ignoreUnknownNodeTypes whether to ignore files which
+     *                  the node type is not konwn, just as pipes
+     * @throws ClientException
+     *
+     * @since 1.5
+     */
+    void doImport(String path, String url, String message, int depth,
+                  boolean noIgnore, boolean ignoreUnknownNodeTypes)
+            throws ClientException;
+
+    /**
      * Return an ordered list of suggested merge source URLs.
      * @param path The merge target path for which to suggest sources.
      * @param pegRevision Peg revision used to interpret path.
