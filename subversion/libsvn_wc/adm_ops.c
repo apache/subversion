@@ -1530,13 +1530,13 @@ svn_wc_add2(const char *path,
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
-      /* ### TODO(sd): Both the calls to svn_wc_ensure_adm3() below pass
-         ### svn_depth_infinity.  I think this is reasonable, because
-         ### we don't have any other source of depth information in
-         ### the current context, and if svn_wc_ensure_adm3() *does*
-         ### create a new admin directory, it ought to default to
-         ### svn_depth_infinity.  However, if 'svn add' ever takes
-         ### a depth parameter, then this would need to change. */
+      /* Note that both calls to svn_wc_ensure_adm3() below pass
+         svn_depth_infinity.  Even if 'svn add' were invoked with some
+         other depth, we'd want to create the adm area with
+         svn_depth_infinity, because when the user passes add a depth,
+         that's just a way of telling Subversion what items to add,
+         not a way of telling Subversion what depth the resultant
+         newly-versioned directory should have. */
 
       if (! copyfrom_url)
         {

@@ -461,8 +461,10 @@ def nested_dir_replacements(sbox):
 
   # Delete and re-add A/D (a replacement), and A/D/H (another replace).
   svntest.main.run_svn(None, 'rm', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D', 'H'))
+  svntest.main.run_svn(None, 'add', '--depth=empty',
+                       os.path.join(wc_dir, 'A', 'D'))
+  svntest.main.run_svn(None, 'add', '--depth=empty',
+                       os.path.join(wc_dir, 'A', 'D', 'H'))
 
   # For kicks, add new file A/D/bloo.
   svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi")
@@ -1064,7 +1066,7 @@ def commit_uri_unsafe(sbox):
               nasty_path, # not xml-safe
               ]
   for item in add_list:
-    svntest.main.run_svn(None, 'add', '--non-recursive', item)
+    svntest.main.run_svn(None, 'add', '--depth=empty', item)
 
   expected_output = svntest.wc.State(wc_dir, {
     '#hash#' : Item(verb='Adding'),
@@ -1450,6 +1452,10 @@ def commit_nonrecursive(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  ### Note: the original recipes used 'add -N'.  These days, we use
+  ### --depth={empty,files}, and both the code and the comments below
+  ### have been adjusted to reflect this.
+
   #####################################################
   ### Issue #1195:
   ###
@@ -1462,7 +1468,7 @@ def commit_nonrecursive(sbox):
   ###    dir1/dir2
   ###    dir1/dir2/file4
   ###
-  ### 2. run 'svn add -N <all of the above>'
+  ### 2. run 'svn add --depth=empty <all of the above>'
   ###
   ### 3. run 'svn ci -N <all of the above>'
   ###
@@ -1487,7 +1493,7 @@ def commit_nonrecursive(sbox):
 
   # Add them to version control.
   svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                     'add', '-N',
+                                     'add', '--depth=empty',
                                      os.path.join(wc_dir, file1_path),
                                      os.path.join(wc_dir, dir1_path),
                                      os.path.join(wc_dir, file2_path),
@@ -1546,9 +1552,12 @@ def commit_nonrecursive(sbox):
   ###       dirA/dirB/fileC
   ###       dirA/dirB/nocommit
   ###
-  ###    2. run 'svn add -N <all of the above>'
+  ###    2. run 'svn add --depth=empty <all of the above>'
   ###
   ###    3. run 'svn ci -N <all but nocommit>'
+  ###
+  ###    (In this recipe, 'add -N' has been changed to 'add --depth...',
+  ###     but 'ci -N' has been left as-is, for reasons explained below.)
   ###
   ### Issue #1239 claimed a two-part bug: that step 3 would try to
   ### commit the file `nocommit' when it shouldn't, and that it would
@@ -1608,7 +1617,7 @@ def commit_nonrecursive(sbox):
 
   # Add them to version control.
   svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                     'add', '-N',
+                                     'add', '--depth=empty',
                                      os.path.join(wc_dir, dirA_path),
                                      os.path.join(wc_dir, fileA_path),
                                      os.path.join(wc_dir, fileB_path),
