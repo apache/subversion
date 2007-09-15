@@ -1486,13 +1486,6 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
- * ### kff todo: This import is similar to cvs import, in that it does
- * not change the source tree into a working copy.  However, this
- * behavior confuses most people, and I think eventually svn _should_
- * turn the tree into a working copy, or at least should offer the
- * option. However, doing so is a bit involved, and we don't need it
- * right now.
- *
  * @since New in 1.5.
  */
 svn_error_t *svn_client_import3(svn_commit_info_t **commit_info_p,
