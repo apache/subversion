@@ -280,7 +280,7 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
           svn_error_clear(svn_io_remove_dir2
             (svn_wc__adm_path(access_path, FALSE, pool, SVN_WC__ADM_WCPROPS,
-                              NULL), FALSE, pool));
+                              NULL), FALSE, NULL, NULL, pool));
           svn_error_clear(svn_io_remove_file
             (svn_wc__adm_path(access_path, FALSE, pool,
                               SVN_WC__ADM_DIR_WCPROPS, NULL), pool));
