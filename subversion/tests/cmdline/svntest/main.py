@@ -718,16 +718,16 @@ def is_ra_type_file():
 def is_fs_type_fsfs():
   _check_command_line_parsed()
   # This assumes that fsfs is the default fs implementation.
-  return (fs_type == 'fsfs' or fs_type is None)
+  return fs_type == 'fsfs' or fs_type is None
 
 def is_os_windows():
-  return (os.name == 'nt')
+  return os.name == 'nt'
 
 def is_posix_os():
-  return (os.name == 'posix')
+  return os.name == 'posix'
 
 def is_os_darwin():
-  return (sys.platform == 'darwin')
+  return sys.platform == 'darwin'
 
 def server_has_mergeinfo():
   _check_command_line_parsed()
