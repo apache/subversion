@@ -553,7 +553,8 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 }
 
 void SVNClient::doImport(const char *path, const char *url,
-                         const char *message, bool recurse)
+                         const char *message, svn_depth_t depth,
+                         bool noIgnore, bool ignoreUnknownNodeTypes)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -563,14 +564,15 @@ void SVNClient::doImport(const char *path, const char *url,
     Path intUrl(url);
     SVN_JNI_ERR(intUrl.error_occured(), );
 
-    svn_client_commit_info_t *commit_info = NULL;
+    svn_commit_info_t *commit_info = NULL;
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_import(&commit_info, intPath.c_str(),
-                                  intUrl.c_str(), !recurse, ctx,
-                                  requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_import3(&commit_info, intPath.c_str(),
+                                   intUrl.c_str(), depth, noIgnore,
+                                   ignoreUnknownNodeTypes, ctx,
+                                   requestPool.pool()), );
 }
 
 jobjectArray

@@ -1057,6 +1057,31 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Import a file or directory into a repository directory  at
+     * head.
+     * @param path      the local path
+     * @param url       the target url
+     * @param message   the log message.
+     * @param depth     depth to traverse into subdirectories
+     * @param noIgnore  whether to add files matched by ignore patterns
+     * @param ignoreUnknownNodeTypes whether to ignore files which
+     *                  the node type is not konwn, just as pipes
+     * @throws ClientException
+     *
+     * @since 1.5
+     */
+    public void doImport(String path, String url, String message, int depth,
+                         boolean noIgnore, boolean ignoreUnknownNodeTypes)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.doImport(path, url, message, depth, noIgnore,
+                            ignoreUnknownNodeTypes);
+        }
+    }
+
+    /**
      * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
      */
     public String[] suggestMergeSources(String path, Revision pegRevision)

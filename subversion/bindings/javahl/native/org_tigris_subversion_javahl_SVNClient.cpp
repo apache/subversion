@@ -704,7 +704,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doSwitch
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_doImport
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jstring jmessage,
- jboolean jrecurse)
+ jint jdepth, jboolean jnoIgnore, jboolean jignoreUnknownNodeTypes)
 {
   JNIEntry(SVNClient, doImport);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -725,7 +725,9 @@ Java_org_tigris_subversion_javahl_SVNClient_doImport
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->doImport(path, url, message, jrecurse ? true : false);
+  cl->doImport(path, url, message, (svn_depth_t)jdepth,
+               jnoIgnore ? true : false,
+               jignoreUnknownNodeTypes ? true : false);
 }
 
 JNIEXPORT jobjectArray JNICALL
