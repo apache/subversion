@@ -1015,10 +1015,8 @@ erase_unversioned_from_wc(const char *path,
     {
       /* Then maybe it was a directory? */
       svn_error_clear(err);
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
 
-      err = svn_io_remove_dir2(path, FALSE, pool);
+      err = svn_io_remove_dir2(path, FALSE, cancel_func, cancel_baton, pool);
 
       if (err)
         {
@@ -1032,12 +1030,8 @@ erase_unversioned_from_wc(const char *path,
           if (kind == svn_node_file)
             SVN_ERR(svn_io_remove_file(path, pool));
           else if (kind == svn_node_dir)
-            {
-              if (cancel_func)
-                SVN_ERR(cancel_func(cancel_baton));
-
-              SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
-            }
+            SVN_ERR(svn_io_remove_dir2(path, FALSE,
+                                       cancel_func, cancel_baton, pool));
           else if (kind == svn_node_none)
             return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                      _("'%s' does not exist"),
