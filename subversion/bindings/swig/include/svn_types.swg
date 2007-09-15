@@ -814,6 +814,19 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 };
 #endif
 
+#ifdef SWIGRUBY
+%typemap(in) (svn_wc_get_file_t fetch_func, void *fetch_baton)
+{
+  $1 = svn_swig_rb_fetch_func_getter();
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+%typemap(argout) (svn_wc_get_file_t fetch_func, void *fetch_baton)
+{
+  svn_swig_rb_set_baton($result, (VALUE)$2);
+};
+#endif
+
 /* -----------------------------------------------------------------------
    Callback: svn_info_receiver_t
 */

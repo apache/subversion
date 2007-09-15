@@ -225,6 +225,9 @@ svn_error_t * svn_swig_rb_conflict_resolver_func(
                             apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_wc_get_file_t svn_swig_rb_fetch_func_getter();
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                                          const char *date,
                                          const char *author,
