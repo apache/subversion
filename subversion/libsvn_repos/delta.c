@@ -157,10 +157,11 @@ static svn_error_t *delta_dirs(struct context *c,
                                apr_pool_t *pool);
 
 
-#define MAYBE_DEMOTE_DEPTH(depth)                      \
-  ((depth) == svn_depth_immediates ? svn_depth_files : \
-   (depth) == svn_depth_files ? svn_depth_empty :      \
-   (depth))
+
+#define MAYBE_DEMOTE_DEPTH(depth)                                  \
+  (((depth) == svn_depth_immediates || (depth) == svn_depth_files) \
+   ? svn_depth_empty                                               \
+   : (depth))
 
 
 /* Return the error 'SVN_ERR_AUTHZ_ROOT_UNREADABLE' if PATH in ROOT is
