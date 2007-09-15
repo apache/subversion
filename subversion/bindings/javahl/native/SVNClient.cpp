@@ -329,8 +329,10 @@ void SVNClient::add(const char *path, bool recurse, bool force, bool no_ignore,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_add4(intPath.c_str(), recurse, force, no_ignore,
-                                add_parents, ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_add4(intPath.c_str(),
+                                SVN_DEPTH_FROM_RECURSE(recurse), force,
+                                no_ignore, add_parents, ctx,
+                                requestPool.pool()), );
 }
 
 jlongArray SVNClient::update(Targets &targets, Revision &revision,
