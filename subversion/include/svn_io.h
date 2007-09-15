@@ -775,10 +775,15 @@ svn_error_t *svn_io_remove_file(const char *path, apr_pool_t *pool);
  * If @a ignore_enoent is @c TRUE, don't fail if the target directory
  * doesn't exist.  Use @a pool for temporary allocations.
  *
+ * Because recursive delete of a directory tree can be a lengthy operation,
+ * provide @a cancel_func and @a cancel_baton for interuptability.
+ *
  * @since New in 1.5.
  */
 svn_error_t *svn_io_remove_dir2(const char *path,
                                 svn_boolean_t ignore_enoent,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
                                 apr_pool_t *pool);
 
 /** Similar to svn_io_remove_dir2(), but with @a ignore_enoent set to

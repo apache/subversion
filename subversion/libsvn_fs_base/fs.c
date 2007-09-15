@@ -1163,7 +1163,7 @@ base_delete_fs(const char *path,
   SVN_ERR(svn_fs_bdb__remove(path, pool));
 
   /* Remove the environment directory. */
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
