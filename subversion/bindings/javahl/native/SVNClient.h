@@ -117,7 +117,7 @@ class SVNClient :public SVNBase
                const char *changelistName);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                     bool ignoreExternals, bool allowUnverObstructions);
-  void add(const char *path, bool recurse, bool force, bool no_ignore,
+  void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
            bool add_parents);
   void revert(const char *path, bool recurse);
   void remove(Targets &targets, const char *message, bool force,

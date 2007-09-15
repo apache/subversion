@@ -414,7 +414,7 @@ public interface SVNClientInterface
     /**
      * Adds a file to the repository.
      * @param path      path to be added.
-     * @param recurse   recurse into subdirectories
+     * @param depth     the depth to recurse into subdirectories
      * @param force     if adding a directory and recurse true and path is a
      *                  directory, all not already managed files are added.
      * @param noIgnores if false, don't add files or directories matching
@@ -423,7 +423,7 @@ public interface SVNClientInterface
      * @throws ClientException
      * @since 1.5
      */
-    void add(String path, boolean recurse, boolean force, boolean noIgnores,
+    void add(String path, int depth, boolean force, boolean noIgnores,
              boolean addParents)
         throws ClientException;
 

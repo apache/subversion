@@ -316,7 +316,8 @@ void SVNClient::revert(const char *path, bool recurse)
     SVN_JNI_ERR(svn_client_revert(targets, recurse, ctx, requestPool.pool()), );
 }
 
-void SVNClient::add(const char *path, bool recurse, bool force, bool no_ignore,
+void SVNClient::add(const char *path,
+                    svn_depth_t depth, bool force, bool no_ignore,
                     bool add_parents)
 {
     Pool requestPool;
@@ -329,8 +330,7 @@ void SVNClient::add(const char *path, bool recurse, bool force, bool no_ignore,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_add4(intPath.c_str(),
-                                SVN_DEPTH_FROM_RECURSE(recurse), force,
+    SVN_JNI_ERR(svn_client_add4(intPath.c_str(), depth, force,
                                 no_ignore, add_parents, ctx,
                                 requestPool.pool()), );
 }
