@@ -1209,10 +1209,12 @@ svn_client_switch(svn_revnum_t *result_rev,
 /**
  * Schedule a working copy @a path for addition to the repository.
  *
- * ### TODO(sd): For consistency, this should take svn_depth_t depth
- * ### instead of svn_boolean_t recursive.  However, it is not
- * ### important for the sparse-directories work, so leaving it
- * ### for now.
+ * If @a depth is @c svn_depth_empty, add just @a path and nothing
+ * below it.  If @c svn_depth_files, add @a path and any file
+ * children of @a path.  If @c svn_depth_immediates, add @a path, any
+ * file children, and any immediate subdirectories (but nothing
+ * underneath those subdirectories).  If @c svn_depth_infinity, add
+ * @a path and everything under it fully recursively.
  *
  * @a path's parent must be under revision control already (unless
  * @a add_parents is true), but @a path is not.  If @a recursive is
@@ -1246,7 +1248,7 @@ svn_client_switch(svn_revnum_t *result_rev,
  */
 svn_error_t *
 svn_client_add4(const char *path,
-                svn_boolean_t recursive,
+                svn_depth_t depth,
                 svn_boolean_t force,
                 svn_boolean_t no_ignore,
                 svn_boolean_t add_parents,
@@ -1255,7 +1257,8 @@ svn_client_add4(const char *path,
 
 /**
  * Similar to svn_client_add4(), but with @a add_parents always set to
- * false.
+ * false and @a depth set according to @a recursive: if true, then
+ * @a depth is @c svn_depth_infinity, if false, then @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
@@ -1470,13 +1473,12 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * combo that this function can use to query for a commit log message
  * when one is needed.
  *
- * ### TODO(sd): For consistency, this should probably take svn_depth_t
- * ### depth instead of svn_boolean_t nonrecursive.  But it's not
- * ### needed for the sparse-directories work right now, so leaving it
- * ### alone.
- *
- * Use @a nonrecursive to indicate that imported directories should not
- * recurse into any subdirectories they may have.
+ * If @a depth is @c svn_depth_empty, import just @a path and nothing
+ * below it.  If @c svn_depth_files, import @a path and any file
+ * children of @a path.  If @c svn_depth_immediates, import @a path, any
+ * file children, and any immediate subdirectories (but nothing
+ * underneath those subdirectories).  If @c svn_depth_infinity, import
+ * @a path and everything under it fully recursively.
  *
  * If @a no_ignore is @c FALSE, don't add files or directories that match
  * ignore patterns.
@@ -1496,7 +1498,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
 svn_error_t *svn_client_import3(svn_commit_info_t **commit_info_p,
                                 const char *path,
                                 const char *url,
-                                svn_boolean_t nonrecursive,
+                                svn_depth_t depth,
                                 svn_boolean_t no_ignore,
                                 svn_boolean_t ignore_unknown_node_types,
                                 svn_client_ctx_t *ctx,
@@ -1504,7 +1506,8 @@ svn_error_t *svn_client_import3(svn_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_import3(), but with @a ignore_unknown_node_types
- * always set to @c FALSE.
+ * always set to @c FALSE, and @a depth set according to @a nonrecursive:
+ * if true, then @a depth is @c svn_depth_files, else @c svn_depth_infinity.
  *
  * @since New in 1.3.
  *
