@@ -1110,6 +1110,17 @@ def depth_immediates_receive_new_dir(sbox):
   svntest.actions.run_and_verify_svn(None, "Depth: empty", [], "info",
                                      other_I_path)
 
+def add_tree_with_depth_files(sbox):
+  "add multi-subdir tree with --depth=files"  # For issue #2931
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  new1_path = os.path.join(wc_dir, 'new1')
+  new2_path = os.path.join(new1_path, 'new2')
+  os.mkdir(new1_path)
+  os.mkdir(new2_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "add", "--depth", "files", new1_path)
+
 #----------------------------------------------------------------------
 
 # list all tests here, starting with None:
@@ -1135,6 +1146,7 @@ test_list = [ None,
               diff_in_depthy_wc,
               commit_depth_immediates,
               depth_immediates_receive_new_dir,
+              add_tree_with_depth_files,
             ]
 
 if __name__ == "__main__":

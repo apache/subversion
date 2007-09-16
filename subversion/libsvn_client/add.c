@@ -390,7 +390,9 @@ add_dir_recursive(const char *dirname,
           SVN_ERR(add_dir_recursive(fullpath, dir_access, depth_below_here,
                                     force, no_ignore, ctx, subpool));
         }
-      else if (this_entry.filetype != APR_UNKFILE && depth >= svn_depth_files)
+      else if (this_entry.filetype != APR_UNKFILE
+               && this_entry.filetype != APR_DIR
+               && depth >= svn_depth_files)
         {
           err = add_file(fullpath, ctx, dir_access, subpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
