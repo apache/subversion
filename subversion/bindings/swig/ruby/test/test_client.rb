@@ -21,16 +21,14 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_add_not_recurse
     log = "sample log"
-    file = "hello.txt"
-    src = "Hello"
     dir = "dir"
     dir_path = File.join(@wc_path, dir)
-    path = File.join(dir_path, file)
-    uri = "#{@repos_uri}/#{dir}/#{file}"
+    path = File.join(dir_path, dir)
+    uri = "#{@repos_uri}/#{dir}/#{dir}"
 
     ctx = make_context(log)
     FileUtils.mkdir(dir_path)
-    File.open(path, "w") {|f| f.print(src)}
+    FileUtils.mkdir(path)
     ctx.add(dir_path, false)
     ctx.commit(@wc_path)
 
@@ -92,10 +90,11 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = make_context(log)
     FileUtils.mkdir(dir_path)
-    File.open(path, "w") {|f| f.print(src)}
     ctx.add(dir_path, false)
     ctx.propset(Svn::Core::PROP_IGNORE, file, dir_path)
     ctx.commit(@wc_path)
+
+    File.open(path, "w") {|f| f.print(src)}
 
     ctx.add(dir_path, true, true, false)
     ctx.commit(@wc_path)
