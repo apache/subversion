@@ -6796,16 +6796,17 @@ def avoid_reflected_revs(sbox):
                                         wc_status, None, None, None,
                                         None, None, wc_dir)
 
-  # Merge r2:5
   short_A_COPY = shorten_path_kludge(A_COPY_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge r5 from /A to /A_COPY, creating r6
   expected_output = wc.State(short_A_COPY, {
     'tfile2'   : Item(status='A '),
-    'tfile1'   : Item(status='A '),
     })
   expected_status = wc.State(short_A_COPY, {
     ''         : Item(status=' M', wc_rev=2),
     'tfile2'   : Item(status='A ', wc_rev='-', copied='+'),
-    'tfile1'   : Item(status='A ', wc_rev='-', copied='+'),
     'bfile1'   : Item(status='  ', wc_rev=4),
     'mu'       : Item(status='  ', wc_rev=2),
     'C'        : Item(status='  ', wc_rev=2),
@@ -6827,8 +6828,7 @@ def avoid_reflected_revs(sbox):
     'D/H/psi'  : Item(status='  ', wc_rev=2),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:1,3-5'}),
-    'tfile1'   : Item(tfile1_content),
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:1,5'}),
     'tfile2'   : Item(tfile2_content),
     'bfile1'   : Item(bfile1_content),
     'mu'       : Item("This is the file 'mu'.\n"),
@@ -6851,10 +6851,8 @@ def avoid_reflected_revs(sbox):
     'D/H/psi'  : Item("This is the file 'psi'.\n"),
     })
   expected_skip = wc.State(short_A_COPY, {})
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
 
-  svntest.actions.run_and_verify_merge(short_A_COPY, '2', '5',
+  svntest.actions.run_and_verify_merge(short_A_COPY, '4', '5',
                                        sbox.repo_url + '/A',
                                        expected_output,
                                        expected_disk,
@@ -6868,6 +6866,40 @@ def avoid_reflected_revs(sbox):
   expected_output = wc.State(wc_dir, {
     'A_COPY'        : Item(verb='Sending'),
     'A_COPY/tfile2' : Item(verb='Adding'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+  os.chdir(svntest.main.work_dir)
+
+  # Merge r3 from /A to /A_COPY, creating r7
+  expected_output = wc.State(short_A_COPY, {
+    'tfile1'   : Item(status='A '),
+    })
+  expected_status.tweak(wc_rev=5)
+  expected_status.tweak('', wc_rev=6)
+  expected_status.tweak('tfile2', status='  ', copied=None, wc_rev=6)
+  expected_status.add({
+   'tfile1'    : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  expected_disk.tweak('', props={SVN_PROP_MERGE_INFO : '/A:1,3,5'})
+  expected_disk.add({
+    'tfile1'   : Item(tfile1_content),
+    })
+
+  svntest.actions.run_and_verify_merge(short_A_COPY, '2', '3',
+                                       sbox.repo_url + '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1)
+
+  os.chdir(saved_cwd)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(wc_dir, {
+    'A_COPY'        : Item(verb='Sending'),
     'A_COPY/tfile1' : Item(verb='Adding'),    
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -6878,50 +6910,50 @@ def avoid_reflected_revs(sbox):
   svntest.main.file_write(bfile2_path, bfile2_content)
   svntest.actions.run_and_verify_svn(None, None, [], 'add', bfile2_path)
   expected_output = wc.State(wc_dir, {'A_COPY/bfile2' : Item(verb='Adding')})
-  wc_status.tweak(wc_rev=5)
+  wc_status.tweak(wc_rev=6)
   wc_status.add({
-    'A_COPY/bfile2' : Item(status='  ', wc_rev=7),
-    'A_COPY'        : Item(status='  ', wc_rev=6),
+    'A_COPY/bfile2' : Item(status='  ', wc_rev=8),
+    'A_COPY'        : Item(status='  ', wc_rev=7),
     'A_COPY/tfile2' : Item(status='  ', wc_rev=6),
-    'A_COPY/tfile1' : Item(status='  ', wc_rev=6),    
+    'A_COPY/tfile1' : Item(status='  ', wc_rev=7),    
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, None, None,
                                         None, None, wc_dir)
 
-  # Merge 2:7 from A_COPY(feature branch) to A(trunk).
+  # Merge 2:8 from A_COPY(feature branch) to A(trunk).
   short_A_path = shorten_path_kludge(A_path)
   expected_output = wc.State(short_A_path, {
     'bfile2' : Item(status='A '),
     'bfile1' : Item(status='A '),
     })
   expected_status = wc.State(short_A_path, {
-    ''          : Item(status=' M', wc_rev=5),
+    ''          : Item(status=' M', wc_rev=6),
     'bfile2'    : Item(status='A ', wc_rev='-', copied='+'),
     'bfile1'    : Item(status='A ', wc_rev='-', copied='+'),
-    'tfile2'    : Item(status='  ', wc_rev=5),
-    'tfile1'    : Item(status='  ', wc_rev=5),
-    'mu'        : Item(status='  ', wc_rev=5),
-    'C'         : Item(status='  ', wc_rev=5),
-    'D'         : Item(status='  ', wc_rev=5),
-    'B'         : Item(status='  ', wc_rev=5),
-    'B/lambda'  : Item(status='  ', wc_rev=5),
-    'B/E'       : Item(status='  ', wc_rev=5),
-    'B/E/alpha' : Item(status='  ', wc_rev=5),
-    'B/E/beta'  : Item(status='  ', wc_rev=5),
-    'B/F'       : Item(status='  ', wc_rev=5),
-    'D/gamma'   : Item(status='  ', wc_rev=5),
-    'D/G'       : Item(status='  ', wc_rev=5),
-    'D/G/pi'    : Item(status='  ', wc_rev=5),
-    'D/G/rho'   : Item(status='  ', wc_rev=5),
-    'D/G/tau'   : Item(status='  ', wc_rev=5),
-    'D/H'       : Item(status='  ', wc_rev=5),
-    'D/H/chi'   : Item(status='  ', wc_rev=5),
-    'D/H/omega' : Item(status='  ', wc_rev=5),
-    'D/H/psi'   : Item(status='  ', wc_rev=5),
+    'tfile2'    : Item(status='  ', wc_rev=6),
+    'tfile1'    : Item(status='  ', wc_rev=6),
+    'mu'        : Item(status='  ', wc_rev=6),
+    'C'         : Item(status='  ', wc_rev=6),
+    'D'         : Item(status='  ', wc_rev=6),
+    'B'         : Item(status='  ', wc_rev=6),
+    'B/lambda'  : Item(status='  ', wc_rev=6),
+    'B/E'       : Item(status='  ', wc_rev=6),
+    'B/E/alpha' : Item(status='  ', wc_rev=6),
+    'B/E/beta'  : Item(status='  ', wc_rev=6),
+    'B/F'       : Item(status='  ', wc_rev=6),
+    'D/gamma'   : Item(status='  ', wc_rev=6),
+    'D/G'       : Item(status='  ', wc_rev=6),
+    'D/G/pi'    : Item(status='  ', wc_rev=6),
+    'D/G/rho'   : Item(status='  ', wc_rev=6),
+    'D/G/tau'   : Item(status='  ', wc_rev=6),
+    'D/H'       : Item(status='  ', wc_rev=6),
+    'D/H/chi'   : Item(status='  ', wc_rev=6),
+    'D/H/omega' : Item(status='  ', wc_rev=6),
+    'D/H/psi'   : Item(status='  ', wc_rev=6),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY:3-5,7\n'}),
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY:3-5,8'}),
     'bfile2'    : Item(bfile2_content),
     'bfile1'    : Item(bfile1_content),
     'tfile2'    : Item(tfile2_content),
@@ -6949,7 +6981,8 @@ def avoid_reflected_revs(sbox):
   expected_skip = wc.State(short_A_path, {})
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_A_path, '2', '7',
+
+  svntest.actions.run_and_verify_merge(short_A_path, '2', '8',
                                        sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_disk,
