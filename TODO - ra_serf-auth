@@ -1,0 +1,47 @@
+What should be finished before merging the ra_serf-auth branch back to trunk:
+
+1. A new version of serf needs to be released, including this patches (or other
+   solutions for the respective issues):
+- Add new request at the beginning of the queue: avoids sending requests 
+  out-of-order:
+  http://groups.google.com/group/serf-dev/t/9361be2713c70e98
+- Add the 'cansend' callback to avoid a storm of failed requests
+  http://groups.google.com/group/serf-dev/t/77964e0c8de69f6
+- Handle situation where response_handlers cancels a request (not specific to 
+  ra_serf-auth):
+  http://groups.google.com/group/serf-dev/t/231fd26aef519248
+
+2. Check the list of remaining test failures to see if they're related to 
+   running the tests with a different username or not:
+FAIL:  prop_tests.py 12: set, get, and delete a revprop change
+FAIL:  merge_tests.py 57: skipped paths get overriding mergeinfo
+FAIL:  trans_tests.py 1: commit new files with keywords active from birth
+FAIL:  blame_tests.py 4: blame output in XML format
+FAIL:  lock_tests.py 7: examine the fields of a lockfile for correctness
+FAIL:  lock_tests.py 21: examine the fields of a lock from a URL
+FAIL:  lock_tests.py 33: verify recursive info shows lock info
+FAIL:  lock_tests.py 34: unlock file locked by other user
+FAIL:  authz_tests.py 1: authz issue #2486 - open root
+FAIL:  authz_tests.py 4: test authz for read operations
+FAIL:  authz_tests.py 10: test authz for aliases
+FAIL:  authz_tests.py 12: test authz for locking
+
+3. Test NTLM auth with different configurations on Win2K3 server.
+   (see also http://subversion.tigris.org/issues/show_bug.cgi?id=2807)
+
+4. Check if ra_serf NTLM works the same as neon NTLM
+   - fallback to basic
+   - guest account
+   - https
+
+5. Add documentation where needed
+
+Other features I hoped to have finished:
+6. Proxy support
+   Can be added after the merge to trunk, probably won't have time to finish 
+   this before 1.5 anyway.
+
+7. Kerberos support 
+  (Kerberos can be implemented using SSPI too)
+   Can be added after the merge to trunk, probably won't have time to finish 
+   this before 1.5 anyway.
