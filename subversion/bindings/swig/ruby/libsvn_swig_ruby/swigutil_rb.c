@@ -1110,20 +1110,20 @@ c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)                  \
 #define DEFINE_DUP(type) \
   DEFINE_DUP_WITH_FUNCTION_NAME(type, type ## _dup)
 
-#define DEFINE_DUP_NO_CONVENIENCE(type, dup_func) \
+#define DEFINE_DUP_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE(type, dup_func, const)
-#define DEFINE_DUP_NO_CONVENIENCE2(type) \
-  DEFINE_DUP_NO_CONVENIENCE(type, type ## _dup)
+#define DEFINE_DUP_NO_CONVENIENCE(type) \
+  DEFINE_DUP_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, type ## _dup)
 
-#define DEFINE_DUP_NO_CONST(type, dup_func) \
+#define DEFINE_DUP_NO_CONST_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func,)
-#define DEFINE_DUP_NO_CONST2(type) \
-  DEFINE_DUP_NO_CONST(type, type ## _dup)
+#define DEFINE_DUP_NO_CONST(type) \
+  DEFINE_DUP_NO_CONST_WITH_FUNCTION_NAME(type, type ## _dup)
 
-#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type, dup_func) \
+#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE(type, dup_func,)
-#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE2(type) \
-  DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type, type ## _dup)
+#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type) \
+  DEFINE_DUP_NO_CONST_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, type ## _dup)
 
 
 DEFINE_DUP_WITH_FUNCTION_NAME(wc_notify, wc_dup_notify)
@@ -1135,12 +1135,12 @@ DEFINE_DUP(auth_ssl_server_cert_info)
 DEFINE_DUP(wc_entry)
 DEFINE_DUP(client_diff_summarize)
 DEFINE_DUP(dirent)
-DEFINE_DUP_NO_CONVENIENCE2(client_commit_item3)
-DEFINE_DUP_NO_CONVENIENCE2(client_proplist_item)
-DEFINE_DUP_NO_CONVENIENCE2(wc_external_item2)
-DEFINE_DUP_NO_CONVENIENCE2(log_changed_path)
-DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
-DEFINE_DUP_NO_CONST_NO_CONVENIENCE2(merge_range)
+DEFINE_DUP_NO_CONVENIENCE(client_commit_item3)
+DEFINE_DUP_NO_CONVENIENCE(client_proplist_item)
+DEFINE_DUP_NO_CONVENIENCE(wc_external_item2)
+DEFINE_DUP_NO_CONVENIENCE(log_changed_path)
+DEFINE_DUP_NO_CONST_WITH_FUNCTION_NAME(wc_status2, wc_dup_status2)
+DEFINE_DUP_NO_CONST_NO_CONVENIENCE(merge_range)
 
 
 /* Ruby -> C */
