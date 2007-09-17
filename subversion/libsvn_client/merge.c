@@ -2411,13 +2411,6 @@ do_merge(const char *initial_URL1,
                        ((depth == svn_depth_infinity) || 
                         (depth == svn_depth_immediates)));
 
-  if (merge_type == merge_type_no_op)
-    return SVN_NO_ERROR;
-
-  if (merge_b->record_only && merge_b->dry_run)
-    return SVN_NO_ERROR;
-
-
   if (notify_b.same_urls && merge_b->same_repos)
     {
       /* Reparent ra_session to WC target url. */
@@ -2854,12 +2847,6 @@ do_single_file_merge(const char *initial_URL1,
   range.inheritable = TRUE;
   if (notify_b.same_urls && merge_b->same_repos)
     {
-      if (merge_type == merge_type_no_op)
-        return SVN_NO_ERROR;
-
-      if (merge_b->record_only && merge_b->dry_run)
-        return SVN_NO_ERROR;
-
       /* Reparent ra_session1 to WC target url. */
       SVN_ERR(svn_ra_reparent(ra_session1, entry->url, pool));
 
@@ -4001,6 +3988,9 @@ svn_client_merge3(const char *source1,
     SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type, same_urls,
                                                ra_session1, revision1,
                                                ra_session2, revision2, pool));
+
+    if ((merge_type == merge_type_no_op) || (record_only && dry_run))
+      return SVN_NO_ERROR;
   }
 
   /* If our target_wcpath is a single file, assume that the merge
@@ -4239,6 +4229,9 @@ svn_client_merge_peg3(const char *source,
     SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type, TRUE,
                                                ra_session, rev1, ra_session,
                                                rev2, pool));
+
+    if ((merge_type == merge_type_no_op) || (record_only && dry_run))
+      return SVN_NO_ERROR;
   }
 
   /* If our target_wcpath is a single file, assume that the merge
