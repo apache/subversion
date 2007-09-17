@@ -844,8 +844,9 @@ typedef struct svn_wc_notify_t {
   /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
    * cases, it is @c NULL. */
   const char *changelist_name;
-  /** When @c action is @c svn_wc_notify_merge_begin.  In all other
-      cases, it is @c NULL.  */
+  /** When @c action is @c svn_wc_notify_merge_begin, and both the
+      left and right sides of the merge are from the same URL.  In all
+      other cases, it is @c NULL.  */
   svn_merge_range_t *merge_range;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
