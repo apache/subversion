@@ -412,7 +412,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_merge_begin:
       /* ### FIXME: Provide a meaningful notification for two-URL merging. */
-      if (n->merge_range->start == n->merge_range->end -1
+      if (n->merge_range->start == n->merge_range->end - 1
           || n->merge_range->start == n->merge_range->end)
         err = svn_cmdline_printf(pool, _("--- Merging r%ld:\n"),
                                  n->merge_range->end);
