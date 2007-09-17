@@ -4,6 +4,14 @@
 #include <ruby.h>
 #include <regex.h>
 
+#if SIZEOF_VOIDP == SIZEOF_LONG
+#  define PTR2NUM(x) (ULONG2NUM((unsigned long)(x)))
+#  define NUM2PTR(x) ((void *)(NUM2ULONG(x)))
+#else
+#  define PTR2NUM(x) (ULL2NUM((unsigned long long)(x)))
+#  define NUM2PTR(x) ((void *)(NUM2ULL(x)))
+#endif
+
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
