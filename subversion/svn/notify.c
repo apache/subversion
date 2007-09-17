@@ -414,20 +414,24 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       /* ### FIXME: Provide a meaningful notification for two-URL merging. */
       if (n->merge_range->start == n->merge_range->end - 1
           || n->merge_range->start == n->merge_range->end)
-        err = svn_cmdline_printf(pool, _("--- Merging r%ld:\n"),
-                                 n->merge_range->end);
+        err = svn_cmdline_printf(pool, _("--- Merging r%ld into '%s':\n"),
+                                 n->merge_range->end, path_local);
       else if (n->merge_range->start - 1 == n->merge_range->end)
-        err = svn_cmdline_printf(pool, _("--- Reverse-merging r%ld:\n"),
-                                 n->merge_range->start);
+        err = svn_cmdline_printf(pool,
+                                 _("--- Reverse-merging r%ld into '%s':\n"),
+                                 n->merge_range->start, path_local);
       else if (n->merge_range->start < n->merge_range->end)
-        err = svn_cmdline_printf(pool, _("--- Merging r%ld through r%ld:\n"),
+        err = svn_cmdline_printf(pool,
+                                 _("--- Merging r%ld through r%ld into "
+                                   "'%s':\n"),
                                  n->merge_range->start + 1,
-                                 n->merge_range->end);
+                                 n->merge_range->end, path_local);
       else /* n->merge_range->start > n->merge_range->end - 1 */
         err = svn_cmdline_printf(pool,
-                                 _("--- Reverse-merging r%ld through r%ld:\n"),
+                                 _("--- Reverse-merging r%ld through r%ld "
+                                   "into '%s':\n"),
                                  n->merge_range->start,
-                                 n->merge_range->end + 1);
+                                 n->merge_range->end + 1, path_local);
       if (err)
         goto print_error;
       break;
