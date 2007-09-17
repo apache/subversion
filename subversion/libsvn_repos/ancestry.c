@@ -232,7 +232,8 @@ svn_repos__walk_ancestry(const char *end_path,
           apr_hash_t *mergeinfo;
           svn_boolean_t merging_rev = FALSE;
 
-          SVN_ERR(get_merged_rev_mergeinfo(&mergeinfo, fs, path, rev, iterpool));
+          SVN_ERR(get_merged_rev_mergeinfo(&mergeinfo, fs, path, rev,
+                                           iterpool));
           if (apr_hash_count(mergeinfo) > 0)
             merging_rev = TRUE;
 
