@@ -1097,12 +1097,14 @@ c2r_ ## type ## _dup(void *type, void *ctx)                                  \
   return rb_copied_item;                                                     \
 }
 
-#define DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, type_prefix)        \
-DEFINE_DUP_BASE(type, dup_func, type_prefix)                                 \
-static VALUE                                                                 \
-c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)                  \
-{                                                                            \
-  return c2r_ ## type ## _dup((void *)type, NULL);                           \
+#define DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, type_prefix)   \
+DEFINE_DUP_BASE(type, dup_func, type_prefix)                            \
+static VALUE                                                            \
+c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)             \
+{                                                                       \
+  void *void_type;                                                      \
+  void_type = (void *)type;                                             \
+  return c2r_ ## type ## _dup(void_type, NULL);                         \
 }
 
 #define DEFINE_DUP_WITH_FUNCTION_NAME(type, dup_func) \
