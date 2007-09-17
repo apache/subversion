@@ -51,11 +51,27 @@ class SVNIncorrectDatatype(SVNUnexpectedOutput):
   pass
 
 class UnorderedOutput:
-  """Simple class to mark unorder output"""
+  """Marks unordered output, and performs comparisions."""
 
   def __init__(self, output):
     self.output = output
 
+  def compare_and_display(self, message, label, actual):
+    """Compare SELF.output lines with ACTUAL lines.  Print them if
+    they differ (disregarding the order of the lines). MESSAGE is
+    ignored if None."""
+    try:
+      main.compare_unordered_output(self.output, actual)
+    except Failure:
+      display_lines(message, label, self.output, actual,
+                    expected_is_unordered=True)
+      raise main.SVNLineUnequal
+
+class UnorderedRegexOutput(UnorderedOutput):
+  def compare_and_display(self, message, label, actual):
+    """Similar to UnorderedOutput.compare_and_display(), but uses a
+    regex-based comparison."""
+    match_or_fail(message, label, self.output, actual)
 
 def no_sleep_for_timestamps():
   os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'no'
@@ -189,9 +205,9 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
      - If it is a single string, invoke match_or_fail() on MESSAGE,
        the expected output, and the actual output.
 
-     - If it is an instance of UnorderedOutput, invoke
-       compare_unordered_and_display_lines() on MESSAGE, the expected
-       output, and the actual output.
+     - If it is an instance of UnorderedOutput, invoke its
+       compare_and_display() method on MESSAGE, the expected output,
+       and the actual output.
 
   If EXPECTED_STDOUT is None, do not check stdout.
   EXPECTED_STDERR may not be None.
@@ -211,20 +227,20 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   for (expected, actual, output_type, raisable) in (
       (expected_stderr, err, 'stderr', SVNExpectedStderr),
       (expected_stdout, out, 'stdout', SVNExpectedStdout)):
+    label = output_type.upper()
     if type(expected) is type([]):
-      compare_and_display_lines(message, output_type.upper(), expected, actual)
+      compare_and_display_lines(message, label, expected, actual)
     elif type(expected) is type(''):
-      match_or_fail(message, output_type.upper(), expected, actual)
+      match_or_fail(message, label, expected, actual)
     elif isinstance(expected, UnorderedOutput):
-      compare_unordered_and_display_lines(message, output_type.upper(),
-                                          expected.output, actual)
+      expected.compare_and_display(message, label, actual)
     elif expected == SVNAnyOutput:
       if len(actual) == 0:
         if message is not None:
           print message
         raise raisable
     elif expected is not None:
-      raise SVNIncorrectDatatype("Unexpected type for %s data" % output_type)
+      raise SVNIncorrectDatatype("Unexpected type for '%s' data" % output_type)
 
   return out, err
 
@@ -949,15 +965,6 @@ def compare_and_display_lines(message, label, expected, actual):
 
   if exp != act:
     display_lines(message, label, expected, actual)
-    raise main.SVNLineUnequal
-
-def compare_unordered_and_display_lines(message, label, expected, actual):
-  """Compare two sets of output lines, and print them if they differ,
-  but disregard the order of the lines. MESSAGE is ignored if None."""
-  try:
-    main.compare_unordered_output(expected, actual)
-  except Failure:
-    display_lines(message, label, expected, actual, expected_is_unordered=True)
     raise main.SVNLineUnequal
 
 def match_or_fail(message, label, expected, actual):
