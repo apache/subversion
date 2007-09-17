@@ -2338,6 +2338,7 @@ drive_merge_report_editor(const char *target_wcpath,
 /* URL1, URL2, and TARGET_WCPATH all better be directories.  For the
    single file case, the caller does the merging manually.
 
+   MERGE_TYPE denotes whether it is a forward or reverse or no-op merge.
    TARGET_MISSING_CHILD indicates whether TARGET_WCPATH is missing any
    immediate children.  If TRUE this signifies that the mergeinfo resulting
    from the merge must be non-inheritable.
@@ -2357,9 +2358,10 @@ drive_merge_report_editor(const char *target_wcpath,
 */
 static svn_error_t *
 do_merge(const char *initial_URL1,
-         const svn_opt_revision_t *initial_revision1,
+         svn_revnum_t revision1,
          const char *initial_URL2,
-         const svn_opt_revision_t *initial_revision2,
+         svn_revnum_t revision2,
+         enum merge_type merge_type,
          svn_boolean_t target_missing_child,
          const char *target_wcpath,
          svn_wc_adm_access_t *adm_access,
@@ -2375,7 +2377,6 @@ do_merge(const char *initial_URL1,
   apr_hash_t *target_mergeinfo;
   apr_array_header_t *remaining_ranges;
   svn_merge_range_t range;
-  enum merge_type merge_type;
   svn_boolean_t is_rollback;
   svn_ra_session_t *ra_session;
   svn_client_ctx_t *ctx = merge_b->ctx;
@@ -2389,8 +2390,6 @@ do_merge(const char *initial_URL1,
   apr_size_t target_count, merge_target_count;
   apr_pool_t *subpool;
 
-  ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
-                              initial_revision2->kind);
 
   notify_b.same_urls = (strcmp(initial_URL1, initial_URL2) == 0);
   if (!notify_b.same_urls && merge_b->record_only)
@@ -2406,16 +2405,12 @@ do_merge(const char *initial_URL1,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
-  SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type,
-                                             notify_b.same_urls,
-                                             ra_session,
-                                             initial_revision1,
-                                             ra_session,
-                                             initial_revision2,
-                                             pool));
+  range.start = revision1;
+  range.end = revision2;
   range.inheritable = (!target_missing_child && 
                        ((depth == svn_depth_infinity) || 
                         (depth == svn_depth_immediates)));
+
   if (merge_type == merge_type_no_op)
     return SVN_NO_ERROR;
 
@@ -2758,9 +2753,10 @@ single_file_merge_notify(void *notify_baton, const char *target_wcpath,
 /* The single-file, simplified version of do_merge. */
 static svn_error_t *
 do_single_file_merge(const char *initial_URL1,
-                     const svn_opt_revision_t *initial_revision1,
+                     svn_revnum_t revision1,
                      const char *initial_URL2,
-                     const svn_opt_revision_t *initial_revision2,
+                     svn_revnum_t revision2,
+                     enum merge_type merge_type,
                      const char *target_wcpath,
                      svn_wc_adm_access_t *adm_access,
                      struct merge_cmd_baton *merge_b,
@@ -2781,7 +2777,6 @@ do_single_file_merge(const char *initial_URL1,
   const char *rel_path;
   svn_merge_range_t range;
   svn_ra_session_t *ra_session1, *ra_session2;
-  enum merge_type merge_type;
   svn_boolean_t is_rollback;
   apr_hash_t *target_mergeinfo;
   const svn_wc_entry_t *entry;
@@ -2790,9 +2785,6 @@ do_single_file_merge(const char *initial_URL1,
   svn_boolean_t is_root_of_noop_merge = FALSE;
   apr_size_t target_count, merge_target_count;
   apr_pool_t *subpool;
-
-  ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
-                              initial_revision2->kind);
 
   /* Ensure that the adm_access we're playing with is our TARGET_WCPATH's
      parent, as required by some of underlying helper functions. */
@@ -2810,8 +2802,13 @@ do_single_file_merge(const char *initial_URL1,
   if (! ignore_ancestry)
     {
       const char *location_url;
-      svn_opt_revision_t unspecified_revision, *location_rev;
+      svn_opt_revision_t *location_rev;
+      svn_opt_revision_t unspecified_revision, rev1_opt, rev2_opt;
       unspecified_revision.kind = svn_opt_revision_unspecified;
+      rev1_opt.value.number = revision1;
+      rev1_opt.kind = svn_opt_revision_number;
+      rev2_opt.value.number = revision2;
+      rev2_opt.kind = svn_opt_revision_number;
 
       /* Try to locate the left side of the merge location by tracing the
          history of right side.  We do this only do verify that one of
@@ -2820,8 +2817,8 @@ do_single_file_merge(const char *initial_URL1,
                                         NULL, NULL,
                                         NULL,
                                         initial_URL2,
-                                        initial_revision2,
-                                        initial_revision1,
+                                        &rev2_opt,
+                                        &rev1_opt,
                                         &unspecified_revision,
                                         ctx, pool);
 
@@ -2852,11 +2849,9 @@ do_single_file_merge(const char *initial_URL1,
                                                NULL, NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
-  SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type,
-                                             notify_b.same_urls,
-                                             ra_session1, initial_revision1,
-                                             ra_session2, initial_revision2,
-                                             pool));
+  range.start = revision1;
+  range.end = revision2;
+  range.inheritable = TRUE;
   if (notify_b.same_urls && merge_b->same_repos)
     {
       if (merge_type == merge_type_no_op)
@@ -3699,9 +3694,9 @@ get_diff_summary_func_cb(const svn_client_diff_summarize_t *summary,
    first order. For each such child, call do_merge() or do_single_file_merge()
    with the appropriate arguments (based on the type of child).  Use
    PARENT_ENTRY and ADM_ACCESS to fill CHILDREN_WITH_MERGEINFO.
-   Cascade PARENT_MERGE_SOURCE_URL, REVISION1, REVISION2, DEPTH,
-   IGNORE_ANCESTRY, ADM_ACCESS, and MERGE_CMD_BATON to do_merge() and
-   do_single_file_merge().  All allocation occurs in POOL.
+   Cascade PARENT_MERGE_SOURCE_URL, REV1, REV2, DEPTH,
+   IGNORE_ANCESTRY, ADM_ACCESS, MERGE_TYPE and MERGE_CMD_BATON to do_merge() 
+   and do_single_file_merge().  All allocation occurs in POOL.
 
    From PARENT_MERGE_SOURCE_URL and WC_ROOT_URL deduce the
    MERGE_SRC_CANON_PATH.
@@ -3719,8 +3714,9 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
                             const svn_wc_entry_t *parent_entry,
                             const char *parent_merge_source_url,
                             const char *wc_root_url,
-                            const svn_opt_revision_t *revision1,
-                            const svn_opt_revision_t *revision2,
+                            svn_revnum_t rev1,
+                            svn_revnum_t rev2,
+                            enum merge_type merge_type,
                             svn_depth_t depth,
                             svn_boolean_t ignore_ancestry,
                             svn_wc_adm_access_t *adm_access,
@@ -3731,7 +3727,7 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
   int merge_target_len = strlen(merge_cmd_baton->target);
   int i;
   struct get_diff_summary_baton sb;
-  svn_opt_revision_t peg_revision;
+  svn_opt_revision_t peg_revision, rev_opt1, rev_opt2;
   const char* merge_src_canon_path = apr_pstrdup(pool,
                                                  parent_merge_source_url +
                                                  strlen(wc_root_url));
@@ -3739,6 +3735,10 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
   sb.deleted_paths = apr_hash_make(pool);
   sb.pool = pool;
   peg_revision.kind = svn_opt_revision_head;
+  rev_opt1.value.number = rev1;
+  rev_opt1.kind = svn_opt_revision_number;
+  rev_opt2.value.number = rev2;
+  rev_opt2.kind = svn_opt_revision_number;
 
   *children_with_mergeinfo = apr_array_make(pool, 0, sizeof(merge_path_t *));
   SVN_ERR(get_mergeinfo_paths(*children_with_mergeinfo,
@@ -3749,8 +3749,8 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
 
   SVN_ERR(svn_client_diff_summarize_peg2(parent_merge_source_url,
                                          &peg_revision,
-                                         revision1,
-                                         revision2,
+                                         &rev_opt1,
+                                         &rev_opt2,
                                          depth,
                                          ignore_ancestry,
                                          get_diff_summary_func_cb,
@@ -3799,13 +3799,10 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
                                 child_repos_path, pool);
       if (child_entry->kind == svn_node_file)
         {
-          SVN_ERR(do_single_file_merge(child_url, revision1,
-                                       child_url, revision2,
-                                       child->path,
-                                       adm_access,
+          SVN_ERR(do_single_file_merge(child_url, rev1, child_url, rev2,
+                                       merge_type, child->path, adm_access,
                                        merge_cmd_baton,
-                                       FALSE, /* ignore_ancestry */
-                                       pool));
+                                       FALSE, /* ignore_ancestry */ pool));
         }
       else if (child_entry->kind == svn_node_dir)
         {
@@ -3818,9 +3815,10 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
             subtree_depth = svn_depth_empty;
 
           SVN_ERR(do_merge(child_url,
-                           revision1,
+                           rev1,
                            child_url,
-                           revision2,
+                           rev2,
+                           merge_type,
                            child->missing_child,
                            child->path,
                            adm_access,
@@ -3915,6 +3913,9 @@ svn_client_merge3(const char *source1,
   apr_array_header_t *children_with_mergeinfo = NULL;
   svn_config_t *cfg;
   const char *wc_repos_root;
+  svn_merge_range_t range;
+  enum merge_type merge_type;
+  svn_boolean_t same_urls;
 
   /* If source1 or source2 are paths, we need to get the underlying
      URL from the wc and save the initial path we were passed so we
@@ -3986,12 +3987,29 @@ svn_client_merge3(const char *source1,
                  SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
+  same_urls = (strcmp(URL1, URL2) == 0);
+  /* Transform opt revisions to actual revision numbers. */
+  {
+    svn_ra_session_t *ra_session1, *ra_session2;
+    SVN_ERR(svn_client__open_ra_session_internal(&ra_session1, URL1, NULL,
+                                                 NULL, NULL, FALSE, FALSE,
+                                                 ctx, pool));
+    SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, URL2, NULL,
+                                                 NULL, NULL, FALSE, FALSE,
+                                                 ctx, pool));
+    ENSURE_VALID_REVISION_KINDS(revision1->kind, revision2->kind);
+    SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type, same_urls,
+                                               ra_session1, revision1,
+                                               ra_session2, revision2, pool));
+  }
+
   /* If our target_wcpath is a single file, assume that the merge
      sources are files as well, and do a single-file merge. */
   if (entry->kind == svn_node_file)
     {
-      SVN_ERR(do_single_file_merge(URL1, revision1,
-                                   URL2, revision2,
+      SVN_ERR(do_single_file_merge(URL1, range.start,
+                                   URL2, range.end,
+                                   merge_type,
                                    target_wcpath,
                                    adm_access,
                                    &merge_cmd_baton,
@@ -4002,15 +4020,16 @@ svn_client_merge3(const char *source1,
      recursive diff-editor thing. */
   else if (entry->kind == svn_node_dir)
     {
-      if (strcmp(URL1, URL2) == 0)
+      if (same_urls)
         {
           /* Merge children with differing mergeinfo. */
           SVN_ERR(discover_and_merge_children(&children_with_mergeinfo,
                                               entry,
                                               URL1,
                                               wc_repos_root,
-                                              revision1,
-                                              revision2,
+                                              range.start,
+                                              range.end,
+                                              merge_type,
                                               depth,
                                               ignore_ancestry,
                                               adm_access,
@@ -4020,9 +4039,10 @@ svn_client_merge3(const char *source1,
 
       /* Merge of the actual target.*/
       SVN_ERR(do_merge(URL1,
-                       revision1,
+                       range.start,
                        URL2,
-                       revision2,
+                       range.end,
+                       merge_type,
                        merge_cmd_baton.target_missing_child,
                        target_wcpath,
                        adm_access,
@@ -4119,6 +4139,8 @@ svn_client_merge_peg3(const char *source,
   svn_opt_revision_t *rev1, *rev2;
   svn_config_t *cfg;
   const char *wc_repos_root;
+  svn_merge_range_t range;
+  enum merge_type merge_type;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
                                  ! dry_run, -1, ctx->cancel_func,
@@ -4207,12 +4229,25 @@ svn_client_merge_peg3(const char *source,
                                       &initial_rev2,
                                       ctx, pool));
 
+  /* Transform opt revisions to actual revision numbers. */
+  {
+    svn_ra_session_t *ra_session;
+    SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL1, NULL,
+                                                 NULL, NULL, FALSE, FALSE,
+                                                 ctx, pool));
+    ENSURE_VALID_REVISION_KINDS(rev1->kind, rev2->kind);
+    SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type, TRUE,
+                                               ra_session, rev1, ra_session,
+                                               rev2, pool));
+  }
+
   /* If our target_wcpath is a single file, assume that the merge
      sources are files as well, and do a single-file merge. */
   if (entry->kind == svn_node_file)
     {
-      SVN_ERR(do_single_file_merge(URL1, rev1,
-                                   URL1, rev2,
+      SVN_ERR(do_single_file_merge(URL1, range.start,
+                                   URL1, range.end,
+                                   merge_type,
                                    target_wcpath,
                                    adm_access,
                                    &merge_cmd_baton,
@@ -4229,8 +4264,9 @@ svn_client_merge_peg3(const char *source,
                                           entry,
                                           URL1,
                                           wc_repos_root,
-                                          rev1,
-                                          rev2,
+                                          range.start,
+                                          range.end,
+                                          merge_type,
                                           depth,
                                           ignore_ancestry,
                                           adm_access,
@@ -4239,9 +4275,10 @@ svn_client_merge_peg3(const char *source,
 
       /* Merge of the actual target.*/
       SVN_ERR(do_merge(URL1,
-                       rev1,
+                       range.start,
                        URL2,
-                       rev2,
+                       range.end,
+                       merge_type,
                        merge_cmd_baton.target_missing_child,
                        target_wcpath,
                        adm_access,
