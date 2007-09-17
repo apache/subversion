@@ -684,12 +684,12 @@ def merge_notify_line(revstart, revend=None):
   merge operation on revisions REVSTART through REVEND."""
   if revend is None:
     if revstart < 0:
-      return "--- Undoing r%ld:\n" % abs(revstart)
+      return "--- Reverse-merging r%ld:\n" % abs(revstart)
     else:
       return "--- Merging r%ld:\n" % revstart
   else:
     if revstart > revend:
-      return "--- Undoing r%ld through r%ld:\n" % (revstart, revend)
+      return "--- Reverse-merging r%ld through r%ld:\n" % (revstart, revend)
     else:
       return "--- Merging r%ld through r%ld:\n" % (revstart, revend)
 
