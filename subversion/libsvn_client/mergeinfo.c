@@ -812,12 +812,24 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
 
 /*** Public APIs ***/
 
+/**
+ * Set @a mergeinfo to a hash mapping <tt>const char *</tt> source
+ * URLs (relative to the repository root) to an <tt>apr_array_header_t *</tt> 
+ * list of <tt>svn_merge_range_t *</tt> revision ranges
+ * representing merge sources and corresponding revision ranges which
+ * have been merged into @a path_or_url as of @a peg_revision, or @c
+ * NULL if there is no mergeinfo.
+ *
+ * Use @a pool for all necessary allocations.
+ *
+ * @since New in 1.5.
+ */
 svn_error_t *
-svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
-                         const char *path_or_url,
-                         const svn_opt_revision_t *revision,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *pool)
+svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
+                                const char *path_or_url,
+                                const svn_opt_revision_t *peg_revision,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool)
 {
   if (svn_path_is_url(path_or_url))
     {
@@ -828,17 +840,16 @@ svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, path_or_url,
                                                    NULL, NULL, NULL, FALSE,
                                                    TRUE, ctx, pool));
-      SVN_ERR(svn_client__get_revision_number(&rev, ra_session, revision, "",
-                                              pool));
+      SVN_ERR(svn_client__get_revision_number(&rev, ra_session, peg_revision, 
+                                              "", pool));
       SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, path_or_url,
                                                 NULL, ra_session, NULL, pool));
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, mergeinfo,
                                               repos_rel_path, rev,
                                               svn_mergeinfo_inherited, pool));
     }
-  else
+  else /* ! svn_path_is_url() */
     {
-      /* PATH_OR_URL is a WC path. */
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
       svn_boolean_t indirect;
@@ -856,5 +867,29 @@ svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
       SVN_ERR(svn_wc_adm_close(adm_access));
     }
 
+  return SVN_NO_ERROR;
+}
+
+
+/**
+ * Set @a merge_ranges to a list of <tt>svn_merge_range_t *</tt> items
+ * representing ranges of revisions which have not yet been merged
+ * from @a merge_source into @a path_or_url as of @a peg_revision, or
+ * @c NULL if all candidate revisions of @a merge_source have already
+ * been merged.
+ *
+ * Use @a pool for all necessary allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_mergeinfo_get_available(apr_array_header_t *merge_ranges,
+                                   const char *path_or_url,
+                                   const svn_opt_revision_t *peg_revision,
+                                   const char *merge_source,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool)
+{
+  abort();
   return SVN_NO_ERROR;
 }
