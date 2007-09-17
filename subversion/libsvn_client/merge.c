@@ -1817,7 +1817,8 @@ do_merge(const char *url1,
 
       notify = svn_wc_create_notify(target_wcpath, svn_wc_notify_merge_begin,
                                     subpool);
-      notify->merge_range = r;
+      if (notify_b.same_urls)
+        notify->merge_range = r;
       notification_receiver(&notify_b, notify, subpool);
 
       /* We must avoid subsequent merges to files which are already in
@@ -2235,7 +2236,8 @@ do_single_file_merge(const char *url1,
       n = svn_wc_create_notify(target_wcpath,
                                svn_wc_notify_merge_begin,
                                subpool);
-      n->merge_range = r;
+      if (notify_b.same_urls)
+        n->merge_range = r;
       notification_receiver(&notify_b, n, subpool);
 
       /* While we currently don't allow it, in theory we could be

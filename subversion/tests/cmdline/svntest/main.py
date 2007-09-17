@@ -679,11 +679,16 @@ def use_editor(func):
   os.environ['SVNTEST_EDITOR_FUNC'] = func
 
 
-def merge_notify_line(revstart, revend=None):
+def merge_notify_line(revstart=None, revend=None):
   """Return an expected output line that describes the beginning of a
-  merge operation on revisions REVSTART through REVEND."""
+  merge operation on revisions REVSTART through REVEND.  Omit both
+  REVSTART and REVEND for the case where the left and right sides of
+  the merge are from different URLs."""
   if revend is None:
-    if revstart < 0:
+    if revstart is None:
+      # The left and right sides of the merge are from different URLs.
+      return "--- Merging differences between repository URLs into '.+':\n"
+    elif revstart < 0:
       return "--- Reverse-merging r%ld into '.+':\n" % abs(revstart)
     else:
       return "--- Merging r%ld into '.+':\n" % revstart
