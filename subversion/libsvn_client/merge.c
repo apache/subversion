@@ -2224,7 +2224,7 @@ remove_absent_children(const char *target_wcpath,
 
 /* Populate *REMAINING_RANGES with after removing reflective merge ranges
  * and already merged ranges from *RANGE.
- * Cascade TARGET_MERGEINFO, IS_ROLLBACK, REL_PATH, INITIAL_URL1, RA_SESSION,
+ * Cascade TARGET_MERGEINFO, IS_ROLLBACK, REL_PATH, URL, RA_SESSION,
  * ENTRY, CTX, POOL.
  */
 static svn_error_t *
@@ -2233,7 +2233,7 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                            apr_hash_t *target_mergeinfo,
                            svn_boolean_t is_rollback,
                            const char *rel_path,
-                           const char *initial_URL1,
+                           const char *url,
                            svn_ra_session_t *ra_session,
                            const svn_wc_entry_t *entry,
                            svn_client_ctx_t *ctx,
@@ -2241,9 +2241,8 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
 {
   apr_array_header_t *requested_rangelist;
   /* Determine which of the requested ranges to consider merging... */
-  SVN_ERR(calculate_requested_ranges(&requested_rangelist, range,
-                                     initial_URL1, entry, ra_session,
-                                     ctx, pool));
+  SVN_ERR(calculate_requested_ranges(&requested_rangelist, range, url, entry,
+                                     ra_session, ctx, pool));
 
   /* ...and of those ranges, determine which ones actually still
      need merging. */
@@ -2258,8 +2257,8 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
 static svn_error_t *
 drive_merge_report_editor(const char *target_wcpath,
                           svn_ra_session_t *ra_session,
-                          const char *initial_URL1,
-                          const char *initial_URL2,
+                          const char *url1,
+                          const char *url2,
                           apr_array_header_t *children_with_mergeinfo,
                           svn_revnum_t start,
                           svn_revnum_t end,
@@ -2282,7 +2281,7 @@ drive_merge_report_editor(const char *target_wcpath,
      the diff, is still being processed the first session cannot be
      reused. This applies to ra_neon, ra_local does not appears to have
      this limitation. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, initial_URL1,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, url1,
                                                NULL, NULL, NULL, FALSE, TRUE,
                                                merge_b->ctx, pool));
   SVN_ERR(svn_client__get_diff_editor(target_wcpath, adm_access, callbacks,
@@ -2296,7 +2295,7 @@ drive_merge_report_editor(const char *target_wcpath,
 
   SVN_ERR(svn_ra_do_diff3(ra_session, &reporter, &report_baton, end, "",
                           depth, ignore_ancestry, TRUE,  /* text_deltas */
-                          initial_URL2, diff_editor, diff_edit_baton, pool));
+                          url2, diff_editor, diff_edit_baton, pool));
 
   SVN_ERR(reporter->set_path(report_baton, "", start, depth,
                              FALSE, NULL, pool));
@@ -2357,9 +2356,9 @@ drive_merge_report_editor(const char *target_wcpath,
    TARGET_WCPATH, otherwise it should be set to a negative value.
 */
 static svn_error_t *
-do_merge(const char *initial_URL1,
+do_merge(const char *url1,
          svn_revnum_t revision1,
-         const char *initial_URL2,
+         const char *url2,
          svn_revnum_t revision2,
          enum merge_type merge_type,
          svn_boolean_t target_missing_child,
@@ -2391,7 +2390,7 @@ do_merge(const char *initial_URL1,
   apr_pool_t *subpool;
 
 
-  notify_b.same_urls = (strcmp(initial_URL1, initial_URL2) == 0);
+  notify_b.same_urls = (strcmp(url1, url2) == 0);
   if (!notify_b.same_urls && merge_b->record_only)
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("Use of two URLs is not compatible with "
@@ -2401,7 +2400,7 @@ do_merge(const char *initial_URL1,
                                   pool));
 
   /* Establish first RA session to initial_URL1. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_URL1, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url1, NULL,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
@@ -2413,18 +2412,18 @@ do_merge(const char *initial_URL1,
 
   if (notify_b.same_urls && merge_b->same_repos)
     {
-      /* Reparent ra_session to WC target url. */
+      /* Temporarily reparent RA_SESSION to WC target URL. */
       SVN_ERR(svn_ra_reparent(ra_session, entry->url, pool));
       SVN_ERR(get_wc_or_repos_mergeinfo(&target_mergeinfo, entry,
                                         &indirect, FALSE,
                                         svn_mergeinfo_inherited, ra_session,
                                         target_wcpath, adm_access,
                                         ctx, pool));
-      /* Reparent ra_session back to initial_URL1. */
-      SVN_ERR(svn_ra_reparent(ra_session, initial_URL1, pool));
+      /* Reparent RA_SESSION back to URL1. */
+      SVN_ERR(svn_ra_reparent(ra_session, url1, pool));
 
       is_rollback = (merge_type == merge_type_rollback);
-      SVN_ERR(svn_client__path_relative_to_root(&rel_path, initial_URL1, NULL,
+      SVN_ERR(svn_client__path_relative_to_root(&rel_path, url1, NULL,
                                                 ra_session, adm_access, pool));
 
       /* When only recording mergeinfo, we don't perform an actual
@@ -2458,7 +2457,8 @@ do_merge(const char *initial_URL1,
 
       SVN_ERR(calculate_remaining_ranges(&remaining_ranges, &range,
                                          target_mergeinfo, is_rollback,
-                                         rel_path, initial_URL1, ra_session,
+                                         rel_path, url1,
+                                         ra_session,
                                          entry, ctx, pool));
     }
   else
@@ -2507,7 +2507,7 @@ do_merge(const char *initial_URL1,
          ### applies the diff. */
 
       SVN_ERR(drive_merge_report_editor(target_wcpath, ra_session,
-                                        initial_URL1, initial_URL2,
+                                        url1, url2,
                                         children_with_mergeinfo,
                                         r->start, r->end, depth, 
                                         ignore_ancestry, &notify_b, adm_access,
@@ -2745,9 +2745,9 @@ single_file_merge_notify(void *notify_baton, const char *target_wcpath,
 
 /* The single-file, simplified version of do_merge. */
 static svn_error_t *
-do_single_file_merge(const char *initial_URL1,
+do_single_file_merge(const char *url1,
                      svn_revnum_t revision1,
-                     const char *initial_URL2,
+                     const char *url2,
                      svn_revnum_t revision2,
                      enum merge_type merge_type,
                      const char *target_wcpath,
@@ -2809,7 +2809,7 @@ do_single_file_merge(const char *initial_URL1,
       err = svn_client__repos_locations(&location_url, &location_rev,
                                         NULL, NULL,
                                         NULL,
-                                        initial_URL2,
+                                        url2,
                                         &rev2_opt,
                                         &rev1_opt,
                                         &unspecified_revision,
@@ -2828,17 +2828,17 @@ do_single_file_merge(const char *initial_URL1,
       SVN_ERR(err);
     }
 
-  notify_b.same_urls = (strcmp(initial_URL1, initial_URL2) == 0);
+  notify_b.same_urls = (strcmp(url1, url2) == 0);
   if (!notify_b.same_urls && merge_b->record_only)
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("Use of two URLs is not compatible with "
                               "mergeinfo modification"));
 
   /* Establish RA sessions to our URLs. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session1, initial_URL1,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session1, url1,
                                                NULL, NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, initial_URL2,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, url2,
                                                NULL, NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
@@ -2847,7 +2847,7 @@ do_single_file_merge(const char *initial_URL1,
   range.inheritable = TRUE;
   if (notify_b.same_urls && merge_b->same_repos)
     {
-      /* Reparent ra_session1 to WC target url. */
+      /* Temporarily reparent RA_SESSION1 to WC target URL. */
       SVN_ERR(svn_ra_reparent(ra_session1, entry->url, pool));
 
       SVN_ERR(get_wc_or_repos_mergeinfo(&target_mergeinfo, entry,
@@ -2856,11 +2856,11 @@ do_single_file_merge(const char *initial_URL1,
                                         target_wcpath, adm_access,
                                         ctx, pool));
 
-      /* Reparent ra_session1 back to initial_URL1. */
-      SVN_ERR(svn_ra_reparent(ra_session1, initial_URL1, pool));
+      /* Reparent RA_SESSION1 back to URL1. */
+      SVN_ERR(svn_ra_reparent(ra_session1, url1, pool));
 
       is_rollback = (merge_type == merge_type_rollback);
-      SVN_ERR(svn_client__path_relative_to_root(&rel_path, initial_URL1, NULL,
+      SVN_ERR(svn_client__path_relative_to_root(&rel_path, url1, NULL,
                                                 ra_session1, adm_access,
                                                 pool));
       /* When only recording mergeinfo, we don't perform an actual
@@ -2888,7 +2888,8 @@ do_single_file_merge(const char *initial_URL1,
 
       SVN_ERR(calculate_remaining_ranges(&remaining_ranges, &range,
                                          target_mergeinfo, is_rollback,
-                                         rel_path, initial_URL1, ra_session1,
+                                         rel_path, url1,
+                                         ra_session1,
                                          entry, ctx, pool));
     }
   else
