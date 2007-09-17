@@ -251,8 +251,8 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
                     svn_path_uri_encode(copyfrom_path + 1, pool),
                     pool);
 
-  SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, peg_revision, 
-                                   ctx, pool));
+  SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, path_or_url, 
+                                          peg_revision, ctx, pool));
   if (mergeinfo)
     {
       for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))

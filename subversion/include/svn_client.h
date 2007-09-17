@@ -2528,26 +2528,49 @@ svn_client_merge_peg(const char *source,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
+
+/** Mergeinfo **/
+
 /**
- * Retrieve the mergeinfo for @a path_or_url in @a *mergeinfo,
- * storing a mapping of repository-relative paths to @c
- * apr_array_header_t *'s of @c svn_merge_range_t *'s, or @c NULL if
- * there is no mergeinfo.
+ * Set @a mergeinfo to a hash mapping <tt>const char *</tt> source
+ * URLs (relative to the repository root) to an <tt>apr_array_header_t *</tt> 
+ * list of <tt>svn_merge_range_t *</tt> revision ranges
+ * representing merge sources and corresponding revision ranges which
+ * have been merged into @a path_or_url as of @a peg_revision, or @c
+ * NULL if there is no mergeinfo.
  *
- * @a path_or_url is a WC path or repository URL.  If @a path_or_url
- * is a WC path, @a revision is ignored in preference to @a
- * path_or_url's @c WORKING revision.  If @a path_or_url is a URL, @a
- * revision is the revision at which to get its mergeinfo.  @a
- * mergeinfo is allocated in @a pool.
+ * Use @a pool for all necessary allocations.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_get_mergeinfo(apr_hash_t **mergeinfo,
-                         const char *path_or_url,
-                         const svn_opt_revision_t *revision,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *pool);
+svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
+                                const char *path_or_url,
+                                const svn_opt_revision_t *peg_revision,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
+
+
+/**
+ * Set @a merge_ranges to a list of <tt>svn_merge_range_t *</tt> items
+ * representing ranges of revisions which have not yet been merged
+ * from @a merge_source into @a path_or_url as of @a peg_revision, or
+ * @c NULL if all candidate revisions of @a merge_source have already
+ * been merged.
+ *
+ * Use @a pool for all necessary allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_mergeinfo_get_available(apr_array_header_t *merge_ranges,
+                                   const char *path_or_url,
+                                   const svn_opt_revision_t *peg_revision,
+                                   const char *merge_source,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool);
+
+
 
 /** @} */
 
