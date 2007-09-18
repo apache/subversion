@@ -1913,7 +1913,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       tmp_entry.copied = FALSE;
 
       /* Reset the checksum if this is a replace-with-history. */
-      if (entry->kind == svn_node_file && tmp_entry.copyfrom_url)
+      if (entry->kind == svn_node_file && entry->copyfrom_url)
         {
           const char *revert_base;
           unsigned char digest[APR_MD5_DIGESTSIZE];
