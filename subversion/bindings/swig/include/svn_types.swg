@@ -817,8 +817,12 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGRUBY
 %typemap(in) (svn_wc_get_file_t fetch_func, void *fetch_baton)
 {
-  $1 = svn_swig_rb_fetch_func_getter();
+  /* ### TODO(rb support fetch_fun): implement
+  $1 = svn_swig_rb_fetch_func;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+  */
+  $1 = NULL;
+  $2 = NULL;
 }
 
 %typemap(argout) (svn_wc_get_file_t fetch_func, void *fetch_baton)
