@@ -2324,23 +2324,6 @@ svn_client_diff_summarize_peg(const char *path,
  * @{
  */
 
-/** Set @a suggestions to an ordered array of @c const char *
- * potential merge sources (expressed as full repository URLs) for @a
- * path_or_url at @a peg_revision.  @path_or_url is a working copy
- * path or repository URL.  @a ctx is a context used for
- * authentication in the repository case.  Use @a pool for all
- * allocations.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
-                                 const char *path_or_url,
-                                 const svn_opt_revision_t *peg_revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
-
-
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into
  * the working-copy path @a target_wcpath.
  *
@@ -2529,15 +2512,30 @@ svn_client_merge_peg(const char *source,
                      apr_pool_t *pool);
 
 
-/** Mergeinfo **/
+/** Set @a suggestions to an ordered array of @c const char *
+ * potential merge sources (expressed as full repository URLs) for @a
+ * path_or_url at @a peg_revision.  @path_or_url is a working copy
+ * path or repository URL.  @a ctx is a context used for
+ * authentication in the repository case.  Use @a pool for all
+ * allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
+                                 const char *path_or_url,
+                                 const svn_opt_revision_t *peg_revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
+
 
 /**
- * Set @a mergeinfo to a hash mapping <tt>const char *</tt> source
- * URLs (relative to the repository root) to an <tt>apr_array_header_t *</tt> 
- * list of <tt>svn_merge_range_t *</tt> revision ranges
- * representing merge sources and corresponding revision ranges which
- * have been merged into @a path_or_url as of @a peg_revision, or @c
- * NULL if there is no mergeinfo.
+ * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> source
+ * URLs to an <tt>apr_array_header_t *</tt> list of
+ * <tt>svn_merge_range_t *</tt> revision ranges representing merge
+ * sources and corresponding revision ranges which have been merged
+ * into @a path_or_url as of @a peg_revision, or @c NULL if there is
+ * no mergeinfo.
  *
  * Use @a pool for all necessary allocations.
  *
@@ -2552,21 +2550,21 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 /**
- * Set @a merge_ranges to a list of <tt>svn_merge_range_t *</tt> items
- * representing ranges of revisions which have not yet been merged
- * from @a merge_source into @a path_or_url as of @a peg_revision, or
- * @c NULL if all candidate revisions of @a merge_source have already
- * been merged.
+ * Set @a *merge_ranges to a list of <tt>svn_merge_range_t *</tt>
+ * items representing ranges of revisions which have not yet been
+ * merged from @a merge_source_url into @a path_or_url as of @a
+ * peg_revision, or @c NULL if all candidate revisions of @a
+ * merge_source have already been merged.
  *
  * Use @a pool for all necessary allocations.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t *merge_ranges,
+svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
                                    const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
-                                   const char *merge_source,
+                                   const char *merge_source_url,
                                    svn_client_ctx_t *ctx,
                                    apr_pool_t *pool);
 

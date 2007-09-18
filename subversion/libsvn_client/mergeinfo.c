@@ -815,18 +815,6 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
 
 /*** Public APIs ***/
 
-/**
- * Set @a mergeinfo to a hash mapping <tt>const char *</tt> source
- * URLs (relative to the repository root) to an <tt>apr_array_header_t *</tt> 
- * list of <tt>svn_merge_range_t *</tt> revision ranges
- * representing merge sources and corresponding revision ranges which
- * have been merged into @a path_or_url as of @a peg_revision, or @c
- * NULL if there is no mergeinfo.
- *
- * Use @a pool for all necessary allocations.
- *
- * @since New in 1.5.
- */
 svn_error_t *
 svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                 const char *path_or_url,
@@ -834,6 +822,9 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool)
 {
+  const char *repos_root;
+  apr_hash_t *full_path_mergeinfo;
+
   if (svn_path_is_url(path_or_url))
     {
       svn_ra_session_t *ra_session;
@@ -845,8 +836,9 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                                    TRUE, ctx, pool));
       SVN_ERR(svn_client__get_revision_number(&rev, ra_session, peg_revision, 
                                               "", pool));
+      SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
       SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, path_or_url,
-                                                NULL, ra_session, NULL, pool));
+                                                repos_root, NULL, NULL, pool));
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, mergeinfo,
                                               repos_rel_path, rev,
                                               svn_mergeinfo_inherited, pool));
@@ -857,6 +849,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
       const svn_wc_entry_t *entry;
       svn_boolean_t indirect;
 
+      SVN_ERR(svn_client__get_repos_root(&repos_root, path_or_url,
+                                         peg_revision, ctx, pool));
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url, FALSE,
                                      0, ctx->cancel_func, ctx->cancel_baton,
                                      pool));
@@ -870,29 +864,84 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
       SVN_ERR(svn_wc_adm_close(adm_access));
     }
 
+  if (*mergeinfo)
+    {
+      apr_hash_index_t *hi;
+
+      /* Copy the MERGEINFO hash items into another hash, but change
+         the relative paths into full URLs. */
+
+      full_path_mergeinfo = apr_hash_make(pool);
+      for (hi = apr_hash_first(pool, *mergeinfo); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          const char *rel_url;
+
+          apr_hash_this(hi, &key, NULL, &val);
+          rel_url = svn_path_uri_encode(key, pool);
+          apr_hash_set(full_path_mergeinfo, 
+                       apr_pstrcat(pool, repos_root, rel_url, NULL),
+                       APR_HASH_KEY_STRING,
+                       val);
+        }
+      *mergeinfo = full_path_mergeinfo;
+    }
+
   return SVN_NO_ERROR;
 }
 
 
-/**
- * Set @a merge_ranges to a list of <tt>svn_merge_range_t *</tt> items
- * representing ranges of revisions which have not yet been merged
- * from @a merge_source into @a path_or_url as of @a peg_revision, or
- * @c NULL if all candidate revisions of @a merge_source have already
- * been merged.
- *
- * Use @a pool for all necessary allocations.
- *
- * @since New in 1.5.
- */
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t *merge_ranges,
+svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
                                    const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
-                                   const char *merge_source,
+                                   const char *merge_source_url,
                                    svn_client_ctx_t *ctx,
                                    apr_pool_t *pool)
 {
-  abort();
+  apr_hash_t *mergeinfo;
+  apr_array_header_t *already_merged_ranges = NULL, *full_range_list;
+  svn_opt_revision_t head_revision;
+  svn_merge_range_t *full_range = apr_pcalloc(pool, sizeof(*full_range));
+  svn_ra_session_t *ra_session;
+
+  /* Step 1: See what merges we *do* have for MERGE_SOURCE.  If none,
+     that's okay. */
+  SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, path_or_url, 
+                                          peg_revision, ctx, pool));
+  if (mergeinfo)
+    already_merged_ranges = apr_hash_get(mergeinfo, merge_source_url,
+                                         APR_HASH_KEY_STRING);
+  
+  /* Step 2: See what revision ranges exist for MERGE_SOURCE.  This
+     means a history crawl. */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, merge_source_url,
+                                               NULL, NULL, NULL, FALSE,
+                                               TRUE, ctx, pool));
+  head_revision.kind = svn_opt_revision_head;
+  SVN_ERR(svn_client__get_revision_number(&(full_range->end), ra_session,
+                                          &head_revision, "", pool));
+  SVN_ERR(svn_client__oldest_rev_at_path(&(full_range->start), ra_session, 
+                                         "", full_range->end, pool));
+  full_range->inheritable = TRUE;
+  full_range_list = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+  APR_ARRAY_PUSH(full_range_list, svn_merge_range_t *) = full_range;
+
+  /* Step 3: Calculate the difference (by removing the already merged
+     ranges from the full set).  If there are no already-merged
+     ranges, then the full range is deemed eligible.  
+     
+     ### TODO: At no point did we say check to see if MERGE_SOURCE_URL
+     ### was a sane merge source to ask about.  If there were previous
+     ### merges from there, fine, but if not ...
+  */
+  if (! already_merged_ranges)
+    *merge_ranges = full_range_list;
+  else
+    SVN_ERR(svn_rangelist_remove(merge_ranges, already_merged_ranges,
+                                 full_range_list, 
+                                 svn_rangelist_equal_inheritance, pool));
+  
   return SVN_NO_ERROR;
 }

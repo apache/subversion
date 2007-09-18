@@ -246,10 +246,13 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
                                       &copyfrom_path, &copyfrom_rev, 
                                       ctx, pool));
   if (copyfrom_path)
-    APR_ARRAY_PUSH(list, const char *) = 
-      svn_path_join(repos_root, 
-                    svn_path_uri_encode(copyfrom_path + 1, pool),
-                    pool);
+    {
+      copyfrom_path = svn_path_join(repos_root, 
+                                    svn_path_uri_encode(copyfrom_path + 1, 
+                                                        pool),
+                                    pool);
+      APR_ARRAY_PUSH(list, const char *) = copyfrom_path;
+    }
 
   SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, path_or_url, 
                                           peg_revision, ctx, pool));
@@ -260,10 +263,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
           const char *merge_path;
           apr_hash_this(hi, (void *)(&merge_path), NULL, NULL);
           if (copyfrom_path == NULL || strcmp(merge_path, copyfrom_path) != 0)
-            APR_ARRAY_PUSH(list, const char *) = 
-              svn_path_join(repos_root, 
-                            svn_path_uri_encode(merge_path + 1, pool),
-                            pool);
+            APR_ARRAY_PUSH(list, const char *) = merge_path;
         }
     }
 
