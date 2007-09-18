@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-09-17 15:58+0800\n"
-"PO-Revision-Date: 2007-09-17 15:57+0800\n"
+"POT-Creation-Date: 2007-09-18 10:54+0800\n"
+"PO-Revision-Date: 2007-09-18 10:52+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1270,8 +1270,8 @@ msgstr "该版本没有 URL “%s”"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "没有找到公共父节点，不能在分离的参数上操作"
 
-#: libsvn_client/locking_commands.c:261 libsvn_client/merge.c:3929
-#: libsvn_client/merge.c:3935 libsvn_client/merge.c:4151
+#: libsvn_client/locking_commands.c:261 libsvn_client/merge.c:3249
+#: libsvn_client/merge.c:3255 libsvn_client/merge.c:3497
 #: libsvn_client/ra.c:375 libsvn_client/ra.c:741 libsvn_client/ra.c:878
 #, c-format
 msgid "'%s' has no URL"
@@ -1300,7 +1300,7 @@ msgstr "锁定注释包含非法字符"
 msgid "Missing required revision specification"
 msgstr "未提供请求的版本"
 
-#: libsvn_client/log.c:370 libsvn_client/merge.c:1173
+#: libsvn_client/log.c:370 libsvn_client/mergeinfo.c:339
 #: libsvn_client/status.c:288 libsvn_client/update.c:137
 #, c-format
 msgid "Entry '%s' has no URL"
@@ -1328,21 +1328,21 @@ msgstr "不支持存取混合方案 (“%s”与“%s”)"
 #. xgettext: the '.working', '.merge-left.r%ld' and
 #. '.merge-right.r%ld' strings are used to tag onto a file
 #. name in case of a merge conflict
-#: libsvn_client/merge.c:432
+#: libsvn_client/merge.c:437
 msgid ".working"
 msgstr ".working"
 
-#: libsvn_client/merge.c:434
+#: libsvn_client/merge.c:439
 #, c-format
 msgid ".merge-left.r%ld"
 msgstr ".merge-left.r%ld"
 
-#: libsvn_client/merge.c:437
+#: libsvn_client/merge.c:442
 #, c-format
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/merge.c:2185
+#: libsvn_client/merge.c:1505
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1353,7 +1353,7 @@ msgstr ""
 "当合并 r%ld:%ld 到 “%s” 时出现了一个或更多的冲突\n"
 "请解决所有冲突后，再次运行合并，处理剩余的未合并版本"
 
-#: libsvn_client/merge.c:2398 libsvn_client/merge.c:2844
+#: libsvn_client/merge.c:1716 libsvn_client/merge.c:2153
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "使用两个 URL 与合并信息修改不兼容"
 
@@ -7660,24 +7660,28 @@ msgstr "路径“%s”不再是修改列表的成员。\n"
 
 #: svn/notify.c:416
 #, c-format
-msgid "--- Merging r%ld:\n"
-msgstr "--- 正在合并 r%ld:\n"
+msgid "--- Merging differences between repository URLs into '%s':\n"
+msgstr "--- 合并版本库 URL 之间的差异到 “%s”：\n"
 
-#: svn/notify.c:419
+#: svn/notify.c:421
 #, c-format
-msgid "--- Undoing r%ld:\n"
-msgstr "--- 正在撤销 r%ld:\n"
+msgid "--- Merging r%ld into '%s':\n"
+msgstr "--- 正在合并 r%ld 到 “%s”:\n"
 
-#: svn/notify.c:422
+#: svn/notify.c:425
 #, c-format
-msgid "--- Merging r%ld through r%ld:\n"
-msgstr "--- 正在合并 r%ld，经由 r%ld:\n"
+msgid "--- Reverse-merging r%ld into '%s':\n"
+msgstr "--- 正在反向合并 r%ld 到 “%s”:\n"
 
-#. n->merge_range->start > n->merge_range->end - 1
-#: svn/notify.c:426
+#: svn/notify.c:429
 #, c-format
-msgid "--- Undoing r%ld through r%ld:\n"
-msgstr "--- 正在撤销 r%ld，经由 r%ld:\n"
+msgid "--- Merging r%ld through r%ld into '%s':\n"
+msgstr "--- 正在合并 r%ld，经由 r%ld，到 “%s”:\n"
+
+#: svn/notify.c:435
+#, c-format
+msgid "--- Reverse-merging r%ld through r%ld into '%s':\n"
+msgstr "--- 正在反向合并 r%ld，经由 r%ld，到 “%s”:\n"
 
 #: svn/propdel-cmd.c:101
 #, c-format
@@ -9460,6 +9464,3 @@ msgstr "已导出 %s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "“%s”未纳入版本控制，并未导出\n"
-
-#~ msgid "'DAV:version-name' was not present on the baseline resource"
-#~ msgstr "基线资源没有“DAV:version-name”"
