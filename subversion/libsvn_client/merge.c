@@ -1754,11 +1754,6 @@ do_merge(const char *url1,
         {
           apr_hash_t *merges;
 
-          /* Remove absent children at or under TARGET_WCPATH from
-             MERGE_B->SKIPPED_PATHS and CHILDREN_WITH_MERGEINFO before we
-             calculate the merges performed. */
-          remove_absent_children(target_wcpath, children_with_mergeinfo,
-                                 &notify_b);
           /* Blindly record the range specified by the user (rather
              than refining it as we do for actual merges). */
           SVN_ERR(determine_merges_performed(&merges, target_wcpath,
