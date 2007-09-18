@@ -629,8 +629,8 @@ def revert_propdel__file(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      iota_path)
 
-def revert_replaced_with_history_file(sbox):
-  "revert a file that was replaced by a copied file"
+def revert_replaced_with_history_file_1(sbox):
+  "revert a committed replace-with-history == no-op"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -825,6 +825,36 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
                                      wc_dir)
 
+# Test for issue #2928.
+def revert_replaced_with_history_file_2(sbox):
+  "reverted replace with history restores checksum"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Delete mu and replace it with a copy of iota
+  svntest.main.run_svn(None, 'rm', mu_path)
+  svntest.main.run_svn(None, 'cp', iota_path, mu_path)
+
+  # Revert mu.
+  svntest.main.run_svn(None, 'revert', mu_path)
+
+  # If we make local mods to the reverted mu the commit will
+  # fail if the checksum is incorrect.
+  svntest.main.file_write(mu_path, "new text")
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu': Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='  ', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -845,9 +875,10 @@ test_list = [ None,
               revert_propset__file,
               revert_propdel__dir,
               revert_propdel__file,
-              revert_replaced_with_history_file,
+              revert_replaced_with_history_file_1,
               status_of_missing_dir_after_revert,
               status_of_missing_dir_after_revert_replaced_with_history_dir,
+              revert_replaced_with_history_file_2,
              ]
 
 if __name__ == '__main__':
