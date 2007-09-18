@@ -1090,16 +1090,16 @@ do_entry_deletion(struct edit_baton *eb,
                   apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
-  svn_node_kind_t kind;
+  const svn_wc_entry_t *entry;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
-
-  SVN_ERR(svn_io_check_path(full_path, &kind, pool));
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_path, pool));
 
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
+
+  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, FALSE, pool));
 
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that parent can give
@@ -1109,7 +1109,8 @@ do_entry_deletion(struct edit_baton *eb,
       svn_wc_entry_t tmp_entry;
 
       tmp_entry.revision = *(eb->target_revision);
-      tmp_entry.kind = (kind == svn_node_file) ? svn_node_file : svn_node_dir;
+      tmp_entry.kind =
+        (entry->kind == svn_node_file) ? svn_node_file : svn_node_dir;
       tmp_entry.deleted = TRUE;
 
       SVN_ERR(svn_wc__loggy_entry_modify(&log_item, adm_access,
@@ -1141,7 +1142,7 @@ do_entry_deletion(struct edit_baton *eb,
        * the log item is to remove the entry in the parent directory.
        */
 
-      if (kind == svn_node_dir)
+      if (entry->kind == svn_node_dir)
         {
           svn_wc_adm_access_t *child_access;
           const char *logfile_path
