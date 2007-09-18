@@ -1176,14 +1176,6 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
   apr_size_t nbr_skips = (notify_b->skipped_paths != NULL ?
                           apr_hash_count(notify_b->skipped_paths) : 0);
   *merges = apr_hash_make(pool);
-  rangelist = apr_array_make(pool, 1, sizeof(range));
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-
-  if (merge_b->record_only)
-    {
-      apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
-      return SVN_NO_ERROR;
-    }
 
   /* If there have been no operative merges on any subtree merged so far and
      we are determining the merges performed on the merge target (i.e. the
@@ -1202,6 +1194,8 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
       && !merge_b->operative_merge)
     merge_b->operative_merge = TRUE;
 
+  rangelist = apr_array_make(pool, 1, sizeof(range));
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
   apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
   if (nbr_skips > 0)
     {
@@ -1659,6 +1653,35 @@ drive_merge_report_editor(const char *target_wcpath,
   return SVN_NO_ERROR;
 }
 
+/* Blindly record the range specified by the user (rather than refining it
+   as we do for actual merges). */
+static svn_error_t *
+record_mergeinfo_for_record_only_merge(svn_merge_range_t *range,
+                                       svn_boolean_t is_rollback,
+                                       svn_boolean_t indirect,
+                                       const char *target_wcpath,
+                                       apr_hash_t *target_mergeinfo,
+                                       const svn_wc_entry_t *entry,
+                                       const char *rel_path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_client_ctx_t *ctx,
+                                       apr_pool_t *pool)
+{
+  apr_array_header_t *rangelist;
+  apr_hash_t *merges = apr_hash_make(pool);
+  rangelist = apr_array_make(pool, 1, sizeof(range));
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
+  apr_hash_set(merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
+
+  /* If merge target has indirect mergeinfo set it. */
+  if (indirect)
+    SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath, target_mergeinfo,
+                                            adm_access, pool));
+
+  return update_wc_mergeinfo(target_wcpath, entry, rel_path, merges,
+                             is_rollback, adm_access, ctx, pool);
+}
+
 /* URL1, URL2, and TARGET_WCPATH all better be directories.  For the
    single file case, the caller does the merging manually.
 
@@ -1756,24 +1779,13 @@ do_merge(const char *url1,
          merge for the specified range. */
       if (merge_b->record_only)
         {
-          apr_hash_t *merges;
-
-          /* Blindly record the range specified by the user (rather
-             than refining it as we do for actual merges). */
-          SVN_ERR(determine_merges_performed(&merges, target_wcpath,
-                                             target_missing_child,
-                                             &range, depth, adm_access, 
-                                             &notify_b, merge_b, pool));
-
-          /* If merge target has indirect mergeinfo set it. */
-          if (indirect)
-            SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
-                                                    target_mergeinfo,
-                                                    adm_access, pool));
-
-          return update_wc_mergeinfo(target_wcpath, entry, rel_path,
-                                     merges, is_rollback, adm_access,
-                                     ctx, pool);
+          return record_mergeinfo_for_record_only_merge(&range, is_rollback,
+                                                        indirect,
+                                                        target_wcpath,
+                                                        target_mergeinfo,
+                                                        entry, rel_path,
+                                                        adm_access,
+                                                        ctx, pool);
         }
 
       SVN_ERR(calculate_remaining_ranges(&remaining_ranges, &range,
@@ -2186,23 +2198,13 @@ do_single_file_merge(const char *url1,
          merge for the specified range. */
       if (merge_b->record_only)
         {
-          /* Blindly record the range specified by the user (rather
-             than refining it as we do for actual merges). */
-          apr_hash_t *merges;
-          SVN_ERR(determine_merges_performed(&merges, target_wcpath,
-                                             FALSE, &range, svn_depth_infinity,
-                                             adm_access, &notify_b, merge_b,
-                                             pool));
-
-          /* If merge target has indirect mergeinfo set it. */
-          if (indirect)
-            SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
-                                                    target_mergeinfo,
-                                                    adm_access, pool));
-
-          return update_wc_mergeinfo(target_wcpath, entry, rel_path,
-                                     merges, is_rollback, adm_access,
-                                     ctx, pool);
+          return record_mergeinfo_for_record_only_merge(&range, is_rollback,
+                                                        indirect,
+                                                        target_wcpath,
+                                                        target_mergeinfo,
+                                                        entry, rel_path,
+                                                        adm_access,
+                                                        ctx, pool);
         }
 
       SVN_ERR(calculate_remaining_ranges(&remaining_ranges, &range,
