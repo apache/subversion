@@ -1176,22 +1176,26 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
   apr_size_t nbr_skips = (notify_b->skipped_paths != NULL ?
                           apr_hash_count(notify_b->skipped_paths) : 0);
   *merges = apr_hash_make(pool);
+  rangelist = apr_array_make(pool, 1, sizeof(range));
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
+
+  if (merge_b->record_only)
+    {
+      apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
+      return SVN_NO_ERROR;
+    }
 
   /* If there have been no operative merges on any subtree merged so far and
      we are determining the merges performed on the merge target (i.e. the
      last such determination to be made), *and* there are no operative merges
      on the target either, then don't calculate anything.  Just return the
      empty hash because this whole merge has been a no-op and we don't change
-     the mergeinfo in that case (issue #2883). --record-only merges are the
-     exception, we just do what we're told. */
+     the mergeinfo in that case (issue #2883). */
    if (!notify_b->nbr_operative_notifications
        && !merge_b->operative_merge
-       && svn_path_compare_paths(target_wcpath, merge_b->target) == 0
-       && !merge_b->record_only)
+       && svn_path_compare_paths(target_wcpath, merge_b->target) == 0)
      return SVN_NO_ERROR;
 
-  rangelist = apr_array_make(pool, 1, sizeof(range));
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
 
   /* Note in the merge baton when the first operative merge is found. */
   if (notify_b->nbr_operative_notifications > 0
