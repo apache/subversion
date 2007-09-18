@@ -627,7 +627,7 @@ module Svn
       end
 
       def mergeinfo(path_or_url, revision=nil)
-        info = Client.get_mergeinfo(path_or_url, revision, self)
+        info = Client.mergeinfo_get_merged(path_or_url, revision, self)
         return nil if info.nil?
         Core::MergeInfo.new(info)
       end
