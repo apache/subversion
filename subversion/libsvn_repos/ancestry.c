@@ -312,6 +312,10 @@ svn_repos__walk_ancestry(const char *end_path,
         break;
       SVN_ERR(svn_fs_history_location(&path, &rev, history, iterpool));
 
+      /* Check to see if the first interesting revision is outside our range. */
+      if (rev < start)
+        break;
+
       /* Check authorization. */
       if (authz_read_func)
         {
@@ -330,7 +334,7 @@ svn_repos__walk_ancestry(const char *end_path,
         SVN_ERR(callbacks->found_ancestor(callbacks_baton, path, rev, &halt,
                                           iterpool));
 
-      if (halt || rev <= start)
+      if (halt)
         break;
 
        /* Check for merges */
@@ -375,10 +379,10 @@ svn_repos__walk_ancestry(const char *end_path,
                                               authz_read_func, authz_read_baton,
                                               iterpool));
                 }
-            }
 
-            if (halt)
-              break;
+              if (halt)
+                break;
+            }
         }
 
       /* Swap the temporary pools. */
