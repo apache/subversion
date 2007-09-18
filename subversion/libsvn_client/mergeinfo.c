@@ -643,6 +643,9 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
           if (!child)
             continue;
 
+          if (child->absent)
+            continue;
+
           if (i == 0)
             {
               /* children_with_mergeinfo is sorted depth
