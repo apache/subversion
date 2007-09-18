@@ -2966,7 +2966,7 @@ def merge_dir_branches(sbox):
   # We can't use run_and_verify_merge because it doesn't support this
   # syntax of the merge command.
   ### TODO: We can use run_and_verify_merge2() here now.
-  expected_output = expected_merge_output(2, "A    " + foo_path + "\n")
+  expected_output = expected_merge_output(None, "A    " + foo_path + "\n")
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', C_url, F_url, wc_dir)
 
