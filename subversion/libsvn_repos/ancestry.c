@@ -150,6 +150,8 @@ svn_repos__is_branching_copy(svn_boolean_t *is_branching,
 
   /* If we've reached this point, we've found a branching revision. */
   *is_branching = TRUE;
+  *src_path = apr_pstrdup(pool, copy_path);
+  *src_rev = copy_rev;
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
