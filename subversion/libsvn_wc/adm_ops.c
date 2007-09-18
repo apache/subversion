@@ -1911,6 +1911,19 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           SVN_WC__ENTRY_MODIFY_COPYFROM_URL |
           SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
       tmp_entry.copied = FALSE;
+
+      /* Reset the checksum if this is a replace-with-history. */
+      if (tmp_entry.copyfrom_url)
+        {
+          const char *revert_base;
+          unsigned char digest[APR_MD5_DIGESTSIZE];
+
+          revert_base = svn_wc__text_revert_path(fullpath, FALSE, pool);
+          SVN_ERR(svn_io_file_checksum(digest, revert_base, pool));
+          tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
+          flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+        }
+
       /* Set this to the empty string, because NULL values will disappear
          in the XML log file. */
       tmp_entry.copyfrom_url = "";
