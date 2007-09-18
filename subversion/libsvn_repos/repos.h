@@ -259,7 +259,6 @@ typedef struct svn_repos__ancestry_callbacks_t
   svn_error_t *(*found_branch)(void *walk_baton,
                                const char *source_path,
                                svn_revnum_t source_rev,
-                               svn_boolean_t *halt,
                                apr_pool_t *pool);
 
   /* The previous ancestor was copied from SOURCE_PATH at SOURCE_REV. */
@@ -317,9 +316,14 @@ svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
 
 /* Determine whether or not PATH  in ROOT is a branching copy.  PATH_MERGEINFO
    should be the the mergeinfo for PATH in ROOT.  If PATH_MERGEINFO is NULL, it
-   will be fetched internally.  The result is returned in *IS_BRANCHING. */
+   will be fetched internally.  The result is returned in *IS_BRANCHING.
+   
+   If a copy is found, the source path and revision are returned in SRC_PATH
+   and SRC_REV, respectively. */
 svn_error_t *
 svn_repos__is_branching_copy(svn_boolean_t *is_branching,
+                             const char **src_path,
+                             svn_revnum_t *src_rev,
                              svn_fs_root_t *root,
                              const char *path,
                              apr_hash_t *path_mergeinfo,

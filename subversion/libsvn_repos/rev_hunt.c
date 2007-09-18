@@ -910,8 +910,9 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
           SVN_ERR(svn_fs_revision_root(&merge_root, repos->fs,
                                        path_rev->revnum,
                                        iter_pool));
-          SVN_ERR(svn_repos__is_branching_copy(&branching_rev, merge_root,
-                                               path_rev->path, NULL, pool));
+          SVN_ERR(svn_repos__is_branching_copy(&branching_rev, NULL, NULL,
+                                               merge_root, path_rev->path,
+                                               NULL, pool));
 
           if (branching_rev)
             break;
