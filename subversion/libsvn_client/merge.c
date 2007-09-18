@@ -1682,6 +1682,37 @@ record_mergeinfo_for_record_only_merge(svn_merge_range_t *range,
                              is_rollback, adm_access, ctx, pool);
 }
 
+/* MERGE_B->TARGET hasn't been merged yet so only elide as
+   far MERGE_B->TARGET's immediate children.  If TARGET_WCPATH
+   is an immdediate child of MERGE_B->TARGET don't even attempt to
+   elide since TARGET_WCPATH can't elide to itself. */
+static svn_error_t *
+elide_target_mergeinfo(const char *target_wcpath,
+                       const svn_wc_entry_t *entry,
+                       svn_wc_adm_access_t *adm_access,
+                       struct merge_cmd_baton *merge_b,
+                       svn_boolean_t is_root_of_noop_merge,
+                       apr_pool_t *pool)
+{
+  apr_size_t target_count, merge_target_count;
+  if (!merge_b->dry_run && !is_root_of_noop_merge)
+    {
+      target_count = svn_path_component_count(target_wcpath);
+      merge_target_count = svn_path_component_count(merge_b->target);
+
+      if (target_count - merge_target_count > 1)
+        {
+          svn_stringbuf_t *elision_limit_path =
+            svn_stringbuf_create(target_wcpath, pool);
+          svn_path_remove_components(elision_limit_path,
+                                     target_count - merge_target_count - 1);
+          SVN_ERR(svn_client__elide_mergeinfo(target_wcpath,
+                                              elision_limit_path->data, entry,
+                                              adm_access, merge_b->ctx, pool));
+        }
+    }
+  return SVN_NO_ERROR;
+}
 /* URL1, URL2, and TARGET_WCPATH all better be directories.  For the
    single file case, the caller does the merging manually.
 
@@ -1733,7 +1764,6 @@ do_merge(const char *url1,
   int i;
   svn_boolean_t indirect;
   svn_boolean_t is_root_of_noop_merge = FALSE;
-  apr_size_t target_count, merge_target_count;
   apr_pool_t *subpool;
 
 
@@ -1999,26 +2029,8 @@ do_merge(const char *url1,
 
   apr_pool_destroy(subpool);
 
-  /* MERGE_B->TARGET hasn't been merged yet so only elide as
-     far MERGE_B->TARGET's immediate children.  If TARGET_WCPATH
-     is an immdediate child of MERGE_B->TARGET don't even attempt to
-     elide since TARGET_WCPATH can't elide to itself. */
-  if (!merge_b->dry_run && !is_root_of_noop_merge)
-    {
-      target_count = svn_path_component_count(target_wcpath);
-      merge_target_count = svn_path_component_count(merge_b->target);
-
-      if (target_count - merge_target_count > 1)
-        {
-          svn_stringbuf_t *elision_limit_path =
-            svn_stringbuf_create(target_wcpath, pool);
-          svn_path_remove_components(elision_limit_path,
-                                     target_count - merge_target_count - 1);
-          SVN_ERR(svn_client__elide_mergeinfo(target_wcpath,
-                                              elision_limit_path->data, entry,
-                                              adm_access, ctx, pool));
-        }
-    }
+  SVN_ERR(elide_target_mergeinfo(target_wcpath, entry, adm_access, merge_b,
+                                 is_root_of_noop_merge, pool));
 
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
@@ -2106,7 +2118,6 @@ do_single_file_merge(const char *url1,
   int i;
   svn_boolean_t indirect = FALSE, is_replace = FALSE;
   svn_boolean_t is_root_of_noop_merge = FALSE;
-  apr_size_t target_count, merge_target_count;
   apr_pool_t *subpool;
 
   /* Ensure that the adm_access we're playing with is our TARGET_WCPATH's
@@ -2377,26 +2388,9 @@ do_single_file_merge(const char *url1,
   apr_pool_destroy(subpool);
 
  finalize_mergeinfo:
-  /* MERGE_B->TARGET hasn't been merged yet so only elide as
-     far MERGE_B->TARGET's immediate children.  If TARGET_WCPATH
-     is an immdediate child of MERGE_B->TARGET don't even attempt to
-     elide since TARGET_WCPATH can't elide to itself. */
-  if (!merge_b->dry_run && !is_root_of_noop_merge)
-    {
-      target_count = svn_path_component_count(target_wcpath);
-      merge_target_count = svn_path_component_count(merge_b->target);
+   SVN_ERR(elide_target_mergeinfo(target_wcpath, entry, adm_access, merge_b,
+                                  is_root_of_noop_merge, pool));
 
-      if (target_count - merge_target_count > 1)
-        {
-          svn_stringbuf_t *elision_limit_path =
-            svn_stringbuf_create(target_wcpath, pool);
-          svn_path_remove_components(elision_limit_path,
-                                     target_count - merge_target_count - 1);
-          SVN_ERR(svn_client__elide_mergeinfo(target_wcpath,
-                                              elision_limit_path->data, entry,
-                                              adm_access, ctx, pool));
-        }
-    }
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
 
