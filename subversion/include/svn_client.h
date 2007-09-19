@@ -3974,7 +3974,7 @@ typedef struct svn_info_t
 
 
 /**
- * The callback invoked by svn_client_info().  Each invocation
+ * The callback invoked by svn_client_info2().  Each invocation
  * describes @a path with the information present in @a info.  Note
  * that any fields within @a info may be NULL if information is
  * unavailable.  Use @a pool for all temporary allocation.
@@ -4022,13 +4022,33 @@ svn_info_dup(const svn_info_t *info, apr_pool_t *pool);
  * Use the authentication baton cached in @a ctx to authenticate
  * against the repository.
  *
- * If @a recurse is true (and @a path_or_url is a directory) this will
- * be a recursive operation, invoking @a receiver on each child.
+ * If @a path_or_url is a file, just invoke @a receiver on it.  If it
+ * is a directory, then descend according to @a depth.  If @a depth is
+ * @c svn_depth_empty, invoke @a receiver on @a path_or_url and
+ * nothing else; if @c svn_depth_files, on @a path_or_url and its
+ * immediate file children; if @c svn_depth_immediates, the preceding
+ * plus on each immediate subdirectory; if @c svn_depth_infinity, then
+ * recurse fully, invoking @a receiver on @a path_or_url and
+ * everything beneath it.
  *
- * ### TODO(sd): I don't see any compelling reason to switch to
- * ### depth-style instead of recurse-style control here
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_info2(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_info_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_depth_t depth,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/*
+ * Similar to svn_client_info2() but with @a depth set according to
+ * @a recurse: if @a recurse is true, @a depth is @c svn_depth_infinity,
+ * else @c svn_depth_files.
  *
- * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_client_info(const char *path_or_url,

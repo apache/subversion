@@ -500,7 +500,7 @@ svn_cl__info(apr_getopt_t *os,
     }
 
   if (opt_state->depth == svn_depth_unknown)
-    opt_state->depth = svn_depth_immediates;
+    opt_state->depth = svn_depth_empty;
 
   for (i = 0; i < targets->nelts; i++)
     {
@@ -518,11 +518,11 @@ svn_cl__info(apr_getopt_t *os,
           && (peg_revision.kind == svn_opt_revision_unspecified))
         peg_revision.kind = svn_opt_revision_head;
 
-      err = svn_client_info(truepath,
-                            &peg_revision, &(opt_state->start_revision),
-                            receiver, NULL,
-                            SVN_DEPTH_TO_RECURSE(opt_state->depth),
-                            ctx, subpool);
+      err = svn_client_info2(truepath,
+                             &peg_revision, &(opt_state->start_revision),
+                             receiver, NULL,
+                             opt_state->depth,
+                             ctx, subpool);
 
       /* If one of the targets is a non-existent URL or wc-entry,
          don't bail out.  Just warn and move on to the next target. */
