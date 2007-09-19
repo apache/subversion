@@ -191,6 +191,7 @@ svn_opt_subcommand_t
   svn_cl__log,
   svn_cl__list,
   svn_cl__merge,
+  svn_cl__mergeinfo,
   svn_cl__mkdir,
   svn_cl__move,
   svn_cl__propdel,
