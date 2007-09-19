@@ -122,7 +122,14 @@ build_info_from_entry(svn_info_t **info,
 
 
 /* Helper func for recursively fetching svn_dirent_t's from a remote
-   directory and pushing them at an info-receiver callback. */
+   directory and pushing them at an info-receiver callback.
+
+   DEPTH is the depth starting at DIR, even though RECEIVER is never
+   invoked on DIR: if DEPTH is svn_depth_immediates, then invoke
+   RECEIVER on all children of DIR, but none of their children; if
+   svn_depth_files, then invoke RECEIVER on file children of DIR but
+   not on subdirectories; if svn_depth_infinity, recurse fully.
+*/
 static svn_error_t *
 push_dir_info(svn_ra_session_t *ra_session,
               const char *session_URL,
@@ -132,6 +139,7 @@ push_dir_info(svn_ra_session_t *ra_session,
               const char *repos_root,
               svn_info_receiver_t receiver,
               void *receiver_baton,
+              svn_depth_t depth,
               svn_client_ctx_t *ctx,
               apr_hash_t *locks,
               apr_pool_t *pool)
@@ -172,13 +180,19 @@ push_dir_info(svn_ra_session_t *ra_session,
       SVN_ERR(build_info_from_dirent(&info, the_ent, lock, URL, rev,
                                      repos_UUID, repos_root, subpool));
 
-      SVN_ERR(receiver(receiver_baton, path, info, subpool));
+      if (depth >= svn_depth_immediates
+          || (depth == svn_depth_files && the_ent->kind == svn_node_file))
+        {
+          SVN_ERR(receiver(receiver_baton, path, info, subpool));
+        }
 
-      if (the_ent->kind == svn_node_dir)
-        SVN_ERR(push_dir_info(ra_session, URL, path,
-                              rev, repos_UUID, repos_root,
-                              receiver, receiver_baton,
-                              ctx, locks, subpool));
+      if (depth == svn_depth_infinity && the_ent->kind == svn_node_dir)
+        {
+          SVN_ERR(push_dir_info(ra_session, URL, path,
+                                rev, repos_UUID, repos_root,
+                                receiver, receiver_baton,
+                                depth, ctx, locks, subpool));
+        }
     }
 
   svn_pool_destroy(subpool);
@@ -232,7 +246,7 @@ static svn_error_t *
 crawl_entries(const char *wcpath,
               svn_info_receiver_t receiver,
               void *receiver_baton,
-              svn_boolean_t recurse,
+              svn_depth_t depth,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool)
 {
@@ -240,9 +254,13 @@ crawl_entries(const char *wcpath,
   const svn_wc_entry_t *entry;
   svn_info_t *info;
   struct found_entry_baton fe_baton;
+  int adm_lock_level = -1;
+
+  if (depth == svn_depth_empty || depth == svn_depth_files)
+    adm_lock_level = 0;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE,
-                                 recurse ? -1 : 0,
+                                 adm_lock_level,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   SVN_ERR(svn_wc__entry_versioned(&entry, wcpath, adm_access, FALSE, pool));
@@ -252,20 +270,15 @@ crawl_entries(const char *wcpath,
   fe_baton.receiver_baton = receiver_baton;
 
   if (entry->kind == svn_node_file)
-    return receiver(receiver_baton, wcpath, info, pool);
-
+    {
+      return receiver(receiver_baton, wcpath, info, pool);
+    }
   else if (entry->kind == svn_node_dir)
     {
-      if (recurse)
-        SVN_ERR(svn_wc_walk_entries3(wcpath, adm_access,
-                                     &entry_walk_callbacks, &fe_baton,
-                                     /* Redundant, since we know recurse
-                                        is true, but good style. */
-                                     SVN_DEPTH_FROM_RECURSE(recurse),
-                                     FALSE, ctx->cancel_func,
-                                     ctx->cancel_baton, pool));
-      else
-        return receiver(receiver_baton, wcpath, info, pool);
+      SVN_ERR(svn_wc_walk_entries3(wcpath, adm_access,
+                                   &entry_walk_callbacks, &fe_baton,
+                                   depth, FALSE, ctx->cancel_func,
+                                   ctx->cancel_baton, pool));
     }
 
   return SVN_NO_ERROR;
@@ -321,14 +334,14 @@ same_resource_in_head(svn_boolean_t *same_p,
 }
 
 svn_error_t *
-svn_client_info(const char *path_or_url,
-                const svn_opt_revision_t *peg_revision,
-                const svn_opt_revision_t *revision,
-                svn_info_receiver_t receiver,
-                void *receiver_baton,
-                svn_boolean_t recurse,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+svn_client_info2(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_info_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_depth_t depth,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session, *parent_ra_session;
   svn_revnum_t rev;
@@ -351,7 +364,7 @@ svn_client_info(const char *path_or_url,
       /* Do all digging in the working copy. */
       return crawl_entries(path_or_url,
                            receiver, receiver_baton,
-                           recurse, ctx, pool);
+                           depth, ctx, pool);
     }
 
   /* Go repository digging instead. */
@@ -387,7 +400,7 @@ svn_client_info(const char *path_or_url,
              If we're recursing, degrade gracefully: rather than
              throw an error, return no information about the
              repos root. */
-          if (recurse)
+          if (depth > svn_depth_empty)
             goto pre_1_2_recurse;
 
           /* Otherwise, we really are stuck.  Better tell the user
@@ -461,7 +474,7 @@ svn_client_info(const char *path_or_url,
   SVN_ERR(receiver(receiver_baton, base_name, info, pool));
 
   /* Possibly recurse, using the original RA session. */
-  if (recurse && (the_ent->kind == svn_node_dir))
+  if (depth > svn_depth_empty && (the_ent->kind == svn_node_dir))
     {
       apr_hash_t *locks;
 
@@ -487,12 +500,28 @@ pre_1_2_recurse:
       SVN_ERR(push_dir_info(ra_session, url, "", rev,
                             repos_UUID, repos_root_URL,
                             receiver, receiver_baton,
-                            ctx, locks, pool));
+                            depth, ctx, locks, pool));
     }
 
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_client_info(const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_info_receiver_t receiver,
+                void *receiver_baton,
+                svn_boolean_t recurse,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_info2(path_or_url, peg_revision, revision,
+                          receiver, receiver_baton,
+                          SVN_DEPTH_FROM_RECURSE(recurse),
+                          ctx, pool);
+}
 
 svn_info_t *
 svn_info_dup(const svn_info_t *info, apr_pool_t *pool)
