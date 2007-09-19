@@ -3222,6 +3222,7 @@ svn_client_merge3(const char *source1,
   svn_merge_range_t range;
   enum merge_type merge_type;
   svn_boolean_t is_rollback, same_urls;
+  svn_opt_revision_t working_rev;
 
   /* If source1 or source2 are paths, we need to get the underlying
      URL from the wc and save the initial path we were passed so we
@@ -3249,17 +3250,10 @@ svn_client_merge3(const char *source1,
   SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
                                   pool));
 
-  if (entry->repos)
-    {
-      wc_repos_root = entry->repos;
-    }
-  else
-    {
-      svn_opt_revision_t working_rev;
-      working_rev.kind = svn_opt_revision_working;
-      SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath, 
-                                         &working_rev, ctx, pool));
-    }
+  /* Get the repository root URL. */
+  working_rev.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath, 
+                                     &working_rev, adm_access, ctx, pool));
 
   if (depth == svn_depth_unknown)
     depth = entry->depth;
@@ -3454,6 +3448,7 @@ svn_client_merge_peg3(const char *source,
   const char *wc_repos_root;
   svn_merge_range_t range;
   enum merge_type merge_type;
+  svn_opt_revision_t working_rev;
   svn_boolean_t is_rollback;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
@@ -3462,17 +3457,12 @@ svn_client_merge_peg3(const char *source,
 
   SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
                                   pool));
-  if (entry->repos)
-    {
-      wc_repos_root = entry->repos;
-    }
-  else
-    {
-      svn_opt_revision_t working_rev;
-      working_rev.kind = svn_opt_revision_working;
-      SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath, 
-                                         peg_revision, ctx, pool));
-    }
+
+  /* Get the repository root URL. */
+  working_rev.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath, 
+                                     &working_rev, adm_access, ctx, pool));
+
 
   /* If source is a path, we need to get the underlying URL from
      the wc and save the initial path we were passed so we can use
