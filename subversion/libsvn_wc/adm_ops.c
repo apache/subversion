@@ -1915,11 +1915,11 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       /* Reset the checksum if this is a replace-with-history. */
       if (entry->kind == svn_node_file && entry->copyfrom_url)
         {
-          const char *revert_base;
+          const char *base_path;
           unsigned char digest[APR_MD5_DIGESTSIZE];
 
-          revert_base = svn_wc__text_revert_path(fullpath, FALSE, pool);
-          SVN_ERR(svn_io_file_checksum(digest, revert_base, pool));
+          base_path = svn_wc__text_revert_path(fullpath, FALSE, pool);
+          SVN_ERR(svn_io_file_checksum(digest, base_path, pool));
           tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
           flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
         }
