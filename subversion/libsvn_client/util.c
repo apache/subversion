@@ -205,26 +205,70 @@ svn_error_t *
 svn_client__get_repos_root(const char **repos_root, 
                            const char *path_or_url,
                            const svn_opt_revision_t *peg_revision,
+                           svn_wc_adm_access_t *adm_access,
                            svn_client_ctx_t *ctx, 
                            apr_pool_t *pool)
 {
   svn_revnum_t rev;
-  svn_ra_session_t *ra_session;
   const char *target_url;
+  svn_boolean_t need_wc_cleanup = FALSE;
+  svn_error_t *err = SVN_NO_ERROR;
 
-  /* ### FIXME: If PATH_OR_URL is a local path, we should first see
-     ###        if its entry already has the repository root URL. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                           &rev,
-                                           &target_url,
-                                           path_or_url,
-                                           peg_revision,
-                                           peg_revision,
-                                           ctx,
-                                           pool));
-  SVN_ERR(svn_ra_get_repos_root(ra_session, repos_root, pool));
-  return SVN_NO_ERROR;
+  /* If PATH_OR_URL is a local path and PEG_REVISION keeps us looking
+     locally, we'll first check PATH_OR_URL's entry for a repository
+     root URL. */
+  if ((! svn_path_is_url(path_or_url))
+      && ((peg_revision->kind == svn_opt_revision_working)
+          || (peg_revision->kind == svn_opt_revision_base)))
+    {
+      const svn_wc_entry_t *entry;
+      if (! adm_access)
+        {
+          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
+                                         FALSE, 0, NULL, NULL, pool));
+          need_wc_cleanup = TRUE;
+        }
+      if ((err = svn_wc__entry_versioned(&entry, path_or_url, adm_access, 
+                                         FALSE, pool)))
+        goto cleanup;
+
+      path_or_url = entry->url;
+      *repos_root = entry->repos;
+    }
+
+  /* If PATH_OR_URL was a URL, or PEG_REVISION wasn't a client-side
+     revision, or we weren't otherwise able to find the repository
+     root URL in PATH_OR_URL's WC entry, we use the RA layer to look
+     it up. */
+  if (*repos_root == NULL)
+    {
+      svn_ra_session_t *ra_session;
+      if ((err = svn_client__ra_session_from_path(&ra_session,
+                                                  &rev,
+                                                  &target_url,
+                                                  path_or_url,
+                                                  peg_revision,
+                                                  peg_revision,
+                                                  ctx,
+                                                  pool)))
+        goto cleanup;
+      
+      if ((err = svn_ra_get_repos_root(ra_session, repos_root, pool)))
+        goto cleanup;
+    }
+      
+ cleanup:
+  if (need_wc_cleanup)
+    {
+      svn_error_t *err2 = svn_wc_adm_close(adm_access);
+      if (! err)
+        err = err2;
+      else
+        svn_error_clear(err2);
+    }
+  return err;
 }
+
 
 svn_error_t *
 svn_client__default_walker_error_handler(const char *path,

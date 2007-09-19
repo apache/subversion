@@ -849,13 +849,13 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
       const svn_wc_entry_t *entry;
       svn_boolean_t indirect;
 
-      SVN_ERR(svn_client__get_repos_root(&repos_root, path_or_url,
-                                         peg_revision, ctx, pool));
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url, FALSE,
                                      0, ctx->cancel_func, ctx->cancel_baton,
                                      pool));
       SVN_ERR(svn_wc__entry_versioned(&entry, path_or_url, adm_access, FALSE,
                                       pool));
+      SVN_ERR(svn_client__get_repos_root(&repos_root, path_or_url,
+                                         peg_revision, adm_access, ctx, pool));
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(mergeinfo, entry, 
                                                     &indirect, FALSE,
                                                     svn_mergeinfo_inherited, 
