@@ -2117,7 +2117,7 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
 
 void
 SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
-                 bool recurse, InfoCallback *callback)
+                 svn_depth_t depth, InfoCallback *callback)
 {
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
@@ -2129,11 +2129,10 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
     Path checkedPath(path);
     SVN_JNI_ERR(checkedPath.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_info(checkedPath.c_str(),
-                                pegRevision.revision(),
-                                revision.revision(),
-                                InfoCallback::callback,
-                                callback,
-                                recurse ? TRUE : FALSE,
-                                ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_info2(checkedPath.c_str(),
+                                 pegRevision.revision(),
+                                 revision.revision(),
+                                 InfoCallback::callback,
+                                 callback,
+                                 depth, ctx, requestPool.pool()), );
 }
