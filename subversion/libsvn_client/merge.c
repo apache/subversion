@@ -2837,7 +2837,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                                        pool));
   else
     SVN_ERR(svn_wc_walk_entries3(merge_cmd_baton->target, adm_access,
-                                 &walk_callbacks, &wb, TRUE,
+                                 &walk_callbacks, &wb, depth, TRUE,
                                  merge_cmd_baton->ctx->cancel_func,
                                  merge_cmd_baton->ctx->cancel_baton,
                                  pool));

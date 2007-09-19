@@ -367,7 +367,10 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       wb.force = skip_checks;
 
       SVN_ERR(svn_wc_walk_entries3(target, adm_access,
-                                   &walk_callbacks, &wb, FALSE,
+                                   &walk_callbacks, &wb,
+                                   /* Redundant, since we know recurse
+                                      is true, but good style. */
+                                   SVN_DEPTH_FROM_RECURSE(recurse), FALSE,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    pool));
     }
@@ -744,7 +747,10 @@ svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
   /* Fetch the property, recursively or for a single resource. */
   if (recurse && entry->kind == svn_node_dir)
     SVN_ERR(svn_wc_walk_entries3(target, adm_access, &walk_callbacks, &wb,
-                                 FALSE, ctx->cancel_func, ctx->cancel_baton,
+                                 /* Redundant, since we know recurse is
+                                    true, but good style. */
+                                 SVN_DEPTH_FROM_RECURSE(recurse), FALSE,
+                                 ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   else
     SVN_ERR(walk_callbacks.found_entry(target, entry, &wb, pool));
@@ -1168,7 +1174,8 @@ svn_client_proplist3(const char *target,
           wb.receiver_baton = receiver_baton;
 
           SVN_ERR(svn_wc_walk_entries3(target, adm_access,
-                                       &walk_callbacks, &wb, FALSE,
+                                       &walk_callbacks, &wb,
+                                       depth, FALSE,
                                        ctx->cancel_func, ctx->cancel_baton,
                                        pool));
         }
