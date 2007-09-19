@@ -2180,19 +2180,19 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param pathOrUrl     the path or the url of the item
      * @param revision      the revision of the item to return
      * @param pegRevision   the revision to interpret pathOrUrl
-     * @param recurse       flag if to recurse, if the item is a directory
+     * @param depth         the depth to recurse
      * @param callback      a callback to receive the infos retreived
      * @return              the information objects
      * @since 1.5
      */
     public void info2(String pathOrUrl, Revision revision,
-                      Revision pegRevision, boolean recurse,
+                      Revision pegRevision, int depth,
                       InfoCallback callback)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.info2(pathOrUrl, revision, pegRevision, recurse, callback);
+            worker.info2(pathOrUrl, revision, pegRevision, depth, callback);
         }
     }
 
