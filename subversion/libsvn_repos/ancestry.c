@@ -46,6 +46,18 @@ struct path_info
   apr_pool_t *oldpool;
 };
 
+static svn_error_t *
+do_walk(const char *end_path,
+        svn_fs_t *fs,
+        svn_revnum_t start,
+        svn_revnum_t end,
+        svn_boolean_t include_merges,
+        svn_boolean_t stop_on_copy,
+        const svn_repos__ancestry_callbacks_t *callbacks,
+        void *callbacks_baton,
+        svn_repos_authz_func_t authz_read_func,
+        void *authz_read_baton,
+        apr_pool_t *pool);
 
 
 /*** Ancestry walking. ***/
@@ -224,10 +236,9 @@ walk_range(const char *path,
             copy_rev = tmp_range.start;
         }
 
-      SVN_ERR(svn_repos__walk_ancestry(path, fs, copy_rev, tmp_range.end, TRUE,
-                                       FALSE, callbacks, callbacks_baton,
-                                       authz_read_func, authz_read_baton,
-                                       iterpool));
+      SVN_ERR(do_walk(path, fs, copy_rev, tmp_range.end, TRUE, FALSE, callbacks,
+                      callbacks_baton, authz_read_func, authz_read_baton,
+                      iterpool));
 
       tmp_range.end = copy_rev - 1;
     }
@@ -274,18 +285,18 @@ walk_merged_history(const char *path,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_repos__walk_ancestry(const char *end_path,
-                         svn_fs_t *fs,
-                         svn_revnum_t start,
-                         svn_revnum_t end,
-                         svn_boolean_t include_merges,
-                         svn_boolean_t stop_on_copy,
-                         const svn_repos__ancestry_callbacks_t *callbacks,
-                         void *callbacks_baton,
-                         svn_repos_authz_func_t authz_read_func,
-                         void *authz_read_baton,
-                         apr_pool_t *pool)
+static svn_error_t *
+do_walk(const char *end_path,
+        svn_fs_t *fs,
+        svn_revnum_t start,
+        svn_revnum_t end,
+        svn_boolean_t include_merges,
+        svn_boolean_t stop_on_copy,
+        const svn_repos__ancestry_callbacks_t *callbacks,
+        void *callbacks_baton,
+        svn_repos_authz_func_t authz_read_func,
+        void *authz_read_baton,
+        apr_pool_t *pool)
 {
   svn_fs_history_t *history;
   svn_fs_root_t *root;
@@ -302,7 +313,6 @@ svn_repos__walk_ancestry(const char *end_path,
       apr_pool_t *tmp_pool;
       svn_revnum_t rev;
       const char *path;
-      svn_boolean_t halt;
 
       svn_pool_clear(iterpool);
 
@@ -331,11 +341,9 @@ svn_repos__walk_ancestry(const char *end_path,
 
       /* Report the ancestor we've found. */
       if (callbacks->found_ancestor)
-        SVN_ERR(callbacks->found_ancestor(callbacks_baton, path, rev, &halt,
+        SVN_ERR(callbacks->found_ancestor(callbacks_baton, path, rev,
                                           iterpool));
 
-      if (halt)
-        break;
 
        /* Check for merges */
       if (include_merges)
@@ -372,16 +380,13 @@ svn_repos__walk_ancestry(const char *end_path,
                   /* Report merging revision, and walk the merged history. */
                   if (callbacks->found_merge)
                     SVN_ERR(callbacks->found_merge(callbacks_baton, path, rev,
-                                                   &halt, iterpool));
+                                                   iterpool));
 
                   SVN_ERR(walk_merged_history(path, rev, fs, mergeinfo,
                                               callbacks, callbacks_baton,
                                               authz_read_func, authz_read_baton,
                                               iterpool));
                 }
-
-              if (halt)
-                break;
             }
         }
 
@@ -396,4 +401,30 @@ svn_repos__walk_ancestry(const char *end_path,
   svn_pool_destroy(lastpool);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos__walk_ancestry(const char *path,
+                         svn_fs_t *fs,
+                         svn_revnum_t start,
+                         svn_revnum_t end,
+                         svn_boolean_t include_merges,
+                         svn_boolean_t stop_on_copy,
+                         const svn_repos__ancestry_callbacks_t *callbacks,
+                         void *callbacks_baton,
+                         svn_repos_authz_func_t authz_read_func,
+                         void *authz_read_baton,
+                         apr_pool_t *pool)
+{
+  svn_error_t *err = do_walk(path, fs, start, end, include_merges, stop_on_copy,
+                             callbacks, callbacks_baton, authz_read_func,
+                             authz_read_baton, pool);
+
+  if (err && svn_error_root_cause_is(err, SVN_ERR_CEASE_INVOCATION))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+ 
+  return err;
 }

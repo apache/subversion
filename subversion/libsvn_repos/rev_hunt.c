@@ -206,28 +206,12 @@ static svn_error_t *
 history_ancestor(void *baton,
                  const char *path,
                  svn_revnum_t rev,
-                 svn_boolean_t *halt,
                  apr_pool_t *pool)
 {
   struct history_cb_baton *hcb = baton;
   svn_error_t *err;
 
-  *halt = FALSE;
-  err = hcb->history_func(hcb->history_baton, path, rev, pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_CEASE_INVOCATION)
-        {
-          svn_error_clear(err);
-          *halt = TRUE;
-        }
-      else
-        {
-          return err;
-        }
-    }
-
-  return SVN_NO_ERROR;
+  return hcb->history_func(hcb->history_baton, path, rev, pool);
 }
 
 svn_error_t *
@@ -788,7 +772,6 @@ static svn_error_t *
 found_ancestor(void *baton,
                const char *path,
                svn_revnum_t rev,
-               svn_boolean_t *halt,
                apr_pool_t *pool)
 {
   struct ancestry_walker_baton *awb = baton;
@@ -799,7 +782,6 @@ found_ancestor(void *baton,
 
   APR_ARRAY_PUSH(awb->path_revisions, struct path_revision *) = path_rev;
 
-  *halt = FALSE;
   return SVN_NO_ERROR;
 }
 

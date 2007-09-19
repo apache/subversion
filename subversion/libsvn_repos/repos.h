@@ -244,14 +244,12 @@ typedef struct svn_repos__ancestry_callbacks_t
   svn_error_t *(*found_ancestor)(void *walk_baton,
                                  const char *path,
                                  svn_revnum_t rev,
-                                 svn_boolean_t *halt,
                                  apr_pool_t *pool);
 
   /* A merge happened in PATH at REV. */
   svn_error_t *(*found_merge)(void *walk_baton,
                               const char *path,
                               svn_revnum_t rev,
-                              svn_boolean_t *halt,
                               apr_pool_t *pool);
 
   /* The end of a merged branch's history has been reached, and it
@@ -265,7 +263,6 @@ typedef struct svn_repos__ancestry_callbacks_t
   svn_error_t *(*found_copy)(void *walk_baton,
                              const char *source_path,
                              svn_revnum_t source_rev,
-                             svn_boolean_t *halt,
                              apr_pool_t *pool);
 
 } svn_repos__ancestry_callbacks_t;
