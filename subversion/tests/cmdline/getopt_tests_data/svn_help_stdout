@@ -27,6 +27,7 @@ Available subcommands:
    lock
    log
    merge
+   mergeinfo
    mkdir
    move (mv, rename, ren)
    propdel (pdel, pd)
