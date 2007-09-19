@@ -607,6 +607,21 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Reverts a file to a pristine state.
+     * @param path      path of the file.
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void revert(String path, int depth) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.revert(path, depth);
+        }
+    }
+
+    /**
      * Adds a file to the repository.
      * @param path      path to be added.
      * @param recurse   recurse into subdirectories

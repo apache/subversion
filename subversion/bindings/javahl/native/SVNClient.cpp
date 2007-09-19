@@ -300,7 +300,7 @@ void SVNClient::remove(Targets &targets, const char *message, bool force,
                                    ctx, requestPool.pool()), );
 }
 
-void SVNClient::revert(const char *path, bool recurse)
+void SVNClient::revert(const char *path, svn_depth_t depth)
 {
     Pool requestPool;
 
@@ -313,7 +313,7 @@ void SVNClient::revert(const char *path, bool recurse)
     Targets target(path);
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
-    SVN_JNI_ERR(svn_client_revert(targets, recurse, ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_revert2(targets, depth, ctx, requestPool.pool()), );
 }
 
 void SVNClient::add(const char *path,
