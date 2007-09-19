@@ -2369,7 +2369,7 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * @par Important:
  * This is a variant of svn_wc_add().  No changes will happen
  * to the repository until a commit occurs.  This scheduling can be
- * removed with svn_client_revert().
+ * removed with svn_client_revert2().
  *
  * @since New in 1.2.
  */
@@ -3972,12 +3972,19 @@ svn_wc_relocate(const char *path,
 
 
 /**
- * Revert changes to @a path (perhaps in a @a recursive fashion).  Perform
- * necessary allocations in @a pool.
+ * Revert changes to @a path.  Perform necessary allocations in @a pool.
  *
  * @a parent_access is an access baton for the directory containing @a path,
  * unless @a path is a wc root, in which case @a parent_access refers to
  * @a path itself.
+ *
+ * If @a depth is @c svn_depth_empty, revert just @a path (if a
+ * directory, then revert just the properties on that directory).
+ * Else if @c svn_depth_files, revert @a path and any files
+ * directly under @a path if it is directory.  Else if 
+ * @c svn_depth_immediates, revert all of the preceding plus
+ * properties on immediate subdirectories; else if @c svn_depth_infinity,
+ * revert path and everything under it fully recursively.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the reversion process.  If it returns an
@@ -3995,7 +4002,28 @@ svn_wc_relocate(const char *path,
  * If @a path is not under version control, return the error
  * SVN_ERR_UNVERSIONED_RESOURCE.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_revert3(const char *path,
+               svn_wc_adm_access_t *parent_access,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_revert3(), but with @a depth set according to
+ * @a recursive: if @a recursive is true, @a depth is
+ * @c svn_depth_infinity; if false, @a depth is @c svn_depth_empty.
+ *
+ * @note Most APIs map @a recurse==false to @a depth==svn_depth_files;
+ * revert is deliberately different.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_wc_revert2(const char *path,

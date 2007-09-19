@@ -1440,7 +1440,7 @@ svn_wc_add2(const char *path,
         {
           /* ### todo: At some point, we obviously don't want to block
              replacements where the node kind changes.  When this
-             happens, svn_wc_revert2() needs to learn how to revert
+             happens, svn_wc_revert3() needs to learn how to revert
              this situation.  At present we are using a specific node-change
              error so that clients can detect it. */
           return svn_error_createf
@@ -1953,9 +1953,9 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_revert2(const char *path,
+svn_wc_revert3(const char *path,
                svn_wc_adm_access_t *parent_access,
-               svn_boolean_t recursive,
+               svn_depth_t depth,
                svn_boolean_t use_commit_times,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
@@ -2089,7 +2089,7 @@ svn_wc_revert2(const char *path,
 
       /* Recursivity is taken care of by svn_wc_remove_from_revision_control,
          and we've definitely reverted PATH at this point. */
-      recursive = FALSE;
+      depth = svn_depth_empty;
       reverted = TRUE;
 
       /* If the removed item was *also* in a 'deleted' state, make
@@ -2150,7 +2150,7 @@ svn_wc_revert2(const char *path,
 
           /* Force recursion on replaced directories. */
           if (entry->schedule == svn_wc_schedule_replace)
-            recursive = TRUE;
+            depth = svn_depth_infinity;
           break;
 
         default:
@@ -2166,7 +2166,7 @@ svn_wc_revert2(const char *path,
                    pool);
 
   /* Finally, recurse if requested. */
-  if (recursive && (entry->kind == svn_node_dir))
+  if (entry->kind == svn_node_dir && depth > svn_depth_empty)
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
@@ -2178,6 +2178,10 @@ svn_wc_revert2(const char *path,
           const void *key;
           const char *keystring;
           const char *full_entry_path;
+          svn_depth_t depth_under_here = depth;
+
+          if (depth == svn_depth_files || depth == svn_depth_immediates)
+            depth_under_here = svn_depth_empty;
 
           svn_pool_clear(subpool);
 
@@ -2193,8 +2197,8 @@ svn_wc_revert2(const char *path,
           full_entry_path = svn_path_join(path, keystring, subpool);
 
           /* Revert the entry. */
-          SVN_ERR(svn_wc_revert2(full_entry_path, dir_access, TRUE,
-                                 use_commit_times,
+          SVN_ERR(svn_wc_revert3(full_entry_path, dir_access,
+                                 depth_under_here, use_commit_times,
                                  cancel_func, cancel_baton,
                                  notify_func, notify_baton, subpool));
         }
@@ -2204,6 +2208,30 @@ svn_wc_revert2(const char *path,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_wc_revert2(const char *path,
+               svn_wc_adm_access_t *parent_access,
+               svn_boolean_t recursive,
+               svn_boolean_t use_commit_times,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool)
+{
+  return svn_wc_revert3(path,
+                        parent_access,
+                        recursive ? svn_depth_infinity : svn_depth_empty,
+                        use_commit_times,
+                        cancel_func,
+                        cancel_baton,
+                        notify_func,
+                        notify_baton,
+                        pool);
+}
+
 
 svn_error_t *
 svn_wc_revert(const char *path,

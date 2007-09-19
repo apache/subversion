@@ -1590,6 +1590,9 @@ main(int argc, const char *argv[])
     {
       if (subcommand->cmd_func == svn_cl__status)
         opt_state.depth = SVN_DEPTH_FROM_RECURSE_STATUS(FALSE);
+      else if (subcommand->cmd_func == svn_cl__revert)
+        /* Be especially conservative, since revert can lose data. */
+        opt_state.depth = svn_depth_empty;
       else
         opt_state.depth = SVN_DEPTH_FROM_RECURSE(FALSE);
     }
