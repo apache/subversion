@@ -229,7 +229,7 @@ def depth_immediates_get_top_file_mod_only(sbox):
 def depth_empty_commit(sbox):
   "commit a file from a depth-empty working copy"
   # Bring iota into a depth-empty working copy, then commit a change to it.
-  raise svntest.Failure("<test not yet written>")
+  raise svntest.Failure  # test not yet written
 
 #----------------------------------------------------------------------
 def depth_empty_with_file(sbox):
@@ -396,7 +396,7 @@ def depth_immediates_bring_in_file(sbox):
   "bring a file into a depth-immediates working copy"
   # Run 'svn up A/mu' to bring A/mu permanently into the working copy.
   # How should 'svn up A/D/gamma' behave, however?  Edge cases...
-  raise svntest.Failure("<test not yet written>")
+  raise svntest.Failure  # test not yet written
 
 #----------------------------------------------------------------------
 def depth_immediates_fill_in_dir(sbox):
