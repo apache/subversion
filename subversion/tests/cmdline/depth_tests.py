@@ -1121,6 +1121,69 @@ def add_tree_with_depth_files(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", "--depth", "files", new1_path)
 
+def upgrade_from_above(sbox):
+  "upgrade a depth=empty wc from above"
+
+  # The bug was that 'svn up --depth=files' worked from within the
+  # working copy, but not from without with working copy top given
+  # as an argument.  Both ways would correctly cause 'iota' to
+  # appear, but only the former actually upgraded the depth of the
+  # working copy to 'files'.  See this thread for details:
+  #
+  #   http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=130157
+  #   From: Alexander Sinyushkin <Alexander.Sinyushkin@svnkit.com>
+  #   To: dev@subversion.tigris.org
+  #   Subject: Problem upgrading working copy depth
+  #   Date: Wed, 19 Sep 2007 23:15:24 +0700
+  #   Message-ID: <46F14B1C.8010406@svnkit.com>
+
+  wc, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox, empty=True)
+
+  # First verify that upgrading from within works.
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(wc)
+    expected_output = svntest.wc.State('', {
+        'iota'    : Item(status='A '),
+        })
+    expected_disk = svntest.wc.State('', {
+        'iota' : Item(contents="This is the file 'iota'.\n"),
+        })
+    expected_status = svntest.wc.State('', {
+        ''     : Item(status='  ', wc_rev=1),
+        'iota' : Item(status='  ', wc_rev=1),
+        })
+    svntest.actions.run_and_verify_update('',
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None, None, None, None, None, None,
+                                          '--depth=files')
+    svntest.actions.run_and_verify_svn(None, "Depth: +files", [], "info")
+  finally:
+    os.chdir(saved_cwd)
+
+  # Reset and do it again, this time from above the working copy.
+  svntest.main.safe_rmtree(wc)
+  wc, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox, empty=True)
+  expected_output = svntest.wc.State(wc, {
+      'iota'    : Item(status='A '),
+      })
+  expected_disk = svntest.wc.State('', {
+      'iota' : Item(contents="This is the file 'iota'.\n"),
+      })
+  expected_status = svntest.wc.State(wc, {
+      ''     : Item(status='  ', wc_rev=1),
+      'iota' : Item(status='  ', wc_rev=1),
+      })
+  svntest.actions.run_and_verify_update(wc,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, None,
+                                        '--depth=files', wc)
+  svntest.actions.run_and_verify_svn(None, "Depth: +files", [], "info", wc)
+
 #----------------------------------------------------------------------
 
 # list all tests here, starting with None:
@@ -1147,6 +1210,7 @@ test_list = [ None,
               commit_depth_immediates,
               depth_immediates_receive_new_dir,
               add_tree_with_depth_files,
+              XFail(upgrade_from_above),
             ]
 
 if __name__ == "__main__":
