@@ -1242,7 +1242,7 @@ svn_client_switch(svn_revnum_t *result_rev,
  * @par Important:
  * This is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
- * can be removed with svn_client_revert().
+ * can be removed with svn_client_revert2().
  *
  * @since New in 1.5.
  */
@@ -1380,7 +1380,7 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * the repository.  Each path's parent must be under revision control.
  * This is just a *scheduling* operation.  No changes will happen to
  * the repository until a commit occurs.  This scheduling can be
- * removed with svn_client_revert(). If a path is a file it is
+ * removed with svn_client_revert2(). If a path is a file it is
  * immediately removed from the working copy. If the path is a
  * directory it will remain in the working copy but all the files, and
  * all unversioned items, it contains will be removed. If @a force is
@@ -2629,13 +2629,18 @@ svn_client_relocate(const char *dir,
  * @{
  */
 
-/** Restore the pristine version of a working copy @a paths,
- * effectively undoing any local mods.  For each path in @a paths, if
- * it is a directory, and @a recursive is true, this will be a
- * recursive operation.
+/**
+ * Restore the pristine version of a working copy @a paths,
+ * effectively undoing any local mods.  For each path in @a paths,
+ * revert it if it is a file.  Else if it is a directory, revert
+ * according to @a depth:
  *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth, but making a note to re-check this logic later.
+ * If @a depth is @c svn_depth_empty, revert just the properties on
+ * the directory; else if @c svn_depth_files, revert the properties
+ * and any files immediately under the directory; else if 
+ * @c svn_depth_immediates, revert all of the preceding plus
+ * properties on immediate subdirectories; else if @c svn_depth_infinity,
+ * revert path and everything under it fully recursively.
  *
  * If @a ctx->notify_func2 is non-null, then for each item reverted,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
@@ -2644,6 +2649,25 @@ svn_client_relocate(const char *dir,
  * If an item specified for reversion is not under version control,
  * then do not error, just invoke @a ctx->notify_func2 with @a
  * ctx->notify_baton2, using notification code @c svn_wc_notify_skip.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_revert2(const apr_array_header_t *paths,
+                   svn_depth_t depth,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+
+/*
+ * Similar to svn_client_revert2(), but with @a depth set according to
+ * @a recurse: if @a recurse is true, @a depth is @c svn_depth_infinity,
+ * else if @a recurse is false, @a depth is @c svn_depth_empty.
+ *
+ * @note Most APIs map @a recurse==false to @a depth==svn_depth_files;
+ * revert is deliberately different.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.0 API.
  */
 svn_error_t *
 svn_client_revert(const apr_array_header_t *paths,
@@ -2772,7 +2796,7 @@ typedef struct svn_client_copy_source_t
  * If @a dst_path is not a URL, then this is just a variant of
  * svn_client_add(), where the @a sources are scheduled for addition
  * as copies.  No changes will happen to the repository until a commit occurs.
- * This scheduling can be removed with svn_client_revert().
+ * This scheduling can be removed with svn_client_revert2().
  *
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
@@ -2887,7 +2911,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *
  *   - This is a scheduling operation.  No changes will happen to the
  *     repository until a commit occurs.  This scheduling can be removed
- *     with svn_client_revert().  If one of @a src_paths is a file it is
+ *     with svn_client_revert2().  If one of @a src_paths is a file it is
  *     removed from the working copy immediately.  If one of @a src_path
  *     is a directory it will remain in the working copy but all the files,
  *     and unversioned items, it contains will be removed.
