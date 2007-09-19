@@ -3187,6 +3187,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 
       break;
     }
+  if (err)
+    return err;
 
   svn_pool_destroy(iterpool);
 
