@@ -1715,7 +1715,7 @@ elide_target_mergeinfo(const char *target_wcpath,
 /* URL1, URL2, and TARGET_WCPATH all better be directories.  For the
    single file case, the caller does the merging manually.
 
-   MERGE_TYPE denotes whether it is a forward or reverse or no-op merge.
+   IS_ROLLBACK denotes whether it is a forward or reverse merge.
    TARGET_MISSING_CHILD indicates whether TARGET_WCPATH is missing any
    immediate children.  If TRUE this signifies that the mergeinfo resulting
    from the merge must be non-inheritable.
@@ -1738,7 +1738,7 @@ do_merge(const char *url1,
          svn_revnum_t revision1,
          const char *url2,
          svn_revnum_t revision2,
-         enum merge_type merge_type,
+         svn_boolean_t is_rollback,
          svn_boolean_t target_missing_child,
          const char *target_wcpath,
          svn_wc_adm_access_t *adm_access,
@@ -1754,7 +1754,6 @@ do_merge(const char *url1,
   apr_hash_t *target_mergeinfo;
   apr_array_header_t *remaining_ranges;
   svn_merge_range_t range;
-  svn_boolean_t is_rollback;
   svn_client_ctx_t *ctx = merge_b->ctx;
   notification_receiver_baton_t notify_b =
     { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, 0, NULL, NULL, pool };
@@ -1799,7 +1798,6 @@ do_merge(const char *url1,
       /* Reparent ra_session back to URL1. */
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, pool));
 
-      is_rollback = (merge_type == merge_type_rollback);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, url1, NULL,
                                                 merge_b->ra_session1,
                                                 adm_access, pool));
@@ -1832,7 +1830,6 @@ do_merge(const char *url1,
       /* ### TODO: Grab WC mergeinfo, push it to the server, and
          ### account for mergeinfo there before pulling down a patch
          ### to apply to the WC. */
-        is_rollback = FALSE;
         remaining_ranges = apr_array_make(pool, 1, sizeof(&range));
         APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = &range;
     }
@@ -2090,7 +2087,7 @@ do_single_file_merge(const char *url1,
                      svn_revnum_t revision1,
                      const char *url2,
                      svn_revnum_t revision2,
-                     enum merge_type merge_type,
+                     svn_boolean_t is_rollback,
                      const char *target_wcpath,
                      svn_wc_adm_access_t *adm_access,
                      struct merge_cmd_baton *merge_b,
@@ -2110,7 +2107,6 @@ do_single_file_merge(const char *url1,
     { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, 0, NULL, NULL, pool };
   const char *rel_path;
   svn_merge_range_t range;
-  svn_boolean_t is_rollback;
   apr_hash_t *target_mergeinfo;
   const svn_wc_entry_t *entry;
   int i;
@@ -2199,7 +2195,6 @@ do_single_file_merge(const char *url1,
       /* Reparent ra_session1 back to URL1. */
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, pool));
 
-      is_rollback = (merge_type == merge_type_rollback);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, url1, NULL,
                                                 merge_b->ra_session1,
                                                 adm_access, pool));
@@ -2224,7 +2219,6 @@ do_single_file_merge(const char *url1,
     }
   else
     {
-        is_rollback = FALSE;
         remaining_ranges = apr_array_make(pool, 1, sizeof(&range));
         APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = &range;
     }
@@ -3007,7 +3001,7 @@ get_diff_summary_func_cb(const svn_client_diff_summarize_t *summary,
    with the appropriate arguments (based on the type of child).  Use
    PARENT_ENTRY and ADM_ACCESS to fill CHILDREN_WITH_MERGEINFO.
    Cascade PARENT_MERGE_SOURCE_URL, REV1, REV2, DEPTH,
-   IGNORE_ANCESTRY, ADM_ACCESS, MERGE_TYPE and MERGE_CMD_BATON to do_merge() 
+   IGNORE_ANCESTRY, ADM_ACCESS, IS_ROLLBACK and MERGE_CMD_BATON to do_merge() 
    and do_single_file_merge().  All allocation occurs in POOL.
 
    From PARENT_MERGE_SOURCE_URL and WC_ROOT_URL deduce the
@@ -3028,7 +3022,7 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
                             const char *wc_root_url,
                             svn_revnum_t rev1,
                             svn_revnum_t rev2,
-                            enum merge_type merge_type,
+                            svn_boolean_t is_rollback,
                             svn_depth_t depth,
                             svn_boolean_t ignore_ancestry,
                             svn_wc_adm_access_t *adm_access,
@@ -3114,7 +3108,7 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
       if (child_entry->kind == svn_node_file)
         {
           SVN_ERR(do_single_file_merge(child_url, rev1, child_url, rev2,
-                                       merge_type, child->path, adm_access,
+                                       is_rollback, child->path, adm_access,
                                        merge_cmd_baton,
                                        FALSE, /* ignore_ancestry */ pool));
         }
@@ -3132,7 +3126,7 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
                            rev1,
                            child_url,
                            rev2,
-                           merge_type,
+                           is_rollback,
                            child->missing_child,
                            child->path,
                            adm_access,
@@ -3227,7 +3221,7 @@ svn_client_merge3(const char *source1,
   const char *wc_repos_root;
   svn_merge_range_t range;
   enum merge_type merge_type;
-  svn_boolean_t same_urls;
+  svn_boolean_t is_rollback, same_urls;
 
   /* If source1 or source2 are paths, we need to get the underlying
      URL from the wc and save the initial path we were passed so we
@@ -3319,13 +3313,15 @@ svn_client_merge3(const char *source1,
   if ((merge_type == merge_type_no_op) || (record_only && dry_run))
     return SVN_NO_ERROR;
 
+  is_rollback = (merge_type == merge_type_rollback);
+
   /* If our target_wcpath is a single file, assume that the merge
      sources are files as well, and do a single-file merge. */
   if (entry->kind == svn_node_file)
     {
       SVN_ERR(do_single_file_merge(URL1, range.start,
                                    URL2, range.end,
-                                   merge_type,
+                                   is_rollback,
                                    target_wcpath,
                                    adm_access,
                                    &merge_cmd_baton,
@@ -3345,7 +3341,7 @@ svn_client_merge3(const char *source1,
                                               wc_repos_root,
                                               range.start,
                                               range.end,
-                                              merge_type,
+                                              is_rollback,
                                               depth,
                                               ignore_ancestry,
                                               adm_access,
@@ -3358,7 +3354,7 @@ svn_client_merge3(const char *source1,
                        range.start,
                        URL2,
                        range.end,
-                       merge_type,
+                       is_rollback,
                        merge_cmd_baton.target_missing_child,
                        target_wcpath,
                        adm_access,
@@ -3458,6 +3454,7 @@ svn_client_merge_peg3(const char *source,
   const char *wc_repos_root;
   svn_merge_range_t range;
   enum merge_type merge_type;
+  svn_boolean_t is_rollback;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
                                  ! dry_run, -1, ctx->cancel_func,
@@ -3556,13 +3553,14 @@ svn_client_merge_peg3(const char *source,
   if ((merge_type == merge_type_no_op) || (record_only && dry_run))
     return SVN_NO_ERROR;
 
+  is_rollback = (merge_type == merge_type_rollback);
   /* If our target_wcpath is a single file, assume that the merge
      sources are files as well, and do a single-file merge. */
   if (entry->kind == svn_node_file)
     {
       SVN_ERR(do_single_file_merge(URL1, range.start,
                                    URL1, range.end,
-                                   merge_type,
+                                   is_rollback,
                                    target_wcpath,
                                    adm_access,
                                    &merge_cmd_baton,
@@ -3581,7 +3579,7 @@ svn_client_merge_peg3(const char *source,
                                           wc_repos_root,
                                           range.start,
                                           range.end,
-                                          merge_type,
+                                          is_rollback,
                                           depth,
                                           ignore_ancestry,
                                           adm_access,
@@ -3593,7 +3591,7 @@ svn_client_merge_peg3(const char *source,
                        range.start,
                        URL2,
                        range.end,
-                       merge_type,
+                       is_rollback,
                        merge_cmd_baton.target_missing_child,
                        target_wcpath,
                        adm_access,
