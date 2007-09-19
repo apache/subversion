@@ -2932,8 +2932,9 @@ walker_helper(const char *dirpath,
 
           if (entry_access)
             SVN_ERR(walker_helper(entrypath, entry_access,
-                                  walk_callbacks, walk_baton, depth,
-                                  show_hidden, cancel_func, cancel_baton,
+                                  walk_callbacks, walk_baton,
+                                  depth_below_here, show_hidden,
+                                  cancel_func, cancel_baton,
                                   subpool));
         }
     }
