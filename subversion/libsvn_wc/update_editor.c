@@ -501,7 +501,8 @@ complete_directory(struct edit_baton *eb,
      Upgrading to infinity changes the depth of *all* directories,
      upgrading to something else only changes the target. */
   if (eb->depth == svn_depth_infinity
-      || (strcmp(path, eb->target) == 0 && eb->depth > entry->depth))
+      || (strcmp(path, svn_path_join(eb->anchor, eb->target, pool)) == 0
+          && eb->depth > entry->depth))
     entry->depth = eb->depth;
 
   /* Remove any deleted or missing entries. */

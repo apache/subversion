@@ -1210,7 +1210,7 @@ test_list = [ None,
               commit_depth_immediates,
               depth_immediates_receive_new_dir,
               add_tree_with_depth_files,
-              XFail(upgrade_from_above),
+              upgrade_from_above,
             ]
 
 if __name__ == "__main__":
