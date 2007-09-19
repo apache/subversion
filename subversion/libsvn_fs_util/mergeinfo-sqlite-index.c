@@ -340,7 +340,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
 
 
 /* Index the mergeinfo for each path in MERGEINFO_FOR_PATHS (a
-   mapping of const char * -> to apr_hash_t *). */
+   mapping of const char * -> to svn_string_t *). */
 static svn_error_t *
 index_txn_mergeinfo(sqlite3 *db,
                     svn_revnum_t new_rev,
