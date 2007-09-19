@@ -515,7 +515,20 @@ public class SVNClient implements SVNClientInterface
      * @param recurse   recurse into subdirectories
      * @throws ClientException
      */
-    public native void revert(String path, boolean recurse)
+    public void revert(String path, boolean recurse)
+            throws ClientException
+    {
+        revert(path, Depth.fromRecurse(recurse));
+    }
+
+    /**
+     * Reverts a file to a pristine state.
+     * @param path      path of the file.
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    public native void revert(String path, int depth)
             throws ClientException;
 
     /**

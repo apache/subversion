@@ -392,6 +392,15 @@ public interface SVNClientInterface
     void revert(String path, boolean recurse) throws ClientException;
 
     /**
+     * Reverts a file to a pristine state.
+     * @param path      path of the file.
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    void revert(String path, int depth) throws ClientException;
+
+    /**
      * Adds a file to the repository.
      * @param path      path to be added.
      * @param recurse   recurse into subdirectories
