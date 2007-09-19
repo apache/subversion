@@ -668,8 +668,13 @@ harvest_committables(apr_hash_t *committables,
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
       SVN_ERR(svn_wc_walk_entries3(path, adm_access, &add_tokens_callbacks,
-                                   lock_tokens, FALSE, ctx->cancel_func,
-                                   ctx->cancel_baton, pool));
+                                   lock_tokens,
+                                   /* If a directory was deleted, everything
+                                      under it would better be deleted too,
+                                      so pass svn_depth_infinity not depth. */
+                                   svn_depth_infinity, FALSE,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
     }
 
   return SVN_NO_ERROR;

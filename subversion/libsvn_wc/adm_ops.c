@@ -2790,6 +2790,9 @@ svn_wc_resolved_conflict3(const char *path,
     {
       SVN_ERR(svn_wc_walk_entries3(path, adm_access,
                                    &resolve_walk_callbacks, baton,
+                                   /* Reduntant, since we know recurse
+                                      is true, but good style. */
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
                                    FALSE, cancel_func, cancel_baton, pool));
 
     }

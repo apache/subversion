@@ -4024,9 +4024,7 @@ svn_info_dup(const svn_info_t *info, apr_pool_t *pool);
  *
  * If @a recurse is true (and @a path_or_url is a directory) this will
  * be a recursive operation, invoking @a receiver on each child.
- *
- * ### TODO(sd): I don't see any compelling reason to switch to
- * ### depth-style instead of recurse-style control here
+ * fooo
  *
  * @since New in 1.2.
  */

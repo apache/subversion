@@ -2850,6 +2850,7 @@ walker_helper(const char *dirpath,
               svn_wc_adm_access_t *adm_access,
               const svn_wc_entry_callbacks2_t *walk_callbacks,
               void *walk_baton,
+              svn_depth_t depth,
               svn_boolean_t show_hidden,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
@@ -2879,6 +2880,9 @@ walker_helper(const char *dirpath,
            walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool),
            walk_baton, pool));
 
+  if (depth == svn_depth_empty)
+    return SVN_NO_ERROR;
+
   /* Loop over each of the other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
@@ -2886,6 +2890,8 @@ walker_helper(const char *dirpath,
       void *val;
       const svn_wc_entry_t *current_entry;
       const char *entrypath;
+
+      svn_pool_clear(subpool);
 
       /* See if someone wants to cancel this operation. */
       if (cancel_func)
@@ -2898,14 +2904,26 @@ walker_helper(const char *dirpath,
         continue;
 
       entrypath = svn_path_join(dirpath, key, subpool);
-      SVN_ERR(walk_callbacks->handle_error
-              (entrypath, walk_callbacks->found_entry(entrypath, current_entry,
-                                                      walk_baton, subpool),
-               walk_baton, pool));
 
-      if (current_entry->kind == svn_node_dir)
+      if (current_entry->kind == svn_node_file
+          || depth >= svn_depth_immediates)
+        {
+          SVN_ERR(walk_callbacks->handle_error
+                  (entrypath,
+                   walk_callbacks->found_entry(entrypath, current_entry,
+                                               walk_baton, subpool),
+                   walk_baton, pool));
+        }
+
+      if (current_entry->kind == svn_node_dir
+          && depth >= svn_depth_immediates)
         {
           svn_wc_adm_access_t *entry_access;
+          svn_depth_t depth_below_here = depth;
+
+          if (depth == svn_depth_immediates)
+            depth_below_here = svn_depth_empty;
+
           SVN_ERR(walk_callbacks->handle_error
                   (entrypath,
                    svn_wc_adm_retrieve(&entry_access, adm_access, entrypath,
@@ -2914,12 +2932,10 @@ walker_helper(const char *dirpath,
 
           if (entry_access)
             SVN_ERR(walker_helper(entrypath, entry_access,
-                                  walk_callbacks, walk_baton,
+                                  walk_callbacks, walk_baton, depth,
                                   show_hidden, cancel_func, cancel_baton,
                                   subpool));
         }
-
-      svn_pool_clear(subpool);
     }
 
   svn_pool_destroy(subpool);
@@ -2961,7 +2977,8 @@ svn_wc_walk_entries2(const char *path,
 {
   svn_wc_entry_callbacks2_t walk_cb2 = { walk_callbacks->found_entry,
                                          svn_wc__walker_default_error_handler };
-  return svn_wc_walk_entries3(path, adm_access, &walk_cb2, walk_baton,
+  return svn_wc_walk_entries3(path, adm_access,
+                              &walk_cb2, walk_baton, svn_depth_infinity,
                               show_hidden, cancel_func, cancel_baton, pool);
 }
 
@@ -2971,6 +2988,7 @@ svn_wc_walk_entries3(const char *path,
                      svn_wc_adm_access_t *adm_access,
                      const svn_wc_entry_callbacks2_t *walk_callbacks,
                      void *walk_baton,
+                     svn_depth_t depth,
                      svn_boolean_t show_hidden,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
@@ -2994,7 +3012,7 @@ svn_wc_walk_entries3(const char *path,
 
   else if (entry->kind == svn_node_dir)
     return walker_helper(path, adm_access, walk_callbacks, walk_baton,
-                         show_hidden, cancel_func, cancel_baton, pool);
+                         depth, show_hidden, cancel_func, cancel_baton, pool);
 
   else
     return walk_callbacks->handle_error

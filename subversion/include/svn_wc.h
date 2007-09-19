@@ -1752,11 +1752,18 @@ typedef struct svn_wc_entry_callbacks_t
 /**
  * A generic entry-walker.
  *
- * Do a recursive depth-first entry-walk beginning on @a path, which can
- * be a file or dir.  Call callbacks in @a walk_callbacks, passing
- * @a walk_baton to each.  Use @a pool for looping, recursion, and to
- * allocate all entries returned.  @a adm_access must be an access baton
- * for @a path.
+ * Do a potentially recursive depth-first entry-walk beginning on
+ * @a path, which can be a file or dir.  Call callbacks in
+ * @a walk_callbacks, passing @a walk_baton to each.  Use @a pool for
+ * looping, recursion, and to allocate all entries returned.
+ * @a adm_access must be an access baton for @a path.
+ *
+ * If @a depth is @c svn_depth_empty, invoke the callbacks on @a path
+ * and return without recursing further.  If @c svn_depth_files, do
+ * the same and invoke the callbacks on file children (if any) of
+ * @a path, then return.  If @c svn_depth_immediates, do the preceding
+ * but also invoke callbacks on immediate subdirectories, then return.
+ * If @c svn_depth_infinity, recurse fully starting from @a path.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
@@ -1781,6 +1788,7 @@ svn_error_t *svn_wc_walk_entries3(const char *path,
                                   const svn_wc_entry_callbacks2_t
                                   *walk_callbacks,
                                   void *walk_baton,
+                                  svn_depth_t depth,
                                   svn_boolean_t show_hidden,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
@@ -1788,7 +1796,8 @@ svn_error_t *svn_wc_walk_entries3(const char *path,
 
 /**
  * Similar to svn_wc_walk_entries3(), but without cancellation support
- * or error handling from @a walk_callbacks.
+ * or error handling from @a walk_callbacks, and with @a depth always
+ * set to @c svn_depth_infinity.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */

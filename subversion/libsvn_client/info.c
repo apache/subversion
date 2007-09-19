@@ -259,6 +259,9 @@ crawl_entries(const char *wcpath,
       if (recurse)
         SVN_ERR(svn_wc_walk_entries3(wcpath, adm_access,
                                      &entry_walk_callbacks, &fe_baton,
+                                     /* Redundant, since we know recurse
+                                        is true, but good style. */
+                                     SVN_DEPTH_FROM_RECURSE(recurse),
                                      FALSE, ctx->cancel_func,
                                      ctx->cancel_baton, pool));
       else
