@@ -1164,7 +1164,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
    otherwise it is false.*/
 static svn_error_t *
 determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
-                           svn_boolean_t target_missing_child,
                            svn_merge_range_t *range,
                            svn_depth_t depth,
                            svn_wc_adm_access_t *adm_access,
@@ -1890,8 +1889,7 @@ do_merge(const char *url1,
               remove_absent_children(target_wcpath, children_with_mergeinfo,
                                      &notify_b);
               SVN_ERR(determine_merges_performed(&merges, target_wcpath,
-                                                 target_missing_child, r,
-                                                 depth, adm_access,
+                                                 r, depth, adm_access,
                                                  &notify_b, merge_b,
                                                  subpool));
               /* If this is the final subtree to be merged (i.e. TARGET_WCPATH
@@ -2343,7 +2341,7 @@ do_single_file_merge(const char *url1,
                  merges, minus any unresolved conflicts and skips. */
               apr_hash_t *merges;
               SVN_ERR(determine_merges_performed(&merges, target_wcpath,
-                                                 FALSE, r, svn_depth_infinity,
+                                                 r, svn_depth_infinity,
                                                  adm_access, &notify_b, merge_b,
                                                  subpool));
               /* If this whole merge was simply a no-op merge to a file then
