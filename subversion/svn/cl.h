@@ -175,6 +175,7 @@ typedef struct
 svn_opt_subcommand_t
   svn_cl__add,
   svn_cl__blame,
+  svn_cl__cat,
   svn_cl__changelist,
   svn_cl__checkout,
   svn_cl__cleanup,
@@ -202,8 +203,7 @@ svn_opt_subcommand_t
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,
-  svn_cl__update,
-  svn_cl__cat;
+  svn_cl__update;
 
 
 /* See definition in main.c for documentation. */
@@ -247,20 +247,20 @@ svn_error_t *svn_cl__check_cancel(void *baton);
 
 /* A mindless implementation of svn_wc_conflict_resolver_func_t that
  * does absolutely nothing to resolve conflicts. */
-svn_error_t *svn_cl__ignore_conflicts(
-    svn_wc_conflict_result_t *result,
-    const svn_wc_conflict_description_t *description,
-    void *baton,
-    apr_pool_t *pool);
+svn_error_t *
+svn_cl__ignore_conflicts(svn_wc_conflict_result_t *result,
+                         const svn_wc_conflict_description_t *description,
+                         void *baton,
+                         apr_pool_t *pool);
 
 /* A conflict-resolution callback which prompts the user to choose
    one of the 3 fulltexts, edit the merged file on the spot, or just
    skip the conflict (to be resolved later). */
-svn_error_t *svn_cl__interactive_conflict_handler(
-                          svn_wc_conflict_result_t *result,
-                          const svn_wc_conflict_description_t *desc,
-                          void *baton,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
+                                     const svn_wc_conflict_description_t *desc,
+                                     void *baton,
+                                     apr_pool_t *pool);
 
 
 
