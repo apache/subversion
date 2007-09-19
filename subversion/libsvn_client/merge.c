@@ -3449,7 +3449,7 @@ svn_client_merge_peg3(const char *source,
   svn_merge_range_t range;
   enum merge_type merge_type;
   svn_opt_revision_t working_rev;
-  svn_boolean_t is_rollback;
+  svn_boolean_t is_rollback, same_urls;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
                                  ! dry_run, -1, ctx->cancel_func,
@@ -3532,6 +3532,8 @@ svn_client_merge_peg3(const char *source,
                                       &initial_rev2,
                                       ctx, pool));
 
+  same_urls = (strcmp(URL1, URL2) == 0);
+
   /* Transform opt revisions to actual revision numbers. */
   SVN_ERR(svn_ra_reparent(merge_cmd_baton.ra_session1, URL1, pool));
   ENSURE_VALID_REVISION_KINDS(rev1->kind, rev2->kind);
@@ -3562,19 +3564,22 @@ svn_client_merge_peg3(const char *source,
      recursive diff-editor thing. */
   else if (entry->kind == svn_node_dir)
     {
-      /* Merge children with differing mergeinfo. */
-      SVN_ERR(discover_and_merge_children(&children_with_mergeinfo,
-                                          entry,
-                                          URL1,
-                                          wc_repos_root,
-                                          range.start,
-                                          range.end,
-                                          is_rollback,
-                                          depth,
-                                          ignore_ancestry,
-                                          adm_access,
-                                          &merge_cmd_baton,
-                                          pool));
+      if (same_urls)
+        {
+          /* Merge children with differing mergeinfo. */
+          SVN_ERR(discover_and_merge_children(&children_with_mergeinfo,
+                                              entry,
+                                              URL1,
+                                              wc_repos_root,
+                                              range.start,
+                                              range.end,
+                                              is_rollback,
+                                              depth,
+                                              ignore_ancestry,
+                                              adm_access,
+                                              &merge_cmd_baton,
+                                              pool));
+        }
 
       /* Merge of the actual target.*/
       SVN_ERR(do_merge(URL1,
