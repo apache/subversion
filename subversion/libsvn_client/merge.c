@@ -3559,7 +3559,7 @@ svn_client_merge_peg3(const char *source,
   if (entry->kind == svn_node_file)
     {
       SVN_ERR(do_single_file_merge(URL1, range.start,
-                                   URL1, range.end,
+                                   URL2, range.end,
                                    is_rollback,
                                    target_wcpath,
                                    adm_access,
