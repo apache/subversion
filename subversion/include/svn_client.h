@@ -3107,7 +3107,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     apr_pool_t *pool);
 
 /**
- * Like svn_client_propset2(), but with @a base_revision_for_url
+ * Like svn_client_propset3(), but with @a base_revision_for_url
  * always @c SVN_INVALID_REVNUM, and @a commit_info_p always NULL.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
