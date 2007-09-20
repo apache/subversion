@@ -54,10 +54,10 @@ def run_sync(url, expected_error=None):
     if expected_error is None:
       raise svntest.actions.SVNUnexpectedStderr(errput)
     else:
-      expected_error = svntest.actions.RegexOutput(expected_error,
-                                                   match_all=False)
-      svntest.actions.compare_and_display_lines(None, "STDERR",
-                                                expected_error, errput)
+      expected_error = svntest.verify.RegexOutput(expected_error,
+                                                  match_all=False)
+      svntest.verify.compare_and_display_lines(None, "STDERR",
+                                               expected_error, errput)
   elif expected_error is not None:
     raise svntest.actions.SVNExpectedStderr()
   if not output and not expected_error:
@@ -122,7 +122,7 @@ def run_test(sbox, dump_file_name):
 
   # Compare the original dump file (used to create the master
   # repository) with the dump produced by the mirror repository.
-  svntest.actions.compare_and_display_lines(
+  svntest.verify.compare_and_display_lines(
     "Dump files", "DUMP", master_dumpfile_contents, dest_dump)
 
 
@@ -286,8 +286,7 @@ def basic_authz(sbox):
 
   # this file should have been blocked by authz
   svntest.actions.run_and_verify_svn(None,
-                                     [],
-                                     svntest.SVNAnyOutput,
+                                     [], svntest.verify.AnyOutput,
                                      'cat',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -397,10 +396,10 @@ def copy_from_unreadable_dir(sbox):
   if err:
     raise svntest.actions.SVNUnexpectedStderr(err)
 
-  svntest.actions.compare_and_display_lines(None,
-                                            'LOG',
-                                            expected_out,
-                                            out[2:11])
+  svntest.verify.compare_and_display_lines(None,
+                                           'LOG',
+                                           expected_out,
+                                           out[2:11])
 
   svntest.actions.run_and_verify_svn(None,
                                      ['bar\n'],
@@ -524,10 +523,10 @@ def copy_with_mod_from_unreadable_dir(sbox):
   if err:
     raise svntest.actions.SVNUnexpectedStderr(err)
 
-  svntest.actions.compare_and_display_lines(None,
-                                            'LOG',
-                                            expected_out,
-                                            out[2:12])
+  svntest.verify.compare_and_display_lines(None,
+                                           'LOG',
+                                           expected_out,
+                                           out[2:12])
 
   svntest.actions.run_and_verify_svn(None,
                                      ['bar\n'],
@@ -628,10 +627,10 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
   if err:
     raise svntest.actions.SVNUnexpectedStderr(err)
 
-  svntest.actions.compare_and_display_lines(None,
-                                            'LOG',
-                                            expected_out,
-                                            out[2:12])
+  svntest.verify.compare_and_display_lines(None,
+                                           'LOG',
+                                           expected_out,
+                                           out[2:12])
 
 def url_encoding(sbox):
   "test url encoding issues"

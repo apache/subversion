@@ -21,7 +21,7 @@ import shutil, sys, re, os
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
@@ -2560,7 +2560,7 @@ def merge_prop_change_to_deleted_target(sbox):
   # inside the wc, so we cd in there.
   os.chdir(wc_dir)
   svntest.actions.run_and_verify_svn("Merge errored unexpectedly",
-                                     SVNAnyOutput, [],
+                                     svntest.verify.AnyOutput, [],
                                      'merge', '-r1:2', '.')
 
 
@@ -4592,7 +4592,7 @@ def setup_branch(sbox, branch_only = False, nbr_of_branches = 1):
   expected_disk = svntest.main.greek_state.copy()
 
   def copy_A(dest_name, rev):
-    expected = svntest.actions.UnorderedOutput(
+    expected = svntest.verify.UnorderedOutput(
       ["A    " + os.path.join(wc_dir, dest_name, "B") + "\n",
        "A    " + os.path.join(wc_dir, dest_name, "B", "lambda") + "\n",
        "A    " + os.path.join(wc_dir, dest_name, "B", "E") + "\n",
@@ -5470,7 +5470,7 @@ def merge_to_switched_path(sbox):
   A_COPY_D_G_path = os.path.join(wc_dir, "A_COPY", "D", "G")
   A_COPY_D_G_rho_path = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
          ["A    " + os.path.join(G_COPY_path, "pi") + "\n",
           "A    " + os.path.join(G_COPY_path, "rho") + "\n",
           "A    " + os.path.join(G_COPY_path, "tau") + "\n",
@@ -5588,13 +5588,13 @@ def merge_to_switched_path(sbox):
   wc_status.tweak("A_COPY/D/G", status=' M')
   wc_status.tweak("A_COPY/D/G/rho", status='M ')
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
     ["A    " + os.path.join(G_COPY_path, "pi") + "\n",
      "A    " + os.path.join(G_COPY_path, "rho") + "\n",
      "A    " + os.path.join(G_COPY_path, "tau") + "\n",
      "Checked out revision 6.\n",
      "A         " + G_COPY_path + "\n"])
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
     ["Properties on '" + A_COPY_D_path + "':\n",
      "  " + SVN_PROP_MERGE_INFO + " : /A/D:\n",
      "Properties on '" + A_COPY_D_G_path + "':\n",
@@ -6347,7 +6347,7 @@ def empty_rev_range_mergeinfo(sbox):
   # and the is the only mod we expect to see.
   wc_status.tweak('A/D', status=' M')
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
     ["Properties on '" + A_D_path + "':\n",
      "  " + SVN_PROP_MERGE_INFO + " : /A_COPY/B:4\n",
      "Properties on '" + A_COPY_path + "':\n",
@@ -6389,7 +6389,7 @@ def empty_rev_range_mergeinfo(sbox):
   # it's nearest ancestor A with mergeinfo for a disjoint set of paths.  So
   # the mergeinfo should elide.
   os.chdir(svntest.main.work_dir)
-  expected = svntest.actions.UnorderedRegexOutput(
+  expected = svntest.verify.UnorderedRegexOutput(
     expected_merge_output(4,
       ["U    " + os.path.join(short_D_path, "G", "rho") + "\n",
        "U    " + os.path.join(short_D_path, "H", "psi") + "\n"],
@@ -6402,7 +6402,7 @@ def empty_rev_range_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, [], [], 'pl', '-vR', A_D_path)
 
   # Revert the last merge.
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
     ["Reverted '" + A_D_path + "'\n",
      "Reverted '" + rho_path + "'\n",
      "Reverted '" + psi_path + "'\n",
@@ -6438,7 +6438,7 @@ def empty_rev_range_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None,[], [], 'pl', '-vR', A_D_path)
 
   # Revert local changes.
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
     ["Reverted '" + A_D_path + "'\n",
      "Reverted '" + rho_path + "'\n",
      "Reverted '" + A_path + "'\n",

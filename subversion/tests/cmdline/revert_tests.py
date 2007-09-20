@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -714,7 +714,7 @@ def status_of_missing_dir_after_revert(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      A_D_G_path)
 
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
     ["D      " + os.path.join(A_D_G_path, "pi") + "\n",
      "D      " + os.path.join(A_D_G_path, "rho") + "\n",
      "D      " + os.path.join(A_D_G_path, "tau") + "\n"])
@@ -723,7 +723,7 @@ def status_of_missing_dir_after_revert(sbox):
 
   svntest.main.safe_rmtree(A_D_G_path)
 
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
     ["!      " + A_D_G_path + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
                                      wc_dir)
@@ -800,7 +800,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                        dry_run = 0)
 
   # now test if the revert works ok
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
    ["Reverted '" + G_path + "'\n",
     "Reverted '" + os.path.join(G_path, 'pi') + "'\n",
     "Reverted '" + os.path.join(G_path, 'rho') + "'\n",
@@ -811,7 +811,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
                                      G_path)
 
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
     ["?      " + os.path.join(G_path, "pi") + "\n",
      "?      " + os.path.join(G_path, "rho") + "\n",
      "?      " + os.path.join(G_path, "tau") + "\n"])
@@ -820,7 +820,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
 
   svntest.main.safe_rmtree(G_path)
 
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
     ["!      " + G_path + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
                                      wc_dir)
