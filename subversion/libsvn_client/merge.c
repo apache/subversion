@@ -2443,7 +2443,8 @@ get_mergeinfo_walk_cb(const char *path,
            * and path_relative_to_merge_target.
            */
           merge_target_len = strlen(wb->merge_target_path);
-          if (!merge_target_len)
+          /* Need to append '/' only for subtrees. */
+          if (!merge_target_len && strcmp(path, wb->merge_target_path) != 0)
             svn_stringbuf_appendbytes(merge_src_child_path, "/", 1);
           path_relative_to_merge_target = path + merge_target_len;
           svn_stringbuf_appendbytes(merge_src_child_path,
