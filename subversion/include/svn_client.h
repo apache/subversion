@@ -3200,7 +3200,7 @@ svn_client_revprop_set(const char *propname,
  * If error, don't touch @a *props, otherwise @a *props is a hash table
  * even if empty.
  *
- * @since New in 1.2.
+ * @since New in 1.4.
  */
 svn_error_t *
 svn_client_propget3(apr_hash_t **props,
@@ -3217,7 +3217,7 @@ svn_client_propget3(apr_hash_t **props,
  * Similar to svn_client_propget3(), except that @a actual_revnum is
  * always @c NULL.
  *
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_client_propget2(apr_hash_t **props,
