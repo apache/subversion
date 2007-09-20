@@ -4089,6 +4089,19 @@ svn_client_url_from_path(const char **url,
                          apr_pool_t *pool);
 
 
+/** Set @a *url to the repository root URL of the repository in which
+ * @a path_or_url is versioned (or scheduled to be versioned),
+ * allocated in @a pool.  @a ctx is required for possible repository
+ * authentication.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_root_url_from_path(const char **url,
+                              const char *path_or_url,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool);
+
 
 
 /* Fetching repository UUIDs. */
