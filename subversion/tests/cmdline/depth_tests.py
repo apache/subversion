@@ -23,7 +23,7 @@ import os
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -63,7 +63,8 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
       svntest.main.safe_rmtree(wc_empty)
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=empty",
-      SVNAnyOutput, [], "co", "--depth", "empty", sbox.repo_url, wc_empty)
+      svntest.verify.AnyOutput, [],
+      "co", "--depth", "empty", sbox.repo_url, wc_empty)
 
   wc_files = None
   if files:
@@ -72,7 +73,8 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
       svntest.main.safe_rmtree(wc1)
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=files",
-      SVNAnyOutput, [], "co", "--depth", "files", sbox.repo_url, wc_files)
+      svntest.verify.AnyOutput, [],
+      "co", "--depth", "files", sbox.repo_url, wc_files)
 
   wc_immediates = None
   if immediates:
@@ -81,7 +83,7 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
       svntest.main.safe_rmtree(wc_immediates)
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=immediates",
-      SVNAnyOutput, [], "co", "--depth", "immediates",
+      svntest.verify.AnyOutput, [], "co", "--depth", "immediates",
       sbox.repo_url, wc_immediates)
 
   return wc_empty, wc_files, wc_immediates, wc
@@ -120,9 +122,8 @@ def depth_files_same_as_nonrecursive(sbox, opt):
     svntest.main.safe_rmtree(sbox.wc_dir)
 
   svntest.actions.run_and_verify_svn("Unexpected error during co %s" % opt,
-                                     SVNAnyOutput, [], "co", opt,
-                                     sbox.repo_url,
-                                     sbox.wc_dir)
+                                     svntest.verify.AnyOutput, [],
+                                     "co", opt, sbox.repo_url, sbox.wc_dir)
 
   # Should create a depth-files top directory, so both iota and A
   # should exist, and A should be empty and depth-empty.
@@ -715,7 +716,7 @@ def depth_immediates_subdir_propset_2(sbox):
 
   # Update at depth=immediates in the other wc, expecting to see no errors.
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     SVNAnyOutput, [],
+                                     svntest.verify.AnyOutput, [],
                                      'update', '--depth', 'immediates',
                                      other_wc)
 
@@ -940,7 +941,7 @@ def diff_in_depthy_wc(sbox):
 
   os.chdir(wc_empty)
 
-  expected_output = svntest.actions.UnorderedOutput(diff[:6])
+  expected_output = svntest.verify.UnorderedOutput(diff[:6])
   # The diff should contain only the propchange on '.'
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
@@ -950,11 +951,11 @@ def diff_in_depthy_wc(sbox):
                                      '--depth', 'files', '-r1')
   # The diff should contain only the propchange on '.' and the
   # contents change on iota.
-  expected_output = svntest.actions.UnorderedOutput(diff[:13])
+  expected_output = svntest.verify.UnorderedOutput(diff[:13])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
   # Do a diff at --depth empty.
-  expected_output = svntest.actions.UnorderedOutput(diff[:6])
+  expected_output = svntest.verify.UnorderedOutput(diff[:6])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--depth', 'empty', '-rHEAD')
 
@@ -963,11 +964,11 @@ def diff_in_depthy_wc(sbox):
                                      '--depth', 'immediates', '-r1')
   # The diff should contain the propchanges on '.' and 'A' and the
   # contents change on iota.
-  expected_output = svntest.actions.UnorderedOutput(diff[:19])
+  expected_output = svntest.verify.UnorderedOutput(diff[:19])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '-rHEAD')
   # Do a diff at --depth files.
-  expected_output = svntest.actions.UnorderedOutput(diff[:13])
+  expected_output = svntest.verify.UnorderedOutput(diff[:13])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--depth', 'files', '-rHEAD')
 
@@ -976,11 +977,11 @@ def diff_in_depthy_wc(sbox):
                                      '--depth', 'files', '-r1', 'A')
   # The diff should contain everything but the contents change on
   # gamma (which does not exist in this working copy).
-  expected_output = svntest.actions.UnorderedOutput(diff)
+  expected_output = svntest.verify.UnorderedOutput(diff)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
   # Do a diff at --depth immediates.
-  expected_output = svntest.actions.UnorderedOutput(diff[:19])
+  expected_output = svntest.verify.UnorderedOutput(diff[:19])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '--depth', 'immediates', '-rHEAD')
 

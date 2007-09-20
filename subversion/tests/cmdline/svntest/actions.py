@@ -17,184 +17,8 @@
 
 import os, shutil, re, sys, errno
 
-import main, tree, wc  # general svntest routines in this module.
-from svntest import Failure, SVNAnyOutput
-
-class SVNUnexpectedOutput(Failure):
-  """Exception raised if an invocation of svn results in unexpected
-  output of any kind."""
-  pass
-
-class SVNUnexpectedStdout(SVNUnexpectedOutput):
-  """Exception raised if an invocation of svn results in unexpected
-  output on STDOUT."""
-  pass
-
-class SVNUnexpectedStderr(SVNUnexpectedOutput):
-  """Exception raised if an invocation of svn results in unexpected
-  output on STDERR."""
-  pass
-
-class SVNExpectedStdout(SVNUnexpectedOutput):
-  """Exception raised if an invocation of svn results in no output on
-  STDOUT when output was expected."""
-  pass
-
-class SVNExpectedStderr(SVNUnexpectedOutput):
-  """Exception raised if an invocation of svn results in no output on
-  STDERR when output was expected."""
-  pass
-
-class SVNIncorrectDatatype(SVNUnexpectedOutput):
-  """Exception raised if invalid input is passed to the
-  run_and_verify_* API"""
-  pass
-
-class ExpectedOutput:
-  """Contains expected output, and performs comparisions."""
-  def __init__(self, output, match_all=True):
-    """Set SELF.output (which may be None).  If MATCH_ALL is True,
-    require that all lines from OUTPUT match when performing
-    comparsisons.  If False, allow any lines to match."""
-    self.output = output
-    self.match_all = match_all
-
-  def __str__(self):
-    return str(self.output)
-
-  def __cmp__(self, other):
-    """Return whether SELF.output matches OTHER (which may be a list
-    of newline-terminated lines, or a single string).  Either value
-    may be None."""
-    if self.output is None:
-      expected = []
-    else:
-      expected = self.output
-    if other is None:
-      actual = []
-    else:
-      actual = other
-
-    if isinstance(actual, list):
-      if isinstance(expected, type('')):
-        expected = [expected]
-      is_match = self.is_equivalent_list(expected, actual)
-    elif isinstance(actual, type('')):
-      is_match = self.is_equivalent_line(expected, actual)
-    else: # unhandled type
-      is_match = False
-
-    if is_match:
-      return 0
-    else:
-      return 1
-
-  def is_equivalent_list(self, expected, actual):
-    "Return whether EXPECTED and ACTUAL are equivalent."
-    if self.match_all:
-      if len(expected) != len(actual):
-        return False
-      for i in range(0, len(actual)):
-        if not self.is_equivalent_line(expected[i], actual[i]):
-          return False
-      return True
-    else:
-      for expected_re in expected:
-        for i in range(0, len(actual)):
-          if self.is_equivalent_line(expected_re, actual[i]):
-            return True
-      return False
-
-  def is_equivalent_line(self, expected, actual):
-    "Return whether EXPECTED and ACTUAL are equal."
-    return expected == actual
-
-  def display_differences(self, message, label, actual):
-    """Delegate to the display_lines() routine with the appropriate
-    args.  MESSAGE is ignored if None."""
-    display_lines(message, label, self.output, actual, False, False)
-
-class AnyOutput(ExpectedOutput):
-  def __init__(self):
-    ExpectedOutput.__init__(self, None, False)
-
-  def is_equivalent_list(self, ignored, actual):
-    if len(actual) == 0:
-      # Empty text or empty list -- either way, no output!
-      return False
-    elif isinstance(actual, list):
-      for line in actual:
-        if self.is_equivalent_line(None, line):
-          return True
-      return False
-    else:
-      return True
-
-  def is_equivalent_line(self, ignored, actual):
-    return len(actual) > 0
-
-  def display_differences(self, message, label, actual):
-    if message:
-      print message
-
-class RegexOutput(ExpectedOutput):
-  def is_equivalent_line(self, expected, actual):
-    "Return whether the regex EXPECTED matches the ACTUAL text."
-    return re.match(expected, actual) is not None
-
-  def display_differences(self, message, label, actual):
-    display_lines(message, label, self.output, actual, True, False)
-
-class UnorderedOutput(ExpectedOutput):
-  """Marks unordered output, and performs comparisions."""
-
-  def __cmp__(self, other):
-    "Handle ValueError."
-    try:
-      return ExpectedOutput.__cmp__(self, other)
-    except ValueError:
-      return 1
-
-  def is_equivalent_list(self, expected, actual):
-    "Disregard the order of ACTUAL lines during comparison."
-    if self.match_all:
-      if len(expected) != len(actual):
-        return False
-      expected = list(expected)
-      for actual_line in actual:
-        try:
-          i = self.is_equivalent_line(expected, actual_line)
-          expected.pop(i)
-        except ValueError:
-          return False
-      return True
-    else:
-      for actual_line in actual:
-        try:
-          self.is_equivalent_line(expected, actual_line)
-          return True
-        except ValueError:
-          pass
-      return False
-
-  def is_equivalent_line(self, expected, actual):
-    """Return the index into the EXPECTED lines of the line ACTUAL.
-    Raise ValueError if not found."""
-    return expected.index(actual)
-
-  def display_differences(self, message, label, actual):
-    display_lines(message, label, self.output, actual, False, True)
-
-class UnorderedRegexOutput(UnorderedOutput, RegexOutput):
-  def is_equivalent_line(self, expected, actual):
-    for i in range(0, len(expected)):
-      if RegexOutput.is_equivalent_line(self, expected[i], actual):
-        return i
-      else:
-        raise ValueError("'%s' not found" % actual)
-
-  def display_differences(self, message, label, actual):
-    display_lines(message, label, self.output, actual, True, True)
+import main, verify, tree, wc  # general svntest routines in this module.
+from svntest import Failure
 
 def no_sleep_for_timestamps():
   os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'no'
@@ -262,8 +86,8 @@ def setup_pristine_repository():
     try:
       tree.compare_trees(output_tree, expected_output_tree)
     except tree.SVNTreeUnequal:
-      display_trees("ERROR:  output of import command is unexpected.",
-                    'OUTPUT TREE', expected_output_tree, output_tree)
+      verify.display_trees("ERROR:  output of import command is unexpected.",
+                           "OUTPUT TREE", expected_output_tree, output_tree)
       sys.exit(1)
 
 
@@ -295,33 +119,16 @@ def guarantee_greek_repository(path):
 def run_and_verify_svnversion(message, wc_dir, repo_url,
                               expected_stdout, expected_stderr):
   "Run svnversion command and check its output"
-
   out, err = main.run_svnversion(wc_dir, repo_url)
-
-  if type(expected_stdout) is type([]):
-    compare_and_display_lines(message, 'STDOUT', expected_stdout, out)
-  elif expected_stdout == SVNAnyOutput:
-    if len(out) == 0:
-      if message is not None: print message
-      raise SVNExpectedStdout
-  elif expected_stdout is not None:
-    raise SVNIncorrectDatatype("Unexpected specification for stdout data")
-
-  if type(expected_stderr) is type([]):
-    compare_and_display_lines(message, 'STDERR', expected_stderr, err)
-  elif expected_stderr == SVNAnyOutput:
-    if len(err) == 0:
-      if message is not None: print message
-      raise SVNExpectedStderr
-  else:
-    raise SVNIncorrectDatatype("Unexpected specification for stderr data")
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
   return out, err
 
 
 def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   """Invokes main.run_svn() with *VARARGS, return stdout and stderr as
   lists of lines.  For both EXPECTED_STDOUT and EXPECTED_STDERR,
-  create an appropriate instance of ExpectedOutput (if necessary):
+  create an appropriate instance of verify.ExpectedOutput (if necessary):
 
      - If it is an array of strings, create a vanilla ExpectedOutput.
 
@@ -337,41 +144,17 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   If EXPECTED_STDOUT is None, do not check stdout.
   EXPECTED_STDERR may not be None.
 
-  If a comparison function fails, it will raise an error."""
-  ### TODO catch and throw particular exceptions from above
+  If a comparison fails, a Failure will be raised."""
 
   if expected_stderr is None:
-    raise SVNIncorrectDatatype("expected_stderr must not be None")
+    raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
 
   want_err = None
   if expected_stderr is not None and expected_stderr is not []:
     want_err = True
 
   out, err = main.run_svn(want_err, *varargs)
-
-  for (expected, actual, output_type, raisable) in (
-      (expected_stderr, err, 'stderr', SVNExpectedStderr),
-      (expected_stdout, out, 'stdout', SVNExpectedStdout)):
-    if expected is None:
-      continue
-
-    label = output_type.upper()
-
-    # Promote inputs to ExpectedOutput object hierarchy.
-    if isinstance(expected, type([])):
-      expected = ExpectedOutput(expected)
-    elif isinstance(expected, type('')):
-      expected = RegexOutput(expected, False)
-    elif expected == SVNAnyOutput:
-      expected = AnyOutput()
-    elif expected is not None and not isinstance(expected, ExpectedOutput):
-      raise SVNIncorrectDatatype("Unexpected type for '%s' data" % output_type)
-
-    if not isinstance(expected, AnyOutput):
-      raisable = main.SVNLineUnequal
-
-    compare_and_display_lines(message, label, expected, actual, raisable)
-
+  verify.verify_outputs(message, out, err, expected_stdout, expected_stderr)
   return out, err
 
 
@@ -382,19 +165,15 @@ def run_and_verify_load(repo_dir, dump_file_content):
           main.run_command_stdin(main.svnadmin_binary,
     expected_stderr, 1, dump_file_content,
     'load', '--force-uuid', '--quiet', repo_dir)
-  if errput:
-    actions.compare_and_display_lines(
-      "Standard error output", "STDERR", expected_stderr, errput)
+  verify.verify_outputs("Unexpected stderr output", None, errput,
+                        None, expected_stderr)
 
 
 def run_and_verify_dump(repo_dir):
   "Runs 'svnadmin dump' and reports any errors, returning the dump content."
   output, errput = main.run_svnadmin('dump', repo_dir)
-  if not output:
-    raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
-  if not errput:
-    raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
-
+  verify.verify_outputs("Missing expected output(s)", output, errput,
+                        verify.AnyOutput, verify.AnyOutput)
   return output
 
 
@@ -718,18 +497,14 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   merge_command = merge_command + args
   out, err = main.run_svn (error_re_string, *merge_command)
 
-  if (error_re_string):
-    rm = re.compile(error_re_string)
-    for line in err:
-      match = rm.search(line)
-      if match:
-        return
-    raise main.SVNUnmatchedError("Expected pattern '%s' failed to match any "
-                                 "lines from error output '%s'" %
-                                 (error_re_string, err))
+  if error_re_string:
+    if not error_re_string.startswith(".*"):
+      error_re_string = ".*(" + error_re_string + ")"
+    expected_err = verify.RegexOutput(error_re_string, match_all=False)
+    verify.verify_outputs(None, None, err, None, expected_err)
+    return
   elif err:
-    ### we should raise a less generic error here. which?
-    raise Failure(err)
+    raise verify.SVNUnexpectedStderr(err)
 
   if dry_run and out != out_dry:
     print "============================================================="
@@ -805,13 +580,14 @@ def run_and_verify_switch(wc_dir_name,
                                  '--password', main.wc_passwd,
                                  switch_url, wc_target, *args)
 
-  if (error_re_string):
-    rm = re.compile(error_re_string)
-    for line in errput:
-      match = rm.search(line)
-      if match:
-        return
-    raise main.SVNUnmatchedError
+  if error_re_string:
+    if not error_re_string.startswith(".*"):
+      error_re_string = ".*(" + error_re_string + ")"
+    expected_err = verify.RegexOutput(error_re_string, match_all=False)
+    verify.verify_outputs(None, None, errput, None, expected_err)
+    return
+  elif errput:
+    raise verify.SVNUnexpectedStderr(err)
 
   actual = tree.build_tree_from_checkout (output)
 
@@ -857,13 +633,12 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
                                 '-m', 'log msg',
                                 *args)
 
-  if (error_re_string):
-    rm = re.compile(error_re_string)
-    for line in errput:
-      match = rm.search(line)
-      if match:
-        return
-    raise main.SVNUnmatchedError
+  if error_re_string:
+    if not error_re_string.startswith(".*"):
+      error_re_string = ".*(" + error_re_string + ")"
+    expected_err = verify.RegexOutput(error_re_string, match_all=False)
+    verify.verify_outputs(None, None, errput, None, expected_err)
+    return
 
   # Else not expecting error:
 
@@ -901,8 +676,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   try:
     tree.compare_trees (actual, output_tree)
   except tree.SVNTreeError:
-      display_trees("Output of commit is unexpected.",
-                    "OUTPUT TREE", output_tree, actual)
+      verify.display_trees("Output of commit is unexpected",
+                           "OUTPUT TREE", output_tree, actual)
       raise
 
   # Verify via 'status' command too, if possible.
@@ -939,7 +714,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
-    display_trees(None, 'STATUS OUTPUT TREE', output_tree, actual)
+    verify.display_trees(None, 'STATUS OUTPUT TREE', output_tree, actual)
     raise
 
 
@@ -996,13 +771,12 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
                                  '--password', main.wc_passwd,
                                  *args)
 
-  if (error_re_string):
-    rm = re.compile(error_re_string)
-    for line in errput:
-      match = rm.search(line)
-      if match:
-        return
-    raise main.SVNUnmatchedError
+  if error_re_string:
+    if not error_re_string.startswith(".*"):
+      error_re_string = ".*(" + error_re_string + ")"
+    expected_err = verify.RegexOutput(error_re_string, match_all=False)
+    verify.verify_outputs(None, None, errput, None, expected_err)
+    return
 
   actual = tree.build_tree_from_diff_summarize (output)
 
@@ -1012,7 +786,7 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
-    display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
+    verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
     raise
 
 def run_and_validate_lock(path, username, password):
@@ -1033,6 +807,7 @@ def run_and_validate_lock(path, username, password):
                                    'info','-R',
                                    path)
 
+  ### TODO: Leverage RegexOuput([...], match_all=True) here.
   # prepare the regexs to compare against
   token_re = re.compile (".*?Lock Token: opaquelocktoken:.*?", re.DOTALL)
   author_re = re.compile (".*?Lock Owner: %s\n.*?" % username, re.DOTALL)
@@ -1046,56 +821,6 @@ def run_and_validate_lock(path, username, password):
             created_re.match(output) and \
             comment_re.match(output))):
     raise Failure
-
-######################################################################
-# Displaying expected and actual output
-
-def display_trees(message, label, expected, actual):
-  'Print two trees, expected and actual.'
-  if message is not None:
-    print message
-  if expected is not None:
-    print 'EXPECTED', label + ':'
-    tree.dump_tree(expected)
-  if actual is not None:
-    print 'ACTUAL', label + ':'
-    tree.dump_tree(actual)
-
-
-def display_lines(message, label, expected, actual, expected_is_regexp=None,
-                  expected_is_unordered=None):
-  """Print MESSAGE, unless it is None, then print EXPECTED (labeled
-  with LABEL) followed by ACTUAL (also labeled with LABEL).
-  Both EXPECTED and ACTUAL may be strings or lists of strings."""
-  if message is not None:
-    print message
-  if expected is not None:
-    output = 'EXPECTED %s' % label
-    if expected_is_regexp:
-      output += ' (regexp)'
-    if expected_is_unordered:
-      output += ' (unordered)'
-    output += ':'
-    print output
-    map(sys.stdout.write, expected)
-    if expected_is_regexp:
-      map(sys.stdout.write, '\n')
-  if actual is not None:
-    print 'ACTUAL %s:' % label
-    map(sys.stdout.write, actual)
-
-def compare_and_display_lines(message, label, expected, actual,
-                              raisable=main.SVNLineUnequal):
-  """Compare two sets of output lines, and print them if they differ.
-  MESSAGE is ignored if None.  EXPECTED may be an instance of
-  ExpectedOutput.  RAISABLE is an exception class, an instance of
-  which is thrown if ACTUAL doesn't match EXPECTED."""
-  if not isinstance(expected, ExpectedOutput):
-    expected = ExpectedOutput(expected)
-
-  if expected != actual:
-    expected.display_differences(message, label, actual)
-    raise raisable
 
 ######################################################################
 # Other general utilities

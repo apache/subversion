@@ -224,7 +224,7 @@ def authz_read_access(sbox):
 
   # open a remote folder(ls), unreadable: should fail
   svntest.actions.run_and_verify_svn(None,
-                                     None, svntest.SVNAnyOutput, 'ls',
+                                     None, svntest.verify.AnyOutput, 'ls',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      B_url)

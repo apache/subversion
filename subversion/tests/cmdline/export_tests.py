@@ -72,7 +72,7 @@ def export_nonexistent_url(sbox):
   export_target = os.path.join(sbox.wc_dir, 'nonexistent')
   nonexistent_url = sbox.repo_url + "/nonexistent"
   svntest.actions.run_and_verify_svn("Error about nonexistent URL expected",
-                                     None, svntest.SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'export', nonexistent_url, export_target)
 
 def export_working_copy(sbox):
@@ -134,7 +134,7 @@ def export_over_existing_dir(sbox):
   os.mkdir(export_target)
 
   svntest.actions.run_and_verify_svn("No error where one is expected",
-                                     None, svntest.SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'export', sbox.wc_dir, export_target)
 
   # As an extra precaution, make sure export_target doesn't have
@@ -334,7 +334,7 @@ def export_nonexistent_file(sbox):
   export_target = sbox.add_wc_path('export')
 
   svntest.actions.run_and_verify_svn("No error where one is expected",
-                                     None, svntest.SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'export', kappa_path, export_target)
 
 def export_unversioned_file(sbox):
@@ -349,7 +349,7 @@ def export_unversioned_file(sbox):
   export_target = sbox.add_wc_path('export')
 
   svntest.actions.run_and_verify_svn("No error where one is expected",
-                                     None, svntest.SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'export', kappa_path, export_target)
 
 def export_with_state_deleted(sbox):
