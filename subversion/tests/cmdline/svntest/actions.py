@@ -382,7 +382,7 @@ def run_and_verify_load(repo_dir, dump_file_content):
           main.run_command_stdin(main.svnadmin_binary,
     expected_stderr, 1, dump_file_content,
     'load', '--force-uuid', '--quiet', repo_dir)
-  if expected_stderr:
+  if errput:
     actions.compare_and_display_lines(
       "Standard error output", "STDERR", expected_stderr, errput)
 
