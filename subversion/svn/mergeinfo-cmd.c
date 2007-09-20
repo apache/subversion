@@ -35,7 +35,8 @@
 
 /*** Code. ***/
 
-static void print_merge_ranges(apr_array_header_t *ranges)
+static void 
+print_merge_ranges(apr_array_header_t *ranges)
 {
   int i;
   for (i = 0; i < ranges->nelts; i++)
@@ -46,6 +47,17 @@ static void print_merge_ranges(apr_array_header_t *ranges)
     }
 }
 
+
+static const char *
+relative_path(const char *root_url,
+              const char *url,
+              apr_pool_t *pool)
+{
+  const char *relurl = svn_path_is_child(root_url, url, pool);
+  return relurl ? apr_pstrcat(pool, "/", 
+                              svn_path_uri_decode(relurl, pool), NULL) 
+                : "/";
+}
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -71,6 +83,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       const char *truepath;
       svn_opt_revision_t peg_revision;
       apr_hash_t *mergeinfo;
+      const char *root_url;
       apr_hash_index_t *hi;
       apr_pool_t *iterpool;
 
@@ -94,12 +107,15 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, truepath,
                                               &peg_revision, ctx, subpool));
 
-      svn_cmdline_printf(pool, _("Path: %s\n"), truepath);
+      svn_cmdline_printf(pool, _("Path: %s\n"), 
+                         svn_path_local_style(truepath, pool));
       if (! mergeinfo)
         {
           svn_cmdline_printf(pool, "\n");
           continue;
         }
+
+      SVN_ERR(svn_client_root_url_from_path(&root_url, truepath, ctx, pool));
 
       iterpool = svn_pool_create(subpool);
       for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
@@ -113,7 +129,8 @@ svn_cl__mergeinfo(apr_getopt_t *os,
           apr_hash_this(hi, &key, NULL, &val);
           merge_source = key;
               
-          printf(_("  Merge source: %s\n"), merge_source);
+          printf(_("  Source path: %s\n"), 
+                 relative_path(root_url, merge_source, pool));
           printf(_("    Merged ranges: "));
           merge_ranges = val;
           print_merge_ranges(merge_ranges);
