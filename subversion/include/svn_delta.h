@@ -980,6 +980,20 @@ svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,
  * wrapped_editor and @a wrapped_baton, respectively; otherwise,
  * they'll be set to new objects allocated from @a pool.
  *
+ * @note Because the svn_delta_editor_t interface's @c delete_entry()
+ * function doesn't carry node kind information, a depth-based
+ * filtering editor being asked to filter for @c svn_depth_files but
+ * receiving a @c delete_entry() call on an immediate child of the
+ * editor's target is unable to know if that deletion should be
+ * allowed or filtered out -- a delete of a top-level file is okay in
+ * this case, a delete of a top-level subdirectory is not.  As such,
+ * this filtering editor takes a conservative approach, and ignores
+ * top-level deletion requests when filtering for @c svn_depth_files.
+ * Fortunately, most non-depth-aware (pre-1.5) Subversion editor
+ * drivers can be told to drive non-recursively (where non-recursive
+ * means essentially @c svn_depth_files), which means they won't
+ * transmit out-of-scope editor commands anyway.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
