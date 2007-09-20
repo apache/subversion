@@ -1922,10 +1922,6 @@ do_merge(const char *url1,
         notify->merge_range = r;
       notification_receiver(&notify_b, notify, subpool);
 
-      /* We must avoid subsequent merges to files which are already in
-         conflict, as subsequent merges might overlap with the
-         conflict markers in the file (or worse, be completely inside
-         them). */
       /* ### TODO: Drill code to avoid merges for files which are
          ### already in conflict down into the API which requests or
          ### applies the diff. */
