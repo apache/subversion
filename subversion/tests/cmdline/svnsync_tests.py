@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2005, 2006 CollabNet.  All rights reserved.
+# Copyright (c) 2005-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -54,7 +54,10 @@ def run_sync(url, expected_error=None):
     if expected_error is None:
       raise svntest.actions.SVNUnexpectedStderr(errput)
     else:
-      svntest.actions.match_or_fail(None, "STDERR", expected_error, errput)
+      expected_error = svntest.actions.RegexOutput(expected_error,
+                                                   match_all=False)
+      svntest.actions.compare_and_display_lines(None, "STDERR",
+                                                expected_error, errput)
   elif expected_error is not None:
     raise svntest.actions.SVNExpectedStderr()
   if not output and not expected_error:
