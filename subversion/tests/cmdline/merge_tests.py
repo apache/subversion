@@ -6393,7 +6393,7 @@ def empty_rev_range_mergeinfo(sbox):
     expected_merge_output(4,
       ["U    " + os.path.join(short_D_path, "G", "rho") + "\n",
        "U    " + os.path.join(short_D_path, "H", "psi") + "\n"],
-      3))
+      3), match_all=False)
   svntest.actions.run_and_verify_svn(None, expected, [], 'merge',
                                      '-r4:2', sbox.repo_url + '/A_COPY/D',
                                      short_D_path)
