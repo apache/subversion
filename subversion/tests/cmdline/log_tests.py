@@ -21,7 +21,7 @@ import re, os, sys
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 
 ######################################################################
