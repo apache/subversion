@@ -124,29 +124,56 @@ svn_cl__mergeinfo(apr_getopt_t *os,
           const char *merge_source;
           void *val;
           apr_array_header_t *merge_ranges;
+          svn_error_t *err;
 
           svn_pool_clear(iterpool);
           apr_hash_this(hi, &key, NULL, &val);
           merge_source = key;
               
-          printf(_("  Source path: %s\n"), 
-                 relative_path(root_url, merge_source, pool));
-          printf(_("    Merged ranges: "));
+          svn_cmdline_printf(iterpool, _("  Source path: %s\n"), 
+                             relative_path(root_url, merge_source, pool));
+          svn_cmdline_printf(iterpool, _("    Merged ranges: "));
           merge_ranges = val;
           print_merge_ranges(merge_ranges, iterpool);
 
           /* Now fetch the available merges for this source. */
-          printf(_("    Eligible ranges: "));
-          SVN_ERR(svn_client_mergeinfo_get_available(&merge_ranges, 
-                                                     truepath, 
-                                                     &peg_revision, 
-                                                     merge_source, 
-                                                     ctx,
-                                                     subpool));
-          print_merge_ranges(merge_ranges, iterpool);
-        }
 
-      svn_cmdline_printf(pool, "\n");
+          /* ### FIXME: There's no reason why this API should fail to
+             ### answer the question, short of something being quite
+             ### wrong with the question.  Certainly, that the merge
+             ### source URL can't be found in HEAD shouldn't mean we
+             ### can't get any decent information about it out of the
+             ### system.  It may just mean the system has to work
+             ### harder to provide that information.
+          */ 
+          svn_cmdline_printf(iterpool, _("    Eligible ranges: "));
+          err = svn_client_mergeinfo_get_available(&merge_ranges, 
+                                                   truepath, 
+                                                   &peg_revision, 
+                                                   merge_source, 
+                                                   ctx,
+                                                   subpool);
+          if (err)
+            {
+              if ((err->apr_err == SVN_ERR_FS_NOT_FOUND) 
+                  || (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND))
+                {
+                  svn_error_clear(err);
+                  svn_cmdline_printf(subpool, _("(source no longer available "
+                                                "in HEAD)\n"));
+                }
+              else
+                {
+                  return err;
+                }
+            }
+          else
+            {
+              print_merge_ranges(merge_ranges, iterpool);
+            }
+        }
+      svn_cmdline_printf(subpool, "\n");
+
       svn_pool_destroy(iterpool);
     }
 
