@@ -1695,6 +1695,74 @@ record_mergeinfo_for_record_only_merge(const char *URL1,
                              is_rollback, adm_access, merge_b->ctx, pool);
 }
 
+/* Marks 'inheritable' RANGE to TARGET_WCPATH by wiping off the 
+ * corresponding 'non-inheritable' RANGE from TARGET_MERGEINFO for the
+ * merge source REL_PATH. 
+ * It does such marking only for same URLs from same Repository, 
+ * not a dry run, target having existing mergeinfo(TARGET_MERGEINFO) and 
+ * target being part of CHILDREN_WITH_MERGEINFO.
+*/
+static svn_error_t *
+mark_mergeinfo_as_inheritable_for_a_range(
+                                   apr_hash_t *target_mergeinfo,
+                                   svn_boolean_t same_urls,
+                                   svn_merge_range_t *range,
+                                   const char *rel_path,
+                                   const char *target_wcpath,
+                                   svn_wc_adm_access_t *adm_access,
+                                   struct merge_cmd_baton *merge_b,
+                                   apr_array_header_t *children_with_mergeinfo,
+                                   int target_index, apr_pool_t *pool)
+{
+  /* Check if we need to make non-inheritable ranges inheritable. */
+  if (target_mergeinfo && same_urls
+      && !merge_b->dry_run
+      && merge_b->same_repos
+      && target_index >= 0)
+    {
+      svn_client__merge_path_t *merge_path = 
+        APR_ARRAY_IDX(children_with_mergeinfo,
+                      target_index, svn_client__merge_path_t *);
+
+      /* If a path has no missing children, has non-inheritable ranges,
+         *and* those non-inheritable ranges intersect with the merge being
+         performed (i.e. this is a repeat merge where a previously missing
+         child is now present) then those non-inheritable ranges are made
+         inheritable. */
+      if (merge_path
+          && merge_path->has_noninheritable && !merge_path->missing_child)
+        {
+          svn_boolean_t is_equal;
+          apr_hash_t *merges;
+          apr_hash_t *inheritable_merges = apr_hash_make(pool);
+          apr_array_header_t *inheritable_ranges =
+            apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+
+          APR_ARRAY_PUSH(inheritable_ranges, svn_merge_range_t *) = range;
+          apr_hash_set(inheritable_merges, rel_path, APR_HASH_KEY_STRING,
+                       inheritable_ranges);
+
+          /* Try to remove any non-inheritable ranges bound by the merge
+             being performed. */
+          SVN_ERR(svn_mergeinfo_inheritable(&merges, target_mergeinfo,
+                                            rel_path, range->start,
+                                            range->end, pool));
+          /* If any non-inheritable ranges were removed put them back as
+             inheritable ranges. */
+          SVN_ERR(svn_mergeinfo__equals(&is_equal, merges, target_mergeinfo,
+                                        FALSE, pool));
+          if (!is_equal)
+            {
+              SVN_ERR(svn_mergeinfo_merge(&merges, inheritable_merges,
+                                          svn_rangelist_equal_inheritance,
+                                          pool));
+              SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath, merges,
+                                                      adm_access, pool));
+            }
+        }
+    }
+  return SVN_NO_ERROR;
+}
 /* MERGE_B->TARGET hasn't been merged yet so only elide as
    far MERGE_B->TARGET's immediate children.  If TARGET_WCPATH
    is an immdediate child of MERGE_B->TARGET don't even attempt to
@@ -1964,60 +2032,18 @@ do_merge(const char *url1,
           is_path_conflicted_by_merge(merge_b))
         {
           err = make_merge_conflict_error(target_wcpath, r, pool);
-          goto finalize_mergeinfo;
+          range.end = r->end;
+          break;
         }
     }
 
- finalize_mergeinfo:
-  /* Check if we need to make non-inheritable ranges inheritable. */
-  if (target_mergeinfo
-      && notify_b.same_urls
-      && !merge_b->dry_run
-      && merge_b->same_repos
-      && target_index >= 0)
-    {
-      svn_client__merge_path_t *merge_path = 
-        APR_ARRAY_IDX(children_with_mergeinfo,
-                      target_index, svn_client__merge_path_t *);
-
-      /* If a path has no missing children, has non-inheritable ranges,
-         *and* those non-inheritable ranges intersect with the merge being
-         performed (i.e. this is a repeat merge where a previously missing
-         child is now present) then those non-inheritable ranges are made
-         inheritable. */
-      if (merge_path
-          && merge_path->has_noninheritable && !merge_path->missing_child)
-        {
-          svn_boolean_t is_equal;
-          apr_hash_t *merges;
-          apr_hash_t *inheritable_merges = apr_hash_make(subpool);
-          apr_array_header_t *inheritable_ranges =
-            apr_array_make(subpool, 1, sizeof(svn_merge_range_t *));
-
-          APR_ARRAY_PUSH(inheritable_ranges, svn_merge_range_t *) = &range;
-          apr_hash_set(inheritable_merges, rel_path, APR_HASH_KEY_STRING,
-                       inheritable_ranges);
-
-          /* Try to remove any non-inheritable ranges bound by the merge
-             being performed. */
-          SVN_ERR(svn_mergeinfo_inheritable(&merges, target_mergeinfo,
-                                            rel_path, range.start,
-                                            range.end, subpool));
-          /* If any non-inheritable ranges were removed put them back as
-             inheritable ranges. */
-          SVN_ERR(svn_mergeinfo__equals(&is_equal, merges, target_mergeinfo,
-                                        FALSE, subpool));
-          if (!is_equal)
-            {
-              SVN_ERR(svn_mergeinfo_merge(&merges, inheritable_merges,
-                                          svn_rangelist_equal_inheritance,
-                                          subpool));
-              SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath, merges,
-                                                      adm_access, subpool));
-            }
-        }
-    }
-
+  SVN_ERR(mark_mergeinfo_as_inheritable_for_a_range(target_mergeinfo,
+                                                    notify_b.same_urls,
+                                                    &range, rel_path,
+                                                    target_wcpath, adm_access,
+                                                    merge_b,
+                                                    children_with_mergeinfo,
+                                                    target_index, subpool));
   apr_pool_destroy(subpool);
 
   SVN_ERR(elide_target_mergeinfo(target_wcpath, entry, adm_access, merge_b,
