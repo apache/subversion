@@ -30,10 +30,10 @@ import sys, os, getopt, stat, string, re, time, shutil
 # Global Settings
 
 # Path to svnlook utility
-svnlook = "@SVN_BINDIR@/svnlook"
+svnlook = r"@SVN_BINDIR@/svnlook"
 
 # Path to svnadmin utility
-svnadmin = "@SVN_BINDIR@/svnadmin"
+svnadmin = r"@SVN_BINDIR@/svnadmin"
 
 # Number of backups to keep around (0 for "keep them all")
 num_backups = 64
