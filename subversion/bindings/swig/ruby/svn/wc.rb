@@ -191,8 +191,10 @@ module Svn
         Wc.get_ancestry(path, self)
       end
 
-      def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil)
-        Wc.walk_entries3(path, self, callbacks, show_hidden, cancel_func)
+      def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil,
+                       depth=nil)
+        Wc.walk_entries3(path, self, callbacks, depth, show_hidden,
+                         cancel_func)
       end
 
       def mark_missing_deleted(path)
