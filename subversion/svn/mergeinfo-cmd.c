@@ -36,7 +36,7 @@
 /*** Code. ***/
 
 static void 
-print_merge_ranges(apr_array_header_t *ranges)
+print_merge_ranges(apr_array_header_t *ranges, apr_pool_t *pool)
 {
   int i;
   for (i = 0; i < ranges->nelts; i++)
@@ -133,7 +133,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                  relative_path(root_url, merge_source, pool));
           printf(_("    Merged ranges: "));
           merge_ranges = val;
-          print_merge_ranges(merge_ranges);
+          print_merge_ranges(merge_ranges, iterpool);
 
           /* Now fetch the available merges for this source. */
           printf(_("    Eligible ranges: "));
@@ -143,7 +143,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                                                      merge_source, 
                                                      ctx,
                                                      subpool));
-          print_merge_ranges(merge_ranges);
+          print_merge_ranges(merge_ranges, iterpool);
         }
 
       svn_cmdline_printf(pool, "\n");
