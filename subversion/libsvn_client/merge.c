@@ -1763,6 +1763,63 @@ mark_mergeinfo_as_inheritable_for_a_range(
     }
   return SVN_NO_ERROR;
 }
+
+/* For shallow merges record the explicit *indirect* mergeinfo on the 
+ * 1. merged files *merged* with a depth 'files'. 
+ * 2. merged target directory *merged* with a depth 'immediates'.
+ * i.e all subtrees which are going to get a 'inheritable merge range'
+ * because of this 'shallow' merge should have the explicit mergeinfo
+ * recorded on them.
+*/
+static svn_error_t *
+record_mergeinfo_on_merged_children(svn_depth_t depth,
+                                    svn_wc_adm_access_t *adm_access,
+                                    notification_receiver_baton_t *notify_b,
+                                    struct merge_cmd_baton *merge_b,
+                                    apr_pool_t *pool)
+{
+  if ((depth != svn_depth_infinity) && notify_b->merged_paths)
+    {
+      svn_boolean_t indirect_child_mergeinfo = FALSE;
+      apr_hash_index_t *hi;
+      apr_hash_t *child_target_mergeinfo;
+      const void *merged_path;
+
+      for (hi = apr_hash_first(NULL, notify_b->merged_paths); hi;
+           hi = apr_hash_next(hi))
+        {
+          const svn_wc_entry_t *child_entry;
+          apr_hash_this(hi, &merged_path, NULL, NULL);
+          SVN_ERR(svn_wc__entry_versioned(&child_entry, merged_path,
+                                          adm_access, FALSE, pool));
+          if (((child_entry->kind == svn_node_dir)
+                && (strcmp(merge_b->target, merged_path) == 0)
+                && (depth == svn_depth_immediates))
+              || ((child_entry->kind == svn_node_file)
+                   && (depth == svn_depth_files)))
+            {
+              /* Set the explicit inheritable mergeinfo for, 
+               *  1. Merge target directory if depth is 
+               *     'immediates'.
+               *  2. If merge is on a file and requested depth 
+               *     is 'files'.
+               */
+              SVN_ERR(svn_client__get_wc_or_repos_mergeinfo
+                                      (&child_target_mergeinfo, child_entry,
+                                       &indirect_child_mergeinfo,
+                                       FALSE, svn_mergeinfo_inherited,
+                                       merge_b->ra_session1, merged_path,
+                                       adm_access, merge_b->ctx, pool));
+              if (indirect_child_mergeinfo)
+                SVN_ERR(svn_client__record_wc_mergeinfo(merged_path,
+                                                        child_target_mergeinfo,
+                                                        adm_access, pool));
+            }
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 /* MERGE_B->TARGET hasn't been merged yet so only elide as
    far MERGE_B->TARGET's immediate children.  If TARGET_WCPATH
    is an immdediate child of MERGE_B->TARGET don't even attempt to
@@ -1966,48 +2023,12 @@ do_merge(const char *url1,
                                                             target_mergeinfo,
                                                             adm_access,
                                                             subpool));
-                  if ((depth != svn_depth_infinity) && notify_b.merged_paths)
-                    {
-                      svn_boolean_t indirect_child_mergeinfo = FALSE;
-                      apr_hash_index_t *hi;
-                      apr_hash_t *child_target_mergeinfo;
-                      const void *merged_path;
 
-                      for (hi = apr_hash_first(NULL, notify_b.merged_paths);
-                           hi;
-                           hi = apr_hash_next(hi))
-                        {
-                          const svn_wc_entry_t *child_entry;
-                          apr_hash_this(hi, &merged_path, NULL, NULL);
-                          SVN_ERR(svn_wc__entry_versioned(&child_entry,
-                                                          merged_path,
-                                                          adm_access, FALSE,
-                                                          subpool));
-                          if (((child_entry->kind == svn_node_dir) && 
-                               (strcmp(merge_b->target, merged_path) == 0) &&
-                               (depth == svn_depth_immediates))
-                              || ((child_entry->kind == svn_node_file) &&
-                                  (depth == svn_depth_files)))
-                            {
-                              /* Set the explicit inheritable mergeinfo for, 
-                               *  1. Merge target directory if depth is 
-                               *     'immediates'.
-                               *  2. If merge is on a file and requested depth 
-                               *     is 'files'.
-                               */
-                              SVN_ERR(svn_client__get_wc_or_repos_mergeinfo
-                                      (&child_target_mergeinfo, child_entry,
-                                       &indirect_child_mergeinfo,
-                                       FALSE, svn_mergeinfo_inherited,
-                                       merge_b->ra_session1, merged_path,
-                                       adm_access, ctx, subpool));
-                              if (indirect_child_mergeinfo)
-                                SVN_ERR(svn_client__record_wc_mergeinfo
-                                        (merged_path, child_target_mergeinfo,
-                                         adm_access, subpool));
-                            }
-                        }
-                    }
+                  SVN_ERR(record_mergeinfo_on_merged_children(depth, 
+                                                              adm_access,
+                                                              &notify_b,
+                                                              merge_b,
+                                                              subpool));
 
                   SVN_ERR(update_wc_mergeinfo(target_wcpath, entry, rel_path,
                                               merges, is_rollback, adm_access,
