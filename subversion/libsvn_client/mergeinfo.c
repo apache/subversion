@@ -922,6 +922,13 @@ svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
   head_revision.kind = svn_opt_revision_head;
   SVN_ERR(svn_client__get_revision_number(&(full_range->end), ra_session,
                                           &head_revision, "", pool));
+
+  /* ### FIXME: What if MERGE_SOURCE_URL no longer exists in HEAD?
+     ### What if it exists, but is a different resource than was
+     ### previously merged?  What about chunks of MERGE_SOURCE_URL's
+     ### history that are shared with PATH_OR_URL?  These are all
+     ### unpleasantries.
+  */
   SVN_ERR(svn_client__oldest_rev_at_path(&(full_range->start), ra_session, 
                                          "", full_range->end, pool));
   full_range->inheritable = TRUE;
