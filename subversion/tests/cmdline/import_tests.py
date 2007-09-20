@@ -21,7 +21,7 @@ import re, os.path
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
