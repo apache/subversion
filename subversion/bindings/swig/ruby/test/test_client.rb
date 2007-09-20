@@ -838,9 +838,10 @@ class SvnClientTest < Test::Unit::TestCase
     assert_nil(ctx.mergeinfo(trunk))
     ctx.merge(branch, rev1, branch, rev2, trunk)
     mergeinfo = ctx.mergeinfo(trunk)
-    assert_equal(["/branch"], mergeinfo.keys)
+    expected_key = ctx.url_from_path(branch)
+    assert_equal([expected_key], mergeinfo.keys)
     assert_equal([[1, 2, true]],
-                 mergeinfo["/branch"].collect {|range| range.to_a})
+                 mergeinfo[expected_key].collect {|range| range.to_a})
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -852,9 +853,9 @@ class SvnClientTest < Test::Unit::TestCase
     assert(!File.exist?(trunk_path))
 
     mergeinfo = ctx.mergeinfo(trunk, rev4)
-    assert_equal(["/branch"], mergeinfo.keys)
+    assert_equal([expected_key], mergeinfo.keys)
     assert_equal([[1, 2, true], [3, 4, true]],
-                 mergeinfo["/branch"].collect {|range| range.to_a })
+                 mergeinfo[expected_key].collect {|range| range.to_a })
     ctx.propdel("svn:mergeinfo", trunk)
     assert_nil ctx.mergeinfo(trunk)
 
@@ -897,9 +898,10 @@ class SvnClientTest < Test::Unit::TestCase
     assert_nil(ctx.mergeinfo(trunk))
     ctx.merge_peg(branch, rev1, rev2, trunk)
     mergeinfo = ctx.mergeinfo(trunk)
-    assert_equal(["/branch"], mergeinfo.keys)
+    expected_key = ctx.url_from_path(branch)
+    assert_equal([expected_key], mergeinfo.keys)
     assert_equal([[1, 2, true]],
-                 mergeinfo["/branch"].collect {|range| range.to_a})
+                 mergeinfo[expected_key].collect {|range| range.to_a})
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -911,9 +913,9 @@ class SvnClientTest < Test::Unit::TestCase
     assert(!File.exist?(trunk_path))
 
     mergeinfo = ctx.mergeinfo(trunk, rev4)
-    assert_equal(["/branch"], mergeinfo.keys)
+    assert_equal([expected_key], mergeinfo.keys)
     assert_equal([[1, 2, true], [3, 4, true]],
-                 mergeinfo["/branch"].collect {|range| range.to_a })
+                 mergeinfo[expected_key].collect {|range| range.to_a })
     ctx.propdel("svn:mergeinfo", trunk)
     assert_nil(ctx.mergeinfo(trunk))
 
