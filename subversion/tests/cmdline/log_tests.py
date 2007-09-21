@@ -504,8 +504,16 @@ def dynamic_revision(sbox):
   guarantee_repos_and_wc(sbox)
   os.chdir(sbox.wc_dir)
 
-  for rev in ('HEAD', 'BASE', 'COMMITTED', 'PREV'):
-    svntest.actions.run_and_verify_svn(None, None, [], 'log', '-r', rev)
+  revprops = [{'svn:author': 'jrandom',
+               'svn:date': '', 'svn:log': 'Log message for revision 9'}]
+  for rev in ('HEAD', 'BASE', 'COMMITTED'):
+    svntest.actions.run_and_verify_log_xml(expected_revprops=revprops,
+                                           args=['-r', rev])
+  revprops[0]['svn:log'] = ('Log message for revision 8\n'
+                            '  but with multiple lines\n'
+                            '  to test the code')
+  svntest.actions.run_and_verify_log_xml(expected_revprops=revprops,
+                                         args=['-r', 'PREV'])
 
 #----------------------------------------------------------------------
 def log_wc_with_peg_revision(sbox):
@@ -1037,6 +1045,18 @@ def log_changes_list(sbox):
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2, 5, 7])
 
+#----------------------------------------------------------------------
+def only_one_wc_path(sbox):
+  "svn log of two wc paths is disallowed"
+
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+
+  svntest.actions.run_and_verify_log_xml(
+    expected_stderr=('.*When specifying working copy paths,'
+                     ' only one target may be given'),
+    args=['A/mu', 'iota'])
+
 
 ########################################################################
 # Run the tests
@@ -1066,6 +1086,7 @@ test_list = [ None,
               XFail(log_single_change),
               XFail(log_changes_range),
               XFail(log_changes_list),
+              only_one_wc_path,
              ]
 
 if __name__ == '__main__':

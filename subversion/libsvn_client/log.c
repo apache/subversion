@@ -294,7 +294,6 @@ svn_client_log4(const apr_array_header_t *targets,
   svn_ra_session_t *ra_session;
   const char *url_or_path;
   const char *ignored_url;
-  const char *base_name = NULL;
   apr_array_header_t *condensed_targets;
   svn_revnum_t ignored_revnum;
   svn_opt_revision_t session_opt_rev;
@@ -349,6 +348,12 @@ svn_client_log4(const apr_array_header_t *targets,
       apr_array_header_t *target_urls;
       apr_array_header_t *real_targets;
       int i;
+
+      /* See FIXME about multiple wc targets, below. */
+      if (targets->nelts > 1)
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                _("When specifying working copy paths, only "
+                                  "one target may be given"));
 
       /* Get URLs for each target */
       target_urls = apr_array_make(pool, 1, sizeof(const char *));
@@ -444,94 +449,53 @@ svn_client_log4(const apr_array_header_t *targets,
    *
    * in which case we want to avoid recomputing the static revision on
    * every iteration.
+   *
+   * ### FIXME: However, we can't yet handle multiple wc targets anyway.
+   *
+   * We used to iterate over each target in turn, getting the logs for
+   * the named range.  This led to revisions being printed in strange
+   * order or being printed more than once.  This is issue 1550.
+   *
+   * In r11599, jpieper blocked multiple wc targets in svn/log-cmd.c,
+   * meaning this block not only doesn't work right in that case, but isn't
+   * even testable that way (svn has no unit test suite; we can only test
+   * via the svn command).  So, that check is now moved into this function
+   * (see above).
+   *
+   * kfogel ponders future enhancements in r4186:
+   * I think that's okay behavior, since the sense of the command is
+   * that one wants a particular range of logs for *this* file, then
+   * another range for *that* file, and so on.  But we should
+   * probably put some sort of separator header between the log
+   * groups.  Of course, libsvn_client can't just print stuff out --
+   * it has to take a callback from the client to do that.  So we
+   * need to define that callback interface, then have the command
+   * line client pass one down here.
+   *
+   * epg wonders if the repository could send a unified stream of log
+   * entries if the paths and revisions were passed down.
    */
   {
-    svn_error_t *err = SVN_NO_ERROR;  /* Because we might have no targets. */
     svn_revnum_t start_revnum, end_revnum;
+    const char *path = APR_ARRAY_IDX(targets, 0, const char *);
 
-    svn_boolean_t start_is_local = svn_client__revision_is_local(start);
-    svn_boolean_t end_is_local = svn_client__revision_is_local(end);
+    SVN_ERR(svn_client__get_revision_number
+            (&start_revnum, ra_session, start, path, pool));
+    SVN_ERR(svn_client__get_revision_number
+            (&end_revnum, ra_session, end, path, pool));
 
-    if (! start_is_local)
-      SVN_ERR(svn_client__get_revision_number
-              (&start_revnum, ra_session, start, base_name, pool));
-
-    if (! end_is_local)
-      SVN_ERR(svn_client__get_revision_number
-              (&end_revnum, ra_session, end, base_name, pool));
-
-    if (start_is_local || end_is_local)
-      {
-        /* ### FIXME: At least one revision is locally dynamic, that
-         * is, we're in a case similar to one of these:
-         *
-         *   $ svn log -rCOMMITTED foo.txt bar.c
-         *   $ svn log -rCOMMITTED:42 foo.txt bar.c
-         *
-         * We'll iterate over each target in turn, getting the logs
-         * for the named range.  This means that certain revisions may
-         * be printed out more than once.  I think that's okay
-         * behavior, since the sense of the command is that one wants
-         * a particular range of logs for *this* file, then another
-         * range for *that* file, and so on.  But we should
-         * probably put some sort of separator header between the log
-         * groups.  Of course, libsvn_client can't just print stuff
-         * out -- it has to take a callback from the client to do
-         * that.  So we need to define that callback interface, then
-         * have the command line client pass one down here.
-         *
-         * In any case, at least it will behave uncontroversially when
-         * passed only one argument, which I would think is the common
-         * case when passing a local dynamic revision word.
-         */
-
-        int i;
-
-        for (i = 0; i < targets->nelts; i++)
-          {
-            const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-            if (start_is_local)
-              SVN_ERR(svn_client__get_revision_number
-                      (&start_revnum, ra_session, start, target, pool));
-
-            if (end_is_local)
-              SVN_ERR(svn_client__get_revision_number
-                      (&end_revnum, ra_session, end, target, pool));
-
-            err = svn_ra_get_log2(ra_session,
-                                  condensed_targets,
-                                  start_revnum,
-                                  end_revnum,
-                                  limit,
-                                  discover_changed_paths,
-                                  strict_node_history,
-                                  include_merged_revisions,
-                                  omit_log_text,
-                                  receiver,
-                                  receiver_baton,
-                                  pool);
-            if (err)
-              break;
-          }
-      }
-    else  /* both revisions are static, so no loop needed */
-      {
-        err = svn_ra_get_log2(ra_session,
-                              condensed_targets,
-                              start_revnum,
-                              end_revnum,
-                              limit,
-                              discover_changed_paths,
-                              strict_node_history,
-                              include_merged_revisions,
-                              omit_log_text,
-                              receiver,
-                              receiver_baton,
-                              pool);
-      }
-
-    return err;
+    return svn_ra_get_log2(ra_session,
+                           condensed_targets,
+                           start_revnum,
+                           end_revnum,
+                           limit,
+                           discover_changed_paths,
+                           strict_node_history,
+                           include_merged_revisions,
+                           omit_log_text,
+                           receiver,
+                           receiver_baton,
+                           pool);
   }
 }
 
