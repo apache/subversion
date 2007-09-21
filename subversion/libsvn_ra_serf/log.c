@@ -252,13 +252,7 @@ end_log(svn_ra_serf__xml_parser_t *parser,
   if (state == REPORT &&
       strcmp(name.name, "log-report") == 0)
     {
-      svn_log_entry_t *log_entry = svn_log_entry_create(log_ctx->pool);
-
-      log_entry->revision = SVN_INVALID_REVNUM;
-      SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton, log_entry,
-                                log_ctx->pool));
       svn_ra_serf__xml_pop_state(parser);
-
     }
   else if (state == ITEM &&
            strcmp(name.name, "log-item") == 0)

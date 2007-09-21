@@ -16,6 +16,8 @@
 ######################################################################
 
 import os, shutil, re, sys, errno
+import difflib, pprint
+import xml.parsers.expat
 
 import main, verify, tree, wc  # general svntest routines in this module.
 from svntest import Failure
@@ -302,6 +304,153 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   tree.compare_trees (actual, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
+
+
+# run_and_verify_log_xml
+
+class LogEntry:
+  def __init__(self, revision, changed_paths=None, revprops=None):
+    self.revision = revision
+    if changed_paths == None:
+      self.changed_paths = {}
+    else:
+      self.changed_paths = changed_paths
+    if revprops == None:
+      self.revprops = {}
+    else:
+      self.revprops = revprops
+
+  def assert_changed_paths(self, changed_paths):
+    """Not implemented, so just raises svntest.Failure.
+    """
+    raise Failure('NOT IMPLEMENTED')
+
+  def assert_revprops(self, revprops):
+    """Assert that the dict revprops is the same as this entry's revprops.
+
+    Raises svntest.Failure if not.
+    """
+    if self.revprops != revprops:
+      raise Failure('\n' + '\n'.join(difflib.ndiff(
+            pprint.pformat(revprops).splitlines(),
+            pprint.pformat(self.revprops).splitlines())))
+
+class LogParser:
+  def parse(self, data):
+    """Return a list of LogEntrys parsed from the sequence of strings data.
+
+    This is the only method of interest to callers.
+    """
+    try:
+      for i in data:
+        self.parser.Parse(i)
+      self.parser.Parse('', True)
+    except xml.parsers.expat.ExpatError, e:
+      raise verify.SVNUnexpectedStdout('%s\n%s\n' % (e, ''.join(data),))
+    return self.entries
+
+  def __init__(self):
+    # for expat
+    self.parser = xml.parsers.expat.ParserCreate()
+    self.parser.StartElementHandler = self.handle_start_element
+    self.parser.EndElementHandler = self.handle_end_element
+    self.parser.CharacterDataHandler = self.handle_character_data
+    # Ignore some things.
+    self.ignore_elements('log', 'paths', 'path', 'revprops')
+    self.ignore_tags('logentry_end', 'author_start', 'date_start', 'msg_start')
+    # internal state
+    self.cdata = []
+    self.property = None
+    # the result
+    self.entries = []
+
+  def ignore(self, *args, **kwargs):
+    del self.cdata[:]
+  def ignore_tags(self, *args):
+    for tag in args:
+      setattr(self, tag, self.ignore)
+  def ignore_elements(self, *args):
+    for element in args:
+      self.ignore_tags(element + '_start', element + '_end')
+
+  # expat handlers
+  def handle_start_element(self, name, attrs):
+    getattr(self, name + '_start')(attrs)
+  def handle_end_element(self, name):
+    getattr(self, name + '_end')()
+  def handle_character_data(self, data):
+    self.cdata.append(data)
+
+  # element handler utilities
+  def use_cdata(self):
+    result = ''.join(self.cdata).strip()
+    del self.cdata[:]
+    return result
+  def svn_prop(self, name):
+    self.entries[-1].revprops['svn:' + name] = self.use_cdata()
+
+  # element handlers
+  def logentry_start(self, attrs):
+    self.entries.append(LogEntry(int(attrs['revision'])))
+  def author_end(self):
+    self.svn_prop('author')
+  def msg_end(self):
+    self.svn_prop('log')
+  def date_end(self):
+    # svn:date could be anything, so just note its presence.
+    self.cdata[:] = ['']
+    self.svn_prop('date')
+  def property_start(self, attrs):
+    self.property = attrs['name']
+  def property_end(self):
+    self.entries[-1].revprops[self.property] = self.use_cdata()
+
+def run_and_verify_log_xml(message=None, expected_paths=None,
+                           expected_revprops=None, expected_stdout=None,
+                           expected_stderr=None, args=[]):
+  """Call run_and_verify_svn with log --xml and args (optional) as command
+  arguments, and pass along message, expected_stdout, and expected_stderr.
+
+  If message is None, pass the svn log command as message.
+
+  expected_paths checking is not yet implemented.
+
+  expected_revprops is an optional list of dicts, compared to each
+  revision's revprops.  The list must be in the same order the log entries
+  come in.  Any svn:date revprops in the dicts must be '' in order to
+  match, as the actual dates could be anything.
+
+  expected_paths and expected_revprops are ignored if expected_stdout or
+  expected_stderr is specified.
+  """
+  if message == None:
+    message = ' '.join(args)
+
+  # We'll parse the output unless the caller specifies expected_stderr or
+  # expected_stdout for run_and_verify_svn.
+  parse = True
+  if expected_stderr == None:
+    expected_stderr = []
+  else:
+    parse = False
+  if expected_stdout != None:
+    parse = False
+
+  log_args = list(args)
+  if expected_paths != None:
+    log_args.append('-v')
+
+  (stdout, stderr) = run_and_verify_svn(
+    message, expected_stdout, expected_stderr,
+    'log', '--xml', *log_args)
+  if not parse:
+    return
+
+  for (index, entry) in enumerate(LogParser().parse(stdout)):
+    if expected_revprops != None:
+      entry.assert_revprops(expected_revprops[index])
+    if expected_paths != None:
+      entry.assert_changed_paths(expected_paths[index])
 
 
 def verify_update(actual_output, wc_dir_name,
