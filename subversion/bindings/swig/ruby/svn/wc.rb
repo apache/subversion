@@ -191,8 +191,10 @@ module Svn
         Wc.get_ancestry(path, self)
       end
 
-      def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil)
-        Wc.walk_entries3(path, self, callbacks, show_hidden, cancel_func)
+      def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil,
+                       depth=nil)
+        Wc.walk_entries3(path, self, callbacks, depth, show_hidden,
+                         cancel_func)
       end
 
       def mark_missing_deleted(path)
@@ -301,10 +303,15 @@ module Svn
                         preserved_exts=nil, conflict_func=nil)
         preserved_exts ||= []
         traversal_info ||= _traversal_info
+
+        # TODO(rb support fetch_fun): implement support for the fetch_func
+        # callback.
+        fetch_func = nil
         results = Wc.get_update_editor3(target_revision, self, target,
                                         use_commit_times, depth,
                                         allow_unver_obstruction,
-                                        notify_func, cancel_func, conflict_func, diff3_cmd,
+                                        notify_func, cancel_func, conflict_func,
+                                        fetch_func, diff3_cmd,
                                         preserved_exts, traversal_info)
         target_revision_address, editor, editor_baton = results
         editor.__send__(:target_revision_address=, target_revision_address)

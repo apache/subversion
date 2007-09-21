@@ -679,7 +679,8 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * If @a text_deltas is @c FALSE, send a single @c NULL txdelta window to
  * the window handler returned by @a editor->apply_textdelta().
  *
- * ### TODO(sd): document @a depth.
+ * TODO(sd): document @a depth behavior only after taking care of
+ * similar comments in libsvn_repos/delta.c:delta_dirs().
  *
  * If @a entry_props is @c TRUE, accompany each opened/added entry with
  * propchange editor calls that relay special "entry props" (this

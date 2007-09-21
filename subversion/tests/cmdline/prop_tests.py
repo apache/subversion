@@ -536,48 +536,48 @@ def inappropriate_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # These should produce an error
-  svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput, 'propset',
-                                     'svn:executable', 'on', A_path)
+  svntest.actions.run_and_verify_svn('Illegal target',
+                                     None, svntest.verify.AnyOutput,
+                                     'propset', 'svn:executable', 'on', A_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput, 'propset',
+                                     svntest.verify.AnyOutput, 'propset',
                                      'svn:keywords', 'LastChangedDate',
                                      A_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput, 'propset',
+                                     svntest.verify.AnyOutput, 'propset',
                                      'svn:eol-style', 'native', A_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput, 'propset',
+                                     svntest.verify.AnyOutput, 'propset',
                                      'svn:mime-type', 'image/png', A_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput, 'propset',
+                                     svntest.verify.AnyOutput, 'propset',
                                      'svn:ignore', '*.o', iota_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput, 'propset',
+                                     svntest.verify.AnyOutput, 'propset',
                                      'svn:externals',
                                      'foo http://host.com/repos', iota_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput, 'propset',
+                                     svntest.verify.AnyOutput, 'propset',
                                      'svn:author', 'socrates', iota_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput, 'propset',
+                                     svntest.verify.AnyOutput, 'propset',
                                      'svn:log', 'log message', iota_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput, 'propset',
+                                     svntest.verify.AnyOutput, 'propset',
                                      'svn:date',
 				     'Tue Jan 19 04:14:07 2038',
 				     iota_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput, 'propset',
+                                     svntest.verify.AnyOutput, 'propset',
                                      'svn:original-date',
 				     'Thu Jan  1 01:00:00 1970',
 				     iota_path)
@@ -603,7 +603,7 @@ def inappropriate_props(sbox):
                        'application/octet-stream', path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput,
+                                     svntest.verify.AnyOutput,
                                      'propset', 'svn:eol-style',
                                      'CRLF', path)
 
@@ -612,7 +612,7 @@ def inappropriate_props(sbox):
   svntest.main.run_svn(None, 'add', path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput,
+                                     svntest.verify.AnyOutput,
                                      'propset', 'svn:eol-style',
                                      'LF', path)
 
@@ -621,7 +621,7 @@ def inappropriate_props(sbox):
   svntest.main.run_svn(None, 'add', path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput,
+                                     svntest.verify.AnyOutput,
                                      'propset', 'svn:eol-style',
                                      'native', path)
 
@@ -630,7 +630,7 @@ def inappropriate_props(sbox):
   svntest.main.run_svn(None, 'add', path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
-                                     svntest.SVNAnyOutput,
+                                     svntest.verify.AnyOutput,
                                      'propset', 'svn:eol-style',
                                      'CR', path)
 

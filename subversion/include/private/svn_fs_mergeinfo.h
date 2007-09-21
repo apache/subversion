@@ -35,7 +35,7 @@ svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool);
 /* Update the mergeinfo index according to the changes made in
    transaction TXN for revision NEW_REV.  MERGEINFO_FOR_PATHS is the
    mergeinfo for each path changed in the transaction (a mapping of
-   const char * -> apr_hash_t *), or NULL if there was no mergeinfo
+   const char * -> svn_string_t *), or NULL if there was no mergeinfo
    recorded for that transaction.  Use POOL for any temporary allocations.
 
    NOTE: Even if there is no mergeinfo, this function should be

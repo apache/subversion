@@ -21,8 +21,7 @@ import sys, re, os
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
-
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -2949,9 +2948,10 @@ def mergeinfo_update_elision(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   svntest.actions.run_and_verify_svn(None,
-                                     [svntest.main.merge_notify_line(3, 5),
-                                      'U    ' + \
-                                      short_alpha_COPY_path + '\n'],
+                                     '|'.join(
+                                        [svntest.main.merge_notify_line(3, 5),
+                                         'U    ' + short_alpha_COPY_path +
+                                         '\n']),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      short_alpha_COPY_path)

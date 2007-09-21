@@ -607,6 +607,21 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Reverts a file to a pristine state.
+     * @param path      path of the file.
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void revert(String path, int depth) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.revert(path, depth);
+        }
+    }
+
+    /**
      * Adds a file to the repository.
      * @param path      path to be added.
      * @param recurse   recurse into subdirectories
@@ -641,7 +656,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * Adds a file to the repository.
      * @param path      path to be added.
-     * @param recurse   recurse into subdirectories
+     * @param depth     the depth to recurse into subdirectories
      * @param force     if adding a directory and recurse true and path is a
      *                  directory, all not already managed files are added.
      * @param noIgnores if false, don't add files or directories matching
@@ -650,13 +665,13 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @throws ClientException
      * @since 1.5
      */
-    public void add(String path, boolean recurse, boolean force,
+    public void add(String path, int depth, boolean force,
                     boolean noIgnores, boolean addParents)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.add(path, recurse, force, noIgnores, addParents);
+            worker.add(path, depth, force, noIgnores, addParents);
         }
     }
 
@@ -1053,6 +1068,31 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.doImport(path, url, message, recurse);
+        }
+    }
+
+    /**
+     * Import a file or directory into a repository directory  at
+     * head.
+     * @param path      the local path
+     * @param url       the target url
+     * @param message   the log message.
+     * @param depth     depth to traverse into subdirectories
+     * @param noIgnore  whether to add files matched by ignore patterns
+     * @param ignoreUnknownNodeTypes whether to ignore files which
+     *                  the node type is not konwn, just as pipes
+     * @throws ClientException
+     *
+     * @since 1.5
+     */
+    public void doImport(String path, String url, String message, int depth,
+                         boolean noIgnore, boolean ignoreUnknownNodeTypes)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.doImport(path, url, message, depth, noIgnore,
+                            ignoreUnknownNodeTypes);
         }
     }
 
@@ -2140,19 +2180,19 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param pathOrUrl     the path or the url of the item
      * @param revision      the revision of the item to return
      * @param pegRevision   the revision to interpret pathOrUrl
-     * @param recurse       flag if to recurse, if the item is a directory
+     * @param depth         the depth to recurse
      * @param callback      a callback to receive the infos retreived
      * @return              the information objects
      * @since 1.5
      */
     public void info2(String pathOrUrl, Revision revision,
-                      Revision pegRevision, boolean recurse,
+                      Revision pegRevision, int depth,
                       InfoCallback callback)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.info2(pathOrUrl, revision, pegRevision, recurse, callback);
+            worker.info2(pathOrUrl, revision, pegRevision, depth, callback);
         }
     }
 

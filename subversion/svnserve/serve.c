@@ -1314,7 +1314,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?w?B", &rev, &target,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?wB", &rev, &target,
                                  &recurse, &depth_word, &send_copyfrom_param));
   target = svn_path_canonicalize(target, pool);
 

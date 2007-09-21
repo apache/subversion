@@ -1196,7 +1196,7 @@ svn_repos_create(svn_repos_t **repos_p,
        * filesystem type.  Clean up after ourselves.  Yes this is safe because
        * create_repos_structure will fail if the path existed before we started
        * so we can't accidentally remove a directory that previously existed. */
-      svn_error_clear(svn_io_remove_dir2(path, FALSE, pool));
+      svn_error_clear(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
       return err;
     }
 
@@ -1366,7 +1366,7 @@ svn_repos_delete(const char *path,
   SVN_ERR(svn_fs_delete_fs(db_path, pool));
 
   /* ...then blow away everything else.  */
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }

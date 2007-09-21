@@ -844,8 +844,9 @@ typedef struct svn_wc_notify_t {
   /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
    * cases, it is @c NULL. */
   const char *changelist_name;
-  /** When @c action is @c svn_wc_notify_merge_begin.  In all other
-      cases, it is @c NULL.  */
+  /** When @c action is @c svn_wc_notify_merge_begin, and both the
+      left and right sides of the merge are from the same URL.  In all
+      other cases, it is @c NULL.  */
   svn_merge_range_t *merge_range;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
@@ -1751,11 +1752,18 @@ typedef struct svn_wc_entry_callbacks_t
 /**
  * A generic entry-walker.
  *
- * Do a recursive depth-first entry-walk beginning on @a path, which can
- * be a file or dir.  Call callbacks in @a walk_callbacks, passing
- * @a walk_baton to each.  Use @a pool for looping, recursion, and to
- * allocate all entries returned.  @a adm_access must be an access baton
- * for @a path.
+ * Do a potentially recursive depth-first entry-walk beginning on
+ * @a path, which can be a file or dir.  Call callbacks in
+ * @a walk_callbacks, passing @a walk_baton to each.  Use @a pool for
+ * looping, recursion, and to allocate all entries returned.
+ * @a adm_access must be an access baton for @a path.
+ *
+ * If @a depth is @c svn_depth_empty, invoke the callbacks on @a path
+ * and return without recursing further.  If @c svn_depth_files, do
+ * the same and invoke the callbacks on file children (if any) of
+ * @a path, then return.  If @c svn_depth_immediates, do the preceding
+ * but also invoke callbacks on immediate subdirectories, then return.
+ * If @c svn_depth_infinity, recurse fully starting from @a path.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
@@ -1780,6 +1788,7 @@ svn_error_t *svn_wc_walk_entries3(const char *path,
                                   const svn_wc_entry_callbacks2_t
                                   *walk_callbacks,
                                   void *walk_baton,
+                                  svn_depth_t depth,
                                   svn_boolean_t show_hidden,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
@@ -1787,7 +1796,8 @@ svn_error_t *svn_wc_walk_entries3(const char *path,
 
 /**
  * Similar to svn_wc_walk_entries3(), but without cancellation support
- * or error handling from @a walk_callbacks.
+ * or error handling from @a walk_callbacks, and with @a depth always
+ * set to @c svn_depth_infinity.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -2368,7 +2378,7 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * @par Important:
  * This is a variant of svn_wc_add().  No changes will happen
  * to the repository until a commit occurs.  This scheduling can be
- * removed with svn_client_revert().
+ * removed with svn_client_revert2().
  *
  * @since New in 1.2.
  */
@@ -2896,8 +2906,6 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * to @a reporter/@a report_baton.  Obviously, if @a path is a file
  * instead of a directory, this depth-first crawl will be a short one.
  *
- * ### TODO(sd): document @a depth parameter.
- *
  * No locks are or logs are created, nor are any animals harmed in the
  * process.  No cleanup is necessary.  @a adm_access must be an access
  * baton for the @a path hierarchy, it does not require a write lock.
@@ -2906,6 +2914,16 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * called, which immediately causes the RA layer to update the working
  * copy.  Thus the return value may very well reflect the result of
  * the update!
+ *
+ * If @a depth is @c svn_depth_empty, then report state only for
+ * @a path itself.  If @c svn_depth_files, do the same and include
+ * immediate file children of @a path.  If @c svn_depth_immediates,
+ * then behave as if for @c svn_depth_files but also report the
+ * property states of immediate subdirectories.  If @a depth is
+ * @c svn_depth_infinity, then report state fully recursively.  All
+ * descents are only as deep as @a path's own depth permits, of
+ * course.  If @a depth is @c svn_depth_unknown, then just use
+ * @c svn_depth_infinity, which in practice means depth of @a path.
  *
  * If @a restore_files is true, then unexpectedly missing working files
  * will be restored from the administrative directory's cache. For each
@@ -3440,7 +3458,6 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * top-level subdirectories at @c svn_depth_empty.  If @c svn_depth_infinity,
  * then diff fully recursively.  In the latter case, @a anchor should be part
  * of an access baton set for the @a target hierarchy.
- * ### TODO(sd): I'm not sure what the last part of that last sentence means.
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -3964,12 +3981,19 @@ svn_wc_relocate(const char *path,
 
 
 /**
- * Revert changes to @a path (perhaps in a @a recursive fashion).  Perform
- * necessary allocations in @a pool.
+ * Revert changes to @a path.  Perform necessary allocations in @a pool.
  *
  * @a parent_access is an access baton for the directory containing @a path,
  * unless @a path is a wc root, in which case @a parent_access refers to
  * @a path itself.
+ *
+ * If @a depth is @c svn_depth_empty, revert just @a path (if a
+ * directory, then revert just the properties on that directory).
+ * Else if @c svn_depth_files, revert @a path and any files
+ * directly under @a path if it is directory.  Else if 
+ * @c svn_depth_immediates, revert all of the preceding plus
+ * properties on immediate subdirectories; else if @c svn_depth_infinity,
+ * revert path and everything under it fully recursively.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the reversion process.  If it returns an
@@ -3987,7 +4011,28 @@ svn_wc_relocate(const char *path,
  * If @a path is not under version control, return the error
  * SVN_ERR_UNVERSIONED_RESOURCE.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_revert3(const char *path,
+               svn_wc_adm_access_t *parent_access,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_revert3(), but with @a depth set according to
+ * @a recursive: if @a recursive is true, @a depth is
+ * @c svn_depth_infinity; if false, @a depth is @c svn_depth_empty.
+ *
+ * @note Most APIs map @a recurse==false to @a depth==svn_depth_files;
+ * revert is deliberately different.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_wc_revert2(const char *path,

@@ -174,16 +174,16 @@ svn_fs_bdb__youngest_rev(svn_revnum_t *youngest_p,
                                           &cursor, 0)));
 
   /* Find the last entry in the `revisions' table.  */
-  db_err = cursor->c_get(cursor,
-                         svn_fs_base__recno_dbt(&key, &recno),
-                         svn_fs_base__nodata_dbt(&value),
-                         DB_LAST);
+  db_err = svn_bdb_dbc_get(cursor,
+                           svn_fs_base__recno_dbt(&key, &recno),
+                           svn_fs_base__nodata_dbt(&value),
+                           DB_LAST);
 
   if (db_err)
     {
       /* Free the cursor.  Ignore any error value --- the error above
          is more interesting.  */
-      cursor->c_close(cursor);
+      svn_bdb_dbc_close(cursor);
 
       if (db_err == DB_NOTFOUND)
         /* The revision 0 should always be present, at least.  */
@@ -204,7 +204,7 @@ svn_fs_bdb__youngest_rev(svn_revnum_t *youngest_p,
      2) using a cursor after committing its transaction can cause
      undetectable database corruption.  */
   SVN_ERR(BDB_WRAP(fs, "getting youngest revision (closing cursor)",
-                   cursor->c_close(cursor)));
+                   svn_bdb_dbc_close(cursor)));
 
   /* Turn the record number into a Subversion revision number.
      Revisions are numbered starting with zero; Berkeley DB record

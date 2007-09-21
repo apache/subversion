@@ -21,8 +21,7 @@ import os
 
 # Our testing module
 import svntest
-from svntest import SVNAnyOutput
-from svntest.actions import SVNExpectedStdout, SVNExpectedStderr
+from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -91,19 +90,19 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
     'load', '--quiet', sbox.repo_dir)
 
   if expected_stdout:
-    if expected_stdout == SVNAnyOutput:
+    if expected_stdout == svntest.verify.AnyOutput:
       if len(output) == 0:
         raise SVNExpectedStdout
     else:
-      svntest.actions.compare_and_display_lines(
+      svntest.verify.compare_and_display_lines(
         "Standard output", "STDOUT:", expected_stdout, output)
 
   if expected_stderr:
-    if expected_stderr == SVNAnyOutput:
+    if expected_stderr == svntest.verify.AnyOutput:
       if len(errput) == 0:
         raise SVNExpectedStderr
     else:
-      svntest.actions.compare_and_display_lines(
+      svntest.verify.compare_and_display_lines(
         "Standard error output", "STDERR:", expected_stderr, errput)
     # The expected error occurred, so don't try to verify the result
     return
@@ -112,7 +111,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
     # verify revs as wc states
     for rev in xrange(len(revs)):
       svntest.actions.run_and_verify_svn("Updating to r%s" % (rev+1),
-                                         SVNAnyOutput, [],
+                                         svntest.verify.AnyOutput, [],
                                          "update", "-r%s" % (rev+1),
                                          '--username', svntest.main.wc_author,
                                          '--password', svntest.main.wc_passwd,
@@ -124,7 +123,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
       try:
         svntest.tree.compare_trees (rev_tree, wc_tree)
       except svntest.tree.SVNTreeError:
-        svntest.actions.display_trees(None, 'WC TREE', wc_tree, rev_tree)
+        svntest.verify.display_trees(None, 'WC TREE', wc_tree, rev_tree)
         raise
 
 
@@ -235,7 +234,7 @@ def inconsistent_headers(sbox):
 
   dumpfile[-2] = "Content-length: 30\n\n"
 
-  load_and_verify_dumpstream(sbox, [], SVNAnyOutput,
+  load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
                              dumpfile_revisions, dumpfile)
 
 #----------------------------------------------------------------------
@@ -282,7 +281,7 @@ def dump_copied_dir(sbox):
                        '-m', 'log msg')
 
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
-  if svntest.actions.compare_and_display_lines(
+  if svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
                "* Dumped revision 1.\n",
@@ -307,14 +306,14 @@ def dump_move_dir_modify_child(sbox):
                        '--password', svntest.main.wc_passwd,
                        '-m', 'log msg')
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
-  svntest.actions.compare_and_display_lines(
+  svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
                "* Dumped revision 1.\n",
                "* Dumped revision 2.\n"], errput)
 
   output, errput = svntest.main.run_svnadmin("dump", "-r", "0:HEAD", repo_dir)
-  svntest.actions.compare_and_display_lines(
+  svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
                "* Dumped revision 1.\n",
@@ -328,7 +327,7 @@ def dump_quiet(sbox):
   sbox.build(create_wc = False)
 
   output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
-  svntest.actions.compare_and_display_lines(
+  svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump --quiet' is unexpected.",
     'STDERR', [], errput)
 
@@ -432,7 +431,7 @@ def verify_windows_paths_in_repos(sbox):
                                      chi_url)
 
   output, errput = svntest.main.run_svnadmin("verify", sbox.repo_dir)
-  svntest.actions.compare_and_display_lines(
+  svntest.verify.compare_and_display_lines(
     "Error while running 'svnadmin verify'.",
     'STDERR', ["* Verified revision 0.\n",
                "* Verified revision 1.\n",
@@ -459,7 +458,7 @@ def recover_fsfs(sbox):
     raise SVNUnexpectedStderr
 
   actual_current_contents = svntest.main.file_read(current_path)
-  svntest.actions.compare_and_display_lines(
+  svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
 

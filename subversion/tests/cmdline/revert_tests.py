@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -629,8 +629,8 @@ def revert_propdel__file(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      iota_path)
 
-def revert_replaced_with_history_file(sbox):
-  "revert a file that was replaced by a copied file"
+def revert_replaced_with_history_file_1(sbox):
+  "revert a committed replace-with-history == no-op"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -714,7 +714,7 @@ def status_of_missing_dir_after_revert(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      A_D_G_path)
 
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
     ["D      " + os.path.join(A_D_G_path, "pi") + "\n",
      "D      " + os.path.join(A_D_G_path, "rho") + "\n",
      "D      " + os.path.join(A_D_G_path, "tau") + "\n"])
@@ -723,7 +723,7 @@ def status_of_missing_dir_after_revert(sbox):
 
   svntest.main.safe_rmtree(A_D_G_path)
 
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
     ["!      " + A_D_G_path + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
                                      wc_dir)
@@ -800,7 +800,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                        dry_run = 0)
 
   # now test if the revert works ok
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
    ["Reverted '" + G_path + "'\n",
     "Reverted '" + os.path.join(G_path, 'pi') + "'\n",
     "Reverted '" + os.path.join(G_path, 'rho') + "'\n",
@@ -811,7 +811,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
                                      G_path)
 
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
     ["?      " + os.path.join(G_path, "pi") + "\n",
      "?      " + os.path.join(G_path, "rho") + "\n",
      "?      " + os.path.join(G_path, "tau") + "\n"])
@@ -820,10 +820,40 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
 
   svntest.main.safe_rmtree(G_path)
 
-  expected_output = svntest.actions.UnorderedOutput(
+  expected_output = svntest.verify.UnorderedOutput(
     ["!      " + G_path + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
                                      wc_dir)
+
+# Test for issue #2928.
+def revert_replaced_with_history_file_2(sbox):
+  "reverted replace with history restores checksum"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Delete mu and replace it with a copy of iota
+  svntest.main.run_svn(None, 'rm', mu_path)
+  svntest.main.run_svn(None, 'cp', iota_path, mu_path)
+
+  # Revert mu.
+  svntest.main.run_svn(None, 'revert', mu_path)
+
+  # If we make local mods to the reverted mu the commit will
+  # fail if the checksum is incorrect.
+  svntest.main.file_write(mu_path, "new text")
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu': Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='  ', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
 ########################################################################
 # Run the tests
@@ -845,9 +875,10 @@ test_list = [ None,
               revert_propset__file,
               revert_propdel__dir,
               revert_propdel__file,
-              revert_replaced_with_history_file,
+              revert_replaced_with_history_file_1,
               status_of_missing_dir_after_revert,
               status_of_missing_dir_after_revert_replaced_with_history_dir,
+              revert_replaced_with_history_file_2,
              ]
 
 if __name__ == '__main__':

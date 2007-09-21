@@ -184,6 +184,10 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
   svn_client__default_walker_error_handler
 };
 
+/* Whether ENTRY->changelist (which may be NULL) matches CHANGELIST_NAME. */
+#define CHANGELIST_MATCHES(changelist_name, entry) \
+        (entry->changelist && strcmp(changelist_name, entry->changelist) == 0)
+
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
@@ -337,9 +341,15 @@ harvest_committables(apr_hash_t *committables,
 
   /* Bail now if any conflicts exist for the ENTRY. */
   if (tc || pc)
-    return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
-                             _("Aborting commit: '%s' remains in conflict"),
-                             svn_path_local_style(path, pool));
+    {
+      /* Paths in conflict which are not part of our changelist should
+         be ignored. */
+      if (changelist_name == NULL &&
+          !CHANGELIST_MATCHES(changelist_name, entry))
+        return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                                 _("Aborting commit: '%s' remains in conflict"),
+                                 svn_path_local_style(path, pool));
+    }
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
      the telescoping one(s).  In COPY_MODE, URL will always be the
@@ -494,9 +504,7 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if ((changelist_name == NULL)
-          || (entry->changelist
-              && (strcmp(changelist_name, entry->changelist) == 0)))
+      if (changelist_name == NULL || CHANGELIST_MATCHES(changelist_name, entry))
         {
           /* Finally, add the committable item. */
           add_committable(committables, path, entry->kind, url,
@@ -592,9 +600,7 @@ harvest_committables(apr_hash_t *committables,
                                   == svn_wc_schedule_delete))
                             {
                               if ((changelist_name == NULL)
-                                  || (entry->changelist
-                                      && (strcmp(changelist_name,
-                                                 entry->changelist) == 0)))
+                                  || CHANGELIST_MATCHES(changelist_name, entry))
                                 {
                                   add_committable(
                                     committables, full_path,
@@ -662,8 +668,13 @@ harvest_committables(apr_hash_t *committables,
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
       SVN_ERR(svn_wc_walk_entries3(path, adm_access, &add_tokens_callbacks,
-                                   lock_tokens, FALSE, ctx->cancel_func,
-                                   ctx->cancel_baton, pool));
+                                   lock_tokens,
+                                   /* If a directory was deleted, everything
+                                      under it would better be deleted too,
+                                      so pass svn_depth_infinity not depth. */
+                                   svn_depth_infinity, FALSE,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
     }
 
   return SVN_NO_ERROR;

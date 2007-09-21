@@ -23,7 +23,7 @@ import os
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -63,7 +63,8 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
       svntest.main.safe_rmtree(wc_empty)
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=empty",
-      SVNAnyOutput, [], "co", "--depth", "empty", sbox.repo_url, wc_empty)
+      svntest.verify.AnyOutput, [],
+      "co", "--depth", "empty", sbox.repo_url, wc_empty)
 
   wc_files = None
   if files:
@@ -72,7 +73,8 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
       svntest.main.safe_rmtree(wc1)
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=files",
-      SVNAnyOutput, [], "co", "--depth", "files", sbox.repo_url, wc_files)
+      svntest.verify.AnyOutput, [],
+      "co", "--depth", "files", sbox.repo_url, wc_files)
 
   wc_immediates = None
   if immediates:
@@ -81,7 +83,7 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
       svntest.main.safe_rmtree(wc_immediates)
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=immediates",
-      SVNAnyOutput, [], "co", "--depth", "immediates",
+      svntest.verify.AnyOutput, [], "co", "--depth", "immediates",
       sbox.repo_url, wc_immediates)
 
   return wc_empty, wc_files, wc_immediates, wc
@@ -120,9 +122,8 @@ def depth_files_same_as_nonrecursive(sbox, opt):
     svntest.main.safe_rmtree(sbox.wc_dir)
 
   svntest.actions.run_and_verify_svn("Unexpected error during co %s" % opt,
-                                     SVNAnyOutput, [], "co", opt,
-                                     sbox.repo_url,
-                                     sbox.wc_dir)
+                                     svntest.verify.AnyOutput, [],
+                                     "co", opt, sbox.repo_url, sbox.wc_dir)
 
   # Should create a depth-files top directory, so both iota and A
   # should exist, and A should be empty and depth-empty.
@@ -229,7 +230,7 @@ def depth_immediates_get_top_file_mod_only(sbox):
 def depth_empty_commit(sbox):
   "commit a file from a depth-empty working copy"
   # Bring iota into a depth-empty working copy, then commit a change to it.
-  raise svntest.Failure("<test not yet written>")
+  raise svntest.Failure  # test not yet written
 
 #----------------------------------------------------------------------
 def depth_empty_with_file(sbox):
@@ -396,13 +397,7 @@ def depth_immediates_bring_in_file(sbox):
   "bring a file into a depth-immediates working copy"
   # Run 'svn up A/mu' to bring A/mu permanently into the working copy.
   # How should 'svn up A/D/gamma' behave, however?  Edge cases...
-  raise svntest.Failure("<test not yet written>")
-
-#----------------------------------------------------------------------
-def depth_immediates_bring_in_dir(sbox):
-  "bring a dir into a depth-immediates working copy"
-  # Run 'svn up A/B' to bring A/B permanently into the working copy.
-  raise svntest.Failure("<test not yet written>")
+  raise svntest.Failure  # test not yet written
 
 #----------------------------------------------------------------------
 def depth_immediates_fill_in_dir(sbox):
@@ -721,7 +716,7 @@ def depth_immediates_subdir_propset_2(sbox):
 
   # Update at depth=immediates in the other wc, expecting to see no errors.
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     SVNAnyOutput, [],
+                                     svntest.verify.AnyOutput, [],
                                      'update', '--depth', 'immediates',
                                      other_wc)
 
@@ -946,7 +941,7 @@ def diff_in_depthy_wc(sbox):
 
   os.chdir(wc_empty)
 
-  expected_output = svntest.actions.UnorderedOutput(diff[:6])
+  expected_output = svntest.verify.UnorderedOutput(diff[:6])
   # The diff should contain only the propchange on '.'
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
@@ -956,11 +951,11 @@ def diff_in_depthy_wc(sbox):
                                      '--depth', 'files', '-r1')
   # The diff should contain only the propchange on '.' and the
   # contents change on iota.
-  expected_output = svntest.actions.UnorderedOutput(diff[:13])
+  expected_output = svntest.verify.UnorderedOutput(diff[:13])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
   # Do a diff at --depth empty.
-  expected_output = svntest.actions.UnorderedOutput(diff[:6])
+  expected_output = svntest.verify.UnorderedOutput(diff[:6])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--depth', 'empty', '-rHEAD')
 
@@ -969,11 +964,11 @@ def diff_in_depthy_wc(sbox):
                                      '--depth', 'immediates', '-r1')
   # The diff should contain the propchanges on '.' and 'A' and the
   # contents change on iota.
-  expected_output = svntest.actions.UnorderedOutput(diff[:19])
+  expected_output = svntest.verify.UnorderedOutput(diff[:19])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '-rHEAD')
   # Do a diff at --depth files.
-  expected_output = svntest.actions.UnorderedOutput(diff[:13])
+  expected_output = svntest.verify.UnorderedOutput(diff[:13])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--depth', 'files', '-rHEAD')
 
@@ -982,11 +977,11 @@ def diff_in_depthy_wc(sbox):
                                      '--depth', 'files', '-r1', 'A')
   # The diff should contain everything but the contents change on
   # gamma (which does not exist in this working copy).
-  expected_output = svntest.actions.UnorderedOutput(diff)
+  expected_output = svntest.verify.UnorderedOutput(diff)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
   # Do a diff at --depth immediates.
-  expected_output = svntest.actions.UnorderedOutput(diff[:19])
+  expected_output = svntest.verify.UnorderedOutput(diff[:19])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '--depth', 'immediates', '-rHEAD')
 
@@ -1116,6 +1111,80 @@ def depth_immediates_receive_new_dir(sbox):
   svntest.actions.run_and_verify_svn(None, "Depth: empty", [], "info",
                                      other_I_path)
 
+def add_tree_with_depth_files(sbox):
+  "add multi-subdir tree with --depth=files"  # For issue #2931
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  new1_path = os.path.join(wc_dir, 'new1')
+  new2_path = os.path.join(new1_path, 'new2')
+  os.mkdir(new1_path)
+  os.mkdir(new2_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "add", "--depth", "files", new1_path)
+
+def upgrade_from_above(sbox):
+  "upgrade a depth=empty wc from above"
+
+  # The bug was that 'svn up --depth=files' worked from within the
+  # working copy, but not from without with working copy top given
+  # as an argument.  Both ways would correctly cause 'iota' to
+  # appear, but only the former actually upgraded the depth of the
+  # working copy to 'files'.  See this thread for details:
+  #
+  #   http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=130157
+  #   From: Alexander Sinyushkin <Alexander.Sinyushkin@svnkit.com>
+  #   To: dev@subversion.tigris.org
+  #   Subject: Problem upgrading working copy depth
+  #   Date: Wed, 19 Sep 2007 23:15:24 +0700
+  #   Message-ID: <46F14B1C.8010406@svnkit.com>
+
+  wc, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox, empty=True)
+
+  # First verify that upgrading from within works.
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(wc)
+    expected_output = svntest.wc.State('', {
+        'iota'    : Item(status='A '),
+        })
+    expected_disk = svntest.wc.State('', {
+        'iota' : Item(contents="This is the file 'iota'.\n"),
+        })
+    expected_status = svntest.wc.State('', {
+        ''     : Item(status='  ', wc_rev=1),
+        'iota' : Item(status='  ', wc_rev=1),
+        })
+    svntest.actions.run_and_verify_update('',
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None, None, None, None, None, None,
+                                          '--depth=files')
+    svntest.actions.run_and_verify_svn(None, "Depth: +files", [], "info")
+  finally:
+    os.chdir(saved_cwd)
+
+  # Reset and do it again, this time from above the working copy.
+  svntest.main.safe_rmtree(wc)
+  wc, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox, empty=True)
+  expected_output = svntest.wc.State(wc, {
+      'iota'    : Item(status='A '),
+      })
+  expected_disk = svntest.wc.State('', {
+      'iota' : Item(contents="This is the file 'iota'.\n"),
+      })
+  expected_status = svntest.wc.State(wc, {
+      ''     : Item(status='  ', wc_rev=1),
+      'iota' : Item(status='  ', wc_rev=1),
+      })
+  svntest.actions.run_and_verify_update(wc,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, None,
+                                        '--depth=files', wc)
+  svntest.actions.run_and_verify_svn(None, "Depth: +files", [], "info", wc)
+
 #----------------------------------------------------------------------
 
 # list all tests here, starting with None:
@@ -1129,7 +1198,6 @@ test_list = [ None,
               depth_empty_with_file,
               depth_empty_with_dir,
               XFail(depth_immediates_bring_in_file),
-              XFail(depth_immediates_bring_in_dir),
               depth_immediates_fill_in_dir,
               depth_mixed_bring_in_dir,
               depth_empty_unreceive_delete,
@@ -1142,6 +1210,8 @@ test_list = [ None,
               diff_in_depthy_wc,
               commit_depth_immediates,
               depth_immediates_receive_new_dir,
+              add_tree_with_depth_files,
+              upgrade_from_above,
             ]
 
 if __name__ == "__main__":

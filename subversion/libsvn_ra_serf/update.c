@@ -1192,16 +1192,23 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         {
           const svn_delta_editor_t *filter_editor;
           void *filter_baton;
-          svn_depth_t depth = ctx->depth;
           svn_boolean_t has_target = *(ctx->update_target) ? TRUE : FALSE;
-
-          SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, &filter_baton,
-                                                ctx->update_editor,
-                                                ctx->update_baton,
-                                                depth, has_target,
-                                                ctx->sess->pool));
-          ctx->update_editor = filter_editor;
-          ctx->update_baton = filter_baton;
+          
+          /* We can skip the depth filtering when the user requested
+             depth_files or depth_infinity because the server will
+             transmit the right stuff anyway. */
+          if ((ctx->depth != svn_depth_files)
+              && (ctx->depth != svn_depth_infinity))
+            {
+              SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
+                                                    &filter_baton,
+                                                    ctx->update_editor,
+                                                    ctx->update_baton,
+                                                    ctx->depth, has_target,
+                                                    ctx->sess->pool));
+              ctx->update_editor = filter_editor;
+              ctx->update_baton = filter_baton;
+            }
         }
     }
   else if (state == NONE && strcmp(name.name, "target-revision") == 0)

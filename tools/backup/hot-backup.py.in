@@ -22,18 +22,35 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 ######################################################################
 
 import sys, os, getopt, stat, string, re, time, shutil
+
+# Try to import the subprocess mode.  It works better then os.popen3
+# and os.spawnl on Windows when spaces appear in any of the svnadmin,
+# svnlook or repository paths.  os.popen3 and os.spawnl are still used
+# to support Python 2.3 and older which do not provide the subprocess
+# module.  have_subprocess is set to 1 or 0 to support older Python
+# versions that do not have True and False.
+try:
+  import subprocess
+  have_subprocess = 1
+except ImportError:
+  have_subprocess = 0
 
 ######################################################################
 # Global Settings
 
 # Path to svnlook utility
-svnlook = "@SVN_BINDIR@/svnlook"
+svnlook = r"@SVN_BINDIR@/svnlook"
 
 # Path to svnadmin utility
-svnadmin = "@SVN_BINDIR@/svnadmin"
+svnadmin = r"@SVN_BINDIR@/svnadmin"
 
 # Number of backups to keep around (0 for "keep them all")
 num_backups = 64
@@ -173,7 +190,16 @@ def comparator(a, b):
 def get_youngest_revision():
   """Examine the repository REPO_DIR using the svnlook binary
   specified by SVNLOOK, and return the youngest revision."""
-  infile, outfile, errfile = os.popen3(svnlook + " youngest " + repo_dir)
+
+  if have_subprocess:
+    p = subprocess.Popen([svnlook, 'youngest', repo_dir],
+                         stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+    infile, outfile, errfile = p.stdin, p.stdout, p.stderr
+  else:
+    infile, outfile, errfile = os.popen3(svnlook + " youngest " + repo_dir)
+
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
   outfile.close()
@@ -231,8 +257,12 @@ if young_list:
 ###         copied last.
 
 print "Backing up repository to '" + backup_subdir + "'..."
-err_code = os.spawnl(os.P_WAIT, svnadmin, "svnadmin", "hotcopy", repo_dir, 
-                     backup_subdir, "--clean-logs")
+if have_subprocess:
+  err_code = subprocess.call([svnadmin, "hotcopy", repo_dir, 
+                              backup_subdir, "--clean-logs"])
+else:
+  err_code = os.spawnl(os.P_WAIT, svnadmin, "svnadmin", "hotcopy", repo_dir, 
+                       backup_subdir, "--clean-logs")
 if err_code != 0:
   print >> sys.stderr, "Unable to backup the repository."
   sys.exit(err_code)

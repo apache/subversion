@@ -262,56 +262,10 @@ output_diff_modified(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Used only by the old code. */
-/* The baton used for RA->get_log */
-struct log_message_baton {
-  const char *path;        /* The path to be processed */
-  struct rev *eldest;      /* The eldest revision processed */
-  char action;             /* The action associated with the eldest */
-  svn_revnum_t copyrev;    /* The revision the eldest was copied from */
-  svn_cancel_func_t cancel_func; /* cancellation callback */
-  void *cancel_baton;            /* cancellation baton */
-  apr_pool_t *pool;
-};
-
 static const svn_diff_output_fns_t output_fns = {
         NULL,
         output_diff_modified
 };
-
-
-/* Callback for log messages: accumulates revision metadata into
-   a chronologically ordered list stored in the baton. */
-static svn_error_t *
-log_message_receiver(void *baton,
-                     apr_hash_t *changed_paths,
-                     svn_revnum_t revision,
-                     const char *author,
-                     const char *date,
-                     const char *message,
-                     apr_pool_t *pool)
-{
-  struct log_message_baton *lmb = baton;
-  struct rev *rev;
-
-  if (lmb->cancel_func)
-    SVN_ERR(lmb->cancel_func(lmb->cancel_baton));
-
-  rev = apr_palloc(lmb->pool, sizeof(*rev));
-  rev->revision = revision;
-  rev->author = apr_pstrdup(lmb->pool, author);
-  rev->date = apr_pstrdup(lmb->pool, date);
-  rev->path = lmb->path;
-  rev->next = lmb->eldest;
-  lmb->eldest = rev;
-
-  SVN_ERR(svn_client__prev_log_path(&lmb->path, &lmb->action,
-                                    &lmb->copyrev, changed_paths,
-                                    lmb->path, svn_node_file, revision,
-                                    lmb->pool));
-
-  return SVN_NO_ERROR;
-}
 
 /* Add the blame for the diffs between LAST_FILE and CUR_FILE with the rev
    specified in FRB.  LAST_FILE may be NULL in which
@@ -980,6 +934,52 @@ svn_client_blame(const char *target,
                            receiver, receiver_baton, ctx, pool);
 }
 
+
+
+/* Used only by the old code. */
+/* The baton used for RA->get_log */
+struct log_message_baton {
+  const char *path;        /* The path to be processed */
+  struct rev *eldest;      /* The eldest revision processed */
+  char action;             /* The action associated with the eldest */
+  svn_revnum_t copyrev;    /* The revision the eldest was copied from */
+  svn_cancel_func_t cancel_func; /* cancellation callback */
+  void *cancel_baton;            /* cancellation baton */
+  apr_pool_t *pool;
+};
+
+/* Callback for log messages: accumulates revision metadata into
+   a chronologically ordered list stored in the baton. */
+static svn_error_t *
+log_message_receiver(void *baton,
+                     apr_hash_t *changed_paths,
+                     svn_revnum_t revision,
+                     const char *author,
+                     const char *date,
+                     const char *message,
+                     apr_pool_t *pool)
+{
+  struct log_message_baton *lmb = baton;
+  struct rev *rev;
+
+  if (lmb->cancel_func)
+    SVN_ERR(lmb->cancel_func(lmb->cancel_baton));
+
+  rev = apr_palloc(lmb->pool, sizeof(*rev));
+  rev->revision = revision;
+  rev->author = apr_pstrdup(lmb->pool, author);
+  rev->date = apr_pstrdup(lmb->pool, date);
+  rev->path = lmb->path;
+  rev->next = lmb->eldest;
+  lmb->eldest = rev;
+
+  SVN_ERR(svn_client__prev_log_path(&lmb->path, &lmb->action,
+                                    &lmb->copyrev, changed_paths,
+                                    lmb->path, svn_node_file, revision,
+                                    lmb->pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* This is used when there is no get_file_revs available. */
 static svn_error_t *

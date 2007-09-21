@@ -22,7 +22,6 @@ import os
 
 # Our testing module
 import svntest
-from svntest import SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -435,8 +434,8 @@ def unschedule_missing_added(sbox):
   svntest.main.safe_rmtree(dir2_path)
 
   # Unschedule the additions, using 'svn rm' and 'svn revert'.
-  svntest.main.run_svn(SVNAnyOutput, 'rm', file1_path)
-  svntest.main.run_svn(SVNAnyOutput, 'rm', dir1_path)
+  svntest.main.run_svn(svntest.verify.AnyOutput, 'rm', file1_path)
+  svntest.main.run_svn(svntest.verify.AnyOutput, 'rm', dir1_path)
   svntest.main.run_svn(None, 'revert', file2_path, dir2_path)
 
   # 'svn st' should now show absolutely zero local mods.
@@ -501,7 +500,7 @@ def revert_inside_newly_added_dir(sbox):
   # Now change into the newly added directory, revert and make sure
   # an error is output.
   os.chdir('foo')
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'revert', '.')
 
 #----------------------------------------------------------------------
@@ -594,7 +593,8 @@ def fail_add_directory(sbox):
   os.makedirs(sbox.wc_dir)
 
   os.chdir(sbox.wc_dir)
-  svntest.actions.run_and_verify_svn('Failed mkdir', None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn('Failed mkdir',
+                                     None, svntest.verify.AnyOutput,
                                      'mkdir', 'A')
   if os.path.exists('A'):
     raise svntest.Failure('svn mkdir created an unversioned directory')
@@ -613,7 +613,7 @@ def delete_non_existent(sbox):
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', '--force', 'non-existent')
 
 ########################################################################
