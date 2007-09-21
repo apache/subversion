@@ -1252,7 +1252,7 @@ def commit_from_long_dir(sbox):
   wc_dir = sbox.wc_dir
 
   was_dir = os.getcwd()
-  abs_wc_dir = os.path.join(was_dir, wc_dir)
+  abs_wc_dir = os.path.realpath(os.path.join(was_dir, wc_dir))
 
   # something to commit
   svntest.main.file_append(os.path.join(wc_dir, 'iota'), "modified iota")
