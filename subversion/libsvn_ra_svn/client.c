@@ -1291,11 +1291,6 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       apr_pool_clear(subpool);
     }
 
-  /* Send the "end of messages" sentinal. */
-  log_entry = svn_log_entry_create(subpool);
-  log_entry->revision = SVN_INVALID_REVNUM;
-  SVN_ERR(receiver(receiver_baton, log_entry, subpool));
-
   apr_pool_destroy(subpool);
 
   /* Read the response. */

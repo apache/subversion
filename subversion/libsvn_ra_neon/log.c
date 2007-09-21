@@ -259,14 +259,6 @@ log_end_element(void *baton, int state,
         reset_log_item(lb);
       }
       break;
-    case ELEM_log_report:
-      {
-        svn_log_entry_t *log_entry = svn_log_entry_create(lb->subpool);
-
-        log_entry->revision = SVN_INVALID_REVNUM;
-        SVN_ERR((*(lb->receiver))(lb->receiver_baton, log_entry, lb->subpool));
-      }
-      break;
     }
 
   /* Stop collecting cdata */
