@@ -942,6 +942,7 @@ class TestRunner:
           print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
         else:
           print 'EXCEPTION:', ex.__class__.__name__
+      traceback.print_exc(file=sys.stdout)
     except KeyboardInterrupt:
       print 'Interrupted'
       sys.exit(0)
