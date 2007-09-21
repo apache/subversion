@@ -2070,9 +2070,15 @@ svn_wc_revert3(const char *path,
           parents_entry = apr_hash_get(entries, basey, APR_HASH_KEY_STRING);
           if (parents_entry)
             was_deleted = parents_entry->deleted;
-          if (kind == svn_node_none)
+          if (kind == svn_node_none
+              || svn_wc__adm_missing(parent_access, path))
             {
-              /* Schedule add but missing, just remove the entry */
+              /* Schedule add but missing, just remove the entry
+                 or it's missing an adm area in which case
+                 svn_wc_adm_probe_retrieve() returned the parent's
+                 adm_access, for which we definitely can't use the 'else'
+                 code path (as it will remove the parent from version
+                 control... (See issue 2425) */
               svn_wc__entry_remove(entries, basey);
               SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
             }
