@@ -736,31 +736,6 @@ struct path_revision
   svn_boolean_t merged_revision;
 };
 
-
-static int
-compare_path_revision_revs(const void *a, const void *b)
-{
-  const struct path_revision *a_path_rev = *(const struct path_revision **)a;
-  const struct path_revision *b_path_rev = *(const struct path_revision **)b;
-
-  if (a_path_rev->revnum == b_path_rev->revnum)
-    {
-      int strcmp_result = strcmp(a_path_rev->path, b_path_rev->path);
-
-      if (strcmp_result == 0)
-        {
-          if (a_path_rev->merged_revision == b_path_rev->merged_revision)
-            return 0;
-
-          return a_path_rev->merged_revision == TRUE ? 1 : -1;
-        }
-
-      return strcmp_result;
-    }
-
-  return a_path_rev->revnum < b_path_rev->revnum ? 1 : -1;
-}
-
 struct ancestry_walker_baton
 {
   apr_array_header_t *path_revisions;
@@ -769,10 +744,10 @@ struct ancestry_walker_baton
 
 /* This implements svn_repos__ancestry_callbacks_t.found_ancestor() */
 static svn_error_t *
-found_ancestor(void *baton,
-               const char *path,
-               svn_revnum_t rev,
-               apr_pool_t *pool)
+revs_found_ancestor(void *baton,
+                    const char *path,
+                    svn_revnum_t rev,
+                    apr_pool_t *pool)
 {
   struct ancestry_walker_baton *awb = baton;
   struct path_revision *path_rev = apr_palloc(awb->mainpool, sizeof(*path_rev));
@@ -786,91 +761,22 @@ found_ancestor(void *baton,
 }
 
 static svn_error_t *
-sort_and_scrub_revisions(apr_array_header_t **path_revisions,
-                         apr_pool_t *pool)
-{
-  int i;
-  struct path_revision previous_path_rev = { 0, NULL, FALSE };
-  apr_array_header_t *out_path_revisions = apr_array_make(pool, 0,
-                                            sizeof(struct path_revision *));
-
-  /* Sort the path_revision pairs by revnum in descending order, then path. */
-  qsort((*path_revisions)->elts, (*path_revisions)->nelts,
-        (*path_revisions)->elt_size, compare_path_revision_revs);
-
-  /* Filter out duplicat path/revision pairs.  Because we ensured that pairs
-     without the merged_revision flag set are ordered after pair with it set,
-     the following scrubbing process will prefer path/revision pairs from the
-     mainline of history, and not the result of a merge. */
-  for (i = 0; i < (*path_revisions)->nelts; i++)
-    {
-      struct path_revision *path_rev = APR_ARRAY_IDX(*path_revisions, i,
-                                                     struct path_revision *);
-
-      if ( (previous_path_rev.revnum != path_rev->revnum)
-            || (strcmp(previous_path_rev.path, path_rev->path) != 0) )
-        {
-          APR_ARRAY_PUSH(out_path_revisions, struct path_revision *) = path_rev;
-        }
-
-      previous_path_rev = *path_rev;
-    }
-
-  *path_revisions = out_path_revisions;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_repos_get_file_revs2(svn_repos_t *repos,
-                         const char *path,
-                         svn_revnum_t start,
-                         svn_revnum_t end,
-                         svn_boolean_t include_merged_revisions,
-                         svn_repos_authz_func_t authz_read_func,
-                         void *authz_read_baton,
-                         svn_file_rev_handler_t handler,
-                         void *handler_baton,
-                         apr_pool_t *pool)
+send_path_revision_list(apr_array_header_t *path_revisions,
+                        svn_repos_t *repos,
+                        svn_file_rev_handler_t handler,
+                        void *handler_baton,
+                        apr_pool_t *pool)
 {
   apr_pool_t *iter_pool, *last_pool;
-  svn_repos__ancestry_callbacks_t walk_callbacks =
-    { found_ancestor, NULL, NULL, NULL };
-  apr_hash_t *last_props;
   svn_fs_root_t *last_root;
-  svn_node_kind_t kind;
-  struct ancestry_walker_baton awb;
   const char *last_path;
+  apr_hash_t *last_props;
   int i;
 
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */
   iter_pool = svn_pool_create(pool);
   last_pool = svn_pool_create(pool);
-
-  /* Check to make sure we are operating on a file. */
-  SVN_ERR(svn_fs_revision_root(&last_root, repos->fs, end, last_pool));
-  SVN_ERR(svn_fs_check_path(&kind, last_root, path, last_pool));
-  if (kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
-      _("'%s' is not a file in revision %ld"), path, end);
-
-  /* Setup the ancesty walker baton. */
-  awb.path_revisions = apr_array_make(pool, 0, sizeof(struct path_revision *));
-  awb.mainpool = pool;
-
-  /* Walk the node ancestry. */
-  SVN_ERR(svn_repos__walk_ancestry(path, repos->fs, start, end,
-                                   include_merged_revisions, FALSE,
-                                   &walk_callbacks, &awb,
-                                   authz_read_func, authz_read_baton,
-                                   pool));
-
-  if (include_merged_revisions)
-    SVN_ERR(sort_and_scrub_revisions(&awb.path_revisions, pool));
-
-  /* We must have at least one revision to get. */
-  assert(awb.path_revisions->nelts > 0);
 
   /* We want the first txdelta to be against the empty file. */
   last_root = NULL;
@@ -880,9 +786,9 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   last_props = apr_hash_make(last_pool);
 
   /* Walk through the revisions in chronological order. */
-  for (i = awb.path_revisions->nelts; i > 0; --i)
+  for (i = path_revisions->nelts; i > 0; --i)
     {
-      struct path_revision *path_rev = APR_ARRAY_IDX(awb.path_revisions, i - 1,
+      struct path_revision *path_rev = APR_ARRAY_IDX(path_revisions, i - 1,
                                                      struct path_revision *);
       apr_hash_t *rev_props;
       apr_hash_t *props;
@@ -953,7 +859,6 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 
   svn_pool_destroy(last_pool);
   svn_pool_destroy(iter_pool);
-
   return SVN_NO_ERROR;
 }
 
@@ -968,13 +873,145 @@ svn_repos_get_file_revs(svn_repos_t *repos,
                         void *handler_baton,
                         apr_pool_t *pool)
 {
+  svn_repos__ancestry_callbacks_t walk_callbacks =
+    { revs_found_ancestor, NULL, NULL, NULL };
+  struct ancestry_walker_baton awb;
+  svn_fs_root_t *root;
+  svn_node_kind_t kind;
   svn_file_rev_handler_t handler2;
   void *handler2_baton;
+
+  /* The path had better be a file in this revision. This avoids calling
+     the callback before reporting an uglier error below. */
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, pool));
+  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+  if (kind != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file in %ld"), path, end);
+
+  /* Setup the ancesty walker baton. */
+  awb.path_revisions = apr_array_make(pool, 0, sizeof(struct path_revision *));
+  awb.mainpool = pool;
+
+  /* Get the revisions we are interested in. */
+  SVN_ERR(svn_repos__walk_ancestry(path, repos->fs, start, end,
+                                   FALSE, FALSE, &walk_callbacks, &awb,
+                                   authz_read_func, authz_read_baton, pool));
+
+  /* We must have at least one revision to get. */
+  assert(awb.path_revisions->nelts > 0);
 
   svn_compat_wrap_file_rev_handler(&handler2, &handler2_baton, handler,
                                    handler_baton, pool);
 
-  return svn_repos_get_file_revs2(repos, path, start, end, FALSE,
-                                  authz_read_func, authz_read_baton,
-                                  handler2, handler2_baton, pool);
+  /* Send the revision list to the client. */
+  return send_path_revision_list(awb.path_revisions, repos,
+                                 handler2, handler2_baton, pool);
+}
+
+static int
+compare_path_revision_revs(const void *a, const void *b)
+{
+  const struct path_revision *a_path_rev = *(const struct path_revision **)a;
+  const struct path_revision *b_path_rev = *(const struct path_revision **)b;
+
+  if (a_path_rev->revnum == b_path_rev->revnum)
+    {
+      int strcmp_result = strcmp(a_path_rev->path, b_path_rev->path);
+
+      if (strcmp_result == 0)
+        {
+          if (a_path_rev->merged_revision == b_path_rev->merged_revision)
+            return 0;
+
+          return a_path_rev->merged_revision == TRUE ? 1 : -1;
+        }
+
+      return strcmp_result;
+    }
+
+  return a_path_rev->revnum < b_path_rev->revnum ? 1 : -1;
+}
+
+static svn_error_t *
+sort_and_scrub_revisions(apr_array_header_t **path_revisions,
+                         apr_pool_t *pool)
+{
+  int i;
+  struct path_revision previous_path_rev = { 0, NULL, FALSE };
+  apr_array_header_t *out_path_revisions = apr_array_make(pool, 0,
+                                            sizeof(struct path_revision *));
+
+  /* Sort the path_revision pairs by revnum in descending order, then path. */
+  qsort((*path_revisions)->elts, (*path_revisions)->nelts,
+        (*path_revisions)->elt_size, compare_path_revision_revs);
+
+  /* Filter out duplicat path/revision pairs.  Because we ensured that pairs
+     without the merged_revision flag set are ordered after pair with it set,
+     the following scrubbing process will prefer path/revision pairs from the
+     mainline of history, and not the result of a merge. */
+  for (i = 0; i < (*path_revisions)->nelts; i++)
+    {
+      struct path_revision *path_rev = APR_ARRAY_IDX(*path_revisions, i,
+                                                     struct path_revision *);
+
+      if ( (previous_path_rev.revnum != path_rev->revnum)
+            || (strcmp(previous_path_rev.path, path_rev->path) != 0) )
+        {
+          APR_ARRAY_PUSH(out_path_revisions, struct path_revision *) = path_rev;
+        }
+
+      previous_path_rev = *path_rev;
+    }
+
+  *path_revisions = out_path_revisions;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_get_file_revs2(svn_repos_t *repos,
+                         const char *path,
+                         svn_revnum_t start,
+                         svn_revnum_t end,
+                         svn_boolean_t include_merged_revisions,
+                         svn_repos_authz_func_t authz_read_func,
+                         void *authz_read_baton,
+                         svn_file_rev_handler_t handler,
+                         void *handler_baton,
+                         apr_pool_t *pool)
+{
+  svn_repos__ancestry_callbacks_t walk_callbacks =
+    { revs_found_ancestor, NULL, NULL, NULL };
+  svn_fs_root_t *root;
+  svn_node_kind_t kind;
+  struct ancestry_walker_baton awb;
+
+  /* Check to make sure we are operating on a file. */
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, pool));
+  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+  if (kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+      _("'%s' is not a file in revision %ld"), path, end);
+
+  /* Setup the ancesty walker baton. */
+  awb.path_revisions = apr_array_make(pool, 0, sizeof(struct path_revision *));
+  awb.mainpool = pool;
+
+  /* Walk the node ancestry. */
+  SVN_ERR(svn_repos__walk_ancestry(path, repos->fs, start, end,
+                                   include_merged_revisions, FALSE,
+                                   &walk_callbacks, &awb,
+                                   authz_read_func, authz_read_baton,
+                                   pool));
+
+  if (include_merged_revisions)
+    SVN_ERR(sort_and_scrub_revisions(&awb.path_revisions, pool));
+
+  /* We must have at least one revision to get. */
+  assert(awb.path_revisions->nelts > 0);
+
+  /* Send the revision list to the client. */
+  return send_path_revision_list(awb.path_revisions, repos, 
+                                 handler, handler_baton, pool);
 }
