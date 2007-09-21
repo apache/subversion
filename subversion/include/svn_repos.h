@@ -1304,27 +1304,6 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
  * will be provided as a text delta against the empty file.  In the following
  * calls, the delta will be against the contents for the previous call.
  *
- * If @a include_merged_revisions is TRUE, revisions which a included as a
- * result of a merge between @a start and @a end will be included.
- *
- * @since New in 1.5.
- */
-svn_error_t *svn_repos_get_file_revs2(svn_repos_t *repos,
-                                      const char *path,
-                                      svn_revnum_t start,
-                                      svn_revnum_t end,
-                                      svn_boolean_t include_merged_revisions,
-                                      svn_repos_authz_func_t authz_read_func,
-                                      void *authz_read_baton,
-                                      svn_file_rev_handler_t handler,
-                                      void *handler_baton,
-                                      apr_pool_t *pool);
-
-/**
- * Similar to svn_repos_get_file_revs2(), with @a include_merged_revisions
- * set to FALSE.
- *
- * @deprecated Provided for backward compatibility with the 1.4 API.
  * @since New in 1.1.
  */
 svn_error_t *svn_repos_get_file_revs(svn_repos_t *repos,
@@ -1336,6 +1315,31 @@ svn_error_t *svn_repos_get_file_revs(svn_repos_t *repos,
                                      svn_repos_file_rev_handler_t handler,
                                      void *handler_baton,
                                      apr_pool_t *pool);
+
+/**
+ * If optional @a authz_read_func is non-NULL, then use this function
+ * (along with optional @a authz_read_baton) to check the readability
+ * of the rev-path in each interesting revision encountered.
+ *
+ * In a series of calls, the file contents for the @ end revision will be
+ * provided as a text delta against the empty file.  In the following calls,
+ * the delta will be against the contents for the previous call.
+ *
+ * If @a include_merged_revisions is TRUE, revisions which a included as a
+ * result of a merge between @a start and @a end will be included.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_get_file_ancestry(svn_repos_t *repos,
+                                         const char *path,
+                                         svn_revnum_t start,
+                                         svn_revnum_t end,
+                                         svn_boolean_t include_merged_revisions,
+                                         svn_repos_authz_func_t authz_read_func,
+                                         void *authz_read_baton,
+                                         svn_file_rev_handler_t handler,
+                                         void *handler_baton,
+                                         apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/

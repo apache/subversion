@@ -49,7 +49,6 @@ typedef enum {
   REV_PROP,
   SET_PROP,
   REMOVE_PROP,
-  MERGED_REVISION,
   TXDELTA,
 } blame_state_e;
 
@@ -104,7 +103,7 @@ typedef struct {
   svn_boolean_t done;
 
   /* blame handler and baton */
-  svn_file_rev_handler_t file_rev;
+  svn_ra_file_rev_handler_t file_rev;
   void *file_rev_baton;
 } blame_context_t;
 
@@ -208,15 +207,11 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
         {
           push_state(parser, blame_ctx, REMOVE_PROP);
         }
-      else if (strcmp(name.name, "merged-revision") == 0)
-        {
-          push_state(parser, blame_ctx, MERGED_REVISION);
-        }
       else if (strcmp(name.name, "txdelta") == 0)
         {
           SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
                                       info->path, info->rev,
-                                      info->rev_props, info->merged_revision,
+                                      info->rev_props,
                                       &info->txdelta, &info->txdelta_baton,
                                       info->prop_diffs, info->pool));
 
@@ -248,9 +243,6 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
             {
               info->prop_base64 = FALSE;
             }
-          break;
-        case MERGED_REVISION:
-            info->merged_revision = TRUE;
           break;
         default:
           break;
@@ -290,8 +282,7 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
         {
           SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
                                       info->path, info->rev,
-                                      info->rev_props, FALSE,
-                                      NULL, NULL,
+                                      info->rev_props, NULL, NULL,
                                       info->prop_diffs, info->pool));
         }
       svn_ra_serf__xml_pop_state(parser);
@@ -314,11 +305,6 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
       prop->name = info->prop_name;
       prop->value = create_propval(info);
 
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == MERGED_REVISION &&
-           strcmp(name.name, "merged-revision") == 0)
-    {
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == TXDELTA &&
@@ -381,8 +367,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                            const char *path,
                            svn_revnum_t start,
                            svn_revnum_t end,
-                           svn_boolean_t include_merged_revisions,
-                           svn_file_rev_handler_t rev_handler,
+                           svn_ra_file_rev_handler_t rev_handler,
                            void *rev_handler_baton,
                            apr_pool_t *pool)
 {
@@ -429,13 +414,6 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:end-revision", apr_ltoa(pool, end),
                                session->bkt_alloc);
-
-  if (include_merged_revisions)
-    {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:include-merged-revisions", NULL,
-                                   session->bkt_alloc);
-    }
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", path,

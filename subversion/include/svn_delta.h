@@ -1070,7 +1070,7 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
 
 /**
  * The callback invoked by file rev loopers, such as
- * svn_ra_plugin_t.get_file_revs2() and svn_repos_get_file_revs2().
+ * svn_ra_plugin_t.get_file_ancestry() and svn_repos_get_file_ancestry().
  *
  * @a baton is provided by the caller, @a path is the pathname of the file
  * in revision @a rev and @a rev_props are the revision properties.

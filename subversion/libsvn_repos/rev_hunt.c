@@ -970,16 +970,16 @@ sort_and_scrub_revisions(apr_array_header_t **path_revisions,
 }
 
 svn_error_t *
-svn_repos_get_file_revs2(svn_repos_t *repos,
-                         const char *path,
-                         svn_revnum_t start,
-                         svn_revnum_t end,
-                         svn_boolean_t include_merged_revisions,
-                         svn_repos_authz_func_t authz_read_func,
-                         void *authz_read_baton,
-                         svn_file_rev_handler_t handler,
-                         void *handler_baton,
-                         apr_pool_t *pool)
+svn_repos_get_file_ancestry(svn_repos_t *repos,
+                            const char *path,
+                            svn_revnum_t start,
+                            svn_revnum_t end,
+                            svn_boolean_t include_merged_revisions,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            svn_file_rev_handler_t handler,
+                            void *handler_baton,
+                            apr_pool_t *pool)
 {
   svn_repos__ancestry_callbacks_t walk_callbacks =
     { revs_found_ancestor, NULL, NULL, NULL };

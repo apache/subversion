@@ -930,29 +930,8 @@ svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
                                   void *handler_baton,
                                   apr_pool_t *pool)
 {
-  svn_file_rev_handler_t handler2;
-  void *handler2_baton;
-
-  svn_compat_wrap_file_rev_handler(&handler2, &handler2_baton,
-                                   handler, handler_baton,
-                                   pool);
-
-  return svn_ra_get_file_revs2(session, path, start, end, FALSE, handler2,
-                               handler2_baton, pool);
-}
-
-svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
-                                   const char *path,
-                                   svn_revnum_t start,
-                                   svn_revnum_t end,
-                                   svn_boolean_t include_merged_revisions,
-                                   svn_file_rev_handler_t handler,
-                                   void *handler_baton,
-                                   apr_pool_t *pool)
-{
   return session->vtable->get_file_revs(session, path, start, end,
-                                        include_merged_revisions, handler,
-                                        handler_baton, pool);
+                                        handler, handler_baton, pool);
 }
 
 svn_error_t *svn_ra_lock(svn_ra_session_t *session,

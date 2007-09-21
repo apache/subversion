@@ -397,7 +397,6 @@ check_mimetype(apr_array_header_t *prop_diffs, const char *target,
 static svn_error_t *
 file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                  apr_hash_t *rev_props,
-                 svn_boolean_t merged_revision,
                  svn_txdelta_window_handler_t *content_delta_handler,
                  void **content_delta_baton,
                  apr_array_header_t *prop_diffs,
@@ -440,7 +439,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   if (!content_delta_handler)
     return SVN_NO_ERROR;
 
-  frb->merged_revision = merged_revision;
+  frb->merged_revision = FALSE;
 
   /* Create delta baton. */
   delta_baton = apr_palloc(frb->currpool, sizeof(*delta_baton));
@@ -674,14 +673,19 @@ svn_client_blame4(const char *target,
       frb.prevfilepool = svn_pool_create(pool);
     }
 
+  if (include_merged_revisions)
+    {
+      return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                               _("Temporarily Out-of-order --Mgmt."));
+    }
+
   /* Collect all blame information.
      We need to ensure that we get one revision before the start_rev,
      if available so that we can know what was actually changed in the start
      revision. */
-  err = svn_ra_get_file_revs2(ra_session, "",
-                              start_revnum - (start_revnum > 0 ? 1 : 0),
-                              end_revnum, include_merged_revisions,
-                              file_rev_handler, &frb, pool);
+  err = svn_ra_get_file_revs(ra_session, "",
+                             start_revnum - (start_revnum > 0 ? 1 : 0),
+                             end_revnum, file_rev_handler, &frb, pool);
 
   /* Fall back if it wasn't supported by the server.  Servers earlier
      than 1.1 need this. */

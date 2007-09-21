@@ -1310,23 +1310,7 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
  * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
  * returned.
  *
- * @since New in 1.5.
- */
-svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
-                                   const char *path,
-                                   svn_revnum_t start,
-                                   svn_revnum_t end,
-                                   svn_boolean_t include_merged_revisions,
-                                   svn_file_rev_handler_t handler,
-                                   void *handler_baton,
-                                   apr_pool_t *pool);
-
-/**
- * Similiar to svn_ra_get_file_revs2(), but with @a include_merged_revisions
- * set to FALSE.
- *
  * @since New in 1.2.
- * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
                                   const char *path,
@@ -1335,6 +1319,19 @@ svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
                                   svn_ra_file_rev_handler_t handler,
                                   void *handler_baton,
                                   apr_pool_t *pool);
+
+/**
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_get_file_ancestry(svn_ra_session_t *session,
+                         const char *path,
+                         svn_revnum_t start,
+                         svn_revnum_t end,
+                         svn_boolean_t include_merged_revisions,
+                         svn_file_rev_handler_t handler,
+                         void *handler_baton,
+                         apr_pool_t *pool);
 
 /**
  * Lock each path in @a path_revs, which is a hash whose keys are the

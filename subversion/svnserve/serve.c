@@ -1817,7 +1817,6 @@ static svn_error_t *svndiff_close_handler(void *baton)
 /* This implements the svn_repos_file_rev_handler_t interface. */
 static svn_error_t *file_rev_handler(void *baton, const char *path,
                                      svn_revnum_t rev, apr_hash_t *rev_props,
-                                     svn_boolean_t merged_revision,
                                      svn_txdelta_window_handler_t *d_handler,
                                      void **d_baton,
                                      apr_array_header_t *prop_diffs,
@@ -1831,7 +1830,7 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
   SVN_ERR(svn_ra_svn_write_proplist(frb->conn, pool, rev_props));
   SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)(!"));
   SVN_ERR(write_prop_diffs(frb->conn, pool, prop_diffs));
-  SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)b", merged_revision));
+  SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)"));
 
   /* Store the pool for the delta stream. */
   frb->pool = pool;
@@ -1863,29 +1862,20 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t start_rev, end_rev;
   const char *path;
   const char *full_path;
-  apr_uint64_t include_merged_revs_param;
-  svn_boolean_t include_merged_revisions;
 
   /* Parse arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)?B",
-                                 &path, &start_rev, &end_rev,
-                                 &include_merged_revs_param));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)",
+                                 &path, &start_rev, &end_rev));
   path = svn_path_canonicalize(path, pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
   full_path = svn_path_join(b->fs_path->data, path, pool);
 
-  if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
-    include_merged_revisions = FALSE;
-  else
-    include_merged_revisions = include_merged_revs_param;
-
   frb.conn = conn;
   frb.pool = NULL;
 
-  err = svn_repos_get_file_revs2(b->repos, full_path, start_rev, end_rev,
-                                 include_merged_revisions,
-                                 authz_check_access_cb_func(b), b,
-                                 file_rev_handler, &frb, pool);
+  err = svn_repos_get_file_revs(b->repos, full_path, start_rev, end_rev,
+                                authz_check_access_cb_func(b), b,
+                                file_rev_handler, &frb, pool);
   write_err = svn_ra_svn_write_word(conn, pool, "done");
   if (write_err)
     {
