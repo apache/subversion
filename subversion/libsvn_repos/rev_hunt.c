@@ -736,10 +736,28 @@ struct path_revision
   svn_boolean_t merged_revision;
 };
 
+/* Context to be used when sending an individual revision. */
+struct send_ctx_t
+{
+  svn_repos_t *repos;
+  svn_file_rev_handler_t handler;
+  void *handler_baton;
+
+  apr_pool_t *iter_pool;
+  apr_pool_t *last_pool;
+  svn_fs_root_t *last_root;
+  const char *last_path;
+  apr_hash_t *last_props;
+};
+
+/* Baton for walking ancestry. */
 struct ancestry_walker_baton
 {
   apr_array_header_t *path_revisions;
   apr_pool_t *mainpool;
+
+  /* For get_file_ancestry(). */
+  struct send_ctx_t *send_ctx;
 };
 
 /* This implements svn_repos__ancestry_callbacks_t.found_ancestor() */
@@ -761,104 +779,116 @@ revs_found_ancestor(void *baton,
 }
 
 static svn_error_t *
+send_revision(const char *path,
+              svn_revnum_t rev,
+              struct send_ctx_t *send_ctx,
+              apr_pool_t *pool)
+{
+  apr_hash_t *rev_props;
+  apr_hash_t *props;
+  apr_array_header_t *prop_diffs;
+  svn_fs_root_t *root;
+  svn_txdelta_stream_t *delta_stream;
+  svn_txdelta_window_handler_t delta_handler = NULL;
+  void *delta_baton = NULL;
+  apr_pool_t *tmp_pool;  /* For swapping */
+  svn_boolean_t contents_changed;
+
+  svn_pool_clear(send_ctx->iter_pool);
+
+  /* Get the revision properties. */
+  SVN_ERR(svn_fs_revision_proplist(&rev_props, send_ctx->repos->fs, rev,
+                                   send_ctx->iter_pool));
+
+  /* Open the revision root. */
+  SVN_ERR(svn_fs_revision_root(&root, send_ctx->repos->fs, rev,
+                               send_ctx->iter_pool));
+
+  /* Get the file's properties for this revision and compute the diffs. */
+  SVN_ERR(svn_fs_node_proplist(&props, root, path, send_ctx->iter_pool));
+  SVN_ERR(svn_prop_diffs(&prop_diffs, props, send_ctx->last_props, pool));
+
+  /* Check if the contents changed. */
+  /* Special case: In the first revision, we always provide a delta. */
+  if (send_ctx->last_root)
+    SVN_ERR(svn_fs_contents_changed(&contents_changed, send_ctx->last_root,
+                                    send_ctx->last_path, root, path,
+                                    send_ctx->iter_pool));
+  else
+    contents_changed = TRUE;
+
+  /* We have all we need, give to the handler. */
+  SVN_ERR(send_ctx->handler(send_ctx->handler_baton, path, rev, rev_props,
+                            FALSE, contents_changed ? &delta_handler : NULL,
+                            contents_changed ? &delta_baton : NULL,
+                            prop_diffs, send_ctx->iter_pool));
+
+  /* Compute and send delta if client asked for it.
+     Note that this was initialized to NULL, so if !contents_changed,
+     no deltas will be computed. */
+  if (delta_handler)
+    {
+      /* Get the content delta. */
+      SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                           send_ctx->last_root,
+                                           send_ctx->last_path,
+                                           root, path, send_ctx->iter_pool));
+      /* And send. */
+      SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                        delta_handler, delta_baton,
+                                        send_ctx->iter_pool));
+    }
+
+  /* Remember root, path and props for next iteration. */
+  send_ctx->last_root = root;
+  send_ctx->last_path = apr_pstrdup(send_ctx->iter_pool, path);
+  send_ctx->last_props = props;
+
+  /* Swap the pools. */
+  tmp_pool = send_ctx->iter_pool;
+  send_ctx->iter_pool = send_ctx->last_pool;
+  send_ctx->last_pool = tmp_pool;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 send_path_revision_list(apr_array_header_t *path_revisions,
                         svn_repos_t *repos,
                         svn_file_rev_handler_t handler,
                         void *handler_baton,
                         apr_pool_t *pool)
 {
-  apr_pool_t *iter_pool, *last_pool;
-  svn_fs_root_t *last_root;
-  const char *last_path;
-  apr_hash_t *last_props;
+  apr_pool_t *iterpool;
+  struct send_ctx_t send_ctx;
   int i;
 
+  /* Setup the send context. */
+  send_ctx.repos = repos;
+  send_ctx.handler = handler;
+  send_ctx.handler_baton = handler_baton;
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */
-  iter_pool = svn_pool_create(pool);
-  last_pool = svn_pool_create(pool);
-
+  send_ctx.iter_pool = svn_pool_create(pool);
+  send_ctx.last_pool = svn_pool_create(pool);
   /* We want the first txdelta to be against the empty file. */
-  last_root = NULL;
-  last_path = NULL;
-
+  send_ctx.last_root = NULL;
+  send_ctx.last_path = NULL;
   /* Create an empty hash table for the first property diff. */
-  last_props = apr_hash_make(last_pool);
+  send_ctx.last_props = apr_hash_make(send_ctx.last_pool);
 
   /* Walk through the revisions in chronological order. */
+  iterpool = svn_pool_create(pool);
   for (i = path_revisions->nelts; i > 0; --i)
     {
       struct path_revision *path_rev = APR_ARRAY_IDX(path_revisions, i - 1,
                                                      struct path_revision *);
-      apr_hash_t *rev_props;
-      apr_hash_t *props;
-      apr_array_header_t *prop_diffs;
-      svn_fs_root_t *root;
-      svn_txdelta_stream_t *delta_stream;
-      svn_txdelta_window_handler_t delta_handler = NULL;
-      void *delta_baton = NULL;
-      apr_pool_t *tmp_pool;  /* For swapping */
-      svn_boolean_t contents_changed;
-
-      svn_pool_clear(iter_pool);
-
-      /* Get the revision properties. */
-      SVN_ERR(svn_fs_revision_proplist(&rev_props, repos->fs,
-                                       path_rev->revnum, iter_pool));
-
-      /* Open the revision root. */
-      SVN_ERR(svn_fs_revision_root(&root, repos->fs, path_rev->revnum,
-                                   iter_pool));
-
-      /* Get the file's properties for this revision and compute the diffs. */
-      SVN_ERR(svn_fs_node_proplist(&props, root, path_rev->path, iter_pool));
-      SVN_ERR(svn_prop_diffs(&prop_diffs, props, last_props, pool));
-
-      /* Check if the contents changed. */
-      /* Special case: In the first revision, we always provide a delta. */
-      if (last_root)
-        SVN_ERR(svn_fs_contents_changed(&contents_changed,
-                                        last_root, last_path,
-                                        root, path_rev->path, iter_pool));
-      else
-        contents_changed = TRUE;
-
-      /* We have all we need, give to the handler. */
-      SVN_ERR(handler(handler_baton, path_rev->path, path_rev->revnum,
-                      rev_props, path_rev->merged_revision,
-                      contents_changed ? &delta_handler : NULL,
-                      contents_changed ? &delta_baton : NULL,
-                      prop_diffs, iter_pool));
-
-      /* Compute and send delta if client asked for it.
-         Note that this was initialized to NULL, so if !contents_changed,
-         no deltas will be computed. */
-      if (delta_handler)
-        {
-          /* Get the content delta. */
-          SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
-                                               last_root, last_path,
-                                               root, path_rev->path,
-                                               iter_pool));
-          /* And send. */
-          SVN_ERR(svn_txdelta_send_txstream(delta_stream,
-                                            delta_handler, delta_baton,
-                                            iter_pool));
-        }
-
-      /* Remember root, path and props for next iteration. */
-      last_root = root;
-      last_path = path_rev->path;
-      last_props = props;
-
-      /* Swap the pools. */
-      tmp_pool = iter_pool;
-      iter_pool = last_pool;
-      last_pool = tmp_pool;
+      svn_pool_clear(iterpool);
+      SVN_ERR(send_revision(path_rev->path, path_rev->revnum, &send_ctx,
+                            iterpool));
     }
 
-  svn_pool_destroy(last_pool);
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -969,6 +999,18 @@ sort_and_scrub_revisions(apr_array_header_t **path_revisions,
   return SVN_NO_ERROR;
 }
 
+/* This implements svn_repos__ancestry_callbacks_t.found_ancestor() */
+static svn_error_t *
+ancestry_found_ancestor(void *baton,
+                        const char *path,
+                        svn_revnum_t rev,
+                        apr_pool_t *pool)
+{
+  struct ancestry_walker_baton *awb = baton;
+
+  return send_revision(path, rev, awb->send_ctx, pool);
+}
+
 svn_error_t *
 svn_repos_get_file_ancestry(svn_repos_t *repos,
                             const char *path,
@@ -982,10 +1024,11 @@ svn_repos_get_file_ancestry(svn_repos_t *repos,
                             apr_pool_t *pool)
 {
   svn_repos__ancestry_callbacks_t walk_callbacks =
-    { revs_found_ancestor, NULL, NULL, NULL };
+    { ancestry_found_ancestor, NULL, NULL, NULL };
   svn_fs_root_t *root;
   svn_node_kind_t kind;
   struct ancestry_walker_baton awb;
+  struct send_ctx_t send_ctx;
 
   /* Check to make sure we are operating on a file. */
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, pool));
@@ -995,23 +1038,30 @@ svn_repos_get_file_ancestry(svn_repos_t *repos,
       _("'%s' is not a file in revision %ld"), path, end);
 
   /* Setup the ancesty walker baton. */
+  send_ctx.repos = repos;
+  send_ctx.handler = handler;
+  send_ctx.handler_baton = handler_baton;
+  /* We switch betwwen two pools while looping, since we need information from
+     the last iteration to be available. */
+  send_ctx.last_pool = svn_pool_create(pool);
+  send_ctx.iter_pool = svn_pool_create(pool);
+  /* We want the first txdelta to be against the empty file. */
+  send_ctx.last_root = NULL;
+  send_ctx.last_path = NULL;
+  send_ctx.last_props = apr_hash_make(send_ctx.last_pool);
+
   awb.path_revisions = apr_array_make(pool, 0, sizeof(struct path_revision *));
   awb.mainpool = pool;
+  awb.send_ctx = &send_ctx;
 
   /* Walk the node ancestry. */
   SVN_ERR(svn_repos__walk_ancestry(path, repos->fs, start, end,
                                    include_merged_revisions, FALSE,
                                    &walk_callbacks, &awb,
-                                   authz_read_func, authz_read_baton,
-                                   pool));
+                                   authz_read_func, authz_read_baton, pool));
 
-  if (include_merged_revisions)
-    SVN_ERR(sort_and_scrub_revisions(&awb.path_revisions, pool));
+  svn_pool_destroy(send_ctx.iter_pool);
+  svn_pool_destroy(send_ctx.last_pool);
 
-  /* We must have at least one revision to get. */
-  assert(awb.path_revisions->nelts > 0);
-
-  /* Send the revision list to the client. */
-  return send_path_revision_list(awb.path_revisions, repos, 
-                                 handler, handler_baton, pool);
+  return SVN_NO_ERROR;
 }
