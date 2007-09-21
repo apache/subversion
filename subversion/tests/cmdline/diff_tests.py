@@ -2754,9 +2754,9 @@ def diff_svnpatch(sbox):
   svnpatch_output_base_head.append(svnpatch[17])
   svnpatch_output_base_head += svnpatch[14:17] + svnpatch[18:]
 
-  # No copy-path is received from the server.
+  # copy-path received from the server is in absolute fashion
   svnpatch_output_base_head[20] =\
-    svnpatch_output_base_head[20].replace('2:mu ','')
+    svnpatch_output_base_head[20].replace('2:mu ','5:/A/mu ')
 
   expected_svnpatch_base_head = svnpatch_encode(svnpatch_output_base_head)
 
