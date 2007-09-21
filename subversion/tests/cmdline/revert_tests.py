@@ -855,27 +855,6 @@ def revert_replaced_with_history_file_2(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
-def revert_obstructed_dir_added(sbox):
-  "revert obstructed dir added"
-  # Test for issue #2425
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  newdir = os.path.join(wc_dir, 'X')
-  expected_output = svntest.wc.State(wc_dir, {
-    'X': Item(status='A '),
-    })
-  svntest.actions.run_and_verify_svn(None, ["A         "+newdir+"\n"], [],
-                                     "mkdir", newdir)
-
-  svntest.main.safe_rmtree(os.path.join(newdir, '.svn'))
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
-                                    "revert", "--recursive", newdir)
-  # Issue #2425 (incorrectly) expects error output with the
-  # status command below.
-  svntest.actions.run_and_verify_svn(None, None, [], "st", wc_dir)
-
 ########################################################################
 # Run the tests
 
@@ -900,7 +879,6 @@ test_list = [ None,
               status_of_missing_dir_after_revert,
               status_of_missing_dir_after_revert_replaced_with_history_dir,
               revert_replaced_with_history_file_2,
-              revert_obstructed_dir_added,
              ]
 
 if __name__ == '__main__':
