@@ -53,7 +53,7 @@ class SVNClient :public SVNBase
 {
  public:
   void info2(const char *path, Revision &revision, Revision &pegRevision,
-             bool recurse, InfoCallback *callback);
+             svn_depth_t depth, InfoCallback *callback);
   void unlock(Targets &targets, bool force);
   void lock(Targets &targets, const char *comment, bool force);
   jobjectArray revProperties(jobject jthis, const char *path,
@@ -95,7 +95,7 @@ class SVNClient :public SVNBase
              Revision &revision2, const char *localPath, bool force,
              svn_depth_t depth, bool ignoreAncestry, bool dryRun);
   void doImport(const char *path, const char *url, const char *message,
-                bool recurse);
+                svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  svn_depth_t depth, bool ignoreExternals,
                  bool allowUnverObstructions);
@@ -117,9 +117,9 @@ class SVNClient :public SVNBase
                const char *changelistName);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                     bool ignoreExternals, bool allowUnverObstructions);
-  void add(const char *path, bool recurse, bool force, bool no_ignore,
+  void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
            bool add_parents);
-  void revert(const char *path, bool recurse);
+  void revert(const char *path, svn_depth_t depth);
   void remove(Targets &targets, const char *message, bool force,
               bool keep_local);
   void notification(Notify *notify);

@@ -2,7 +2,7 @@
  * props.c :  routines for fetching DAV properties
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,7 @@
 #include "svn_props.h"
 #include "../libsvn_ra/ra_loader.h"
 
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -64,7 +65,7 @@ static const ne_propname starting_props[] =
 static const ne_propname baseline_props[] =
 {
   { "DAV:", "baseline-collection" },
-  { "DAV:", "version-name" },
+  { "DAV:", SVN_DAV__VERSION_NAME },
   { NULL }
 };
 
@@ -129,10 +130,10 @@ static const svn_ra_neon__xml_elm_t propfind_elements[] =
   { "DAV:", "collection", ELEM_collection, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "version-controlled-configuration", ELEM_vcc, 0 },
-  { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", SVN_DAV__VERSION_NAME, ELEM_version_name, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "getcontentlength", ELEM_get_content_length,
     SVN_RA_NEON__XML_CDATA },
-  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", SVN_DAV__CREATIONDATE, ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "creator-displayname", ELEM_creator_displayname,
     SVN_RA_NEON__XML_CDATA },
 
@@ -968,8 +969,8 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
 
           /* ### need an SVN_ERR here */
           return svn_error_create(APR_EGENERAL, NULL,
-                                  _("'DAV:version-name' was not present"
-                                    " on the baseline resource"));
+                                  _("'DAV:" SVN_DAV__VERSION_NAME "' was not "
+                                    "present on the baseline resource"));
         }
       *latest_rev = SVN_STR_TO_REV(vsn_name->data);
     }

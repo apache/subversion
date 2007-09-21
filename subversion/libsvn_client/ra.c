@@ -250,8 +250,9 @@ invalidate_wc_props(void *baton,
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, cb->base_access, path,
                                     pool));
   SVN_ERR(svn_wc_walk_entries3(path, adm_access, &walk_callbacks, &wb,
-                               FALSE, cb->ctx->cancel_func,
-                               cb->ctx->cancel_baton, pool));
+                               svn_depth_infinity, FALSE,
+                               cb->ctx->cancel_func, cb->ctx->cancel_baton,
+                               pool));
 
   return SVN_NO_ERROR;
 }

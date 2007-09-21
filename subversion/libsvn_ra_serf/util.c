@@ -822,11 +822,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       if (ctx->error && ctx->ignore_errors == FALSE)
         {
           XML_ParserFree(ctx->xmlp);
-          status = ctx->error->apr_err;
-
-          svn_error_clear(ctx->error);
-
-          return status;
+          return ctx->error->apr_err;
         }
 
       if (APR_STATUS_IS_EAGAIN(status))

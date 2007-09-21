@@ -241,18 +241,21 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 
   /* ### TODO: Share ra_session batons to improve efficiency? */
   SVN_ERR(svn_client__get_repos_root(&repos_root, path_or_url, peg_revision, 
-                                     ctx, pool));
+                                     NULL, ctx, pool));
   SVN_ERR(svn_client__get_copy_source(path_or_url, peg_revision, 
                                       &copyfrom_path, &copyfrom_rev, 
                                       ctx, pool));
   if (copyfrom_path)
-    APR_ARRAY_PUSH(list, const char *) = 
-      svn_path_join(repos_root, 
-                    svn_path_uri_encode(copyfrom_path + 1, pool),
-                    pool);
+    {
+      copyfrom_path = svn_path_join(repos_root, 
+                                    svn_path_uri_encode(copyfrom_path + 1, 
+                                                        pool),
+                                    pool);
+      APR_ARRAY_PUSH(list, const char *) = copyfrom_path;
+    }
 
-  SVN_ERR(svn_client_get_mergeinfo(&mergeinfo, path_or_url, peg_revision, 
-                                   ctx, pool));
+  SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, path_or_url, 
+                                          peg_revision, ctx, pool));
   if (mergeinfo)
     {
       for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
@@ -260,10 +263,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
           const char *merge_path;
           apr_hash_this(hi, (void *)(&merge_path), NULL, NULL);
           if (copyfrom_path == NULL || strcmp(merge_path, copyfrom_path) != 0)
-            APR_ARRAY_PUSH(list, const char *) = 
-              svn_path_join(repos_root, 
-                            svn_path_uri_encode(merge_path + 1, pool),
-                            pool);
+            APR_ARRAY_PUSH(list, const char *) = merge_path;
         }
     }
 

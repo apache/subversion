@@ -1097,50 +1097,52 @@ c2r_ ## type ## _dup(void *type, void *ctx)                                  \
   return rb_copied_item;                                                     \
 }
 
-#define DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, type_prefix)        \
-DEFINE_DUP_BASE(type, dup_func, type_prefix)                                 \
-static VALUE                                                                 \
-c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)                  \
-{                                                                            \
-  return c2r_ ## type ## _dup((void *)type, NULL);                           \
+#define DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, type_prefix)   \
+DEFINE_DUP_BASE(type, dup_func, type_prefix)                            \
+static VALUE                                                            \
+c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)             \
+{                                                                       \
+  void *void_type;                                                      \
+  void_type = (void *)type;                                             \
+  return c2r_ ## type ## _dup(void_type, NULL);                         \
 }
 
-#define DEFINE_DUP(type, dup_func) \
+#define DEFINE_DUP_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, const)
-#define DEFINE_DUP2(type) \
-  DEFINE_DUP(type, type ## _dup)
+#define DEFINE_DUP(type) \
+  DEFINE_DUP_WITH_FUNCTION_NAME(type, type ## _dup)
 
-#define DEFINE_DUP_NO_CONVENIENCE(type, dup_func) \
+#define DEFINE_DUP_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE(type, dup_func, const)
-#define DEFINE_DUP_NO_CONVENIENCE2(type) \
-  DEFINE_DUP_NO_CONVENIENCE(type, type ## _dup)
+#define DEFINE_DUP_NO_CONVENIENCE(type) \
+  DEFINE_DUP_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, type ## _dup)
 
-#define DEFINE_DUP_NO_CONST(type, dup_func) \
+#define DEFINE_DUP_NO_CONST_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func,)
-#define DEFINE_DUP_NO_CONST2(type) \
-  DEFINE_DUP_NO_CONST(type, type ## _dup)
+#define DEFINE_DUP_NO_CONST(type) \
+  DEFINE_DUP_NO_CONST_WITH_FUNCTION_NAME(type, type ## _dup)
 
-#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type, dup_func) \
+#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE(type, dup_func,)
-#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE2(type) \
-  DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type, type ## _dup)
+#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type) \
+  DEFINE_DUP_NO_CONST_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, type ## _dup)
 
 
-DEFINE_DUP(wc_notify, wc_dup_notify)
-DEFINE_DUP2(txdelta_window)
-DEFINE_DUP2(info)
-DEFINE_DUP2(commit_info)
-DEFINE_DUP2(lock)
-DEFINE_DUP2(auth_ssl_server_cert_info)
-DEFINE_DUP2(wc_entry)
-DEFINE_DUP2(client_diff_summarize)
-DEFINE_DUP2(dirent)
-DEFINE_DUP_NO_CONVENIENCE2(client_commit_item3)
-DEFINE_DUP_NO_CONVENIENCE2(client_proplist_item)
-DEFINE_DUP_NO_CONVENIENCE2(wc_external_item2)
-DEFINE_DUP_NO_CONVENIENCE2(log_changed_path)
-DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
-DEFINE_DUP_NO_CONST_NO_CONVENIENCE2(merge_range)
+DEFINE_DUP_WITH_FUNCTION_NAME(wc_notify, wc_dup_notify)
+DEFINE_DUP(txdelta_window)
+DEFINE_DUP(info)
+DEFINE_DUP(commit_info)
+DEFINE_DUP(lock)
+DEFINE_DUP(auth_ssl_server_cert_info)
+DEFINE_DUP(wc_entry)
+DEFINE_DUP(client_diff_summarize)
+DEFINE_DUP(dirent)
+DEFINE_DUP_NO_CONVENIENCE(client_commit_item3)
+DEFINE_DUP_NO_CONVENIENCE(client_proplist_item)
+DEFINE_DUP_NO_CONVENIENCE(wc_external_item2)
+DEFINE_DUP_NO_CONVENIENCE(log_changed_path)
+DEFINE_DUP_NO_CONST_WITH_FUNCTION_NAME(wc_status2, wc_dup_status2)
+DEFINE_DUP_NO_CONST_NO_CONVENIENCE(merge_range)
 
 
 /* Ruby -> C */

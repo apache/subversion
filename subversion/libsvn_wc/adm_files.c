@@ -682,16 +682,15 @@ svn_wc__close_revert_base(apr_file_t *fp,
 svn_error_t *
 svn_wc__open_props(apr_file_t **handle,
                    const char *path,
+                   svn_node_kind_t kind,
                    apr_int32_t flags,
                    svn_boolean_t base,
                    svn_boolean_t wcprops,
                    apr_pool_t *pool)
 {
   const char *parent_dir, *base_name;
-  svn_node_kind_t kind;
   int wc_format_version;
 
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
     parent_dir = path;
   else
@@ -756,15 +755,14 @@ svn_wc__open_props(apr_file_t **handle,
 svn_error_t *
 svn_wc__close_props(apr_file_t *fp,
                     const char *path,
+                    svn_node_kind_t kind,
                     svn_boolean_t base,
                     svn_boolean_t wcprops,
                     int sync,
                     apr_pool_t *pool)
 {
   const char *parent_dir, *base_name;
-  svn_node_kind_t kind;
 
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
     parent_dir = path;
   else
@@ -816,65 +814,6 @@ svn_wc__close_props(apr_file_t *fp,
 
 
 
-svn_error_t *
-svn_wc__sync_props(const char *path,
-                   svn_boolean_t base,
-                   svn_boolean_t wcprops,
-                   apr_pool_t *pool)
-{
-  const char *parent_dir, *base_name;
-  svn_node_kind_t kind;
-
-  /* Check if path is a file or a dir. */
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
-
-  /* If file, split the path. */
-  if (kind == svn_node_file)
-    svn_path_split(path, &parent_dir, &base_name, pool);
-  else
-    parent_dir = path;
-
-  /* At this point, we know we need to open a file in the admin area
-     of parent_dir.  Examine the flags to know -which- kind of prop
-     file to get -- there are three types! */
-
-  if (base && wcprops)
-    return svn_error_create(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                            _("No such thing as 'base' "
-                              "working copy properties!"));
-
-  else if (base)
-    {
-      if (kind == svn_node_dir)
-        return sync_adm_file(parent_dir, NULL, pool,
-                             SVN_WC__ADM_DIR_PROP_BASE, NULL);
-      else
-        return sync_adm_file(parent_dir, SVN_WC__BASE_EXT, pool,
-                             SVN_WC__ADM_PROP_BASE, base_name, NULL);
-    }
-  else if (wcprops)
-    {
-      if (kind == svn_node_dir)
-        return sync_adm_file(parent_dir, NULL, pool,
-                             SVN_WC__ADM_DIR_WCPROPS, NULL);
-      else
-        return sync_adm_file(parent_dir, SVN_WC__BASE_EXT, pool,
-                             SVN_WC__ADM_WCPROPS, base_name, NULL);
-    }
-  else /* plain old property file */
-    {
-      if (kind == svn_node_dir)
-        return sync_adm_file(parent_dir, NULL, pool,
-                             SVN_WC__ADM_DIR_PROPS, NULL);
-      else
-        return sync_adm_file(parent_dir, SVN_WC__WORK_EXT, pool,
-                             SVN_WC__ADM_PROPS, base_name, NULL);
-    }
-
-}
-
-
-
 
 /*** Checking for and creating administrative subdirs. ***/
 
@@ -895,105 +834,50 @@ check_adm_exists(svn_boolean_t *exists,
                  apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  svn_node_kind_t kind;
-  svn_boolean_t dir_exists = FALSE, wc_exists = FALSE;
-  const char *tmp_path;
 
-  /** Step 1: check that the directory exists. **/
+  /* This is a bit odd.  We have to open an access baton, which relies
+     on this being a working copy, so use an error as a signal this *isn't*
+     a working copy! */
+  svn_wc_adm_access_t *adm_access;
+  const svn_wc_entry_t *entry;
 
-  tmp_path = extend_with_adm_name(path, NULL, 0, pool, NULL);
-
-  SVN_ERR(svn_io_check_path(tmp_path, &kind, pool));
-  if (kind != svn_node_none && kind != svn_node_dir)
+  err = svn_wc_adm_open3(&adm_access, NULL, path, FALSE, 0,
+                         NULL, NULL, pool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
-      /* If got an error other than dir non-existence, then
-         something's weird and we should return a genuine error. */
-      return svn_error_createf(APR_ENOTDIR, NULL,
-                               _("'%s' is not a directory"),
-                               svn_path_local_style(tmp_path, pool));
-    }
-  else if (kind == svn_node_none)
-    {
-      dir_exists = FALSE;
-    }
-  else                      /* must be a dir. */
-    {
-      assert(kind == svn_node_dir);
-      dir_exists = TRUE;
-    }
-
-  /** Step 1.  If no adm directory, then we're done. */
-  if (! dir_exists)
-    {
+      svn_error_clear(err);
       *exists = FALSE;
       return SVN_NO_ERROR;
     }
+  else if (err)
+    return SVN_NO_ERROR;
 
-  /** The directory exists, but is it a valid working copy yet?
-      Try step 2: checking that we can read the format number. */
-  {
-    int wc_format;
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc_adm_close(adm_access));
 
-    err = svn_io_read_version_file
-      (&wc_format, svn_path_join(tmp_path, SVN_WC__ADM_ENTRIES, pool), pool);
-
-    /* Fall back on the format file for WCs before format 7. */
-    if (err)
-      {
-        svn_error_clear(err);
-        err = svn_io_read_version_file
-          (&wc_format, svn_path_join(tmp_path, SVN_WC__ADM_FORMAT, pool),
-           pool);
-      }
-
-    if (err)
-      {
-        svn_error_clear(err);
-        wc_exists = FALSE;
-      }
-    else
-      wc_exists = TRUE;
-  }
-
-  /** Step 3: now check that repos and ancestry are correct **/
-
-  if (wc_exists)
+  /* When the directory exists and is scheduled for deletion do not
+   * check the revision or the URL.  The revision can be any
+   * arbitrary revision and the URL may differ if the add is
+   * being driven from a merge which will have a different URL. */
+  if (entry->schedule != svn_wc_schedule_delete)
     {
-      /* This is a bit odd.  We have to open an access baton, which relies
-         on this being a working copy, in order to determine if this is a
-         working copy! */
-      svn_wc_adm_access_t *adm_access;
-      const svn_wc_entry_t *entry;
+      if (entry->revision != revision)
+        return
+          svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("Revision %ld doesn't match existing revision %ld in '%s'"),
+           revision, entry->revision, path);
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, FALSE, 0,
-                               NULL, NULL, pool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
-
-      /* When the directory exists and is scheduled for deletion do not
-       * check the revision or the URL.  The revision can be any
-       * arbitrary revision and the URL may differ if the add is
-       * being driven from a merge which will have a different URL. */
-      if (entry->schedule != svn_wc_schedule_delete)
-        {
-          if (entry->revision != revision)
-            return
-              svn_error_createf
-              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("Revision %ld doesn't match existing revision %ld in '%s'"),
-               revision, entry->revision, path);
-
-          /** ### comparing URLs, should they be canonicalized first? */
-          if (strcmp(entry->url, url) != 0)
-            return
-              svn_error_createf
-              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("URL '%s' doesn't match existing URL '%s' in '%s'"),
-               url, entry->url, path);
-        }
+      /** ### comparing URLs, should they be canonicalized first? */
+      if (strcmp(entry->url, url) != 0)
+        return
+          svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("URL '%s' doesn't match existing URL '%s' in '%s'"),
+           url, entry->url, path);
     }
 
-  *exists = wc_exists;
+  *exists = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -1154,7 +1038,7 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
      directory, which also removes the lock file */
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                               NULL, FALSE, pool, NULL);
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
   SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
@@ -1173,7 +1057,7 @@ svn_wc__adm_cleanup_tmp_area(svn_wc_adm_access_t *adm_access,
   tmp_path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                                   NULL, 0, pool, SVN_WC__ADM_TMP, NULL);
 
-  SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, NULL, NULL, pool));
   /* Now, rebuild the tmp area. */
   SVN_ERR(init_adm_tmp_area(adm_access, pool));
 

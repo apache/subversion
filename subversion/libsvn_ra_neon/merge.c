@@ -2,7 +2,7 @@
  * merge.c :  routines for performing a MERGE server requests
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -31,6 +31,7 @@
 #include "svn_props.h"
 #include "svn_xml.h"
 
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -53,10 +54,10 @@ static const svn_ra_neon__xml_elm_t merge_elements[] =
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "collection", ELEM_collection, 0 },
   { "DAV:", "baseline", ELEM_baseline, 0 },
-  { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", SVN_DAV__VERSION_NAME, ELEM_version_name, SVN_RA_NEON__XML_CDATA },
   { SVN_XML_NAMESPACE, "post-commit-err",
     ELEM_post_commit_err, SVN_RA_NEON__XML_CDATA },
-  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", SVN_DAV__CREATIONDATE, ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "creator-displayname", ELEM_creator_displayname,
     SVN_RA_NEON__XML_CDATA },
 
@@ -745,9 +746,9 @@ svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
                       "<D:merge xmlns:D=\"DAV:\">"
                       "<D:source><D:href>%s</D:href></D:source>"
                       "<D:no-auto-merge/><D:no-checkout/>"
-                      "<D:prop>"
-                      "<D:checked-in/><D:version-name/><D:resourcetype/>"
-                      "<D:creationdate/><D:creator-displayname/>"
+                      "<D:prop><D:checked-in/>"
+                      "<D:" SVN_DAV__VERSION_NAME "/><D:resourcetype/>"
+                      "<D:" SVN_DAV__CREATIONDATE "/><D:creator-displayname/>"
                       "</D:prop>"
                       "%s"
                       "</D:merge>",

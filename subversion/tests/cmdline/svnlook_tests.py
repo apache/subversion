@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -259,7 +259,7 @@ def test_print_property_diffs(sbox):
   for i in xrange(len(expected_output)):
     expected_output[i] = expected_output[i].replace(iota_path, 'iota')
 
-  svntest.actions.compare_and_display_lines('', '', expected_output, output)
+  svntest.verify.compare_and_display_lines('', '', expected_output, output)
 
 #----------------------------------------------------------------------
 # Check that svnlook info repairs allows inconsistent line endings in logs.

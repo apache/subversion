@@ -609,6 +609,7 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   const char *target, const char *tgt_path,
                                   svn_boolean_t text_deltas,
                                   svn_depth_t depth,
+                                  svn_boolean_t send_copyfrom_args,
                                   svn_boolean_t ignore_ancestry)
 {
   const svn_delta_editor_t *editor;
@@ -622,6 +623,7 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_repos_begin_report2(&report_baton, rev, b->repos,
                                       b->fs_path->data, target, tgt_path,
                                       text_deltas, depth, ignore_ancestry,
+                                      send_copyfrom_args,
                                       editor, edit_baton,
                                       authz_check_access_cb_func(b),
                                       b, pool));
@@ -1305,19 +1307,24 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *target, *full_path, *depth_word;
   svn_boolean_t recurse;
+  svn_boolean_t send_copyfrom_args;
+  apr_uint64_t send_copyfrom_param;
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?w", &rev, &target,
-                                 &recurse, &depth_word));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?wB", &rev, &target,
+                                 &recurse, &depth_word, &send_copyfrom_param));
   target = svn_path_canonicalize(target, pool);
 
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
     depth = SVN_DEPTH_FROM_RECURSE(recurse);
+
+  send_copyfrom_args = (send_copyfrom_param == SVN_RA_SVN_UNSPECIFIED_NUMBER) ?
+      FALSE : send_copyfrom_param;
 
   full_path = svn_path_join(b->fs_path->data, target, pool);
   /* Check authorization and authenticate the user if necessary. */
@@ -1326,7 +1333,8 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
-  return accept_report(conn, pool, b, rev, target, NULL, TRUE, depth, FALSE);
+  return accept_report(conn, pool, b, rev, target, NULL, TRUE,
+                       depth, send_copyfrom_args, FALSE);
 }
 
 static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -1360,7 +1368,9 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           &switch_path));
 
   return accept_report(conn, pool, b, rev, target, switch_path, TRUE,
-                       depth, TRUE);
+                       depth,
+                       FALSE /* TODO(sussman): no copyfrom args for now */,
+                       TRUE);
 }
 
 static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -1388,7 +1398,8 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
-  return accept_report(conn, pool, b, rev, target, NULL, FALSE, depth, FALSE);
+  return accept_report(conn, pool, b, rev, target, NULL, FALSE,
+                       depth, FALSE, FALSE);
 }
 
 static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -1436,7 +1447,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           &versus_path));
 
   return accept_report(conn, pool, b, rev, target, versus_path,
-                       text_deltas, depth, ignore_ancestry);
+                       text_deltas, depth, FALSE, ignore_ancestry);
 }
 
 /* Regardless of whether a client's capabilities indicate an

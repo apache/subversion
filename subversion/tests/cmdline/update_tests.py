@@ -21,8 +21,7 @@ import sys, re, os
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
-
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -2301,7 +2300,7 @@ def update_wc_with_replaced_file(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'iota' : Item(status='C ', wc_rev='-', copied='+'),
+    'iota' : Item(status='CM', wc_rev='-', copied='+'),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
@@ -2949,9 +2948,10 @@ def mergeinfo_update_elision(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   svntest.actions.run_and_verify_svn(None,
-                                     [svntest.main.merge_notify_line(3, 5),
-                                      'U    ' + \
-                                      short_alpha_COPY_path + '\n'],
+                                     '|'.join(
+                                        [svntest.main.merge_notify_line(3, 5),
+                                         'U    ' + short_alpha_COPY_path +
+                                         '\n']),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      short_alpha_COPY_path)

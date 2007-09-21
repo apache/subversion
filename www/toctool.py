@@ -16,6 +16,7 @@ import xml.parsers.expat
 
 class Index:
   def __init__(self):
+    self.title = None
     self.tree = []
     self._ptr_stack = [self.tree]
 
@@ -92,7 +93,10 @@ class IndexBuildParse(ExpatParseJob):
         self.saved_id = attrs.get('id')
         self.elt_stack.append((name, True))
         return
-    if name == self.waiting_for_elt:
+    elif name == 'title':
+      self.collecting_text = name
+      self.text = ''
+    elif name == self.waiting_for_elt:
       self.waiting_for_elt = None
       self.collecting_text = name
       self.text = ''
@@ -101,8 +105,11 @@ class IndexBuildParse(ExpatParseJob):
   def EndElementHandler(self, name):
     if self.collecting_text:
       if name == self.collecting_text:
-        self.index.addLevel(self.saved_id, self.text)
-        self.saved_id = None
+        if name == 'title':
+          self.index.title = self.text
+        else:
+          self.index.addLevel(self.saved_id, self.text)
+          self.saved_id = None
         self.collecting_text = False
       else:
         raise RuntimeError('foo')
@@ -128,34 +135,63 @@ def escape_entities(s):
 
 
 class IndexInsertParse(ExpatParseJob):
-  do_not_minimize = {'script':None}
-  temp_do_not_indent = {'div':None, 'a': None, 'strong': None, 'em': None}
-
   def __init__(self, index, outfp):
+    self._ordered_attributes = True
     self.index = index
     self.outfp = outfp
-    self._element_open = False
-    self.linepos = 0
-    self.indentpos = 0
     self.elt_stack = []
     self.skipping_toc = False
-    self._ordered_attributes = True
 
-  def _finish_pending(self, due_to_end):
-    if self._element_open:
-      self._element_open = False
-      if due_to_end:
-        self.linepos += 3
-        self.outfp.write(' />')
+    self._line_in_progress = []
+    self._element_open = None
+    self.linepos = 0
+    self.indentpos = 0
+
+    self.do_not_minimize = {'script':None}
+    self.do_not_indent = {'div':None, 'a':None, 'strong':None, 'em':None}
+    self.do_not_wrap = {'div':None, 'strong':None, 'em':None, 'li':None}
+
+    if self.index.title == 'Subversion Design':
+      self.do_not_wrap['a'] = None
+
+  def put_token(self, token, tag_name):
+    self._line_in_progress.append((token, tag_name))
+
+  def done_line(self):
+    linepos = 0
+    last_was_tag = False
+    outq = []
+    for token, tag_name in self._line_in_progress:
+      is_tag = tag_name is not None and tag_name not in self.do_not_wrap
+      no_indent_if_wrap = tag_name in self.do_not_indent
+      linepos += len(token)
+      if linepos > 79 and is_tag and last_was_tag:
+        token = token.lstrip(' ')
+        if no_indent_if_wrap:
+          linepos = len(token)
+          outq.append('\n')
+        else:
+          linepos = len(token) + 2
+          outq.append('\n  ')
+      outq.append(token)
+      last_was_tag = is_tag
+    outq.append('\n')
+    for i in outq:
+      self.outfp.write(i)
+    del self._line_in_progress[:]
+
+  def _finish_pending(self, minimized_form):
+    if self._element_open is not None:
+      name = self._element_open
+      self._element_open = None
+      if minimized_form:
+        self.put_token(' />', name)
         return True
       else:
-        self.linepos += 1
-        self.outfp.write('>')
+        self.put_token('>', name)
     return False
 
   def StartElementHandler(self, name, attrs):
-    if self.indentpos == 0:
-      self.indentpos = self.linepos
     self._finish_pending(False)
     if name == 'ol' and attrlist_to_dict(attrs).get('id') == 'toc':
       self.outfp.write(self.index.renderXML())
@@ -163,28 +199,18 @@ class IndexInsertParse(ExpatParseJob):
       self.elt_stack.append((name, True))
       return
     if not self.skipping_toc:
-      toks = [ "<%s" % name ]
+      self.put_token("<%s" % name, name)
       while attrs:
         aname = attrs.pop(0)
         aval = escape_entities(attrs.pop(0))
-        toks.append(' %s="%s"' % (aname, aval))
-      for t in toks:
-        self.linepos += len(t)
-        if self.linepos > 79 and name not in self.temp_do_not_indent:
-          self.linepos = len(t) + self.indentpos + 2
-          self.outfp.write('\n ' + ' '*self.indentpos)
-        self.outfp.write(t)
-      self._element_open = True
+        self.put_token(' %s="%s"' % (aname, aval), name)
+      self._element_open = name
     self.elt_stack.append((name, False))
 
   def EndElementHandler(self, name):
     if not self.skipping_toc:
-      if self.indentpos == 0:
-        self.indentpos = self.linepos
       if not self._finish_pending(name not in self.do_not_minimize):
-        data = "</%s>" % name
-        self.linepos += len(data)
-        self.outfp.write(data)
+        self.put_token("</%s>" % name, name)
     eltinfo = self.elt_stack.pop(-1)
     assert eltinfo[0] == name
     if eltinfo[1]:
@@ -198,15 +224,9 @@ class IndexInsertParse(ExpatParseJob):
     # characters to this function.  Seems to work at the moment.
     # Will almost certainly break later.
     if data == '\n':
-      self.indentpos = self.linepos = 0
+      self.done_line()
     else:
-      self.linepos += len(data)
-      if self.indentpos == 0:
-        i = 0
-        while i < len(data) and data[i] == ' ':
-          i += 1
-        self.indentpos = i
-    self.outfp.write(data)
+      self.put_token(data, None)
 
 
 def process(fn):

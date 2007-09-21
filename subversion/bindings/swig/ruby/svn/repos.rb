@@ -99,11 +99,13 @@ module Svn
       end
 
       def report2(rev, fs_base, target, tgt_path, editor, text_deltas=true,
-                  ignore_ancestry=false, depth=nil, authz_read_func=nil)
+                  ignore_ancestry=false, depth=nil, authz_read_func=nil,
+                  send_copyfrom_args=nil)
         authz_read_func ||= @authz_read_func
         args = [
           rev, self, fs_base, target, tgt_path, text_deltas,
-          depth, ignore_ancestry, editor, authz_read_func,
+          depth, ignore_ancestry, send_copyfrom_args, editor,
+          authz_read_func,
         ]
         report_baton = Repos.begin_report2(*args)
         setup_report_baton(report_baton)

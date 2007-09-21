@@ -193,6 +193,9 @@ struct dir_baton
   /* The current log buffer. */
   svn_stringbuf_t *log_accum;
 
+  /* The working copy depth of the directory. */
+  svn_depth_t depth;
+
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
 };
@@ -349,6 +352,33 @@ make_dir_baton(const char *path,
   if (pb && (! path))
     abort();
 
+  if (added)
+    {
+      if (strcmp(eb->target, path) == 0)
+        {
+          /* The target of the edit is being added, give it the requested
+             depth of the edit (but convert svn_depth_unknown to
+             svn_depth_infinity). */
+          d->depth = (eb->depth == svn_depth_unknown) ?
+                     svn_depth_infinity : eb->depth;
+        }
+      else if (eb->depth == svn_depth_immediates
+               || (eb->depth == svn_depth_unknown
+                   && pb->depth == svn_depth_immediates))
+        {
+          d->depth = svn_depth_empty;
+        }
+      else
+        {
+          d->depth = svn_depth_infinity;
+        }
+    }
+  else
+    {
+      /* For opened directories, we'll get the real depth later. */
+      d->depth = svn_depth_infinity;
+    }
+
   /* Construct the PATH and baseNAME of this directory. */
   d->path = apr_pstrdup(pool, eb->anchor);
   if (path)
@@ -471,7 +501,8 @@ complete_directory(struct edit_baton *eb,
      Upgrading to infinity changes the depth of *all* directories,
      upgrading to something else only changes the target. */
   if (eb->depth == svn_depth_infinity
-      || (strcmp(path, eb->target) == 0 && eb->depth > entry->depth))
+      || (strcmp(path, svn_path_join(eb->anchor, eb->target, pool)) == 0
+          && eb->depth > entry->depth))
     entry->depth = eb->depth;
 
   /* Remove any deleted or missing entries. */
@@ -748,7 +779,6 @@ static svn_error_t *
 prep_directory(struct dir_baton *db,
                const char *ancestor_url,
                svn_revnum_t ancestor_revision,
-               svn_depth_t depth,
                apr_pool_t *pool)
 {
   const char *repos;
@@ -768,7 +798,7 @@ prep_directory(struct dir_baton *db,
      or by checking that it is so already. */
   SVN_ERR(svn_wc_ensure_adm3(db->path, NULL,
                              ancestor_url, repos,
-                             ancestor_revision, depth, pool));
+                             ancestor_revision, db->depth, pool));
 
   if (! db->edit_baton->adm_access
       || strcmp(svn_wc_adm_access_path(db->edit_baton->adm_access),
@@ -981,8 +1011,15 @@ open_root(void *edit_baton,
       /* For an update with a NULL target, this is equivalent to open_dir(): */
       svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t tmp_entry;
+      const svn_wc_entry_t *entry;
       apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
         SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
+
+      /* Read the depth from the entry. */
+      SVN_ERR(svn_wc_entry(&entry, d->path, eb->adm_access,
+                           FALSE, pool));
+      if (entry)
+        d->depth = entry->depth;
 
       /* Mark directory as being at target_revision, but incomplete. */
       tmp_entry.revision = *(eb->target_revision);
@@ -1054,16 +1091,16 @@ do_entry_deletion(struct edit_baton *eb,
                   apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
-  svn_node_kind_t kind;
+  const svn_wc_entry_t *entry;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
-
-  SVN_ERR(svn_io_check_path(full_path, &kind, pool));
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_path, pool));
 
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
+
+  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, FALSE, pool));
 
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that parent can give
@@ -1073,7 +1110,8 @@ do_entry_deletion(struct edit_baton *eb,
       svn_wc_entry_t tmp_entry;
 
       tmp_entry.revision = *(eb->target_revision);
-      tmp_entry.kind = (kind == svn_node_file) ? svn_node_file : svn_node_dir;
+      tmp_entry.kind =
+        (entry->kind == svn_node_file) ? svn_node_file : svn_node_dir;
       tmp_entry.deleted = TRUE;
 
       SVN_ERR(svn_wc__loggy_entry_modify(&log_item, adm_access,
@@ -1105,7 +1143,7 @@ do_entry_deletion(struct edit_baton *eb,
        * the log item is to remove the entry in the parent directory.
        */
 
-      if (kind == svn_node_dir)
+      if (entry->kind == svn_node_dir)
         {
           svn_wc_adm_access_t *child_access;
           const char *logfile_path
@@ -1331,20 +1369,10 @@ add_directory(const char *path,
         }
     }
 
-  {
-    svn_depth_t depth = svn_depth_infinity;
-
-    if (eb->depth == svn_depth_empty
-        || eb->depth == svn_depth_files
-        || eb->depth == svn_depth_immediates)
-      depth = svn_depth_empty;
-
-    SVN_ERR(prep_directory(db,
-                           db->new_URL,
-                           *(eb->target_revision),
-                           depth,
-                           db->pool));
-  }
+  SVN_ERR(prep_directory(db,
+                         db->new_URL,
+                         *(eb->target_revision),
+                         db->pool));
 
   *child_baton = db;
 
@@ -1402,6 +1430,8 @@ open_directory(const char *path,
          both flags. */
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
+
+      db->depth = entry->depth;
 
       SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,
                                   db->path, entry, pool));

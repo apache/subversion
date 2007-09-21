@@ -812,9 +812,11 @@ public class BasicTests extends SVNTests
             wc.addItem("A/B/F/" + fileName,
                        wc.getItemContent("A/B/E/" + fileName));
             wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
+            wc.setItemPropStatus("A/B/F/" + fileName, Status.Kind.normal);
             addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                                   "A/B/F/" + fileName, NodeKind.file,
                                   CommitItemStateFlags.Add |
+                                  CommitItemStateFlags.PropMods |
                                   CommitItemStateFlags.IsCopy);
 
             wc.removeItem("A/B/E/" + fileName);
@@ -846,7 +848,8 @@ public class BasicTests extends SVNTests
                                           String destPath, OneTest thisTest)
         throws SubversionException
     {
-        String wcPath = new File(thisTest.getWCPath(), destPath).getPath();
+        String wcPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                               destPath), false);
         String[] suggestions = client.suggestMergeSources(wcPath, 
                                                           Revision.WORKING);
         assertNotNull(suggestions);

@@ -21,7 +21,6 @@ import stat, os, re
 
 # Our testing module
 import svntest
-from svntest import SVNAnyOutput, wc
 
 from svntest.main import SVN_PROP_MERGE_INFO
 
@@ -564,7 +563,7 @@ def no_copy_overwrites(sbox):
 
   # Expect out-of-date failure if 'svn cp URL URL' tries to overwrite a file
   svntest.actions.run_and_verify_svn("Whoa, I was able to overwrite a file!",
-                                     None, SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'cp', fileURL1, fileURL2,
                                      '--username',
                                      svntest.main.wc_author,
@@ -582,7 +581,7 @@ def no_copy_overwrites(sbox):
   # Repeat the last command.  It should *fail* because A/D/H/G already exists.
   svntest.actions.run_and_verify_svn(
     "Whoa, I was able to overwrite a directory!",
-    None, SVNAnyOutput,
+    None, svntest.verify.AnyOutput,
     'cp', dirURL1, dirURL2,
     '--username', svntest.main.wc_author,
     '--password', svntest.main.wc_passwd,
@@ -610,9 +609,9 @@ def no_wc_copy_overwrites(sbox):
   # These copies should fail
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'cp', pi_path, rho_path)
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'cp', pi_path, tau_path)
 
   # Status after failed copies should not have changed
@@ -1016,7 +1015,7 @@ def repos_to_wc(sbox):
   pi_url = other_repo_url + "/A/D/G/pi"
 
   # Expect an error in the directory case
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'copy', E_url, wc_dir)
 
   # But file case should work fine.
@@ -1426,10 +1425,10 @@ def copy_over_missing_file(sbox):
   os.remove(mu_path)
 
   # Try both wc->wc copy and repos->wc copy, expect failures:
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'cp', iota_path, mu_path)
 
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                     'cp', iota_url, mu_path)
 
   # Make sure that the working copy is not corrupted:
@@ -2460,7 +2459,8 @@ def move_dir_back_and_forth(sbox):
 
   # Move the moved dir: D_moved back to its starting
   # location at A/D.
-  out, err = svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  out, err = svntest.actions.run_and_verify_svn(None, None,
+                                                svntest.verify.AnyOutput,
                                                 'mv', D_move_path,
                                                 D_path)
 
@@ -3284,8 +3284,9 @@ def copy_peg_rev_local_files(sbox):
   psi_text = "This is the file 'psi'.\n"
   iota_text = "This is the file 'iota'.\n"
 
-  # Make some changes to the repository
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+  # Play a shell game with some WC files, then commit the changes back
+  # to the repository (making r2).
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-g',
                                      psi_path, new_iota_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      iota_path, psi_path)
@@ -3296,7 +3297,8 @@ def copy_peg_rev_local_files(sbox):
                                      '-m', 'rev 2',
                                      wc_dir)
 
-  # Copy using a peg rev
+  # Copy using a peg rev (remember, the object at iota_path at HEAD
+  # was at psi_path back at r1).
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      iota_path + '@HEAD', '-r', '1',
                                      sigma_path)
@@ -3306,11 +3308,13 @@ def copy_peg_rev_local_files(sbox):
                                      '-m', 'rev 3')
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('iota', contents=psi_text)
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
-    'sigma' : Item(contents=psi_text,
-                   props={ SVN_PROP_MERGE_INFO : '/A/D/H/psi:1' }),
+    'iota'      : Item(contents=psi_text,
+                       props={ SVN_PROP_MERGE_INFO : '/A/D/H/psi:1' }),
+    'A/D/H/psi' : Item(contents=iota_text, props={ SVN_PROP_MERGE_INFO : '' }),
+    'sigma'     : Item(contents=psi_text,
+                       props={ SVN_PROP_MERGE_INFO : '/A/D/H/psi:1' }),
     })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
@@ -3341,19 +3345,19 @@ def copy_peg_rev_local_dirs(sbox):
                                      wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-g',
                                      E_path, I_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'rev 3',
                                      wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-g',
                                      G_path, E_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'rev 4',
                                      wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-g',
                                      I_path, G_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'rev 5',
@@ -3375,9 +3379,12 @@ def copy_peg_rev_local_dirs(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_disk.add({
+    'A/B/E'       : Item(props={ SVN_PROP_MERGE_INFO : '/A/D/G:1-2' }),
     'A/B/E/pi'    : Item(contents="This is the file 'pi'.\n"),
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
+    'A/D/G'       : Item(props={ SVN_PROP_MERGE_INFO :
+                                 '/A/B/E:1-2\n/A/D/I:3\n' }),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
     'A/J'         : Item(props={ SVN_PROP_MERGE_INFO : '/A/B/E:1' }),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
@@ -3687,7 +3694,7 @@ def URI_encoded_repos_to_wc(sbox):
   expected_disk = svntest.main.greek_state.copy()
 
   def copy_URL_to_WC(URL_rel_path, dest_name, rev):
-    expected = svntest.actions.UnorderedOutput(
+    expected = svntest.verify.UnorderedOutput(
       ["A    " + os.path.join(wc_dir, dest_name, "B") + "\n",
        "A    " + os.path.join(wc_dir, dest_name, "B", "lambda") + "\n",
        "A    " + os.path.join(wc_dir, dest_name, "B", "E") + "\n",

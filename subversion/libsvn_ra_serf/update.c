@@ -277,6 +277,9 @@ typedef struct {
   /* What was the requested depth? */
   svn_depth_t depth;
 
+  /* Do we want the server to send copyfrom args or not? */
+  svn_boolean_t send_copyfrom_args;
+
   /* Path -> lock token mapping. */
   apr_hash_t *lock_path_tokens;
 
@@ -1189,16 +1192,23 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         {
           const svn_delta_editor_t *filter_editor;
           void *filter_baton;
-          svn_depth_t depth = ctx->depth;
           svn_boolean_t has_target = *(ctx->update_target) ? TRUE : FALSE;
-
-          SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, &filter_baton,
-                                                ctx->update_editor,
-                                                ctx->update_baton,
-                                                depth, has_target,
-                                                ctx->sess->pool));
-          ctx->update_editor = filter_editor;
-          ctx->update_baton = filter_baton;
+          
+          /* We can skip the depth filtering when the user requested
+             depth_files or depth_infinity because the server will
+             transmit the right stuff anyway. */
+          if ((ctx->depth != svn_depth_files)
+              && (ctx->depth != svn_depth_infinity))
+            {
+              SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
+                                                    &filter_baton,
+                                                    ctx->update_editor,
+                                                    ctx->update_baton,
+                                                    ctx->depth, has_target,
+                                                    ctx->sess->pool));
+              ctx->update_editor = filter_editor;
+              ctx->update_baton = filter_baton;
+            }
         }
     }
   else if (state == NONE && strcmp(name.name, "target-revision") == 0)
@@ -1445,7 +1455,30 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                                            info->dir->dir_baton,
                                            info->dir->pool);
     }
-  else if ((state == OPEN_DIR || state == ADD_DIR))
+  else if ((state == OPEN_DIR || state == ADD_DIR) &&
+           strcmp(name.name, "absent-file") == 0)
+    {
+      const char *file_name;
+      report_info_t *info;
+
+      file_name = svn_ra_serf__find_attr(attrs, "name");
+
+      if (!file_name)
+        {
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing name attr in absent-file element"));
+        }
+
+      info = parser->state->private;
+
+      SVN_ERR(open_dir(info->dir));
+
+      ctx->update_editor->absent_file(file_name,
+                                      info->dir->dir_baton,
+                                      info->dir->pool);
+    }
+  else if (state == OPEN_DIR || state == ADD_DIR)
     {
       report_info_t *info;
 
@@ -1505,7 +1538,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         }
 
     }
-  else if ((state == OPEN_FILE || state == ADD_FILE))
+  else if (state == OPEN_FILE || state == ADD_FILE)
     {
       report_info_t *info;
 
@@ -1855,7 +1888,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                 ns->namespace, ns->url, set_val_str, pool);
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if ((state == IGNORE_PROP_NAME || state == NEED_PROP_NAME))
+  else if (state == IGNORE_PROP_NAME || state == NEED_PROP_NAME)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -2385,6 +2418,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
                      svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t text_deltas,
+                     svn_boolean_t send_copyfrom_args,
                      const svn_delta_editor_t *update_editor,
                      void *update_baton,
                      apr_pool_t *pool)
@@ -2400,6 +2434,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->target_rev = revision;
   report->depth = (depth == svn_depth_unknown ? svn_depth_infinity : depth);
   report->ignore_ancestry = ignore_ancestry;
+  report->send_copyfrom_args = send_copyfrom_args;
   report->text_deltas = text_deltas;
   report->lock_path_tokens = apr_hash_make(pool);
 
@@ -2482,6 +2517,13 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                    report->sess->bkt_alloc);
     }
 
+  if (report->send_copyfrom_args)
+    {
+      svn_ra_serf__add_tag_buckets(report->buckets,
+                                   "S:send-copyfrom-args", "yes",
+                                   report->sess->bkt_alloc);
+    }
+
   /* Old servers know "recursive" but not "depth"; help them DTRT. */
   if (depth == svn_depth_files || depth == svn_depth_empty)
     {
@@ -2504,6 +2546,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        svn_revnum_t revision_to_update_to,
                        const char *update_target,
                        svn_depth_t depth,
+                       svn_boolean_t send_copyfrom_args,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
                        apr_pool_t *pool)
@@ -2513,7 +2556,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision_to_update_to,
                               session->repos_url.path, NULL, update_target,
-                              depth, FALSE, TRUE,
+                              depth, FALSE, TRUE, send_copyfrom_args,
                               update_editor, update_baton, pool);
 }
 
@@ -2536,7 +2579,7 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
                               session->repos_url.path, versus_url, diff_target,
-                              depth, ignore_ancestry, text_deltas,
+                              depth, ignore_ancestry, text_deltas, FALSE,
                               diff_editor, diff_baton, pool);
 }
 
@@ -2556,7 +2599,7 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
                               session->repos_url.path, NULL, status_target,
-                              depth, FALSE, FALSE,
+                              depth, FALSE, FALSE, FALSE,
                               status_editor, status_baton, pool);
 }
 
@@ -2578,7 +2621,7 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                               revision_to_switch_to,
                               session->repos_url.path,
                               switch_url, switch_target,
-                              depth, TRUE, TRUE,
+                              depth, TRUE, TRUE, FALSE /* TODO(sussman) */,
                               switch_editor, switch_baton, pool);
 }
 

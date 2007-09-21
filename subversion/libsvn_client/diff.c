@@ -1227,7 +1227,6 @@ diff_repos_repos(const struct diff_parameters *diff_param,
 
   /* Drive the reporter; do the diff. */
   SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
-                             /* ### TODO(sd): dynamic depth here */
                              svn_depth_infinity,
                              FALSE, NULL,
                              pool));
@@ -1474,7 +1473,6 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
 
   /* Drive the reporter; do the diff. */
   SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
-                             /* ### TODO(sd): dynamic depth here */
                              svn_depth_infinity,
                              FALSE, NULL, pool));
   SVN_ERR(reporter->finish_report(report_baton, pool));

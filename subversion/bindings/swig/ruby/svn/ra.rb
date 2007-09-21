@@ -96,9 +96,11 @@ module Svn
                 editor, depth, &block)
       end
 
-      def update2(revision_to_update_to, update_target, editor, depth=nil)
+      def update2(revision_to_update_to, update_target, editor, depth=nil,
+                  send_copyfrom_args=nil)
         reporter, reporter_baton = Ra.do_update2(self, revision_to_update_to,
-                                                 update_target, depth, editor)
+                                                 update_target, depth,
+                                                 send_copyfrom_args, editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# Usage: svnmucc-test.py [build-dir-top [base-url]]
+
 import sys
 import os
 import re
@@ -12,21 +14,33 @@ this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 sys.path.insert(0, '%s/../../../subversion/tests/cmdline' % (this_dir))
 import svntest
 
+# calculate the top of the build tree
+if len(sys.argv) > 1:
+  build_top = os.path.abspath(sys.argv[1])
+else:
+  build_top = os.path.abspath('%s/../../../' % (this_dir))
+
 # where lives svnmucc?
-svnmucc_binary = os.path.abspath('%s/svnmucc' % (this_dir))
+svnmucc_binary = \
+   os.path.abspath('%s/contrib/client-side/svnmucc/svnmucc' % (build_top))
 
 # override some svntest binary locations
 svntest.main.svn_binary = \
-   os.path.abspath('%s/../../../subversion/svn/svn' % (this_dir))
+   os.path.abspath('%s/subversion/svn/svn' % (build_top))
 svntest.main.svnlook_binary = \
-   os.path.abspath('%s/../../../subversion/svnlook/svnlook' % (this_dir))
+   os.path.abspath('%s/subversion/svnlook/svnlook' % (build_top))
 svntest.main.svnadmin_binary = \
-   os.path.abspath('%s/../../../subversion/svnadmin/svnadmin' % (this_dir))
+   os.path.abspath('%s/subversion/svnadmin/svnadmin' % (build_top))
 
 # where lives the test repository?
-repos_path = os.path.abspath(('%s/svnmucc-test-repos' % (this_dir)))
-repos_url = 'file://' + repos_path
+repos_path = \
+   os.path.abspath(('%s/contrib/client-side/svnmucc/svnmucc-test-repos'
+                    % (build_top)))
 
+if (len(sys.argv) > 2):
+  repos_url = sys.argv[2] + '/svnmucc-test-repos'
+else:
+  repos_url = 'file://' + repos_path
 
 def die(msg):
   """Write MSG (formatted as a failure) to stderr, and exit with a
@@ -48,6 +62,8 @@ def run_svnmucc(expected_path_changes, *varargs):
   outlines, errlines = svntest.main.run_command(svnmucc_binary, 1, 0,
                                                 '-U', repos_url,
                                                 '-u', 'svnmuccuser',
+                                                '-p', 'svnmuccpass',
+                                                '--config-dir', 'dummy',
                                                 *varargs)
   if errlines:
     raise svntest.main.SVNCommitFailure(str(errlines))
@@ -214,6 +230,12 @@ if __name__ == "__main__":
                                                    'fsfs', repos_path)
     if errlines:
       raise svntest.main.SVNRepositoryCreateFailure(repos_path)
+    fp = open(os.path.join(repos_path, 'conf', 'svnserve.conf'), 'w')
+    fp.write('[general]\nauth-access = write\npassword-db = passwd\n')
+    fp.close()
+    fp = open(os.path.join(repos_path, 'conf', 'passwd'), 'w')
+    fp.write('[users]\nsvnmuccuser = svnmuccpass\n')
+    fp.close()
     main()
   except SystemExit, e:
     raise
