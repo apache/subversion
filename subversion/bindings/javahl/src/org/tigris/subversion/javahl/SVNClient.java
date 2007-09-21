@@ -515,7 +515,20 @@ public class SVNClient implements SVNClientInterface
      * @param recurse   recurse into subdirectories
      * @throws ClientException
      */
-    public native void revert(String path, boolean recurse)
+    public void revert(String path, boolean recurse)
+            throws ClientException
+    {
+        revert(path, Depth.fromRecurse(recurse));
+    }
+
+    /**
+     * Reverts a file to a pristine state.
+     * @param path      path of the file.
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    public native void revert(String path, int depth)
             throws ClientException;
 
     /**
@@ -542,13 +555,13 @@ public class SVNClient implements SVNClientInterface
     public void add(String path, boolean recurse, boolean force)
             throws ClientException
     {
-        add(path, recurse, force, false, false);
+        add(path, Depth.fromRecurse(recurse), force, false, false);
     }
 
     /**
      * Adds a file to the repository.
      * @param path      path to be added.
-     * @param recurse   recurse into subdirectories
+     * @param depth     the depth to recurse into subdirectories
      * @param force     if adding a directory and recurse true and path is a
      *                  directory, all not already managed files are added.
      * @param noIgnores if false, don't add files or directories matching
@@ -557,7 +570,7 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.5
      */
-    public native void add(String path, boolean recurse, boolean force,
+    public native void add(String path, int depth, boolean force,
                            boolean noIgnores, boolean addParents)
         throws ClientException;
 
@@ -879,8 +892,31 @@ public class SVNClient implements SVNClientInterface
      * @param recurse   traverse into subdirectories
      * @throws ClientException
      */
+    public void doImport(String path, String url, String message,
+                         boolean recurse)
+            throws ClientException
+    {
+        doImport(path, url, message, Depth.fromRecurse(recurse),
+                 false, false);
+    }
+
+    /**
+     * Import a file or directory into a repository directory  at
+     * head.
+     * @param path      the local path
+     * @param url       the target url
+     * @param message   the log message.
+     * @param depth     depth to traverse into subdirectories
+     * @param noIgnore  whether to add files matched by ignore patterns
+     * @param ignoreUnknownNodeTypes whether to ignore files which
+     *                  the node type is not konwn, just as pipes
+     * @throws ClientException
+     *
+     * @since 1.5
+     */
     public native void doImport(String path, String url, String message,
-                                boolean recurse)
+                                int depth, boolean noIgnore,
+                                boolean ignoreUnknownNodeTypes)
             throws ClientException;
 
     /**
@@ -1818,7 +1854,8 @@ public class SVNClient implements SVNClientInterface
     {
         MyInfoCallback callback = new MyInfoCallback();
 
-        info2(pathOrUrl, revision, pegRevision, recurse, callback);
+        info2(pathOrUrl, revision, pegRevision, Depth.fromRecurse(recurse),
+              callback);
         return callback.getInfoArray();
     }
 
@@ -1827,13 +1864,13 @@ public class SVNClient implements SVNClientInterface
      * @param pathOrUrl     the path or the url of the item
      * @param revision      the revision of the item to return
      * @param pegRevision   the revision to interpret pathOrUrl
-     * @param recurse       flag if to recurse, if the item is a directory
+     * @param depth         the depth to recurse
      * @param callback      a callback to receive the infos retreived
      * @return              the information objects
      * @since 1.5
      */
     public native void info2(String pathOrUrl, Revision revision,
-                             Revision pegRevision, boolean recurse,
+                             Revision pegRevision, int depth,
                              InfoCallback callback)
             throws ClientException;
 

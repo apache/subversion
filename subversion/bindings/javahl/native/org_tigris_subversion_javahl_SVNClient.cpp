@@ -432,7 +432,7 @@ Java_org_tigris_subversion_javahl_SVNClient_remove
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_revert
-(JNIEnv *env, jobject jthis, jstring jpath, jboolean jrecurse)
+(JNIEnv *env, jobject jthis, jstring jpath, jint jdepth)
 {
   JNIEntry(SVNClient, revert);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -445,12 +445,12 @@ Java_org_tigris_subversion_javahl_SVNClient_revert
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->revert(path, jrecurse ? true : false);
+  cl->revert(path, (svn_depth_t)jdepth);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_add
-(JNIEnv *env, jobject jthis, jstring jpath, jboolean jrecurse,
+(JNIEnv *env, jobject jthis, jstring jpath, jint jdepth,
  jboolean jforce, jboolean jnoIgnore, jboolean jaddParents)
 {
   JNIEntry(SVNClient, add);
@@ -464,7 +464,7 @@ Java_org_tigris_subversion_javahl_SVNClient_add
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->add(path, jrecurse ? true : false, jforce ? true : false,
+  cl->add(path, (svn_depth_t)jdepth, jforce ? true : false,
           jnoIgnore ? true : false, jaddParents ? true : false);
 }
 
@@ -704,7 +704,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doSwitch
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_doImport
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jstring jmessage,
- jboolean jrecurse)
+ jint jdepth, jboolean jnoIgnore, jboolean jignoreUnknownNodeTypes)
 {
   JNIEntry(SVNClient, doImport);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -725,7 +725,9 @@ Java_org_tigris_subversion_javahl_SVNClient_doImport
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->doImport(path, url, message, jrecurse ? true : false);
+  cl->doImport(path, url, message, (svn_depth_t)jdepth,
+               jnoIgnore ? true : false,
+               jignoreUnknownNodeTypes ? true : false);
 }
 
 JNIEXPORT jobjectArray JNICALL
@@ -1567,7 +1569,7 @@ Java_org_tigris_subversion_javahl_SVNClient_unlock
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_info2
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jboolean jrecurse, jobject jinfoCallback)
+ jobject jpegRevision, jint jdepth, jobject jinfoCallback)
 {
   JNIEntry(SVNClient, info2);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1589,6 +1591,6 @@ Java_org_tigris_subversion_javahl_SVNClient_info2
     return;
 
   InfoCallback callback(jinfoCallback);
-  cl->info2(path, revision, pegRevision, jrecurse ? true : false,
+  cl->info2(path, revision, pegRevision, (svn_depth_t)jdepth,
             &callback);
 }

@@ -319,17 +319,26 @@ static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
   const svn_delta_editor_t *filter_editor;
   void *filter_baton;
 
-  svn_error_clear(svn_delta_depth_filter_editor(&filter_editor, &filter_baton,
-                                                editor, edit_baton, depth,
-                                                *target ? TRUE : FALSE,
-                                                pool));
+  /* We can skip the depth filtering when the user requested
+     depth_files or depth_infinity because the server will
+     transmit the right stuff anyway. */
+  if ((depth != svn_depth_files) && (depth != svn_depth_infinity))
+    {
+      svn_error_clear(svn_delta_depth_filter_editor(&filter_editor, 
+                                                    &filter_baton,
+                                                    editor, edit_baton, depth,
+                                                    *target ? TRUE : FALSE,
+                                                    pool));
+      editor = filter_editor;
+      edit_baton = filter_baton;
+    }
 
   b = apr_palloc(pool, sizeof(*b));
   b->sess_baton = sess_baton;
   b->conn = sess_baton->conn;
   b->pool = pool;
-  b->editor = filter_editor;
-  b->edit_baton = filter_baton;
+  b->editor = editor;
+  b->edit_baton = edit_baton;
 
   *reporter = &ra_svn_reporter;
   *report_baton = b;
@@ -1071,6 +1080,7 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
                                   const svn_ra_reporter3_t **reporter,
                                   void **report_baton, svn_revnum_t rev,
                                   const char *target, svn_depth_t depth,
+                                  svn_boolean_t send_copyfrom_args,
                                   const svn_delta_editor_t *update_editor,
                                   void *update_baton, apr_pool_t *pool)
 {
@@ -1079,8 +1089,9 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start an update. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cbw", rev, target,
-                               recurse, svn_depth_to_word(depth)));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cbwb", rev, target,
+                               recurse, svn_depth_to_word(depth),
+                               send_copyfrom_args));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive

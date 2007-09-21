@@ -31,6 +31,7 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_iter.h"
 
 #include "wc.h"
 #include "log.h"
@@ -1002,6 +1003,48 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
         return err;
 }
 
+static svn_error_t *
+remove_deleted_entry(void *baton, const void *key,
+                     apr_ssize_t klen, void *val, apr_pool_t *pool)
+{
+  struct log_runner *loggy = baton;
+  const char *base_name;
+  const char *pdir;
+  const svn_wc_entry_t *cur_entry = val;
+  svn_wc_adm_access_t *entry_access;
+
+  /* Skip each entry that isn't scheduled for deletion. */
+  if (cur_entry->schedule != svn_wc_schedule_delete)
+    return SVN_NO_ERROR;
+
+  /* Determine what arguments to hand to our removal function,
+     and let BASE_NAME double as an "ok" flag to run that function. */
+  base_name = NULL;
+  if (cur_entry->kind == svn_node_file)
+    {
+      pdir = svn_wc_adm_access_path(loggy->adm_access);
+      base_name = apr_pstrdup(pool, key);
+      entry_access = loggy->adm_access;
+    }
+  else if (cur_entry->kind == svn_node_dir)
+    {
+      pdir = svn_path_join(svn_wc_adm_access_path(loggy->adm_access),
+                           key, pool);
+      base_name = SVN_WC_ENTRY_THIS_DIR;
+      SVN_ERR(svn_wc_adm_retrieve(&entry_access, loggy->adm_access,
+                                  pdir, pool));
+    }
+
+  /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
+     ### If they were available, it would be nice to use them. */
+  if (base_name)
+    SVN_ERR(svn_wc_remove_from_revision_control
+            (entry_access, base_name, FALSE, FALSE,
+             NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Note:  assuming that svn_wc__log_commit() is what created all of
    the <committed...> commands, the `name' attribute will either be a
    file or SVN_WC_ENTRY_THIS_DIR. */
@@ -1171,51 +1214,11 @@ log_do_committed(struct log_runner *loggy,
      however, need to be outright removed from revision control.  */
   if ((entry->schedule == svn_wc_schedule_replace) && is_this_dir)
     {
-      apr_hash_index_t *hi;
-
       /* Loop over all children entries, look for items scheduled for
          deletion. */
       SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access, TRUE, pool));
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          const svn_wc_entry_t *cur_entry;
-          svn_wc_adm_access_t *entry_access;
-
-          /* Get the next entry */
-          apr_hash_this(hi, &key, NULL, &val);
-          cur_entry = (svn_wc_entry_t *) val;
-
-          /* Skip each entry that isn't scheduled for deletion. */
-          if (cur_entry->schedule != svn_wc_schedule_delete)
-            continue;
-
-          /* Determine what arguments to hand to our removal function,
-             and let BASE_NAME double as an "ok" flag to run that function. */
-          base_name = NULL;
-          if (cur_entry->kind == svn_node_file)
-            {
-              pdir = svn_wc_adm_access_path(loggy->adm_access);
-              base_name = apr_pstrdup(pool, key);
-              entry_access = loggy->adm_access;
-            }
-          else if (cur_entry->kind == svn_node_dir)
-            {
-              pdir = svn_path_join(svn_wc_adm_access_path(loggy->adm_access),
-                                   key, pool);
-              base_name = SVN_WC_ENTRY_THIS_DIR;
-              SVN_ERR(svn_wc_adm_retrieve(&entry_access, loggy->adm_access,
-                                          pdir, pool));
-            }
-
-          /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
-             ### If they were available, it would be nice to use them. */
-          if (base_name)
-            SVN_ERR(svn_wc_remove_from_revision_control
-                    (entry_access, base_name, FALSE, FALSE,
-                     NULL, NULL, pool));
-        }
+      SVN_ERR(svn_iter_apr_hash(NULL, entries,
+                                remove_deleted_entry, loggy, pool));
     }
 
   SVN_ERR(svn_wc__has_prop_mods(&prop_mods,
@@ -1816,7 +1819,8 @@ run_log(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access, pool));
     }
   if (loggy->wcprops_modified)
-    SVN_ERR(svn_wc__wcprops_write(loggy->adm_access, pool));
+    SVN_ERR(svn_wc__props_flush(svn_wc_adm_access_path(adm_access),
+                                svn_wc__props_wcprop, loggy->adm_access, pool));
 
   /* Check for a 'killme' file in the administrative area. */
   SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only, pool));

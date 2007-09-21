@@ -899,6 +899,7 @@ svn_client_export4(svn_revnum_t *result_rev,
                                     revnum,
                                     "", /* no sub-target */
                                     depth,
+                                    FALSE, /* don't want copyfrom-args */
                                     export_editor, edit_baton, pool));
 
           SVN_ERR(reporter->set_path(report_baton, "", revnum,

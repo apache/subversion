@@ -96,6 +96,7 @@ typedef struct report_baton_t
   svn_depth_t requested_depth;
 
   svn_boolean_t ignore_ancestry;
+  svn_boolean_t send_copyfrom_args;
   svn_boolean_t is_switch;
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -634,33 +635,36 @@ add_file_smartly(report_baton_t *b,
   *copyfrom_path = NULL;
   *copyfrom_rev = SVN_INVALID_REVNUM;
 
-  /* Find the destination of the nearest 'copy event' which may have
-     caused o_path@t_root to exist.  */
-  SVN_ERR(svn_fs_closest_copy(&closest_copy_root, &closest_copy_path,
-                              b->t_root, o_path, pool));
-  if (closest_copy_root != NULL)
+  if (b->send_copyfrom_args)
     {
-      /* If the destination of the copy event is the same path as
-         o_path, then we've found something interesting that should
-         have 'copyfrom' history. */
-      if (strcmp(closest_copy_path + 1, o_path) == 0)
+      /* Find the destination of the nearest 'copy event' which may have
+         caused o_path@t_root to exist.  */
+      SVN_ERR(svn_fs_closest_copy(&closest_copy_root, &closest_copy_path,
+                                  b->t_root, o_path, pool));
+      if (closest_copy_root != NULL)
         {
-          SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
-                                     closest_copy_root, closest_copy_path,
-                                     pool));
-          if (b->authz_read_func)
+          /* If the destination of the copy event is the same path as
+             o_path, then we've found something interesting that should
+             have 'copyfrom' history. */
+          if (strcmp(closest_copy_path + 1, o_path) == 0)
             {
-              svn_boolean_t allowed;
-              svn_fs_root_t *copyfrom_root;
-              SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
-                                           *copyfrom_rev, pool));
-              SVN_ERR(b->authz_read_func(&allowed, copyfrom_root,
-                                         *copyfrom_path, b->authz_read_baton,
+              SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
+                                         closest_copy_root, closest_copy_path,
                                          pool));
-              if (! allowed)
+              if (b->authz_read_func)
                 {
-                  *copyfrom_path = NULL;
-                  *copyfrom_rev = SVN_INVALID_REVNUM;
+                  svn_boolean_t allowed;
+                  svn_fs_root_t *copyfrom_root;
+                  SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
+                                               *copyfrom_rev, pool));
+                  SVN_ERR(b->authz_read_func(&allowed, copyfrom_root,
+                                             *copyfrom_path, b->authz_read_baton,
+                                             pool));
+                  if (! allowed)
+                    {
+                      *copyfrom_path = NULL;
+                      *copyfrom_rev = SVN_INVALID_REVNUM;
+                    }
                 }
             }
         }
@@ -1337,6 +1341,7 @@ svn_repos_begin_report2(void **report_baton,
                         svn_boolean_t text_deltas,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
+                        svn_boolean_t send_copyfrom_args,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
                         svn_repos_authz_func_t authz_read_func,
@@ -1358,6 +1363,7 @@ svn_repos_begin_report2(void **report_baton,
   b->text_deltas = text_deltas;
   b->requested_depth = depth;
   b->ignore_ancestry = ignore_ancestry;
+  b->send_copyfrom_args = send_copyfrom_args;
   b->is_switch = (switch_path != NULL);
   b->editor = editor;
   b->edit_baton = edit_baton;
@@ -1401,6 +1407,7 @@ svn_repos_begin_report(void **report_baton,
                                  text_deltas,
                                  SVN_DEPTH_FROM_RECURSE(recurse),
                                  ignore_ancestry,
+                                 FALSE, /* don't send copyfrom args */
                                  editor,
                                  edit_baton,
                                  authz_read_func,

@@ -30,6 +30,8 @@
 #include "svn_md5.h"
 #include "svn_props.h"
 
+#include "private/svn_dav_protocol.h"
+
 #include "dav_svn.h"
 
 

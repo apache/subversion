@@ -275,7 +275,7 @@ fs_delete_fs(const char *path,
              apr_pool_t *pool)
 {
   /* Remove everything. */
-  return svn_io_remove_dir2(path, FALSE, pool);
+  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
 }
 
 static const svn_version_t *

@@ -826,7 +826,10 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
  *
  * Update the target only as deeply as @a depth indicates.
  *
- * ### TODO(sd): Make sure the behavior described above is what happens.
+ * If @a send_copyfrom_args is true, then ask the server to send
+ * copyfrom arguments to add_file() and add_directory() when possible.
+ * (Note: this means that any subsequent txdeltas coming from the
+ * server are presumed to apply against the copied file!)
  *
  * The working copy will be updated to @a revision_to_update_to, or the
  * "latest" revision if this arg is invalid.
@@ -852,6 +855,7 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                svn_revnum_t revision_to_update_to,
                                const char *update_target,
                                svn_depth_t depth,
+                               svn_boolean_t send_copyfrom_args,
                                const svn_delta_editor_t *update_editor,
                                void *update_baton,
                                apr_pool_t *pool);
@@ -895,8 +899,6 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
  * entire directory is meant to be switched.
  *
  * Switch the target only as deeply as @a depth indicates.
- *
- * ### TODO(sd): Make sure the behavior described above is what happens.
  *
  * The working copy will be switched to @a revision_to_switch_to, or the
  * "latest" revision if this arg is invalid.
@@ -968,8 +970,6 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
  * is meant to be examined.
  *
  * Get status only as deeply as @a depth indicates.
- *
- * ### TODO(sd): Make sure the behavior described above is what happens.
  *
  * The caller may not perform any RA operations using @a session
  * before finishing the report, and may not perform any RA operations
@@ -1050,8 +1050,6 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  * unrelated items will be diffed as if they were related.
  *
  * Diff only as deeply as @a depth indicates.
- *
- * ### TODO(sd): Make sure the behavior described above is what happens.
  *
  * The caller may not perform any RA operations using @a session before
  * finishing the report, and may not perform any RA operations using

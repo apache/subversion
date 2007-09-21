@@ -407,7 +407,7 @@ dav_svn__send_xml(apr_bucket_brigade *bb,
 dav_error *
 dav_svn__test_canonical(const char *path, apr_pool_t *pool)
 {
-  if (strcmp(path, svn_path_canonicalize(path, pool)) == 0)
+  if (svn_path_is_canonical(path, pool))
     return NULL;
 
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */

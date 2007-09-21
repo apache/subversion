@@ -659,6 +659,7 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                svn_revnum_t revision_to_update_to,
                                const char *update_target,
                                svn_depth_t depth,
+                               svn_boolean_t send_copyfrom_args,
                                const svn_delta_editor_t *update_editor,
                                void *update_baton,
                                apr_pool_t *pool)
@@ -666,7 +667,8 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
   return session->vtable->do_update(session,
                                     reporter, report_baton,
                                     revision_to_update_to, update_target,
-                                    depth, update_editor, update_baton,
+                                    depth, send_copyfrom_args,
+                                    update_editor, update_baton,
                                     pool);
 }
 
@@ -688,6 +690,7 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
                                     &(b->reporter3), &(b->reporter3_baton),
                                     revision_to_update_to, update_target,
                                     SVN_DEPTH_FROM_RECURSE(recurse),
+                                    FALSE, /* no copyfrom args */
                                     update_editor, update_baton,
                                     pool);
 }

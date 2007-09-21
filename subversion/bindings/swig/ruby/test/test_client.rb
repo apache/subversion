@@ -21,16 +21,14 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_add_not_recurse
     log = "sample log"
-    file = "hello.txt"
-    src = "Hello"
     dir = "dir"
     dir_path = File.join(@wc_path, dir)
-    path = File.join(dir_path, file)
-    uri = "#{@repos_uri}/#{dir}/#{file}"
+    path = File.join(dir_path, dir)
+    uri = "#{@repos_uri}/#{dir}/#{dir}"
 
     ctx = make_context(log)
     FileUtils.mkdir(dir_path)
-    File.open(path, "w") {|f| f.print(src)}
+    FileUtils.mkdir(path)
     ctx.add(dir_path, false)
     ctx.commit(@wc_path)
 
@@ -92,10 +90,11 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = make_context(log)
     FileUtils.mkdir(dir_path)
-    File.open(path, "w") {|f| f.print(src)}
     ctx.add(dir_path, false)
     ctx.propset(Svn::Core::PROP_IGNORE, file, dir_path)
     ctx.commit(@wc_path)
+
+    File.open(path, "w") {|f| f.print(src)}
 
     ctx.add(dir_path, true, true, false)
     ctx.commit(@wc_path)
@@ -839,9 +838,10 @@ class SvnClientTest < Test::Unit::TestCase
     assert_nil(ctx.mergeinfo(trunk))
     ctx.merge(branch, rev1, branch, rev2, trunk)
     mergeinfo = ctx.mergeinfo(trunk)
-    assert_equal(["/branch"], mergeinfo.keys)
+    expected_key = ctx.url_from_path(branch)
+    assert_equal([expected_key], mergeinfo.keys)
     assert_equal([[1, 2, true]],
-                 mergeinfo["/branch"].collect {|range| range.to_a})
+                 mergeinfo[expected_key].collect {|range| range.to_a})
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -853,9 +853,9 @@ class SvnClientTest < Test::Unit::TestCase
     assert(!File.exist?(trunk_path))
 
     mergeinfo = ctx.mergeinfo(trunk, rev4)
-    assert_equal(["/branch"], mergeinfo.keys)
+    assert_equal([expected_key], mergeinfo.keys)
     assert_equal([[1, 2, true], [3, 4, true]],
-                 mergeinfo["/branch"].collect {|range| range.to_a })
+                 mergeinfo[expected_key].collect {|range| range.to_a })
     ctx.propdel("svn:mergeinfo", trunk)
     assert_nil ctx.mergeinfo(trunk)
 
@@ -898,9 +898,10 @@ class SvnClientTest < Test::Unit::TestCase
     assert_nil(ctx.mergeinfo(trunk))
     ctx.merge_peg(branch, rev1, rev2, trunk)
     mergeinfo = ctx.mergeinfo(trunk)
-    assert_equal(["/branch"], mergeinfo.keys)
+    expected_key = ctx.url_from_path(branch)
+    assert_equal([expected_key], mergeinfo.keys)
     assert_equal([[1, 2, true]],
-                 mergeinfo["/branch"].collect {|range| range.to_a})
+                 mergeinfo[expected_key].collect {|range| range.to_a})
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -912,9 +913,9 @@ class SvnClientTest < Test::Unit::TestCase
     assert(!File.exist?(trunk_path))
 
     mergeinfo = ctx.mergeinfo(trunk, rev4)
-    assert_equal(["/branch"], mergeinfo.keys)
+    assert_equal([expected_key], mergeinfo.keys)
     assert_equal([[1, 2, true], [3, 4, true]],
-                 mergeinfo["/branch"].collect {|range| range.to_a })
+                 mergeinfo[expected_key].collect {|range| range.to_a })
     ctx.propdel("svn:mergeinfo", trunk)
     assert_nil(ctx.mergeinfo(trunk))
 

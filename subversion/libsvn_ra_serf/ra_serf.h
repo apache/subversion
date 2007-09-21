@@ -28,8 +28,9 @@
 #include "svn_ra.h"
 #include "svn_delta.h"
 #include "svn_version.h"
-
 #include "svn_dav.h"
+
+#include "private/svn_dav_protocol.h"
 
 
 /** Use this to silence compiler warnings about unused parameters. */
@@ -186,7 +187,7 @@ static const svn_ra_serf__dav_props_t checked_in_props[] =
 static const svn_ra_serf__dav_props_t baseline_props[] =
 {
   { "DAV:", "baseline-collection" },
-  { "DAV:", "version-name" },
+  { "DAV:", SVN_DAV__VERSION_NAME },
   { NULL }
 };
 
@@ -990,6 +991,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        svn_revnum_t revision_to_update_to,
                        const char *update_target,
                        svn_depth_t depth,
+                       svn_boolean_t send_copyfrom_args,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
                        apr_pool_t *pool);

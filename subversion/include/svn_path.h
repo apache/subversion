@@ -24,13 +24,19 @@
  * No result path ever ends with a separator, no matter whether the
  * path is a file or directory, because we always canonicalize() it.
  *
- * All paths passed to the @c svn_path_xxx functions, with the exceptions of
- * the svn_path_canonicalize() and svn_path_internal_style() functions,
- * must be in canonical form as defined by the Subversion path library
- * itself.  For the most part, we mean what most anyone would mean
- * when talking about canonical paths, but to be on the safe side, you
- * should run your paths through svn_path_canonicalize() before
- * passing them to other functions in this API.
+ * Nearly all the @c svn_path_xxx functions expect paths passed into
+ * them to be in canonical form as defined by the Subversion path
+ * library itself.  The only functions which do *not* have such
+ * expectations are:
+ * 
+ *    - @c svn_path_canonicalize()
+ *    - @c svn_path_is_canonical()
+ *    - @c svn_path_internal_style()
+ *
+ * For the most part, we mean what most anyone would mean when talking
+ * about canonical paths, but to be on the safe side, you must run
+ * your paths through @c svn_path_canonicalize() before passing them to
+ * other functions in this API.
  */
 
 #ifndef SVN_PATH_H
@@ -214,6 +220,17 @@ svn_boolean_t svn_dirent_is_root(const char *dirent, apr_size_t len);
  * allocated from @a pool.
  */
 const char *svn_path_canonicalize(const char *path, apr_pool_t *pool);
+
+/** Return @c TRUE iff path is canonical.  Use @a pool for temporary
+ * allocations. 
+ *
+ * @note The test for canonicalization is currently defined as
+ * "looks exactly the same as @c svn_path_canonicalize() would make
+ * it look".
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t svn_path_is_canonical(const char *path, apr_pool_t *pool);
 
 
 /** Return an integer greater than, equal to, or less than 0, according

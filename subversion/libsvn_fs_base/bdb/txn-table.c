@@ -251,15 +251,15 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
                                              trail->db_txn, &cursor, 0)));
 
   /* Build a null-terminated array of keys in the transactions table. */
-  for (db_err = cursor->c_get(cursor,
-                              svn_fs_base__result_dbt(&key),
-                              svn_fs_base__result_dbt(&value),
-                              DB_FIRST);
+  for (db_err = svn_bdb_dbc_get(cursor,
+                                svn_fs_base__result_dbt(&key),
+                                svn_fs_base__result_dbt(&value),
+                                DB_FIRST);
        db_err == 0;
-       db_err = cursor->c_get(cursor,
-                              svn_fs_base__result_dbt(&key),
-                              svn_fs_base__result_dbt(&value),
-                              DB_NEXT))
+       db_err = svn_bdb_dbc_get(cursor,
+                                svn_fs_base__result_dbt(&key),
+                                svn_fs_base__result_dbt(&value),
+                                DB_NEXT))
     {
       transaction_t *txn;
       skel_t *txn_skel;
@@ -283,7 +283,7 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
       txn_skel = svn_fs_base__parse_skel(value.data, value.size, subpool);
       if (! txn_skel)
         {
-          cursor->c_close(cursor);
+          svn_bdb_dbc_close(cursor);
           return svn_fs_base__err_corrupt_txn
             (fs, apr_pstrmemdup(pool, key.data, key.size));
         }
@@ -292,7 +292,7 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
       if ((err = svn_fs_base__parse_transaction_skel(&txn, txn_skel,
                                                      subpool)))
         {
-          cursor->c_close(cursor);
+          svn_bdb_dbc_close(cursor);
           return err;
         }
 
@@ -306,7 +306,7 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
     }
 
   /* Check for errors, but close the cursor first. */
-  db_c_err = cursor->c_close(cursor);
+  db_c_err = svn_bdb_dbc_close(cursor);
   if (db_err != DB_NOTFOUND)
     {
       SVN_ERR(BDB_WRAP(fs, "reading transaction list (listing keys)",

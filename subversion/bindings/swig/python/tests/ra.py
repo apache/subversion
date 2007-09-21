@@ -23,7 +23,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
 
-    callbacks = ra.callbacks2_t()
+    callbacks = ra.Callbacks()
 
     self.ra_ctx = ra.open2(REPOS_URL, callbacks, None, None)
 

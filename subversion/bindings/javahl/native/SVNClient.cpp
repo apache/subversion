@@ -300,7 +300,7 @@ void SVNClient::remove(Targets &targets, const char *message, bool force,
                                    ctx, requestPool.pool()), );
 }
 
-void SVNClient::revert(const char *path, bool recurse)
+void SVNClient::revert(const char *path, svn_depth_t depth)
 {
     Pool requestPool;
 
@@ -313,10 +313,11 @@ void SVNClient::revert(const char *path, bool recurse)
     Targets target(path);
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
-    SVN_JNI_ERR(svn_client_revert(targets, recurse, ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_revert2(targets, depth, ctx, requestPool.pool()), );
 }
 
-void SVNClient::add(const char *path, bool recurse, bool force, bool no_ignore,
+void SVNClient::add(const char *path,
+                    svn_depth_t depth, bool force, bool no_ignore,
                     bool add_parents)
 {
     Pool requestPool;
@@ -329,8 +330,9 @@ void SVNClient::add(const char *path, bool recurse, bool force, bool no_ignore,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_add4(intPath.c_str(), recurse, force, no_ignore,
-                                add_parents, ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_add4(intPath.c_str(), depth, force,
+                                no_ignore, add_parents, ctx,
+                                requestPool.pool()), );
 }
 
 jlongArray SVNClient::update(Targets &targets, Revision &revision,
@@ -551,7 +553,8 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 }
 
 void SVNClient::doImport(const char *path, const char *url,
-                         const char *message, bool recurse)
+                         const char *message, svn_depth_t depth,
+                         bool noIgnore, bool ignoreUnknownNodeTypes)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -561,14 +564,15 @@ void SVNClient::doImport(const char *path, const char *url,
     Path intUrl(url);
     SVN_JNI_ERR(intUrl.error_occured(), );
 
-    svn_client_commit_info_t *commit_info = NULL;
+    svn_commit_info_t *commit_info = NULL;
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_import(&commit_info, intPath.c_str(),
-                                  intUrl.c_str(), !recurse, ctx,
-                                  requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_import3(&commit_info, intPath.c_str(),
+                                   intUrl.c_str(), depth, noIgnore,
+                                   ignoreUnknownNodeTypes, ctx,
+                                   requestPool.pool()), );
 }
 
 jobjectArray
@@ -677,9 +681,10 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
     apr_hash_t *mergeinfo;
     Path intLocalTarget(target);
     SVN_JNI_ERR(intLocalTarget.error_occured(), NULL);
-    SVN_JNI_ERR(svn_client_get_mergeinfo(&mergeinfo, intLocalTarget.c_str(),
-                                         rev.revision(), ctx,
-                                         requestPool.pool()),
+    SVN_JNI_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, 
+                                                intLocalTarget.c_str(),
+                                                rev.revision(), ctx,
+                                                requestPool.pool()),
                 NULL);
     if (mergeinfo == NULL)
         return NULL;
@@ -2112,7 +2117,7 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
 
 void
 SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
-                 bool recurse, InfoCallback *callback)
+                 svn_depth_t depth, InfoCallback *callback)
 {
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
@@ -2124,11 +2129,10 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
     Path checkedPath(path);
     SVN_JNI_ERR(checkedPath.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_info(checkedPath.c_str(),
-                                pegRevision.revision(),
-                                revision.revision(),
-                                InfoCallback::callback,
-                                callback,
-                                recurse ? TRUE : FALSE,
-                                ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_info2(checkedPath.c_str(),
+                                 pegRevision.revision(),
+                                 revision.revision(),
+                                 InfoCallback::callback,
+                                 callback,
+                                 depth, ctx, requestPool.pool()), );
 }

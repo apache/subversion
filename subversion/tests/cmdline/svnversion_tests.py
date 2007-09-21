@@ -29,8 +29,6 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-SVNAnyOutput = svntest.SVNAnyOutput
-
 #----------------------------------------------------------------------
 
 def svnversion_test(sbox):
@@ -118,7 +116,8 @@ def svnversion_test(sbox):
   # No directory generates an error
   svntest.actions.run_and_verify_svnversion("None existent directory",
                                             os.path.join(wc_dir, 'Q', 'X'),
-                                            repo_url, None, SVNAnyOutput)
+                                            repo_url,
+                                            None, svntest.verify.AnyOutput)
 
 
 #----------------------------------------------------------------------
@@ -152,7 +151,8 @@ def ignore_externals(sbox):
   # Update to get it on disk
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   ext_path = os.path.join(C_path, 'ext')
-  out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+  out, err = svntest.actions.run_and_verify_svn(None,
+                                                svntest.verify.AnyOutput, [],
                                                 'info', ext_path)
   for line in out:
     if line.find('Revision: 1') != -1:

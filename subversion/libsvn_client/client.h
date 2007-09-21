@@ -187,12 +187,17 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
 /* Set REPOS_ROOT to the URL which represents the root of the
    repository in with PATH_OR_URL (at PEG_REVISION) is versioned.  Use
-   the authentication baton cached in CTX as necessary.  Use POOL for
-   all allocations. */
+   the authentication baton cached in CTX as necessary.  
+
+   ADM_ACCESS is a working copy administrative access baton associated
+   with PATH_OR_URL (if PATH_OR_URL is a working copy path), or NULL.
+
+   Use POOL for all allocations. */
 svn_error_t *
 svn_client__get_repos_root(const char **repos_root, 
                            const char *path_or_url,
                            const svn_opt_revision_t *peg_revision,
+                           svn_wc_adm_access_t *adm_access,
                            svn_client_ctx_t *ctx, 
                            apr_pool_t *pool);
 
@@ -878,6 +883,7 @@ svn_error_t *
 svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_wc_status_func2_t status_func,
                                void *status_baton,
+                               svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,

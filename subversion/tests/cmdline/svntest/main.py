@@ -83,13 +83,6 @@ class SVNRepositoryCreateFailure(Failure):
   "Exception raised if unable to create a repository"
   pass
 
-# Define True and False if not provided by Python (<=2.1)
-try:
-  False
-except:
-  False = 0
-  True = 1
-
 # Windows specifics
 if sys.platform == 'win32':
   windows = True
@@ -133,8 +126,15 @@ svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
 svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 
-# Global variable indicating if we want verbose output.
+# Global variable indicating if we want verbose output, that is, 
+# details of what commands each test does as it does them.  This is
+# incompatible with quiet_mode.
 verbose_mode = False
+
+# Global variable indicating if we want quiet output, that is, don't
+# show PASS, XFAIL, or SKIP notices, but do show FAIL and XPASS.  This
+# is incompatible with verbose_mode.
+quiet_mode = False
 
 # Global variable indicating if we want test data cleaned up after success
 cleanup_mode = False
@@ -635,21 +635,6 @@ def create_python_hook_script (hook_path, hook_script_code):
     file_write (hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
     os.chmod (hook_path, 0755)
 
-
-def compare_unordered_output(expected, actual):
-  """Compare lists of output lines for equality disregarding the
-     order of the lines"""
-  if len(actual) != len(expected):
-    raise Failure("Length of expected output not equal to actual length")
-
-  expected = list(expected)
-  for aline in actual:
-    try:
-      i = expected.index(aline)
-      expected.pop(i)
-    except ValueError:
-      raise Failure("Expected output does not match actual output")
-
 def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."
 
@@ -686,19 +671,25 @@ def use_editor(func):
   os.environ['SVNTEST_EDITOR_FUNC'] = func
 
 
-def merge_notify_line(revstart, revend=None):
+def merge_notify_line(revstart=None, revend=None):
   """Return an expected output line that describes the beginning of a
-  merge operation on revisions REVSTART through REVEND."""
+  merge operation on revisions REVSTART through REVEND.  Omit both
+  REVSTART and REVEND for the case where the left and right sides of
+  the merge are from different URLs."""
   if revend is None:
-    if revstart < 0:
-      return "--- Undoing r%ld:\n" % abs(revstart)
+    if revstart is None:
+      # The left and right sides of the merge are from different URLs.
+      return "--- Merging differences between repository URLs into '.+':\n"
+    elif revstart < 0:
+      return "--- Reverse-merging r%ld into '.+':\n" % abs(revstart)
     else:
-      return "--- Merging r%ld:\n" % revstart
+      return "--- Merging r%ld into '.+':\n" % revstart
   else:
     if revstart > revend:
-      return "--- Undoing r%ld through r%ld:\n" % (revstart, revend)
+      return "--- Reverse-merging r%ld through r%ld into '.+':\n" % (revstart,
+                                                                     revend)
     else:
-      return "--- Merging r%ld through r%ld:\n" % (revstart, revend)
+      return "--- Merging r%ld through r%ld into '.+':\n" % (revstart, revend)
 
 
 ######################################################################
@@ -725,13 +716,16 @@ def is_ra_type_file():
 def is_fs_type_fsfs():
   _check_command_line_parsed()
   # This assumes that fsfs is the default fs implementation.
-  return (fs_type == 'fsfs' or fs_type is None)
+  return fs_type == 'fsfs' or fs_type is None
 
 def is_os_windows():
-  return (os.name == 'nt')
+  return os.name == 'nt'
 
 def is_posix_os():
-  return (os.name == 'posix')
+  return os.name == 'posix'
+
+def is_os_darwin():
+  return sys.platform == 'darwin'
 
 def server_has_mergeinfo():
   _check_command_line_parsed()
@@ -963,9 +957,11 @@ class TestRunner:
 
     os.chdir(saved_dir)
     result = self.pred.convert_result(result)
-    print self.pred.run_text(result),
-    self._print_name()
-    sys.stdout.flush()
+    (result_text, result_benignity) = self.pred.run_text(result)
+    if not (quiet_mode and result_benignity):
+      print result_text,
+      self._print_name()
+      sys.stdout.flush()
     if sandbox is not None and result != 1 and cleanup_mode:
       sandbox.cleanup_test_paths()
     return result
@@ -1052,9 +1048,10 @@ def _internal_run_tests(test_list, testnums, parallel):
 
 def usage():
   prog_name = os.path.basename(sys.argv[0])
-  print "%s [--url] [--fs-type] [--verbose] [--enable-sasl] [--cleanup] \\" \
-        % prog_name
-  print "%s [--bin] [<test> ...]" % (" " * len(prog_name))
+  print "%s [--url] [--fs-type] [--verbose|--quiet] \\" % prog_name
+  print "%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]" \
+      % (" " * len(prog_name))
+  print "%s " % (" " * len(prog_name))
   print "%s [--list] [<test> ...]\n" % prog_name
   print "Arguments:"
   print " test          The number of the test to run (multiple okay), " \
@@ -1064,7 +1061,8 @@ def usage():
   print " --fs-type       Subversion file system type (fsfs or bdb)"
   print " --http-library  DAV library to use (neon or serf)"
   print " --url           Base url to the repos (e.g. svn://localhost)"
-  print " --verbose       Print binary command-lines"
+  print " --verbose       Print binary command-lines (not with --quiet)"
+  print " --quiet         Print only unexpected results (not with --verbose)"
   print " --cleanup       Whether to clean up"
   print " --enable-sasl   Whether to enable SASL authentication"
   print " --parallel      Run the tests in parallel"
@@ -1087,6 +1085,7 @@ def run_tests(test_list, serial_only = False):
   global pristine_url
   global fs_type
   global verbose_mode
+  global quiet_mode
   global cleanup_mode
   global enable_sasl
   global is_child_process
@@ -1106,10 +1105,10 @@ def run_tests(test_list, serial_only = False):
   parallel = 0
   svn_bin = None
   try:
-    opts, args = my_getopt(sys.argv[1:], 'vhpc',
-                           ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
-                            'enable-sasl', 'help', 'parallel', 'bin=',
-                            'http-library=', 'server-minor-version='])
+    opts, args = my_getopt(sys.argv[1:], 'vqhpc',
+                           ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
+                            'list', 'enable-sasl', 'help', 'parallel',
+                            'bin=', 'http-library=', 'server-minor-version='])
   except getopt.GetoptError, e:
     print "ERROR: %s\n" % e
     usage()
@@ -1138,6 +1137,9 @@ def run_tests(test_list, serial_only = False):
 
     elif opt == "-v" or opt == "--verbose":
       verbose_mode = True
+
+    elif opt == "-q" or opt == "--quiet":
+      quiet_mode = True
 
     elif opt == "--cleanup":
       cleanup_mode = True
@@ -1172,6 +1174,10 @@ def run_tests(test_list, serial_only = False):
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
+
+  if verbose_mode and quiet_mode:
+    sys.stderr.write("ERROR: 'verbose' and 'quiet' are incompatible\n")
+    sys.exit(1)
 
   # Calculate pristine_url from test_area_url.
   pristine_url = test_area_url + '/' + pristine_dir

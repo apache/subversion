@@ -558,6 +558,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      'g', 'x', svn_cl__ignore_ancestry_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
+  { "mergeinfo", svn_cl__mergeinfo, {0}, N_
+    ("Query merge-related information.\n"
+     "usage: mergeinfo [TARGET[@REV]...]\n"),
+    {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
      "usage: 1. mkdir PATH...\n"
@@ -1611,6 +1616,9 @@ main(int argc, const char *argv[])
     {
       if (subcommand->cmd_func == svn_cl__status)
         opt_state.depth = SVN_DEPTH_FROM_RECURSE_STATUS(FALSE);
+      else if (subcommand->cmd_func == svn_cl__revert)
+        /* Be especially conservative, since revert can lose data. */
+        opt_state.depth = svn_depth_empty;
       else
         opt_state.depth = SVN_DEPTH_FROM_RECURSE(FALSE);
     }

@@ -939,13 +939,13 @@ struct svn_auth_baton_t
 static VALUE
 svn_default_charset(void)
 {
-  return INT2NUM((int)APR_DEFAULT_CHARSET);
+  return PTR2NUM(APR_DEFAULT_CHARSET);
 }
 
 static VALUE
 svn_locale_charset(void)
 {
-  return INT2NUM((int)APR_LOCALE_CHARSET);
+  return PTR2NUM(APR_LOCALE_CHARSET);
 }
 
 static svn_error_t *

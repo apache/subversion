@@ -26,6 +26,7 @@
 #include "svn_private_config.h"
 #include "svn_mergeinfo.h"
 #include "ra_serf.h"
+#include "svn_path.h"
 #include "svn_string.h"
 #include <apr_tables.h>
 #include <apr_xml.h>
@@ -230,6 +231,36 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
 
+
+  /* ras's URL may not exist in HEAD, and thus it's not safe to send
+     it as the main argument to the REPORT request; it might cause
+     dav_get_resource() to choke on the server.  So instead, we pass a
+     baseline-collection URL, which we get from END. */
+  const char *vcc_url, *relative_url, *basecoll_url;
+  apr_hash_t *props;
+  const char *path = session->repos_url_str;
+
+  props = apr_hash_make(pool);
+
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
+                                     session, session->conns[0],
+                                     path, pool));
+
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      vcc_url, revision,
+                                      "0", baseline_props, pool));
+
+  basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
+                                           "DAV:", "baseline-collection");
+  if (!basecoll_url)
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested baseline-collection value."));
+    }
+
+  path = svn_path_url_add_component(basecoll_url, relative_url, pool);
+
   mergeinfo_ctx = apr_pcalloc(pool, sizeof(*mergeinfo_ctx));
   mergeinfo_ctx->pool = pool;
   mergeinfo_ctx->curr_path = svn_stringbuf_create("", pool);
@@ -243,7 +274,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   handler = apr_pcalloc(pool, sizeof(*handler));
 
   handler->method = "REPORT";
-  handler->path = session->repos_url_str;
+  handler->path = path;
   handler->conn = session->conns[0];
   handler->session = session;
   handler->body_delegate = create_mergeinfo_body;

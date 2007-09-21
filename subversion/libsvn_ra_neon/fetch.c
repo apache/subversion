@@ -46,6 +46,7 @@
 #include "svn_time.h"
 #include "svn_props.h"
 
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -195,6 +196,9 @@ typedef struct {
   /* The depth requested from the server. */
   svn_depth_t depth;
 
+  /* Whether the server should try to send copyfrom arguments. */
+  svn_boolean_t send_copyfrom_args;
+
   /* Use an intermediate tmpfile for the REPORT response. */
   svn_boolean_t spool_response;
 
@@ -232,7 +236,7 @@ static const svn_ra_neon__xml_elm_t report_elements[] =
     SVN_RA_NEON__XML_CDATA },
 
   { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
-  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", SVN_DAV__CREATIONDATE, ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "creator-displayname", ELEM_creator_displayname,
      SVN_RA_NEON__XML_CDATA },
 
@@ -259,7 +263,7 @@ static const svn_ra_neon__xml_elm_t getlocks_report_elements[] =
   { SVN_XML_NAMESPACE, "token", ELEM_lock_token, SVN_RA_NEON__XML_CDATA },
   { SVN_XML_NAMESPACE, "owner", ELEM_lock_owner, SVN_RA_NEON__XML_CDATA },
   { SVN_XML_NAMESPACE, "comment", ELEM_lock_comment, SVN_RA_NEON__XML_CDATA },
-  { SVN_XML_NAMESPACE, "creationdate",
+  { SVN_XML_NAMESPACE, SVN_DAV__CREATIONDATE,
     ELEM_lock_creationdate, SVN_RA_NEON__XML_CDATA },
   { SVN_XML_NAMESPACE, "expirationdate",
     ELEM_lock_expirationdate, SVN_RA_NEON__XML_CDATA },
@@ -936,7 +940,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
           if (dirent_fields & SVN_DIRENT_TIME)
             {
               which_props[num_props].nspace = "DAV:";
-              which_props[num_props--].name = "creationdate";
+              which_props[num_props--].name = SVN_DAV__CREATIONDATE;
             }
 
           if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
@@ -1210,8 +1214,8 @@ svn_error_t *svn_ra_neon__get_dated_revision(svn_ra_session_t *session,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
                       "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                       "xmlns:D=\"DAV:\">"
-                      "<D:creationdate>%s</D:creationdate>"
-                      "</S:dated-rev-report>",
+                      "<D:" SVN_DAV__CREATIONDATE ">%s</D:"
+                      SVN_DAV__CREATIONDATE "></S:dated-rev-report>",
                       svn_time_to_cstring(timestamp, pool));
 
   err = svn_ra_neon__parsed_request(ras, "REPORT",
@@ -2031,16 +2035,25 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
         {
           const svn_delta_editor_t *filter_editor;
           void *filter_baton;
-          svn_depth_t depth = rb->depth;
           svn_boolean_t has_target = *(rb->target) ? TRUE : FALSE;
 
-          SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, &filter_baton,
-                                                rb->editor, rb->edit_baton,
-                                                depth, has_target, rb->pool));
-          rb->editor = filter_editor;
-          rb->edit_baton = filter_baton;
+          /* We can skip the depth filtering when the user requested
+             depth_files or depth_infinity because the server will
+             transmit the right stuff anyway. */
+          if ((rb->depth != svn_depth_files)
+              && (rb->depth != svn_depth_infinity))
+            {
+              SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
+                                                    &filter_baton,
+                                                    rb->editor, 
+                                                    rb->edit_baton,
+                                                    rb->depth, 
+                                                    has_target, 
+                                                    rb->pool));
+              rb->editor = filter_editor;
+              rb->edit_baton = filter_baton;
+            }
         }
-
       break;
 
     case ELEM_target_revision:
@@ -2997,7 +3010,18 @@ static const svn_ra_reporter3_t ra_neon_reporter = {
    in the directory represented by the SESSION's URL, or empty if the
    entire directory is meant to be the target.
 
-   ### TODO(sd): document DEPTH behavior
+   DEPTH is the requested depth of the operation.  It will be
+   transmitted to the server, which (if it understands depths) can use
+   the information to limit the information it sends back.  Also store
+   DEPTH in the REPORT_BATON: that way, if the server is old and does
+   not understand depth requests, the client can notice this when the
+   response starts streaming in, and adjust accordingly (as of this
+   writnig, by wrapping REPORTER->editor and REPORTER->edit_baton in a
+   filtering editor that simply tosses out the data the client doesn't
+   want).
+
+   If SEND_COPYFROM_ARGS is set, then ask the server to transmit
+   copyfrom args in add_file() in add_directory() calls.
 
    If IGNORE_ANCESTRY is set, the server will transmit real diffs
    between the working copy and the target even if those objects are
@@ -3028,6 +3052,7 @@ make_reporter(svn_ra_session_t *session,
               const char *target,
               const char *dst_path,
               svn_depth_t depth,
+              svn_boolean_t send_copyfrom_args,
               svn_boolean_t ignore_ancestry,
               svn_boolean_t resource_walk,
               const svn_delta_editor_t *editor,
@@ -3061,6 +3086,7 @@ make_reporter(svn_ra_session_t *session,
   rb->base64_decoder = NULL;
   rb->cdata_accum = svn_stringbuf_create("", pool);
   rb->depth = (depth == svn_depth_unknown ? svn_depth_infinity : depth);
+  rb->send_copyfrom_args = send_copyfrom_args;
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use
@@ -3149,6 +3175,17 @@ make_reporter(svn_ra_session_t *session,
                                      NULL, pool));
     }
 
+  /* mod_dav_svn 1.5 and later won't send copyfrom args unless it
+     finds this element.  older mod_dav_svn modules should just
+     ignore the unknown element. */
+  if (send_copyfrom_args)
+    {
+      const char *data =
+        "<S:send-copyfrom-args>yes</S:send-copyfrom-args>" DEBUG_CR;
+      SVN_ERR(svn_io_file_write_full(rb->tmpfile, data, strlen(data),
+                                     NULL, pool));
+    }
+
   /* If we want a resource walk to occur, note that now. */
   if (resource_walk)
     {
@@ -3185,6 +3222,7 @@ svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                                      svn_revnum_t revision_to_update_to,
                                      const char *update_target,
                                      svn_depth_t depth,
+                                     svn_boolean_t send_copyfrom_args,
                                      const svn_delta_editor_t *wc_update,
                                      void *wc_update_baton,
                                      apr_pool_t *pool)
@@ -3196,6 +3234,7 @@ svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                        update_target,
                        NULL,
                        depth,
+                       send_copyfrom_args,
                        FALSE,
                        FALSE,
                        wc_update,
@@ -3226,6 +3265,7 @@ svn_error_t * svn_ra_neon__do_status(svn_ra_session_t *session,
                        depth,
                        FALSE,
                        FALSE,
+                       FALSE,
                        wc_status,
                        wc_status_baton,
                        FALSE, /* fetch_content */
@@ -3253,6 +3293,7 @@ svn_error_t * svn_ra_neon__do_switch(svn_ra_session_t *session,
                        update_target,
                        switch_url,
                        depth,
+                       FALSE,  /* ### TODO(sussman): no copyfrom args */
                        TRUE,
                        FALSE, /* ### Disabled, pre-1.2 servers sometimes
                                  return incorrect resource-walk data */
@@ -3285,6 +3326,7 @@ svn_error_t * svn_ra_neon__do_diff(svn_ra_session_t *session,
                        diff_target,
                        versus_url,
                        depth,
+                       FALSE,
                        ignore_ancestry,
                        FALSE,
                        wc_diff,

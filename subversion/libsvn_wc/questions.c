@@ -465,26 +465,37 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
  /* If there's no text-base file, we have to assume the working file
      is modified.  For example, a file scheduled for addition but not
      yet committed. */
+  /* We used to stat for the working base here, but we just give
+     compare_and_verify a try; we'll check for errors afterwards */
   textbase_filename = svn_wc__text_base_path(filename, FALSE, pool);
-  SVN_ERR(svn_io_check_path(textbase_filename, &kind, pool));
-  if (kind != svn_node_file)
-    {
-      *modified_p = TRUE;
-      return SVN_NO_ERROR;
-    }
-
 
   /* Check all bytes, and verify checksum if requested. */
   {
     apr_pool_t *subpool = svn_pool_create(pool);
 
-    SVN_ERR(compare_and_verify(modified_p,
-                               filename,
-                               adm_access,
-                               textbase_filename,
-                               compare_textbases,
-                               force_comparison,
-                               subpool));
+    err = compare_and_verify(modified_p,
+                             filename,
+                             adm_access,
+                             textbase_filename,
+                             compare_textbases,
+                             force_comparison,
+                             subpool);
+    if (err)
+      {
+        svn_error_t *err2;
+
+        err2 = svn_io_check_path(textbase_filename, &kind, pool);
+        if (! err2 && kind != svn_node_file)
+          {
+            svn_error_clear(err);
+            *modified_p = TRUE;
+            return SVN_NO_ERROR;
+          }
+
+        svn_error_clear(err);
+        return err2;
+      }
+
     svn_pool_destroy(subpool);
   }
 

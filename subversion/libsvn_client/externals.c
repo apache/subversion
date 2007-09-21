@@ -598,6 +598,7 @@ svn_error_t *
 svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_wc_status_func2_t status_func,
                                void *status_baton,
+                               svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
@@ -670,14 +671,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
           SVN_ERR(svn_client_status3(NULL, fullpath,
                                      &(external->revision),
                                      status_func, status_baton,
-                                     /* ### TODO(sd): Is it really correct
-                                        ### to unconditionally recurse
-                                        ### here?  Hmm, I think not, 
-                                        ### because then we might
-                                        ### recurse farther into an
-                                        ### external subdir than the
-                                        ### user requested... */ 
-                                     svn_depth_infinity, get_all, update,
+                                     depth, get_all, update,
                                      no_ignore, FALSE, ctx, iterpool));
         }
     }

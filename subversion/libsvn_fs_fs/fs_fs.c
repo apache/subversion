@@ -3187,6 +3187,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 
       break;
     }
+  if (err)
+    return err;
 
   svn_pool_destroy(iterpool);
 
@@ -3623,7 +3625,8 @@ svn_fs_fs__purge_txn(svn_fs_t *fs,
   /* Remove the shared transaction object associated with this transaction. */
   SVN_ERR(purge_shared_txn(fs, txn_id, pool));
   /* Remove the directory associated with this transaction. */
-  return svn_io_remove_dir2(path_txn_dir(fs, txn_id, pool), FALSE, pool);
+  return svn_io_remove_dir2(path_txn_dir(fs, txn_id, pool), FALSE,
+                            NULL, NULL, pool);
 }
 
 

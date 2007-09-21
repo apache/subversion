@@ -586,12 +586,13 @@ href="http://subversion.tigris.org/hacking.html#crediting">special
 contribution format</a>.</p>
 
 <p><i>Please do not use this list as a generic guide to who has
-contributed what to Subversion!</i> It omits existing full committers,
-for example, because they are irrelevant to our search for new
-committers.  Also, it merely counts changes, it does not evaluate
-them.  To truly understand what someone has contributed, you have to
-read their changes in detail.  This page can only assist human
-judgement, not substitute for it.</p>
+contributed what to Subversion!</i> It omits existing <a
+href="http://svn.collab.net/repos/svn/trunk/COMMITTERS"
+>full committers</a>, for example, because they are irrelevant to our
+search for new committers.  Also, it merely counts changes, it does
+not evaluate them.  To truly understand what someone has contributed,
+you have to read their changes in detail.  This page can only assist
+human judgement, not substitute for it.</p>
 
 '''
 

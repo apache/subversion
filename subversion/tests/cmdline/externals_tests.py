@@ -22,8 +22,6 @@ import warnings
 
 # Our testing module
 import svntest
-from svntest import SVNAnyOutput
-
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -616,7 +614,7 @@ def modify_and_update_receive_new_external(sbox):
   # Once upon a time there was a core-dump here
 
   svntest.actions.run_and_verify_svn("update failed",
-                                     SVNAnyOutput, [], 'up' )
+                                     svntest.verify.AnyOutput, [], 'up' )
 
   os.chdir(was_cwd)
 
@@ -634,7 +632,7 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   def set_externals_for_path_expect_error(path, val, dir):
     tmp_f = os.tempnam(dir, 'tmp')
     svntest.main.file_append(tmp_f, val)
-    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+    svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                        'pset', '-F', tmp_f,
                                        'svn:externals', path)
     os.remove(tmp_f)

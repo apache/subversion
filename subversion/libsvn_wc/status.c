@@ -1531,6 +1531,7 @@ delete_entry(const char *path,
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   const char *hash_key;
+  const svn_wc_entry_t *entry;
   svn_error_t *err;
 
   /* Note:  when something is deleted, it's okay to tweak the
@@ -1542,8 +1543,9 @@ delete_entry(const char *path,
      versioned in this working copy, it was probably deleted via this
      working copy.  No need to report such a thing. */
   /* ### use svn_wc_entry() instead? */
-  SVN_ERR(svn_io_check_path(full_path, &kind, pool));
-  if (kind == svn_node_dir)
+  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, eb->adm_access,
+                                  FALSE, pool));
+  if (entry->kind == svn_node_dir)
     {
       dir_path = full_path;
       hash_key = SVN_WC_ENTRY_THIS_DIR;
@@ -1557,6 +1559,7 @@ delete_entry(const char *path,
   err = svn_wc_adm_retrieve(&adm_access, eb->adm_access, dir_path, pool);
   if (err)
     {
+      SVN_ERR(svn_io_check_path(full_path, &kind, pool));
       if ((kind == svn_node_none) && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
         {
           /* We're probably dealing with a non-recursive, (or
@@ -1583,7 +1586,7 @@ delete_entry(const char *path,
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
   if (apr_hash_get(entries, hash_key, APR_HASH_KEY_STRING))
     SVN_ERR(tweak_statushash(db, db, TRUE, eb->adm_access,
-                             full_path, kind == svn_node_dir,
+                             full_path, entry->kind == svn_node_dir,
                              svn_wc_status_deleted, 0, revision, NULL));
 
   /* Mark the parent dir -- it lost an entry (unless that parent dir
@@ -1591,7 +1594,7 @@ delete_entry(const char *path,
      node).  */
   if (db->parent_baton && (! *eb->target))
     SVN_ERR(tweak_statushash(db->parent_baton, db, TRUE, eb->adm_access,
-                             db->path, kind == svn_node_dir,
+                             db->path, entry->kind == svn_node_dir,
                              svn_wc_status_modified, 0, SVN_INVALID_REVNUM,
                              NULL));
 
@@ -1765,10 +1768,8 @@ close_directory(void *dir_baton,
           tgt_status = apr_hash_get(db->statii, path, APR_HASH_KEY_STRING);
           if (tgt_status)
             {
-              if (eb->default_depth != svn_depth_exclude
-                  /* ### TODO(sd): above condition "can't happen", right? */
-                  && (tgt_status->entry)
-                  && (tgt_status->entry->kind == svn_node_dir))
+              if (tgt_status->entry
+                  && tgt_status->entry->kind == svn_node_dir)
                 {
                   svn_wc_adm_access_t *dir_access;
                   SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,

@@ -7,7 +7,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -18,13 +18,12 @@
 ######################################################################
 
 # General modules
-import sys, re, os
+import sys, re, os, time
 import zlib, base64 #needed for diff_svnpatch test
 import textwrap
 
 # Our testing module
 import svntest
-from svntest import SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -816,7 +815,7 @@ def diff_head_of_moved_file(sbox):
   # Modify the file to ensure that the diff is non-empty.
   svntest.main.file_append(new_mu_path, "\nActually, it's a new mu.")
 
-  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'diff', '-r', 'HEAD', new_mu_path)
 
 
@@ -1855,25 +1854,25 @@ def diff_property_changes_to_base(sbox):
                                      'ci', '-m', 'empty-msg')
 
   # Check that forward and reverse repos-repos diffs are as expected.
-  expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
+  expected = svntest.verify.UnorderedOutput(expected_output_r1_r2)
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      'diff', '-r', '1:2')
 
-  expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
+  expected = svntest.verify.UnorderedOutput(expected_output_r2_r1)
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      'diff', '-r', '2:1')
 
   # Now check repos->WORKING, repos->BASE, and BASE->repos.
   # (BASE is r1, and WORKING has no local mods, so this should produce
   # the same output as above).
-  expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
+  expected = svntest.verify.UnorderedOutput(expected_output_r1_r2)
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      'diff', '-r', '1')
 
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      'diff', '-r', '1:BASE')
 
-  expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
+  expected = svntest.verify.UnorderedOutput(expected_output_r2_r1)
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      'diff', '-r', 'BASE:1')
 
@@ -1892,11 +1891,11 @@ def diff_property_changes_to_base(sbox):
 
   # Check that the earlier diffs against BASE are unaffected by the
   # presence of local mods.
-  expected = svntest.actions.UnorderedOutput(expected_output_r1_r2)
+  expected = svntest.verify.UnorderedOutput(expected_output_r1_r2)
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      'diff', '-r', '1:BASE')
 
-  expected = svntest.actions.UnorderedOutput(expected_output_r2_r1)
+  expected = svntest.verify.UnorderedOutput(expected_output_r2_r1)
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      'diff', '-r', 'BASE:1')
 
@@ -2131,7 +2130,7 @@ def diff_prop_change_local_propmod(sbox):
   # We also need to make sure that the 'new' (WORKING only) properties
   # are included in the output, since they won't be listed in a simple
   # BASE->r2 diff.
-  expected = svntest.actions.UnorderedOutput(expected_output_r2_wc)
+  expected = svntest.verify.UnorderedOutput(expected_output_r2_wc)
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      'diff', '-r', '2')
 
@@ -2311,7 +2310,8 @@ def diff_base_repos_moved(sbox):
   # a file-delete plus file-add.  The former is currently produced if we
   # explicitly request a diff of the file itself, and the latter if we
   # request a tree diff which just happens to contain the file.
-  out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+  out, err = svntest.actions.run_and_verify_svn(None,
+                                                svntest.verify.AnyOutput, [],
                                                 'diff', '-rBASE:1', newfile)
   if check_diff_output(out, newfile, 'M'):
     raise svntest.Failure
@@ -2341,7 +2341,7 @@ def diff_added_subtree(sbox):
   # addition of the greek tree.  The diff contains additions of files
   # and directories with parents that don't currently exist in the wc,
   # which is what we're testing here.
-  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'diff', '-r', 'BASE:1')
 
 #----------------------------------------------------------------------
@@ -2391,7 +2391,7 @@ def basic_diff_summarize(sbox):
                                         None, None, None, None,
                                         wc_dir)
 
-  # Get the differences between two files.
+  # Get the differences between two versions of a file.
   expected_diff = svntest.wc.State(wc_dir, {
     'iota': Item(status=' M'),
     })
@@ -3026,10 +3026,10 @@ def diff_with_depth(sbox):
     "   + bar4\n",
     "\n" ]
 
-  expected_empty = svntest.actions.UnorderedOutput(diff[:6])
-  expected_files = svntest.actions.UnorderedOutput(diff[:12])
-  expected_immediates = svntest.actions.UnorderedOutput(diff[:18])
-  expected_infinity = svntest.actions.UnorderedOutput(diff[:])
+  expected_empty = svntest.verify.UnorderedOutput(diff[:6])
+  expected_files = svntest.verify.UnorderedOutput(diff[:12])
+  expected_immediates = svntest.verify.UnorderedOutput(diff[:18])
+  expected_infinity = svntest.verify.UnorderedOutput(diff[:])
 
   os.chdir(sbox.wc_dir)
 
@@ -3113,10 +3113,10 @@ def diff_with_depth(sbox):
     " This is the file 'mu'.\n",
     "+new text\n" ]
 
-  expected_empty = svntest.actions.UnorderedOutput(diff_wc_repos[:7])
-  expected_files = svntest.actions.UnorderedOutput(diff_wc_repos[1:22])
-  expected_immediates = svntest.actions.UnorderedOutput(diff_wc_repos[1:29])
-  expected_infinity = svntest.actions.UnorderedOutput(diff_wc_repos[:])
+  expected_empty = svntest.verify.UnorderedOutput(diff_wc_repos[:7])
+  expected_files = svntest.verify.UnorderedOutput(diff_wc_repos[1:22])
+  expected_immediates = svntest.verify.UnorderedOutput(diff_wc_repos[1:29])
+  expected_infinity = svntest.verify.UnorderedOutput(diff_wc_repos[:])
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1')
 
@@ -3144,6 +3144,45 @@ def diff_with_depth(sbox):
                                      'diff', '-rHEAD', '--depth', 'immediates')
   svntest.actions.run_and_verify_svn(None, expected_infinity, [],
                                      'diff', '-rHEAD', '--depth', 'infinity')
+
+# test for issue 2920: ignore eol-style on empty lines
+def diff_ignore_eolstyle_empty_lines(sbox):
+  "ignore eol styles when diffing empty lines"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  svntest.main.file_write(file_path,
+                          "Aa\n"
+                          "\n"
+                          "Bb\n"
+                          "\n"
+                          "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # sleep to guarantee timestamp change
+  time.sleep(1)
+
+  # commit only eol changes
+  svntest.main.file_write(file_path,
+                          "Aa\012"
+                          "\012"
+                          "Bb\r"
+                          "\r"
+                          "Cc\012",
+                          mode="wb")
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'diff', '-x', '--ignore-eol-style',
+                                     file_path)
 
 ########################################################################
 #Run the tests
@@ -3194,6 +3233,7 @@ test_list = [ None,
               diff_in_renamed_folder,
               diff_svnpatch,
               diff_with_depth,
+              XFail(diff_ignore_eolstyle_empty_lines),
               ]
 
 if __name__ == '__main__':

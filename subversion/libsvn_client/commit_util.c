@@ -30,6 +30,7 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_md5.h"
+#include "svn_iter.h"
 
 #include <assert.h>
 #include <stdlib.h>  /* for qsort() */
@@ -182,6 +183,10 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
   add_lock_token,
   svn_client__default_walker_error_handler
 };
+
+/* Whether ENTRY->changelist (which may be NULL) matches CHANGELIST_NAME. */
+#define CHANGELIST_MATCHES(changelist_name, entry) \
+        (entry->changelist && strcmp(changelist_name, entry->changelist) == 0)
 
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
@@ -336,9 +341,15 @@ harvest_committables(apr_hash_t *committables,
 
   /* Bail now if any conflicts exist for the ENTRY. */
   if (tc || pc)
-    return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
-                             _("Aborting commit: '%s' remains in conflict"),
-                             svn_path_local_style(path, pool));
+    {
+      /* Paths in conflict which are not part of our changelist should
+         be ignored. */
+      if (changelist_name == NULL &&
+          !CHANGELIST_MATCHES(changelist_name, entry))
+        return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                                 _("Aborting commit: '%s' remains in conflict"),
+                                 svn_path_local_style(path, pool));
+    }
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
      the telescoping one(s).  In COPY_MODE, URL will always be the
@@ -493,9 +504,7 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if ((changelist_name == NULL)
-          || (entry->changelist
-              && (strcmp(changelist_name, entry->changelist) == 0)))
+      if (changelist_name == NULL || CHANGELIST_MATCHES(changelist_name, entry))
         {
           /* Finally, add the committable item. */
           add_committable(committables, path, entry->kind, url,
@@ -591,9 +600,7 @@ harvest_committables(apr_hash_t *committables,
                                   == svn_wc_schedule_delete))
                             {
                               if ((changelist_name == NULL)
-                                  || (entry->changelist
-                                      && (strcmp(changelist_name,
-                                                 entry->changelist) == 0)))
+                                  || CHANGELIST_MATCHES(changelist_name, entry))
                                 {
                                   add_committable(
                                     committables, full_path,
@@ -661,8 +668,39 @@ harvest_committables(apr_hash_t *committables,
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
       SVN_ERR(svn_wc_walk_entries3(path, adm_access, &add_tokens_callbacks,
-                                   lock_tokens, FALSE, ctx->cancel_func,
-                                   ctx->cancel_baton, pool));
+                                   lock_tokens,
+                                   /* If a directory was deleted, everything
+                                      under it would better be deleted too,
+                                      so pass svn_depth_infinity not depth. */
+                                   svn_depth_infinity, FALSE,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+validate_dangler(void *baton,
+                 const void *key, apr_ssize_t klen, void *val,
+                 apr_pool_t *pool)
+{
+  const char *dangling_parent = key;
+  const char *dangling_child = val;
+
+  /* The baton points to the committables hash */
+  if (! look_up_committable(baton, dangling_parent, pool))
+    {
+      return svn_error_createf
+        (SVN_ERR_ILLEGAL_TARGET, NULL,
+         _("'%s' is not under version control "
+           "and is not part of the commit, "
+           "yet its child '%s' is part of the commit"),
+         /* Probably one or both of these is an entry, but
+            safest to local_stylize just in case. */
+         svn_path_local_style(dangling_parent, pool),
+         svn_path_local_style(dangling_child, pool));
     }
 
   return SVN_NO_ERROR;
@@ -813,40 +851,53 @@ svn_client__harvest_committables(apr_hash_t **committables,
   while (i < targets->nelts);
 
   /* Make sure that every path in danglers is part of the commit. */
-  {
-    apr_hash_index_t *hi;
-
-    for (hi = apr_hash_first(pool, danglers); hi; hi = apr_hash_next(hi))
-      {
-        const void *key;
-        void *val;
-        const char *dangling_parent, *dangling_child;
-
-        /* Get the next entry.  Name is an entry name; value is an
-           entry structure. */
-        apr_hash_this(hi, &key, NULL, &val);
-        dangling_parent = key;
-        dangling_child = val;
-
-        if (! look_up_committable(*committables, dangling_parent, pool))
-          {
-            return svn_error_createf
-              (SVN_ERR_ILLEGAL_TARGET, NULL,
-               _("'%s' is not under version control "
-                 "and is not part of the commit, "
-                 "yet its child '%s' is part of the commit"),
-               /* Probably one or both of these is an entry, but
-                  safest to local_stylize just in case. */
-               svn_path_local_style(dangling_parent, pool),
-               svn_path_local_style(dangling_child, pool));
-          }
-      }
-  }
+  SVN_ERR(svn_iter_apr_hash(NULL,
+                            danglers, validate_dangler, *committables, pool));
 
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
+
+struct copy_committables_baton
+{
+  svn_wc_adm_access_t *adm_access;
+  svn_client_ctx_t *ctx;
+  apr_hash_t *committables;
+};
+
+static svn_error_t *
+harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
+{
+  struct copy_committables_baton *btn = baton;
+
+  const svn_wc_entry_t *entry;
+  svn_client__copy_pair_t *pair =
+    *(svn_client__copy_pair_t **)item;
+  svn_wc_adm_access_t *dir_access;
+
+  /* Read the entry for this SRC. */
+  SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, btn->adm_access, FALSE,
+                                  pool));
+
+  /* Get the right access baton for this SRC. */
+  if (entry->kind == svn_node_dir)
+    SVN_ERR(svn_wc_adm_retrieve(&dir_access, btn->adm_access, pair->src, pool));
+  else
+    SVN_ERR(svn_wc_adm_retrieve(&dir_access, btn->adm_access,
+                                svn_path_dirname(pair->src, pool),
+                                pool));
+
+  /* Handle this SRC.  Because add_committable() uses the hash pool to
+     allocate the new commit_item, we can safely use the iterpool here. */
+  SVN_ERR(harvest_committables(btn->committables, NULL, pair->src,
+                               dir_access, pair->dst, entry->url, entry,
+                               NULL, FALSE, TRUE, svn_depth_infinity,
+                               FALSE, NULL, btn->ctx, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 svn_error_t *
@@ -856,44 +907,18 @@ svn_client__get_copy_committables(apr_hash_t **committables,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  int i;
+  struct copy_committables_baton btn;
 
   *committables = apr_hash_make(pool);
 
+  btn.adm_access = adm_access;
+  btn.ctx = ctx;
+  btn.committables = *committables;
+
   /* For each copy pair, harvest the committables for that pair into the
      committables hash. */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair =
-        APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
-      svn_wc_adm_access_t *dir_access;
-
-      svn_pool_clear(iterpool);
-
-      /* Read the entry for this SRC. */
-      SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
-                                     iterpool));
-
-      /* Get the right access baton for this SRC. */
-      if (entry->kind == svn_node_dir)
-        SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, pair->src,
-                iterpool));
-      else
-        SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access,
-                                    svn_path_dirname(pair->src, iterpool),
-                                    iterpool));
-
-      /* Handle this SRC.  Because add_committable() uses the hash pool to
-         allocate the new commit_item, we can safely use the iterpool here. */
-      SVN_ERR(harvest_committables(*committables, NULL, pair->src,
-                                   dir_access, pair->dst, entry->url, entry,
-                                   NULL, FALSE, TRUE, svn_depth_infinity,
-                                   FALSE, NULL, ctx, iterpool));
-    }
-
-  svn_pool_destroy(iterpool);
+  SVN_ERR(svn_iter_apr_array(NULL, copy_pairs,
+                             harvest_copy_committables, &btn, pool));
 
   return SVN_NO_ERROR;
 }

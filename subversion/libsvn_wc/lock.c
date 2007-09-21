@@ -34,6 +34,7 @@
 #include "entries.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 
@@ -280,7 +281,7 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
           svn_error_clear(svn_io_remove_dir2
             (svn_wc__adm_path(access_path, FALSE, pool, SVN_WC__ADM_WCPROPS,
-                              NULL), FALSE, pool));
+                              NULL), FALSE, NULL, NULL, pool));
           svn_error_clear(svn_io_remove_file
             (svn_wc__adm_path(access_path, FALSE, pool,
                               SVN_WC__ADM_DIR_WCPROPS, NULL), pool));
@@ -1017,13 +1018,34 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
                           apr_pool_t *pool)
 {
   const char *dir;
+  const svn_wc_entry_t *entry;
   int wc_format;
+  svn_error_t *err;
 
-  SVN_ERR(probe(&dir, path, &wc_format, pool));
-  SVN_ERR(svn_wc_adm_retrieve(adm_access, associated, dir, pool));
+  SVN_ERR(svn_wc_entry(&entry, path, associated, TRUE, pool));
 
-  if (wc_format && ! (*adm_access)->wc_format)
-    (*adm_access)->wc_format = wc_format;
+  if (! entry)
+    /* Not a versioned item, probe it */
+    SVN_ERR(probe(&dir, path, &wc_format, pool));
+  else if (entry->kind != svn_node_dir)
+    dir = svn_path_dirname(path, pool);
+  else
+    dir = path;
+
+  err = svn_wc_adm_retrieve(adm_access, associated, dir, pool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+    {
+      /* We'll receive a NOT LOCKED error for various reasons,
+         including the reason we'll actually want to test for:
+         The path is a versioned directory, but missing, in which case
+         we want its parent's adm_access (which holds minimal data
+         on the child) */
+      svn_error_clear(err);
+      SVN_ERR(probe(&dir, path, &wc_format, pool));
+      SVN_ERR(svn_wc_adm_retrieve(adm_access, associated, dir, pool));
+    }
+  else
+    return err;
 
   return SVN_NO_ERROR;
 }

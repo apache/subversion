@@ -320,7 +320,7 @@ base_bdb_set_errcall(svn_fs_t *fs,
 
 /* Write the DB_CONFIG file. */
 static svn_error_t *
-bdb_write_config  (svn_fs_t *fs)
+bdb_write_config(svn_fs_t *fs)
 {
   const char *dbconfig_file_name =
     svn_path_join(fs->path, BDB_CONFIG_FILE, fs->pool);
@@ -1163,7 +1163,7 @@ base_delete_fs(const char *path,
   SVN_ERR(svn_fs_bdb__remove(path, pool));
 
   /* Remove the environment directory. */
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }

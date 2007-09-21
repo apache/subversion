@@ -507,7 +507,7 @@ static svn_error_t *sasl_read_cb(void *baton, char *buffer, apr_size_t *len)
   sasl_baton_t *sasl_baton = baton;
   int result;
   /* A copy of *len, used by the wrapped stream. */
-  unsigned int len2 = *len;
+  apr_size_t len2 = *len;
 
   /* sasl_decode might need more data than a single read can provide,
      hence the need to put a loop around the decoding. */
@@ -570,7 +570,7 @@ sasl_write_cb(void *baton, const char *buffer, apr_size_t *len)
 
   do
     {
-      unsigned int tmplen = sasl_baton->write_len;
+      apr_size_t tmplen = sasl_baton->write_len;
       SVN_ERR(svn_ra_svn__stream_write(sasl_baton->stream,
                                        sasl_baton->write_buf,
                                        &tmplen));

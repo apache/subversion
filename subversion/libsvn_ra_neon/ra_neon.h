@@ -34,6 +34,8 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
+
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #ifdef __cplusplus
@@ -257,6 +259,7 @@ svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                                      svn_revnum_t revision_to_update_to,
                                      const char *update_target,
                                      svn_depth_t depth,
+                                     svn_boolean_t send_copyfrom_args,
                                      const svn_delta_editor_t *wc_update,
                                      void *wc_update_baton,
                                      apr_pool_t *pool);
@@ -356,7 +359,7 @@ svn_error_t *svn_ra_neon__get_file_revs(svn_ra_session_t *session,
 #define SVN_RA_NEON__PROP_BASELINE_COLLECTION    "DAV:baseline-collection"
 #define SVN_RA_NEON__PROP_CHECKED_IN     "DAV:checked-in"
 #define SVN_RA_NEON__PROP_VCC            "DAV:version-controlled-configuration"
-#define SVN_RA_NEON__PROP_VERSION_NAME   "DAV:version-name"
+#define SVN_RA_NEON__PROP_VERSION_NAME   "DAV:" SVN_DAV__VERSION_NAME
 #define SVN_RA_NEON__PROP_CREATIONDATE   "DAV:creationdate"
 #define SVN_RA_NEON__PROP_CREATOR_DISPLAYNAME "DAV:creator-displayname"
 #define SVN_RA_NEON__PROP_GETCONTENTLENGTH "DAV:getcontentlength"
