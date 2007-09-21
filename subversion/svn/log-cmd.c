@@ -507,17 +507,8 @@ svn_cl__log(apr_getopt_t *os,
         }
     }
 
-  /* Verify that we pass at most one working copy path. */
-  if (! svn_path_is_url(target) )
+  if (svn_path_is_url(target))
     {
-      if (targets->nelts > 1)
-        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                _("When specifying working copy paths, only "
-                                  "one target may be given"));
-    }
-  else
-    {
-      /* Check to make sure there are no other URLs. */
       for (i = 1; i < targets->nelts; i++)
         {
           target = APR_ARRAY_IDX(targets, i, const char *);

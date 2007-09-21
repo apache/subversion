@@ -1742,15 +1742,12 @@ svn_client_status(svn_revnum_t *result_rev,
  * given log message more than once).
  *
  * @a targets contains either a URL followed by zero or more relative
- * paths, or a list of working copy paths, as <tt>const char *</tt>,
- * for which log messages are desired.  The repository info is
- * determined by taking the common prefix of the target entries' URLs.
- * @a receiver is invoked only on messages whose revisions involved a
- * change to some path in @a targets.  @a peg_revision indicates in
- * which revision @a targets are valid.  If @a peg_revision is @c
- * svn_opt_revision_unspecified, it defaults to @c
- * svn_opt_revision_head for URLs or @c svn_opt_revision_working for
- * WC paths.
+ * paths, or 1 working copy path, as <tt>const char *</tt>, for which log
+ * messages are desired.  @a receiver is invoked only on messages whose
+ * revisions involved a change to some path in @a targets.  @a peg_revision
+ * indicates in which revision @a targets are valid.  If @a peg_revision is
+ * @c svn_opt_revision_unspecified, it defaults to @c svn_opt_revision_head
+ * for URLs or @c svn_opt_revision_working for WC paths.
  *
  * If @a limit is non-zero only invoke @a receiver on the first @a limit
  * logs.
