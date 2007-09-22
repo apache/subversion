@@ -60,6 +60,10 @@ svn_cl__propset(apr_getopt_t *os,
                                  opt_state->filedata ? 1 : 2, pool));
   pname = APR_ARRAY_IDX(args, 0, const char *);
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
+  if (! svn_prop_name_is_valid(pname_utf8))
+    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                             _("'%s' is not a valid Subversion property name"),
+                             pname_utf8);
 
   /* Get the PROPVAL from either an external file, or from the command
      line. */

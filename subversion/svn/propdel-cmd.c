@@ -52,6 +52,9 @@ svn_cl__propdel(apr_getopt_t *os,
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
   pname = APR_ARRAY_IDX(args, 0, const char *);
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
+  /* No need to check svn_prop_name_is_valid for *deleting*
+     properties, and it may even be useful to allow, in case invalid
+     properties sneaked through somehow. */
 
   /* Before allowing svn_opt_args_to_target_array() to canonicalize
      all the targets, we need to build a list of targets made of both

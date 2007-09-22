@@ -1355,6 +1355,43 @@ def depthy_url_proplist(sbox):
   verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
                 output, errput)
 
+#----------------------------------------------------------------------
+
+def invalid_propnames(sbox):
+  """test prop* handle invalid property names"""
+  # Bootstrap.
+  sbox.build()
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+  cwd = os.getcwd()
+  os.chdir(wc_dir)
+
+  propname = chr(8)
+  propval = 'foo'
+
+  expected_stdout = ["property '%s' deleted from '.'.\n" % (propname,)]
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [],
+                                     'propdel', propname)
+  expected_stderr = (".*'%s' is not a valid Subversion"
+                     ' property name' % (propname,))
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'propedit', propname)
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'propget', propname)
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'propset', propname, propval)
+
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'commit', '--with-revprop',
+                                     '='.join([propname, propval]))
+  # Now swap them: --with-revprop should accept propname as a property
+  # value; no concept of validity there.
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'commit', '--with-revprop',
+                                     '='.join([propval, propname]))
+
+  os.chdir(cwd)
+
 ########################################################################
 # Run the tests
 
@@ -1383,6 +1420,7 @@ test_list = [ None,
               props_on_replaced_file,
               depthy_wc_proplist,
               depthy_url_proplist,
+              invalid_propnames,
              ]
 
 if __name__ == '__main__':
