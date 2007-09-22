@@ -1839,14 +1839,8 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * Retrieve information about repository or working copy items.
-     *
-     * @param pathOrUrl   the path or the url of the item
-     * @param revision    the revision of the item to return
-     * @param pegRevision the revision to interpret pathOrUrl
-     * @param recurse     flag if to recurse, if the item is a directory
-     * @return the information objects
-     * @since 1.2
+     * @see org.tigris.subversion.javahl.SVNClientInterface.info2(String, Revision, Revision, int, InfoCallback)
+     * @since 1.5
      */
     public Info2[] info2(String pathOrUrl, Revision revision,
                          Revision pegRevision, boolean recurse)
