@@ -2176,13 +2176,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve information about repository or working copy items.
-     * @param pathOrUrl     the path or the url of the item
-     * @param revision      the revision of the item to return
-     * @param pegRevision   the revision to interpret pathOrUrl
-     * @param depth         the depth to recurse
-     * @param callback      a callback to receive the infos retreived
-     * @return              the information objects
+     * @see org.tigris.subversion.javahl.SVNClientInterface.info2(String, Revision, Revision, int, InfoCallback)
      * @since 1.5
      */
     public void info2(String pathOrUrl, Revision revision,
