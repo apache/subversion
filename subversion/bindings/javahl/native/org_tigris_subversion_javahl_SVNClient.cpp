@@ -861,7 +861,7 @@ Java_org_tigris_subversion_javahl_SVNClient_properties
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_propertySet
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jstring jvalue,
- jboolean jrecurse, jboolean jforce)
+ jint jdepth, jboolean jforce)
 {
   JNIEntry(SVNClient, propertySet);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -882,13 +882,12 @@ Java_org_tigris_subversion_javahl_SVNClient_propertySet
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->propertySet(path, name, value, jrecurse ? true:false,
-                  jforce ? true:false);
+  cl->propertySet(path, name, value, (svn_depth_t)jdepth, jforce ? true:false);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_propertyRemove
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jboolean jrecurse)
+(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jint jdepth)
 {
   JNIEntry(SVNClient, propertyRemove);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -905,7 +904,7 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyRemove
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->propertyRemove(path, name, jrecurse ? true:false);
+  cl->propertyRemove(path, name, (svn_depth_t)jdepth);
 }
 
 JNIEXPORT jobject JNICALL

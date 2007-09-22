@@ -1348,9 +1348,12 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    public native void propertySet(String path, String name, String value,
+    public void propertySet(String path, String name, String value,
                                    boolean recurse, boolean force)
-            throws ClientException;
+            throws ClientException
+    {
+        propertySet(path, name, value, Depth.fromRecurse(recurse), force);
+    }
 
     /**
      * Sets one property of an item with a byte array value
@@ -1386,14 +1389,44 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * Sets one property of an item with a String value
+     *
+     * @param path    path of the item
+     * @param name    name of the property
+     * @param value   new value of the property
+     * @param depth   the depth to recurse into subdirectories
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     * @since 1.5
+     */
+    public native void propertySet(String path, String name, String value,
+                                   int depth, boolean force)
+            throws ClientException;
+
+    /**
      * Remove one property of an item.
      * @param path      path of the item
      * @param name      name of the property
      * @param recurse   remove the property also on subdirectories
      * @throws ClientException
      */
-    public native void propertyRemove(String path, String name,
+    public void propertyRemove(String path, String name,
                                       boolean recurse)
+            throws ClientException
+    {
+        propertyRemove(path, name, Depth.fromRecurse(recurse));
+    }
+
+    /**
+     * Remove one property of an item.
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    public native void propertyRemove(String path, String name,
+                                      int depth)
             throws ClientException;
 
     /**
