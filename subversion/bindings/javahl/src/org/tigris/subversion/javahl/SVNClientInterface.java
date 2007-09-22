@@ -1471,7 +1471,8 @@ public interface SVNClientInterface
      * @since 1.2
      */
     Info2[] info2(String pathOrUrl, Revision revision, Revision pegRevision,
-                 boolean recurse) throws ClientException;
+                  boolean recurse)
+        throws ClientException;
 
     /**
      * Retrieve information about repository or working copy items.
