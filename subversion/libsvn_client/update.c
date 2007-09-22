@@ -263,11 +263,12 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   children_with_mergeinfo = apr_hash_make(pool);
   err = svn_client__get_prop_from_wc(children_with_mergeinfo,
                                      SVN_PROP_MERGE_INFO, path, FALSE,
-                                     entry, path_adm_access, TRUE, ctx,
-                                     pool);
+                                     entry, path_adm_access,
+                                     depth, ctx, pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+      if (svn_error_root_cause_is(err, SVN_ERR_WC_PATH_NOT_FOUND)
+          || svn_error_root_cause_is(err, SVN_ERR_UNVERSIONED_RESOURCE))
         {
           svn_error_clear(err);
           err = SVN_NO_ERROR;

@@ -3053,26 +3053,25 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
 
 
 /**
- * Set @a propname to @a propval on @a target.  If @a recurse is true,
- * then @a propname will be set on recursively on @a target and all
- * children.  If @a recurse is false, and @a target is a directory, @a
- * propname will be set on _only_ @a target.
- *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth right now; it's not exactly part of the
- * ### sparse-directories feature, although it's related.
- *
+ * Set @a propname to @a propval on @a target.
  * A @a propval of @c NULL will delete the property.
+ *
+ * If @a depth is @c svn_depth_empty, set the property on @a target
+ * only; if @c svn_depth_files, set it on @a target and its file
+ * children (if any); if @c svn_depth_immediates, on @a target and all
+ * of its immediate children (both files and directories); if
+ * @c svn_depth_infinity, on @a target and everything beneath it.
  *
  * The @a target may only be an URL if @a base_revision_for_url is not
  * @c SVN_INVALID_REVNUM; in this case, the property will only be set
- * if it has not changed since revision @a base_revision_for_url.  @a
- * base_revision_for_url must be @c SVN_INVALID_REVNUM if @a target is
- * not an URL.  @a recurse is not supported on URLs.  The
- * authentication baton in @a ctx and @a ctx->log_msg_func3/@a
- * ctx->log_msg_baton3 will be used to immediately attempt to commit
- * the property change in the repository.  If the commit succeeds,
- * allocate (in @a pool) and populate @a *commit_info_p.
+ * if it has not changed since revision @a base_revision_for_url.
+ * @a base_revision_for_url must be @c SVN_INVALID_REVNUM if @a target
+ * is not an URL.  @a depth deeper than @c svn_depth_empty is not
+ * supported on URLs.  The authentication baton in @a ctx and @a
+ * ctx->log_msg_func3/@a ctx->log_msg_baton3 will be used to
+ * immediately attempt to commit the property change in the
+ * repository.  If the commit succeeds, allocate (in @a pool) and
+ * populate @a *commit_info_p.
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
@@ -3097,7 +3096,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     const char *propname,
                     const svn_string_t *propval,
                     const char *target,
-                    svn_boolean_t recurse,
+                    svn_depth_t depth,
                     svn_boolean_t skip_checks,
                     svn_revnum_t base_revision_for_url,
                     svn_client_ctx_t *ctx,
@@ -3105,7 +3104,9 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
 
 /**
  * Like svn_client_propset3(), but with @a base_revision_for_url
- * always @c SVN_INVALID_REVNUM, and @a commit_info_p always NULL.
+ * always @c SVN_INVALID_REVNUM; @a commit_info_p always NULL; and
+ * @a depth set according to @a recurse: if @a recurse is true,
+ * @a depth is @c svn_depth_infinity, else @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3143,7 +3144,7 @@ svn_client_propset(const char *propname,
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
  * the value UTF8-encoded and uses LF line-endings.
  *
- * Note that unlike its cousin svn_client_propset2(), this routine
+ * Note that unlike its cousin svn_client_propset3(), this routine
  * doesn't affect the working copy at all;  it's a pure network
  * operation that changes an *unversioned* property attached to a
  * revision.  This can be used to tweak log messages, dates, authors,
@@ -3185,19 +3186,34 @@ svn_client_revprop_set(const char *propname,
  * If @a actual_revnum is not @c NULL, the actual revision number used
  * for the fetch is stored in @a *actual_revnum.
  *
- * If @a target is a file or @a recurse is false, @a *props will have
- * at most one element.
- *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth right now; it's not exactly part of the
- * ### sparse-directories feature, although it's related.  Usually
- * ### you would just name the target carefully... Is there a
- * ### situation where depth support would be useful here?
+ * If @a depth is @c svn_depth_empty, fetch the property from
+ * @a target only; if @c svn_depth_files, fetch from @a target and its
+ * file children (if any); if @c svn_depth_immediates, from @a target
+ * and all of its immediate children (both files and directories); if
+ * @c svn_depth_infinity, from @a target and everything beneath it.
  *
  * If error, don't touch @a *props, otherwise @a *props is a hash table
  * even if empty.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_propget4(apr_hash_t **props,
+                    const char *propname,
+                    const char *target,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
+                    svn_revnum_t *actual_revnum,
+                    svn_depth_t depth,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_propget4(), but with @a depth set according
+ * to @a recurse: if @a recurse is true, then @a depth is
+ * @c svn_depth_infinity, else @c svn_depth_files.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_propget3(apr_hash_t **props,
@@ -3209,6 +3225,7 @@ svn_client_propget3(apr_hash_t **props,
                     svn_boolean_t recurse,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
+
 
 /**
  * Similar to svn_client_propget3(), except that @a actual_revnum is

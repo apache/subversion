@@ -220,8 +220,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                         pool));
       err = svn_client__get_prop_from_wc(children_with_mergeinfo,
                                          SVN_PROP_MERGE_INFO, path, FALSE,
-                                         entry, path_adm_access, TRUE, ctx,
-                                         pool);
+                                         entry, path_adm_access,
+                                         depth, ctx, pool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)

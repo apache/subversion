@@ -135,7 +135,7 @@ svn_cl__propdel(apr_getopt_t *os,
           SVN_ERR(svn_cl__try(svn_client_propset3
                               (&commit_info, pname_utf8,
                                NULL, target,
-                               SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                               opt_state->depth,
                                FALSE, SVN_INVALID_REVNUM,
                                ctx, subpool),
                               &success, opt_state->quiet,
