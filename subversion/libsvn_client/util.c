@@ -235,6 +235,10 @@ svn_client__get_repos_root(const char **repos_root,
       path_or_url = entry->url;
       *repos_root = entry->repos;
     }
+  else
+    {
+      *repos_root = NULL;
+    }
 
   /* If PATH_OR_URL was a URL, or PEG_REVISION wasn't a client-side
      revision, or we weren't otherwise able to find the repository
