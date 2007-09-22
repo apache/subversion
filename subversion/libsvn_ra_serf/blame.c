@@ -103,7 +103,7 @@ typedef struct {
   svn_boolean_t done;
 
   /* blame handler and baton */
-  svn_ra_file_rev_handler_t file_rev;
+  svn_file_rev_handler_t file_rev;
   void *file_rev_baton;
 } blame_context_t;
 
@@ -211,7 +211,7 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
         {
           SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
                                       info->path, info->rev,
-                                      info->rev_props,
+                                      info->rev_props, FALSE,
                                       &info->txdelta, &info->txdelta_baton,
                                       info->prop_diffs, info->pool));
 
@@ -282,7 +282,7 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
         {
           SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
                                       info->path, info->rev,
-                                      info->rev_props, NULL, NULL,
+                                      info->rev_props, FALSE, NULL, NULL,
                                       info->prop_diffs, info->pool));
         }
       svn_ra_serf__xml_pop_state(parser);
@@ -363,13 +363,14 @@ cdata_blame(svn_ra_serf__xml_parser_t *parser,
 }
 
 svn_error_t *
-svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
-                           const char *path,
-                           svn_revnum_t start,
-                           svn_revnum_t end,
-                           svn_ra_file_rev_handler_t rev_handler,
-                           void *rev_handler_baton,
-                           apr_pool_t *pool)
+process_request(svn_ra_session_t *ra_session,
+                const char *request_id,
+                const char *path,
+                svn_revnum_t start,
+                svn_revnum_t end,
+                svn_file_rev_handler_t rev_handler,
+                void *rev_handler_baton,
+                apr_pool_t *pool)
 {
   blame_context_t *blame_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
@@ -391,14 +392,18 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:file-revs-report xmlns:S=\"",
-                                  sizeof("<S:file-revs-report xmlns:S=\"")-1,
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:", sizeof("<S:")-1,
                                   session->bkt_alloc);
 
   serf_bucket_aggregate_append(buckets, tmp);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(SVN_XML_NAMESPACE,
-                                      sizeof(SVN_XML_NAMESPACE)-1,
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(request_id, strlen(request_id),
+                                  session->bkt_alloc);
+
+  serf_bucket_aggregate_append(buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" xmlns:S=\"" SVN_XML_NAMESPACE,
+                                      sizeof(" xmlns:S=\"" SVN_XML_NAMESPACE)-1,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
@@ -419,8 +424,15 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                "S:path", path,
                                session->bkt_alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:file-revs-report>",
-                                      sizeof("</S:file-revs-report>")-1,
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:", sizeof("</S:")-1,
+                                      session->bkt_alloc);
+  serf_bucket_aggregate_append(buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(request_id, sizeof(request_id)-1,
+                                      session->bkt_alloc);
+  serf_bucket_aggregate_append(buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", sizeof(">")-1,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
@@ -536,4 +548,37 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                handler->path);
     }
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_ra_file_rev_handler_t handler,
+                           void *handler_baton,
+                           apr_pool_t *pool)
+{
+  svn_file_rev_handler_t handler2;
+  void *handler2_baton;
+
+  svn_compat_wrap_file_rev_handler(&handler2, &handler2_baton, handler,
+                                   handler_baton, pool);
+
+  return process_request(ra_session, "file-rev-report", path, start, end,
+                         handler2, handler2_baton, pool);
+}
+
+svn_error_t *
+svn_ra_serf__get_file_ancestry(svn_ra_session_t *ra_session,
+                               const char *path,
+                               svn_revnum_t start,
+                               svn_revnum_t end,
+                               svn_boolean_t include_merged_revisions,
+                               svn_file_rev_handler_t rev_handler,
+                               void *rev_handler_baton,
+                               apr_pool_t *pool)
+{
+  return process_request(ra_session, "file-ancestry-report", path, start, end,
+                         rev_handler, rev_handler_baton, pool);
 }

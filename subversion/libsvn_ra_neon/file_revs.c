@@ -44,7 +44,7 @@
 
 struct report_baton {
   /* From the caller. */
-  svn_ra_file_rev_handler_t handler;
+  svn_file_rev_handler_t handler;
   void *handler_baton;
 
   /* Arguments for the callback. */
@@ -174,7 +174,7 @@ start_element(int *elem, void *userdata, int parent_state, const char *ns,
             void *wbaton;
             /* It's time to call our hanlder. */
             SVN_ERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
-                                rb->rev_props, &whandler,
+                                rb->rev_props, FALSE, &whandler,
                                 &wbaton, rb->prop_diffs, rb->subpool));
             if (whandler)
               rb->stream = svn_base64_decode
@@ -223,7 +223,7 @@ end_element(void *userdata, int state,
          there were no content changes. */
       if (!rb->had_txdelta)
         SVN_ERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
-                            rb->rev_props, NULL, NULL,
+                            rb->rev_props, FALSE, NULL, NULL,
                             rb->prop_diffs, rb->subpool));
       break;
 
@@ -281,14 +281,15 @@ cdata_handler(void *userdata, int state,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_ra_neon__get_file_revs(svn_ra_session_t *session,
-                           const char *path,
-                           svn_revnum_t start,
-                           svn_revnum_t end,
-                           svn_ra_file_rev_handler_t handler,
-                           void *handler_baton,
-                           apr_pool_t *pool)
+static svn_error_t *
+process_request(svn_ra_session_t *session,
+                const char *request_id,
+                const char *path,
+                svn_revnum_t start,
+                svn_revnum_t end,
+                svn_file_rev_handler_t handler,
+                void *handler_baton,
+                apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
@@ -298,10 +299,12 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
   struct report_baton rb;
   svn_error_t *err;
   apr_hash_t *request_headers = apr_hash_make(pool);
-  static const char request_head[]
-    = "<S:file-revs-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
-  static const char request_tail[]
-    = "</S:file-revs-report>";
+  const char *request_head, *request_tail;
+
+  request_head = apr_psprintf(pool, "<S:%s xmlns:S=\"" SVN_XML_NAMESPACE "\">"
+                                                                      DEBUG_CR,
+                              request_id);
+  request_tail = apr_psprintf(pool, "</S:%s>", request_id);
 
   apr_hash_set(request_headers, "Accept-Encoding", APR_HASH_KEY_STRING,
                "svndiff1;q=0.9,svndiff;q=0.8");
@@ -350,18 +353,50 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
   if (http_status == 501)
-    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                            _("'get-file-revs' REPORT not implemented"));
+    return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("'%s' REPORT not implemented"), request_id);
 
   SVN_ERR(err);
 
   /* Caller expects at least one revision.  Signal error otherwise. */
   if (!SVN_IS_VALID_REVNUM(rb.revnum))
     return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                            _("The file-revs report didn't contain any "
-                              "revisions"));
+                            _("The report didn't contain any revisions"));
 
   svn_pool_destroy(rb.subpool);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_neon__get_file_revs(svn_ra_session_t *session,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_ra_file_rev_handler_t handler,
+                           void *handler_baton,
+                           apr_pool_t *pool)
+{
+  svn_file_rev_handler_t handler2;
+  void *handler2_baton;
+
+  svn_compat_wrap_file_rev_handler(&handler2, &handler2_baton, handler,
+                                   handler_baton, pool);
+
+  return process_request(session, "file-revs-report", path, start, end,
+                         handler2, handler2_baton, pool);
+}
+
+svn_error_t *
+svn_ra_neon__get_file_ancestry(svn_ra_session_t *session,
+                               const char *path,
+                               svn_revnum_t start,
+                               svn_revnum_t end,
+                               svn_boolean_t include_merged_revisions,
+                               svn_file_rev_handler_t handler,
+                               void *handler_baton,
+                               apr_pool_t *pool)
+{
+  return process_request(session, "file-ancestry-report", path, start, end,
+                         handler, handler_baton, pool);
 }

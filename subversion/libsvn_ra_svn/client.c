@@ -1437,11 +1437,12 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
-                                         const char *path,
-                                         svn_revnum_t start, svn_revnum_t end,
-                                         svn_ra_file_rev_handler_t handler,
-                                         void *handler_baton, apr_pool_t *pool)
+static svn_error_t *
+process_file_revs(svn_ra_session_t *session,
+                  const char *path,
+                  svn_revnum_t start, svn_revnum_t end,
+                  svn_file_rev_handler_t handler,
+                  void *handler_baton, apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   apr_pool_t *rev_pool, *chunk_pool;
@@ -1462,13 +1463,6 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
      Note that the rev_pool must live during the following txdelta. */
   rev_pool = svn_pool_create(pool);
   chunk_pool = svn_pool_create(pool);
-
-  SVN_ERR(svn_ra_svn_write_cmd(sess_baton->conn, pool, "get-file-revs",
-                               "c(?r)(?r)", path, start, end));
-
-  /* Servers before 1.1 don't support this command.  Check for this here. */
-  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
-                                 _("'get-file-revs' not implemented")));
 
   while (1)
     {
@@ -1497,7 +1491,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
                                 _("Text delta chunk not a string"));
       has_txdelta = item->u.string->len > 0;
 
-      SVN_ERR(handler(handler_baton, p, rev, rev_props,
+      SVN_ERR(handler(handler_baton, p, rev, rev_props, FALSE,
                       has_txdelta ? &d_handler : NULL, &d_baton,
                       props, rev_pool));
 
@@ -1538,6 +1532,53 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
   svn_pool_destroy(rev_pool);
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+ra_svn_get_file_revs(svn_ra_session_t *session,
+                     const char *path,
+                     svn_revnum_t start, svn_revnum_t end,
+                     svn_ra_file_rev_handler_t handler,
+                     void *handler_baton, apr_pool_t *pool)
+{
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_file_rev_handler_t handler2;
+  void *handler2_baton;
+
+  SVN_ERR(svn_ra_svn_write_cmd(sess_baton->conn, pool, "get-file-revs",
+                               "c(?r)(?r)", path, start, end));
+
+  /* Servers before 1.1 don't support this command.  Check for this here. */
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
+                                 _("'get-file-revs' not implemented")));
+
+  svn_compat_wrap_file_rev_handler(&handler2, &handler2_baton, handler,
+                                   handler_baton, pool);
+
+  return process_file_revs(session, path, start, end, handler2, handler2_baton,
+                           pool);
+}
+
+static svn_error_t *
+ra_svn_get_file_ancestry(svn_ra_session_t *session,
+                         const char *path,
+                         svn_revnum_t start, svn_revnum_t end,
+                         svn_boolean_t include_merged_revisions,
+                         svn_file_rev_handler_t handler,
+                         void *handler_baton, apr_pool_t *pool)
+{
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+
+  SVN_ERR(svn_ra_svn_write_cmd(sess_baton->conn, pool, "get-file-ancestry",
+                               "c(?r)(?r)b", path, start, end,
+                               include_merged_revisions));
+
+  /* Servers before 1.5 don't support this command.  Check for this here. */
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
+                                 _("'get-file-ancestry' not implemented")));
+
+  return process_file_revs(session, path, start, end, handler, handler_baton,
+                           pool);
 }
 
 /* For each path in PATH_REVS, send a 'lock' command to the server.
@@ -2024,6 +2065,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_repos_root,
   ra_svn_get_locations,
   ra_svn_get_file_revs,
+  ra_svn_get_file_ancestry,
   ra_svn_lock,
   ra_svn_unlock,
   ra_svn_get_lock,

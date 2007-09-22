@@ -981,6 +981,7 @@ static const svn_ra__vtable_t neon_vtable = {
   svn_ra_neon__get_repos_root,
   svn_ra_neon__get_locations,
   svn_ra_neon__get_file_revs,
+  svn_ra_neon__get_file_ancestry,
   svn_ra_neon__lock,
   svn_ra_neon__unlock,
   svn_ra_neon__get_lock,

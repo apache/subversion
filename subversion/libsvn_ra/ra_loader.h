@@ -192,6 +192,14 @@ typedef struct svn_ra__vtable_t {
                                 svn_ra_file_rev_handler_t handler,
                                 void *handler_baton,
                                 apr_pool_t *pool);
+  svn_error_t *(*get_file_ancestry)(svn_ra_session_t *session,
+                                    const char *path,
+                                    svn_revnum_t start,
+                                    svn_revnum_t end,
+                                    svn_boolean_t include_merged_revisions,
+                                    svn_file_rev_handler_t handler,
+                                    void *handler_baton,
+                                    apr_pool_t *pool);
   svn_error_t *(*lock)(svn_ra_session_t *session,
                        apr_hash_t *path_revs,
                        const char *comment,

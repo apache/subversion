@@ -934,6 +934,20 @@ svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
                                         handler, handler_baton, pool);
 }
 
+svn_error_t *svn_ra_get_file_ancestry(svn_ra_session_t *session,
+                                      const char *path,
+                                      svn_revnum_t start,
+                                      svn_revnum_t end,
+                                      svn_boolean_t include_merged_revisions,
+                                      svn_file_rev_handler_t handler,
+                                      void *handler_baton,
+                                      apr_pool_t *pool)
+{
+  return session->vtable->get_file_ancestry(session, path, start, end,
+                                            include_merged_revisions,
+                                            handler, handler_baton, pool);
+}
+
 svn_error_t *svn_ra_lock(svn_ra_session_t *session,
                          apr_hash_t *path_revs,
                          const char *comment,

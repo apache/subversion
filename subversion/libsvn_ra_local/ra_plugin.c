@@ -160,6 +160,27 @@ svn_ra_local__get_file_revs(svn_ra_session_t *session,
                                  NULL, NULL, handler, handler_baton, pool);
 }
 
+static svn_error_t *
+svn_ra_local__get_file_ancestry(svn_ra_session_t *session,
+                                const char *path,
+                                svn_revnum_t start,
+                                svn_revnum_t end,
+                                svn_boolean_t include_merged_revisions,
+                                svn_file_rev_handler_t handler,
+                                void *handler_baton,
+                                apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sbaton = session->priv;
+  const char *abs_path = sbaton->fs_path->data;
+
+  /* Concatenate paths */
+  abs_path = svn_path_join(abs_path, path, pool);
+
+  return svn_repos_get_file_ancestry(sbaton->repos, abs_path, start, end,
+                                     include_merged_revisions, NULL, NULL,
+                                     handler, handler_baton, pool);
+}
+
 /* Pool cleanup handler: Ensure that the access descriptor of the filesystem
    DATA is set to NULL. */
 static apr_status_t
@@ -1413,6 +1434,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_repos_root,
   svn_ra_local__get_locations,
   svn_ra_local__get_file_revs,
+  svn_ra_local__get_file_ancestry,
   svn_ra_local__lock,
   svn_ra_local__unlock,
   svn_ra_local__get_lock,
