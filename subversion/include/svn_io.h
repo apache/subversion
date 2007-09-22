@@ -291,6 +291,14 @@ svn_error_t *svn_io_append_file(const char *src,
 /** Make a file as read-only as the operating system allows.
  * @a path is the utf8-encoded path to the file. If @a ignore_enoent is
  * @c TRUE, don't fail if the target file doesn't exist.
+ *
+ * If @a path is a symlink, do nothing.
+ *
+ * @note If @a path is a directory, act on it as though it were a
+ * file, as described above, but note that you probably don't want to
+ * call this function on directories.  We have left it effective on
+ * directories for compatibility reasons, but as its name implies, it
+ * should be used only for files.
  */
 svn_error_t *svn_io_set_file_read_only(const char *path,
                                        svn_boolean_t ignore_enoent,
@@ -303,6 +311,14 @@ svn_error_t *svn_io_set_file_read_only(const char *path,
  * @warning On Unix this function will do the equivalent of chmod a+w path.
  * If this is not what you want you should not use this function, but rather
  * use apr_file_perms_set().
+ *
+ * If @a path is a symlink, do nothing.
+ *
+ * @note If @a path is a directory, act on it as though it were a
+ * file, as described above, but note that you probably don't want to
+ * call this function on directories.  We have left it effective on
+ * directories for compatibility reasons, but as its name implies, it
+ * should be used only for files.
  */
 svn_error_t *svn_io_set_file_read_write(const char *path,
                                         svn_boolean_t ignore_enoent,
@@ -336,7 +352,12 @@ svn_error_t *svn_io_set_file_read_write_carefully(const char *path,
                                                   svn_boolean_t ignore_enoent,
                                                   apr_pool_t *pool);
 
-/** Toggle a file's "executability".
+/** Set @a path's "executability" (but do nothing if it is a symlink).
+ *
+ * @a path is the utf8-encoded path to the file.  If @a executable
+ * is @c TRUE, then make the file executable.  If @c FALSE, make it
+ * non-executable.  If @a ignore_enoent is @c TRUE, don't fail if the target
+ * file doesn't exist.
  *
  * When making the file executable on operating systems with unix style
  * permissions, never add an execute permission where there is not
@@ -350,10 +371,11 @@ svn_error_t *svn_io_set_file_read_write_carefully(const char *path,
  * On other operating systems, toggle the file's "executability" as much as
  * the operating system allows.
  *
- * @a path is the utf8-encoded path to the file.  If @a executable
- * is @c TRUE, then make the file executable.  If @c FALSE, make it
- * non-executable.  If @a ignore_enoent is @c TRUE, don't fail if the target
- * file doesn't exist.
+ * @note If @a path is a directory, act on it as though it were a
+ * file, as described above, but note that you probably don't want to
+ * call this function on directories.  We have left it effective on
+ * directories for compatibility reasons, but as its name implies, it
+ * should be used only for files.
  */
 svn_error_t *svn_io_set_file_executable(const char *path,
                                         svn_boolean_t executable,
