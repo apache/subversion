@@ -230,7 +230,31 @@ def depth_immediates_get_top_file_mod_only(sbox):
 def depth_empty_commit(sbox):
   "commit a file from a depth-empty working copy"
   # Bring iota into a depth-empty working copy, then commit a change to it.
-  raise svntest.Failure  # test not yet written
+  wc_empty, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox,
+                                                               empty=True)
+ 
+  # Form the working path of iota
+  wc_empty_iota = os.path.join(wc_empty, 'iota')
+
+  # Update 'iota' in the depth-empty working copy and modify it
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', wc_empty_iota)
+  svntest.main.file_write(wc_empty_iota, "iota modified")
+
+  # Commit the modified changes from a depth-empty working copy
+  expected_output = svntest.wc.State(wc_empty, {
+    'iota'        : Item(verb='Sending'),
+    })
+  expected_status = svntest.wc.State(wc_empty, { })
+  expected_status.add({
+    ''            : Item(status='  ', wc_rev=1),
+    'iota'        : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_empty,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_empty)
 
 #----------------------------------------------------------------------
 def depth_empty_with_file(sbox):
@@ -395,9 +419,56 @@ def depth_empty_with_dir(sbox):
 #----------------------------------------------------------------------
 def depth_immediates_bring_in_file(sbox):
   "bring a file into a depth-immediates working copy"
+
+  # Create an immediates working copy and form the paths
+  ign_a, ign_b, wc_imm, wc = set_up_depthy_working_copies(sbox,
+                                                          immediates=True)
+  A_mu_path = os.path.join(wc_imm, 'A', 'mu')
+  gamma_path = os.path.join(wc_imm, 'A', 'D', 'gamma')
+
   # Run 'svn up A/mu' to bring A/mu permanently into the working copy.
-  # How should 'svn up A/D/gamma' behave, however?  Edge cases...
-  raise svntest.Failure  # test not yet written
+  expected_output = svntest.wc.State(wc_imm, {
+    'A/mu'           : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/C', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
+                       'A/B/E/beta', 'A/B/F', 'A/B', 'A/D/gamma', 'A/D/G',
+                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H/chi',
+                       'A/D/H/psi', 'A/D/H/omega', 'A/D/H', 'A/D')
+  expected_status = svntest.actions.get_virginal_state(wc_imm, 1)
+  expected_status.remove('A/C', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
+                       'A/B/E/beta', 'A/B/F', 'A/B', 'A/D/gamma', 'A/D/G',
+                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H/chi',
+                       'A/D/H/psi', 'A/D/H/omega', 'A/D/H', 'A/D')
+  svntest.actions.run_and_verify_update(wc_imm,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        A_mu_path)
+
+  # Run 'svn up A/D/gamma' to test the edge case 'Skipped'.
+  expected_output = svntest.wc.State(wc_imm, {
+    'A/D/gamma'   : Item(verb='Skipped'),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/C', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
+                       'A/B/E/beta', 'A/B/F', 'A/B', 'A/D/gamma', 'A/D/G',
+                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H/chi',
+                       'A/D/H/psi', 'A/D/H/omega', 'A/D/H', 'A/D')
+  expected_status = svntest.actions.get_virginal_state(wc_imm, 1)
+  expected_status.remove('A/C', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
+                       'A/B/E/beta', 'A/B/F', 'A/B', 'A/D/gamma', 'A/D/G', 
+                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H/chi',
+                       'A/D/H/psi', 'A/D/H/omega', 'A/D/H', 'A/D')
+  svntest.actions.run_and_verify_update(wc_imm,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        gamma_path)
 
 #----------------------------------------------------------------------
 def depth_immediates_fill_in_dir(sbox):
@@ -1194,10 +1265,10 @@ test_list = [ None,
               nonrecursive_checkout,
               depth_empty_update_bypass_single_file,
               depth_immediates_get_top_file_mod_only,
-              XFail(depth_empty_commit),
+              depth_empty_commit,
               depth_empty_with_file,
               depth_empty_with_dir,
-              XFail(depth_immediates_bring_in_file),
+              depth_immediates_bring_in_file,
               depth_immediates_fill_in_dir,
               depth_mixed_bring_in_dir,
               depth_empty_unreceive_delete,
