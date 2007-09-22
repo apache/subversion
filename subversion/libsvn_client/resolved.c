@@ -42,19 +42,23 @@ svn_client_resolved(const char *path,
 
 svn_error_t *
 svn_client_resolved2(const char *path,
-                     svn_boolean_t recursive,
+                     svn_depth_t depth,
                      svn_accept_t accept_,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
+  int adm_lock_level = -1;
+
+  if (depth == svn_depth_empty || depth == svn_depth_files)
+    adm_lock_level = 0;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, TRUE,
-                                 recursive ? -1 : 0,
+                                 adm_lock_level,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  SVN_ERR(svn_wc_resolved_conflict3(path, adm_access, TRUE, TRUE, recursive,
+  SVN_ERR(svn_wc_resolved_conflict3(path, adm_access, TRUE, TRUE, depth,
                                     accept_,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,

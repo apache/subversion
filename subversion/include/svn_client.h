@@ -2696,8 +2696,13 @@ svn_client_resolved(const char *path,
 /** Remove the 'conflicted' state on a working copy @a path.  This will
  * not semantically resolve conflicts;  it just allows @a path to be
  * committed in the future.  The implementation details are opaque.
- * If @a recursive is set, recurse below @a path, looking for conflicts
- * to resolve.
+ *
+ * If @a depth is @c svn_depth_empty, act only on @a path; if
+ * @c svn_depth_files, resolve @a path and its conflicted file
+ * children (if any); if @c svn_depth_immediates, resolve @a path and
+ * all its immediate conflicted children (both files and directories,
+ * if any); if @c svn_depth_infinity, resolve @a path and every
+ * conflicted file or directory anywhere beneath it.
  *
  * @a accept_ is the argument used to facilitate automatic conflict resolution.
  * If @a accept_ is svn_accept_left, the contents of the conflicted file will
@@ -2709,9 +2714,6 @@ svn_client_resolved(const char *path,
  * svn_accept_default, conflict resolution will be handled just like before
  * automatic conflict resolution was availble.
  *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth, but making a note to re-check this logic later.
- *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-null,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
@@ -2720,7 +2722,7 @@ svn_client_resolved(const char *path,
  */
 svn_error_t *
 svn_client_resolved2(const char *path,
-                     svn_boolean_t recursive,
+                     svn_depth_t depth,
                      svn_accept_t accept_,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);

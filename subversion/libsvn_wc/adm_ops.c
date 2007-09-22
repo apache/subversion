@@ -2768,7 +2768,7 @@ svn_wc_resolved_conflict3(const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_boolean_t recurse,
+                          svn_depth_t depth,
                           svn_accept_t accept_,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -2785,7 +2785,7 @@ svn_wc_resolved_conflict3(const char *path,
   baton->notify_baton = notify_baton;
   baton->accept_ = accept_;
 
-  if (! recurse)
+  if (depth == svn_depth_empty)
     {
       const svn_wc_entry_t *entry;
       SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
@@ -2795,10 +2795,7 @@ svn_wc_resolved_conflict3(const char *path,
   else
     {
       SVN_ERR(svn_wc_walk_entries3(path, adm_access,
-                                   &resolve_walk_callbacks, baton,
-                                   /* Reduntant, since we know recurse
-                                      is true, but good style. */
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   &resolve_walk_callbacks, baton, depth,
                                    FALSE, cancel_func, cancel_baton, pool));
 
     }
