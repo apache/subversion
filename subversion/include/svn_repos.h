@@ -679,8 +679,12 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * If @a text_deltas is @c FALSE, send a single @c NULL txdelta window to
  * the window handler returned by @a editor->apply_textdelta().
  *
- * TODO(sd): document @a depth behavior only after taking care of
- * similar comments in libsvn_repos/delta.c:delta_dirs().
+ * If @a depth is @c svn_depth_empty, invoke @a editor calls only on
+ * @a src_entry (or @a src_parent_dir, if @a src_entry is empty).
+ * If @a depth is @c svn_depth_files, also invoke the editor on file
+ * children, if any; if @c svn_depth_immediates, invoke it on
+ * immediate subdirectories as well as files; if @c svn_depth_infinity,
+ * recurse fully.
  *
  * If @a entry_props is @c TRUE, accompany each opened/added entry with
  * propchange editor calls that relay special "entry props" (this
