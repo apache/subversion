@@ -630,8 +630,7 @@ svn_log_entry_create(apr_pool_t *pool);
  * @c svn_ra_plugin_t.get_log() and svn_repos_get_logs().
  *
  * This function is invoked once on each log message, in the order
- * determined by the caller (see above-mentioned functions).  When all
- * messages are finished, it is invoked with a revision of SVN_INVALID_REVNUM.
+ * determined by the caller (see above-mentioned functions).
  *
  * @a baton is what you think it is, and @a log_entry contains relevent
  * information for the log message.  Any of @a log_entry->author,
