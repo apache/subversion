@@ -545,7 +545,7 @@ def create_repos(path):
   chmod_tree(path, 0666, 0666)
 
 # For copying a repository
-def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
+def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
