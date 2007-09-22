@@ -593,11 +593,6 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 42,
              "Item is out of date")
 
-  /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_FS_SQLITE_ERROR,
-             SVN_ERR_FS_CATEGORY_START + 43,
-             "SQLite error")
-
   /**@since New in 1.2.
    *
    * This is analogous to SVN_ERR_REPOS_UNSUPPORTED_VERSION.  To avoid
@@ -619,6 +614,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_FS_TXN_NAME_TOO_LONG,
              SVN_ERR_FS_CATEGORY_START + 45,
              "The generated transaction name is too long")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_SQLITE_ERROR,
+             SVN_ERR_FS_CATEGORY_START + 46,
+             "SQLite error")
 
   /* repos errors */
 
