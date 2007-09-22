@@ -940,13 +940,19 @@ parse_revprop(apr_hash_t **revprop_table_p,
   if (sep)
     {
       propname = apr_pstrndup(pool, revprop_pair, sep - revprop_pair);
+      SVN_ERR(svn_utf_cstring_to_utf8(&propname, propname, pool));
       propval = svn_string_create(sep + 1, pool);
     }
   else
     {
-      propname = apr_pstrdup(pool, revprop_pair);
+      SVN_ERR(svn_utf_cstring_to_utf8(&propname, revprop_pair, pool));
       propval = svn_string_create("", pool);
     }
+
+  if (!svn_prop_name_is_valid(propname))
+    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                             _("'%s' is not a valid Subversion property name"),
+                             propname);
 
   apr_hash_set(*revprop_table_p, propname, APR_HASH_KEY_STRING, propval);
 
