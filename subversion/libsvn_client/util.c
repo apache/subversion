@@ -217,9 +217,9 @@ svn_client__get_repos_root(const char **repos_root,
   /* If PATH_OR_URL is a local path and PEG_REVISION keeps us looking
      locally, we'll first check PATH_OR_URL's entry for a repository
      root URL. */
-  if ((! svn_path_is_url(path_or_url))
-      && ((peg_revision->kind == svn_opt_revision_working)
-          || (peg_revision->kind == svn_opt_revision_base)))
+  if (!svn_path_is_url(path_or_url)
+      && (peg_revision->kind == svn_opt_revision_working
+          || peg_revision->kind == svn_opt_revision_base))
     {
       const svn_wc_entry_t *entry;
       if (! adm_access)
