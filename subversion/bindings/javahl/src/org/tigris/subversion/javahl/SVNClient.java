@@ -1847,9 +1847,10 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         MyInfoCallback callback = new MyInfoCallback();
-
-        info2(pathOrUrl, revision, pegRevision, Depth.fromRecurse(recurse),
-              callback);
+        // Depth.fromRecurse() will return info about child paths of a
+        // directory, which is not what we want.
+        info2(pathOrUrl, revision, pegRevision,
+              (recurse ? Depth.infinity : Depth.empty), callback);
         return callback.getInfoArray();
     }
 
