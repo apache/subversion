@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os
+import sys, re, os, stat
 
 # Our testing module
 import svntest
@@ -1392,6 +1392,34 @@ def invalid_propnames(sbox):
 
   os.chdir(cwd)
 
+def perms_on_symlink(sbox):
+  "issue #2581: propset shouldn't touch symlink perms"
+  sbox.build()
+  # We can't just run commands on absolute paths in the usual way
+  # (e.g., os.path.join(sbox.wc_dir, 'newdir')), because for some
+  # reason, if the symlink points to newdir as an absolute path, the
+  # bug doesn't reproduce.  I have no idea why.  Since it does have to
+  # point to newdir, the only other choice is to have it point to it
+  # in the same directory, so we have to run the test from inside the
+  # working copy.
+  saved_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', 'newdir')
+    os.symlink('newdir', 'symlink')
+    svntest.actions.run_and_verify_svn(None, None, [], 'add', 'symlink')
+    old_mode = os.stat('newdir')[stat.ST_MODE]
+    svntest.actions.run_and_verify_svn(None, None, [], 'propdel',
+                                     'svn:executable', 'symlink')
+    new_mode = os.stat('newdir')[stat.ST_MODE]
+    if not old_mode == new_mode:
+      # Chmod newdir back, so the test suite can remove this working
+      # copy when cleaning up later.
+      os.chmod('newdir', stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+      raise svntest.Failure
+  finally:
+    os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -1421,6 +1449,7 @@ test_list = [ None,
               depthy_wc_proplist,
               depthy_url_proplist,
               invalid_propnames,
+              SkipUnless(perms_on_symlink, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':
