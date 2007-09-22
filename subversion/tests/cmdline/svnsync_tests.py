@@ -644,10 +644,6 @@ def no_author(sbox):
   "test copying revs with no svn:author revprops"
   run_test(sbox, "no-author.dump")
 
-def move_parent_modify_file(sbox):
-  "move parent and modify a file"
-  run_test(sbox, "move-parent-modify-file.dump")
-  
 
 ########################################################################
 # Run the tests
@@ -676,7 +672,6 @@ test_list = [ None,
                    svntest.main.is_ra_type_file),
               url_encoding,
               no_author,
-              move_parent_modify_file,
              ]
 
 if __name__ == '__main__':
