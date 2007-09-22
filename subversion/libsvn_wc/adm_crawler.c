@@ -87,8 +87,9 @@ restore_file(const char *file_path,
   SVN_ERR(svn_wc__maybe_set_executable(NULL, file_path, adm_access, pool));
 
   /* Remove any text conflict */
-  SVN_ERR(svn_wc_resolved_conflict2(file_path, adm_access, TRUE, FALSE,
-                                    FALSE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_resolved_conflict3(file_path, adm_access, TRUE, FALSE,
+                                    FALSE, svn_accept_left,
+                                    NULL, NULL, NULL, NULL, pool));
 
   if (use_commit_times)
     {
