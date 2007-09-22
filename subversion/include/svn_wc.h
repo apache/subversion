@@ -2653,8 +2653,14 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * Assuming @a path is under version control and in a state of conflict,
  * then take @a path *out* of this state.  If @a resolve_text is true then
  * any text conflict is resolved, if @a resolve_props is true then any
- * property conflicts are resolved.  If @a recurse is true, then search
- * recursively for conflicts to resolve.
+ * property conflicts are resolved.
+ *
+ * If @a depth is @c svn_depth_empty, act only on @a path; if
+ * @c svn_depth_files, resolve @a path and its conflicted file
+ * children (if any); if @c svn_depth_immediates, resolve @a path and
+ * all its immediate conflicted children (both files and directories,
+ * if any); if @c svn_depth_infinity, resolve @a path and every
+ * conflicted file or directory anywhere beneath it.
  *
  * @a accept_ is the argument used to facilitate automatic conflict resolution.
  * If @a accept_ is svn_accept_left, the contents of the conflicted file will
@@ -2693,7 +2699,7 @@ svn_error_t *svn_wc_resolved_conflict3(const char *path,
                                        svn_wc_adm_access_t *adm_access,
                                        svn_boolean_t resolve_text,
                                        svn_boolean_t resolve_props,
-                                       svn_boolean_t recurse,
+                                       svn_depth_t depth,
                                        svn_accept_t accept_,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
@@ -2704,7 +2710,9 @@ svn_error_t *svn_wc_resolved_conflict3(const char *path,
 
 /**
  * Similar to svn_wc_resolved_conflict3(), but without automatic conflict
- * resolution support.
+ * resolution support, and with @a depth set according to @a recurse:
+ * if @a recurse is true, @a depth is @c svn_depth_infinity, else it is
+ * @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
