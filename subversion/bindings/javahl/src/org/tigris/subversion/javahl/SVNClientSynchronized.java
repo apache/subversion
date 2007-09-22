@@ -1633,6 +1633,27 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Sets one property of an item with a String value
+     *
+     * @param path    path of the item
+     * @param name    name of the property
+     * @param value   new value of the property
+     * @param depth   the depth to recurse into subdirectories
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertySet(String path, String name, String value, int depth,
+                     boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertySet(path, name, value, depth, force);
+        }
+    }
+
+    /**
      * Remove one property of an item.
      * @param path      path of the item
      * @param name      name of the property
@@ -1645,6 +1666,23 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.propertyRemove(path, name, recurse);
+        }
+    }
+
+    /**
+     * Remove one property of an item.
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertyRemove(String path, String name, int depth)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertyRemove(path, name, depth);
         }
     }
 

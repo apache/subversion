@@ -80,9 +80,9 @@ class SVNClient :public SVNBase
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, jobject outputStream,
                          size_t bufSize);
-  void propertyRemove(const char *path, const char *name, bool recurse);
+  void propertyRemove(const char *path, const char *name, svn_depth_t depth);
   void propertySet(const char *path, const char *name, const char *value,
-                   bool recurse, bool force);
+                   svn_depth_t depth, bool force);
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
                   ProplistCallback *callback);
@@ -184,7 +184,7 @@ class SVNClient :public SVNBase
  private:
   static svn_error_t *checkCancel(void *cancelBaton);
   void propertySet(const char *path, const char *name,
-                   svn_string_t *value, bool recurse, bool force,
+                   svn_string_t *value, svn_depth_t depth, bool force,
                    svn_revnum_t baseRevisionForURL);
   jobject createJavaProperty(jobject jthis, const char *path,
                              const char *name, svn_string_t *value);

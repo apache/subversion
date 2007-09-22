@@ -1139,6 +1139,21 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
+     * Sets one property of an item with a String value
+     *
+     * @param path    path of the item
+     * @param name    name of the property
+     * @param value   new value of the property
+     * @param depth   the depth to recurse into subdirectories
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     * @since 1.5
+     */
+    void propertySet(String path, String name, String value, int depth,
+                     boolean force)
+            throws ClientException;
+
+    /**
      * Remove one property of an item.
      * @param path      path of the item
      * @param name      name of the property
@@ -1146,6 +1161,17 @@ public interface SVNClientInterface
      * @throws ClientException
      */
     void propertyRemove(String path, String name, boolean recurse)
+            throws ClientException;
+
+    /**
+     * Remove one property of an item.
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    void propertyRemove(String path, String name, int depth)
             throws ClientException;
 
     /**
