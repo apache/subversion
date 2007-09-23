@@ -2711,6 +2711,7 @@ def diff_svnpatch(sbox):
     '( close-dir ( 2:d6 ) ) ',
     '( add-dir ( 3:A/T 2:d1 2:d8 ( ) ) ) ',
     '( add-file ( 8:A/T/mumu 2:d8 2:c9 ( 2:mu ) ) ) ',
+    '( change-file-prop ( 2:c9 13:svn:mergeinfo ( 0: ) ) ) ',
     '( close-file ( 2:c9 ( ) ) ) ',
     '( close-dir ( 2:d8 ) ) ',
     '( close-dir ( 2:d1 ) ) ',
@@ -2754,9 +2755,9 @@ def diff_svnpatch(sbox):
   svnpatch_output_base_head.append(svnpatch[17])
   svnpatch_output_base_head += svnpatch[14:17] + svnpatch[18:]
 
-  # copy-path received from the server is in absolute fashion
+  # No copy-path is received from the server.
   svnpatch_output_base_head[20] =\
-    svnpatch_output_base_head[20].replace('2:mu ','5:/A/mu ')
+    svnpatch_output_base_head[20].replace('2:mu ','')
 
   expected_svnpatch_base_head = svnpatch_encode(svnpatch_output_base_head)
 

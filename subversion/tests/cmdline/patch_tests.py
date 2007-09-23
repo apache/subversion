@@ -25,7 +25,7 @@ import warnings
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -45,12 +45,14 @@ def svnpatch_encode(l):
                 "".join(l))),
               76))
 
+gnupatch_garbage_re =\
+ re.compile("^patch: \*\*\*\* Only garbage was found in the patch input.$")
 
 ########################################################################
 #Tests
 
 def patch_basic(sbox):
-  "test 'svn patch' basic functionality"
+  "'svn patch' basic functionality with no unidiff"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -59,8 +61,6 @@ def patch_basic(sbox):
   # We might want to use The-Merge-Kludge trick here
   patch_file_path = os.tempnam(svntest.main.temp_dir, 'tmp')
 
-  expected_output, stde = svntest.main.run_svn(None, 'diff',
-                                               '--svnpatch')
   svnpatch = [
     '( open-root ( 2:d0 ) ) ',
     '( open-dir ( 1:A 2:d0 2:d1 ) ) ',
@@ -142,7 +142,8 @@ def patch_basic(sbox):
                                        expected_disk,
                                        None,
                                        expected_skip,
-                                       None, None, None, None, None,
+                                       gnupatch_garbage_re, # expected err
+                                       None, None, None, None,
                                        1, # check-props
                                        0) # no dry-run, outputs differ
 
