@@ -33,6 +33,25 @@
 
 #include <assert.h>
 
+/* We now have not one, not two, but *three* ways to retrieve blame
+   information, depending on the server.  We attempt them in the following
+   order:
+    - For >=1.5 servers, we use get_file_ancestry() and the backwards blame
+      algorithm.  This is much more streamy, and allow us to do early
+      termination when we've received all the data we need.
+    - For servers <1.5, but >=1.1, we use get_file_revs() and the foward blame
+      algorithm.  This isn't as streamy, and it takes a while, but the server
+      still only sends deltas of the file being blamed.
+    - If that fails (servers <1.1), we use the brute force method: running
+      get_log on the file, and then fetching and diffing each individual file
+      locally.
+
+   Because all three implementation live in this file, an attempt has been made
+   to clearly deliniate each one.
+*/
+
+
+/*** Datastructures common to blame implementations. */
 /* The metadata associated with a particular revision. */
 struct rev
 {
@@ -82,16 +101,6 @@ struct file_rev_baton {
   apr_pool_t *mainpool;  /* lives during the whole sequence of calls */
   apr_pool_t *lastpool;  /* pool used during previous call */
   apr_pool_t *currpool;  /* pool used during this call */
-
-  /* These are used for tracking merged revisions. */
-  svn_boolean_t include_merged_revisions;
-  svn_boolean_t merged_revision;
-  struct blame_chain *merged_chain;  /* the merged blame chain. */
-  /* name of file containing the previous merged revision of the file */
-  const char *last_original_filename;
-  /* pools for files which may need to persist for more than one rev. */
-  apr_pool_t *filepool;
-  apr_pool_t *prevfilepool;
 };
 
 /* The baton used by the txdelta window handler. */
@@ -106,6 +115,20 @@ struct delta_baton {
 };
 
 
+
+/*** Reverse blame implementation ***/
+static svn_error_t *
+reverse_blame(const char *target,
+              svn_ra_session_t *ra_session,
+              const svn_revnum_t start,
+              const svn_revnum_t end,
+              svn_boolean_t include_merged_revisions,
+              apr_pool_t *pool)
+{
+  SVN_ERR(svn_ra_get_file_ancestry(ra_session, "", start, end,
+                                   include_merged_revisions, NULL, NULL, pool));
+  return SVN_NO_ERROR;
+}
 
 
 /* Return a blame chunk associated with REV for a change starting
@@ -305,7 +328,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct delta_baton *dbaton = baton;
   struct file_rev_baton *frb = dbaton->file_rev_baton;
-  struct blame_chain *chain;
 
   /* Call the wrapped handler first. */
   SVN_ERR(dbaton->wrapped_handler(window, dbaton->wrapped_baton));
@@ -322,39 +344,10 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     SVN_ERR(svn_io_file_close(dbaton->source_file, frb->currpool));
   SVN_ERR(svn_io_file_close(dbaton->file, frb->currpool));
 
-  /* If we are including merged revisions, we need to add each rev to the
-     merged chain. */
-  if (frb->include_merged_revisions)
-    chain = frb->merged_chain;
-  else
-    chain = frb->chain;
-
   /* Process this file. */
   SVN_ERR(add_file_blame(frb->last_filename,
-                         dbaton->filename, chain, frb->rev,
+                         dbaton->filename, frb->chain, frb->rev,
                          frb->diff_options, frb->currpool));
-
-  /* If we are including merged revisions, and the current revision is not a
-     merged one, we need to add its blame info to the chain for the original
-     line of history. */
-  if (frb->include_merged_revisions && ! frb->merged_revision)
-    {
-      apr_pool_t *tmppool;
-
-      SVN_ERR(add_file_blame(frb->last_original_filename,
-                             dbaton->filename, frb->chain, frb->rev,
-                             frb->diff_options, frb->currpool));
-
-      /* This filename could be around for a while, potentially, so
-         use the longer lifetime pool, and switch it with the previous one*/
-      svn_pool_clear(frb->prevfilepool);
-      tmppool = frb->filepool;
-      frb->filepool = frb->prevfilepool;
-      frb->prevfilepool = tmppool;
-
-      frb->last_original_filename = apr_pstrdup(frb->filepool,
-                                                dbaton->filename);
-    }
 
   /* Prepare for next revision. */
 
@@ -406,7 +399,6 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   svn_stream_t *last_stream;
   svn_stream_t *cur_stream;
   struct delta_baton *delta_baton;
-  apr_pool_t *filepool;
 
   /* Clear the current pool. */
   svn_pool_clear(frb->currpool);
@@ -439,8 +431,6 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   if (!content_delta_handler)
     return SVN_NO_ERROR;
 
-  frb->merged_revision = FALSE;
-
   /* Create delta baton. */
   delta_baton = apr_palloc(frb->currpool, sizeof(*delta_baton));
 
@@ -453,16 +443,11 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     delta_baton->source_file = NULL;
   last_stream = svn_stream_from_aprfile(delta_baton->source_file, pool);
 
-  if (frb->include_merged_revisions && !frb->merged_revision)
-    filepool = frb->filepool;
-  else
-    filepool = frb->currpool;
-
   SVN_ERR(svn_io_open_unique_file2(&delta_baton->file,
                                    &delta_baton->filename,
                                    frb->tmp_path,
                                    ".tmp", svn_io_file_del_on_pool_cleanup,
-                                   filepool));
+                                   frb->currpool));
   cur_stream = svn_stream_from_aprfile(delta_baton->file, frb->currpool);
 
   /* Get window handler for applying delta. */
@@ -510,9 +495,6 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
       else
         frb->rev->date = NULL;
     }
-
-  if (frb->include_merged_revisions)
-    frb->rev->path = apr_pstrdup(frb->mainpool, path);
 
   return SVN_NO_ERROR;
 }
@@ -587,76 +569,43 @@ normalize_blames(struct blame_chain *chain,
 }
 
 static svn_error_t *
-old_blame(const char *target, const char *url,
-          svn_ra_session_t *ra_session,
-          struct file_rev_baton *frb);
+pre_1_1_blame(const char *target, const char *url,
+              svn_ra_session_t *ra_session,
+              struct file_rev_baton *frb);
 
-svn_error_t *
-svn_client_blame4(const char *target,
-                  const svn_opt_revision_t *peg_revision,
-                  const svn_opt_revision_t *start,
-                  const svn_opt_revision_t *end,
-                  const svn_diff_file_options_t *diff_options,
-                  svn_boolean_t ignore_mime_type,
-                  svn_boolean_t include_merged_revisions,
-                  svn_client_blame_receiver2_t receiver,
-                  void *receiver_baton,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
+/* Blame implemention for pre-1.5 servers.  This uses get_file_revs() which
+   replays revisions in oldest->youngest order.  */
+static svn_error_t *
+pre_1_5_blame(const char *target,
+              svn_ra_session_t *ra_session,
+              const char *url,
+              const svn_revnum_t start,
+              const svn_revnum_t end,
+              const svn_diff_file_options_t *diff_options,
+              svn_boolean_t ignore_mime_type,
+              svn_client_blame_receiver2_t receiver,
+              void *receiver_baton,
+              svn_client_ctx_t *ctx,
+              apr_pool_t *pool)
 {
   struct file_rev_baton frb;
-  svn_ra_session_t *ra_session;
-  const char *url;
-  svn_revnum_t start_revnum, end_revnum;
   struct blame *walk, *walk_merged = NULL;
   apr_file_t *file;
   apr_pool_t *iterpool;
   svn_stream_t *stream;
   svn_error_t *err;
 
-  if (start->kind == svn_opt_revision_unspecified
-      || end->kind == svn_opt_revision_unspecified)
-    return svn_error_create
-      (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
-  else if (start->kind == svn_opt_revision_working
-           || end->kind == svn_opt_revision_working)
-    return svn_error_create
-      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("blame of the WORKING revision is not supported"));
-
-  /* Get an RA plugin for this filesystem object. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
-                                           &url, target, peg_revision, end,
-                                           ctx, pool));
-
-  SVN_ERR(svn_client__get_revision_number(&start_revnum, ra_session,
-                                          start, target, pool));
-
-  if (end_revnum < start_revnum)
-    return svn_error_create
-      (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-       _("Start revision must precede end revision"));
-
-  frb.start_rev = start_revnum;
-  frb.end_rev = end_revnum;
+  frb.start_rev = start;
+  frb.end_rev = end;
   frb.target = target;
   frb.ctx = ctx;
   frb.diff_options = diff_options;
   frb.ignore_mime_type = ignore_mime_type;
-  frb.include_merged_revisions = include_merged_revisions;
   frb.last_filename = NULL;
-  frb.last_original_filename = NULL;
   frb.chain = apr_palloc(pool, sizeof(*frb.chain));
   frb.chain->blame = NULL;
   frb.chain->avail = NULL;
   frb.chain->pool = pool;
-  if (include_merged_revisions)
-    {
-      frb.merged_chain = apr_palloc(pool, sizeof(*frb.merged_chain));
-      frb.merged_chain->blame = NULL;
-      frb.merged_chain->avail = NULL;
-      frb.merged_chain->pool = pool;
-    }
 
   SVN_ERR(svn_io_temp_dir(&frb.tmp_path, pool));
   frb.tmp_path = svn_path_join(frb.tmp_path, "tmp", pool),
@@ -667,32 +616,21 @@ svn_client_blame4(const char *target,
      the lifetime of the pool provided by get_file_revs. */
   frb.lastpool = svn_pool_create(pool);
   frb.currpool = svn_pool_create(pool);
-  if (include_merged_revisions)
-    {
-      frb.filepool = svn_pool_create(pool);
-      frb.prevfilepool = svn_pool_create(pool);
-    }
-
-  if (include_merged_revisions)
-    {
-      return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                               _("Temporarily Out-of-order --Mgmt."));
-    }
 
   /* Collect all blame information.
      We need to ensure that we get one revision before the start_rev,
      if available so that we can know what was actually changed in the start
      revision. */
   err = svn_ra_get_file_revs(ra_session, "",
-                             start_revnum - (start_revnum > 0 ? 1 : 0),
-                             end_revnum, file_rev_handler, &frb, pool);
+                             start - (start > 0 ? 1 : 0),
+                             end, file_rev_handler, &frb, pool);
 
   /* Fall back if it wasn't supported by the server.  Servers earlier
      than 1.1 need this. */
   if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
       svn_error_clear(err);
-      err = old_blame(target, url, ra_session, &frb);
+      err = pre_1_1_blame(target, url, ra_session, &frb);
     }
 
   SVN_ERR(err);
@@ -710,22 +648,6 @@ svn_client_blame4(const char *target,
                            APR_OS_DEFAULT, pool));
   stream = svn_subst_stream_translated(svn_stream_from_aprfile(file, pool),
                                        "\n", TRUE, NULL, FALSE, pool);
-
-  /* Perform optional merged chain normalization. */
-  if (include_merged_revisions)
-    {
-      /* If we never created any blame for the original chain, create it now,
-         with the most recent changed revision.  This could occur if a file
-         was created on a branch and them merged to another branch.  This is
-         semanticly a copy, and we want to use the revision on the branch as
-         the most recently changed revision.  ### Is this really what we want
-         to do here?  Do the sematics of copy change? */
-      if (!frb.chain->blame)
-        frb.chain->blame = blame_create(frb.chain, frb.rev, 0);
-
-      normalize_blames(frb.chain, frb.merged_chain, pool);
-      walk_merged = frb.merged_chain->blame;
-    }
 
   /* Process each blame item. */
   for (walk = frb.chain->blame; walk; walk = walk->next)
@@ -779,168 +701,15 @@ svn_client_blame4(const char *target,
 
   svn_pool_destroy(frb.lastpool);
   svn_pool_destroy(frb.currpool);
-  if (include_merged_revisions)
-    {
-      svn_pool_destroy(frb.filepool);
-      svn_pool_destroy(frb.prevfilepool);
-    }
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
 
-/* Baton for use with wrap_blame_receiver */
-struct blame_receiver_wrapper_baton {
-  void *baton;
-  svn_client_blame_receiver_t receiver;
-};
 
-/* This implements svn_client_blame_receiver2_t */
-static svn_error_t *
-blame_wrapper_receiver(void *baton,
-                       apr_int64_t line_no,
-                       svn_revnum_t revision,
-                       const char *author,
-                       const char *date,
-                       svn_revnum_t merged_revision,
-                       const char *merged_author,
-                       const char *merged_date,
-                       const char *merged_path,
-                       const char *line,
-                       apr_pool_t *pool)
-{
-  struct blame_receiver_wrapper_baton *brwb = baton;
+
+/*** Pre-1.1 blame implementation: fetch each revision full-text ***/
 
-  if (brwb->receiver)
-    return brwb->receiver(brwb->baton,
-                          line_no, revision, author, date, line, pool);
-
-  return SVN_NO_ERROR;
-}
-
-static void
-wrap_blame_receiver(svn_client_blame_receiver2_t *receiver2,
-                    void **receiver2_baton,
-                    svn_client_blame_receiver_t receiver,
-                    void *receiver_baton,
-                    apr_pool_t *pool)
-{
-  struct blame_receiver_wrapper_baton *brwb = apr_palloc(pool, sizeof(*brwb));
-
-  /* Set the user provided old format callback in the baton. */
-  brwb->baton = receiver_baton;
-  brwb->receiver = receiver;
-
-  *receiver2_baton = brwb;
-  *receiver2 = blame_wrapper_receiver;
-}
-
-svn_error_t *
-svn_client_blame3(const char *target,
-                  const svn_opt_revision_t *peg_revision,
-                  const svn_opt_revision_t *start,
-                  const svn_opt_revision_t *end,
-                  const svn_diff_file_options_t *diff_options,
-                  svn_boolean_t ignore_mime_type,
-                  svn_client_blame_receiver_t receiver,
-                  void *receiver_baton,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  svn_client_blame_receiver2_t receiver2;
-  void *receiver2_baton;
-
-  wrap_blame_receiver(&receiver2, &receiver2_baton, receiver, receiver_baton,
-                      pool);
-
-  return svn_client_blame4(target, peg_revision, start, end, diff_options,
-                           ignore_mime_type, FALSE, receiver2, receiver2_baton,
-                           ctx, pool);
-}
-
-/* svn_client_blame3 guarantees 'no EOL chars' as part of the receiver
-   LINE argument.  Older versions depend on the fact that if a CR is
-   required, that CR is already part of the LINE data.
-
-   Because of this difference, we need to trap old receivers and append
-   a CR to LINE before passing it on to the actual receiver on platforms
-   which want CRLF line termination.
-
-*/
-
-struct wrapped_receiver_baton_s
-{
-  svn_client_blame_receiver_t orig_receiver;
-  void *orig_baton;
-};
-
-static svn_error_t *
-wrapped_receiver(void *baton,
-                 apr_int64_t line_no,
-                 svn_revnum_t revision,
-                 const char *author,
-                 const char *date,
-                 const char *line,
-                 apr_pool_t *pool)
-{
-  struct wrapped_receiver_baton_s *b = baton;
-  svn_stringbuf_t *expanded_line = svn_stringbuf_create(line, pool);
-
-  svn_stringbuf_appendbytes(expanded_line, "\r", 1);
-
-  return b->orig_receiver(b->orig_baton, line_no, revision, author,
-                          date, expanded_line->data, pool);
-}
-
-static void
-wrap_pre_blame3_receiver(svn_client_blame_receiver_t *receiver,
-                   void **receiver_baton,
-                   apr_pool_t *pool)
-{
-  if (strlen(APR_EOL_STR) > 1)
-    {
-      struct wrapped_receiver_baton_s *b = apr_palloc(pool,sizeof(*b));
-
-      b->orig_receiver = *receiver;
-      b->orig_baton = *receiver_baton;
-
-      *receiver_baton = b;
-      *receiver = wrapped_receiver;
-    }
-}
-
-svn_error_t *
-svn_client_blame2(const char *target,
-                  const svn_opt_revision_t *peg_revision,
-                  const svn_opt_revision_t *start,
-                  const svn_opt_revision_t *end,
-                  svn_client_blame_receiver_t receiver,
-                  void *receiver_baton,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  wrap_pre_blame3_receiver(&receiver, &receiver_baton, pool);
-  return svn_client_blame3(target, peg_revision, start, end,
-                           svn_diff_file_options_create(pool), FALSE,
-                           receiver, receiver_baton, ctx, pool);
-}
-svn_error_t *
-svn_client_blame(const char *target,
-                 const svn_opt_revision_t *start,
-                 const svn_opt_revision_t *end,
-                 svn_client_blame_receiver_t receiver,
-                 void *receiver_baton,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  wrap_pre_blame3_receiver(&receiver, &receiver_baton, pool);
-  return svn_client_blame2(target, end, start, end,
-                           receiver, receiver_baton, ctx, pool);
-}
-
-
-
-/* Used only by the old code. */
 /* The baton used for RA->get_log */
 struct log_message_baton {
   const char *path;        /* The path to be processed */
@@ -987,9 +756,9 @@ log_message_receiver(void *baton,
 
 /* This is used when there is no get_file_revs available. */
 static svn_error_t *
-old_blame(const char *target, const char *url,
-          svn_ra_session_t *ra_session,
-          struct file_rev_baton *frb)
+pre_1_1_blame(const char *target, const char *url,
+              svn_ra_session_t *ra_session,
+              struct file_rev_baton *frb)
 {
   const char *reposURL;
   struct log_message_baton lmb;
@@ -1154,3 +923,224 @@ old_blame(const char *target, const char *url,
 
   return SVN_NO_ERROR;
 }
+
+
+/*** Public APIs and wrappers ***/
+
+svn_error_t *
+svn_client_blame4(const char *target,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_boolean_t include_merged_revisions,
+                  svn_client_blame_receiver2_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  const char *url;
+  svn_revnum_t start_revnum, end_revnum;
+  svn_error_t *err;
+
+  /* Argument sanity check. */
+  if (start->kind == svn_opt_revision_unspecified
+      || end->kind == svn_opt_revision_unspecified)
+    return svn_error_create
+      (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+  else if (start->kind == svn_opt_revision_working
+           || end->kind == svn_opt_revision_working)
+    return svn_error_create
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("blame of the WORKING revision is not supported"));
+
+  /* Get an RA plugin for this filesystem object. */
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
+                                           &url, target, peg_revision, end,
+                                           ctx, pool));
+
+  SVN_ERR(svn_client__get_revision_number(&start_revnum, ra_session,
+                                          start, target, pool));
+
+  if (end_revnum < start_revnum)
+    return svn_error_create
+      (SVN_ERR_CLIENT_BAD_REVISION, NULL,
+       _("Start revision must precede end revision"));
+
+  /* Attempt the reverse blame implementation. */
+  err = reverse_blame(target, ra_session, start_revnum, end_revnum,
+                      include_merged_revisions, pool);
+
+  if (err)
+    {
+      if (include_merged_revisions)
+        {
+          err = svn_error_quick_wrap(err,
+                 _("blame with merges is not available with pre-1.5 servers."));
+        }
+      else if(err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+        {
+          svn_error_clear(err);
+
+          err = pre_1_5_blame(target, ra_session, url, start_revnum, end_revnum,
+                              diff_options, ignore_mime_type,
+                              receiver, receiver_baton, ctx, pool);
+          /* We don't fall back to pre-1.1 blame here, because that is done
+             as part of the pre-1.5 blame implementation. */
+        }
+    }
+
+  return err;
+}
+
+/* Baton for use with wrap_blame_receiver */
+struct blame_receiver_wrapper_baton {
+  void *baton;
+  svn_client_blame_receiver_t receiver;
+};
+
+/* This implements svn_client_blame_receiver2_t */
+static svn_error_t *
+blame_wrapper_receiver(void *baton,
+                       apr_int64_t line_no,
+                       svn_revnum_t revision,
+                       const char *author,
+                       const char *date,
+                       svn_revnum_t merged_revision,
+                       const char *merged_author,
+                       const char *merged_date,
+                       const char *merged_path,
+                       const char *line,
+                       apr_pool_t *pool)
+{
+  struct blame_receiver_wrapper_baton *brwb = baton;
+
+  if (brwb->receiver)
+    return brwb->receiver(brwb->baton,
+                          line_no, revision, author, date, line, pool);
+
+  return SVN_NO_ERROR;
+}
+
+static void
+wrap_blame_receiver(svn_client_blame_receiver2_t *receiver2,
+                    void **receiver2_baton,
+                    svn_client_blame_receiver_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool)
+{
+  struct blame_receiver_wrapper_baton *brwb = apr_palloc(pool, sizeof(*brwb));
+
+  /* Set the user provided old format callback in the baton. */
+  brwb->baton = receiver_baton;
+  brwb->receiver = receiver;
+
+  *receiver2_baton = brwb;
+  *receiver2 = blame_wrapper_receiver;
+}
+
+svn_error_t *
+svn_client_blame3(const char *target,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_client_blame_receiver_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  svn_client_blame_receiver2_t receiver2;
+  void *receiver2_baton;
+
+  wrap_blame_receiver(&receiver2, &receiver2_baton, receiver, receiver_baton,
+                      pool);
+
+  return svn_client_blame4(target, peg_revision, start, end, diff_options,
+                           ignore_mime_type, FALSE, receiver2, receiver2_baton,
+                           ctx, pool);
+}
+
+/* svn_client_blame3 guarantees 'no EOL chars' as part of the receiver
+   LINE argument.  Older versions depend on the fact that if a CR is
+   required, that CR is already part of the LINE data.
+
+   Because of this difference, we need to trap old receivers and append
+   a CR to LINE before passing it on to the actual receiver on platforms
+   which want CRLF line termination.
+
+*/
+
+struct wrapped_receiver_baton_s
+{
+  svn_client_blame_receiver_t orig_receiver;
+  void *orig_baton;
+};
+
+static svn_error_t *
+wrapped_receiver(void *baton,
+                 apr_int64_t line_no,
+                 svn_revnum_t revision,
+                 const char *author,
+                 const char *date,
+                 const char *line,
+                 apr_pool_t *pool)
+{
+  struct wrapped_receiver_baton_s *b = baton;
+  svn_stringbuf_t *expanded_line = svn_stringbuf_create(line, pool);
+
+  svn_stringbuf_appendbytes(expanded_line, "\r", 1);
+
+  return b->orig_receiver(b->orig_baton, line_no, revision, author,
+                          date, expanded_line->data, pool);
+}
+
+static void
+wrap_pre_blame3_receiver(svn_client_blame_receiver_t *receiver,
+                   void **receiver_baton,
+                   apr_pool_t *pool)
+{
+  if (strlen(APR_EOL_STR) > 1)
+    {
+      struct wrapped_receiver_baton_s *b = apr_palloc(pool,sizeof(*b));
+
+      b->orig_receiver = *receiver;
+      b->orig_baton = *receiver_baton;
+
+      *receiver_baton = b;
+      *receiver = wrapped_receiver;
+    }
+}
+
+svn_error_t *
+svn_client_blame2(const char *target,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  svn_client_blame_receiver_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  wrap_pre_blame3_receiver(&receiver, &receiver_baton, pool);
+  return svn_client_blame3(target, peg_revision, start, end,
+                           svn_diff_file_options_create(pool), FALSE,
+                           receiver, receiver_baton, ctx, pool);
+}
+svn_error_t *
+svn_client_blame(const char *target,
+                 const svn_opt_revision_t *start,
+                 const svn_opt_revision_t *end,
+                 svn_client_blame_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  wrap_pre_blame3_receiver(&receiver, &receiver_baton, pool);
+  return svn_client_blame2(target, end, start, end,
+                           receiver, receiver_baton, ctx, pool);
+}
+
