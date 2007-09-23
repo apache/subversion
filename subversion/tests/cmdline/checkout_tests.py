@@ -406,7 +406,9 @@ def checkout_peg_rev(sbox):
   svntest.main.file_append(mu_path, 'appended mu text')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                    'ci', '-m', 'changed file mu', wc_dir)
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'ci', '-m', 'changed file mu', wc_dir)
 
   # now checkout the repo@1 in another folder, this should create our initial
   # wc without the change in mu.
@@ -444,7 +446,9 @@ def checkout_peg_rev_date(sbox):
   svntest.main.file_append(mu_path, 'appended mu text')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                    'ci', '-m', 'changed file mu', wc_dir)
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'ci', '-m', 'changed file mu', wc_dir)
 
   # now checkout the repo@current_time in another folder, this should create our
   # initial wc without the change in mu.

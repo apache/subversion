@@ -64,6 +64,8 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=empty",
       svntest.verify.AnyOutput, [],
+      '--username', svntest.main.wc_author,
+      '--password', svntest.main.wc_passwd,
       "co", "--depth", "empty", sbox.repo_url, wc_empty)
 
   wc_files = None
@@ -74,6 +76,8 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=files",
       svntest.verify.AnyOutput, [],
+      '--username', svntest.main.wc_author,
+      '--password', svntest.main.wc_passwd,
       "co", "--depth", "files", sbox.repo_url, wc_files)
 
   wc_immediates = None
@@ -83,7 +87,10 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
       svntest.main.safe_rmtree(wc_immediates)
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=immediates",
-      svntest.verify.AnyOutput, [], "co", "--depth", "immediates",
+      svntest.verify.AnyOutput, [],
+      '--username', svntest.main.wc_author,
+      '--password', svntest.main.wc_passwd,
+      "co", "--depth", "immediates",
       sbox.repo_url, wc_immediates)
 
   return wc_empty, wc_files, wc_immediates, wc
@@ -123,6 +130,8 @@ def depth_files_same_as_nonrecursive(sbox, opt):
 
   svntest.actions.run_and_verify_svn("Unexpected error during co %s" % opt,
                                      svntest.verify.AnyOutput, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      "co", opt, sbox.repo_url, sbox.wc_dir)
 
   # Should create a depth-files top directory, so both iota and A
@@ -723,6 +732,8 @@ def depth_immediates_subdir_propset_1(sbox):
 
   # Set a property on an immediate subdirectory of the working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'pset', 'foo', 'bar',
                                      A_path)
 
@@ -779,15 +790,21 @@ def depth_immediates_subdir_propset_2(sbox):
 
   # Set a property on an immediate subdirectory of the working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'pset', 'foo', 'bar',
                                      A_path)
   # Commit.
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'commit', '-m', 'logmsg', A_path)
 
   # Update at depth=immediates in the other wc, expecting to see no errors.
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
                                      svntest.verify.AnyOutput, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'update', '--depth', 'immediates',
                                      other_wc)
 
@@ -977,10 +994,13 @@ def diff_in_depthy_wc(sbox):
                                      'propset', 'foo', 'foo-val', wc)
   svntest.main.file_write(iota_path, "new text\n")
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'bar', 'bar-val', A_path)  
+                                     'propset', 'bar', 'bar-val', A_path)
   svntest.main.file_write(mu_path, "new text\n")
   svntest.main.file_write(gamma_path, "new text\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit', '-m', '', wc)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'commit', '-m', '', wc)
 
   diff = [
     "\n",
@@ -1019,41 +1039,59 @@ def diff_in_depthy_wc(sbox):
 
   # Upgrade to depth-files.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--depth', 'files', '-r1')
   # The diff should contain only the propchange on '.' and the
   # contents change on iota.
   expected_output = svntest.verify.UnorderedOutput(diff[:13])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'diff', '-rHEAD')
   # Do a diff at --depth empty.
   expected_output = svntest.verify.UnorderedOutput(diff[:6])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'diff', '--depth', 'empty', '-rHEAD')
 
   # Upgrade to depth-immediates.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--depth', 'immediates', '-r1')
   # The diff should contain the propchanges on '.' and 'A' and the
   # contents change on iota.
   expected_output = svntest.verify.UnorderedOutput(diff[:19])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                     'diff', '-rHEAD')
   # Do a diff at --depth files.
   expected_output = svntest.verify.UnorderedOutput(diff[:13])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'diff', '--depth', 'files', '-rHEAD')
 
   # Upgrade A to depth-files.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--depth', 'files', '-r1', 'A')
   # The diff should contain everything but the contents change on
   # gamma (which does not exist in this working copy).
   expected_output = svntest.verify.UnorderedOutput(diff)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'diff', '-rHEAD')
   # Do a diff at --depth immediates.
   expected_output = svntest.verify.UnorderedOutput(diff[:19])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                     'diff', '--depth', 'immediates', '-rHEAD')
 
 def commit_depth_immediates(sbox):
