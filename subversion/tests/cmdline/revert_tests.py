@@ -102,13 +102,20 @@ def revert_replacement_with_props(sbox, wc_copy,
   else:
     pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cp', pi_src, rho_path)
+  if contact_repos_for_merge_info:
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'cp', '-g', pi_src, rho_path)
+  else:
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
   props = { 'phony-prop' : '*' }
   if not wc_copy or contact_repos_for_merge_info:
     props['svn:mergeinfo'] = '/A/D/G/pi:1-2'
+  else:
+    props['svn:mergeinfo'] = ''
+
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
                       props=props)
@@ -463,7 +470,6 @@ def revert_wc_to_wc_replace_with_props(sbox):
   "revert svn cp PATH PATH replace file with props"
 
   revert_replacement_with_props(sbox, 1)
-  ### FIXME: WC -> WC copies don't yet handle merge info.
   revert_replacement_with_props(sbox, 1, 1)
 
 def revert_repos_to_wc_replace_with_props(sbox):
@@ -865,7 +871,7 @@ test_list = [ None,
               revert_reexpand_keyword,
               revert_replaced_file_without_props,
               XFail(revert_moved_file),
-              XFail(revert_wc_to_wc_replace_with_props),
+              revert_wc_to_wc_replace_with_props,
               revert_file_merge_replace_with_history,
               revert_repos_to_wc_replace_with_props,
               revert_after_second_replace,

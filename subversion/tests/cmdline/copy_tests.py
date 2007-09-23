@@ -160,13 +160,20 @@ is only relevant when WC_COPY is true."""
   else:
     pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cp', pi_src, rho_path)
+  if contact_repos_for_merge_info:
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'cp', '-g', pi_src, rho_path)
+  else:
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
   props = { 'phony-prop' : '*' }
   if not wc_copy or contact_repos_for_merge_info:
     props[SVN_PROP_MERGE_INFO] = '/A/D/G/pi:1-2'
+  else:
+    props[SVN_PROP_MERGE_INFO] = ''
+
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
                       props=props)
@@ -1812,7 +1819,6 @@ def wc_copy_replace_with_props(sbox):
   "svn cp PATH PATH replace file with props"
 
   copy_replace_with_props(sbox, 1, 0)
-  ### FIXME: WC -> WC copies don't yet handle merge info.
   copy_replace_with_props(sbox, 1, 1)
 
 def repos_to_wc_copy_replacement(sbox):
@@ -3814,7 +3820,7 @@ test_list = [ None,
               wc_copy_dir_to_itself,
               mixed_wc_to_url,
               wc_copy_replacement,
-              XFail(wc_copy_replace_with_props),
+              wc_copy_replace_with_props,
               repos_to_wc_copy_replacement,
               repos_to_wc_copy_replace_with_props,
               delete_replaced_file,
