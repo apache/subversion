@@ -932,6 +932,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Set diff3-has-program-arg to 'true' or 'yes' if your 'diff3'"   NL
         "###   program accepts the '--diff-program' option."                 NL
         "# diff3-has-program-arg = [true | false]"                           NL
+        "### Set patch-cmd to your favorite patching program."               NL
+        "# patch-cmd = patch_program (patch, etc.)"                          NL
         ""                                                                   NL
         "### Section for configuring tunnel agents."                         NL
         "[tunnels]"                                                          NL

@@ -146,7 +146,7 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("try operation but make no changes")},
   {"no-diff-deleted", svn_cl__no_diff_deleted_opt, 0,
                     N_("do not print differences for deleted files")},
-  {"svnpatch", svn_cl__svnpatch_format_opt, 0,
+  {"svnpatch",      svn_cl__svnpatch_format_opt, 0,
                     N_("output in svnpatch format")},
   {"notice-ancestry", svn_cl__notice_ancestry_opt, 0,
                     N_("notice ancestry when calculating differences")},
@@ -161,6 +161,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("use ARG as merge command")},
   {"editor-cmd",    svn_cl__editor_cmd_opt, 1,
                     N_("use ARG as external editor")},
+  {"patch-cmd",     svn_cl__patch_cmd_opt, 1,
+                    N_("use ARG as external patch command")},
 #endif
   {"record-only",   svn_cl__record_only_opt, 0,
                     N_("mark revisions as merged (use with -r)")},
@@ -612,7 +614,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  This command allows some amount of fuzzing as Unidiff is contextual\n"
      "  and svnpatch revisionless.  However, you might see failure warnings\n"
      "  when pushing this feature too hard.\n"),
-    {'q', svn_cl__force_opt, svn_cl__dry_run_opt, svn_cl__config_dir_opt} },
+    {'q', svn_cl__force_opt, svn_cl__dry_run_opt, svn_cl__patch_cmd_opt,
+     svn_cl__config_dir_opt} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1323,6 +1326,9 @@ main(int argc, const char *argv[])
       case svn_cl__editor_cmd_opt:
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
         break;
+      case svn_cl__patch_cmd_opt:
+        opt_state.patch_cmd = apr_pstrdup(pool, opt_arg);
+        break;
       case svn_cl__old_cmd_opt:
         if (used_change_arg)
           {
@@ -1644,6 +1650,9 @@ main(int argc, const char *argv[])
   if (opt_state.merge_cmd)
     svn_config_set(cfg, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+  if (opt_state.patch_cmd)
+    svn_config_set(cfg, SVN_CONFIG_SECTION_HELPERS,
+                   SVN_CONFIG_OPTION_PATCH_CMD, opt_state.patch_cmd);
 
   /* Check for mutually exclusive args --auto-props and --no-auto-props */
   if (opt_state.autoprops && opt_state.no_autoprops)

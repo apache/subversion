@@ -4080,10 +4080,17 @@ svn_client_info(const char *path_or_url,
  * pointed to by @a wc_path.
  *
  * The patch might carry Unified diffs, svnpatch diffs, or both.
- * Although we're pretty much able to handle the svnpatch block, we're
- * not yet able to handle the Unidiff section internally.  See notes/svnpatch.
+ * However, 'svn patch' doesn't yet support Unidiff application
+ * internally: we rather delegate this task to an external program which
+ * the user can specify either via --patch-cmd or 'patch-cmd' user
+ * config option.  If unspecified, as a last resort we try to call
+ * 'patch' and see if it works.  The external program, whatever it is,
+ * is given the Unidiff bytes in a GNU-patch fashion, that is, we
+ * feed/link the external program's stdin pipe with the patch itself.
+ * Likewise, @a outfile and @a errfile are connected to the program's.
+ * See subversion/libsvn_client/patch.c(apply_unidiff) or notes/svnpatch.
  * Note: hopefuly this is temporary and we'll have our own implementation
- * one day to cut off the dependency.
+ * one day to cut off the messy dependency.
  *
  * If @a force is not set and the patch involves deleting locally modified or
  * unversioned items the operation will fail.  If @a force is set such items
@@ -4099,6 +4106,8 @@ svn_client_patch(const char *patch_path,
                  const char *wc_path,
                  svn_boolean_t force,
                  svn_boolean_t dry_run,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 

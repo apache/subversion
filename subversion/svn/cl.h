@@ -86,7 +86,8 @@ typedef enum {
   svn_cl__with_revprop_opt,
   svn_cl__parents_opt,
   svn_cl__accept_opt,
-  svn_cl__svnpatch_format_opt
+  svn_cl__svnpatch_format_opt,
+  svn_cl__patch_cmd_opt
 } svn_cl__longopt_t;
 
 
@@ -144,7 +145,8 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t revprop;         /* operate on a revision property */
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
-  const char *editor_cmd;        /* external editor command. */
+  const char *editor_cmd;        /* the external editor command to use */
+  const char *patch_cmd;         /* the external patch command to use */
   svn_boolean_t record_only;     /* whether to record mergeinfo */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
