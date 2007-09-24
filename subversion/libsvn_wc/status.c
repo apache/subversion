@@ -1284,8 +1284,10 @@ make_dir_baton(void **dir_baton,
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,
                                   d->path, pool));
       SVN_ERR(get_dir_status(eb, status_in_parent->entry, dir_access, NULL,
-                             ignores, svn_depth_immediates, TRUE, TRUE, TRUE,
-                             hash_stash, d->statii, NULL, NULL, pool));
+                             ignores, d->depth == svn_depth_files ?
+                             svn_depth_files : svn_depth_immediates,
+                             TRUE, TRUE, TRUE, hash_stash, d->statii, NULL,
+                             NULL, pool));
 
       /* If we found a depth here, it should govern. */
       this_dir_status = apr_hash_get(d->statii, d->path, APR_HASH_KEY_STRING);
@@ -1454,24 +1456,21 @@ handle_statii(struct edit_baton *eb,
       /* Clear the subpool. */
       svn_pool_clear(subpool);
 
-      /* Now, handle the status. */
+      /* Now, handle the status.  We don't recurse for svn_depth_immediates
+         because we already have the subdirectories' statii. */
       if (status->text_status != svn_wc_status_obstructed
           && status->text_status != svn_wc_status_missing
           && status->entry && status->entry->kind == svn_node_dir
           && (depth == svn_depth_unknown
-              || depth == svn_depth_immediates
               || depth == svn_depth_infinity))
         {
           svn_wc_adm_access_t *dir_access;
-          svn_depth_t depth_minus_one = depth;
 
           SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,
                                       key, subpool));
 
-          if (depth_minus_one == svn_depth_immediates)
-            depth_minus_one = svn_depth_empty;
           SVN_ERR(get_dir_status(eb, dir_entry, dir_access, NULL,
-                                 ignores, depth_minus_one, eb->get_all,
+                                 ignores, depth, eb->get_all,
                                  eb->no_ignore, TRUE, status_func,
                                  status_baton, eb->cancel_func,
                                  eb->cancel_baton, subpool));
