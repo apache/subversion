@@ -278,7 +278,10 @@ def remove_props(sbox):
   svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', iota_path)
 
   # Commit the file
-  svntest.main.run_svn(None, 'ci', '-m', 'logmsg', iota_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'logmsg', iota_path)
 
   # Now, remove the property
   svntest.main.run_svn(None, 'propdel', 'cash-sound', iota_path)
@@ -314,7 +317,10 @@ def update_conflict_props(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', A_path)
 
   # Commit the file and directory
-  svntest.main.run_svn(None, 'ci', '-m', 'logmsg', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'logmsg', wc_dir)
 
   # Update to rev 1
   svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
@@ -376,10 +382,16 @@ def commit_conflict_dirprops(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', wc_dir)
 
   # Commit the file and directory
-  svntest.main.run_svn(None, 'ci', '-m', 'r2', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'r2', wc_dir)
 
   # Update to rev 1
-  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', '-r', '1', wc_dir)
 
   # Add conflicting properties
   svntest.main.run_svn(None, 'propset', 'foo', 'eek', wc_dir)
@@ -414,7 +426,10 @@ def commit_replacement_props(sbox):
 
   # Commit (### someday use run_and_verify_commit for better coverage)
   svntest.actions.run_and_verify_svn("Error in property commit",
-                                     None, [], 'ci', '-m', 'logmsg', wc_dir)
+                                     None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'ci', '-m', 'logmsg', wc_dir)
 
   # Schedule both files for deletion
   svntest.main.run_svn(None, 'rm', iota_path, lambda_path)
@@ -470,6 +485,8 @@ def revert_replacement_props(sbox):
 
   # Commit rev 2. (### someday use run_and_verify_commit for better coverage)
   svntest.actions.run_and_verify_svn("Error in property commit", None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'logmsg', wc_dir)
 
   # Schedule both files for deletion
@@ -702,7 +719,10 @@ def copy_inherits_special_props(sbox):
     os.chmod(new_path1, 0644)
 
   # Commit the file
-  svntest.main.run_svn(None, 'ci', '-m', 'create file and set svn:mime-type',
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'create file and set svn:mime-type',
                        wc_dir)
 
   # Copy the file
@@ -743,6 +763,8 @@ def revprop_change(sbox):
 
   # First test the error when no revprop-change hook exists.
   svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'propset', '--revprop', '-r', '0',
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
@@ -750,6 +772,8 @@ def revprop_change(sbox):
   message = 'revprop_change test'
   svntest.actions.disable_revprop_changes(sbox.repo_dir, message)
   svntest.actions.run_and_verify_svn(None, None, '.*' + message,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'propset', '--revprop', '-r', '0',
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
@@ -757,18 +781,28 @@ def revprop_change(sbox):
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'propset', '--revprop', '-r', '0',
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'propget', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'propdel', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
 
   actual_stdout, actual_stderr = svntest.main.run_svn(None,
+                                                      '--username',
+                                                      svntest.main.wc_author,
+                                                      '--password',
+                                                      svntest.main.wc_passwd,
                                                       'pg', '--revprop',
                                                       '-r', '0',
                                                       'cash-sound',
@@ -1029,7 +1063,10 @@ def recursive_base_wc_ops(sbox):
   # Set up properties
   svntest.main.run_svn(None, 'propset', 'p', 'old-del', fp_del)
   svntest.main.run_svn(None, 'propset', 'p', 'old-keep',fp_keep)
-  svntest.main.run_svn(None, 'commit', '-m', '', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', '', wc_dir)
   svntest.main.file_append(fp_add, 'blah')
   svntest.main.run_svn(None, 'add', fp_add)
   svntest.main.run_svn(None, 'propset', 'p', 'new-add', fp_add)
@@ -1094,47 +1131,79 @@ def url_props_ops(sbox):
   svntest.main.run_svn(None, 'propset', prop1, propval1, A_path)
 
   # Commit
-  svntest.main.run_svn(None, 'ci', '-m', 'logmsg', sbox.wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'logmsg', sbox.wc_dir)
 
   # Add a few more properties
   svntest.main.run_svn(None, 'propset', prop2, propval2, iota_path)
   svntest.main.run_svn(None, 'propset', prop2, propval2, A_path)
 
   # Commit again
-  svntest.main.run_svn(None, 'ci', '-m', 'logmsg', sbox.wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'logmsg', sbox.wc_dir)
 
   # Test propget
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'propget', prop1, iota_url)
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'propget', prop1, A_url)
 
   # Test normal proplist
-  output, errput = svntest.main.run_svn(None, 'proplist', iota_url)
+  output, errput = svntest.main.run_svn(None,
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        'proplist', iota_url)
   verify_output([ prop1, prop2, 'Properties on ' ],
                 output, errput)
 
-  output, errput = svntest.main.run_svn(None, 'proplist', A_url)
+  output, errput = svntest.main.run_svn(None,
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        'proplist', A_url)
   verify_output([ prop1, prop2, 'Properties on ' ],
                 output, errput)
 
   # Test verbose proplist
-  output, errput = svntest.main.run_svn(None, 'proplist', '-v', iota_url)
+  output, errput = svntest.main.run_svn(None,
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        'proplist', '-v', iota_url)
   verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
                   'Properties on ' ], output, errput)
 
-  output, errput = svntest.main.run_svn(None, 'proplist', '-v', A_url)
+  output, errput = svntest.main.run_svn(None,
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        'proplist', '-v', A_url)
   verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
                   'Properties on ' ], output, errput)
 
   # Test propedit
   svntest.main.use_editor('foo_to_bar')
   propval1 = propval1.replace('foo', 'bar')
-  svntest.main.run_svn(None, 'propedit', prop1, '-m', 'editlog', iota_url)
-  svntest.main.run_svn(None, 'propedit', prop1, '-m', 'editlog', A_url)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'propedit', prop1, '-m', 'editlog', iota_url)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'propedit', prop1, '-m', 'editlog', A_url)
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'propget', prop1, iota_url)
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'propget', prop1, A_url)
 
   # Edit without actually changing the property
@@ -1143,6 +1212,8 @@ def url_props_ops(sbox):
                                      "No changes to property '%s' on '.*'"
                                        % prop1,
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'propedit', prop1, '-m', 'nocommit',
                                      iota_url)
 
@@ -1245,7 +1316,10 @@ def props_on_replaced_file(sbox):
   iota_path = os.path.join(wc_dir, "iota")
   svntest.main.run_svn(None, 'propset', 'red', 'rojo', iota_path)
   svntest.main.run_svn(None, 'propset', 'blue', 'lagoon', iota_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log message', wc_dir)
 
   # replace iota_path
   svntest.main.run_svn(None, 'rm', iota_path)
@@ -1286,7 +1360,10 @@ def depthy_wc_proplist(sbox):
   svntest.main.run_svn(None, 'propset', 'p', 'prop4', mu_path)
 
   # Commit.
-  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log message', wc_dir)
 
   # Test depth-empty proplist.
   output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'empty',
@@ -1332,25 +1409,37 @@ def depthy_url_proplist(sbox):
   svntest.main.run_svn(None, 'propset', 'p', 'prop4', mu_path)
 
   # Test depth-empty proplist.
-  output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'empty',
+  output, errput = svntest.main.run_svn(None,
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        'proplist', '--depth', 'empty',
                                         '-v', repo_url)
   verify_output([ 'prop1', 'Properties on ' ],
                 output, errput)
 
   # Test depth-files proplist.
-  output, errput = svntest.main.run_svn(None, 'proplist', '--depth', 'files',
+  output, errput = svntest.main.run_svn(None,
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        'proplist', '--depth', 'files',
                                         '-v', repo_url)
   verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
                 output, errput)
 
   # Test depth-immediates proplist.
-  output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
+  output, errput = svntest.main.run_svn(None,
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        'proplist', '--depth',
                                         'immediates', '-v', repo_url)
   verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
                 output, errput)
 
   # Test depth-infinity proplist.
-  output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
+  output, errput = svntest.main.run_svn(None,
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        'proplist', '--depth',
                                         'infinity', '-v', repo_url)
   verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
                 output, errput)
@@ -1382,11 +1471,15 @@ def invalid_propnames(sbox):
                                      'propset', propname, propval)
 
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'commit', '--with-revprop',
                                      '='.join([propname, propval]))
   # Now swap them: --with-revprop should accept propname as a property
   # value; no concept of validity there.
   svntest.actions.run_and_verify_svn(None, [], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'commit', '--with-revprop',
                                      '='.join([propval, propname]))
 

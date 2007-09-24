@@ -323,6 +323,8 @@ def copy_from_unreadable_dir(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      None,
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci',
                                      sbox.wc_dir + '/A/B',
                                      '-m', 'log_msg')
@@ -331,6 +333,8 @@ def copy_from_unreadable_dir(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      None,
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'cp',
                                      B_url,
                                      P_url,
@@ -404,6 +408,8 @@ def copy_from_unreadable_dir(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      ['bar\n'],
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'pget',
                                      'foo',
                                      dest_sbox.repo_url + '/A/P/lambda')
@@ -411,6 +417,8 @@ def copy_from_unreadable_dir(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      ['zot\n'],
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'pget',
                                      'baz',
                                      dest_sbox.repo_url + '/A/P')
@@ -459,6 +467,8 @@ def copy_with_mod_from_unreadable_dir(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      None,
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci',
                                      sbox.wc_dir,
                                      '-m', 'log_msg')
@@ -563,6 +573,8 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      None,
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci',
                                      sbox.wc_dir,
                                      '-m', 'log_msg')
