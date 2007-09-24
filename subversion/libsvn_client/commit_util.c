@@ -344,7 +344,7 @@ harvest_committables(apr_hash_t *committables,
     {
       /* Paths in conflict which are not part of our changelist should
          be ignored. */
-      if (changelist_name == NULL &&
+      if (changelist_name == NULL ||
           !CHANGELIST_MATCHES(changelist_name, entry))
         return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
                                  _("Aborting commit: '%s' remains in conflict"),
