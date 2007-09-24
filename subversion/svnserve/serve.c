@@ -1614,7 +1614,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       elt = &APR_ARRAY_IDX(paths, i, svn_ra_svn_item_t);
       if (elt->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Log path entry not a string");
+                                _("Log path entry not a string"));
       full_path = svn_path_join(b->fs_path->data,
                                 svn_path_canonicalize(elt->u.string->data,
                                                       pool),
