@@ -395,11 +395,14 @@ svn_client_propset2(const char *propname,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
+  /* SVN_DEPTH_FROM_RECURSE() will affect immediate file children of
+     directory, so instead inline an expression to preserve backward
+     compatibility. */
   return svn_client_propset3(NULL,
                              propname,
                              propval,
                              target,
-                             SVN_DEPTH_FROM_RECURSE(recurse),
+                             (recurse ? svn_depth_infinity : svn_depth_empty),
                              skip_checks,
                              SVN_INVALID_REVNUM,
                              ctx,

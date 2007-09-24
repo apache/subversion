@@ -1352,7 +1352,11 @@ public class SVNClient implements SVNClientInterface
                                    boolean recurse, boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, Depth.fromRecurse(recurse), force);
+        // Depth.fromRecurse() will affect immediate file children of
+        // a directory, so instead inline an expression to preserve
+        // backward compatibility.
+        propertySet(path, name, value,
+                    (recurse ? Depth.infinity : Depth.empty), force);
     }
 
     /**
@@ -1880,8 +1884,9 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         MyInfoCallback callback = new MyInfoCallback();
-        // Depth.fromRecurse() will return info about child paths of a
-        // directory, which is not what we want.
+        // Depth.fromRecurse() will return info about immediate file
+        // children of a directory, so instead inline an expression to
+        // preserve backward compatibility.
         info2(pathOrUrl, revision, pegRevision,
               (recurse ? Depth.infinity : Depth.empty), callback);
         return callback.getInfoArray();
