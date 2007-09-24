@@ -43,7 +43,7 @@ svn_client_resolved(const char *path,
 svn_error_t *
 svn_client_resolved2(const char *path,
                      svn_depth_t depth,
-                     svn_accept_t accept_,
+                     svn_accept_t accept_which,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
@@ -59,7 +59,7 @@ svn_client_resolved2(const char *path,
                                  pool));
 
   SVN_ERR(svn_wc_resolved_conflict3(path, adm_access, TRUE, TRUE, depth,
-                                    accept_,
+                                    accept_which,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool));
