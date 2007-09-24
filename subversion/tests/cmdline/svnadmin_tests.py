@@ -427,7 +427,10 @@ def verify_windows_paths_in_repos(sbox):
   repo_url       = sbox.repo_url
   chi_url = sbox.repo_url + '/c:hi'
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'log_msg',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'mkdir', '-m', 'log_msg',
                                      chi_url)
 
   output, errput = svntest.main.run_svnadmin("verify", sbox.repo_dir)
