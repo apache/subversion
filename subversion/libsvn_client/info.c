@@ -517,9 +517,11 @@ svn_client_info(const char *path_or_url,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
+  /* SVN_DEPTH_FROM_RECURSE() will return info about child paths of a
+     directory, so inline an expression to preserve backward compatibility. */
   return svn_client_info2(path_or_url, peg_revision, revision,
                           receiver, receiver_baton,
-                          SVN_DEPTH_FROM_RECURSE(recurse),
+                          (recurse ? svn_depth_infinity : svn_depth_empty),
                           ctx, pool);
 }
 
