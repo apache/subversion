@@ -1268,12 +1268,12 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(String, Revision)
      * @since 1.5
      */
-    public MergeInfo getMergeInfo(String path, Revision revision)
+    public MergeInfo getMergeInfo(String path, Revision pegRevision)
         throws SubversionException
     {
         synchronized (clazz)
         {
-            return worker.getMergeInfo(path, revision);
+            return worker.getMergeInfo(path, pegRevision);
         }
     }
 

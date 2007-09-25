@@ -1020,7 +1020,7 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyGet
 
 JNIEXPORT jobject JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_getMergeInfo
-(JNIEnv *env, jobject jthis, jstring jtarget, jobject jrevision)
+(JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision)
 {
   JNIEntry(SVNClient, getMergeInfo);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1032,10 +1032,10 @@ Java_org_tigris_subversion_javahl_SVNClient_getMergeInfo
   JNIStringHolder target(jtarget);
   if (JNIUtil::isExceptionThrown())
     return NULL;
-  Revision revision(jrevision);
+  Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
     return NULL;
-  return cl->getMergeInfo(target, revision);
+  return cl->getMergeInfo(target, pegRevision);
 }
 
 JNIEXPORT void JNICALL

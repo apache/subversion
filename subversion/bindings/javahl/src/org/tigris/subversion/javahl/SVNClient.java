@@ -1073,7 +1073,7 @@ public class SVNClient implements SVNClientInterface
      * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(String, Revision)
      * @since 1.5
      */
-    public native MergeInfo getMergeInfo(String path, Revision revision)
+    public native MergeInfo getMergeInfo(String path, Revision pegRevision)
             throws SubversionException;
 
     /**
