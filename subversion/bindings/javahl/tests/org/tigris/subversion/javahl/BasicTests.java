@@ -2111,7 +2111,7 @@ public class BasicTests extends SVNTests
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A/mu").getPath();
         final String mergeSrc = thisTest.getUrl() + "/A/mu";
-        acquireMergeInfoAndAssertEquals("0-2", targetPath, mergeSrc);
+        acquireMergeInfoAndAssertEquals("0-2", "2-3", targetPath, mergeSrc);
 
         // TODO: Test retrieval of uncommitted, inerhited mergeinfo
         // from a WC path.
@@ -2125,17 +2125,27 @@ public class BasicTests extends SVNTests
 
         // Test retrieval of inherited mergeinfo from the repository.
         targetPath = thisTest.getUrl() + "/branches/A/mu";
-        acquireMergeInfoAndAssertEquals("0-2", targetPath, mergeSrc);
+        acquireMergeInfoAndAssertEquals("0-2", "2-3", targetPath, mergeSrc);
     }
 
     /**
-     * Helper method for {@link #testMergeInfoRetrieval()}.
+     * Helper method for {@link #testMergeInfoRetrieval()}.  Assumes
+     * that <code>targetPath</code> has both merge history and
+     * available merges.
+     * @param expectedMergedRevs The expected revision ranges from the
+     * merge history for <code>mergeSrc</code>.
+     * @param expectedMergedRevs The expected available revision
+     * ranges from the available merges for <code>mergeSrc</code>.
+     * @param targetPath The path for which to acquire mergeinfo.
+     * @param mergeSrc The URL from which to consider merges.
      */
-    private void acquireMergeInfoAndAssertEquals(String expectedFirstRange,
+    private void acquireMergeInfoAndAssertEquals(String expectedMergedRevs,
+                                                 String expectedAvailableRevs,
                                                  String targetPath,
                                                  String mergeSrc)
         throws SubversionException
     {
+        // Verify expected merge history.
         MergeInfo mergeInfo = client.getMergeInfo(targetPath, Revision.HEAD);
         assertNotNull("Missing merge info on '" + targetPath + '\'',
                       mergeInfo);
@@ -2143,9 +2153,18 @@ public class BasicTests extends SVNTests
         assertTrue("Missing merge info for source '" + mergeSrc + "' on '" +
                    targetPath + '\'', ranges != null && !ranges.isEmpty());
         RevisionRange range = (RevisionRange) ranges.get(0);
-        assertEquals("Unexpected first revision range for '" + mergeSrc +
-                     "' on '" + targetPath + '\'', expectedFirstRange,
-                     range.toString());
+        assertEquals("Unexpected first merged revision range for '" +
+                     mergeSrc + "' on '" + targetPath + '\'',
+                     expectedMergedRevs, range.toString());
+
+        // Verify expected available merges.
+        RevisionRange[] revRanges =
+            client.getAvailableMerges(targetPath, Revision.HEAD, mergeSrc);
+        assertTrue("Missing available merges on '" + targetPath + '\'',
+                   revRanges != null && revRanges.length > 0);
+        assertEquals("Unexpected first available revision range for '" +
+                     mergeSrc + "' on '" + targetPath + '\'',
+                     expectedAvailableRevs, revRanges[0].toString());
     }
 
     /**

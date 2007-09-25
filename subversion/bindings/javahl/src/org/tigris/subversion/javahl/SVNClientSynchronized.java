@@ -1278,6 +1278,22 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getAvailableMerges(String, Revision, String)
+     * @since 1.5
+     */
+    public RevisionRange[] getAvailableMerges(String path,
+                                              Revision pegRevision,
+                                              String mergeSource)
+        throws SubversionException
+    {
+        synchronized (clazz)
+        {
+            return worker.getAvailableMerges(path, pegRevision,
+                                             mergeSource);
+        }
+    }
+
+    /**
      * Display the differences between two paths
      * @param target1       first path or url
      * @param revision1     first revision
