@@ -1077,6 +1077,15 @@ public class SVNClient implements SVNClientInterface
             throws SubversionException;
 
     /**
+     * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getAvailableMerges(String, Revision, String)
+     * @since 1.5
+     */
+    public native RevisionRange[] getAvailableMerges(String path,
+                                                     Revision pegRevision,
+                                                     String mergeSource)
+        throws SubversionException;
+
+    /**
      * Display the differences between two paths
      * @param target1       first path or url
      * @param revision1     first revision

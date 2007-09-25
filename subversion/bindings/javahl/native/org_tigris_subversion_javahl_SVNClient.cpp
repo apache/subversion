@@ -1038,6 +1038,30 @@ Java_org_tigris_subversion_javahl_SVNClient_getMergeInfo
   return cl->getMergeInfo(target, pegRevision);
 }
 
+JNIEXPORT jobjectArray JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_getAvailableMerges
+(JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision,
+ jstring jmergeSource)
+{
+  JNIEntry(SVNClient, getAvailableMerges);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+  JNIStringHolder target(jtarget);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  Revision pegRevision(jpegRevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  JNIStringHolder mergeSource(jmergeSource);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  return cl->getAvailableMerges(target, pegRevision, mergeSource);
+}
+
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2IZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1,
