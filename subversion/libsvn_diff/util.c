@@ -321,7 +321,8 @@ svn_diff__normalize_buffer(char **tgt,
           break;
 
         default:
-          if (svn_ctype_isspace(*curp))
+          if (svn_ctype_isspace(*curp)
+              && opts->ignore_space != svn_diff_file_ignore_space_none)
             {
               /* Whitespace but not '\r' or '\n' */
               if (state != svn_diff__normalize_state_whitespace
@@ -345,7 +346,8 @@ svn_diff__normalize_buffer(char **tgt,
             }
           else
             {
-              /* Non-whitespace character */
+              /* Non-whitespace character, or whitespace character in
+                 svn_diff_file_ignore_space_none mode. */
               INCLUDE;
               state = svn_diff__normalize_state_normal;
             }
