@@ -1684,7 +1684,10 @@ svn_error_t *svn_fs_get_uuid(svn_fs_t *fs,
                              apr_pool_t *pool);
 
 
-/** Associate @a *uuid with @a fs.  Use @a pool for any scratchwork. */
+/** If not @c NULL, associate @a *uuid with @a fs.  Otherwise (if @a
+ * uuid is @c NULL), generate a new UUID for @a fs.  Use @a pool for
+ * any scratchwork.
+ */
 svn_error_t *svn_fs_set_uuid(svn_fs_t *fs,
                              const char *uuid,
                              apr_pool_t *pool);
