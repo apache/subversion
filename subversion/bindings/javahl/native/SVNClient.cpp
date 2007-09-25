@@ -669,7 +669,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
 }
 
 jobject
-SVNClient::getMergeInfo(const char *target, Revision &rev)
+SVNClient::getMergeInfo(const char *target, Revision &pegRevision)
 {
     Pool requestPool;
     JNIEnv *env = JNIUtil::getEnv();
@@ -683,7 +683,7 @@ SVNClient::getMergeInfo(const char *target, Revision &rev)
     SVN_JNI_ERR(intLocalTarget.error_occured(), NULL);
     SVN_JNI_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, 
                                                 intLocalTarget.c_str(),
-                                                rev.revision(), ctx,
+                                                pegRevision.revision(), ctx,
                                                 requestPool.pool()),
                 NULL);
     if (mergeinfo == NULL)
