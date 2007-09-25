@@ -47,7 +47,7 @@ class SVNTests extends TestCase
      * The root directory for the test data. All other files and
      * directories will created under here.
      */
-    protected final File rootDir;
+    protected File rootDir;
 
     /**
      * The Subversion file system type.
@@ -86,25 +86,25 @@ class SVNTests extends TestCase
      * for the sample repository and its dumpfile and for the config
      * directory.
      */
-    protected final File localTmp;
+    protected File localTmp;
 
     /**
      * the directory "repositories" in the rootDir. All test repositories will
      * be created here.
      */
-    protected final File repositories;
+    protected File repositories;
 
     /**
      * the directory "working_copies" in the rootDir. All test working copies
      * will be created here.
      */
-    protected final File workingCopies;
+    protected File workingCopies;
 
     /**
      * the directory "config" in the localTmp. It will be used as the
      * configuration directory for all the tests.
      */
-    protected final File conf;
+    protected File conf;
 
     /**
      * standard log message. Used for all commits.
@@ -135,6 +135,20 @@ class SVNTests extends TestCase
      * Create a JUnit <code>TestCase</code> instance.
      */
     protected SVNTests()
+    {
+        init();
+    }
+
+    /**
+     * Create a JUnit <code>TestCase</code> instance.
+     */
+    protected SVNTests(String name)
+    {
+        super(name);
+        init();
+    }
+
+    private void init()
     {
         // if not already set, get a usefull value for rootDir
         if (rootDirectoryName == null)
