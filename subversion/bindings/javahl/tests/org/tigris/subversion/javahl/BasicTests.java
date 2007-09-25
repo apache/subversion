@@ -43,11 +43,22 @@ public class BasicTests extends SVNTests
      */
     public final static String testName = "basic_test";
 
+    public BasicTests()
+    {
+        init();
+    }
+
+    public BasicTests(String name)
+    {
+        super(name);
+        init();
+    }
+
     /**
      * Initialize the testBaseName and the testCounter, if this is the
      * first test of this class.
      */
-    public BasicTests()
+    private void init()
     {
         if (!testName.equals(testBaseName))
         {
