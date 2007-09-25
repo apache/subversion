@@ -886,14 +886,14 @@ public interface SVNClientInterface
                boolean ignoreAncestry, boolean dryRun) throws ClientException;
 
     /**
-     * Get merge info for <code>path</code> at <code>revision</code>.
+     * Get merge info for <code>path</code> at <code>pegRevision</code>.
      * @param path Path or URL.
      * @param revision Revision at which to get the merge info for
      * <code>path</code>.
      * @throws SubversionException
      * @since 1.5
      */
-    MergeInfo getMergeInfo(String path, Revision revision)
+    MergeInfo getMergeInfo(String path, Revision pegRevision)
         throws SubversionException;
 
     /**
