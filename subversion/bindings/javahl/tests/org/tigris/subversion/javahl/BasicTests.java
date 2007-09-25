@@ -2096,11 +2096,14 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
-        // Test retrieval of uncommitted, inerhited merge info from a WC path.
+        // Test retrieval of inerhited mergeinfo from a WC path.
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A/mu").getPath();
-        final String mergeSrc = "/A/mu";
+        final String mergeSrc = thisTest.getUrl() + "/A/mu";
         acquireMergeInfoAndAssertEquals("0-2", targetPath, mergeSrc);
+
+        // TODO: Test retrieval of uncommitted, inerhited mergeinfo
+        // from a WC path.
 
         // Commit the result of the merge in preparation for testing
         // retrieval of merge info from the repository.
@@ -2109,7 +2112,7 @@ public class BasicTests extends SVNTests
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true));
 
-        // Test retrieval of inherited merge info from the repository.
+        // Test retrieval of inherited mergeinfo from the repository.
         targetPath = thisTest.getUrl() + "/branches/A/mu";
         acquireMergeInfoAndAssertEquals("0-2", targetPath, mergeSrc);
     }

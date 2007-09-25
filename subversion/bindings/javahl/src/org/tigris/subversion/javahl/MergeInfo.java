@@ -65,14 +65,15 @@ public class MergeInfo implements java.io.Serializable
     }
 
     /**
-     * Add one or more RevisionRange objects to merge info. If path is already
-     * stored, the list of revisions is replaced.
-     * @param path The merge source path.
+     * Add one or more RevisionRange objects to merge info. If the
+     * merge source is already stored, the list of revisions is
+     * replaced.
+     * @param mergeSrc The merge source URL.
      * @param range List of RevisionRange objects to add.
      * @throws SubversionException If range list contains objects of
      * type other than RevisionRange.
      */
-    public void addRevisions(String path, List range)
+    public void addRevisions(String mergeSrc, List range)
             throws SubversionException
     {
         for (Iterator iterator = range.iterator(); iterator.hasNext();)
@@ -81,28 +82,28 @@ public class MergeInfo implements java.io.Serializable
                 throw new SubversionException(
                       "List must only contain objects of type RevisionRange");
         }
-        this.setRevisionList(path, range);
+        this.setRevisionList(mergeSrc, range);
     }
 
     /**
      * Add a revision range to the merged revisions for a path.  If
-     * the path already has associated revision ranges, add the
-     * revision range to the existing list.
-     * @param path The merge source path.
+     * the merge source already has associated revision ranges, add
+     * the revision range to the existing list.
+     * @param mergeSrc The merge source URL.
      * @param range The revision range to add.
      */
-    public void addRevisionRange(String path, RevisionRange range)
+    public void addRevisionRange(String mergeSrc, RevisionRange range)
     {
-        List revisions = this.getRevisions(path);
+        List revisions = this.getRevisions(mergeSrc);
         if (revisions == null)
             revisions = new ArrayList();
         revisions.add(range);
-        this.setRevisionList(path, revisions);
+        this.setRevisionList(mergeSrc, revisions);
     }
 
     /**
-     * Get the merge source paths.
-     * @return The merge source paths.
+     * Get the merge source URLs.
+     * @return The merge source URLs.
      */
     public String[] getPaths()
     {
@@ -113,25 +114,25 @@ public class MergeInfo implements java.io.Serializable
     }
 
     /**
-     * Get the revision ranges for the specified path.
-     * @param path The merge source path.
+     * Get the revision ranges for the specified merge source URL.
+     * @param mergeSrc The merge source URL, or <code>null</code>.
      * @return List of RevisionRange objects, or <code>null</code>.
      */
-    public List getRevisions(String path)
+    public List getRevisions(String mergeSrc)
     {
-        if (path == null)
+        if (mergeSrc == null)
             return null;
-        return (List) mergeSources.get(path);
+        return (List) mergeSources.get(mergeSrc);
     }
 
     /**
-     * Get the RevisionRange objects for the specified path
-     * @param path The merge source path.
+     * Get the RevisionRange objects for the specified merge source URL
+     * @param mergeSrc The merge source URL, or <code>null</code>.
      * @return Array of RevisionRange objects, or <code>null</code>.
      */
-    public RevisionRange[] getRevisionRange(String path)
+    public RevisionRange[] getRevisionRange(String mergeSrc)
     {
-        List revisions = this.getRevisions(path);
+        List revisions = this.getRevisions(mergeSrc);
         if (revisions == null)
             return null;
         return (RevisionRange [])
@@ -140,7 +141,7 @@ public class MergeInfo implements java.io.Serializable
 
     /**
      * Parse the <code>svn:mergeinfo</code> property to populate the
-     * merge source paths and revision ranges of this instance.
+     * merge source URLs and revision ranges of this instance.
      * @param mergeInfo <code>svn:mergeinfo</code> property value.
      */
     public void loadFromMergeInfoProperty(String mergeInfo)
@@ -201,11 +202,11 @@ public class MergeInfo implements java.io.Serializable
      * Add the List object to the map.  This method is only
      * used internally where we know that List contains a
      * type-safe set of RevisionRange objects.
-     * @param path The merge source path.
+     * @param mergeSrc The merge source URL.
      * @param range List of RevisionRange objects to add.
      */
-    private void setRevisionList(String path, List range)
+    private void setRevisionList(String mergeSrc, List range)
     {
-        mergeSources.put(path, range);
+        mergeSources.put(mergeSrc, range);
     }
 }
