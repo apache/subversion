@@ -5401,6 +5401,9 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
   SVN_ERR(svn_io_open_unique_file2(&uuid_file, &tmp_path, uuid_path,
                                     ".tmp", svn_io_file_del_none, pool));
 
+  if (! uuid)
+    uuid = svn_uuid_generate(pool);
+
   SVN_ERR(svn_io_file_write_full(uuid_file, uuid, strlen(uuid), NULL,
                                  pool));
   SVN_ERR(svn_io_file_write_full(uuid_file, "\n", 1, NULL, pool));
