@@ -1069,8 +1069,6 @@ class TextCommitRenderer:
       for prop, src_val, dst_val in props:
         w('         %s\n' % prop)
 
-=======
->>>>>>> .merge-right.r21683
   def _render_diffs(self, diffs, section_header):
     """Render diffs. Write the SECTION_HEADER if there are actually
     any diffs to render."""
@@ -1163,8 +1161,6 @@ class TextCommitRenderer:
     w(SEPARATOR + '\n')
     w('%s' % content)
 
-=======
->>>>>>> .merge-right.r21683
 class Repository:
   "Hold roots and other information about the repository."
 
