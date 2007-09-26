@@ -316,9 +316,11 @@ svn_cl__status(apr_getopt_t *os,
           changelist_name = key;
           path_array = val;
 
-          /* ### TODO(sussman): should this be able to output XML too? */
-          /* ### TODO: We shouldn't print the leading \n on the first
-             ### changelist if there were no non-changelist entries. */
+          /* ### TODO(sussman): This should be able to output XML
+             ### (issue #2859). */
+          /* ### TODO: For non-XML output, we shouldn't print the
+             ### leading \n on the first changelist if there were no
+             ### non-changelist entries. */
           SVN_ERR(svn_cmdline_printf(pool, _("\n--- Changelist '%s':\n"),
                                      changelist_name));
 
