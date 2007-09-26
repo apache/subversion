@@ -51,6 +51,7 @@ typedef enum {
   CREATOR,
   DATE,
   COMMENT,
+  REVPROP,
   HAS_CHILDREN,
   ADDED_PATH,
   REPLACED_PATH,
@@ -70,6 +71,9 @@ typedef struct {
 
   /* Log information */
   svn_log_entry_t *log_entry;
+
+  /* Place to hold revprop name. */
+  const char *revprop_name;
 } log_info_t;
 
 typedef struct {
@@ -85,8 +89,15 @@ typedef struct {
   int status_code;
 
   /* log receiver function and baton */
-  svn_log_message_receiver2_t receiver;
+  svn_log_entry_receiver_t receiver;
   void *receiver_baton;
+
+  /* pre-1.5 compatibility */
+  svn_boolean_t seen_revprop_element;
+  svn_boolean_t want_author;
+  svn_boolean_t want_date;
+  svn_boolean_t want_message;
+  svn_boolean_t want_custom_revprops;
 } log_context_t;
 
 
@@ -122,6 +133,17 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
       info->tmp_path = apr_pcalloc(info->pool, sizeof(*info->tmp_path));
       info->tmp_path->copyfrom_rev = SVN_INVALID_REVNUM;
+    }
+
+  if (state == CREATOR || state == DATE || state == COMMENT
+      || state == REVPROP)
+    {
+      log_info_t *info = parser->state->private;
+
+      if (!info->log_entry->revprops)
+        {
+          info->log_entry->revprops = apr_hash_make(info->pool);
+        }
     }
 
   return parser->state->private;
@@ -173,6 +195,19 @@ start_log(svn_ra_serf__xml_parser_t *parser,
       else if (strcmp(name.name, "comment") == 0)
         {
           push_state(parser, log_ctx, COMMENT);
+        }
+      else if (strcmp(name.name, "no-custom-revprops") == 0)
+        {
+          log_ctx->seen_revprop_element = TRUE;
+        }
+      else if (strcmp(name.name, "revprop") == 0)
+        {
+          log_ctx->seen_revprop_element = TRUE;
+          info = push_state(parser, log_ctx, REVPROP);
+          info->revprop_name = svn_ra_serf__find_attr(attrs, "name");
+          if (info->revprop_name == NULL)
+            return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                     _("Missing name attr in revprop element"));
         }
       else if (strcmp(name.name, "has-children") == 0)
         {
@@ -257,6 +292,13 @@ end_log(svn_ra_serf__xml_parser_t *parser,
   else if (state == ITEM &&
            strcmp(name.name, "log-item") == 0)
     {
+      if (log_ctx->want_custom_revprops && !log_ctx->seen_revprop_element)
+        {
+          /* Caller asked for custom revprops, but server is too old. */
+          return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                                  _("Server does not support custom revprops"
+                                    " via log"));
+        }
       /* Give the info to the reporter */
       SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton,
                                 info->log_entry,
@@ -274,24 +316,47 @@ end_log(svn_ra_serf__xml_parser_t *parser,
   else if (state == CREATOR &&
            strcmp(name.name, "creator-displayname") == 0)
     {
-      info->log_entry->author = apr_pstrmemdup(info->pool, info->tmp,
-                                               info->tmp_len);
-      info->tmp_len = 0;
+      if (log_ctx->want_author)
+        {
+          apr_hash_set(info->log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
+                       APR_HASH_KEY_STRING,
+                       svn_string_ncreate(info->tmp, info->tmp_len,
+                                          info->pool));
+          info->tmp_len = 0;
+        }
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == DATE &&
            strcmp(name.name, "date") == 0)
     {
-      info->log_entry->date = apr_pstrmemdup(info->pool, info->tmp,
-                                             info->tmp_len);
-      info->tmp_len = 0;
+      if (log_ctx->want_date)
+        {
+          apr_hash_set(info->log_entry->revprops, SVN_PROP_REVISION_DATE,
+                       APR_HASH_KEY_STRING,
+                       svn_string_ncreate(info->tmp, info->tmp_len,
+                                          info->pool));
+          info->tmp_len = 0;
+        }
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == COMMENT &&
            strcmp(name.name, "comment") == 0)
     {
-      info->log_entry->message = apr_pstrmemdup(info->pool, info->tmp,
-                                                info->tmp_len);
+      if (log_ctx->want_message)
+        {
+          apr_hash_set(info->log_entry->revprops, SVN_PROP_REVISION_LOG,
+                       APR_HASH_KEY_STRING,
+                       svn_string_ncreate(info->tmp, info->tmp_len,
+                                          info->pool));
+          info->tmp_len = 0;
+        }
+      svn_ra_serf__xml_pop_state(parser);
+    }
+  else if (state == REVPROP)
+    {
+      apr_hash_set(info->log_entry->revprops, info->revprop_name,
+                   APR_HASH_KEY_STRING,
+                   svn_string_ncreate(info->tmp, info->tmp_len, info->pool));
       info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -344,6 +409,7 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
       case CREATOR:
       case DATE:
       case COMMENT:
+      case REVPROP:
       case ADDED_PATH:
       case REPLACED_PATH:
       case DELETED_PATH:
@@ -367,8 +433,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_boolean_t include_merged_revisions,
-                     svn_boolean_t omit_log_text,
-                     svn_log_message_receiver2_t receiver,
+                     apr_array_header_t *revprops,
+                     svn_log_entry_receiver_t receiver,
                      void *receiver_baton,
                      apr_pool_t *pool)
 {
@@ -442,11 +508,32 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                    session->bkt_alloc);
     }
 
-  if (omit_log_text)
+  if (revprops)
+    {
+      int i;
+      for (i = 0; i < revprops->nelts; i++)
+        {
+          char *name = APR_ARRAY_IDX(revprops, i, char *);
+          svn_ra_serf__add_tag_buckets(buckets,
+                                       "S:revprop", name,
+                                       session->bkt_alloc);
+          if (strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
+            log_ctx->want_author = TRUE;
+          else if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
+            log_ctx->want_date = TRUE;
+          else if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
+            log_ctx->want_message = TRUE;
+          else
+            log_ctx->want_custom_revprops = TRUE;
+        }
+    }
+  else
     {
       svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:omit-log-text", NULL,
+                                   "S:all-revprops", NULL,
                                    session->bkt_alloc);
+      log_ctx->want_author = log_ctx->want_date = log_ctx->want_message = TRUE;
+      log_ctx->want_custom_revprops = TRUE;
     }
 
   if (paths)

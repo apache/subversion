@@ -1150,8 +1150,8 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
- * If @a omit_log_text is set, the contents of the log message will not
- * be returned.
+ * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
+ * revprops named in the array (i.e. retrieve none if the array is empty).
  *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
@@ -1166,6 +1166,10 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
+ * @note Pre-1.5 servers do not support custom revprop retrieval; if @a
+ * revprops is NULL or contains a revprop other than svn:author, svn:date,
+ * or svn:log, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is returned.
+ *
  * @since New in 1.5.
  */
 
@@ -1177,15 +1181,16 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
                              svn_boolean_t include_merged_revisions,
-                             svn_boolean_t omit_log_text,
-                             svn_log_message_receiver2_t receiver,
+                             apr_array_header_t *revprops,
+                             svn_log_entry_receiver_t receiver,
                              void *receiver_baton,
                              apr_pool_t *pool);
 
 /**
  * Similar to svn_ra_get_log2(), but uses @c svn_log_message_receiver_t
- * instead of @c svn_log_message_recevier2_t.  Also @a omit_log_text is
- * always set to @c FALSE.
+ * instead of @c svn_log_entry_receiver_t.  Also, @a
+ * include_merged_revisions is set to @c FALSE and @a revprops is
+ * svn:author, svn:date, and svn:log.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.

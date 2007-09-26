@@ -42,7 +42,7 @@
 
 /*** Getting misc. information ***/
 
-/* A log callback conforming to the svn_log_message_receiver2_t
+/* A log callback conforming to the svn_log_entry_receiver_t
    interface for obtaining the last revision of a node at a path and
    storing it in *BATON (an svn_revnum_t). */
 static svn_error_t *
@@ -64,13 +64,14 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
                                apr_pool_t *pool)
 {
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
+  apr_array_header_t *revprops = apr_array_make(pool, 0, sizeof(char *));
   *oldest_rev = SVN_INVALID_REVNUM;
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
 
   /* Trace back in history to find the revision at which this node
      was created (copied or added). */
   return svn_ra_get_log2(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
-                         FALSE, TRUE, revnum_receiver, oldest_rev, pool);
+                         FALSE, revprops, revnum_receiver, oldest_rev, pool);
 }
 
 /* The baton for use with copyfrom_info_receiver(). */
@@ -271,6 +272,89 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
   return SVN_NO_ERROR;
 }
 
+/* compatibility with pre-1.5 servers, which send only author/date/log
+ *revprops in log entries */
+typedef struct
+{
+  svn_client_ctx_t *ctx;
+  /* ra session for retrieving revprops from old servers */
+  svn_ra_session_t *ra_session;
+  /* caller's list of requested revprops, receiver, and baton */
+  apr_array_header_t *revprops;
+  svn_log_entry_receiver_t receiver;
+  void *baton;
+} pre_15_receiver_baton_t;
+
+static svn_error_t *
+pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
+{
+  pre_15_receiver_baton_t *rb = baton;
+
+  if (log_entry->revision == SVN_INVALID_REVNUM)
+    return rb->receiver(rb->baton, log_entry, pool);
+
+  /* If only some revprops are requested, get them one at a time on the
+     second ra connection.  If all are requested, get them all with
+     svn_ra_rev_proplist.  This avoids getting unrequested revprops (which
+     may be arbitrarily large), but means one round-trip per requested
+     revprop.  epg isn't entirely sure which should be optimized for. */
+  if (rb->revprops)
+    {
+      int i;
+      svn_boolean_t want_author, want_date, want_log;
+      want_author = want_date = want_log = FALSE;
+      for (i = 0; i < rb->revprops->nelts; i++)
+        {
+          const char *name = APR_ARRAY_IDX(rb->revprops, i, const char *);
+          svn_string_t *value;
+
+          /* If a standard revprop is requested, we know it is already in
+             log_entry->revprops if available. */
+          if (strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
+            {
+              want_author = TRUE;
+              continue;
+            }
+          if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
+            {
+              want_date = TRUE;
+              continue;
+            }
+          if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
+            {
+              want_log = TRUE;
+              continue;
+            }
+          SVN_ERR(svn_ra_rev_prop(rb->ra_session, log_entry->revision,
+                                  name, &value, pool));
+          if (log_entry->revprops == NULL)
+            log_entry->revprops = apr_hash_make(pool);
+          apr_hash_set(log_entry->revprops, (const void *)name,
+                       APR_HASH_KEY_STRING, (const void *)value);
+        }
+      if (log_entry->revprops)
+        {
+          /* Pre-1.5 servers send the standard revprops unconditionally;
+             clear those the caller doesn't want. */
+          if (!want_author)
+            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
+                         APR_HASH_KEY_STRING, NULL);
+          if (!want_date)
+            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
+                         APR_HASH_KEY_STRING, NULL);
+          if (!want_log)
+            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_LOG,
+                         APR_HASH_KEY_STRING, NULL);
+        }
+    }
+  else
+    {
+      SVN_ERR(svn_ra_rev_proplist(rb->ra_session, log_entry->revision,
+                                  &log_entry->revprops, pool));
+    }
+
+  return rb->receiver(rb->baton, log_entry, pool);
+}
 
 
 /*** Public Interface. ***/
@@ -285,18 +369,19 @@ svn_client_log4(const apr_array_header_t *targets,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
-                svn_boolean_t omit_log_text,
-                svn_log_message_receiver2_t receiver,
-                void *receiver_baton,
+                apr_array_header_t *revprops,
+                svn_log_entry_receiver_t real_receiver,
+                void *real_receiver_baton,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
   const char *url_or_path;
-  const char *ignored_url;
+  const char *actual_url;
   apr_array_header_t *condensed_targets;
   svn_revnum_t ignored_revnum;
   svn_opt_revision_t session_opt_rev;
+  const char *ra_target;
 
   if ((start->kind == svn_opt_revision_unspecified)
       || (end->kind == svn_opt_revision_unspecified))
@@ -409,8 +494,6 @@ svn_client_log4(const apr_array_header_t *targets,
     session_opt_rev.kind = svn_opt_revision_unspecified;
 
   {
-    const char *target;
-
     /* If this is a revision type that requires access to the working copy,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
@@ -418,12 +501,12 @@ svn_client_log4(const apr_array_header_t *targets,
         || peg_revision->kind == svn_opt_revision_committed
         || peg_revision->kind == svn_opt_revision_previous
         || peg_revision->kind == svn_opt_revision_working)
-      SVN_ERR(svn_path_condense_targets(&target, NULL, targets, TRUE, pool));
+      SVN_ERR(svn_path_condense_targets(&ra_target, NULL, targets, TRUE, pool));
     else
-      target = url_or_path;
+      ra_target = url_or_path;
 
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &ignored_revnum,
-                                             &ignored_url, target,
+                                             &actual_url, ra_target,
                                              peg_revision, &session_opt_rev,
                                              ctx, pool));
   }
@@ -478,24 +561,56 @@ svn_client_log4(const apr_array_header_t *targets,
   {
     svn_revnum_t start_revnum, end_revnum;
     const char *path = APR_ARRAY_IDX(targets, 0, const char *);
+    svn_error_t *err;
 
     SVN_ERR(svn_client__get_revision_number
             (&start_revnum, ra_session, start, path, pool));
     SVN_ERR(svn_client__get_revision_number
             (&end_revnum, ra_session, end, path, pool));
 
-    return svn_ra_get_log2(ra_session,
-                           condensed_targets,
-                           start_revnum,
-                           end_revnum,
-                           limit,
-                           discover_changed_paths,
-                           strict_node_history,
-                           include_merged_revisions,
-                           omit_log_text,
-                           receiver,
-                           receiver_baton,
-                           pool);
+    if ((err = svn_ra_get_log2(ra_session,
+                               condensed_targets,
+                               start_revnum,
+                               end_revnum,
+                               limit,
+                               discover_changed_paths,
+                               strict_node_history,
+                               include_merged_revisions,
+                               revprops,
+                               real_receiver,
+                               real_receiver_baton,
+                               pool))
+        && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+      {
+        /* See above pre-1.5 notes. */
+        pre_15_receiver_baton_t rb;
+        rb.ctx = ctx;
+        SVN_ERR(svn_client_open_ra_session(&rb.ra_session, actual_url,
+                                           ctx, pool));
+        rb.revprops = revprops;
+        rb.receiver = real_receiver;
+        rb.baton = real_receiver_baton;
+        SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                                 &ignored_revnum,
+                                                 &actual_url, ra_target,
+                                                 peg_revision,
+                                                 &session_opt_rev,
+                                                 ctx, pool));
+        svn_error_clear(err);
+        err = svn_ra_get_log2(ra_session,
+                              condensed_targets,
+                              start_revnum,
+                              end_revnum,
+                              limit,
+                              discover_changed_paths,
+                              strict_node_history,
+                              include_merged_revisions,
+                              svn_compat_log_revprops_in(pool),
+                              pre_15_receiver,
+                              &rb,
+                              pool);
+      }
+    return err;
   }
 }
 
@@ -512,7 +627,7 @@ svn_client_log3(const apr_array_header_t *targets,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  svn_log_message_receiver2_t receiver2;
+  svn_log_entry_receiver_t receiver2;
   void *receiver2_baton;
 
   svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
@@ -521,7 +636,8 @@ svn_client_log3(const apr_array_header_t *targets,
 
   return svn_client_log4(targets, peg_revision, start, end, limit,
                          discover_changed_paths, strict_node_history, FALSE,
-                         FALSE, receiver2, receiver2_baton, ctx, pool);
+                         svn_compat_log_revprops_in(pool),
+                         receiver2, receiver2_baton, ctx, pool);
 }
 
 svn_error_t *

@@ -716,6 +716,21 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 /* -----------------------------------------------------------------------
+   Callback: svn_log_entry_receiver_t
+   svn_client_log4()
+   svn_ra_get_log2()
+   svn_repos_get_logs4()
+*/
+
+#ifdef SWIGPYTHON
+%typemap(in) (svn_log_entry_receiver_t receiver,
+                      void *receiver_baton) {
+    $1 = svn_swig_py_log_entry_receiver;
+    $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Callback: svn_commit_callback_t
    svn_ra get_commit_editor()
    svn_repos_get_commit_editor()

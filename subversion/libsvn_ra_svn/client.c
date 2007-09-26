@@ -1187,17 +1187,19 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                svn_boolean_t discover_changed_paths,
                                svn_boolean_t strict_node_history,
                                svn_boolean_t include_merged_revisions,
-                               svn_boolean_t omit_log_text,
-                               svn_log_message_receiver2_t receiver,
+                               apr_array_header_t *revprops,
+                               svn_log_entry_receiver_t receiver,
                                void *receiver_baton, apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_pool_t *subpool;
   int i;
-  const char *path, *author, *date, *message, *cpath, *action, *copy_path;
+  const char *path, *cpath, *action, *copy_path;
+  svn_string_t *author, *date, *message;
   svn_ra_svn_item_t *item, *elt;
-  apr_array_header_t *cplist;
+  char *name;
+  apr_array_header_t *cplist, *rplist;
   apr_hash_t *cphash;
   svn_revnum_t rev, copy_rev;
   svn_log_changed_path_t *change;
@@ -1205,6 +1207,8 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   apr_uint64_t has_children_param, invalid_revnum_param;
   svn_boolean_t has_children;
   svn_log_entry_t *log_entry;
+  svn_boolean_t want_custom_revprops;
+  apr_uint64_t revprop_count;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "log"));
   if (paths)
@@ -1215,11 +1219,32 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bbnbb)", start, end,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bbnb!", start, end,
                                  discover_changed_paths, strict_node_history,
                                  (apr_uint64_t) limit,
-                                 include_merged_revisions,
-                                 omit_log_text));
+                                 include_merged_revisions));
+  if (revprops)
+    {
+      want_custom_revprops = FALSE;
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!w(!", "revprops"));
+      for (i = 0; i < revprops->nelts; i++)
+        {
+          name = APR_ARRAY_IDX(revprops, i, char *);
+          SVN_ERR(svn_ra_svn_write_cstring(conn, pool, name));
+          if (!want_custom_revprops
+              && strcmp(name, SVN_PROP_REVISION_AUTHOR) != 0
+              && strcmp(name, SVN_PROP_REVISION_DATE) != 0
+              && strcmp(name, SVN_PROP_REVISION_LOG) != 0)
+            want_custom_revprops = TRUE;
+        }
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+    }
+  else
+    {
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!w())", "all-revprops"));
+      want_custom_revprops = TRUE;
+    }
+
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Read the log messages. */
@@ -1232,10 +1257,19 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log entry not a list"));
-      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr(?c)(?c)(?c)?BB",
+      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool,
+                                     "lr(?s)(?s)(?s)?BBnl",
                                      &cplist, &rev, &author, &date,
                                      &message, &has_children_param,
-                                     &invalid_revnum_param));
+                                     &invalid_revnum_param,
+                                     &revprop_count, &rplist));
+      if (want_custom_revprops && rplist == NULL)
+        {
+          /* Caller asked for custom revprops, but server is too old. */
+          return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                                  _("Server does not support custom revprops"
+                                    " via log"));
+        }
 
       if (has_children_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
         has_children = FALSE;
@@ -1280,17 +1314,46 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
 
           log_entry->changed_paths = cphash;
           log_entry->revision = rev;
-          log_entry->author = author;
-          log_entry->date = date;
-          log_entry->message = message;
           log_entry->has_children = has_children;
-
+          if (rplist)
+            SVN_ERR(svn_ra_svn_parse_proplist(rplist, pool,
+                                              &log_entry->revprops));
+          if (log_entry->revprops == NULL)
+            log_entry->revprops = apr_hash_make(pool);
+          if (revprops == NULL)
+            {
+              /* Caller requested all revprops; set author/date/log. */
+              if (author)
+                apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
+                             APR_HASH_KEY_STRING, author);
+              if (date)
+                apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
+                             APR_HASH_KEY_STRING, date);
+              if (message)
+                apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_LOG,
+                             APR_HASH_KEY_STRING, message);
+            }
+          else
+            {
+              /* Caller requested some; maybe set author/date/log. */
+              for (i = 0; i < revprops->nelts; i++)
+                {
+                  name = APR_ARRAY_IDX(revprops, i, char *);
+                  if (author && strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
+                    apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
+                                 APR_HASH_KEY_STRING, author);
+                  if (date && strcmp(name, SVN_PROP_REVISION_DATE) == 0)
+                    apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
+                                 APR_HASH_KEY_STRING, date);
+                  if (message && strcmp(name, SVN_PROP_REVISION_LOG) == 0)
+                    apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_LOG,
+                                 APR_HASH_KEY_STRING, message);
+                }
+            }
           SVN_ERR(receiver(receiver_baton, log_entry, subpool));
         }
-
       apr_pool_clear(subpool);
     }
-
   apr_pool_destroy(subpool);
 
   /* Read the response. */

@@ -844,14 +844,14 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
                              svn_boolean_t include_merged_revisions,
-                             svn_boolean_t omit_log_text,
-                             svn_log_message_receiver2_t receiver,
+                             apr_array_header_t *revprops,
+                             svn_log_entry_receiver_t receiver,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
   return session->vtable->get_log(session, paths, start, end, limit,
                                   discover_changed_paths, strict_node_history,
-                                  include_merged_revisions, omit_log_text,
+                                  include_merged_revisions, revprops,
                                   receiver, receiver_baton, pool);
 }
 
@@ -866,7 +866,7 @@ svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
                             void *receiver_baton,
                             apr_pool_t *pool)
 {
-  svn_log_message_receiver2_t receiver2;
+  svn_log_entry_receiver_t receiver2;
   void *receiver2_baton;
 
   svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
@@ -875,7 +875,8 @@ svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
 
   return svn_ra_get_log2(session, paths, start, end, limit,
                          discover_changed_paths, strict_node_history,
-                         FALSE, FALSE, receiver2, receiver2_baton, pool);
+                         FALSE, svn_compat_log_revprops_in(pool),
+                         receiver2, receiver2_baton, pool);
 }
 
 svn_error_t *svn_ra_check_path(svn_ra_session_t *session,

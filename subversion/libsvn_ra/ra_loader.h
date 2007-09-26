@@ -159,8 +159,8 @@ typedef struct svn_ra__vtable_t {
                           svn_boolean_t discover_changed_paths,
                           svn_boolean_t strict_node_history,
                           svn_boolean_t include_merged_revisions,
-                          svn_boolean_t omit_log_text,
-                          svn_log_message_receiver2_t receiver,
+                          apr_array_header_t *revprops,
+                          svn_log_entry_receiver_t receiver,
                           void *receiver_baton,
                           apr_pool_t *pool);
   svn_error_t *(*check_path)(svn_ra_session_t *session,

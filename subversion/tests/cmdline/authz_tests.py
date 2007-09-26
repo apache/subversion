@@ -569,8 +569,9 @@ def authz_log_and_tracing_test(sbox):
   else:
     expected_err = ".*svn: Authorization failed.*"
 
-  write_authz_file(sbox, { "/": "* = rw",
-                           "/A/D/G": "* ="})
+  authz = { "/": "* = rw",
+            "/A/D/G": "* ="}
+  write_authz_file(sbox, authz)
 
   ## log
 
@@ -601,6 +602,23 @@ def authz_log_and_tracing_test(sbox):
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                     'log', '-r', '2', '--limit', '1', D_url)
+
+  # Test that only author/date are shown for partially visible revisions.
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  write_authz_file(sbox, { "/": "* = rw"})
+  svntest.actions.run_and_verify_svn(
+    None, None, [],        # message, expected_stdout, expected_stderr
+    'ps', '--revprop', '-r1', 'foobar', 'foo bar', sbox.repo_url)
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': svntest.main.wc_author, 'svn:date': '',
+                        'svn:log': 'Log message for revision 1.',
+                        'foobar': 'foo bar'}],
+    args=['--with-all-revprops', '-r1', sbox.repo_url])
+  write_authz_file(sbox, authz)
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': svntest.main.wc_author, 'svn:date': ''}],
+    args=['--with-all-revprops', '-r1', sbox.repo_url])
+
 
   ## cat
 
