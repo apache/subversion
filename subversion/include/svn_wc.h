@@ -502,7 +502,7 @@ typedef struct svn_wc_external_item2_t
       svn_opt_revision_head. */
   svn_opt_revision_t revision;
 
-  /** The peg revision to use when checking out.  THe only valid kinds are
+  /** The peg revision to use when checking out.  The only valid kinds are
       svn_opt_revision_number, svn_opt_revision_date, and
       svn_opt_revision_head. */
   svn_opt_revision_t peg_revision;
