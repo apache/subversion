@@ -869,8 +869,8 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
          props needs to be made (it'll just see no file, and do nothing).
          So manufacture an empty propfile and force it to be written out. */
 
-      SVN_ERR(svn_wc__prop_path(&dst_bprop, path,
-                                entry->kind, svn_wc__props_revert, TRUE, pool));
+      SVN_ERR(svn_wc__prop_path(&dst_bprop, path, entry->kind,
+                                svn_wc__props_revert, TRUE, pool));
 
       SVN_ERR(save_prop_file(dst_bprop, apr_hash_make(pool), TRUE, pool));
 
@@ -1375,7 +1375,8 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                     *conflict = svn_string_createf
                       (pool,
                        _("Trying to change property '%s' from '%s' to '%s',\n"
-                         "but property has been locally added with value '%s'"),
+                         "but property has been locally added with "
+                         "value '%s'"),
                        propname, old_val->data, new_val->data,
                        working_val->data);
                 }
@@ -2211,7 +2212,8 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
     {
       new_value = svn_stringbuf_create_from_string(propval, pool);
       svn_stringbuf_strip_whitespace(new_value);
-      SVN_ERR(validate_eol_prop_against_file(path, getter, getter_baton, pool));
+      SVN_ERR(validate_eol_prop_against_file(path, getter, getter_baton,
+                                             pool));
     }
   else if (!skip_some_checks && (strcmp(propname, SVN_PROP_MIME_TYPE) == 0))
     {
@@ -2926,7 +2928,8 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
   int i;
 
   SVN_ERR(svn_wc_parse_externals_description3(externals_p ? &list : NULL,
-                                              parent_directory, desc, subpool));
+                                              parent_directory, desc,
+                                              subpool));
 
   if (externals_p)
     {
