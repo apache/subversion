@@ -586,14 +586,9 @@ typedef struct svn_log_entry_t
   /** The revision of the commit. */
   svn_revnum_t revision;
 
-  /** The author of the commit. */
-  const char *author;
-
-  /** The date of the commit. */
-  const char *date;
-
-  /** The log message of the commit. */
-  const char *message;
+  /** The hash of requested revision properties, which may be NULL if it
+   * would contain no revprops. */
+  apr_hash_t *revprops;
 
   /**
    * Whether or not this message has children.
@@ -659,13 +654,13 @@ svn_log_entry_create(apr_pool_t *pool);
  * @since New in 1.5.
  */
 
-typedef svn_error_t *(*svn_log_message_receiver2_t)
+typedef svn_error_t *(*svn_log_entry_receiver_t)
   (void *baton,
    svn_log_entry_t *log_entry,
    apr_pool_t *pool);
 
 /**
- * Similar to svn_log_message_receiver2_t, except this uses separate
+ * Similar to svn_log_entry_receiver_t, except this uses separate
  * parameters for each part of the log entry.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -705,6 +700,8 @@ typedef svn_error_t *(*svn_commit_callback_t)
    void *baton);
 
 
+/* TODO(epg): Moving svn_compat_* to new svn_compat.h in follow-up. */
+
 /** Return, in @a *callback2 and @a *callback2_baton a function/baton that
  * will call @a callback/@a callback_baton, allocating the @a *callback2_baton
  * in @a pool.
@@ -720,6 +717,34 @@ void svn_compat_wrap_commit_callback(svn_commit_callback2_t *callback2,
                                      void *callback_baton,
                                      apr_pool_t *pool);
 
+/** Clear svn:author, svn:date, and svn:log from @a revprops if not NULL.
+ * Use this if you must handle these three properties separately for
+ * compatibility reasons.
+ *
+ * @since New in 1.5.
+ */
+void
+svn_compat_log_revprops_clear(apr_hash_t *revprops);
+
+/** Return a list to pass to post-1.5 log-retrieval functions in order to
+ * retrieve the pre-1.5 set of revprops: svn:author, svn:date, and svn:log.
+ *
+ * @since New in 1.5.
+ */
+apr_array_header_t *
+svn_compat_log_revprops_in(apr_pool_t *pool);
+
+/** Return, in @a **author, @a **date, and @a **message, the values of the
+ * svn:author, svn:date, and svn:log revprops from @a revprops.  If @a
+ * revprops is NULL, all return values are NULL.  Any return value may be
+ * NULL if the corresponding property is not set in @a revprops.
+ *
+ * @since New in 1.5.
+ */
+void
+svn_compat_log_revprops_out(const char **author, const char **date,
+                            const char **message, apr_hash_t *revprops);
+
 /** Return, in @a *receiver2 and @a *receiver2_baton a function/baton that
  * will call @a receiver/@a receiver_baton, allocating the @a *receiver2_baton
  * in @a pool.
@@ -729,7 +754,7 @@ void svn_compat_wrap_commit_callback(svn_commit_callback2_t *callback2,
  *
  * @since New in 1.5.
  */
-void svn_compat_wrap_log_receiver(svn_log_message_receiver2_t *receiver2,
+void svn_compat_wrap_log_receiver(svn_log_entry_receiver_t *receiver2,
                                   void **receiver2_baton,
                                   svn_log_message_receiver_t receiver,
                                   void *receiver_baton,

@@ -352,7 +352,7 @@ static svn_error_t *compat_get_log(void *session_baton,
                                    void *receiver_baton,
                                    apr_pool_t *pool)
 {
-  svn_log_message_receiver2_t receiver2;
+  svn_log_entry_receiver_t receiver2;
   void *receiver2_baton;
 
   svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
@@ -362,7 +362,7 @@ static svn_error_t *compat_get_log(void *session_baton,
   return VTBL.get_log(session_baton, paths, start, end, 0, /* limit */
                       discover_changed_paths, strict_node_history,
                       FALSE, /* include_merged_revisions */
-                      FALSE, /* omit_log_text */
+                      svn_compat_log_revprops_in(pool), /* revprops */
                       receiver2, receiver2_baton, pool);
 }
 

@@ -198,6 +198,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("don't delete changelist after commit")},
   {"keep-local",    svn_cl__keep_local_opt, 0,
                     N_("keep path in working copy")},
+  {"with-all-revprops",  svn_cl__with_all_revprops_opt, 0,
+                    N_("retrieve all revision properties")},
   {"with-revprop",  svn_cl__with_revprop_opt, 1,
                     N_("set revision property ARG in new revision\n"
                        "                             "
@@ -521,7 +523,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', svn_cl__targets_opt, svn_cl__stop_on_copy_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, 'l', svn_cl__changelist_opt} },
+     svn_cl__config_dir_opt, 'l', svn_cl__changelist_opt,
+     svn_cl__with_all_revprops_opt, svn_cl__with_revprop_opt},
+    {{svn_cl__with_revprop_opt, N_("retrieve revision property ARG")}} },
 
   { "merge", svn_cl__merge, {0}, N_
     ("Apply the differences between two sources to a working copy path.\n"
@@ -1366,6 +1370,11 @@ main(int argc, const char *argv[])
         break;
       case svn_cl__keep_local_opt:
         opt_state.keep_local = TRUE;
+        break;
+      case svn_cl__with_all_revprops_opt:
+        /* If --with-all-revprops is specified along with one or more
+         * --with-revprops options, --with-all-revprops takes precedence. */
+        opt_state.all_revprops = TRUE;
         break;
       case svn_cl__with_revprop_opt:
         err = parse_revprop(&opt_state.revprop_table, opt_arg, pool);

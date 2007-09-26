@@ -1197,6 +1197,97 @@ def only_one_wc_path(sbox):
                      ' only one target may be given'),
     args=['A/mu', 'iota'])
 
+#----------------------------------------------------------------------
+def retrieve_revprops(sbox):
+  "test revprop retrieval"
+
+  sbox.build()
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+
+  # test properties
+  author = 'jrandom'
+  msg1 = 'Log message for revision 1.'
+  msg2 = 'Log message for revision 2.'
+  custom_name = 'retrieve_revprops'
+  custom_value = 'foo bar'
+
+  # Commit a change.
+  wc_dir = sbox.wc_dir
+  cwd = os.getcwd()
+  os.chdir(wc_dir)
+  svntest.main.file_append(os.path.join('A', 'D', 'H', 'omega'), "new otext")
+  os.chdir(cwd)
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/omega' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/H/omega', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        '-m', msg2,
+                                        omega_path)
+
+  os.chdir(wc_dir)
+
+  # Set custom property on r1 and r2.
+  svntest.actions.run_and_verify_svn(
+    None, None, [],        # message, expected_stdout, expected_stderr
+    'ps', '--revprop', '-r1', custom_name, custom_value, sbox.repo_url)
+  svntest.actions.run_and_verify_svn(
+    None, None, [],        # message, expected_stdout, expected_stderr
+    'ps', '--revprop', '-r2', custom_name, custom_value, sbox.repo_url)
+
+  # Can't set revprops with log.
+  svntest.actions.run_and_verify_log_xml(
+    expected_stderr=(".*cannot assign with 'with-revprop' option"
+                     " \(drop the '='\)"),
+    args=['--with-revprop=foo=bar'])
+
+  # basic test without revprop options
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': author, 'svn:date': '', 'svn:log': msg1}],
+    args=['-r1'])
+
+  # basic test without revprop options, with multiple revisions
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': author, 'svn:date': '', 'svn:log': msg1},
+                       {'svn:author': author, 'svn:date': '', 'svn:log': msg2}])
+
+  # -q with no revprop options must suppress svn:log only.
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': author, 'svn:date': ''}],
+    args=['-q', '-r1'])
+
+  # Request svn:date, svn:log, and a non-existent property.
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:date': '', 'svn:log': msg1}],
+    args=['-r1', '--with-revprop=svn:date', '--with-revprop', 'svn:log',
+          '--with-revprop', 'nosuchprop'])
+
+  # Get all revprops.
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': author, 'svn:date': '',
+                        'svn:log': msg1, custom_name: custom_value}],
+    args=['-r1', '--with-all-revprops'])
+
+  # Get all revprops, with multiple revisions.
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': author, 'svn:date': '',
+                        'svn:log': msg1, custom_name: custom_value},
+                       {'svn:author': author, 'svn:date': '',
+                        'svn:log': msg2, custom_name: custom_value}],
+    args=['--with-all-revprops'])
+
+  # Get only the custom property.
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{custom_name: custom_value}],
+    args=['-r1', '--with-revprop', custom_name])
+
 
 ########################################################################
 # Run the tests
@@ -1227,6 +1318,7 @@ test_list = [ None,
               XFail(log_changes_range),
               XFail(log_changes_list),
               only_one_wc_path,
+              retrieve_revprops,
              ]
 
 if __name__ == '__main__':

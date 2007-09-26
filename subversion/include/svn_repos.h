@@ -1142,8 +1142,8 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each path.
  *
- * If @a omit_log_text is set, the text of the log message will not be
- * returned.
+ * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
+ * revprops named in the array (i.e. retrieve none if the array is empty).
  *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
@@ -1154,12 +1154,14 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
  * of each changed-path in each revision about to be "pushed" at
- * @a receiver.  If a revision has all unreadable changed-paths, then
- * don't push the revision at all.  If a revision has a mixture of
- * readable and unreadable changed-paths, then silently omit the
- * unreadable changed-paths when pushing the revision.
+ * @a receiver.  If a revision has some changed-paths readable and
+ * others unreadable, unreadable paths are omitted from the
+ * changed_paths field and only svn:author and svn:date will be
+ * available in the revprops field.  If a revision has no
+ * changed-paths readable at all, then all paths are omitted and no
+ * revprops are available.
  *
- * See also the documentation for @c svn_log_message_receiver2_t.
+ * See also the documentation for @c svn_log_entry_receiver_t.
  *
  * Use @a pool for temporary allocations.
  *
@@ -1174,17 +1176,18 @@ svn_repos_get_logs4(svn_repos_t *repos,
                     svn_boolean_t discover_changed_paths,
                     svn_boolean_t strict_node_history,
                     svn_boolean_t include_merged_revisions,
-                    svn_boolean_t omit_log_text,
+                    apr_array_header_t *revprops,
                     svn_repos_authz_func_t authz_read_func,
                     void *authz_read_baton,
-                    svn_log_message_receiver2_t receiver,
+                    svn_log_entry_receiver_t receiver,
                     void *receiver_baton,
                     apr_pool_t *pool);
 
 /**
- * Same as svn_repos_get_logs4(), but with @a receiver being a
- * @c svn_log_message_receiver_t instead of @c svn_log_message_receiver2_t.
- * Also, @a omit_log_text is set to @c FALSE.
+ * Same as svn_repos_get_logs4(), but with @a receiver being @c
+ * svn_log_message_receiver_t instead of @c svn_log_entry_receiver_t.
+ * Also, @a include_merged_revisions is set to @c FALSE and @a revprops is
+ * svn:author, svn:date, and svn:log.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
