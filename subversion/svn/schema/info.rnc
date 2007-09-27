@@ -37,6 +37,7 @@ wc-info =
     schedule?,
     copy-from-url?,
     copy-from-rev?,
+    depth?,
     text-updated?,
     prop-updated?,
     checksum?,
