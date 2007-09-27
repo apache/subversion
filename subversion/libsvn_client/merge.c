@@ -1623,7 +1623,7 @@ drive_merge_report_editor(const char *target_wcpath,
 
   if (merge_b->target_has_dummy_merge_range)
     default_start = end;
-  else if (children_with_mergeinfo)
+  else if (children_with_mergeinfo && children_with_mergeinfo->nelts > 0)
     {
       svn_client__merge_path_t *target_merge_path_t;
       target_merge_path_t = APR_ARRAY_IDX(children_with_mergeinfo, 0,
@@ -3797,6 +3797,8 @@ svn_client_merge_peg3(const char *source,
         }
       else
         {
+          children_with_mergeinfo =
+            apr_array_make(pool, 0, sizeof(svn_client__merge_path_t *));
           SVN_ERR(do_merge(URL1,
                            range.start,
                            URL2,
