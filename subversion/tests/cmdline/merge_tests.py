@@ -307,7 +307,7 @@ def textual_merges_galore(sbox):
 
   expected_status = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
                              { ''     : Item(wc_rev=1, status='  '),
-                               'rho'  : Item(wc_rev=1, status='MM'),
+                               'rho'  : Item(wc_rev=1, status='M '),
                                'pi'   : Item(wc_rev=1, status='M '),
                                'tau'  : Item(wc_rev=1, status='C '),
                                })
@@ -330,7 +330,7 @@ def textual_merges_galore(sbox):
     svntest.tree.detect_conflict_files, list(tau_conflict_support_files))
 
 
-  svntest.actions.run_and_verify_svn(None, ["/A/D/G/rho:2-3\n"], [],
+  svntest.actions.run_and_verify_svn(None, [], [],
                                      'propget', SVN_PROP_MERGE_INFO,
                                      os.path.join(other_wc,
                                                   "A", "D", "G", "rho"))
