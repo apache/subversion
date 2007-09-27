@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_string.h"
 #include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
