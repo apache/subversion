@@ -2587,6 +2587,15 @@ def changelist(sbox):
                                         "--changelist=" + changelist_name,
                                         "-m", "msg", wc_dir)
 
+  # Attempt to commit a non-existent changelist.
+  expected_output = svntest.wc.State(wc_dir, {})
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        ".+", None, None, None, None,
+                                        "--changelist=does-not-exist",
+                                        "-m", "msg", wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -2645,7 +2654,7 @@ test_list = [ None,
               start_commit_hook_test,
               pre_commit_hook_test,
               versioned_log_message,
-              changelist,
+              XFail(changelist),
              ]
 
 if __name__ == '__main__':
