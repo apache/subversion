@@ -1533,6 +1533,8 @@ remove_absent_children(const char *target_wcpath,
           && child->absent
           && svn_path_is_ancestor(target_wcpath, child->path))
         {
+          if (notify_b->skipped_paths == NULL)
+            notify_b->skipped_paths = apr_hash_make(notify_b->pool);
           apr_hash_set(notify_b->skipped_paths, child->path,
                        APR_HASH_KEY_STRING, NULL);
           APR_ARRAY_IDX(children_with_mergeinfo, i, 
