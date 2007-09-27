@@ -1195,25 +1195,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
   svn_string_t *working_val
     = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
 
-  if (base_val)
-    {
-       if (working_val)
-         {
-           if (svn_string_compare(working_val, new_val))
-             set_prop_merge_state(state, svn_wc_notify_state_merged);
-           else
-             *conflict = svn_string_createf
-               (pool, _("Trying to create property '%s' with value '%s',\n"
-                        "but it already exists."),
-                propname, new_val->data);
-         }
-       else
-          *conflict = svn_string_createf
-            (pool, _("Trying to create property '%s' with value '%s',\n"
-                     "but it has been locally deleted."),
-             propname, new_val->data);
-    }
-  else if (working_val)
+  if (working_val)
     {
       /* the property already exists in working_props... */
 
@@ -1240,6 +1222,13 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                  "'%s',\nbut property already exists with value '%s'."),
                propname, new_val->data, working_val->data);
         }
+    }
+  else if (base_val)
+    {
+      *conflict = svn_string_createf
+        (pool, _("Trying to create property '%s' with value '%s',\n"
+                 "but it has been locally deleted."),
+         propname, new_val->data);
     }
   else  /* property doesn't yet exist in working_props...  */
     /* so just set it */
