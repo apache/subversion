@@ -660,7 +660,7 @@ typedef svn_error_t *(*svn_log_entry_receiver_t)
    apr_pool_t *pool);
 
 /**
- * Similar to svn_log_entry_receiver_t, except this uses separate
+ * Similar to @c svn_log_entry_receiver_t, except this uses separate
  * parameters for each part of the log entry.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
