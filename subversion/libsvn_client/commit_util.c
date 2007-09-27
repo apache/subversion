@@ -186,10 +186,14 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
 
 /* Whether CHANGELIST_NAME is NULL, or ENTRY->changelist (which may be
    NULL) matches CHANGELIST_NAME. */
-#define IS_COMMITTABLE(changelist_name, entry) \
-        ((changelist_name) == NULL || \
-         ((entry)->changelist && \
-          strcmp((changelist_name), (entry)->changelist) == 0))
+static APR_INLINE svn_boolean_t
+considered_committable(const char *changelist_name,
+                       const svn_wc_entry_t *entry)
+{
+  return (changelist_name == NULL ||
+          (entry->changelist &&
+           strcmp(changelist_name, entry->changelist) == 0) ? TRUE : FALSE);
+}
 
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
@@ -347,7 +351,7 @@ harvest_committables(apr_hash_t *committables,
     {
       /* Paths in conflict which are not part of our changelist should
          be ignored. */
-      if (IS_COMMITTABLE(changelist_name, entry))
+      if (considered_committable(changelist_name, entry))
         return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
                                  _("Aborting commit: '%s' remains in conflict"),
                                  svn_path_local_style(path, pool));
@@ -506,7 +510,7 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if (IS_COMMITTABLE(changelist_name, entry))
+      if (considered_committable(changelist_name, entry))
         {
           /* Finally, add the committable item. */
           add_committable(committables, path, entry->kind, url,
@@ -601,7 +605,8 @@ harvest_committables(apr_hash_t *committables,
                               && (this_entry->schedule
                                   == svn_wc_schedule_delete))
                             {
-                              if (IS_COMMITTABLE(changelist_name, entry))
+                              if (considered_committable(changelist_name,
+                                                         entry))
                                 {
                                   add_committable(
                                     committables, full_path,
