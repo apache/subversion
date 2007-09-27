@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_string.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -303,6 +304,11 @@ svn_cl__status(apr_getopt_t *os,
   if (apr_hash_count(master_cl_hash) > 0)
     {
       apr_hash_index_t *hi;
+      svn_stringbuf_t *buf;
+
+      if (opt_state->xml)
+        buf = svn_stringbuf_create("", pool);
+
       for (hi = apr_hash_first(pool, master_cl_hash); hi;
            hi = apr_hash_next(hi))
         {
@@ -316,19 +322,32 @@ svn_cl__status(apr_getopt_t *os,
           changelist_name = key;
           path_array = val;
 
-          /* ### TODO(sussman): This should be able to output XML
-             ### (issue #2859). */
           /* ### TODO: For non-XML output, we shouldn't print the
              ### leading \n on the first changelist if there were no
              ### non-changelist entries. */
-          SVN_ERR(svn_cmdline_printf(pool, _("\n--- Changelist '%s':\n"),
-                                     changelist_name));
+          if (opt_state->xml)
+            {
+              svn_stringbuf_set(buf, "");
+              svn_xml_make_open_tag(&buf, pool, svn_xml_normal, "changelist",
+                                    "name", changelist_name, NULL);
+              SVN_ERR(svn_cl__error_checked_fputs(buf->data, stdout));
+            }
+          else
+            SVN_ERR(svn_cmdline_printf(pool, _("\n--- Changelist '%s':\n"),
+                                       changelist_name));
 
           for (j = 0; j < path_array->nelts; j++)
             {
               struct status_cache *scache =
                 APR_ARRAY_IDX(path_array, j, struct status_cache *);
               print_status_normal_or_xml(&sb, scache->path, scache->status);
+            }
+
+          if (opt_state->xml)
+            {
+              svn_stringbuf_set(buf, "");
+              svn_xml_make_close_tag(&buf, pool, "changelist");
+              SVN_ERR(svn_cl__error_checked_fputs(buf->data, stdout));
             }
         }
     }
