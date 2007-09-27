@@ -1650,14 +1650,15 @@ drive_merge_report_editor(const char *target_wcpath,
       int i;
       for (i = 1; i < children_with_mergeinfo->nelts; i++)
         {
+          svn_merge_range_t *range;
           svn_client__merge_path_t *child = 
             APR_ARRAY_IDX(children_with_mergeinfo, i, 
                           svn_client__merge_path_t *);
           if (!child || child->absent || (child->remaining_ranges->nelts == 0))
             continue;
 
-          svn_merge_range_t *range = APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                                   svn_merge_range_t *);
+          range = APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                svn_merge_range_t *);
           if (range->start == default_start)
             continue;
           else
