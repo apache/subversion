@@ -152,10 +152,11 @@ href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
 <h3>Interactive Conflict Resolution (<em>client</em>)</h3>
 
 <p>Added support for interactive conflict resolution in the command
-line client, and a corresponding callback function in the client library.
-GUI clients can use the callback function to hook in a graphical conflict
-resolution program to the update/switch/merge commands.  Example command
-line output:</p>
+line client, and a corresponding callback function in the client
+library.  GUI clients can use the callback function to hook in a
+graphical conflict resolution program to the
+<code>update</code>/<code>switch</code>/<code>merge</code> commands.
+Example command line output:</p>
 <pre>
     svn up
     U    contrib/client-side/svnmerge/svnmerge_test.py
@@ -177,6 +178,27 @@ line output:</p>
 <p>This feature can be selectively disabled by using the --non-interactive
 option, or disabled permanently by setting '[miscellany] interactive-conflicts
  = no' in your run-time config file.</p>
+
+<p>The API for interactive conflict resolution is exposed via a
+callback function and the following new data types:</p>
+
+<ul>
+  <li><code>svn_wc_conflict_resolver_func_t</code>, the callback API
+    itself</li>
+  <li><code>svn_wc_conflict_description_t</code>, a description of the
+    conflict passed to the callback</li>
+  <li><code>svn_wc_conflict_action_t</code>, the part of the conflict
+    description indicating what the merge was trying to do</li>
+  <li><code>svn_wc_conflict_reason_t</code>, the part of the conflict
+    description indicating the type of conflict</li>
+  <li><code>svn_wc_conflict_result_t</code>, returned by the callback
+    as the result of any conflict resolution attempt</li>
+</ul>
+
+<p>Clients provide their callback function to Subversion's libraries
+by setting it on the (new) <code>conflict_func</code> field of their
+<code>svn_client_ctx_t</code>, and may provide additional state to the
+callback via the corresponding <code>conflict_baton</code> field.</p>
 
 </div>  <!-- conflict-resolution -->
 
