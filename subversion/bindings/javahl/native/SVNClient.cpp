@@ -213,6 +213,13 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     Targets target(path);
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
+
+    apr_array_header_t *revprops = apr_array_make(requestPool.pool(), 3,
+                                                  sizeof(char *));
+    APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+    APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
+    APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
+
     SVN_JNI_ERR(svn_client_log4(targets,
                                 pegRevision.revision(),
                                 revisionStart.revision(),
@@ -221,7 +228,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                                 discoverPaths,
                                 stopOnCopy,
                                 includeMergedRevisions,
-                                omitLogText,
+                                revprops,
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }
