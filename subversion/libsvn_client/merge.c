@@ -3128,7 +3128,6 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
   svn_error_t *err = SVN_NO_ERROR;
   int merge_target_len = strlen(merge_b->target);
   int i;
-  svn_opt_revision_t peg_revision, rev_opt1, rev_opt2;
   svn_merge_range_t range;
   svn_ra_session_t *ra_session;
   svn_revnum_t start_rev, end_rev;
@@ -3144,13 +3143,6 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
                                                parent_merge_source_url, NULL,
                                                NULL, NULL, FALSE, TRUE,
                                                merge_b->ctx, pool));
-
-  peg_revision.kind = svn_opt_revision_head;
-  rev_opt1.value.number = rev1;
-  rev_opt1.kind = svn_opt_revision_number;
-  rev_opt2.value.number = rev2;
-  rev_opt2.kind = svn_opt_revision_number;
-
   *children_with_mergeinfo = 
     apr_array_make(pool, 0, sizeof(svn_client__merge_path_t *));
   SVN_ERR(get_mergeinfo_paths(*children_with_mergeinfo,
