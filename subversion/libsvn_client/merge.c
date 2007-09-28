@@ -2194,6 +2194,7 @@ do_single_file_merge(const char *url1,
                      svn_boolean_t is_rollback,
                      const char *target_wcpath,
                      svn_wc_adm_access_t *adm_access,
+                     notification_receiver_baton_t *notify_b,
                      struct merge_cmd_baton *merge_b,
                      svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool)
@@ -2207,8 +2208,6 @@ do_single_file_merge(const char *url1,
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   svn_client_ctx_t *ctx = merge_b->ctx;
-  notification_receiver_baton_t notify_b =
-    { ctx->notify_func2, ctx->notify_baton2, TRUE, 0, 0, NULL, NULL, pool };
   const char *rel_path;
   svn_merge_range_t range;
   apr_hash_t *target_mergeinfo;
@@ -2266,8 +2265,6 @@ do_single_file_merge(const char *url1,
       SVN_ERR(err);
     }
 
-  notify_b.same_urls = (strcmp(url1, url2) == 0);
-
   /* Establish RA sessions to our URLs. */
   SVN_ERR(svn_client__open_ra_session_internal(&merge_b->ra_session1, url1,
                                                NULL, NULL, NULL, FALSE, TRUE,
@@ -2279,7 +2276,7 @@ do_single_file_merge(const char *url1,
   range.start = revision1;
   range.end = revision2;
   range.inheritable = TRUE;
-  if (notify_b.same_urls && merge_b->same_repos)
+  if (notify_b->same_urls && merge_b->same_repos)
     {
       /* Temporarily reparent ra_session1 to WC target URL. */
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, entry->url, pool));
@@ -2326,9 +2323,9 @@ do_single_file_merge(const char *url1,
       n = svn_wc_create_notify(target_wcpath,
                                svn_wc_notify_merge_begin,
                                subpool);
-      if (notify_b.same_urls)
+      if (notify_b->same_urls)
         n->merge_range = r;
-      notification_receiver(&notify_b, n, subpool);
+      notification_receiver(notify_b, n, subpool);
 
       /* While we currently don't allow it, in theory we could be
          fetching two fulltexts from two different repositories here. */
@@ -2362,7 +2359,7 @@ do_single_file_merge(const char *url1,
                                      mimetype1, mimetype2,
                                      props1,
                                      merge_b));
-          single_file_merge_notify(&notify_b, target_wcpath,
+          single_file_merge_notify(notify_b, target_wcpath,
                                    svn_wc_notify_update_delete, text_state,
                                    svn_wc_notify_state_unknown, subpool);
 
@@ -2377,7 +2374,7 @@ do_single_file_merge(const char *url1,
                                    mimetype1, mimetype2,
                                    propchanges, props1,
                                    merge_b));
-          single_file_merge_notify(&notify_b, target_wcpath,
+          single_file_merge_notify(notify_b, target_wcpath,
                                    svn_wc_notify_update_add, text_state,
                                    prop_state, subpool);
           /* ... equals replace. */
@@ -2394,7 +2391,7 @@ do_single_file_merge(const char *url1,
                                      mimetype1, mimetype2,
                                      propchanges, props1,
                                      merge_b));
-          single_file_merge_notify(&notify_b, target_wcpath,
+          single_file_merge_notify(notify_b, target_wcpath,
                                    svn_wc_notify_update_update, text_state,
                                    prop_state, subpool);
         }
@@ -2413,7 +2410,7 @@ do_single_file_merge(const char *url1,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
-      if (notify_b.same_urls)
+      if (notify_b->same_urls)
         {
           if (!merge_b->dry_run && merge_b->same_repos)
             {
@@ -2422,7 +2419,7 @@ do_single_file_merge(const char *url1,
               apr_hash_t *merges;
               SVN_ERR(determine_merges_performed(&merges, target_wcpath,
                                                  r, svn_depth_infinity,
-                                                 adm_access, &notify_b, merge_b,
+                                                 adm_access, notify_b, merge_b,
                                                  subpool));
               /* If this whole merge was simply a no-op merge to a file then
                  we don't touch the local mergeinfo. */
@@ -2443,11 +2440,11 @@ do_single_file_merge(const char *url1,
 
           /* Clear the notification counter and list of skipped paths
              in preparation for the next revision range merge. */
-          notify_b.nbr_notifications = 0;
-          if (notify_b.skipped_paths != NULL)
-            svn_hash__clear(notify_b.skipped_paths);
-          if (notify_b.merged_paths != NULL)
-            svn_hash__clear(notify_b.merged_paths);
+          notify_b->nbr_notifications = 0;
+          if (notify_b->skipped_paths != NULL)
+            svn_hash__clear(notify_b->skipped_paths);
+          if (notify_b->merged_paths != NULL)
+            svn_hash__clear(notify_b->merged_paths);
         }
 
       if (i < remaining_ranges->nelts - 1 &&
@@ -3506,6 +3503,7 @@ svn_client_merge3(const char *source1,
                                    is_rollback,
                                    target_wcpath,
                                    adm_access,
+                                   &notify_b,
                                    &merge_cmd_baton,
                                    ignore_ancestry,
                                    pool));
@@ -3758,6 +3756,7 @@ svn_client_merge_peg3(const char *source,
                                    is_rollback,
                                    target_wcpath,
                                    adm_access,
+                                   &notify_b,
                                    &merge_cmd_baton,
                                    ignore_ancestry,
                                    pool));
