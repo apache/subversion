@@ -1737,8 +1737,13 @@ main(int argc, const char *argv[])
   if (interactive_conflicts
       && (! opt_state.non_interactive ))
     {
+      svn_cmdline_prompt_baton_t *pb = apr_palloc(pool, sizeof(*pb));
+
+      pb->cancel_func = ctx->cancel_func;
+      pb->cancel_baton = ctx->cancel_baton;
+
       ctx->conflict_func = svn_cl__interactive_conflict_handler;
-      ctx->conflict_baton = NULL;
+      ctx->conflict_baton = pb;
     }
   else
     {

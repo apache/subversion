@@ -139,16 +139,6 @@ int svn_cmdline_handle_exit_error(svn_error_t *error,
                                   apr_pool_t *pool,
                                   const char *prefix);
 
-/** Prompt the user for input, using @a prompt_str for the prompt and
- * returning the user's response in @a result, allocated in @a pool.
- *
- * @since New in 1.4.
- */
-svn_error_t *
-svn_cmdline_prompt_user(const char **result,
-                        const char *prompt_str,
-                        apr_pool_t *pool);
-
 /** A cancellation function/baton pair to be passed as the baton argument
  * to the @c svn_cmdline_*_prompt functions.
  *
@@ -158,6 +148,28 @@ typedef struct svn_cmdline_prompt_baton_t {
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 } svn_cmdline_prompt_baton_t;
+
+/** Prompt the user for input, using @a prompt_str for the prompt and
+ * @a baton (which may be @c NULL) for cancellation, and returning the
+ * user's response in @a result, allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_cmdline_prompt_user2(const char **result,
+                         const char *prompt_str,
+                         svn_cmdline_prompt_baton_t *baton,
+                         apr_pool_t *pool);
+
+/** Similar to svn_cmdline_prompt_user2, but without cancellation
+ * support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+svn_error_t *
+svn_cmdline_prompt_user(const char **result,
+                        const char *prompt_str,
+                        apr_pool_t *pool);
 
 /** An implementation of @c svn_auth_simple_prompt_func_t that prompts
  * the user for keyboard input on the command line.
