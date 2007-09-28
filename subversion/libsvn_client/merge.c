@@ -2457,9 +2457,6 @@ do_single_file_merge(const char *url1,
 
   apr_pool_destroy(subpool);
 
-  SVN_ERR(elide_target_mergeinfo(target_wcpath, entry, adm_access, merge_b,
-                                 pool));
-
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
 
