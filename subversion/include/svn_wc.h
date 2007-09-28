@@ -767,7 +767,10 @@ typedef enum svn_wc_notify_state_t
   svn_wc_notify_state_merged,
 
   /** Modified state got conflicting mods. */
-  svn_wc_notify_state_conflicted
+  svn_wc_notify_state_conflicted,
+
+  /** The source to copy the file from is missing. */
+  svn_wc_notify_state_source_missing
 
 } svn_wc_notify_state_t;
 
@@ -1079,12 +1082,13 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
 
 /**
  * A callback vtable invoked by our diff-editors, as they receive
- * diffs from the server.  'svn diff' and 'svn merge' both implement
- * their own versions of this table.
+ * diffs from the server.  'svn diff', 'svn merge' and 'svn patch' all
+ * three implement their own versions of this table, though patch's is
+ * very similar to merge's.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
  */
-typedef struct svn_wc_diff_callbacks2_t
+typedef struct svn_wc_diff_callbacks3_t
 {
   /** A file @a path has changed.  If @a tmpfile2 is non-NULL, the
    * contents have changed and those changes can be seen by comparing
@@ -1152,6 +1156,9 @@ typedef struct svn_wc_diff_callbacks2_t
    * @c svn_wc_notify_state_unknown, since they do not change the state
    * and therefore do not bother to know the state after the operation.)
    *
+   * @a copyfrom_path and @a copyfrom_rev are used when dealing with
+   * copied file.  They are respectively the source path and the
+   * source revision from which the file was copied.
    */
   svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
                              svn_wc_notify_state_t *contentstate,
@@ -1163,6 +1170,8 @@ typedef struct svn_wc_diff_callbacks2_t
                              svn_revnum_t rev2,
                              const char *mimetype1,
                              const char *mimetype2,
+                             const char *copyfrom_path,
+                             svn_revnum_t copyfrom_rev,
                              const apr_array_header_t *propchanges,
                              apr_hash_t *originalprops,
                              void *diff_baton);
@@ -1201,11 +1210,17 @@ typedef struct svn_wc_diff_callbacks2_t
    *
    * @a adm_access will be an access baton for the directory containing
    * @a path, or @c NULL if the diff editor is not using access batons.
+   *
+   * @a copyfrom_path and @a copyfrom_rev are used when dealing with
+   * copied directory.  They are respectively the source path and the
+   * source revision from which the directory was copied.
    */
   svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_state_t *state,
                             const char *path,
                             svn_revnum_t rev,
+                            const char *copyfrom_path,
+                            svn_revnum_t copyfrom_rev,
                             void *diff_baton);
 
   /** A directory @a path was deleted.
@@ -1243,6 +1258,80 @@ typedef struct svn_wc_diff_callbacks2_t
    * to @c svn_wc_notify_state_unknown, since they do not change the state
    * and therefore do not bother to know the state after the operation.)
    */
+  svn_error_t *(*dir_props_changed)(svn_wc_adm_access_t *adm_access,
+                                    svn_wc_notify_state_t *state,
+                                    const char *path,
+                                    const apr_array_header_t *propchanges,
+                                    apr_hash_t *original_props,
+                                    void *diff_baton);
+
+} svn_wc_diff_callbacks3_t;
+
+/**
+ * Similar to @c svn_wc_diff_callbacks3_t, but without @a copyfrom_path
+ * and @a copyfrom_rev args for both @c file_added and @c dir_added.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ */
+typedef struct svn_wc_diff_callbacks2_t
+{
+  /** The same as @c file_changed in @c svn_wc_diff_callbacks3_t. */
+  svn_error_t *(*file_changed)(svn_wc_adm_access_t *adm_access,
+                               svn_wc_notify_state_t *contentstate,
+                               svn_wc_notify_state_t *propstate,
+                               const char *path,
+                               const char *tmpfile1,
+                               const char *tmpfile2,
+                               svn_revnum_t rev1,
+                               svn_revnum_t rev2,
+                               const char *mimetype1,
+                               const char *mimetype2,
+                               const apr_array_header_t *propchanges,
+                               apr_hash_t *originalprops,
+                               void *diff_baton);
+
+  /** Similar to @c svn_wc_diff_callbacks3_t's @c file_added but without
+   * @a copyfrom_path and @a copyfrom_rev arguments. */
+  svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *contentstate,
+                             svn_wc_notify_state_t *propstate,
+                             const char *path,
+                             const char *tmpfile1,
+                             const char *tmpfile2,
+                             svn_revnum_t rev1,
+                             svn_revnum_t rev2,
+                             const char *mimetype1,
+                             const char *mimetype2,
+                             const apr_array_header_t *propchanges,
+                             apr_hash_t *originalprops,
+                             void *diff_baton);
+
+  /** The same as @c file_deleted in @c svn_wc_diff_callbacks3_t. */
+  svn_error_t *(*file_deleted)(svn_wc_adm_access_t *adm_access,
+                               svn_wc_notify_state_t *state,
+                               const char *path,
+                               const char *tmpfile1,
+                               const char *tmpfile2,
+                               const char *mimetype1,
+                               const char *mimetype2,
+                               apr_hash_t *originalprops,
+                               void *diff_baton);
+
+  /** Similar to @c svn_wc_diff_callbacks3_t's @c dir_added but without
+   * @a copyfrom_path and @a copyfrom_rev arguments. */
+  svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
+                            svn_wc_notify_state_t *state,
+                            const char *path,
+                            svn_revnum_t rev,
+                            void *diff_baton);
+
+  /** The same as @c dir_deleted in @c svn_wc_diff_callbacks3_t. */
+  svn_error_t *(*dir_deleted)(svn_wc_adm_access_t *adm_access,
+                              svn_wc_notify_state_t *state,
+                              const char *path,
+                              void *diff_baton);
+
+  /** The same as @c dir_props_changed in @c svn_wc_diff_callbacks3_t. */
   svn_error_t *(*dir_props_changed)(svn_wc_adm_access_t *adm_access,
                                     svn_wc_notify_state_t *state,
                                     const char *path,
