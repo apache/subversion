@@ -2049,10 +2049,9 @@ elide_target_mergeinfo(const char *target_wcpath,
                        const svn_wc_entry_t *entry,
                        svn_wc_adm_access_t *adm_access,
                        struct merge_cmd_baton *merge_b,
-                       svn_boolean_t is_root_of_noop_merge,
                        apr_pool_t *pool)
 {
-  if (!merge_b->dry_run && !is_root_of_noop_merge
+  if (!merge_b->dry_run && merge_b->operative_merge
       && strcmp(target_wcpath, merge_b->target))
     {
       SVN_ERR(svn_client__elide_mergeinfo(target_wcpath,
@@ -2216,7 +2215,6 @@ do_single_file_merge(const char *url1,
   const svn_wc_entry_t *entry;
   int i;
   svn_boolean_t indirect = FALSE, is_replace = FALSE;
-  svn_boolean_t is_root_of_noop_merge = FALSE;
   apr_pool_t *subpool;
 
   /* Ensure that the adm_access we're playing with is our TARGET_WCPATH's
@@ -2428,12 +2426,7 @@ do_single_file_merge(const char *url1,
                                                  subpool));
               /* If this whole merge was simply a no-op merge to a file then
                  we don't touch the local mergeinfo. */
-              if(svn_path_compare_paths(target_wcpath, merge_b->target) == 0
-                 && !merge_b->operative_merge)
-                {
-                  is_root_of_noop_merge = TRUE;
-                }
-              else
+              if (merge_b->operative_merge)
                 {
                   /* If merge target has indirect mergeinfo set it before
                      recording the first merge range. */
@@ -2468,7 +2461,7 @@ do_single_file_merge(const char *url1,
   apr_pool_destroy(subpool);
 
   SVN_ERR(elide_target_mergeinfo(target_wcpath, entry, adm_access, merge_b,
-                                 is_root_of_noop_merge, pool));
+                                 pool));
 
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
@@ -3314,8 +3307,7 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
                                                    i, iterpool));
           if (i > 0)
             SVN_ERR(elide_target_mergeinfo(child->path, child_entry,
-                                           adm_access, merge_b, FALSE,
-                                           iterpool));
+                                           adm_access, merge_b, iterpool));
         }
     }
 
