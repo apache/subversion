@@ -3452,8 +3452,8 @@ removed.</b>
 <blockquote>
 <div><pre><code>
 # Check and delete svn unversioned files: 
-svn status --no-ignore | grep "^[I?]" | sed 's/^[I?]//'
-svn status --no-ignore | grep "^[I?]" | sed 's/^[I?]//' | xargs rm -rf
+svn status --no-ignore | grep '^[I?]' | sed 's/^[I?]//'
+svn status --no-ignore | grep '^[I?]' | sed 's/^[I?]//' | xargs rm -rf
 </code></pre></div>
 </blockquote>
 
