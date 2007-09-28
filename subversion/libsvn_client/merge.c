@@ -1599,29 +1599,6 @@ drive_merge_report_editor(const char *target_wcpath,
   void *diff_edit_baton;
   void *report_baton;
   svn_revnum_t default_start = start;
-  /* Open a second session used to request individual file
-     contents. Although a session can be used for multiple requests, it
-     appears that they must be sequential. Since the first request, for
-     the diff, is still being processed the first session cannot be
-     reused. This applies to ra_neon, ra_local does not appears to have
-     this limitation. */
-  SVN_ERR(svn_client__open_ra_session_internal(&merge_b->ra_session2, url1,
-                                               NULL, NULL, NULL, FALSE, TRUE,
-                                               merge_b->ctx, pool));
-  SVN_ERR(svn_client__get_diff_editor(target_wcpath, adm_access, callbacks,
-                                      merge_b, depth, merge_b->dry_run,
-                                      merge_b->ra_session2, start,
-                                      notification_receiver, notify_b,
-                                      merge_b->ctx->cancel_func,
-                                      merge_b->ctx->cancel_baton,
-                                      &diff_editor, &diff_edit_baton,
-                                      pool));
-
-  SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1, &reporter, &report_baton, end,
-                          "", depth, ignore_ancestry, TRUE,  /* text_deltas */
-                          url2, diff_editor, diff_edit_baton, pool));
-
-
   if (merge_b->target_has_dummy_merge_range)
     default_start = end;
   else if (children_with_mergeinfo)
@@ -1637,6 +1614,29 @@ drive_merge_report_editor(const char *target_wcpath,
           default_start = range->start;
         }
     }
+  /* Open a second session used to request individual file
+     contents. Although a session can be used for multiple requests, it
+     appears that they must be sequential. Since the first request, for
+     the diff, is still being processed the first session cannot be
+     reused. This applies to ra_neon, ra_local does not appears to have
+     this limitation. */
+  SVN_ERR(svn_client__open_ra_session_internal(&merge_b->ra_session2, url1,
+                                               NULL, NULL, NULL, FALSE, TRUE,
+                                               merge_b->ctx, pool));
+  SVN_ERR(svn_client__get_diff_editor(target_wcpath, adm_access, callbacks,
+                                      merge_b, depth, merge_b->dry_run,
+                                      merge_b->ra_session2, default_start,
+                                      notification_receiver, notify_b,
+                                      merge_b->ctx->cancel_func,
+                                      merge_b->ctx->cancel_baton,
+                                      &diff_editor, &diff_edit_baton,
+                                      pool));
+
+  SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1, &reporter, &report_baton, end,
+                          "", depth, ignore_ancestry, TRUE,  /* text_deltas */
+                          url2, diff_editor, diff_edit_baton, pool));
+
+
 
   SVN_ERR(reporter->set_path(report_baton, "", default_start, depth,
                              FALSE, NULL, pool));
