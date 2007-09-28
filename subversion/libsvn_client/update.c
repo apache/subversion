@@ -267,14 +267,16 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                      depth, ctx, pool);
   if (err)
     {
-      if (svn_error_root_cause_is(err, SVN_ERR_WC_PATH_NOT_FOUND)
-          || svn_error_root_cause_is(err, SVN_ERR_UNVERSIONED_RESOURCE))
+      svn_error_t *root_err = svn_error_root_cause(err);
+      switch (root_err->apr_err)
         {
+        case SVN_ERR_WC_PATH_NOT_FOUND:
+        case SVN_ERR_UNVERSIONED_RESOURCE:
           svn_error_clear(err);
           err = SVN_NO_ERROR;
-        }
-      else
-        {
+          break;
+
+        default:
           return err;
         }
     }
