@@ -687,6 +687,7 @@ harvest_committables(apr_hash_t *committables,
 }
 
 
+/* BATON is an apr_hash_t * of harvested committables. */
 static svn_error_t *
 validate_dangler(void *baton,
                  const void *key, apr_ssize_t klen, void *val,
