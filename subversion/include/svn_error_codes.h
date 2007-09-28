@@ -1083,6 +1083,10 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 23,
              "Iteration terminated before completion")
 
+  SVN_ERRDEF(SVN_ERR_UNKNOWN_CHANGELIST,
+             SVN_ERR_MISC_CATEGORY_START + 24,
+             "Unknown changelist")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
