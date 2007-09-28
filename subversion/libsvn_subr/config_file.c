@@ -574,13 +574,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
           return SVN_NO_ERROR;
         }
     }
-  else
+  else if (kind == svn_node_file)
     {
-      /* ### config directory already exists, but for the sake of
-         smooth upgrades, try to ensure that the auth/ subdirs exist
-         as well.  we can remove this check someday in the future. */
-      ensure_auth_dirs(path, pool);
-
+      /* Somebody put a file where the config directory should be.
+         Wacky.  Let's bail. */
       return SVN_NO_ERROR;
     }
 
