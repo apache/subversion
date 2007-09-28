@@ -857,6 +857,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
     }
   while (i < targets->nelts);
 
+  if (changelist_name && apr_hash_count(*committables) == 0)
+    /* None of the paths we examined were in the changelist. */
+    return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
+                             _("Unknown changelist '%s'"), changelist_name);
+
   /* Make sure that every path in danglers is part of the commit. */
   SVN_ERR(svn_iter_apr_hash(NULL,
                             danglers, validate_dangler, *committables, pool));

@@ -1570,7 +1570,9 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  * on items that are committed;  that is, don't commit anything unless
  * it's a member of changelist @a changelist_name.  After the commit
  * completes successfully, remove changelist associations from the
- * targets, unless @a keep_changelist is set.
+ * targets, unless @a keep_changelist is set.  If no items are
+ * committed, return an error with @c SVN_ERR_UNKNOWN_CHANGELIST as
+ * its root cause.
  *
  * Use @a pool for any temporary allocations.
  *

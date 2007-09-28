@@ -24,6 +24,8 @@
 
 #include <apr_general.h>
 
+#include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_path.h"
@@ -39,6 +41,7 @@ svn_cl__commit(apr_getopt_t *os,
                void *baton,
                apr_pool_t *pool)
 {
+  svn_error_t *err;
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
@@ -96,16 +99,27 @@ svn_cl__commit(apr_getopt_t *os,
   ctx->revprop_table = opt_state->revprop_table;
 
   /* Commit. */
-  SVN_ERR(svn_cl__cleanup_log_msg
-          (ctx->log_msg_baton3,
-           svn_client_commit4(&commit_info,
-                              targets,
-                              opt_state->depth,
-                              no_unlock,
-                              opt_state->keep_changelist,
-                              opt_state->changelist,
-                              ctx,
-                              pool)));
+  err = svn_client_commit4(&commit_info,
+                           targets,
+                           opt_state->depth,
+                           no_unlock,
+                           opt_state->keep_changelist,
+                           opt_state->changelist,
+                           ctx,
+                           pool);
+  if (err)
+    {
+      svn_error_t *root_err = svn_error_root_cause(err);
+      if (root_err->apr_err == SVN_ERR_UNKNOWN_CHANGELIST)
+        {
+          /* Convert a hard error about an unknown changelist into a
+             soft warning. */
+          svn_handle_warning2(stdout, root_err, "svn: ");
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+    }
+  SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 
