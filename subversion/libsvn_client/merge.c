@@ -1577,7 +1577,8 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
 }
 
 /* Sets up the diff editor report and drives it by properly negating
-   subtree that could have a conflicting merge history.*/
+   subtree that could have a conflicting merge history.
+   If non-null CHILDREN_WITH_MERGEINFO is given, it should not be empty.*/
 static svn_error_t *
 drive_merge_report_editor(const char *target_wcpath,
                           const char *url1,
@@ -1623,7 +1624,7 @@ drive_merge_report_editor(const char *target_wcpath,
 
   if (merge_b->target_has_dummy_merge_range)
     default_start = end;
-  else if (children_with_mergeinfo && children_with_mergeinfo->nelts > 0)
+  else if (children_with_mergeinfo)
     {
       svn_client__merge_path_t *target_merge_path_t;
       target_merge_path_t = APR_ARRAY_IDX(children_with_mergeinfo, 0,
@@ -1640,8 +1641,7 @@ drive_merge_report_editor(const char *target_wcpath,
   SVN_ERR(reporter->set_path(report_baton, "", default_start, depth,
                              FALSE, NULL, pool));
 
-  if (notify_b->same_urls && children_with_mergeinfo
-      && children_with_mergeinfo->nelts > 0)
+  if (notify_b->same_urls && children_with_mergeinfo)
     {
       /* Describe children with mergeinfo overlapping this merge
          operation such that no repeated diff is retrieved for them from
@@ -3399,7 +3399,6 @@ svn_client_merge3(const char *source1,
   const svn_wc_entry_t *entry;
   struct merge_cmd_baton merge_cmd_baton;
   const char *URL1, *URL2;
-  apr_array_header_t *children_with_mergeinfo = NULL;
   svn_config_t *cfg;
   const char *wc_repos_root;
   svn_merge_range_t range;
@@ -3527,6 +3526,7 @@ svn_client_merge3(const char *source1,
       if (notify_b.same_urls)
         {
           /* Merge children with differing mergeinfo. */
+          apr_array_header_t *children_with_mergeinfo = NULL;
           SVN_ERR(discover_and_merge_children(&children_with_mergeinfo,
                                               entry,
                                               URL1,
@@ -3540,6 +3540,14 @@ svn_client_merge3(const char *source1,
                                               &notify_b,
                                               &merge_cmd_baton,
                                               pool));
+          SVN_ERR(cleanup_noop_merge(&merge_cmd_baton, children_with_mergeinfo,
+                                     adm_access, pool));
+          /* The merge of the actual target is complete.  See if the target's
+             immediate children's mergeinfo elides to the target. */
+          if (! dry_run && merge_cmd_baton.operative_merge)
+            SVN_ERR(svn_client__elide_children(children_with_mergeinfo,
+                                               target_wcpath, entry, 
+                                               adm_access, ctx, pool));
         }
       else
         {
@@ -3555,18 +3563,9 @@ svn_client_merge3(const char *source1,
                            &merge_callbacks,
                            &notify_b,
                            &merge_cmd_baton,
-                           children_with_mergeinfo,
+                           NULL,
                            pool));
         }
-      SVN_ERR(cleanup_noop_merge(&merge_cmd_baton, children_with_mergeinfo,
-                                 adm_access, pool));
-
-      /* The merge of the actual target is complete.  See if the target's
-         immediate children's mergeinfo elides to the target. */
-      if (! dry_run && merge_cmd_baton.operative_merge)
-        SVN_ERR(svn_client__elide_children(children_with_mergeinfo, 
-                                           target_wcpath, entry, 
-                                           adm_access, ctx, pool));
     }
 
   /* The final mergeinfo on TARGET_WCPATH may itself elide. */
@@ -3637,7 +3636,6 @@ svn_client_merge_peg3(const char *source,
   struct merge_cmd_baton merge_cmd_baton;
   const char *URL;
   const char *path = NULL;
-  apr_array_header_t *children_with_mergeinfo;
   const char *URL1, *URL2;
   svn_opt_revision_t initial_rev1, initial_rev2;
   svn_opt_revision_t *rev1, *rev2;
@@ -3781,6 +3779,7 @@ svn_client_merge_peg3(const char *source,
       if (notify_b.same_urls)
         {
           /* Merge children with differing mergeinfo. */
+          apr_array_header_t *children_with_mergeinfo;
           SVN_ERR(discover_and_merge_children(&children_with_mergeinfo,
                                               entry,
                                               URL1,
@@ -3794,11 +3793,17 @@ svn_client_merge_peg3(const char *source,
                                               &notify_b,
                                               &merge_cmd_baton,
                                               pool));
+          SVN_ERR(cleanup_noop_merge(&merge_cmd_baton, children_with_mergeinfo,
+                                     adm_access, pool));
+          /* The merge of the actual target is complete.  See if the target's
+             immediate children's mergeinfo elides to the target. */
+          if (!dry_run && merge_cmd_baton.operative_merge)
+            SVN_ERR(svn_client__elide_children(children_with_mergeinfo,
+                                               target_wcpath, entry,
+                                               adm_access, ctx, pool));
         }
       else
         {
-          children_with_mergeinfo =
-            apr_array_make(pool, 0, sizeof(svn_client__merge_path_t *));
           SVN_ERR(do_merge(URL1,
                            range.start,
                            URL2,
@@ -3811,18 +3816,9 @@ svn_client_merge_peg3(const char *source,
                            &merge_callbacks,
                            &notify_b,
                            &merge_cmd_baton,
-                           children_with_mergeinfo,
+                           NULL,
                            pool));
         }
-      SVN_ERR(cleanup_noop_merge(&merge_cmd_baton, children_with_mergeinfo,
-                                 adm_access, pool));
-
-      /* The merge of the actual target is complete.  See if the target's
-         immediate children's mergeinfo elides to the target. */
-      if (!dry_run && merge_cmd_baton.operative_merge)
-        SVN_ERR(svn_client__elide_children(children_with_mergeinfo, 
-                                           target_wcpath, entry, 
-                                           adm_access, ctx, pool));
     }
 
   /* The final mergeinfo on TARGET_WCPATH may itself elide. */
