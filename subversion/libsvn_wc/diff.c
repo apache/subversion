@@ -1548,7 +1548,7 @@ path_driver_cb_func(void **dir_baton,
 
   *dir_baton = NULL;
   if (entry->copyfrom_url)
-    copyfrom_url = svn_path_basename(entry->copyfrom_url, pb->pool);
+    copyfrom_url = svn_path_is_child(entry->repos, entry->copyfrom_url, NULL);
 
   /* If the join baton is set we're performing a drive relative to the
    * directory @c join_dir_baton holds. */

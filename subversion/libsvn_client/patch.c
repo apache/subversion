@@ -94,7 +94,7 @@ dry_run_deleted_p(struct patch_cmd_baton *patch_b, const char *wcpath)
 
 
 
-/* A svn_wc_diff_callbacks2_t function.  Used for both file and directory
+/* A svn_wc_diff_callbacks3_t function.  Used for both file and directory
    property merges. */
 static svn_error_t *
 merge_props_changed(svn_wc_adm_access_t *adm_access,
@@ -148,7 +148,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* A svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_file_changed(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *content_state,
@@ -283,7 +283,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* A svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_file_added(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *content_state,
@@ -295,15 +295,21 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                  svn_revnum_t rev2,
                  const char *mimetype1,
                  const char *mimetype2,
+                 const char *copyfrom_path,
+                 svn_revnum_t copyfrom_rev,
                  const apr_array_header_t *prop_changes,
                  apr_hash_t *original_props,
                  void *baton)
 {
   struct patch_cmd_baton *patch_b = baton;
   apr_pool_t *subpool = svn_pool_create(patch_b->pool);
+  const char *mine_basename = svn_path_basename(mine, subpool);
   svn_node_kind_t kind;
   int i;
   apr_hash_t *new_props;
+
+  /* This new file can't have any original prop in this offline context. */
+  original_props = apr_hash_make(subpool);
 
   /* In most cases, we just leave prop_state as unknown, and let the
      content_state what happened, so we set prop_state here to avoid that
@@ -354,23 +360,54 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
             svn_pool_destroy(subpool);
             return SVN_NO_ERROR;
           }
+
         if (! patch_b->dry_run)
           {
-            /* Since 'mine' doesn't exist, and this is
-               'merge_file_added', I hope it's safe to assume that
-               'older' is empty, and 'yours' is the full file.  Merely
-               copying 'yours' to 'mine', isn't enough; we need to get
-               the whole text-base and props installed too, just as if
-               we had called 'svn cp wc wc'. */
-            SVN_ERR(svn_wc_add_repos_file2(mine, adm_access, yours, NULL,
-                                           new_props, NULL, NULL,
-                                           SVN_IGNORED_REVNUM, subpool));
-            /* The file 'yours' points to edit_baton's cached empty file. Since
-             * it was just moved, set it to empty so that later get_empty_file()
-             * calls don't get it wrong with the cache, i.e.  create another
-             * empty file again. */
-            *(char *)yours = '\0';
+            if (copyfrom_path) /* schedule-add-with-history */
+              {
+                /* Check whether the source we want to copy from exists. */
+                svn_node_kind_t copyfrom_kind; 
+                SVN_ERR(svn_io_check_path(copyfrom_path, &copyfrom_kind,
+                                          subpool));
+
+                if (copyfrom_kind == svn_node_none)
+                  {
+                    if (content_state)
+                      *content_state = svn_wc_notify_state_source_missing;
+                    svn_pool_destroy(subpool);
+                    return SVN_NO_ERROR;
+                  }
+
+                SVN_ERR(svn_wc_copy2(copyfrom_path, adm_access, mine_basename,
+                                     patch_b->ctx->cancel_func,
+                                     patch_b->ctx->cancel_baton,
+                                     NULL, NULL, /* no notification */
+                                     subpool));
+              }
+            else /* schedule-add */
+              {
+                /* Copy the cached empty file and schedule-add it.  The
+                 * contents will come in either via apply-textdelta
+                 * following calls if this is a binary file or with
+                 * unidiff for text files. */
+                SVN_ERR(svn_io_copy_file(yours, mine, TRUE, subpool));
+                SVN_ERR(svn_wc_add2(mine, adm_access, NULL, SVN_IGNORED_REVNUM,
+                                    patch_b->ctx->cancel_func,
+                                    patch_b->ctx->cancel_baton,
+                                    NULL, NULL, /* no notification */
+                                    subpool));
+              }
+
+            /* Now regardless of the schedule-add nature, merge properties. */
+            if (prop_changes->nelts > 0)
+              SVN_ERR(merge_props_changed(adm_access, prop_state,
+                                          mine, prop_changes,
+                                          original_props, baton));
+            else
+              if (prop_state)
+                *prop_state = svn_wc_notify_state_unchanged;
           }
+
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
         if (prop_state && apr_hash_count(new_props))
@@ -436,7 +473,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* A svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_file_deleted(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *state,
@@ -508,12 +545,14 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* A svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_dir_added(svn_wc_adm_access_t *adm_access,
                 svn_wc_notify_state_t *state,
                 const char *path,
                 svn_revnum_t rev,
+                const char *copyfrom_path,
+                svn_revnum_t copyfrom_rev,
                 void *baton)
 {
   struct patch_cmd_baton *patch_b = baton;
@@ -667,7 +706,7 @@ merge_delete_notify_func(void *baton,
     (*mdb->ctx->notify_func2)(mdb->ctx->notify_baton2, notify, pool);
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* A svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
@@ -744,7 +783,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
  * names as (a) they are pretty much merge operations (b) even if
  * tweaked them to meet 'svn patch' needs, they do pretty much what
  * their real sibblings do. */
-static const svn_wc_diff_callbacks2_t
+static const svn_wc_diff_callbacks3_t
 patch_callbacks =
   {
     merge_file_changed,
@@ -774,7 +813,7 @@ struct edit_baton {
   const char *empty_file;
 
   /* The merge callbacks array and its baton. */
-  const svn_wc_diff_callbacks2_t *diff_callbacks;
+  const svn_wc_diff_callbacks3_t *diff_callbacks;
   void *diff_cmd_baton;
 
   /* If the func is non-null, send notifications of actions. */
@@ -843,6 +882,12 @@ struct file_baton {
   /* A cache of any property changes (svn_prop_t) received for this file. */
   apr_array_header_t *propchanges;
 
+  /* The source file's path the file was copied from. */
+  const char *copyfrom_path;
+
+  /* The source file's revision the file was copied from. */
+  svn_revnum_t copyfrom_rev;
+
   /* The pool passed in by add_file or open_file.
      Also, the pool this file_baton is allocated in. */
   apr_pool_t *pool;
@@ -885,6 +930,8 @@ make_file_baton(const char *path,
                 svn_boolean_t added,
                 void *edit_baton,
                 struct dir_baton *parent_baton,
+                const char *copyfrom_path,
+                svn_revnum_t copyfrom_rev,
                 apr_pool_t *pool)
 {
   struct file_baton *file_baton = apr_pcalloc(pool, sizeof(*file_baton));
@@ -898,6 +945,8 @@ make_file_baton(const char *path,
   file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
   file_baton->dir_baton = parent_baton;
   file_baton->is_binary = FALSE;
+  file_baton->copyfrom_path = copyfrom_path;
+  file_baton->copyfrom_rev = copyfrom_rev;
 
   return file_baton;
 }
@@ -1065,7 +1114,8 @@ delete_entry(const char *path,
             struct file_baton *b;
             
             /* Compare a file being deleted against an empty file */
-            b = make_file_baton(path, FALSE, eb, pb, pool);
+            b = make_file_baton(path, FALSE, eb, pb, NULL,
+                                SVN_IGNORED_REVNUM, pool);
             
             SVN_ERR(eb->diff_callbacks->file_deleted 
                     (adm_access, &state, b->wcpath,
@@ -1134,8 +1184,6 @@ add_directory(const char *path,
   svn_wc_notify_state_t state;
   svn_wc_notify_action_t action;
 
-  /* ### TODO: support copyfrom? */
-
   b = make_dir_baton(path, pb, eb, TRUE, pool);
   *child_baton = b;
 
@@ -1144,6 +1192,7 @@ add_directory(const char *path,
 
   SVN_ERR(eb->diff_callbacks->dir_added 
           (adm_access, &state, b->wcpath, SVN_IGNORED_REVNUM,
+           copyfrom_path, copyfrom_revision,
            eb->diff_cmd_baton));
 
   if ((state == svn_wc_notify_state_missing)
@@ -1191,9 +1240,8 @@ add_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct file_baton *b;
 
-  /* ### TODO: support copyfrom? */
-
-  b = make_file_baton(path, TRUE, pb->edit_baton, pb, pool);
+  b = make_file_baton(path, TRUE, pb->edit_baton, pb,
+                      copyfrom_path, copyfrom_revision, pool);
   *file_baton = b;
 
   /* We want to schedule this file for addition. */
@@ -1213,7 +1261,8 @@ open_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct file_baton *b;
 
-  b = make_file_baton(path, FALSE, pb->edit_baton, pb, pool);
+  b = make_file_baton(path, FALSE, pb->edit_baton, pb,
+                      NULL, SVN_IGNORED_REVNUM, pool);
   *file_baton = b;
 
   return SVN_NO_ERROR;
@@ -1344,6 +1393,7 @@ close_file(void *file_baton,
                  SVN_IGNORED_REVNUM,
                  SVN_IGNORED_REVNUM,
                  NULL, mimetype,
+                 b->copyfrom_path, b->copyfrom_rev,
                  b->propchanges, NULL,
                  b->edit_baton->diff_cmd_baton));
       else
@@ -1355,13 +1405,14 @@ close_file(void *file_baton,
                  SVN_IGNORED_REVNUM,
                  SVN_IGNORED_REVNUM,
                  NULL, mimetype,
-                 b->propchanges, NULL,
+                 b->propchanges, NULL, /* use base props */
                  b->edit_baton->diff_cmd_baton));
     }
 
 
   if ((content_state == svn_wc_notify_state_missing)
-      || (content_state == svn_wc_notify_state_obstructed))
+      || (content_state == svn_wc_notify_state_obstructed)
+      || (content_state == svn_wc_notify_state_source_missing))
     action = svn_wc_notify_skip;
   else if (b->added)
     action = svn_wc_notify_update_add;
@@ -1497,7 +1548,7 @@ static struct edit_baton *
 make_editor_baton(const char *target,
                   svn_wc_adm_access_t *adm_access,
                   svn_boolean_t dry_run,
-                  const svn_wc_diff_callbacks2_t *callbacks,
+                  const svn_wc_diff_callbacks3_t *callbacks,
                   void *patch_cmd_baton,
                   svn_wc_notify_func2_t notify_func,
                   void *notify_baton,
