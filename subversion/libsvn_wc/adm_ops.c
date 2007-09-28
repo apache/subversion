@@ -2918,6 +2918,9 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
           continue;
         }
 
+      /* ### TODO (issue #2947): Add warning when a path is moved from
+         ### one changelist to another. */
+
       /* Possibly enforce matching with an existing changelist. */
       if (matching_changelist != NULL)
         {
