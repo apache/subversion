@@ -143,6 +143,7 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
                                      apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
+  svn_cmdline_prompt_baton_t *pb = baton;
 
   /* Handle conflicting file contents, which is the most common case. */
   if ((desc->node_kind == svn_node_file)
@@ -168,7 +169,7 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
             prompt = apr_pstrcat(subpool, prompt, _(", (r)esolved"), NULL);
           prompt = apr_pstrcat(subpool, prompt, _(", (h)elp : "), NULL);
 
-          SVN_ERR(svn_cmdline_prompt_user(&answer, prompt, subpool));
+          SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, pb, subpool));
 
           if ((strcmp(answer, "h") == 0) || (strcmp(answer, "?") == 0))
             {
@@ -312,7 +313,7 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
         {
           svn_pool_clear(subpool);
 
-          SVN_ERR(svn_cmdline_prompt_user(&answer, prompt, subpool));
+          SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, pb, subpool));
 
           if ((strcmp(answer, "h") == 0) || (strcmp(answer, "?") == 0))
             {
