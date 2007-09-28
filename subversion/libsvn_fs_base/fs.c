@@ -55,6 +55,7 @@
 #include "bdb/uuids-table.h"
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
+#include "bdb/successors-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_mergeinfo.h"
@@ -180,6 +181,7 @@ cleanup_fs(svn_fs_t *fs)
   SVN_ERR(cleanup_fs_db(fs, &bfd->uuids, "uuids"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->locks, "locks"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->lock_tokens, "lock-tokens"));
+  SVN_ERR(cleanup_fs_db(fs, &bfd->successors, "successors"));
 
   /* Finally, close the environment.  */
   bfd->bdb = 0;
@@ -617,6 +619,12 @@ open_databases(svn_fs_t *fs, svn_boolean_t create,
                    svn_fs_bdb__open_lock_tokens_table(&bfd->lock_tokens,
                                                       bfd->bdb->env,
                                                       create)));
+  SVN_ERR(BDB_WRAP(fs, (create
+                        ? "creating 'successors' table"
+                        : "opening 'successors' table"),
+                   svn_fs_bdb__open_successors_table(&bfd->successors,
+                                                     bfd->bdb->env,
+                                                     create)));
 
   return SVN_NO_ERROR;
 }

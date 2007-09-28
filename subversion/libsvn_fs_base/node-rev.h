@@ -74,14 +74,30 @@ svn_error_t *svn_fs_base__create_successor(const svn_fs_id_t **new_id_p,
                                            apr_pool_t *pool);
 
 
-/* Delete node revision ID from FS's `nodes' table, as part of TRAIL.
+/* Delete node revision ID (with predecessor id PRED_ID, if any) from
+   FS's `nodes' table, as part of TRAIL.
+
    WARNING: This does not check that the node revision is mutable!
    Callers should do that check themselves.  */
 svn_error_t *svn_fs_base__delete_node_revision(svn_fs_t *fs,
                                                const svn_fs_id_t *id,
+                                               const svn_fs_id_t *pred_id,
                                                trail_t *trail,
                                                apr_pool_t *pool);
 
+/* Set *SUCCESSORS to an array of svn_fs_id_t * node revision IDs of
+   nodes in FS which are successors of ID (that is, ID is their
+   immediate predecessor).  If COMMITTED_ONLY is set, only include
+   successors which were created in transactions that have since been
+   committed.
+
+   Do this as part of TRAIL, and use POOL for any allocations.  */
+svn_error_t *svn_fs_base__get_node_successors(apr_array_header_t **successors,
+                                              svn_fs_t *fs,
+                                              const svn_fs_id_t *id,
+                                              svn_boolean_t committed_only,
+                                              trail_t *trail,
+                                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

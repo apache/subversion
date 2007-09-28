@@ -56,6 +56,7 @@ typedef struct
   DB *representations;
   DB *revisions;
   DB *strings;
+  DB *successors;
   DB *transactions;
   DB *uuids;
   DB *locks;
