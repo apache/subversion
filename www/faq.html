@@ -3607,11 +3607,19 @@ C:\> svn update C:\WorkingCopy
 <p>If the problem goes away, congratulations &mdash; you've hit a
 Windows path length limitation.  And now you know the workaround.</p>
 
-<p>Why does this problem not affect TortoiseSVN?  Because TortoiseSVN
-runs as a Windows GUI application, it doesn't really have a
-concept of a "current working directory" like a command-line program
-does.  So TortoiseSVN <em>always</em> provides absolute paths to the
+<p><strong>Why does this problem not affect TortoiseSVN?</strong>
+Because TortoiseSVN <em>always</em> provides absolute paths to the
 Subversion APIs.</p>
+
+<p><strong>Why, then, does the Subversion command-line client not
+always convert its input into absolute paths and use those?</strong>
+The Subversion developers have been operating under the principle
+that, for reasons of user experience, the display of paths in the
+tool's output should match the syntax of the paths provided as input.
+And while conversion to an absolute path from a relative one is a
+fairly trivial operation, the reverse transformation is fraught with
+complexities.  (In other words, it's a hard problem not high on our
+priority list.)</p>
 
 </div>
 </div>
