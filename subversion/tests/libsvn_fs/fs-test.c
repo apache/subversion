@@ -4830,11 +4830,11 @@ set_uuid(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(get_mergeinfo),
     SVN_TEST_PASS(trivial_transaction),
     SVN_TEST_PASS(reopen_trivial_transaction),
     SVN_TEST_PASS(create_file_transaction),
     SVN_TEST_PASS(verify_txn_list),
+    SVN_TEST_PASS(txn_names_are_not_reused),
     SVN_TEST_PASS(write_and_read_file),
     SVN_TEST_PASS(create_mini_tree_transaction),
     SVN_TEST_PASS(create_greek_tree_transaction),
@@ -4861,9 +4861,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(branch_test),
     SVN_TEST_PASS(verify_checksum),
     SVN_TEST_PASS(closest_copy_test),
+    SVN_TEST_PASS(get_mergeinfo),
     SVN_TEST_PASS(root_revisions),
     SVN_TEST_PASS(unordered_txn_dirprops),
-    SVN_TEST_PASS(txn_names_are_not_reused),
     SVN_TEST_PASS(set_uuid),
     SVN_TEST_NULL
   };
