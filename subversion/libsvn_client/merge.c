@@ -1803,7 +1803,7 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
         continue;
       if (child->remaining_ranges->nelts > 0)
         {
-          svn_merge_range_t *range = APR_ARRAY_IDX(children_with_mergeinfo, 0,
+          svn_merge_range_t *range = APR_ARRAY_IDX(child->remaining_ranges, 0,
                                                    svn_merge_range_t *);
           if ((range->start < end_rev) && (range->end > end_rev))
             {
