@@ -322,8 +322,8 @@ end_log(svn_ra_serf__xml_parser_t *parser,
                        APR_HASH_KEY_STRING,
                        svn_string_ncreate(info->tmp, info->tmp_len,
                                           info->pool));
-          info->tmp_len = 0;
         }
+      info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == DATE &&
@@ -335,8 +335,8 @@ end_log(svn_ra_serf__xml_parser_t *parser,
                        APR_HASH_KEY_STRING,
                        svn_string_ncreate(info->tmp, info->tmp_len,
                                           info->pool));
-          info->tmp_len = 0;
         }
+      info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == COMMENT &&
@@ -348,8 +348,8 @@ end_log(svn_ra_serf__xml_parser_t *parser,
                        APR_HASH_KEY_STRING,
                        svn_string_ncreate(info->tmp, info->tmp_len,
                                           info->pool));
-          info->tmp_len = 0;
         }
+      info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == REVPROP)
