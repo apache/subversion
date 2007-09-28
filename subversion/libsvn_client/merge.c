@@ -2632,14 +2632,18 @@ get_mergeinfo_error_handler(const char *path,
                             void *walk_baton,
                             apr_pool_t *pool)
 {
-  if (svn_error_root_cause_is(err, SVN_ERR_WC_PATH_NOT_FOUND)
-      || svn_error_root_cause_is(err, SVN_ERR_WC_NOT_LOCKED))
+  svn_error_t *root_err = svn_error_root_cause(err);
+  if (root_err == SVN_NO_ERROR)
+    return err;
+
+  switch (root_err->apr_err)
     {
+    case SVN_ERR_WC_PATH_NOT_FOUND:
+    case SVN_ERR_WC_NOT_LOCKED:
       svn_error_clear(err);
       return SVN_NO_ERROR;
-    }
-  else
-    {
+
+    default:
       return err;
     }
 }
