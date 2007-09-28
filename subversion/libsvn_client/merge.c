@@ -1577,8 +1577,7 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
 }
 
 /* Sets up the diff editor report and drives it by properly negating
-   subtree that could have a conflicting merge history.
-   If non-null CHILDREN_WITH_MERGEINFO is given, it should not be empty.*/
+   subtree that could have a conflicting merge history.*/
 static svn_error_t *
 drive_merge_report_editor(const char *target_wcpath,
                           const char *url1,
@@ -1601,7 +1600,7 @@ drive_merge_report_editor(const char *target_wcpath,
   svn_revnum_t default_start = start;
   if (merge_b->target_has_dummy_merge_range)
     default_start = end;
-  else if (children_with_mergeinfo)
+  else if (children_with_mergeinfo && children_with_mergeinfo->nelts)
     {
       svn_client__merge_path_t *target_merge_path_t;
       target_merge_path_t = APR_ARRAY_IDX(children_with_mergeinfo, 0,
