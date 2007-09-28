@@ -3218,17 +3218,20 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
          calculate the merges performed. */
       remove_absent_children(merge_b->target,
                              *children_with_mergeinfo, notify_b);
-      SVN_ERR(record_mergeinfo_on_merged_children(depth, adm_access,
-                                                  notify_b, merge_b,
-                                                  iterpool));
       SVN_ERR(determine_merges_performed(&merges, merge_b->target, &range,
                                          depth, adm_access, notify_b, merge_b,
                                          iterpool));
-      if (merge_b->operative_merge) 
-        SVN_ERR(update_wc_mergeinfo(merge_b->target, parent_entry,
-                                    parent_merge_src_canon_path, merges,
-                                    is_rollback, adm_access,
-                                    merge_b->ctx, iterpool));
+      if (!merge_b->operative_merge) 
+        {
+          svn_pool_destroy(iterpool);
+          return err;
+        }
+      SVN_ERR(record_mergeinfo_on_merged_children(depth, adm_access, notify_b,
+                                                  merge_b, iterpool));
+      SVN_ERR(update_wc_mergeinfo(merge_b->target, parent_entry,
+                                  parent_merge_src_canon_path, merges,
+                                  is_rollback, adm_access, merge_b->ctx,
+                                  iterpool));
       for (i = 0; i < (*children_with_mergeinfo)->nelts; i++)
         {
           const char *child_url;
@@ -3319,45 +3322,6 @@ from_same_repos(struct merge_cmd_baton *merge_b, const svn_wc_entry_t *entry,
   const char *src_root;
   SVN_ERR(svn_ra_get_repos_root(merge_b->ra_session1, &src_root, pool));
   merge_b->same_repos = svn_path_is_ancestor(src_root, entry->repos);
-  return SVN_NO_ERROR;
-}
-
-/* Helper for svn_client_merge3() and svn_client_merge_peg3().
-
-   If a merge was ultimately a no-op, as determined by examing
-   MERGE_CMD_BATON, then undo any mergeinfo changes to any subtrees of
-   MERGE_CMD_BATON->TARGET (which are stored as
-   svn_client__merge_path_t * in CHILDREN_WITH_MERGEINFO - see
-   discover_and_merge_children(). */
-static svn_error_t *
-cleanup_noop_merge(struct merge_cmd_baton *merge_cmd_baton,
-                   apr_array_header_t *children_with_mergeinfo,
-                   svn_wc_adm_access_t *adm_access,
-                   apr_pool_t *pool)
-{
-  if (children_with_mergeinfo
-      && !merge_cmd_baton->operative_merge
-      && !merge_cmd_baton->dry_run
-      && merge_cmd_baton->same_repos
-      && !merge_cmd_baton->record_only)
-    {
-      int i;
-      for (i = 0; i < children_with_mergeinfo->nelts; i++)
-        {
-          svn_client__merge_path_t *child = 
-            APR_ARRAY_IDX(children_with_mergeinfo,
-                          i, svn_client__merge_path_t *);
-
-          /* Only undo mergeinfo changes for subtrees, do_merge() and
-             do_single_file_merge() take care of the merge target. */
-          if (child
-              && !child->absent
-              && svn_path_compare_paths(child->path,
-                                        merge_cmd_baton->target) != 0)
-            SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGE_INFO, child->propval,
-                                     child->path, adm_access, TRUE, pool));
-        }
-    }
   return SVN_NO_ERROR;
 }
 
@@ -3526,8 +3490,6 @@ svn_client_merge3(const char *source1,
                                               &notify_b,
                                               &merge_cmd_baton,
                                               pool));
-          SVN_ERR(cleanup_noop_merge(&merge_cmd_baton, children_with_mergeinfo,
-                                     adm_access, pool));
           /* The merge of the actual target is complete.  See if the target's
              immediate children's mergeinfo elides to the target. */
           if (! dry_run && merge_cmd_baton.operative_merge)
@@ -3780,8 +3742,6 @@ svn_client_merge_peg3(const char *source,
                                               &notify_b,
                                               &merge_cmd_baton,
                                               pool));
-          SVN_ERR(cleanup_noop_merge(&merge_cmd_baton, children_with_mergeinfo,
-                                     adm_access, pool));
           /* The merge of the actual target is complete.  See if the target's
              immediate children's mergeinfo elides to the target. */
           if (!dry_run && merge_cmd_baton.operative_merge)
