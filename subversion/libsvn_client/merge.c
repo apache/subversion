@@ -2461,15 +2461,14 @@ do_single_file_merge(const char *url1,
           is_path_conflicted_by_merge(merge_b))
         {
           err = make_merge_conflict_error(target_wcpath, r, pool);
-          goto finalize_mergeinfo;
+          break;
         }
     }
 
   apr_pool_destroy(subpool);
 
- finalize_mergeinfo:
-   SVN_ERR(elide_target_mergeinfo(target_wcpath, entry, adm_access, merge_b,
-                                  is_root_of_noop_merge, pool));
+  SVN_ERR(elide_target_mergeinfo(target_wcpath, entry, adm_access, merge_b,
+                                 is_root_of_noop_merge, pool));
 
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
