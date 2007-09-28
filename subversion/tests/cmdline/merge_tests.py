@@ -8291,6 +8291,158 @@ def merge_to_sparse_directories(sbox):
                                        None, 1)
   os.chdir(saved_cwd)
 
+def merge_old_and_new_revs_from_renamed_dir(sbox):
+  "merge -rold(before rename):head renamed dir"
+
+  ## See http://svn.haxx.se/dev/archive-2007-09/0706.shtml ##
+
+  # Create a WC with a single branch
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox, True, 1)
+
+  # Some paths we'll care about
+  repo_url = sbox.repo_url
+  A_url = repo_url + '/A'
+  A_MOVED_url = repo_url + '/A_MOVED'
+  A_COPY_path = os.path.join(wc_dir, 'A_COPY')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  A_MOVED_mu_path = os.path.join(wc_dir, 'A_MOVED', 'mu')
+
+  # Make a modification to A/mu
+  svntest.main.file_write(mu_path, "This is 'mu' modified.\n")
+  expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
+  wc_status.add({'A/mu'     : Item(status='  ', wc_rev=3)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Move A to A_MOVED
+  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 4.\n'],
+                                     [], 'mv', '-m', 'mv A to A_MOVED',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     A_url, A_MOVED_url)
+
+  # Update the working copy to get A_MOVED
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Make a modification to A_MOVED/mu
+  svntest.main.file_write(A_MOVED_mu_path, "This is 'mu' in A_MOVED.\n")
+  expected_output = wc.State(wc_dir, {'A_MOVED/mu' : Item(verb='Sending')})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
+  expected_status.remove('A', 'A/mu', 'A/C', 'A/D', 'A/B', 'A/B/lambda',
+                         'A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F',
+                         'A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho',
+                         'A/D/G/tau', 'A/D/H', 'A/D/H/chi', 'A/D/H/omega',
+                         'A/D/H/psi')
+  expected_status.add({
+    ''                 : Item(status='  ', wc_rev=4),
+    'iota'             : Item(status='  ', wc_rev=4),
+    'A_MOVED'          : Item(status='  ', wc_rev=4),
+    'A_MOVED/mu'       : Item(status='  ', wc_rev=5),
+    'A_MOVED/C'        : Item(status='  ', wc_rev=4),
+    'A_MOVED/D'        : Item(status='  ', wc_rev=4),
+    'A_MOVED/B'        : Item(status='  ', wc_rev=4),
+    'A_MOVED/B/lambda' : Item(status='  ', wc_rev=4),
+    'A_MOVED/B/E'      : Item(status='  ', wc_rev=4),
+    'A_MOVED/B/E/alpha': Item(status='  ', wc_rev=4),
+    'A_MOVED/B/E/beta' : Item(status='  ', wc_rev=4),
+    'A_MOVED/B/F'      : Item(status='  ', wc_rev=4),
+    'A_MOVED/D/gamma'  : Item(status='  ', wc_rev=4),
+    'A_MOVED/D/G'      : Item(status='  ', wc_rev=4),
+    'A_MOVED/D/G/pi'   : Item(status='  ', wc_rev=4),
+    'A_MOVED/D/G/rho'  : Item(status='  ', wc_rev=4),
+    'A_MOVED/D/G/tau'  : Item(status='  ', wc_rev=4),
+    'A_MOVED/D/H'      : Item(status='  ', wc_rev=4),
+    'A_MOVED/D/H/chi'  : Item(status='  ', wc_rev=4),
+    'A_MOVED/D/H/omega': Item(status='  ', wc_rev=4),
+    'A_MOVED/D/H/psi'  : Item(status='  ', wc_rev=4),
+    'A_COPY'           : Item(status='  ', wc_rev=4),
+    'A_COPY/mu'        : Item(status='  ', wc_rev=4),
+    'A_COPY/C'         : Item(status='  ', wc_rev=4),
+    'A_COPY/D'         : Item(status='  ', wc_rev=4),
+    'A_COPY/B'         : Item(status='  ', wc_rev=4),
+    'A_COPY/B/lambda'  : Item(status='  ', wc_rev=4),
+    'A_COPY/B/E'       : Item(status='  ', wc_rev=4),
+    'A_COPY/B/E/alpha' : Item(status='  ', wc_rev=4),
+    'A_COPY/B/E/beta'  : Item(status='  ', wc_rev=4),
+    'A_COPY/B/F'       : Item(status='  ', wc_rev=4),
+    'A_COPY/D/gamma'   : Item(status='  ', wc_rev=4),
+    'A_COPY/D/G'       : Item(status='  ', wc_rev=4),
+    'A_COPY/D/G/pi'    : Item(status='  ', wc_rev=4),
+    'A_COPY/D/G/rho'   : Item(status='  ', wc_rev=4),
+    'A_COPY/D/G/tau'   : Item(status='  ', wc_rev=4),
+    'A_COPY/D/H'       : Item(status='  ', wc_rev=4),
+    'A_COPY/D/H/chi'   : Item(status='  ', wc_rev=4),
+    'A_COPY/D/H/omega' : Item(status='  ', wc_rev=4),
+    'A_COPY/D/H/psi'   : Item(status='  ', wc_rev=4),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  short_A_COPY = shorten_path_kludge(A_COPY_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge /A_MOVED to /A_COPY
+  expected_output = wc.State(short_A_COPY, {
+    ''   : Item(status=' G'),
+    'mu' : Item(status='U '),
+    })
+  expected_status = wc.State(short_A_COPY, {
+    ''         : Item(status=' M', wc_rev=4),
+    'mu'       : Item(status='M ', wc_rev=4),
+    'C'        : Item(status='  ', wc_rev=4),
+    'D'        : Item(status='  ', wc_rev=4),
+    'B'        : Item(status='  ', wc_rev=4),
+    'B/lambda' : Item(status='  ', wc_rev=4),
+    'B/E'      : Item(status='  ', wc_rev=4),
+    'B/E/alpha': Item(status='  ', wc_rev=4),
+    'B/E/beta' : Item(status='  ', wc_rev=4),
+    'B/F'      : Item(status='  ', wc_rev=4),
+    'D/gamma'  : Item(status='  ', wc_rev=4),
+    'D/G'      : Item(status='  ', wc_rev=4),
+    'D/G/pi'   : Item(status='  ', wc_rev=4),
+    'D/G/rho'  : Item(status='  ', wc_rev=4),
+    'D/G/tau'  : Item(status='  ', wc_rev=4),
+    'D/H'      : Item(status='  ', wc_rev=4),
+    'D/H/chi'  : Item(status='  ', wc_rev=4),
+    'D/H/omega': Item(status='  ', wc_rev=4),
+    'D/H/psi'  : Item(status='  ', wc_rev=4),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:1-3'}),
+    'mu'       : Item("This is 'mu' in A_MOVED.\n"),
+    'C'        : Item(),
+    'D'        : Item(),
+    'B'        : Item(),
+    'B/lambda' : Item("This is the file 'lambda'.\n"),
+    'B/E'      : Item(),
+    'B/E/alpha': Item("This is the file 'alpha'.\n"),
+    'B/E/beta' : Item("This is the file 'beta'.\n"),
+    'B/F'      : Item(),
+    'D/gamma'  : Item("This is the file 'gamma'.\n"),
+    'D/G'      : Item(),
+    'D/G/pi'   : Item("This is the file 'pi'.\n"),
+    'D/G/rho'  : Item("This is the file 'rho'.\n"),
+    'D/G/tau'  : Item("This is the file 'tau'.\n"),
+    'D/H'      : Item(),
+    'D/H/chi'  : Item("This is the file 'chi'.\n"),
+    'D/H/omega': Item("This is the file 'omega'.\n"),
+    'D/H/psi'  : Item("This is the file 'psi'.\n"),
+    })
+  expected_skip = wc.State(short_A_COPY, {})
+  svntest.actions.run_and_verify_merge(short_A_COPY, '2', '5',
+                                       A_MOVED_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -8363,6 +8515,7 @@ test_list = [ None,
               merge_fails_if_subtree_is_deleted_on_src,
               no_mergeinfo_from_no_op_merge,
               merge_to_sparse_directories,
+              merge_old_and_new_revs_from_renamed_dir,
              ]
 
 if __name__ == '__main__':
