@@ -2,7 +2,7 @@
  * diff-cmd.c -- Display context diff of a file
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,6 +26,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
+#include "svn_error_codes.h"
 #include "svn_error.h"
 #include "svn_types.h"
 #include "svn_cmdline.h"
@@ -130,8 +131,8 @@ svn_cl__diff(apr_getopt_t *os,
                                         ((svn_cl__cmd_baton_t *)baton)->ctx,
                                         pool));
       if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("no such changelist '%s'"),
+        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
+                                 _("Unknown changelist '%s'"),
                                  opt_state->changelist);
     }
 
