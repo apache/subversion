@@ -192,8 +192,9 @@ module Svn
       alias pset propset
       alias ps propset
 
-      def propdel(name, target, recurse=true, force=false)
-        Client.propset2(name, nil, target, recurse, force, self)
+      def propdel(*args)
+        name = args.shift
+        propset(name, nil, *args)
       end
       alias prop_del propdel
       alias pdel propdel
