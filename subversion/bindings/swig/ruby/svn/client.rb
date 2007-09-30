@@ -193,8 +193,7 @@ module Svn
       alias pset propset
       alias ps propset
 
-      def propdel(*args)
-        name = args.shift
+      def propdel(name, *args)
         propset(name, nil, *args)
       end
       alias prop_del propdel
