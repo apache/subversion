@@ -185,7 +185,8 @@ module Svn
       def propset(name, value, target, recurse=true, force=false,
                   base_revision_for_url=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
-        Client.propset3(name, value, target, recurse, force,
+        depth = recurse ? Svn::Core::DEPTH_INFINITY : Svn::Core::DEPTH_EMPTY
+        Client.propset3(name, value, target, depth, force,
                         base_revision_for_url, self)
       end
       alias prop_set propset
@@ -205,7 +206,8 @@ module Svn
       def propget(name, target, rev=nil, peg_rev=nil, recurse=true)
         rev ||= "HEAD"
         peg_rev ||= rev
-        Client.propget2(name, target, rev, peg_rev, recurse, self)
+        depth = recurse ? Svn::Core::DEPTH_INFINITY : Svn::Core::DEPTH_EMPTY
+        Client.propget4(name, target, peg_rev, rev, depth, self).first
       end
       alias prop_get propget
       alias pget propget
