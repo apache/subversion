@@ -3485,12 +3485,6 @@ svn_client_merge3(const char *source1,
                                               &notify_b,
                                               &merge_cmd_baton,
                                               pool));
-          /* The merge of the actual target is complete.  See if the target's
-             immediate children's mergeinfo elides to the target. */
-          if (! dry_run && merge_cmd_baton.operative_merge)
-            SVN_ERR(svn_client__elide_children(children_with_mergeinfo,
-                                               target_wcpath, entry, 
-                                               adm_access, ctx, pool));
         }
       else
         {
@@ -3737,12 +3731,6 @@ svn_client_merge_peg3(const char *source,
                                               &notify_b,
                                               &merge_cmd_baton,
                                               pool));
-          /* The merge of the actual target is complete.  See if the target's
-             immediate children's mergeinfo elides to the target. */
-          if (!dry_run && merge_cmd_baton.operative_merge)
-            SVN_ERR(svn_client__elide_children(children_with_mergeinfo,
-                                               target_wcpath, entry,
-                                               adm_access, ctx, pool));
         }
       else
         {
