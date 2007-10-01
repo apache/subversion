@@ -484,7 +484,7 @@ void SVNClient::cleanup(const char *path)
     SVN_JNI_ERR(svn_client_cleanup(intPath.c_str(), ctx, requestPool.pool()),);
 }
 
-void SVNClient::resolved(const char *path, bool recurse)
+void SVNClient::resolved(const char *path, svn_depth_t depth)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -494,8 +494,8 @@ void SVNClient::resolved(const char *path, bool recurse)
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_resolved(intPath.c_str(), recurse,
-                                    ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_resolved2(intPath.c_str(), depth, svn_accept_none,
+                                     ctx, requestPool.pool()), );
 }
 
 jlong SVNClient::doExport(const char *srcPath, const char *destPath,
