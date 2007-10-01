@@ -48,7 +48,8 @@ public class ClientException extends NativeException
 
     /**
      * A conversion routine for maintaining backwards compatibility.
-     * @return <code>e</code> coerced or converted into a
+     * @param t The exception to (potentially) convert.
+     * @return <code>t</code> coerced or converted into a
      * <code>ClientException</code>.
      */
     static ClientException fromException(Throwable t)
