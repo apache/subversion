@@ -568,7 +568,9 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
 
 /**
  * If @a externals_p is non-NULL, set @a *externals_p to an array of
- * @c svn_wc_external_item2_t * objects based on @a desc.
+ * @c svn_wc_external_item2_t * objects based on @a desc.  The @a url
+ * member of the objects will be canonicalized if @a canonicalize_url
+ * is @c TRUE.
  *
  * If the format of @a desc is invalid, don't touch @a *externals_p and
  * return @c SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.  Thus, if
@@ -588,12 +590,14 @@ svn_error_t *
 svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                     const char *parent_directory,
                                     const char *desc,
+                                    svn_boolean_t canonicalize_url,
                                     apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_parse_externals_description3(), but returns an
- * array of @c svn_wc_external_item_t * objects instead of
- * @c svn_wc_external_item2_t * objects.
+ * Similar to svn_wc_parse_externals_description3() with @a
+ * canonicalize_url set to @c TRUE, but returns an array of @c
+ * svn_wc_external_item_t * objects instead of @c
+ * svn_wc_external_item2_t * objects
  *
  * @since New in 1.1.
  *

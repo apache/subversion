@@ -335,7 +335,7 @@ copy_versioned_files(const char *from,
 
               SVN_ERR(svn_wc_parse_externals_description3(&ext_items, from,
                                                           prop_val->data,
-                                                          pool));
+                                                          TRUE, pool));
               for (i = 0; i < ext_items->nelts; ++i)
                 {
                   svn_wc_external_item2_t *ext_item;
