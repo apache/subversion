@@ -1419,4 +1419,3 @@ svn_path_splitext(const char **path_root,
   if (path_ext)
     *path_ext = "";
 }
-
