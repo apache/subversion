@@ -204,7 +204,7 @@ start_log(svn_ra_serf__xml_parser_t *parser,
         {
           log_ctx->seen_revprop_element = TRUE;
           info = push_state(parser, log_ctx, REVPROP);
-          info->revprop_name = svn_ra_serf__find_attr(attrs, "name");
+          info->revprop_name = svn_xml_get_attr_value("name", attrs);
           if (info->revprop_name == NULL)
             return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                      _("Missing name attr in revprop element"));
@@ -220,8 +220,8 @@ start_log(svn_ra_serf__xml_parser_t *parser,
           info = push_state(parser, log_ctx, ADDED_PATH);
           info->tmp_path->action = 'A';
 
-          copy_path = svn_ra_serf__find_attr(attrs, "copyfrom-path");
-          copy_rev_str = svn_ra_serf__find_attr(attrs, "copyfrom-rev");
+          copy_path = svn_xml_get_attr_value("copyfrom-path", attrs);
+          copy_rev_str = svn_xml_get_attr_value("copyfrom-rev", attrs);
           if (copy_path && copy_rev_str)
             {
               svn_revnum_t copy_rev;
@@ -242,8 +242,8 @@ start_log(svn_ra_serf__xml_parser_t *parser,
           info = push_state(parser, log_ctx, REPLACED_PATH);
           info->tmp_path->action = 'R';
 
-          copy_path = svn_ra_serf__find_attr(attrs, "copyfrom-path");
-          copy_rev_str = svn_ra_serf__find_attr(attrs, "copyfrom-rev");
+          copy_path = svn_xml_get_attr_value("copyfrom-path", attrs);
+          copy_rev_str = svn_xml_get_attr_value("copyfrom-rev", attrs);
           if (copy_path && copy_rev_str)
             {
               svn_revnum_t copy_rev;

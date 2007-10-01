@@ -186,8 +186,8 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, blame_ctx, FILE_REV);
 
       info->path = apr_pstrdup(info->pool,
-                               svn_ra_serf__find_attr(attrs, "path"));
-      info->rev = SVN_STR_TO_REV(svn_ra_serf__find_attr(attrs, "rev"));
+                               svn_xml_get_attr_value("path", attrs));
+      info->rev = SVN_STR_TO_REV(svn_xml_get_attr_value("rev", attrs));
     }
   else if (state == FILE_REV)
     {
@@ -235,11 +235,11 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
         case SET_PROP:
         case REMOVE_PROP:
           info->prop_name = apr_pstrdup(info->pool,
-                                        svn_ra_serf__find_attr(attrs, "name"));
+                                        svn_xml_get_attr_value("name", attrs));
           info->prop_attr = NULL;
           info->prop_attr_len = 0;
 
-          enc = svn_ra_serf__find_attr(attrs, "encoding");
+          enc = svn_xml_get_attr_value("encoding", attrs);
           if (enc && strcmp(enc, "base64") == 0)
             {
               info->prop_base64 = TRUE;
