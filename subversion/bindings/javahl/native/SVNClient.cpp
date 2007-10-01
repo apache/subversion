@@ -913,7 +913,7 @@ void SVNClient::propertyRemove(const char *path, const char *name,
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
     SVN_JNI_NULL_PTR_EX(name, "name", );
-    propertySet(path, name, (svn_string_t*)NULL, depth, false,
+    propertySet(path, name, (svn_string_t *) NULL, depth, false,
                 SVN_INVALID_REVNUM);
 }
 
