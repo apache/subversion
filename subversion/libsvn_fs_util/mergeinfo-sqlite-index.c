@@ -672,7 +672,8 @@ get_mergeinfo_for_children(sqlite3 *db,
   SQLITE_ERR(sqlite3_prepare(db,
                              "SELECT MAX(revision), path "
                              "FROM mergeinfo_changed "
-                             "WHERE path LIKE ? AND revision <= ?;",
+                             "WHERE path LIKE ? AND revision <= ? "
+                             "GROUP BY path;",
                              -1, &stmt, NULL), db);
 
   like_path = apr_psprintf(pool, "%s/%%", path);
