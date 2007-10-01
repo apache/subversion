@@ -648,10 +648,19 @@ public interface SVNClientInterface
     void cleanup(String path) throws ClientException;
 
     /**
-     * Removes the 'conflicted' state on a file.
-     * @param path      path to cleanup
-     * @param recurse   recurce into subdirectories
-     * @throws ClientException
+     * Removes the <i>conflicted</i> state on a WC path (or tree).
+     * @param path The path to resolve.
+     * @param depth How deep to recurse into child paths.
+     * @throws SubversionException If an error occurs.
+     * @since 1.5
+     */
+    void resolved(String path, int depth)
+        throws SubversionException;
+
+    /**
+     * Removes the <i>conflicted</i> state on a WC path (or tree).
+     * @see #resolved(String, int)
+     * @deprecated Use resolved(String, int) instead.
      */
     void resolved(String path, boolean recurse) throws ClientException;
 

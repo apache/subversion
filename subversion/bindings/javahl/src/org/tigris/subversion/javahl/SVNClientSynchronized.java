@@ -928,16 +928,26 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Removes the 'conflicted' state on a file.
-     * @param path      path to cleanup
-     * @param recurse   recurce into subdirectories
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, int)
+     * @since 1.5
+     */
+    public void resolved(String path, int depth)
+        throws SubversionException
+    {
+        synchronized (clazz)
+        {
+            worker.resolved(path, depth);
+        }
+    }
+
+    /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, boolean)
      */
     public void resolved(String path, boolean recurse) throws ClientException
     {
-        synchronized(clazz)
+        synchronized (clazz)
         {
-            worker.resolved(path,recurse);
+            worker.resolved(path, recurse);
         }
     }
 

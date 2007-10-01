@@ -784,13 +784,27 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * Removes the 'conflicted' state on a file.
-     * @param path      path to cleanup
-     * @param recurse   recurce into subdirectories
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, int)
+     * @since 1.5
      */
-    public native void resolved(String path, boolean recurse)
-            throws ClientException;
+    public native void resolved(String path, int depth)
+        throws SubversionException;
+
+    /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, boolean)
+     */
+    public void resolved(String path, boolean recurse)
+        throws ClientException
+    {
+        try
+        {
+            resolved(path, (recurse ? Depth.infinity : Depth.empty));
+        }
+        catch (SubversionException e)
+        {
+            throw ClientException.fromException(e);
+        }
+    }
 
     /**
      * Exports the contents of either a subversion repository into a
