@@ -45,4 +45,21 @@ public class ClientException extends NativeException
     {
         super(message, source, aprError);
     }
+
+    /**
+     * A conversion routine for maintaining backwards compatibility.
+     * @return <code>e</code> coerced or converted into a
+     * <code>ClientException</code>.
+     */
+    static ClientException fromException(Throwable t)
+    {
+        if (t instanceof ClientException)
+        {
+            return (ClientException) t;
+        }
+        else
+        {
+            return new ClientException(t.getMessage(), null, -1);
+        }
+    }
 }
