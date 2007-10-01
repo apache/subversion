@@ -340,7 +340,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       svn_path_split(path, &parent, NULL, ib->pool);
       SVN_ERR(svn_io_make_dir_recursively(parent, ib->pool));
 
-      /* If we were handling renames the fancy way, then  before
+      /* If we were handling renames the fancy way, then before
          checking out a new subdir here, we would somehow learn if
          it's really just a rename of an old one.  That would work in
          tandem with the next case -- this case would do nothing,
