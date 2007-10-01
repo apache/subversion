@@ -2886,16 +2886,15 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
       item->target_dir = svn_path_canonicalize
         (svn_path_internal_style(item->target_dir, pool), pool);
-      {
-        if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
-            || svn_path_is_backpath_present(item->target_dir))
-          return svn_error_createf
-            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
-             _("Invalid %s property on '%s': "
-               "target involves '.' or '..' or is an absolute path"),
-             SVN_PROP_EXTERNALS,
-             parent_directory_display);
-      }
+
+      if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
+          || svn_path_is_backpath_present(item->target_dir))
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           _("Invalid %s property on '%s': "
+             "target involves '.' or '..' or is an absolute path"),
+           SVN_PROP_EXTERNALS,
+           parent_directory_display);
 
       item->url = svn_path_canonicalize(item->url, pool);
 
