@@ -2601,7 +2601,7 @@ def no_such_changelist(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_svn("Attempt to commit a changelist with no "
                                      "relevant paths should warn",
-                                     ".*Unknown changelist 'not-found'", [],
+                                     None, ".*Unknown changelist 'not-found'",
                                      "commit", "--changelist=not-found",
                                      "-m", "msg", wc_dir)
                                         

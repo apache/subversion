@@ -112,11 +112,13 @@ svn_cl__commit(apr_getopt_t *os,
       svn_error_t *root_err = svn_error_root_cause(err);
       if (root_err->apr_err == SVN_ERR_UNKNOWN_CHANGELIST)
         {
-          /* Convert a hard error about an unknown changelist into a
-             soft warning. */
-          svn_handle_warning2(stdout, root_err, "svn: ");
+          /* Strip any errors wrapped around this root cause.  Note
+             that this handling differs from that of any other
+             commands, because of the way 'commit' internally harvests
+             its list of committables. */
+          root_err = svn_error_dup(root_err);
           svn_error_clear(err);
-          err = SVN_NO_ERROR;
+          err = root_err;
         }
     }
   SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));
