@@ -468,14 +468,14 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   svn_wc_external_item2_t *item;
 
   if ((old_desc_text = apr_hash_get(cb->externals_old, key, klen)))
-    SVN_ERR(svn_wc_parse_externals_description3(&old_desc, key,
-                                                old_desc_text, cb->pool));
+    SVN_ERR(svn_wc_parse_externals_description3(&old_desc, key, old_desc_text,
+                                                TRUE, cb->pool));
   else
     old_desc = NULL;
 
   if ((new_desc_text = apr_hash_get(cb->externals_new, key, klen)))
-    SVN_ERR(svn_wc_parse_externals_description3(&new_desc, key,
-                                                new_desc_text, cb->pool));
+    SVN_ERR(svn_wc_parse_externals_description3(&new_desc, key, new_desc_text,
+                                                TRUE, cb->pool));
   else
     new_desc = NULL;
 
@@ -636,8 +636,8 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
 
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */
-      SVN_ERR(svn_wc_parse_externals_description3(&exts, path,
-                                                  propval, subpool));
+      SVN_ERR(svn_wc_parse_externals_description3(&exts, path, propval,
+                                                  TRUE, subpool));
 
       /* Make a sub-pool of SUBPOOL. */
       iterpool = svn_pool_create(subpool);

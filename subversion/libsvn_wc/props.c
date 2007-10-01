@@ -2232,7 +2232,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
              we're not interested in the parsed result, only in
              whether or the parsing errored. */
           SVN_ERR(svn_wc_parse_externals_description3
-                  (NULL, path, propval->data, pool));
+                  (NULL, path, propval->data, TRUE, pool));
         }
     }
   else if (strcmp(propname, SVN_PROP_KEYWORDS) == 0)
@@ -2801,6 +2801,7 @@ svn_error_t *
 svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                     const char *parent_directory,
                                     const char *desc,
+                                    svn_boolean_t canonicalize_url,
                                     apr_pool_t *pool)
 {
   apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
@@ -2897,7 +2898,8 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
            SVN_PROP_EXTERNALS,
            parent_directory_display);
 
-      item->url = svn_path_canonicalize(item->url, pool);
+      if (canonicalize_url)
+          item->url = svn_path_canonicalize(item->url, pool);
 
       if (externals_p)
         APR_ARRAY_PUSH(*externals_p, svn_wc_external_item2_t *) = item;
@@ -2918,6 +2920,7 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
 
   SVN_ERR(svn_wc_parse_externals_description3(externals_p ? &list : NULL,
                                               parent_directory, desc,
+                                              TRUE,
                                               subpool));
 
   if (externals_p)

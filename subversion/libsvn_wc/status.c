@@ -853,7 +853,8 @@ get_dir_status(struct edit_baton *eb,
           /* Now, parse the thing, and copy the parsed results into
              our "global" externals hash. */
           SVN_ERR(svn_wc_parse_externals_description3(&ext_items, path,
-                                                      prop_val->data, pool));
+                                                      prop_val->data, TRUE,
+                                                      pool));
           for (i = 0; ext_items && i < ext_items->nelts; i++)
             {
               svn_wc_external_item2_t *item;
