@@ -2705,6 +2705,7 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
  *
  *   -r N
  *   -rN
+ *
  * in the LINE_PARTS array and update the revision field in ITEM with
  * the revision if the revision is found.  Set REV_IDX to the index in
  * LINE_PARTS where the revision specification starts.  Remove from
