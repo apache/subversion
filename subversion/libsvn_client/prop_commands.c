@@ -190,8 +190,7 @@ do_url_propset(const char *propname,
   return SVN_NO_ERROR;
 }
 
-static
-svn_error_t *
+static svn_error_t *
 propset_on_url(svn_commit_info_t **commit_info_p,
                const char *propname,
                const svn_string_t *propval,
