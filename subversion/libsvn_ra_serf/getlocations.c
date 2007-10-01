@@ -124,13 +124,13 @@ start_getloc(svn_ra_serf__xml_parser_t *parser,
       svn_revnum_t rev = SVN_INVALID_REVNUM;
       const char *revstr, *path;
 
-      revstr = svn_ra_serf__find_attr(attrs, "rev");
+      revstr = svn_xml_get_attr_value("rev", attrs);
       if (revstr)
         {
           rev = SVN_STR_TO_REV(revstr);
         }
 
-      path = svn_ra_serf__find_attr(attrs, "path");
+      path = svn_xml_get_attr_value("path", attrs);
 
       if (SVN_IS_VALID_REVNUM(rev) && path)
         {

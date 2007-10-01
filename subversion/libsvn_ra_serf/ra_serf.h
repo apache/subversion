@@ -653,15 +653,6 @@ svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
                        const char *name);
 
 /*
- * Look for @a attr_name in the @a attrs array and return its value.
- *
- * Returns NULL if no matching name is found.
- */
-const char *
-svn_ra_serf__find_attr(const char **attrs,
-                       const char *attr_name);
-
-/*
  * Expand the string represented by @a cur with a current size of @a
  * cur_len by appending @a new with a size of @a new_len.
  *

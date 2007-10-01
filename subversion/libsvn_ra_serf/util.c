@@ -27,6 +27,7 @@
 
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "svn_xml.h"
 #include "private/svn_compat.h"
 
 #include "ra_serf.h"
@@ -376,7 +377,7 @@ start_error(svn_ra_serf__xml_parser_t *parser,
     {
       const char *err_code;
 
-      err_code = svn_ra_serf__find_attr(attrs, "errcode");
+      err_code = svn_xml_get_attr_value("errcode", attrs);
       if (err_code)
         {
           ctx->error->apr_err = apr_atoi64(err_code);
