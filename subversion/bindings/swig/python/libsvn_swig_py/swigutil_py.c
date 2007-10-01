@@ -44,6 +44,11 @@
 #include "swig_python_external_runtime.swg"
 #include "swigutil_py.h"
 
+/* Define handy Python 2.4 macro if this is older Python. */
+#ifndef Py_RETURN_NONE
+#define Py_RETURN_NONE return Py_INCREF(Py_None), Py_None
+#endif
+
 
 
 /*** Manage the Global Interpreter Lock ***/
