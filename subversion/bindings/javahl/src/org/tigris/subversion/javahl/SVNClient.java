@@ -1295,8 +1295,10 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
-        properties(path, revision, pegRevision, Depth.fromRecurse(false),
-                   callback);
+        // Depth.fromRecurse() will return info about immediate file
+        // children of a directory, so instead inline an expression to
+        // preserve backward compatibility.
+        properties(path, revision, pegRevision, Depth.empty, callback);
 
         Map propMap = callback.getProperties(path);
         if (propMap == null)
@@ -1423,11 +1425,13 @@ public class SVNClient implements SVNClientInterface
      * @param recurse   remove the property also on subdirectories
      * @throws ClientException
      */
-    public void propertyRemove(String path, String name,
-                                      boolean recurse)
+    public void propertyRemove(String path, String name, boolean recurse)
             throws ClientException
     {
-        propertyRemove(path, name, Depth.fromRecurse(recurse));
+        // Depth.fromRecurse() will affect immediate file children of
+        // a directory, so instead inline an expression to preserve
+        // backward compatibility.
+        propertyRemove(path, name, (recurse ? Depth.infinity : Depth.empty));
     }
 
     /**

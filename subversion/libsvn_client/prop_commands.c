@@ -873,7 +873,7 @@ svn_client_propget3(apr_hash_t **props,
                              peg_revision,
                              revision,
                              actual_revnum,
-                             SVN_DEPTH_FROM_RECURSE(recurse),
+                             (recurse ? svn_depth_infinity : svn_depth_empty),
                              ctx,
                              pool);
 }
