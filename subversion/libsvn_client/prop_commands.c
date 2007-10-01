@@ -349,6 +349,22 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
              "not supported"),
            target);
 
+      /* ### When you set svn:eol-style or svn:keywords on a wc file,
+         ### Subversion send a textdelta at commit time to properly
+         ### normalize the file in the repository.  If we want to
+         ### support editing these properties on URLs, then we should
+         ### generate the same textdelta; for now, we won't support
+         ### editing these properties on URLs.  (Admittedly, this
+         ### means that all the machinery with get_file_for_validation
+         ### is unused.)
+       */
+      if ((strcmp(propname, SVN_PROP_EOL_STYLE) == 0) ||
+          (strcmp(propname, SVN_PROP_KEYWORDS) == 0))
+        return svn_error_createf
+          (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+           _("Setting property '%s' on non-local target '%s' is not supported"),
+           propname, target);
+
       return propset_on_url(commit_info_p, propname, propval, target,
                             skip_checks, base_revision_for_url, ctx, pool);
     }
