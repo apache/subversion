@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -37,7 +38,8 @@ svn_client_resolved(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  return svn_client_resolved2(path, recursive, svn_accept_none, ctx, pool);
+  svn_depth_t depth = (recursive ? svn_depth_infinity : svn_depth_empty);
+  return svn_client_resolved2(path, depth, svn_accept_none, ctx, pool);
 }
 
 svn_error_t *
