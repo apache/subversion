@@ -2920,8 +2920,7 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
 
   SVN_ERR(svn_wc_parse_externals_description3(externals_p ? &list : NULL,
                                               parent_directory, desc,
-                                              TRUE,
-                                              subpool));
+                                              TRUE, subpool));
 
   if (externals_p)
     {
