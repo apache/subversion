@@ -8457,6 +8457,11 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   #This should merge r4 and then r5 through r6.
   #Revert r5 and r6 via single file merge on A_COPY/mu.
   #Revert r6 through r4 on A_COPY this should get back us the pristine copy.
+  #Merge r3:6 from 'A' to 'A_COPY
+  #Revert r5 on A_COPY/mu
+  #Modify line number 17 with 'some other line17' of A_COPY/mu
+  #Merge r6:3 from 'A' to 'A_COPY, This should leave line number 17
+  #undisturbed in A_COPY/mu, rest should be reverted.
 
   # Create a WC with a single branch
   sbox.build()
@@ -8639,7 +8644,58 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                        expected_skip,
                                        None, None, None, None, None, 1)
   os.chdir(saved_cwd)
-
+  expected_disk.tweak('', props={SVN_PROP_MERGE_INFO : '/A:1-2,4-6',
+                                 'prop1' : 'val1'})
+  expected_disk.tweak('mu', contents=tweaked_27th_line)
+  expected_output = wc.State(short_A_COPY, {
+    ''   : Item(status=' U'),
+    'mu' : Item(status='U '),
+    })
+  expected_status.tweak('', status=' M')
+  expected_status.tweak('mu', status='M ')
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_COPY, '3', '6',
+                                       A_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+  #Revert r5 on A_COPY/mu
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output(-5,
+                                       ['G    ' + mu_path + '\n']),
+                                     [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'merge', '-r5:4',
+                                     A_mu_url,
+                                     A_COPY_mu_path)
+  tweaked_17th_line_1 = tweaked_27th_line.replace('LINE17', 
+                                                  'some other line17')
+  tweaked_17th_line_2 = thirty_line_dummy_text.replace('line17',
+                                                       'some other line17')
+  #mimicing svn_sleep_for_timestamps
+  time.sleep(1)
+  svntest.main.file_write(A_COPY_mu_path, tweaked_17th_line_1)
+  expected_output = wc.State(short_A_COPY, {
+    ''   : Item(status=' G'),
+    'mu' : Item(status='G '),
+    })
+  expected_status.tweak('', status='  ')
+  expected_status.tweak('mu', status='M ')
+  expected_disk.tweak('', props={SVN_PROP_MERGE_INFO : '/A:1-2'})
+  expected_disk.tweak('mu', contents=tweaked_17th_line_2)
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_COPY, '6', '3',
+                                       A_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
 ########################################################################
 # Run the tests
 
