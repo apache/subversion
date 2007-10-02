@@ -862,7 +862,8 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
 
 /**
  * Similar to svn_ra_do_update2(), but taking @c svn_ra_reporter2_t
- * instead of @c svn_ra_reporter3_t.
+ * instead of @c svn_ra_reporter3_t.  If @a recurse is true, pass
+ * @c svn_depth_infinity for @a depth, else pass @c svn_depth_files.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -933,7 +934,9 @@ svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
 /**
  * Similar to svn_ra_do_switch2(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t, and therefore only able to report
- * @c svn_depth_infinity for depths.
+ * @c svn_depth_infinity for depths.  The switch itself is performed
+ * according to @a recurse: if true, then use @c svn_depth_infinity
+ * for @a depth, else use @c svn_depth_files.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -1000,7 +1003,9 @@ svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
 /**
  * Similar to svn_ra_do_status2(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t, and therefore only able to report
- * @c svn_depth_infinity for depths.
+ * @c svn_depth_infinity for depths.  The status operation itself is
+ * performed according to @a recurse: if true, then @a depth is
+ * @c svn_depth_infinity, else it is @c svn_depth_immediates.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -1087,7 +1092,9 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
 /**
  * Similar to svn_ra_do_diff3(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t, and therefore only able to report
- * @c svn_depth_infinity for depths.
+ * @c svn_depth_infinity for depths.  Perform the diff according to
+ * @a recurse: if true, then @a depth is @c svn_depth_infinity, else
+ * it is @c svn_depth_files.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */

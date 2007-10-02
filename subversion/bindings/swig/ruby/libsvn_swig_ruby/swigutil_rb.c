@@ -853,9 +853,9 @@ svn_swig_rb_to_depth(VALUE value)
   if (NIL_P(value)) {
     return svn_depth_infinity;
   } else if (value == Qtrue) {
-    return SVN_DEPTH_FROM_RECURSE(TRUE);
+    return SVN_DEPTH_INFINITY_OR_FILES(TRUE);
   } else if (value == Qfalse) {
-    return SVN_DEPTH_FROM_RECURSE(FALSE);
+    return SVN_DEPTH_INFINITY_OR_FILES(FALSE);
   } else if (RTEST(rb_obj_is_kind_of(value, rb_cString)) ||
              RTEST(rb_obj_is_kind_of(value, rb_cSymbol))) {
     value = rb_funcall(value, id_to_s, 0);

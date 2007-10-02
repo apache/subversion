@@ -689,7 +689,7 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
   return session->vtable->do_update(session,
                                     &(b->reporter3), &(b->reporter3_baton),
                                     revision_to_update_to, update_target,
-                                    SVN_DEPTH_FROM_RECURSE(recurse),
+                                    SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                     FALSE, /* no copyfrom args */
                                     update_editor, update_baton,
                                     pool);
@@ -731,7 +731,7 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
   return session->vtable->do_switch(session,
                                     &(b->reporter3), &(b->reporter3_baton),
                                     revision_to_switch_to, switch_target,
-                                    SVN_DEPTH_FROM_RECURSE(recurse),
+                                    SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                     switch_url, switch_editor, switch_baton,
                                     pool);
 }
@@ -769,7 +769,7 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
   return session->vtable->do_status(session,
                                     &(b->reporter3), &(b->reporter3_baton),
                                     status_target, revision,
-                                    SVN_DEPTH_FROM_RECURSE_STATUS(recurse),
+                                    SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                                     status_editor, status_baton, pool);
 }
 
@@ -814,7 +814,7 @@ svn_error_t *svn_ra_do_diff2(svn_ra_session_t *session,
   return session->vtable->do_diff(session,
                                   &(b->reporter3), &(b->reporter3_baton),
                                   revision, diff_target,
-                                  SVN_DEPTH_FROM_RECURSE(recurse),
+                                  SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                   ignore_ancestry, text_deltas, versus_url,
                                   diff_editor, diff_baton, pool);
 }

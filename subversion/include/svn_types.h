@@ -313,28 +313,40 @@ svn_depth_t
 svn_depth_from_word(const char *word);
 
 
-/* Return an @c svn_depth_t depth based on boolean @a recurse.
+/* Return @c svn_depth_infinity if boolean @a recurse is true, else
+ * return @c svn_depth_files.
  *
  * @note New code should never need to use this, it is called only
  * from pre-depth APIs, for compatibility.
  *
  * @since New in 1.5.
  */
-#define SVN_DEPTH_FROM_RECURSE(recurse) \
+#define SVN_DEPTH_INFINITY_OR_FILES(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_files)
 
 
-/* Return an @c svn_depth_t depth based on boolean @a recurse.
- * Use this only for the status command, as it has a unique interpretation
- * of recursion.
+/* Return @c svn_depth_infinity if boolean @a recurse is true, else
+ * return @c svn_depth_immediates.
  *
  * @note New code should never need to use this, it is called only
  * from pre-depth APIs, for compatibility.
  *
  * @since New in 1.5.
  */
-#define SVN_DEPTH_FROM_RECURSE_STATUS(recurse) \
+#define SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_immediates)
+
+
+/* Return @c svn_depth_infinity if boolean @a recurse is true, else
+ * return @c svn_depth_empty.
+ *
+ * @note New code should never need to use this, it is called only
+ * from pre-depth APIs, for compatibility.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_DEPTH_INFINITY_OR_EMPTY(recurse) \
+  ((recurse) ? svn_depth_infinity : svn_depth_empty)
 
 
 /* Return a recursion boolean based on @a depth.
@@ -344,7 +356,7 @@ svn_depth_from_word(const char *word);
  * unknown or infinite depth as recursive, and any other depth as
  * non-recursive (which in turn usually translates to @c svn_depth_files).
  */
-#define SVN_DEPTH_TO_RECURSE(depth)                                \
+#define SVN_DEPTH_IS_RECURSIVE(depth)                              \
   (((depth) == svn_depth_infinity || (depth) == svn_depth_unknown) \
    ? TRUE : FALSE)
 

@@ -1321,7 +1321,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = SVN_DEPTH_FROM_RECURSE(recurse);
+    depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   send_copyfrom_args = (send_copyfrom_param == SVN_RA_SVN_UNSPECIFIED_NUMBER) ?
       FALSE : send_copyfrom_param;
@@ -1358,7 +1358,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = SVN_DEPTH_FROM_RECURSE(recurse);
+    depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
@@ -1436,7 +1436,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = SVN_DEPTH_FROM_RECURSE(recurse);
+    depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 

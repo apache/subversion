@@ -275,7 +275,8 @@ switch_external(const char *path,
 
   /* ... Hello, new hotness. */
   SVN_ERR(svn_client__checkout_internal(NULL, url, path, peg_revision,
-                                        revision, SVN_DEPTH_FROM_RECURSE(TRUE),
+                                        revision,
+                                        SVN_DEPTH_INFINITY_OR_FILES(TRUE),
                                         FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
@@ -367,13 +368,11 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                    TRUE, FALSE, svn_depth_infinity, NULL,
                                    ib->ctx, ib->pool));
       else
-        SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,
-                                              &(new_item->peg_revision),
-                                              &(new_item->revision),
-                                              SVN_DEPTH_FROM_RECURSE(TRUE),
-                                              FALSE, FALSE,
-                                              ib->timestamp_sleep,
-                                              ib->ctx, ib->pool));
+        SVN_ERR(svn_client__checkout_internal
+                (NULL, new_item->url, path,
+                 &(new_item->peg_revision), &(new_item->revision),
+                 SVN_DEPTH_INFINITY_OR_FILES(TRUE),
+                 FALSE, FALSE, ib->timestamp_sleep, ib->ctx, ib->pool));
     }
   else if (! new_item)
     {

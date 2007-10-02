@@ -402,7 +402,7 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
                               authz_read_func,
                               authz_read_baton,
                               text_deltas,
-                              SVN_DEPTH_FROM_RECURSE(recurse),
+                              SVN_DEPTH_INFINITY_OR_FILES(recurse),
                               entry_props,
                               ignore_ancestry,
                               pool);

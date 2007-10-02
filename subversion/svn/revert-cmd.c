@@ -87,7 +87,7 @@ svn_cl__revert(apr_getopt_t *os,
 
   if (err
       && (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
-      && (! SVN_DEPTH_TO_RECURSE(opt_state->depth)))
+      && (! SVN_DEPTH_IS_RECURSIVE(opt_state->depth)))
     {
       err = svn_error_quick_wrap
         (err, _("Try 'svn revert --recursive' instead?"));

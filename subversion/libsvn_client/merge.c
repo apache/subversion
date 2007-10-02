@@ -3530,7 +3530,8 @@ svn_client_merge2(const char *source1,
                   apr_pool_t *pool)
 {
   return svn_client_merge3(source1, revision1, source2, revision2,
-                           target_wcpath, SVN_DEPTH_FROM_RECURSE(recurse),
+                           target_wcpath,
+                           SVN_DEPTH_INFINITY_OR_FILES(recurse),
                            ignore_ancestry, force, FALSE, dry_run,
                            merge_options, ctx, pool);
 }
@@ -3776,7 +3777,8 @@ svn_client_merge_peg2(const char *source,
                       apr_pool_t *pool)
 {
   return svn_client_merge_peg3(source, revision1, revision2, peg_revision,
-                               target_wcpath, SVN_DEPTH_FROM_RECURSE(recurse),
+                               target_wcpath,
+                               SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                ignore_ancestry, force, FALSE, dry_run,
                                merge_options, ctx, pool);
 }

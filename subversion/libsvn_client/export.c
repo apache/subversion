@@ -986,7 +986,7 @@ svn_client_export3(svn_revnum_t *result_rev,
 {
   return svn_client_export4(result_rev, from, to, peg_revision, revision,
                             overwrite, ignore_externals,
-                            SVN_DEPTH_FROM_RECURSE(recurse),
+                            SVN_DEPTH_INFINITY_OR_FILES(recurse),
                             native_eol, ctx, pool);
 }
 

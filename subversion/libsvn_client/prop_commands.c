@@ -410,14 +410,11 @@ svn_client_propset2(const char *propname,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  /* SVN_DEPTH_FROM_RECURSE() will affect immediate file children of
-     directory, so instead inline an expression to preserve backward
-     compatibility. */
   return svn_client_propset3(NULL,
                              propname,
                              propval,
                              target,
-                             (recurse ? svn_depth_infinity : svn_depth_empty),
+                             SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
                              skip_checks,
                              SVN_INVALID_REVNUM,
                              ctx,
@@ -889,7 +886,7 @@ svn_client_propget3(apr_hash_t **props,
                              peg_revision,
                              revision,
                              actual_revnum,
-                             (recurse ? svn_depth_infinity : svn_depth_empty),
+                             SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
                              ctx,
                              pool);
 }
@@ -1356,10 +1353,7 @@ svn_client_proplist2(apr_array_header_t **props,
   pl_baton.pool = pool;
 
   SVN_ERR(svn_client_proplist3(target, peg_revision, revision,
-                               /* We can't use SVN_DEPTH_FROM_RECURSE() here,
-                                  because we want a non-recursive proplist
-                                  to mean svn_depth_empty, not _files. */
-                               recurse ? svn_depth_infinity : svn_depth_empty,
+                               SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
                                proplist_receiver_cb, &pl_baton, ctx, pool));
 
   return SVN_NO_ERROR;
