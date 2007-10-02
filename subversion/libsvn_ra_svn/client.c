@@ -52,7 +52,7 @@
 #define DO_AUTH svn_ra_svn__do_internal_auth
 #endif
 
-/* We aren't using SVN_DEPTH_TO_RECURSE here because that macro (for
+/* We aren't using SVN_DEPTH_IS_RECURSIVE here because that macro (for
    whatever reason) deems svn_depth_immediates as non-recursive, which
    is ... kinda true, but not true enough for our purposes.  We need
    our requested recursion level to be *at least* as recursive as the

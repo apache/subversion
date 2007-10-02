@@ -1553,7 +1553,7 @@ svn_client_diff3(const apr_array_header_t *options,
                  apr_pool_t *pool)
 {
   return svn_client_diff4(options, path1, revision1, path2,
-                          revision2, SVN_DEPTH_FROM_RECURSE(recurse),
+                          revision2, SVN_DEPTH_INFINITY_OR_FILES(recurse),
                           ignore_ancestry, no_diff_deleted,
                           ignore_content_type, header_encoding,
                           outfile, errfile, ctx, pool);
@@ -1679,7 +1679,7 @@ svn_client_diff_peg3(const apr_array_header_t *options,
                               peg_revision,
                               start_revision,
                               end_revision,
-                              SVN_DEPTH_FROM_RECURSE(recurse),
+                              SVN_DEPTH_INFINITY_OR_FILES(recurse),
                               ignore_ancestry,
                               no_diff_deleted,
                               ignore_content_type,
@@ -1706,7 +1706,8 @@ svn_client_diff_peg2(const apr_array_header_t *options,
                      apr_pool_t *pool)
 {
   return svn_client_diff_peg3(options, path, peg_revision, start_revision,
-                              end_revision, SVN_DEPTH_FROM_RECURSE(recurse),
+                              end_revision,
+                              SVN_DEPTH_INFINITY_OR_FILES(recurse),
                               ignore_ancestry, no_diff_deleted,
                               ignore_content_type, SVN_APR_LOCALE_CHARSET,
                               outfile, errfile, ctx, pool);
@@ -1778,7 +1779,8 @@ svn_client_diff_summarize(const char *path1,
                           apr_pool_t *pool)
 {
   return svn_client_diff_summarize2(path1, revision1, path2,
-                                    revision2, SVN_DEPTH_FROM_RECURSE(recurse),
+                                    revision2,
+                                    SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                     ignore_ancestry, summarize_func,
                                     summarize_baton, ctx, pool);
 }
@@ -1827,7 +1829,7 @@ svn_client_diff_summarize_peg(const char *path,
 {
   return svn_client_diff_summarize_peg2(path, peg_revision,
                                         start_revision, end_revision,
-                                        SVN_DEPTH_FROM_RECURSE(recurse),
+                                        SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                         ignore_ancestry,
                                         summarize_func, summarize_baton,
                                         ctx, pool);

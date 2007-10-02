@@ -2294,7 +2294,7 @@ svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
  * provided from the corresponding value in @a config, and @a recurse
  * instead of @a depth.  If @a recurse is true, behave as if for @c
  * svn_depth_infinity; else if @a recurse is false, behave as if for
- * @c svn_depth_files.
+ * @c svn_depth_immediates.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.

@@ -148,7 +148,7 @@ svn_cl__propdel(apr_getopt_t *os,
             {
               SVN_ERR(svn_cmdline_printf
                       (subpool,
-                       SVN_DEPTH_TO_RECURSE(opt_state->depth)
+                       SVN_DEPTH_IS_RECURSIVE(opt_state->depth)
                        ? _("property '%s' deleted (recursively) from '%s'.\n")
                        : _("property '%s' deleted from '%s'.\n"),
                        pname_utf8, svn_path_local_style(target, subpool)));

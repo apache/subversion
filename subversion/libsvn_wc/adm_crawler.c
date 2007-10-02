@@ -433,7 +433,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                        subdir_entry->lock_token,
                                        iterpool));
 
-          if (depth == svn_depth_infinity || depth == svn_depth_unknown)
+          if (SVN_DEPTH_IS_RECURSIVE(depth))
             SVN_ERR(report_revisions_and_depths(adm_access, this_path,
                                                 subdir_entry->revision,
                                                 reporter, report_baton,
@@ -746,7 +746,7 @@ svn_wc_crawl_revisions2(const char *path,
                                  adm_access,
                                  &wrap_3to2_reporter, &wrb,
                                  restore_files,
-                                 SVN_DEPTH_FROM_RECURSE(recurse),
+                                 SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                  use_commit_times,
                                  notify_func,
                                  notify_baton,

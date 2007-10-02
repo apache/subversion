@@ -232,7 +232,7 @@ svn_client_status3(svn_revnum_t *result_rev,
   /* Try to open the target directory. If the target is a file or an
      unversioned directory, open the parent directory instead */
   err = svn_wc_adm_open3(&anchor_access, NULL, path, FALSE,
-                         SVN_DEPTH_TO_RECURSE(depth) ? -1 : 1,
+                         SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
                          ctx->cancel_func, ctx->cancel_baton,
                          pool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
@@ -240,7 +240,7 @@ svn_client_status3(svn_revnum_t *result_rev,
       svn_error_clear(err);
       SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
                                      path, FALSE,
-                                     SVN_DEPTH_TO_RECURSE(depth) ? -1 : 1,
+                                     SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
     }
@@ -411,7 +411,7 @@ svn_client_status2(svn_revnum_t *result_rev,
 {
   return svn_client_status3(result_rev, path, revision,
                             status_func, status_baton,
-                            SVN_DEPTH_FROM_RECURSE_STATUS(recurse),
+                            SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                             get_all, update,
                             no_ignore, ignore_externals,
                             ctx, pool);

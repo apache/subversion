@@ -301,7 +301,7 @@ svn_cl__propget(apr_getopt_t *os,
              the path associated with a printed thing is not obvious,
              we'll print filenames.  That is, unless we've been told
              not to do so with the --strict option. */
-          print_filenames = ((SVN_DEPTH_TO_RECURSE(opt_state->depth)
+          print_filenames = ((SVN_DEPTH_IS_RECURSIVE(opt_state->depth)
                               || targets->nelts > 1
                               || apr_hash_count(props) > 1)
                              && (! opt_state->strict));

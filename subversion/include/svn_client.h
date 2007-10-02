@@ -1688,7 +1688,7 @@ svn_client_status3(svn_revnum_t *result_rev,
 /**
  * Like svn_client_status3(), except with @a recurse instead of @a depth.
  * If @a recurse is true, behave as if for @c svn_depth_infinity; else
- * if @a recurse is false, behave as if for @c svn_depth_files.
+ * if @a recurse is false, behave as if for @c svn_depth_immediates.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -3113,7 +3113,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
  * Like svn_client_propset3(), but with @a base_revision_for_url
  * always @c SVN_INVALID_REVNUM; @a commit_info_p always NULL; and
  * @a depth set according to @a recurse: if @a recurse is true,
- * @a depth is @c svn_depth_infinity, else @c svn_depth_files.
+ * @a depth is @c svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3218,7 +3218,7 @@ svn_client_propget4(apr_hash_t **props,
 /**
  * Similar to svn_client_propget4(), but with @a depth set according
  * to @a recurse: if @a recurse is true, then @a depth is
- * @c svn_depth_infinity, else @c svn_depth_files.
+ * @c svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -4067,7 +4067,7 @@ svn_client_info2(const char *path_or_url,
 /*
  * Similar to svn_client_info2() but with @a depth set according to
  * @a recurse: if @a recurse is true, @a depth is @c svn_depth_infinity,
- * else @c svn_depth_files.
+ * else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */

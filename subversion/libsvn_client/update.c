@@ -234,8 +234,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  if ((depth == svn_depth_infinity || depth == svn_depth_unknown)
-      && (! ignore_externals))
+  if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     SVN_ERR(svn_client__handle_externals(traversal_info,
                                          TRUE, /* update unchanged ones */
                                          use_sleep, ctx, pool));
@@ -376,7 +375,7 @@ svn_client_update2(apr_array_header_t **result_revs,
                    apr_pool_t *pool)
 {
   return svn_client_update3(result_revs, paths, revision,
-                            SVN_DEPTH_FROM_RECURSE(recurse),
+                            SVN_DEPTH_INFINITY_OR_FILES(recurse),
                             ignore_externals, FALSE, ctx, pool);
 }
 
@@ -389,6 +388,6 @@ svn_client_update(svn_revnum_t *result_rev,
                   apr_pool_t *pool)
 {
   return svn_client__update_internal(result_rev, path, revision,
-                                     SVN_DEPTH_FROM_RECURSE(recurse),
+                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                      FALSE, FALSE, NULL, ctx, pool);
 }

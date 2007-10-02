@@ -1224,7 +1224,7 @@ main(int argc, const char *argv[])
         opt_state.revprop = TRUE;
         break;
       case 'R':
-        opt_state.depth = SVN_DEPTH_FROM_RECURSE(TRUE);
+        opt_state.depth = SVN_DEPTH_INFINITY_OR_FILES(TRUE);
         break;
       case 'N':
         descend = FALSE;
@@ -1609,12 +1609,12 @@ main(int argc, const char *argv[])
   if (descend == FALSE)
     {
       if (subcommand->cmd_func == svn_cl__status)
-        opt_state.depth = SVN_DEPTH_FROM_RECURSE_STATUS(FALSE);
+        opt_state.depth = SVN_DEPTH_INFINITY_OR_IMMEDIATES(FALSE);
       else if (subcommand->cmd_func == svn_cl__revert)
         /* Be especially conservative, since revert can lose data. */
         opt_state.depth = svn_depth_empty;
       else
-        opt_state.depth = SVN_DEPTH_FROM_RECURSE(FALSE);
+        opt_state.depth = SVN_DEPTH_INFINITY_OR_FILES(FALSE);
     }
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;

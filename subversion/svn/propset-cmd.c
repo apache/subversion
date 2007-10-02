@@ -220,7 +220,7 @@ svn_cl__propset(apr_getopt_t *os,
             {
               SVN_ERR
                 (svn_cmdline_printf
-                 (pool, SVN_DEPTH_TO_RECURSE(opt_state->depth)
+                 (pool, SVN_DEPTH_IS_RECURSIVE(opt_state->depth)
                   ? _("property '%s' set (recursively) on '%s'\n")
                   : _("property '%s' set on '%s'\n"),
                   pname, svn_path_local_style(target, pool)));

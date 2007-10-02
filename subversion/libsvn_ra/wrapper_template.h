@@ -260,7 +260,7 @@ static svn_error_t *compat_do_update(void *session_baton,
 {
   const svn_ra_reporter3_t *reporter3;
   void *baton3;
-  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE(recurse);
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   SVN_ERR(VTBL.do_update(session_baton, &reporter3, &baton3,
                          revision_to_update_to, update_target, depth,
@@ -284,7 +284,7 @@ static svn_error_t *compat_do_switch(void *session_baton,
 {
   const svn_ra_reporter3_t *reporter3;
   void *baton3;
-  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE(recurse);
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   SVN_ERR(VTBL.do_switch(session_baton, &reporter3, &baton3,
                          revision_to_switch_to, switch_target, depth,
@@ -307,7 +307,7 @@ static svn_error_t *compat_do_status(void *session_baton,
 {
   const svn_ra_reporter3_t *reporter3;
   void *baton3;
-  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE_STATUS(recurse);
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse);
 
   SVN_ERR(VTBL.do_status(session_baton, &reporter3, &baton3, status_target,
                          revision, depth, editor, status_baton, pool));
@@ -331,7 +331,7 @@ static svn_error_t *compat_do_diff(void *session_baton,
 {
   const svn_ra_reporter3_t *reporter3;
   void *baton3;
-  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE(recurse);
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   SVN_ERR(VTBL.do_diff(session_baton, &reporter3, &baton3, revision,
                        diff_target, depth, ignore_ancestry, TRUE,
