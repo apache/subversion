@@ -8769,7 +8769,7 @@ test_list = [ None,
               no_mergeinfo_from_no_op_merge,
               merge_to_sparse_directories,
               merge_old_and_new_revs_from_renamed_dir,
-              XFail(merge_with_child_having_different_rev_ranges_to_merge),
+              merge_with_child_having_different_rev_ranges_to_merge,
              ]
 
 if __name__ == '__main__':
