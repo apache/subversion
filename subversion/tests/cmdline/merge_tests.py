@@ -8299,6 +8299,7 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
 
   # Create a WC with a single branch
   sbox.build()
+  svntest.actions.do_sleep_for_timestamps()
   wc_dir = sbox.wc_dir
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
