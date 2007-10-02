@@ -8299,7 +8299,6 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
 
   # Create a WC with a single branch
   sbox.build()
-  svntest.actions.do_sleep_for_timestamps()
   wc_dir = sbox.wc_dir
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
@@ -8312,7 +8311,7 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
   A_MOVED_mu_path = os.path.join(wc_dir, 'A_MOVED', 'mu')
 
   # Make a modification to A/mu
-  svntest.main.file_write(mu_path, "This is 'mu' modified.\n")
+  svntest.main.file_write(mu_path, "This is the file 'mu' modified.\n")
   expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
   wc_status.add({'A/mu'     : Item(status='  ', wc_rev=3)})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -8479,8 +8478,6 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   for i in range(2, 31):
     thirty_line_dummy_text += 'line' + str(i) + '\n'
 
-  #mimicing svn_sleep_for_timestamps
-  time.sleep(1)
   svntest.main.file_write(mu_path, thirty_line_dummy_text)
   expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -8514,7 +8511,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                        'A_COPY/D/H/omega' : Item(status='  '),
                        'A_COPY/D/H/psi'   : Item(status='  ')})
   expected_status.tweak(wc_rev=3)
-  tweaked_7th_line = thirty_line_dummy_text.replace('line7', 'LINE7')
+  tweaked_7th_line = thirty_line_dummy_text.replace('line7', 'LINE 7')
   svntest.main.file_write(mu_path, tweaked_7th_line)
   expected_status.tweak('A/mu', wc_rev=4)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -8522,9 +8519,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                         None, None, wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_status.tweak(wc_rev=4)
-  tweaked_17th_line = tweaked_7th_line.replace('line17', 'LINE17')
-  #mimicing svn_sleep_for_timestamps
-  time.sleep(1)
+  tweaked_17th_line = tweaked_7th_line.replace('line17', 'LINE 17')
   svntest.main.file_write(mu_path, tweaked_17th_line)
   svntest.main.run_svn(None, 'propset', 'prop1', 'val1', A_path)
   expected_output = wc.State(wc_dir, 
@@ -8538,9 +8533,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
-  tweaked_27th_line = tweaked_17th_line.replace('line27', 'LINE27')
-  #mimicing svn_sleep_for_timestamps
-  time.sleep(1)
+  tweaked_27th_line = tweaked_17th_line.replace('line27', 'LINE 27')
   svntest.main.file_write(mu_path, tweaked_27th_line)
   expected_status.tweak('A/mu', wc_rev=6)
   expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
@@ -8673,12 +8666,10 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                      'merge', '-r5:4',
                                      A_mu_url,
                                      A_COPY_mu_path)
-  tweaked_17th_line_1 = tweaked_27th_line.replace('LINE17', 
+  tweaked_17th_line_1 = tweaked_27th_line.replace('LINE 17', 
                                                   'some other line17')
   tweaked_17th_line_2 = thirty_line_dummy_text.replace('line17',
                                                        'some other line17')
-  #mimicing svn_sleep_for_timestamps
-  time.sleep(1)
   svntest.main.file_write(A_COPY_mu_path, tweaked_17th_line_1)
   expected_output = wc.State(short_A_COPY, {
     ''   : Item(status=' G'),
