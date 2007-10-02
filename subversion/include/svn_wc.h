@@ -1081,10 +1081,9 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
 
 
 /**
- * A callback vtable invoked by our diff-editors, as they receive
- * diffs from the server.  'svn diff', 'svn merge' and 'svn patch' all
- * three implement their own versions of this table, though patch's is
- * very similar to merge's.
+ * A callback vtable invoked by our diff-editors, as they receive diffs
+ * from the server.  'svn diff', 'svn merge' and 'svn patch' all
+ * implement their own versions of this vtable.
  *
  * @since New in 1.5.
  */
@@ -1156,9 +1155,9 @@ typedef struct svn_wc_diff_callbacks3_t
    * @c svn_wc_notify_state_unknown, since they do not change the state
    * and therefore do not bother to know the state after the operation.)
    *
-   * @a copyfrom_path and @a copyfrom_rev are used when dealing with
-   * copied file.  They are respectively the source path and the
-   * source revision from which the file was copied.
+   * If @a copyfrom_path is non-@c NULL, this add has history (i.e., is a
+   * copy), and the origin of the copy may be recorded as
+   * @a copyfrom_path under @a copyfrom_revision.
    */
   svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
                              svn_wc_notify_state_t *contentstate,
@@ -1171,7 +1170,7 @@ typedef struct svn_wc_diff_callbacks3_t
                              const char *mimetype1,
                              const char *mimetype2,
                              const char *copyfrom_path,
-                             svn_revnum_t copyfrom_rev,
+                             svn_revnum_t copyfrom_revision,
                              const apr_array_header_t *propchanges,
                              apr_hash_t *originalprops,
                              void *diff_baton);
@@ -1211,16 +1210,16 @@ typedef struct svn_wc_diff_callbacks3_t
    * @a adm_access will be an access baton for the directory containing
    * @a path, or @c NULL if the diff editor is not using access batons.
    *
-   * @a copyfrom_path and @a copyfrom_rev are used when dealing with
-   * copied directory.  They are respectively the source path and the
-   * source revision from which the directory was copied.
+   * If @a copyfrom_path is non-@c NULL, this add has history (i.e., is a
+   * copy), and the origin of the copy may be recorded as
+   * @a copyfrom_path under @a copyfrom_revision.
    */
   svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_state_t *state,
                             const char *path,
                             svn_revnum_t rev,
                             const char *copyfrom_path,
-                            svn_revnum_t copyfrom_rev,
+                            svn_revnum_t copyfrom_revision,
                             void *diff_baton);
 
   /** A directory @a path was deleted.
