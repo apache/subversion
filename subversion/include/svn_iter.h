@@ -116,6 +116,3 @@ svn_iter__break(void);
  * @since New in 1.5.
  */
 #define svn_iter_break(pool) return svn_iter__break()
-
-
-
