@@ -323,6 +323,13 @@ log_entry_receiver_xml(void *baton,
 
   svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
 
+  if (author)
+    author = svn_xml_fuzzy_escape(author, pool);
+  if (date)
+    date = svn_xml_fuzzy_escape(date, pool);
+  if (message)
+    message = svn_xml_fuzzy_escape(message, pool);
+
   if (log_entry->revision == 0 && message == NULL)
     return SVN_NO_ERROR;
 
