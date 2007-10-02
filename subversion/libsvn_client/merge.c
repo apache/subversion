@@ -2608,15 +2608,9 @@ get_mergeinfo_walk_cb(const char *path,
             child->has_noninheritable = TRUE;
           else
             child->has_noninheritable = FALSE;
-          child->propval =
-            svn_string_create(propval->data,
-                              wb->children_with_mergeinfo->pool);
         }
       else
-        {
-          child->propval = NULL;
-          child->has_noninheritable = FALSE;
-        }
+        child->has_noninheritable = FALSE;
 
       /* A little trickery: If PATH doesn't have any mergeinfo or has
          only inheritable mergeinfo, we still describe it as having
@@ -2836,7 +2830,6 @@ insert_parent_and_siblings_of_switched_or_absent_entry(
       parent->switched = FALSE;
       parent->has_noninheritable = FALSE;
       parent->absent = FALSE;
-      parent->propval = NULL;
       /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
       insert_child_to_merge(children_with_mergeinfo, parent, parent_index);
       /* Increment for loop index so we don't process the inserted element. */
@@ -2875,7 +2868,6 @@ insert_parent_and_siblings_of_switched_or_absent_entry(
           sibling_of_missing->switched = FALSE;
           sibling_of_missing->has_noninheritable = FALSE;
           sibling_of_missing->absent = FALSE;
-          sibling_of_missing->propval = NULL;
           insert_child_to_merge(children_with_mergeinfo, sibling_of_missing,
                                 insert_index);
         }
@@ -3029,7 +3021,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   child_of_noninheritable->switched = FALSE;
                   child_of_noninheritable->has_noninheritable = FALSE;
                   child_of_noninheritable->absent = FALSE;
-                  child_of_noninheritable->propval = NULL;
                   insert_child_to_merge(children_with_mergeinfo,
                                         child_of_noninheritable,
                                         insert_index);
@@ -3071,7 +3062,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                              ? TRUE : FALSE;
       item->switched = FALSE;
       item->absent = FALSE;
-      item->propval = NULL;
       item->has_noninheritable = FALSE;
       if (item->missing_child)
         item->has_noninheritable = TRUE;
@@ -3095,7 +3085,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                                         ? TRUE : FALSE;
           target_item->switched = FALSE;
           target_item->absent = FALSE;
-          target_item->propval = NULL;
           target_item->has_noninheritable = FALSE;
           if (target_item->missing_child)
             target_item->has_noninheritable = TRUE;
