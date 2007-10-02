@@ -2076,23 +2076,6 @@ record_mergeinfo_on_merged_children(svn_depth_t depth,
   return SVN_NO_ERROR;
 }
 
-/* For all paths other than MERGE_B->target elide the mergeinfo. */
-static svn_error_t *
-elide_target_mergeinfo(const char *target_wcpath,
-                       const svn_wc_entry_t *entry,
-                       svn_wc_adm_access_t *adm_access,
-                       struct merge_cmd_baton *merge_b,
-                       apr_pool_t *pool)
-{
-  if (!merge_b->dry_run && merge_b->operative_merge
-      && strcmp(target_wcpath, merge_b->target))
-    {
-      SVN_ERR(svn_client__elide_mergeinfo(target_wcpath,
-                                          merge_b->target, entry,
-                                          adm_access, merge_b->ctx, pool));
-    }
-  return SVN_NO_ERROR;
-}
 /* URL1, URL2, and TARGET_WCPATH all better be directories.  For the
    single file case, the caller does the merging manually.
 
@@ -3339,8 +3322,9 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
                                                    *children_with_mergeinfo,
                                                    i, iterpool));
           if (i > 0)
-            SVN_ERR(elide_target_mergeinfo(child->path, child_entry,
-                                           adm_access, merge_b, iterpool));
+            SVN_ERR(svn_client__elide_mergeinfo(child->path, merge_b->target,
+                                                child_entry, adm_access, 
+                                                merge_b->ctx, iterpool));
         }
     }
 
