@@ -170,8 +170,8 @@ public class SVNClient implements SVNClientInterface
     {
         MyStatusCallback callback = new MyStatusCallback();
 
-        status(path, Depth.fromRecurse(descend), onServer, getAll, noIgnore,
-               ignoreExternals, callback);
+        status(path, Depth.infinityOrImmediates(descend), onServer, getAll,
+               noIgnore, ignoreExternals, callback);
 
         return callback.getStatusArray();
     }
@@ -222,8 +222,7 @@ public class SVNClient implements SVNClientInterface
     {
         MyListCallback callback = new MyListCallback();
 
-        list(url, revision, pegRevision,
-             recurse ? Depth.infinity : Depth.immediates,
+        list(url, revision, pegRevision, Depth.infinityOrImmediates(recurse),
              DirEntry.Fields.all, false, callback);
 
         return callback.getDirEntryArray();
@@ -422,7 +421,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return checkout(moduleName, destPath, revision, revision,
-                        Depth.fromRecurse(recurse), ignoreExternals,
+                        Depth.infinityOrFiles(recurse), ignoreExternals,
                         false);
     }
 
@@ -518,7 +517,7 @@ public class SVNClient implements SVNClientInterface
     public void revert(String path, boolean recurse)
             throws ClientException
     {
-        revert(path, Depth.fromRecurse(recurse));
+        revert(path, Depth.infinityOrFiles(recurse));
     }
 
     /**
@@ -555,7 +554,7 @@ public class SVNClient implements SVNClientInterface
     public void add(String path, boolean recurse, boolean force)
             throws ClientException
     {
-        add(path, Depth.fromRecurse(recurse), force, false, false);
+        add(path, Depth.infinityOrFiles(recurse), force, false, false);
     }
 
     /**
@@ -586,8 +585,8 @@ public class SVNClient implements SVNClientInterface
     public long update(String path, Revision revision, boolean recurse)
             throws ClientException
     {
-        return update(new String[]{path}, revision, Depth.fromRecurse(recurse),
-                      false, false)[0];
+        return update(new String[]{path}, revision,
+                      Depth.infinityOrFiles(recurse), false, false)[0];
     }
 
     /**
@@ -605,7 +604,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, Depth.fromRecurse(recurse),
+        return update(path, revision, Depth.infinityOrFiles(recurse),
                       ignoreExternals, false);
     }
 
@@ -798,7 +797,7 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            resolved(path, (recurse ? Depth.infinity : Depth.empty));
+            resolved(path, Depth.infinityOrEmpty(recurse));
         }
         catch (SubversionException e)
         {
@@ -847,7 +846,8 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return doExport(srcPath, destPath, revision, pegRevision, force,
-                        ignoreExternals, Depth.fromRecurse(recurse), nativeEOL);
+                        ignoreExternals, Depth.infinityOrFiles(recurse),
+                        nativeEOL);
     }
 
     /**
@@ -893,7 +893,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse)
             throws ClientException
     {
-        return doSwitch(path, url, revision, Depth.fromRecurse(recurse),
+        return doSwitch(path, url, revision, Depth.infinityOrFiles(recurse),
                         false, false);
     }
 
@@ -910,7 +910,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse)
             throws ClientException
     {
-        doImport(path, url, message, Depth.fromRecurse(recurse),
+        doImport(path, url, message, Depth.infinityOrFiles(recurse),
                  false, false);
     }
 
@@ -981,7 +981,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         merge(path1, revision1, path2, revision2, localPath, force,
-              Depth.fromRecurse(recurse), ignoreAncestry, dryRun);
+              Depth.infinityOrFiles(recurse), ignoreAncestry, dryRun);
     }
 
     /**
@@ -1026,7 +1026,7 @@ public class SVNClient implements SVNClientInterface
            throws ClientException
     {
         merge(path, pegRevision, revision1, revision2, localPath, force,
-              Depth.fromRecurse(recurse), ignoreAncestry, dryRun);
+              Depth.infinityOrFiles(recurse), ignoreAncestry, dryRun);
     }
 
     /**
@@ -1140,7 +1140,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target1, revision1, target2, revision2, outFileName,
-             Depth.fromRecurse(recurse), ignoreAncestry, noDiffDeleted,
+             Depth.infinityOrFiles(recurse), ignoreAncestry, noDiffDeleted,
              force);
     }
 
@@ -1187,7 +1187,8 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target, pegRevision, startRevision, endRevision, outFileName,
-             Depth.fromRecurse(recurse), ignoreAncestry, noDiffDeleted, force);
+             Depth.infinityOrFiles(recurse), ignoreAncestry, noDiffDeleted,
+             force);
     }
 
     /**
@@ -1309,9 +1310,6 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
-        // Depth.fromRecurse() will return info about immediate file
-        // children of a directory, so instead inline an expression to
-        // preserve backward compatibility.
         properties(path, revision, pegRevision, Depth.empty, callback);
 
         Map propMap = callback.getProperties(path);
@@ -1377,11 +1375,7 @@ public class SVNClient implements SVNClientInterface
                                    boolean recurse, boolean force)
             throws ClientException
     {
-        // Depth.fromRecurse() will affect immediate file children of
-        // a directory, so instead inline an expression to preserve
-        // backward compatibility.
-        propertySet(path, name, value,
-                    (recurse ? Depth.infinity : Depth.empty), force);
+        propertySet(path, name, value, Depth.infinityOrEmpty(recurse), force);
     }
 
     /**
@@ -1442,10 +1436,7 @@ public class SVNClient implements SVNClientInterface
     public void propertyRemove(String path, String name, boolean recurse)
             throws ClientException
     {
-        // Depth.fromRecurse() will affect immediate file children of
-        // a directory, so instead inline an expression to preserve
-        // backward compatibility.
-        propertyRemove(path, name, (recurse ? Depth.infinity : Depth.empty));
+        propertyRemove(path, name, Depth.infinityOrEmpty(recurse));
     }
 
     /**
@@ -1875,7 +1866,7 @@ public class SVNClient implements SVNClientInterface
                        boolean noUnlock)
             throws ClientException
     {
-        return commit(path, message, Depth.fromRecurse(recurse), noUnlock,
+        return commit(path, message, Depth.infinityOrFiles(recurse), noUnlock,
                       false, null);
     }
 
@@ -1911,11 +1902,8 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         MyInfoCallback callback = new MyInfoCallback();
-        // Depth.fromRecurse() will return info about immediate file
-        // children of a directory, so instead inline an expression to
-        // preserve backward compatibility.
         info2(pathOrUrl, revision, pegRevision,
-              (recurse ? Depth.infinity : Depth.empty), callback);
+              Depth.infinityOrEmpty(recurse), callback);
         return callback.getInfoArray();
     }
 
