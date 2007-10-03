@@ -1189,6 +1189,46 @@ test_splitext(const char **msg,
 }
 
 
+static svn_error_t *
+test_compose(const char **msg,
+             svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  static const char * const paths[] = {
+    "",
+    "/",
+    "/foo",
+    "/foo/bar",
+    "/foo/bar/baz",
+    "foo",
+    "foo/bar",
+    "foo/bar/baz",
+    NULL,
+  };
+  const char * const *path_ptr = paths;
+  const char *input_path;
+
+  *msg = "test svn_path_decompose";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (input_path = *path_ptr; *path_ptr; input_path = *++path_ptr)
+    {
+      apr_array_header_t *components = svn_path_decompose(input_path, pool);
+      const char *output_path = svn_path_compose(components, pool);
+
+      if (strcmp(input_path, output_path))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_path_compose("
+                                 "svn_path_decompose(\"%s\")) "
+                                 "returned \"%s\" expected \"%s\"",
+                                 input_path, output_path, input_path);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* local define to support XFail-ing tests on Windows/Cygwin only */
 #if defined(WIN32) || defined(__CYGWIN__)
 #define WINDOWS_OR_CYGWIN TRUE
@@ -1223,5 +1263,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_compare_paths),
     SVN_TEST_PASS(test_get_longest_ancestor),
     SVN_TEST_PASS(test_splitext),
+    SVN_TEST_PASS(test_compose),
     SVN_TEST_NULL
   };

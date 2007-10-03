@@ -745,6 +745,53 @@ svn_path_decompose(const char *path,
 }
 
 
+const char *
+svn_path_compose(const apr_array_header_t *components,
+                 apr_pool_t *pool)
+{
+  apr_size_t *lengths = apr_palloc(pool, components->nelts*sizeof(* lengths));
+  apr_size_t max_length = components->nelts;
+  char *path;
+  char *p;
+  int i;
+
+  /* Get the length of each component so a total length can be
+     calculated. */
+  for (i = 0; i < components->nelts; ++i)
+    {
+      apr_size_t l = strlen(APR_ARRAY_IDX(components, i, const char *));
+      lengths[i] = l;
+      max_length += l;
+    }
+
+  path = apr_palloc(pool, max_length + 1);
+  p = path;
+
+  for (i = 0; i < components->nelts; ++i)
+    {
+      /* Append a '/' to the path.  Handle the case with an absolute
+         path where a '/' appears in the first component.  Only append
+         a '/' if the component is the second component that does not
+         follow a "/" first component; or it is the third or later
+         component. */
+      if (i > 1 ||
+          (i == 1 && strcmp("/", APR_ARRAY_IDX(components,
+                                               0,
+                                               const char *)) != 0))
+        {
+          *p++ = '/';
+        }
+
+      memcpy(p, APR_ARRAY_IDX(components, i, const char *), lengths[i]);
+      p += lengths[i];
+    }
+
+  *p = '\0';
+
+  return path;
+}
+
+
 svn_boolean_t
 svn_path_is_single_path_component(const char *name)
 {
