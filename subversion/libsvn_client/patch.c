@@ -1695,96 +1695,6 @@ extract_svnpatch(const char *original_patch_path,
   return SVN_NO_ERROR;
 }
 
-/* Look for the patch external program we'll use to apply the unidiff
- * part of a patch file, and run it against @a patch_path.  Consider the
- * following order of priority:
- *  1. '--patch-cmd' command line argument value
- *  2. 'patch-cmd' entry in the run-time user config file
- *  3. try to execute 'patch' literally, which should work on most *NIX
- *    systems at least.  This involves searching into $PATH.
- */
-svn_error_t *
-apply_unidiff(const char *patch_path,
-              apr_file_t *outfile,
-              apr_file_t *errfile,
-              svn_client_ctx_t *ctx,
-              apr_pool_t *pool)
-{
-  const char *patch_cmd = NULL;
-  const char *patch_cmd_args[2];
-  int exitcode = 0;
-  apr_exit_why_e exitwhy = 0;
-  svn_boolean_t patch_bin_guess = TRUE; 
-  apr_file_t *patchfile;
-
-  /* The client config should know about the first two options since its
-   * patch-cmd value was overriden in main(). */
-  if (ctx->config)
-    {
-      const char *patch_cmd_tmp = NULL;
-      svn_config_t *cfg = apr_hash_get(ctx->config,
-                                       SVN_CONFIG_CATEGORY_CONFIG,
-                                       APR_HASH_KEY_STRING);
-      svn_config_get(cfg, &patch_cmd_tmp, SVN_CONFIG_SECTION_HELPERS,
-                     SVN_CONFIG_OPTION_PATCH_CMD, NULL);
-      
-      if (patch_cmd_tmp)
-        {
-          patch_bin_guess = FALSE;
-          SVN_ERR(svn_path_cstring_to_utf8(&patch_cmd, patch_cmd_tmp,
-                                           pool));
-        }
-      else
-        patch_cmd = apr_psprintf(pool, "patch");
-    }
-
-  /* Posix convention. */
-  patch_cmd_args[0] = patch_cmd;
-  patch_cmd_args[1] = NULL;
-
-  /* We want to feed the external program's stdin with the patch itself. */
-  SVN_ERR(svn_io_file_open(&patchfile, patch_path,
-                           APR_READ, APR_OS_DEFAULT, pool));
-
-  /* Now run the external program.  The parent process should close
-   * opened pipes/files. */
-  SVN_ERR(svn_io_run_cmd(".", patch_cmd, patch_cmd_args,
-                         &exitcode, &exitwhy, TRUE, patchfile, outfile,
-                         errfile, pool));
-
-  /* This is where we have to make the assumption that if the exitcode
-   * isn't 0 nor 1 then the external program got into trouble or wasn't
-   * even executed--command not found (see below).  Basically we're
-   * trying to stick with patch(1) behaviour as stated in the man page:
-   * "patch's exit  status is 0 if all hunks are applied successfully, 1
-   * if some hunks cannot be applied, and 2 if there is more serious
-   * trouble." */
-  if (exitcode != 0 && exitcode != 1)
-    {
-      /* This is the case when we're trying to execute 'patch' and got
-       * some weird exitcode.
-       * XXX: I haven't figured out how to check against the 'command
-       * not found' error, which returns exitcode == 255.  Is there a
-       * macro somewhere to compare with?  Let's use > 2 for now. */
-      if (patch_bin_guess && exitcode > 2)
-        return svn_error_createf
-                (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                 _("No 'patch' program was found in your system.  Please try\n"
-                   "to use --patch-cmd or 'patch-cmd' run-time configuration\n"
-                   "option or manually use an external tool to apply Unidiffs."));
-      else
-        /* patch(1) uses exitcode 2 along with the message "Only garbage
-         * was found in the patch input.".  This falls here. */
-        return svn_error_createf
-                (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                 _("'%s' returned error exitcode %d"),
-                 svn_path_local_style(patch_cmd, pool),
-                 exitcode);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *wc_path,
@@ -1823,17 +1733,14 @@ svn_client_patch(const char *patch_path,
                              ctx->notify_func2, ctx->notify_baton2,
                              &diff_editor, pool);
 
-      /* It's time to drive diff_editor and apply changes to the working
-       * copy. */
-      SVN_ERR(svn_wc_apply_patch(decoded_patch_file, diff_editor,
-                                 eb, pool));
+      /* Apply the svnpatch part of the patch file against the WC. */
+      SVN_ERR(svn_wc_apply_svnpatch(decoded_patch_file, diff_editor,
+                                    eb, pool));
 
     }
 
-  /* At this point the svnpatch block has been addressed by
-   * svn_wc_apply_patch() right above and we'll now proceed with the
-   * unidiff part. */
-  SVN_ERR(apply_unidiff(patch_path, outfile, errfile, ctx, pool));
+  /* Now proceed with the unidiff bytes. */
+  SVN_ERR(svn_wc_apply_unidiff(patch_path, outfile, errfile, ctx->config, pool));
 
   return SVN_NO_ERROR;
 }

@@ -4574,11 +4574,28 @@ svn_wc_read_tuple(svn_stream_t *from,
                   apr_pool_t *pool,
                   const char *fmt, ...);
 
+/* Drive @a diff_editor against @a decoded_patch_file's clear-text
+ * Editor Commands. */
 svn_error_t *
-svn_wc_apply_patch(apr_file_t *decoded_patch_file,
-                   const svn_delta_editor_t *diff_editor,
-                   void *diff_edit_baton,
-                   apr_pool_t *pool);
+svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
+                      const svn_delta_editor_t *diff_editor,
+                      void *diff_edit_baton,
+                      apr_pool_t *pool);
+
+/* Run an external patch program against @a patch_path patch file.  @a
+ * outfile and @a errfile are respectively connected to the external
+ * program's stdout and stderr pipes when executed.  @a config is looked
+ * up for the SVN_CONFIG_OPTION_PATCH_CMD entry to use as the patch
+ * program.  If missing or @a config is @c NULL, the function tries to
+ * execute 'patch' literally, which should work on most *NIX systems at
+ * least.  This involves searching into $PATH.  The external program is
+ * given the patch file via its stdin pipe. */
+svn_error_t *
+svn_wc_apply_unidiff(const char *patch_path,
+                     apr_file_t *outfile,
+                     apr_file_t *errfile,
+                     apr_hash_t *config,
+                     apr_pool_t *pool);
 
 /** @} end group: svnpatch related functions */
 

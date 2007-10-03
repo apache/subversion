@@ -56,9 +56,9 @@ typedef struct svn_config_t svn_config_t;
  * client configuration files.
  * @{
  */
-#define SVN_CONFIG_CATEGORY_SERVERS                 "servers"
-#define SVN_CONFIG_SECTION_GROUPS                   "groups"
-#define SVN_CONFIG_SECTION_GLOBAL                   "global"
+#define SVN_CONFIG_CATEGORY_SERVERS        "servers"
+#define SVN_CONFIG_SECTION_GROUPS               "groups"
+#define SVN_CONFIG_SECTION_GLOBAL               "global"
 #define SVN_CONFIG_OPTION_HTTP_PROXY_HOST           "http-proxy-host"
 #define SVN_CONFIG_OPTION_HTTP_PROXY_PORT           "http-proxy-port"
 #define SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME       "http-proxy-username"
@@ -74,16 +74,17 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_PASSWORD  "ssl-client-cert-password"
 #define SVN_CONFIG_OPTION_HTTP_LIBRARY              "http-library"
 
-#define SVN_CONFIG_CATEGORY_CONFIG                  "config"
-#define SVN_CONFIG_SECTION_AUTH                     "auth"
+#define SVN_CONFIG_CATEGORY_CONFIG          "config"
+#define SVN_CONFIG_SECTION_AUTH                 "auth"
 #define SVN_CONFIG_OPTION_STORE_PASSWORDS           "store-passwords"
 #define SVN_CONFIG_OPTION_STORE_AUTH_CREDS          "store-auth-creds"
-#define SVN_CONFIG_SECTION_HELPERS                  "helpers"
+#define SVN_CONFIG_SECTION_HELPERS              "helpers"
 #define SVN_CONFIG_OPTION_EDITOR_CMD                "editor-cmd"
 #define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
-#define SVN_CONFIG_SECTION_MISCELLANY               "miscellany"
+#define SVN_CONFIG_OPTION_PATCH_CMD                 "patch-cmd"
+#define SVN_CONFIG_SECTION_MISCELLANY           "miscellany"
 #define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
 #define SVN_CONFIG_OPTION_LOG_ENCODING              "log-encoding"
 #define SVN_CONFIG_OPTION_USE_COMMIT_TIMES          "use-commit-times"
@@ -93,9 +94,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
 #define SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS     "interactive-conflicts"
-#define SVN_CONFIG_SECTION_TUNNELS                  "tunnels"
-#define SVN_CONFIG_SECTION_AUTO_PROPS               "auto-props"
-#define SVN_CONFIG_OPTION_PATCH_CMD                 "patch-cmd"
+#define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
+#define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 /** @} */
 
 /** @name Repository conf directory configuration files strings
@@ -104,19 +104,19 @@ typedef struct svn_config_t svn_config_t;
  * @{
  */
 /* For repository svnserve.conf files */
-#define SVN_CONFIG_SECTION_GENERAL                  "general"
+#define SVN_CONFIG_SECTION_GENERAL              "general"
 #define SVN_CONFIG_OPTION_ANON_ACCESS               "anon-access"
 #define SVN_CONFIG_OPTION_AUTH_ACCESS               "auth-access"
 #define SVN_CONFIG_OPTION_PASSWORD_DB               "password-db"
 #define SVN_CONFIG_OPTION_REALM                     "realm"
 #define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
-#define SVN_CONFIG_SECTION_SASL                     "sasl"
+#define SVN_CONFIG_SECTION_SASL                 "sasl"
 #define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
 #define SVN_CONFIG_OPTION_MIN_SSF                   "min-encryption"
 #define SVN_CONFIG_OPTION_MAX_SSF                   "max-encryption"
 
 /* For repository password database */
-#define SVN_CONFIG_SECTION_USERS                    "users"
+#define SVN_CONFIG_SECTION_USERS                "users"
 /** @} */
 
 /*** Configuration Default Values ***/
