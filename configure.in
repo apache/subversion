@@ -466,6 +466,7 @@ AC_HELP_STRING([--enable-maintainer-mode],
       enable_debugging=yes
       if test "$GCC" = "yes"; then
         CFLAGS="$CFLAGS -std=c89 -Wpointer-arith -Wwrite-strings -Wshadow"
+        CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
       fi
     fi
 ])
@@ -474,12 +475,15 @@ if test "$enable_debugging" = "yes" ; then
   dnl At the moment, we don't want optimization, because we're
   dnl debugging.
   CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-O[^ ]* //g'`"]
+  CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-O[^ ]* //g'`"]
   dnl SVN_DEBUG enables specific features for developer builds
   dnl AP_DEBUG enables specific (Apache) features for developer builds
   CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
+  CXXFLAGS="$CXXFLAGS -DSVN_DEBUG -DAP_DEBUG"
 else
   if test "$enable_debugging" = "no" ; then
     CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
+    CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
   fi
 fi
 
@@ -535,6 +539,7 @@ AC_HELP_STRING([--enable-gprof],
         fi
         AC_MSG_NOTICE([Enabling gprof profiling data (to gmon.out).])
         CFLAGS="$CFLAGS -pg"
+        CXXFLAGS="$CXXFLAGS -pg"
         LT_LDFLAGS="$LT_LDFLAGS -pg"
       else
         AC_MSG_ERROR(We only support --enable-gprof with GCC right now.)
