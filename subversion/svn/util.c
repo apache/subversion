@@ -27,9 +27,11 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+ #include <unistd.h>
 
 #include <apr_env.h>
 #include <apr_errno.h>
+#include <apr_file_info.h>
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
@@ -196,8 +198,8 @@ svn_cl__edit_file_externally(const char *path,
 
 svn_error_t *
 svn_cl__merge_file_externally(const char *base_path,
-                              const char *repos_path,
-                              const char *user_path,
+                              const char *their_path,
+                              const char *my_path,
                               const char *merged_path,
                               apr_hash_t *config,
                               apr_pool_t *pool)
@@ -237,8 +239,8 @@ svn_cl__merge_file_externally(const char *base_path,
            "configuration option were not set.\n"));
 
   {
-    const char *arguments[] = { merge_tool, base_path, repos_path,
-                                user_path, merged_path, NULL};
+    const char *arguments[] = { merge_tool, base_path, their_path,
+                                my_path, merged_path, NULL};
     char *cwd;
     apr_status_t status = apr_filepath_get(&cwd, APR_FILEPATH_NATIVE, pool);
     if (status != 0)

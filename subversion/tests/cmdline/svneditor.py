@@ -20,11 +20,12 @@ import sys
 import os
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in [2, 5]:
         print "usage: svneditor.py file"
+        print "       svneditor.py base theirs mine merged"
         sys.exit(1)
 
-    filename = sys.argv[1]
+    filename = sys.argv[-1]
 
     # Read in the input file.
     f = open(filename)

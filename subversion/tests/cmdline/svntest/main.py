@@ -668,6 +668,7 @@ an appropriate list of mappings.
 
 def use_editor(func):
   os.environ['SVN_EDITOR'] = svneditor_script
+  os.environ['SVN_MERGE'] = svneditor_script
   os.environ['SVNTEST_EDITOR_FUNC'] = func
 
 
