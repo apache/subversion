@@ -840,7 +840,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  are applied to the obstructing path.\n"),
     { 'r', 'N', svn_cl__depth_opt, 'q', svn_cl__merge_cmd_opt,
       svn_cl__relocate_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
-      svn_cl__ignore_externals_opt, svn_cl__force_opt} },
+      svn_cl__ignore_externals_opt, svn_cl__force_opt, svn_cl__accept_opt} },
 
   { "unlock", svn_cl__unlock, {0}, N_
     ("Unlock working copy paths or URLs.\n"

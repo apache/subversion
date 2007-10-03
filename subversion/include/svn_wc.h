@@ -3201,6 +3201,12 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * If @a cancel_func is non-NULL, it will be called with @a cancel_baton as
  * the switch progresses to determine if it should continue.
  *
+ * If @a conflict_func is non-NULL, then invoke it with @a
+ * conflict_baton whenever a conflict is encountered, giving the
+ * callback a chance to resolve the conflict before the editor takes
+ * more drastic measures (such as marking a file conflicted, or
+ * bailing out of the switch).
+ *
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
@@ -3238,6 +3244,8 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                        void *notify_baton,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
+                                       svn_wc_conflict_resolver_func_t conflict_func,
+                                       void *conflict_baton,
                                        const char *diff3_cmd,
                                        apr_array_header_t *preserved_exts,
                                        const svn_delta_editor_t **editor,
@@ -3248,9 +3256,9 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
 /**
  * Similar to svn_wc_get_switch_editor3() but with the
  * @a allow_unver_obstructions parameter always set to false,
- * @a preserved_exts set to NULL, and @a depth set according to @a
- * recurse: if @a recurse is true, pass @c svn_depth_infinity, if
- * false, pass @c svn_depth_files.
+ * @a preserved_exts set to NULL, @a conflict_func and baton set to NULL,
+ * and @a depth set according to @a recurse: if @a recurse is true, pass @c
+ * svn_depth_infinity, if false, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */

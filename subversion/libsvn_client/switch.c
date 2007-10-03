@@ -170,6 +170,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
+                                    ctx->conflict_func, ctx->conflict_baton,
                                     diff3_cmd, preserved_exts,
                                     &switch_editor, &switch_edit_baton,
                                     traversal_info, pool));
