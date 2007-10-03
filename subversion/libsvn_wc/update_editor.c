@@ -2965,6 +2965,8 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           void *notify_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
                           const char *diff3_cmd,
                           apr_array_header_t *preserved_exts,
                           const svn_delta_editor_t **editor,
@@ -2978,7 +2980,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                      target, use_commit_times, switch_url, depth,
                      allow_unver_obstructions, notify_func, notify_baton,
                      cancel_func, cancel_baton,
-                     NULL, NULL, /* TODO(sussman): add conflict callback here */
+                     conflict_func, conflict_baton,
                      NULL, NULL, /* TODO(sussman): add fetch callback here  */
                      diff3_cmd, preserved_exts,
                      editor, edit_baton, traversal_info, pool);
@@ -3007,7 +3009,8 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
                                    switch_url, use_commit_times,
                                    SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                    FALSE, notify_func, notify_baton,
-                                   cancel_func, cancel_baton, diff3_cmd,
+                                   cancel_func, cancel_baton,
+                                   NULL, NULL, diff3_cmd,
                                    NULL, editor, edit_baton, traversal_info,
                                    pool);
 }
@@ -3037,7 +3040,8 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
                                    switch_url, use_commit_times,
                                    SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                    FALSE, svn_wc__compat_call_notify_func, nb,
-                                   cancel_func, cancel_baton, diff3_cmd,
+                                   cancel_func, cancel_baton,
+                                   NULL, NULL, diff3_cmd,
                                    NULL, editor, edit_baton, traversal_info,
                                    pool);
 }
