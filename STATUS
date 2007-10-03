@@ -31,6 +31,8 @@ Candidate changes:
       safe).  Now reported by a user
       (http://svn.haxx.se/dev/archive-2007-09/0441.shtml).  Has unit
       and end-to-end tests.
+    Branch: 1.4.x-issue-2608 (resolving a trivial conflict and removing
+     an irrelevant helper function)
     Votes:
       +1: glasser, dlr
 
