@@ -409,7 +409,20 @@ svn_cl__edit_file_externally(const char *path,
                              apr_hash_t *config,
                              apr_pool_t *pool);
 
+/* Search for a merge tool command in environment variables,
+   and use it to perform the merge of the four given files.
+   Use POOL for all allocations.
 
+   CONFIG is a hash of svn_config_t * items keyed on a configuration
+   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.
+   */
+svn_error_t *
+svn_cl__merge_file_externally(const char *base_path,
+                              const char *repos_path,
+                              const char *user_path,
+                              const char *merged_path,
+                              apr_hash_t *config,
+                              apr_pool_t *pool);
 
 
 /*** Notification functions to display results on the terminal. */
