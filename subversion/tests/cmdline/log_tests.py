@@ -1297,7 +1297,7 @@ def log_xml_with_bad_data(sbox):
   r0_props = {
     'svn:date' : '',
     'svn:log'  : 'After the colon are a space, 3 bad chars, '
-               + '3 good chars, and a period: '
+               + '2 good chars, and a period: '
                + '?\\021?\\022?\\017\t\n.' }
   svntest.actions.run_and_verify_log_xml(
     expected_revprops=(r0_props,), args=[sbox.repo_url])
