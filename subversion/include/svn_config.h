@@ -121,9 +121,17 @@ typedef struct svn_config_t svn_config_t;
 /*** Configuration Default Values ***/
 
 /* '*' matches leading dots, e.g. '*.rej' matches '.foo.rej'. */
+/* We want this to be printed on two lines in the generated config file,
+ * but we don't want the # character to end up in the variable.
+ */
+#define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
+  "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo"
+#define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
+  "*.rej *~ #*# .#* .*.swp .DS_Store"
+
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
-    "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo" \
-    " *.rej *~ #*# .#* .*.swp .DS_Store"
+  SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 " " \
+  SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2
 
 #define SVN_CONFIG_TRUE  "true"
 #define SVN_CONFIG_FALSE "false"

@@ -962,7 +962,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### which Subversion will ignore in its 'status' output, and"       NL
         "### while importing or adding files and directories."               NL
         "### '*' matches leading dots, e.g. '*.rej' matches '.foo.rej'."     NL
-        "# global-ignores = " SVN_CONFIG_DEFAULT_GLOBAL_IGNORES ""           NL
+        "# global-ignores = " SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1      NL
+        "#   " SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2                     NL
         "### Set log-encoding to the default encoding for log messages"      NL
         "# log-encoding = latin1"                                            NL
         "### Set use-commit-times to make checkout/update/switch/revert"     NL
