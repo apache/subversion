@@ -3096,27 +3096,40 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 }
 
 
-/* Fill *CHILDREN_WITH_MERGEINFO with child paths (const char *) which
-   might have intersecting merges because they meet one or more of the
+/* Fill *CHILDREN_WITH_MERGEINFO with child paths
+   (const svn_client__merge_path_t *) which might have intersecting merges
+   because they meet one or more of the criteria
    described in get_mergeinfo_paths(). Here the paths are arranged in a depth
-   first order. For each such child, call do_merge() or do_single_file_merge()
-   with the appropriate arguments (based on the type of child).  Use
-   PARENT_ENTRY and ADM_ACCESS to fill CHILDREN_WITH_MERGEINFO.
+   first order. Use PARENT_ENTRY and ADM_ACCESS to fill 
+   *CHILDREN_WITH_MERGEINFO.
    Cascade PARENT_MERGE_SOURCE_URL, REV1, REV2, DEPTH,
-   IGNORE_ANCESTRY, ADM_ACCESS, IS_ROLLBACK and MERGE_CMD_BATON to do_merge() 
-   and do_single_file_merge().  All allocation occurs in POOL.
+   IGNORE_ANCESTRY, ADM_ACCESS, IS_ROLLBACK and MERGE_B to do_merge().
+   All allocation occurs in POOL.
 
    From PARENT_MERGE_SOURCE_URL and WC_ROOT_URL deduce the
    MERGE_SRC_CANON_PATH.
 
+   For each item in *CHILDREN_WITH_MERGEINFO it calculates remaining revision
+   ranges to merge.
+   
+   From the remaining ranges of each item in *CHILDREN_WITH_MERGEINFO,
+   it picks the smallest end_rev(for forward merge) 
+   or biggest end_rev(for rollback merge).
+
+MERGE_ONE_RANGE: RETURN IF END_REV == SVN_INVALID_REVNUM
+   Slices each remaining_ranges[0] around this 'end_rev'.
+   Starts with start_rev = REV1, Calls do_merge on MERGE_B->target for 
+   start_rev:end_rev. 
+   Removes the first item from each remaining_ranges.
+   Sets start_rev=end_rev and picks the next end_rev, repeats this whole 
+   process(MERGE_ONE_RANGE) 
+
+   Records the mergeinfo.
+
    Note that any paths in CHILDREN_WITH_MERGEINFO which were switched
    but had no explicit working mergeinfo at the start of the call, will have
-   some at the end as a result of do_merge() and/or do_single_file_merge.
-
-   If MERGE_CMD_BATON->TARGET is found to have prexisting mergeinfo it is
-   added to CHILDREN_WITH_MERGEINFO and MERGE_CMD_BATON->EXISTING_MERGEINFO is
-   set to TRUE, but do_merge() is never called for MERGE_CMD_BATON->TARGET by
-   this function. */
+   some at the end of it if merge is not a no-op merge.
+*/
 static svn_error_t *
 discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
                             const svn_wc_entry_t *parent_entry,
