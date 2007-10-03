@@ -2707,17 +2707,12 @@ svn_client_resolved(const char *path,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
  *
- * @a accept_which is the argument used to facilitate automatic
- * conflict resolution.  If @a accept_which is svn_accept_left, the
- * contents of the conflicted file will be replaced with the prestine
- * contents of the pre-modification base file contents.  If @a
- * accept_which is svn_accept_right, the contents of the conflicted
- * file will be replaced with the post-conflict base file contents.  If @a
- * accept_which is svn_accept_working, the contents of the conflicted
- * file will be the content of the pre-conflict working copy file.  If
- * @a accept_which is svn_accept_default, conflict resolution will
- * be handled just like before automatic conflict resolution was
- * availble.
+ * If @a conflict_result is svn_wc_conflict_result_choose_base, resolve the
+ * conflict with the old file contents; if
+ * svn_wc_conflict_result_choose_user, use the original working contents;
+ * if svn_wc_conflict_result_choose_theirs, the new contents; and if
+ * svn_wc_conflict_result_choose_merged, don't change the contents at all,
+ * just remove the conflict status (i.e. pre-1.5 behavior).
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-null,
@@ -2728,7 +2723,7 @@ svn_client_resolved(const char *path,
 svn_error_t *
 svn_client_resolved2(const char *path,
                      svn_depth_t depth,
-                     svn_accept_t accept_which,
+                     svn_wc_conflict_result_t conflict_result,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 

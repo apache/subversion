@@ -2138,30 +2138,40 @@ def automatic_conflict_resolution(sbox):
   # So now lambda, mu and rho are all in a "conflicted" state.  Run 'svn
   # resolved' with the respective "--accept[mine|orig|repo]" flag.
 
+  # But first, check --accept actions resolved does not accept.
+  svntest.actions.run_and_verify_svn(None,
+                                     # stdout, stderr
+                                     None,
+                                     ".*invalid 'accept' ARG",
+                                     'resolved', '--accept=postpone')
+  svntest.actions.run_and_verify_svn(None,
+                                     # stdout, stderr
+                                     None,
+                                     ".*invalid 'accept' ARG",
+                                     'resolved', '--accept=edit')
+  svntest.actions.run_and_verify_svn(None,
+                                     # stdout, stderr
+                                     None,
+                                     ".*invalid 'accept' ARG",
+                                     'resolved', '--accept=launch')
   # Run 'svn resolved --accept=NOTVALID.  Using omega for the test.
   svntest.actions.run_and_verify_svn("Resolved command", None,
-                                     "svn: 'NOTVALID' is not a valid accept value; "
-                                     "try 'left', 'right', or 'working'\n",
+                                     ".*NOTVALID' is not a valid accept value",
                                      'resolved',
                                      '--accept=NOTVALID',
                                      omega_path_backup)
 
-  # Run 'svn resolved --accept=left.  Using lambda for the test.
+  # Resolve lambda, mu, and rho with different --accept options.
   svntest.actions.run_and_verify_svn("Resolved command", None, [],
-                                     'resolved',
-                                     '--accept=left',
+                                     'resolved', '--accept=base',
                                      lambda_path_backup)
-
-  # Run 'svn resolved --accept=working.  Using mu for the test.
   svntest.actions.run_and_verify_svn("Resolved command", None, [],
                                      'resolved',
-                                     '--accept=working',
+                                     '--accept=mine',
                                      mu_path_backup)
-
-  # Run 'svn resolved --accept=right.  Using rho for the test.
   svntest.actions.run_and_verify_svn("Resolved command", None, [],
                                      'resolved',
-                                     '--accept=right',
+                                     '--accept=theirs',
                                      rho_path_backup)
 
   # Set the expected disk contents for the test

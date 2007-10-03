@@ -221,37 +221,6 @@ enum svn_recurse_kind
   svn_recursive
 };
 
-/** The concept of automatic conflict resolution.
- *
- * @since New in 1.5.
- */
-typedef enum
-{
-  /* Invalid accept flag */
-  svn_accept_invalid = -1,
-
-  /* Resolve the conflict as usual */
-  svn_accept_none,
-
-  /* Resolve the conflict with the pre-conflict base file */
-  svn_accept_left,
-
-  /* Resolve the conflict with the pre-conflict working copy file */
-  svn_accept_working,
-
-  /* Resolve the conflict with the post-conflict base file */
-  svn_accept_right,
-
-} svn_accept_t;
-
-/** Return the appropriate accept for @a accept_str.  @a word is as
- * returned from svn_accept_to_word().
- *
- * @since New in 1.5.
- */
-svn_accept_t
-svn_accept_from_word(const char *word);
-
 /** The concept of depth for directories.
  *
  * @note This is similar to, but not exactly the same as, the WebDAV

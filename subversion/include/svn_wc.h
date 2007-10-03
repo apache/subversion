@@ -1011,8 +1011,8 @@ typedef struct svn_wc_conflict_description_t
    * they default to NULL.) */
 
   const char *base_file;     /* common ancestor of the two files being merged */
-  const char *repos_file;    /* repository's version of the file */
-  const char *user_file;     /* user's locally-edited version of the file */
+  const char *their_file;    /* their version of the file */
+  const char *my_file;       /* my locally-edited version of the file */
   const char *merged_file;   /* merged version of file; has conflict markers */
 
 } svn_wc_conflict_description_t;
@@ -1040,8 +1040,8 @@ typedef enum svn_wc_conflict_result_t
      "installing" the chosen file as the final version of the file.*/
 
   svn_wc_conflict_result_choose_base,   /* user chooses the base file */
-  svn_wc_conflict_result_choose_repos,  /* user chooses the repository file */
-  svn_wc_conflict_result_choose_user,   /* user chooses own version of file */
+  svn_wc_conflict_result_choose_theirs, /* user chooses their file */
+  svn_wc_conflict_result_choose_mine,   /* user chooses own version of file */
   svn_wc_conflict_result_choose_merged  /* user chooses the merged-file
                                            (which she may have
                                            manually edited) */
@@ -2666,15 +2666,12 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
  *
- * @a accept_ is the argument used to facilitate automatic conflict resolution.
- * If @a accept_ is svn_accept_left, the contents of the conflicted file will
- * be replaced with the prestine contents of the pre-modification base file
- * contents.  If @a accept_ is svn_accept_right, the contents of the conflicted
- * file will be replaced with the post-conflict base file contents.  If @a
- * accept_ is svn_accept_working, the contents of the conflicted file will be
- * the content of the pre-conflict working copy file.  If @a accept_ is
- * svn_accept_default, conflict resolution will be handled just like before
- * automatic conflict resolution was availble.
+ * If @a conflict_result is svn_wc_conflict_result_choose_base, resolve the
+ * conflict with the old file contents; if
+ * svn_wc_conflict_result_choose_user, use the original working contents;
+ * if svn_wc_conflict_result_choose_theirs, the new contents; and if
+ * svn_wc_conflict_result_choose_merged, don't change the contents at all,
+ * just remove the conflict status (i.e. pre-1.5 behavior).
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
  *
@@ -2704,7 +2701,7 @@ svn_error_t *svn_wc_resolved_conflict3(const char *path,
                                        svn_boolean_t resolve_text,
                                        svn_boolean_t resolve_props,
                                        svn_depth_t depth,
-                                       svn_accept_t accept_,
+                                       svn_wc_conflict_result_t conflict_result,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
                                        svn_cancel_func_t cancel_func,
