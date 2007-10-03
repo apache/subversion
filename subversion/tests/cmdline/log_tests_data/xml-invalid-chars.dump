@@ -9,7 +9,7 @@ Content-length: 150
 K 7
 svn:log
 V 76
-After the colon are a space, 3 bad chars, 3 good chars, and a period: 	
+After the colon are a space, 3 bad chars, 2 good chars, and a period: 	
 .
 K 8
 svn:date
