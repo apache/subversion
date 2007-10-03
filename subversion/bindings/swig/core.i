@@ -201,6 +201,7 @@
 %ignore svn_path_condense_targets;
 %ignore svn_path_remove_redundancies;
 %ignore svn_path_decompose;
+%ignore svn_path_compose;
 %ignore svn_path_is_single_path_component;
 %ignore svn_path_is_backpath_present;
 %ignore svn_path_is_child;
