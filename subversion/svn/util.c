@@ -134,7 +134,7 @@ find_editor_binary(const char **editor,
   else
     return svn_error_create
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
-       _("None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
+       _("None of the environment variables SVN_EDITOR, VISUAL or EDITOR are "
          "set, and no 'editor-cmd' run-time configuration option was found"));
 
   *editor = e;
