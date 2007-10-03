@@ -1083,6 +1083,10 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 23,
              "Iteration terminated before completion")
 
+  SVN_ERRDEF(SVN_ERR_EXTERNAL_PROGRAM_MISSING,
+             SVN_ERR_MISC_CATEGORY_START + 24,
+             "External program is missing")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,

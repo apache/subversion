@@ -46,6 +46,7 @@ svn_cl__patch(apr_getopt_t *os,
   const char *patch_path = NULL, *target_path = NULL;
   apr_file_t *outfile, *errfile;
   apr_status_t status;
+  svn_error_t *err;
 
   /* Sanity checks */
 
@@ -99,14 +100,26 @@ svn_cl__patch(apr_getopt_t *os,
     return svn_error_wrap_apr(status, _("Can't open stderr"));
 
   /* OK we're good. */
-  SVN_ERR(svn_client_patch(patch_path,
-                           target_path,
-                           opt_state->force,
-                           opt_state->dry_run,
-                           outfile,
-                           errfile,
-                           ctx,
-                           pool));
+  err = svn_client_patch(patch_path,
+                         target_path,
+                         opt_state->force,
+                         opt_state->dry_run,
+                         outfile,
+                         errfile,
+                         ctx,
+                         pool);
+
+  if (err)
+    {
+      if (svn_error_root_cause_is(err, SVN_ERR_EXTERNAL_PROGRAM_MISSING))
+        return svn_error_quick_wrap
+                (err,
+                 _("No 'patch' program was found in your system.  Please try\n"
+                   "to use --patch-cmd or 'patch-cmd' run-time configuration\n"
+                   "option or manually use an external tool to apply Unidiffs."));
+      else
+        return err;
+    }
 
   return SVN_NO_ERROR;
 }

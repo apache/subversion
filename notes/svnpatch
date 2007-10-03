@@ -120,19 +120,32 @@ V PATCHING
   --------
 
 When it comes to applying an svnpatch patch (RAS syndrom), the 'svn patch'
-subcommand is a good friend.  No decision has been taken yet as regards how to
-deal with the Unidiff bytes from (a), i.e. Subversion isn't able to handle that
-part.  Rather, the user has to use her own tools like GNU patch on Unix-like
-systems, which will ignore any noise it can't understand -- the svnpatch block.
+subcommand is a good friend.  We don't currently support applying (a) Unidiffs
+internally.  We instead call an external program to do the job for us which the
+user may specify with the 'patch-cmd' entry in the run-time configuration.  'svn
+patch' also has a --patch-cmd flag that overrides this run-time config.  When
+none of those flags are specified, the ultimate fallback is to try to call
+'patch'.  Since GNU patch is widely available on many UNIX-like platforms, this
+workaround should cover a fairly large amount of users.  No decision nor
+consensus have been taken towards this issue yet.
 On the other hand, (b) is handled with internal routines that read and drive
-editor functions out from it much like what's being performed by libsvn_ra_svn
-with a network stream.
+editor functions out from the patch file much like what's being performed by
+libsvn_ra_svn with a network stream.
+
+Put differently, for now 'svn patch' will gladly apply any (full-featured-)patch
+on GNU-patch-enabled environments while it will bail out with a message on a
+GNU-patch-less one.  In the latter, the user is left the burden to apply the
+Unidiff with his own tools.
 
 Now some words about the order to process (a) and (b).  There might be cases
 when operations to a single file live in the two parts of the patch (see above).
-Because that's the way the svn protocol and 'svn diff' do, we recommand to
-process (b) first and then (a).  (This implies (a) provides diff against the
-most up-to-date indexes.)
+Since Unidiff indexes are made against the most up-to-date file name, it makes
+sense that 'svn patch' first deals with the svnpatch block and then the Unidiff
+block.  E.g. consider a WC with a file copy from foo to bar and then contextual
+modifications to bar.  The patch that represents this WC changes would show
+diffs against 'bar' file.  So 'svn patch' first has to schedule-add-with-history
+bar from foo and then apply contextual diffs, which would not work the other way
+around.
 
 When the Editor Command Set comes to be extended, 'svn patch' will face
 unexpected commands and/or syntax.  As in libsvn_ra_svn, we warn the user with

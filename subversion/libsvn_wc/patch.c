@@ -384,12 +384,11 @@ static const struct {
 };
 
 
-/* Drive @a diff_editor against @a decoded_patch_file's Editor Commands. */
 svn_error_t *
-svn_wc_apply_patch(apr_file_t *decoded_patch_file,
-                   const svn_delta_editor_t *diff_editor,
-                   void *diff_edit_baton,
-                   apr_pool_t *pool)
+svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
+                      const svn_delta_editor_t *diff_editor,
+                      void *diff_edit_baton,
+                      apr_pool_t *pool)
 {
   svn_stream_t *patch_stream;
   ra_svn_driver_state_t state;
@@ -431,5 +430,88 @@ svn_wc_apply_patch(apr_file_t *decoded_patch_file,
     }
 
   apr_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_apply_unidiff(const char *patch_path,
+                     apr_file_t *outfile,
+                     apr_file_t *errfile,
+                     apr_hash_t *config,
+                     apr_pool_t *pool)
+{
+  const char *patch_cmd = NULL;
+  const char *patch_cmd_args[3];
+  const char *patch_cmd_tmp = NULL;
+  int exitcode = 0;
+  apr_exit_why_e exitwhy = 0;
+  svn_boolean_t patch_bin_guess = TRUE; 
+  apr_file_t *patchfile;
+
+  if (config)
+    {
+      svn_config_t *cfg = apr_hash_get(config,
+                                       SVN_CONFIG_CATEGORY_CONFIG,
+                                       APR_HASH_KEY_STRING);
+      svn_config_get(cfg, &patch_cmd_tmp, SVN_CONFIG_SECTION_HELPERS,
+                     SVN_CONFIG_OPTION_PATCH_CMD, NULL);
+      
+    }
+
+  if (patch_cmd_tmp) 
+    {
+      patch_bin_guess = FALSE;
+      SVN_ERR(svn_path_cstring_to_utf8(&patch_cmd, patch_cmd_tmp,
+                                       pool));
+      patch_cmd_args[0] = patch_cmd;
+      patch_cmd_args[1] = NULL;
+      patch_cmd_args[2] = NULL;
+    }
+  else
+    {
+      patch_cmd = apr_psprintf(pool, "patch");
+      patch_cmd_args[0] = patch_cmd;
+      patch_cmd_args[1] = "p0"; /* TODO: make it smarter in detecting CWD */
+      patch_cmd_args[2] = NULL;
+    }
+
+  /* We want to feed the external program's stdin with the patch itself. */
+  SVN_ERR(svn_io_file_open(&patchfile, patch_path,
+                           APR_READ, APR_OS_DEFAULT, pool));
+
+  /* Now run the external program.  The parent process should close
+   * opened pipes/files. */
+  SVN_ERR(svn_io_run_cmd(".", patch_cmd, patch_cmd_args,
+                         &exitcode, &exitwhy, TRUE, patchfile, outfile,
+                         errfile, pool));
+
+  /* This is where we have to make the assumption that if the exitcode
+   * isn't 0 nor 1 then the external program got into trouble or wasn't
+   * even executed--command not found (see below).  Basically we're
+   * trying to stick with patch(1) behaviour as stated in the man page:
+   * "patch's exit  status is 0 if all hunks are applied successfully, 1
+   * if some hunks cannot be applied, and 2 if there is more serious
+   * trouble." */
+  if (exitcode != 0 && exitcode != 1)
+    {
+      /* This is the case when we're trying to execute 'patch' and got
+       * some weird exitcode.
+       * XXX: I haven't figured out how to check against the 'command
+       * not found' error, which returns exitcode == 255.  Is there a
+       * macro somewhere to compare with?  Let's use > 2 for now. */
+      if (patch_bin_guess && exitcode > 2)
+        return svn_error_create
+                (SVN_ERR_EXTERNAL_PROGRAM_MISSING, NULL, NULL);
+      else
+        /* patch(1) uses exitcode 2 along with the message "Only garbage
+         * was found in the patch input.".  This falls here along with
+         * every other errors. */
+        return svn_error_createf
+                (SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                 _("'%s' returned error exitcode %d"),
+                 svn_path_local_style(patch_cmd, pool),
+                 exitcode);
+    }
+
   return SVN_NO_ERROR;
 }
