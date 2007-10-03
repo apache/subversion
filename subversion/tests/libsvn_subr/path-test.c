@@ -658,7 +658,9 @@ test_decompose(const char **msg,
           int j;
           for (j = 0; j < components->nelts; ++j)
             {
-              const char *component = APR_ARRAY_IDX(components, j, const char*);
+              const char *component = APR_ARRAY_IDX(components,
+                                                    j,
+                                                    const char*);
               if (! paths[i+j+1])
                 return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                          "svn_path_decompose(\"%s\") returned "
