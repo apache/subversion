@@ -1195,7 +1195,7 @@ update_ancestry(svn_fs_t *fs,
   noderev->predecessor_count = source_pred_count;
   if (noderev->predecessor_count != -1)
     noderev->predecessor_count++;
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, target_id, noderev, pool));
+  SVN_ERR(svn_fs_fs__put_node_revision(fs, target_id, noderev, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

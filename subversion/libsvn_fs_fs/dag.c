@@ -53,6 +53,12 @@ struct dag_node_t
   /* The node revision ID for this dag node, allocated in POOL.  */
   svn_fs_id_t *id;
 
+  /* In the special case that this node is the root of a transaction
+     that has not yet been modified, the node revision ID for this dag
+     node's predecessor; otherwise NULL. (Used in
+     svn_fs_node_created_rev.) */
+  const svn_fs_id_t *fresh_root_predecessor_id;
+
   /* The node's type (file, dir, etc.) */
   svn_node_kind_t kind;
 
@@ -185,6 +191,11 @@ svn_fs_fs__dag_get_node(dag_node_t **node,
   new_node->kind = noderev->kind;
   new_node->created_path = apr_pstrdup(pool, noderev->created_path);
 
+  if (noderev->is_fresh_txn_root)
+    new_node->fresh_root_predecessor_id = noderev->predecessor_id;
+  else
+    new_node->fresh_root_predecessor_id = NULL;
+
   /* Return a fresh new node */
   *node = new_node;
   return SVN_NO_ERROR;
@@ -196,8 +207,14 @@ svn_fs_fs__dag_get_revision(svn_revnum_t *rev,
                             dag_node_t *node,
                             apr_pool_t *pool)
 {
+  /* In the special case that this is an unmodified transaction root,
+     we need to actually get the revision of the noderev's predecessor
+     (the revision root); see Issue #2608. */
+  const svn_fs_id_t *correct_id = node->fresh_root_predecessor_id
+    ? node->fresh_root_predecessor_id : node->id;
+
   /* Look up the committed revision from the Node-ID. */
-  *rev = svn_fs_fs__id_rev(node->id);
+  *rev = svn_fs_fs__id_rev(correct_id);
 
   return SVN_NO_ERROR;
 }
