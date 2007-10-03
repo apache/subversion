@@ -75,35 +75,17 @@ releases, by only adding new functions.  A program written to the 1.0,
 However, a program written for 1.5 cannot necessarily compile or run
 against older libraries.</p>
 
-<div class="h3" id="wc-format-change" title="wc-format-change">
-<h3>Working Copy and Repository Format Changes</h3>
+<div class="h3" id="repos-format-change" title="repos-format-change">
+<h3>Repository Format Changes</h3>
 
-<p>XXX: 1.5 currently uses the same SVN_WC__VERSION (8) as 1.4.x.
-However, some changes <em>sussman</em> and some other folks are
-considering for Merge Tracking may impact this.  If these changes turn
-out not to require a WC format bump, remove this section.</p>
+<p>Due to certain improvements and bugfixes made to the FS library,
+the version number of the repository format has been incremented. This
+means that pre-1.5 Subversion tools that normally access a repository
+directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>,
+<tt>svnadmin</tt>) will <em>not</em> be able to read a repository
+originally created by Subversion 1.5.</p>
 
-<p>Due to certain improvements and bugfixes made to the working copy
-library, the version number of the working copy format has been
-incremented. This means that Subversion clients earlier than 1.5 will
-<em>not</em> be able to work with working copies produced by Subversion
-1.5.  Similarly, the repository format has changed as well, meaning
-that pre-1.5 Subversion tools that normally access a repository
-directly
-(e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>, <tt>svnadmin</tt>)
-won't be able to read a repository originally created by Subversion
-1.5. </p>
-
-<p><strong>WARNING:</strong> if a Subversion 1.5 client encounters a pre-1.5
-working copy, it will <em>automatically</em> upgrade the working copy
-format as soon as it touches it, making it unreadable by older
-Subversion clients.  If you are using several versions of Subversion
-on your machine, you need to be careful about which version you use in
-which working copy, to avoid accidentally upgrading the working copy
-format.  This "auto upgrade" feature, however, does <em>not</em> occur
-with the new repository format.  </p>
-
-</div>  <!-- wc-format-change -->
+</div>  <!-- repos-format-change -->
 
 <div class="h3" id="output-changes" title="output-changes">
 <h3>Command Line Output Changes</h3>
