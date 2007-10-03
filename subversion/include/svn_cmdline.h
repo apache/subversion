@@ -41,9 +41,10 @@ extern "C" {
 
 
 /** Set up the locale for character conversion, and initialize APR.
- * If @a error_stream is non-null, print error messages to the stream,
- * using @a progname as the program name. Return @c EXIT_SUCCESS if
- * successful, otherwise @c EXIT_FAILURE.
+ * If @a error_stream is non-NULL, print error messages to the stream,
+ * using @a progname as the program name.  Attempt to set @c stdout to
+ * line-buffered mode, and @a error_stream to unbuffered mode.  Return
+ * @c EXIT_SUCCESS if successful, otherwise @c EXIT_FAILURE.
  *
  * @note This function should be called exactly once at program startup,
  *       before calling any other APR or Subversion functions.
