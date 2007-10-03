@@ -258,12 +258,38 @@ svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
             }
           if (strcmp(answer, "l") == 0)
             {
-              if (desc->base_file && desc->repos_file && desc->user_file)
+              if (desc->base_file && desc->repos_file &&
+                  desc->user_file && desc->merged_file)
                 {
-                  /* ### TODO: launch $SVNMERGE tool here with 3 fulltexts. */
-                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                       _("Feature not yet implemented.\n\n")));
-                  performed_edit = TRUE;
+                  svn_error_t *merge_err;
+                  merge_err = svn_cl__merge_file_externally(desc->base_file,
+                                                            desc->repos_file,
+                                                            desc->user_file,
+                                                            desc->merged_file,
+                                                            NULL,
+                                                            pool);
+                  if (merge_err &&
+                      merge_err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
+                    {
+                      SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                                 merge_err->message ?
+                                                 merge_err->message :
+                                                 _("No merge tool found.\n")));
+                      svn_error_clear(merge_err);
+                    }
+                  else if (merge_err &&
+                           merge_err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
+                    {
+                      SVN_ERR(svn_cmdline_fprintf(stderr, subpool, "%s\n",
+                                                 merge_err->message ?
+                                                 merge_err->message :
+                                             _("Error running merge tool.")));
+                      svn_error_clear(merge_err);
+                    }
+                  else if (merge_err)
+                    return merge_err;
+                  else
+                    performed_edit = TRUE;
                 }
               else
                 SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
