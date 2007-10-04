@@ -612,8 +612,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
      "\n"
      "  This command allows some amount of fuzzing as Unidiff is contextual\n"
-     "  and svnpatch revisionless.  However, you might see failure warnings\n"
-     "  when pushing this feature too hard.\n"),
+     "  and svnpatch revisionless.\n"),
     {'q', svn_cl__force_opt, svn_cl__dry_run_opt, svn_cl__patch_cmd_opt,
      svn_cl__config_dir_opt} },
 
