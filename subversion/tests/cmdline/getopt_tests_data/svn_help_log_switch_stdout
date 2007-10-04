@@ -97,4 +97,6 @@ Valid options:
   --config-dir ARG         : read user configuration files from directory ARG
   --ignore-externals       : ignore externals definitions
   --force                  : force operation to run
+  --accept ARG             : specify automatic conflict resolution action
+                            ('postpone', 'base', 'mine', 'theirs', 'edit', 'launch')
 
