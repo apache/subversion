@@ -844,9 +844,10 @@ skip_uri_scheme(const char *path)
 {
   apr_size_t j;
 
-  for (j = 0; path[j]; ++j)
-    if (path[j] == ':' || path[j] == '/')
-       break;
+  /* A scheme is terminated by a : and cannot contain any /'s. */
+  for (j = 0; path[j] && path[j] != ':'; ++j)
+    if (path[j] == '/')
+      return NULL;
 
   if (j > 0 && path[j] == ':' && path[j+1] == '/' && path[j+2] == '/')
     return path + j + 3;
