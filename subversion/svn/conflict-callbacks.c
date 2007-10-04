@@ -254,7 +254,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t *result,
                                               pool);
           if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, subpool, "%s\n",
+              SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
                                           err->message ? err->message :
                                           _("No merge tool found.\n")));
               svn_error_clear(err);
@@ -262,7 +262,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t *result,
             }
           else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, subpool, "%s\n",
+              SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
                                           err->message ? err->message :
                                           _("Error running merge tool.")));
               svn_error_clear(err);
