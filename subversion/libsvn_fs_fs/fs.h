@@ -187,6 +187,8 @@ typedef struct
 
 
 /*** Representation ***/
+/* If you add fields to this, check to see if you need to change
+ * svn_fs_fs__rep_copy. */
 typedef struct
 {
   /* MD5 checksum for the contents produced by this representation.
@@ -218,6 +220,8 @@ typedef struct
 
 
 /*** Node-Revision ***/
+/* If you add fields to this, check to see if you need to change
+ * copy_node_revision in dag.c. */
 typedef struct
 {
   /* node kind */
