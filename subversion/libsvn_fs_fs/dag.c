@@ -946,9 +946,15 @@ svn_fs_fs__dag_dup(dag_node_t *node,
   new_node->kind = node->kind;
   new_node->created_path = apr_pstrdup(pool, node->created_path);
 
-  /* Leave new_node->node_revision zero for now, so it'll get read in.
-     We can get fancy and duplicate node's cache later.  */
-
+  /* Only copy cached node_revision_t for immutable nodes. */
+  if (node->node_revision && !svn_fs_fs__dag_check_mutable(node))
+    {
+      new_node->node_revision = copy_node_revision(node->node_revision, pool);
+      new_node->node_revision->id = 
+          svn_fs_fs__id_copy(node->node_revision->id, pool);
+      new_node->node_revision->is_fresh_txn_root = 
+          node->node_revision->is_fresh_txn_root;
+    }
   return new_node;
 }
 
