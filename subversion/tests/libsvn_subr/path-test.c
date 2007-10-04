@@ -166,13 +166,22 @@ test_is_url(const char **msg,
     const char *path;
     svn_boolean_t result;
   } tests[] = {
+    { "",                                 FALSE },
+    { "/blah/blah",                       FALSE },
+    { "//blah/blah",                      FALSE },
     { "://blah/blah",                     FALSE },
     { "a:abb://boo/",                     FALSE },
     { "http://svn.collab.net/repos/svn",  TRUE  },
+    { "scheme/with",                      FALSE },
+    { "scheme/with:",                     FALSE },
+    { "scheme/with:/",                    FALSE },
+    { "scheme/with://",                   FALSE },
     { "scheme/with://slash/",             FALSE },
     { "file:///path/to/repository",       TRUE  },
     { "file://",                          TRUE  },
     { "file:/",                           FALSE },
+    { "file:",                            FALSE },
+    { "file",                             FALSE },
   };
 
   *msg = "test svn_path_is_url";
