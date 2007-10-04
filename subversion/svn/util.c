@@ -27,7 +27,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
- #include <unistd.h>
 
 #include <apr_env.h>
 #include <apr_errno.h>
