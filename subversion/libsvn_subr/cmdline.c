@@ -93,7 +93,9 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
      buffering, as the streams should retain their default buffering
      modes. */
   setvbuf(error_stream, NULL, _IONBF, 0);
+#ifndef WIN32
   setvbuf(stdout, NULL, _IOLBF, 0);
+#endif
 
 #ifdef WIN32
 #if _MSC_VER < 1400
