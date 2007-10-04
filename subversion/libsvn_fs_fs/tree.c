@@ -685,7 +685,7 @@ make_path_mutable(svn_fs_root_t *root,
   const char *txn_id = root->txn;
 
   /* Is the node mutable already?  */
-  if (svn_fs_fs__dag_check_mutable(parent_path->node, txn_id))
+  if (svn_fs_fs__dag_check_mutable(parent_path->node))
     return SVN_NO_ERROR;
 
   /* Are we trying to clone the root, or somebody's child node?  */
@@ -1076,7 +1076,7 @@ fs_change_node_prop(svn_fs_root_t *root,
 
   /* Overwrite the node's proplist. */
   SVN_ERR(svn_fs_fs__dag_set_proplist(parent_path->node, proplist,
-                                      txn_id, pool));
+                                      pool));
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
@@ -2362,7 +2362,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 
   /* Make a writable "target" stream */
   SVN_ERR(svn_fs_fs__dag_get_edit_stream(&(tb->target_stream), tb->node,
-                                         txn_id, tb->pool));
+                                         tb->pool));
 
   /* Make a writable "string" stream which writes data to
      tb->target_string. */
@@ -2520,7 +2520,7 @@ apply_text(void *baton, apr_pool_t *pool)
 
   /* Make a writable stream for replacing the file's text. */
   SVN_ERR(svn_fs_fs__dag_get_edit_stream(&(tb->file_stream), tb->node,
-                                         txn_id, tb->pool));
+                                         tb->pool));
 
   /* Create a 'returnable' stream which writes to the file_stream. */
   tb->stream = svn_stream_create(tb, tb->pool);

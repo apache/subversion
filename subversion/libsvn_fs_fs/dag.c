@@ -163,8 +163,7 @@ get_node_revision(node_revision_t **noderev_p,
 }
 
 
-svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node,
-                                           const char *txn_id)
+svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node)
 {
   return (svn_fs_fs__id_txn_id(svn_fs_fs__dag_get_id(node)) != NULL);
 }
@@ -334,7 +333,7 @@ make_entry(dag_node_t **child_p,
        _("Attempted to create entry in non-directory parent"));
 
   /* Check that the parent is mutable. */
-  if (! svn_fs_fs__dag_check_mutable(parent, txn_id))
+  if (! svn_fs_fs__dag_check_mutable(parent))
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        _("Attempted to clone child of non-mutable node"));
@@ -402,7 +401,7 @@ svn_fs_fs__dag_set_entry(dag_node_t *node,
        _("Attempted to set entry in non-directory node"));
 
   /* Check it's mutable. */
-  if (! svn_fs_fs__dag_check_mutable(node, txn_id))
+  if (! svn_fs_fs__dag_check_mutable(node))
     return svn_error_create
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        _("Attempted to set entry in immutable node"));
@@ -436,13 +435,12 @@ svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
 svn_error_t *
 svn_fs_fs__dag_set_proplist(dag_node_t *node,
                             apr_hash_t *proplist,
-                            const char *txn_id,
                             apr_pool_t *pool)
 {
   node_revision_t *noderev;
 
   /* Sanity check: this node better be mutable! */
-  if (! svn_fs_fs__dag_check_mutable(node, txn_id))
+  if (! svn_fs_fs__dag_check_mutable(node))
     {
       svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, node->pool);
       return svn_error_createf
@@ -518,7 +516,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
   svn_fs_t *fs = svn_fs_fs__dag_get_fs(parent);
 
   /* First check that the parent is mutable. */
-  if (! svn_fs_fs__dag_check_mutable(parent, txn_id))
+  if (! svn_fs_fs__dag_check_mutable(parent))
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Attempted to clone child of non-mutable node");
@@ -534,7 +532,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
 
   /* Check for mutability in the node we found.  If it's mutable, we
      don't need to clone it. */
-  if (svn_fs_fs__dag_check_mutable(cur_entry, txn_id))
+  if (svn_fs_fs__dag_check_mutable(cur_entry))
     {
       /* This has already been cloned */
       new_node_id = cur_entry->id;
@@ -636,7 +634,7 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
        "Attempted to delete entry '%s' from *non*-directory node", name);
 
   /* Make sure parent is mutable. */
-  if (! svn_fs_fs__dag_check_mutable(parent, txn_id))
+  if (! svn_fs_fs__dag_check_mutable(parent))
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Attempted to delete entry '%s' from immutable directory node", name);
@@ -673,7 +671,7 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
                                   pool));
 
   /* If mutable, remove it and any mutable children from db. */
-  SVN_ERR(svn_fs_fs__dag_delete_if_mutable(parent->fs, id, txn_id, pool));
+  SVN_ERR(svn_fs_fs__dag_delete_if_mutable(parent->fs, id, pool));
 
   /* Remove this entry from its parent's entries list. */
   SVN_ERR(svn_fs_fs__set_entry(parent->fs, txn_id, parent_noderev, name,
@@ -686,7 +684,6 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
 svn_error_t *
 svn_fs_fs__dag_remove_node(svn_fs_t *fs,
                            const svn_fs_id_t *id,
-                           const char *txn_id,
                            apr_pool_t *pool)
 {
   dag_node_t *node;
@@ -695,7 +692,7 @@ svn_fs_fs__dag_remove_node(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, id, pool));
 
   /* If immutable, do nothing and return immediately. */
-  if (! svn_fs_fs__dag_check_mutable(node, txn_id))
+  if (! svn_fs_fs__dag_check_mutable(node))
     return svn_error_createf(SVN_ERR_FS_NOT_MUTABLE, NULL,
                              "Attempted removal of immutable node");
 
@@ -709,7 +706,6 @@ svn_fs_fs__dag_remove_node(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
                                  const svn_fs_id_t *id,
-                                 const char *txn_id,
                                  apr_pool_t *pool)
 {
   dag_node_t *node;
@@ -718,7 +714,7 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, id, pool));
 
   /* If immutable, do nothing and return immediately. */
-  if (! svn_fs_fs__dag_check_mutable(node, txn_id))
+  if (! svn_fs_fs__dag_check_mutable(node))
     return SVN_NO_ERROR;
 
   /* Else it's mutable.  Recurse on directories... */
@@ -742,14 +738,14 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
               apr_hash_this(hi, NULL, NULL, &val);
               dirent = val;
               SVN_ERR(svn_fs_fs__dag_delete_if_mutable(fs, dirent->id,
-                                                       txn_id, pool));
+                                                       pool));
             }
         }
     }
 
   /* ... then delete the node itself, after deleting any mutable
      representations and strings it points to. */
-  SVN_ERR(svn_fs_fs__dag_remove_node(fs, id, txn_id, pool));
+  SVN_ERR(svn_fs_fs__dag_remove_node(fs, id, pool));
 
   return SVN_NO_ERROR;
 }
@@ -883,7 +879,6 @@ svn_fs_fs__dag_file_checksum(unsigned char digest[],
 svn_error_t *
 svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
                                dag_node_t *file,
-                               const char *txn_id,
                                apr_pool_t *pool)
 {
   node_revision_t *noderev;
@@ -896,7 +891,7 @@ svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
        "Attempted to set textual contents of a *non*-file node");
 
   /* Make sure our node is mutable. */
-  if (! svn_fs_fs__dag_check_mutable(file, txn_id))
+  if (! svn_fs_fs__dag_check_mutable(file))
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Attempted to set textual contents of an immutable node");
