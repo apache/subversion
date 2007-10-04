@@ -137,10 +137,10 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t *result,
   jstring jbasePath = JNIUtil::makeJString(desc->base_file);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
-  jstring jreposPath = JNIUtil::makeJString(desc->repos_file);
+  jstring jreposPath = JNIUtil::makeJString(desc->their_file);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
-  jstring juserPath = JNIUtil::makeJString(desc->user_file);
+  jstring juserPath = JNIUtil::makeJString(desc->my_file);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
   jstring jmergedPath = JNIUtil::makeJString(desc->merged_file);

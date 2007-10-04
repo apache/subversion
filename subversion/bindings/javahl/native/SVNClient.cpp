@@ -494,7 +494,8 @@ void SVNClient::resolved(const char *path, svn_depth_t depth)
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_resolved2(intPath.c_str(), depth, svn_accept_none,
+    SVN_JNI_ERR(svn_client_resolved2(intPath.c_str(), depth,
+                                     svn_wc_conflict_result_choose_merged,
                                      ctx, requestPool.pool()), );
 }
 
