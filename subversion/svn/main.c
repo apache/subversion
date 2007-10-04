@@ -218,6 +218,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        " '" SVN_CL__ACCEPT_MINE "',"
                        " '" SVN_CL__ACCEPT_THEIRS "',"
                        " '" SVN_CL__ACCEPT_EDIT "',"
+                       "\n                            "
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {0,               0, 0, 0},
 };
