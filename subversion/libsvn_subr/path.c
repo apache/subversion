@@ -749,7 +749,7 @@ const char *
 svn_path_compose(const apr_array_header_t *components,
                  apr_pool_t *pool)
 {
-  apr_size_t *lengths = apr_palloc(pool, components->nelts*sizeof(* lengths));
+  apr_size_t *lengths = apr_palloc(pool, components->nelts*sizeof(*lengths));
   apr_size_t max_length = components->nelts;
   char *path;
   char *p;
