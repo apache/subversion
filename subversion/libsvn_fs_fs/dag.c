@@ -105,7 +105,8 @@ svn_fs_fs__dag_get_fs(dag_node_t *node)
 }
 
 
-/* Dup NODEREV and all associated data into POOL */
+/* Dup NODEREV and all associated data into POOL.
+   Leaves the id and is_fresh_txn_root fields as zero bytes. */
 static node_revision_t *
 copy_node_revision(node_revision_t *noderev,
                    apr_pool_t *pool)
