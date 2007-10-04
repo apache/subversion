@@ -1216,19 +1216,15 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
               set_prop_merge_state(state, svn_wc_notify_state_merged);
             }
           else
-            {
-              /* ### TODO: Attempt property merge. */
-              *conflict = svn_string_createf
-                (pool,
-                 _("Trying to add new property '%s' with value "
-                   "'%s',\nbut property already exists with value '%s'."),
-                 propname, new_val->data, working_val->data);
-            }
+            *conflict = svn_string_createf
+              (pool,
+               _("Trying to add new property '%s' with value "
+                 "'%s',\nbut property already exists with value '%s'."),
+               propname, new_val->data, working_val->data);
         }
     }
   else if (base_val)
     {
-      /* ### TODO: Attempt property merge? */
       *conflict = svn_string_createf
         (pool, _("Trying to create property '%s' with value '%s',\n"
                  "but it has been locally deleted."),
@@ -1280,7 +1276,6 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
              /* they have the same values, so it's an update */
              apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
            else
-             /* ### TODO: Attempt property merge? */
              *conflict = svn_string_createf
                (pool,
                 _("Trying to delete property '%s' with value '%s'\n"
@@ -1293,7 +1288,6 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
     }
 
   else
-    /* ### TODO: Attempt property merge? */
     *conflict = svn_string_createf
       (pool,
        _("Trying to delete property '%s' with value '%s'\n"
