@@ -471,7 +471,7 @@ svn_wc_apply_unidiff(const char *patch_path,
     {
       patch_cmd = apr_psprintf(pool, "patch");
       patch_cmd_args[0] = patch_cmd;
-      patch_cmd_args[1] = "p0"; /* TODO: make it smarter in detecting CWD */
+      patch_cmd_args[1] = "-p0"; /* TODO: make it smarter in detecting CWD */
       patch_cmd_args[2] = NULL;
     }
 
