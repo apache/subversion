@@ -590,6 +590,20 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
                                  apr_pool_t *pool);
 
 /*
+ * Handler that retrieves the embedded XML multistatus response from the
+ * the @a RESPONSE body associated with a @a REQUEST. *DONE is set to TRUE.
+ *
+ * The @a BATON should be of type svn_ra_serf__simple_request_context_t.
+ * 
+ * All temporary allocations will be made in a @a pool.
+ */
+apr_status_t
+svn_ra_serf__handle_multistatus_only(serf_request_t *request,
+                                     serf_bucket_t *response,
+                                     void *baton,
+                                     apr_pool_t *pool);
+
+/*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
  *

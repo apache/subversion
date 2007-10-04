@@ -552,6 +552,151 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
   return status;
 }
 
+/*
+ * Expat callback invoked on a start element tag for a 207 response.
+ */
+static svn_error_t *
+start_207(svn_ra_serf__xml_parser_t *parser,
+          void *userData,
+          svn_ra_serf__dav_props_t name,
+          const char **attrs)
+{
+  svn_ra_serf__server_error_t *ctx = userData;
+
+  if (!ctx->in_error &&
+      strcmp(name.namespace, "DAV:") == 0 &&
+      strcmp(name.name, "multistatus") == 0)
+    {
+      ctx->in_error = TRUE;
+    }
+  else if (ctx->in_error && strcmp(name.name, "responsedescription") == 0)
+    {
+      /* Start collecting cdata. */
+      svn_stringbuf_setempty(ctx->cdata);
+      ctx->collect_cdata = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ * Expat callback invoked on an end element tag for a 207 response.
+ */
+static svn_error_t *
+end_207(svn_ra_serf__xml_parser_t *parser,
+        void *userData,
+        svn_ra_serf__dav_props_t name)
+{
+  svn_ra_serf__server_error_t *ctx = userData;
+
+  if (ctx->in_error &&
+      strcmp(name.namespace, "DAV:") == 0 &&
+      strcmp(name.name, "multistatus") == 0)
+    {
+      ctx->in_error = FALSE;
+    }
+  if (ctx->in_error && strcmp(name.name, "responsedescription") == 0)
+    {
+      ctx->collect_cdata = FALSE;
+      ctx->error->message = apr_pstrmemdup(ctx->error->pool, ctx->cdata->data,
+                                           ctx->cdata->len);
+      ctx->error->apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ * Expat callback invoked on CDATA elements in a 207 response.
+ *
+ * This callback can be called multiple times.
+ */
+static svn_error_t *
+cdata_207(svn_ra_serf__xml_parser_t *parser,
+          void *userData,
+          const char *data,
+          apr_size_t len)
+{
+  svn_ra_serf__server_error_t *ctx = userData;
+
+  if (ctx->collect_cdata)
+    {
+      svn_stringbuf_appendbytes(ctx->cdata, data, len);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+apr_status_t
+svn_ra_serf__handle_multistatus_only(serf_request_t *request,
+                                     serf_bucket_t *response,
+                                     void *baton,
+                                     apr_pool_t *pool)
+{
+  apr_status_t status;
+  svn_ra_serf__simple_request_context_t *ctx = baton;
+  svn_ra_serf__server_error_t *server_err = &ctx->server_error;
+
+  if (server_err && !server_err->init)
+    {
+      serf_bucket_t *hdrs;
+      const char *val;
+
+      server_err->init = TRUE;
+      hdrs = serf_bucket_response_get_headers(response);
+      val = serf_bucket_headers_get(hdrs, "Content-Type");
+      if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
+        {
+          server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
+          server_err->has_xml_response = TRUE;
+          server_err->cdata = svn_stringbuf_create("", pool);
+          server_err->collect_cdata = FALSE;
+          server_err->parser.pool = server_err->error->pool;
+          server_err->parser.user_data = server_err;
+          server_err->parser.start = start_207;
+          server_err->parser.end = end_207;
+          server_err->parser.cdata = cdata_207;
+          server_err->parser.done = &ctx->done;
+          server_err->parser.ignore_errors = TRUE;
+
+          status = svn_ra_serf__handle_xml_parser(request, response,
+                                                  &server_err->parser, pool);
+
+          if (ctx->done && server_err->error->apr_err == APR_SUCCESS)
+            {
+              svn_error_clear(server_err->error);
+              server_err->error = SVN_NO_ERROR;
+            }
+        }
+      else
+        {
+          server_err->error = SVN_NO_ERROR;
+        }
+    }
+
+  status = svn_ra_serf__handle_discard_body(request, response,
+                                            NULL, pool);
+
+  if (APR_STATUS_IS_EOF(status))
+    {
+      serf_status_line sl;
+      apr_status_t rv;
+
+      rv = serf_bucket_response_status(response, &sl);
+
+      ctx->status = sl.code;
+      ctx->reason = sl.reason;
+
+      status = svn_ra_serf__is_conn_closing(response);
+      if (status == SERF_ERROR_CLOSING)
+        {
+          serf_connection_reset(serf_request_get_conn(request));
+        }
+    }
+
+  return status;
+}
+
 static svn_error_t *
 handle_auth(svn_ra_serf__session_t *session,
             svn_ra_serf__connection_t *conn,
