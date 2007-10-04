@@ -236,6 +236,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     SVN_ERR(svn_client__handle_externals(traversal_info,
+                                         depth,
                                          TRUE, /* update unchanged ones */
                                          use_sleep, ctx, pool));
 

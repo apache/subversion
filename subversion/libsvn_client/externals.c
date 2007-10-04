@@ -32,6 +32,7 @@
 #include "svn_path.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 
 
 /* Closure for handle_external_item_change. */
@@ -440,6 +441,13 @@ struct handle_externals_desc_change_baton
   apr_hash_t *externals_new;
   apr_hash_t *externals_old;
 
+  /* The requested depth of the driving operation (e.g., update, switch). */
+  svn_depth_t requested_depth;
+
+  /* As returned by svn_wc_traversed_depths().  NULL means no ambient
+     depths available (e.g., svn export). */
+  apr_hash_t *ambient_depths;
+
   /* Passed through to handle_external_item_change_baton. */
   svn_client_ctx_t *ctx;
   svn_boolean_t update_unchanged;
@@ -465,6 +473,35 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   apr_hash_t *old_desc_hash, *new_desc_hash;
   int i;
   svn_wc_external_item2_t *item;
+  const char *ambient_depth_w;
+  svn_depth_t ambient_depth;
+
+  if (cb->ambient_depths)
+    {
+      ambient_depth_w = apr_hash_get(cb->ambient_depths, key, klen);
+      if (ambient_depth_w == NULL)
+        {
+          return svn_error_createf
+            (SVN_ERR_WC_CORRUPT, NULL,
+             _("Traversal of '%s' found no ambient depth"),
+             (const char *) key);
+        }
+      else
+        {
+          ambient_depth = svn_depth_from_word(ambient_depth_w);
+        }
+    }
+  else
+    {
+      ambient_depth = svn_depth_infinity;
+    }
+
+  /* Bag out if the depth here is too shallow for externals action. */
+  if ((cb->requested_depth < svn_depth_infinity
+       && cb->requested_depth != svn_depth_unknown)
+      || (ambient_depth < svn_depth_infinity
+          && cb->requested_depth < svn_depth_infinity))
+    return SVN_NO_ERROR;
 
   if ((old_desc_text = apr_hash_get(cb->externals_old, key, klen)))
     SVN_ERR(svn_wc_parse_externals_description3(&old_desc, key, old_desc_text,
@@ -544,18 +581,22 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
 svn_error_t *
 svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
+                             svn_depth_t requested_depth,
                              svn_boolean_t update_unchanged,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
-  apr_hash_t *externals_old, *externals_new;
+  apr_hash_t *externals_old, *externals_new, *ambient_depths;
   struct handle_externals_desc_change_baton cb;
 
   svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
+  svn_wc_traversed_depths(&ambient_depths, traversal_info);
 
   cb.externals_new     = externals_new;
   cb.externals_old     = externals_old;
+  cb.requested_depth   = requested_depth;
+  cb.ambient_depths    = ambient_depths;
   cb.ctx               = ctx;
   cb.update_unchanged  = update_unchanged;
   cb.timestamp_sleep   = timestamp_sleep;
@@ -571,6 +612,7 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
 
 svn_error_t *
 svn_client__fetch_externals(apr_hash_t *externals,
+                            svn_depth_t requested_depth,
                             svn_boolean_t is_export,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
@@ -580,6 +622,8 @@ svn_client__fetch_externals(apr_hash_t *externals,
 
   cb.externals_new     = externals;
   cb.externals_old     = apr_hash_make(pool);
+  cb.requested_depth   = requested_depth;
+  cb.ambient_depths    = NULL;
   cb.ctx               = ctx;
   cb.update_unchanged  = TRUE;
   cb.timestamp_sleep   = timestamp_sleep;

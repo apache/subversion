@@ -823,9 +823,10 @@ get_dir_status(struct edit_baton *eb,
   /* Get this directory's entry. */
   SVN_ERR(svn_wc_entry(&dir_entry, path, adm_access, FALSE, subpool));
 
-  /* If "this dir" has "svn:externals" property set on it, store its
-     name and value in traversal_info.  Also, we want to track the
-     externals internally so we can report status more accurately. */
+  /* If "this dir" has "svn:externals" property set on it, store the
+     name and value in traversal_info, along with this directory's depth.
+     (Also, we want to track the externals internally so we can report
+     status more accurately.) */
     {
       const svn_string_t *prop_val;
       SVN_ERR(svn_wc_prop_get(&prop_val, SVN_PROP_EXTERNALS, path,
@@ -848,6 +849,9 @@ get_dir_status(struct edit_baton *eb,
                            dup_path, APR_HASH_KEY_STRING, dup_val);
               apr_hash_set(eb->traversal_info->externals_new,
                            dup_path, APR_HASH_KEY_STRING, dup_val);
+              apr_hash_set(eb->traversal_info->depths,
+                           dup_path, APR_HASH_KEY_STRING,
+                           svn_depth_to_word(dir_entry->depth));
             }
 
           /* Now, parse the thing, and copy the parsed results into
@@ -2027,6 +2031,8 @@ close_edit(void *edit_baton,
       apr_hash_set(eb->traversal_info->externals_old,
                    eb->anchor, APR_HASH_KEY_STRING, NULL);
       apr_hash_set(eb->traversal_info->externals_new,
+                   eb->anchor, APR_HASH_KEY_STRING, NULL);
+      apr_hash_set(eb->traversal_info->depths,
                    eb->anchor, APR_HASH_KEY_STRING, NULL);
     }
 

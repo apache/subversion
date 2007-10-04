@@ -475,6 +475,30 @@ void svn_wc_edited_externals(apr_hash_t **externals_old,
                              svn_wc_traversal_info_t *traversal_info);
 
 
+/** Set @a *depths to a hash table mapping <tt>const char *</tt>
+ * directory names (directories traversed by @a traversal_info) to
+ * <tt>const char *</tt> values (the depths of those directories, as
+ * converted by svn_depth_to_word()).
+ *
+ * @a traversal_info is obtained from svn_wc_init_traversal_info(), but is
+ * only useful after it has been passed through another function, such
+ * as svn_wc_crawl_revisions(), svn_wc_get_update_editor(),
+ * svn_wc_get_switch_editor(), etc.
+ *
+ * The dir names are full paths -- that is, anchor plus target, not target
+ * alone.  The values are not allocated, they are static constant strings.
+ * Although the values are never NULL, not all directories traversed
+ * are necessarily listed.  For example, directories which did not
+ * have an svn:externals property set or modified are not included.
+ *
+ * The hashes and keys have the same lifetime as @a traversal_info.
+ *
+ * @since New in 1.5.
+ */
+void svn_wc_traversed_depths(apr_hash_t **depths,
+                             svn_wc_traversal_info_t *traversal_info);
+
+
 /** One external item.  This usually represents one line from an
  * svn:externals description but with the path and URL
  * canonicalized.

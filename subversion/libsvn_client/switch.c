@@ -207,7 +207,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    err = svn_client__handle_externals(traversal_info, FALSE,
+    err = svn_client__handle_externals(traversal_info, depth, FALSE,
                                        use_sleep, ctx, pool);
 
   if (!err)

@@ -1561,25 +1561,28 @@ close_directory(void *dir_baton,
                   else if (new_val_s && old_val_s
                            && (svn_string_compare(old_val_s, new_val_s)))
                     ; /* Value did not change... so do nothing. */
-                  else  /* something changed, record the change */
+                  else if (old_val_s || new_val_s)
+                    /* something changed, record the change */
                     {
-                      /* We can't assume that ti came pre-loaded with the
-                         old values of the svn:externals property.  Yes,
-                         most callers will have already initialized ti by
-                         sending it through svn_wc_crawl_revisions, but we
-                         shouldn't count on that here -- so we set both the
-                         old and new values again. */
+                      const char *d_path = apr_pstrdup(ti->pool, db->path);
+                      
+                      apr_hash_set(ti->depths, d_path, APR_HASH_KEY_STRING,
+                                   svn_depth_to_word(db->depth));
 
+                      /* We can't assume that ti came pre-loaded with
+                         the old values of the svn:externals property.
+                         Yes, most callers will have already
+                         initialized ti by sending it through
+                         svn_wc_crawl_revisions, but we shouldn't
+                         count on that here -- so we set both the old
+                         and new values again. */
                       if (old_val_s)
-                        apr_hash_set(ti->externals_old,
-                                     apr_pstrdup(ti->pool, db->path),
+                        apr_hash_set(ti->externals_old, d_path,
                                      APR_HASH_KEY_STRING,
                                      apr_pstrmemdup(ti->pool, old_val_s->data,
                                                     old_val_s->len));
-
                       if (new_val_s)
-                        apr_hash_set(ti->externals_new,
-                                     apr_pstrdup(ti->pool, db->path),
+                        apr_hash_set(ti->externals_new, d_path,
                                      APR_HASH_KEY_STRING,
                                      apr_pstrmemdup(ti->pool, new_val_s->data,
                                                     new_val_s->len));
@@ -3055,6 +3058,7 @@ svn_wc_init_traversal_info(apr_pool_t *pool)
   ti->pool           = pool;
   ti->externals_old  = apr_hash_make(pool);
   ti->externals_new  = apr_hash_make(pool);
+  ti->depths         = apr_hash_make(pool);
 
   return ti;
 }
@@ -3069,6 +3073,13 @@ svn_wc_edited_externals(apr_hash_t **externals_old,
   *externals_new = traversal_info->externals_new;
 }
 
+
+void
+svn_wc_traversed_depths(apr_hash_t **depths,
+                        svn_wc_traversal_info_t *traversal_info)
+{
+  *depths = traversal_info->depths;
+}
 
 
 /* THE GOAL

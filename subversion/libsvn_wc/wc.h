@@ -96,6 +96,11 @@ struct svn_wc_traversal_info_t
    */
   apr_hash_t *externals_old;
   apr_hash_t *externals_new;
+
+  /* The ambient depths of the working copy directories.  The keys are
+     working copy paths (as for svn_wc_edited_externals()), the values
+     are the result of svn_depth_to_word(depth_of_each_dir). */
+  apr_hash_t *depths;
 };
 
 
