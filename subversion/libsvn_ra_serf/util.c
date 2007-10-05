@@ -28,7 +28,7 @@
 #include "svn_path.h"
 #include "svn_private_config.h"
 #include "svn_xml.h"
-#include "private/svn_compat.h"
+#include "private/svn_dep_compat.h"
 
 #include "ra_serf.h"
 
