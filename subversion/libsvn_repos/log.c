@@ -20,6 +20,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_compat.h"
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
