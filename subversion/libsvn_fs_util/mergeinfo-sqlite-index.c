@@ -30,7 +30,7 @@
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 
-#include "private/svn_compat.h"
+#include "private/svn_dep_compat.h"
 #include "private/svn_fs_mergeinfo.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
