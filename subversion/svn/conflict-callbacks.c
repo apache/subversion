@@ -303,7 +303,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t *result,
                                  NULL);
           if (performed_edit)
             prompt = apr_pstrcat(subpool, prompt, _(", (r)esolved"), NULL);
-          prompt = apr_pstrcat(subpool, prompt, _(", (h)elp : "), NULL);
+          prompt = apr_pstrcat(subpool, prompt,
+                               _(", (h)elp for more options : "), NULL);
 
           SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
 
