@@ -409,6 +409,10 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 27,
              "Conflict resolution failed")
 
+  SVN_ERRDEF(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
+             SVN_ERR_WC_CATEGORY_START + 28,
+             "Failed to locate 'copyfrom' path in working copy.")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
