@@ -61,9 +61,6 @@ def externals_test_setup(sbox):
                     exdir_A/G        <scheme>:///<other_repos>/A/D/G
                     exdir_A/H  -r 3  <scheme>:///<other_repos>/A/D/H
                     x/y/z/blah       <scheme>:///<other_repos>/A/B
-
-  NOTE: Before calling this, use externals_test_cleanup(SBOX) to
-  remove a previous incarnation of the other repository.
   """
 
   # The test itself will create a working copy
