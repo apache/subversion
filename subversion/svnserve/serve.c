@@ -27,6 +27,7 @@
 #include <apr_strings.h>
 #include <apr_md5.h>
 
+#include "svn_compat.h"
 #include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_types.h"
 #include "svn_string.h"
