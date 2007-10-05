@@ -77,7 +77,7 @@ extern "C" {
 #define SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT 3
 
 /* Maximum number of directories to cache dirents for.
-   This *must* be a power of 2 for DIR_CACHE_ENTRIES_INDEX
+   This *must* be a power of 2 for DIR_CACHE_ENTRIES_MASK
    to work.  */
 #define NUM_DIR_CACHE_ENTRIES 128
 #define DIR_CACHE_ENTRIES_MASK(x) ((x) & (NUM_DIR_CACHE_ENTRIES - 1))
