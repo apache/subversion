@@ -7958,8 +7958,16 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                      A_url + '/D/gamma' + '@4',
                                      Acopy_gamma_path)
 
+  #For both regex and python '\' is a escape sequence
+  #so \ will become \\ in python and then \\\\ for regex.
+  #As win32 path names has '\', it need to be escaped in the regex.
+  regex_escaped_Acopy_gamma_path = Acopy_gamma_path
+  if sys.platform == 'win32':
+    regex_escaped_Acopy_gamma_path = \
+                          regex_escaped_Acopy_gamma_path.replace("\\", "\\\\")
   svntest.actions.run_and_verify_svn(None, expected_merge_output(3,
-                                     'D    ' + Acopy_gamma_path + '\n', 5),
+                                     'D    ' + regex_escaped_Acopy_gamma_path
+                                      + '\n', 5),
                                      [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
 
@@ -8757,8 +8765,7 @@ test_list = [ None,
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
               merge_with_depth_files,
-              XFail(merge_fails_if_subtree_is_deleted_on_src, 
-                    svntest.main.is_os_windows),
+              merge_fails_if_subtree_is_deleted_on_src,
               no_mergeinfo_from_no_op_merge,
               merge_to_sparse_directories,
               merge_old_and_new_revs_from_renamed_dir,
