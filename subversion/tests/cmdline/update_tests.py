@@ -3233,17 +3233,17 @@ def update_handles_copyfrom(sbox):
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\Some new text.\n")
+                      contents="This is the file 'rho'.\nSome new text.\n")
   expected_disk.add({
     'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n"),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
   expected_status.tweak('A/D/G/rho', wc_rev=2, status='M ')
   expected_status.add({
     'A/D/G/glub' : Item(status='M ', wc_rev=2),
     })
-  svntest.actions.run_and_verify_update(wc_dir,
+  svntest.actions.run_and_verify_update(wc_backup,
                                         expected_output,
                                         expected_disk,
                                         expected_status)
@@ -3500,7 +3500,7 @@ test_list = [ None,
               update_with_obstructing_additions,
               update_conflicted,
               mergeinfo_update_elision,
-              XFail(update_handles_copyfrom),
+              update_handles_copyfrom,
               update_accept_conflicts,
              ]
 
