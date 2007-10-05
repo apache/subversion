@@ -49,8 +49,20 @@ def expected_merge_output(start_rev, additional_lines=None, end_rev=None):
   END_REV."""
   lines = [svntest.main.merge_notify_line(start_rev, end_rev)]
   if isinstance(additional_lines, list):
+    # Address "The Backslash Plague"
+    #
+    # If ADDITIONAL_LINES are present there are possibly paths in it with
+    # multiple components and on Windows these components are separated with
+    # '\'.  These need to be escaped properly in the regexp for the match to
+    # work correctly.  See http://aspn.activestate.com/ASPN/docs/ActivePython
+    # /2.2/howto/regex/regex.html#SECTION000420000000000000000.
+    if sys.platform == 'win32':
+      for i in range(0, len(additional_lines)):
+        additional_lines[i] = additional_lines[i].replace("\\", "\\\\")
     lines.extend(additional_lines)
   else:
+    if sys.platform == 'win32'and additional_lines != None:
+      additional_lines = additional_lines.replace("\\", "\\\\")
     lines.append(str(additional_lines))
   return "|".join(lines)
 
@@ -7958,16 +7970,8 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                      A_url + '/D/gamma' + '@4',
                                      Acopy_gamma_path)
 
-  #For both regex and python '\' is a escape sequence
-  #so \ will become \\ in python and then \\\\ for regex.
-  #As win32 path names has '\', it need to be escaped in the regex.
-  regex_escaped_Acopy_gamma_path = Acopy_gamma_path
-  if sys.platform == 'win32':
-    regex_escaped_Acopy_gamma_path = \
-                          regex_escaped_Acopy_gamma_path.replace("\\", "\\\\")
   svntest.actions.run_and_verify_svn(None, expected_merge_output(3,
-                                     'D    ' + regex_escaped_Acopy_gamma_path
-                                      + '\n', 5),
+                                     'D    ' + Acopy_gamma_path + '\n', 5),
                                      [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
 
