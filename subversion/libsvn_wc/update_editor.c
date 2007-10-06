@@ -2803,7 +2803,7 @@ add_file_with_history(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_adm_access_t *adm_access, *src_access;
   const char *src_path;
-  apr_hash_t *props, *base_props;
+  apr_hash_t *base_props;
   apr_hash_index_t *hi;
   apr_file_t *textbase_file;
   const svn_wc_entry_t *path_entry;
