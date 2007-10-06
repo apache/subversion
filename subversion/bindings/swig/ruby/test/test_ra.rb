@@ -17,6 +17,12 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal(Svn::Core.subr_version, Svn::Ra.version)
   end
 
+  def test_uuid
+    session = Svn::Ra::Session.open(@repos_uri)
+    assert_equal(File.read(File.join(@repos_path, "db", "uuid")).strip,
+                 session.uuid)
+  end
+
   def test_open_without_callback
     assert_nothing_raised do
       Svn::Ra::Session.open(@repos_uri)

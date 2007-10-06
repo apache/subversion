@@ -182,7 +182,7 @@ module Svn
       end
 
       def uuid
-        Ra.uuid(self)
+        Ra.get_uuid(self)
       end
 
       def repos_root
