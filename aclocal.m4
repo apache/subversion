@@ -1,4 +1,4 @@
-# aclocal.m4: Supplementary macros used by Subversion's configure.in
+# aclocal.m4: Supplementary macros used by Subversion's configure.ac
 #
 # These are here rather than directly in configure.in, since this prevents
 # comments in the macro files being copied into configure.in, producing
