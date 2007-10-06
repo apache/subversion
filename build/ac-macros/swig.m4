@@ -8,7 +8,7 @@ dnl python bindings.
 AC_DEFUN(SVN_CHECK_SWIG,
 [
   AC_ARG_WITH(swig,
-              AC_HELP_STRING([--with-swig=PATH],
+              AS_HELP_STRING([--with-swig=PATH],
                              [Try to use 'PATH/bin/swig' to build the
                               swig bindings.  If PATH is not specified,
                               look for a 'swig' binary in your PATH.]),
@@ -204,7 +204,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       svn_cv_ruby_sitedir="$rbconfig_sitedir"
     ])
     AC_ARG_WITH([ruby-sitedir],
-    AC_HELP_STRING([--with-ruby-sitedir=SITEDIR],
+    AS_HELP_STRING([--with-ruby-sitedir=SITEDIR],
                                [install Ruby bindings in SITEDIR
                                 (default is same as ruby's one)]),
     [svn_ruby_installdir="$withval"],
@@ -231,7 +231,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       svn_cv_ruby_test_verbose="normal"
     ])
     AC_ARG_WITH([ruby-test-verbose],
-    AC_HELP_STRING([--with-ruby-test-verbose=LEVEL],
+    AS_HELP_STRING([--with-ruby-test-verbose=LEVEL],
                                [how to use output level for Ruby bindings tests
                                 (default is normal)]),
     [svn_ruby_test_verbose="$withval"],

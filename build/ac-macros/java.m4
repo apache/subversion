@@ -6,7 +6,7 @@ AC_DEFUN(SVN_CHECK_JDK,
 [
   JAVA_OLDEST_WORKING_VER="$1"
   AC_ARG_WITH(jdk,
-              AC_HELP_STRING([--with-jdk=PATH],
+              AS_HELP_STRING([--with-jdk=PATH],
                              [Try to use 'PATH/include' to find the JNI
                               headers.  If PATH is not specified, look 
                               for a Java Development Kit at JAVA_HOME.]),
@@ -97,7 +97,7 @@ AC_DEFUN(SVN_FIND_JDK,
     dnl Prefer Jikes (for speed) if available.
     jikes_options="/usr/local/bin/jikes /usr/bin/jikes"
     AC_ARG_WITH(jikes,
-                AC_HELP_STRING([--with-jikes=PATH],
+                AS_HELP_STRING([--with-jikes=PATH],
                                [Specify the path to a jikes binary to use
                                 it as your Java compiler.  The default is to
                                 look for jikes (PATH optional).  This behavior
