@@ -326,10 +326,12 @@ module Svn
                         preserved_exts=nil)
         preserved_exts ||= []
         traversal_info ||= _traversal_info
+        conflict_func = nil
         results = Wc.get_switch_editor3(target_revision, self, target,
                                         switch_url, use_commit_times, depth,
                                         allow_unver_obstruction,
                                         notify_func, cancel_func,
+                                        conflict_func,
                                         diff3_cmd, preserved_exts,
                                         traversal_info)
         target_revision_address, editor, editor_baton = results
