@@ -735,7 +735,8 @@ proppatch_resource(proppatch_context_t *proppatch,
   SVN_ERR(svn_ra_serf__context_run_wait(&proppatch->progress.done,
                                         commit->session, pool));
 
-  if (proppatch->progress.server_error.error)
+  if (proppatch->progress.status != 207 ||
+      proppatch->progress.server_error.error)
     {
       svn_error_t *err;
       err = return_response_err(handler, &proppatch->progress);
