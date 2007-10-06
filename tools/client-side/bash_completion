@@ -108,7 +108,7 @@ _svn()
 	           |-x|--extensions|-m|--message|-F|--file|--encoding|
 	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new|
 	           |--config-dir|--native-eol|-l|--limit|-c|--change|--depth|
-                   |--with-revprop|--changelist"
+                   |--with-revprop|--changelist|--accept"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds
@@ -319,6 +319,16 @@ _svn()
 
 	    [[ $previous = '--depth' ]] && \
 		values='empty files immediates infinity'
+
+	    [[ $previous = '--accept' ]] && \
+	    {
+	        # the list is reduced for 'resolved'
+                if [[ $cmd = 'resolved' ]] ; then
+		    values='base mine theirs'
+		else # checkout merge switch update
+		    values='postpone base mine theirs edit launch'
+		fi
+	    }
 
 	    # could look at ~/.subversion/
 	    [[ $previous = '--username' ]] && beep=1
@@ -609,7 +619,7 @@ _svn()
 		;;
 	checkout|co)
 		cmdOpts="$rOpts $qOpts $nOpts $pOpts --ignore-externals \
-                         --force"
+                         --force --accept"
 		;;
 	cleanup)
 		cmdOpts="--diff3-cmd"
@@ -658,7 +668,7 @@ _svn()
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
 		         $pOpts --ignore-ancestry -c --change -x --extensions \
-                         $gOpts --record-only"
+                         $gOpts --record-only --accept"
 		;;
 	mergeinfo)
 	        cmdOpts="$rOpts $pOpts"
@@ -694,7 +704,7 @@ _svn()
 		[[ $val ]] || cmdOpts="$cmdOpts -F --file"
 		;;
 	resolved)
-		cmdOpts="--targets -R --recursive $qOpts"
+		cmdOpts="--targets -R --recursive $qOpts --accept"
 		;;
 	revert)
 		cmdOpts="--targets -R --recursive $qOpts --changelist"
@@ -705,14 +715,14 @@ _svn()
 		;;
 	switch|sw)
 		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd \
-                         --force"
+                         --force --accept"
 		;;
 	unlock)
 		cmdOpts="--targets --force $pOpts"
 		;;
 	update|up)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
-                         --ignore-externals --force"
+                         --ignore-externals --force --accept"
 		;;
 	*)
 		;;
