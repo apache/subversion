@@ -177,7 +177,7 @@ svn_cl__edit_file_externally(const char *path,
     return svn_error_wrap_apr
       (apr_err, _("Can't change working directory to '%s'"), base_dir);
 
-  cmd = apr_psprintf(pool, "%s \'%s\'", editor, file_name);
+  cmd = apr_psprintf(pool, "%s %s", editor, file_name);
   sys_err = system(cmd);
 
   apr_err = apr_filepath_set(old_cwd, pool);
