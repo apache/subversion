@@ -139,9 +139,9 @@ AC_DEFUN(SVN_MAYBE_ADD_TO_CFLAGS,
   svn_maybe_add_to_cflags_saved_flags="$CFLAGS"
   CFLAGS="$CFLAGS $option"
   AC_MSG_CHECKING([if $CC accepts $option])
-  AC_TRY_COMPILE(
-    [#include <apr_portable.h>],
-    [],
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
+    [[#include <apr_portable.h>]],
+    [[]])],
     [svn_maybe_add_to_cflags_ok="yes"],
     [svn_maybe_add_to_cflags_ok="no"]
   )
