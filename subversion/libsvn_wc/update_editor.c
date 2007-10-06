@@ -2819,9 +2819,6 @@ add_file_with_history(const char *path,
      apply_textdelta() does. */
   tfb->text_base_path = svn_wc__text_base_path(tfb->path, FALSE, tfb->pool);
   tfb->new_text_base_path = svn_wc__text_base_path(tfb->path, TRUE, tfb->pool);
-  SVN_ERR(svn_wc__open_text_base(&textbase_file, tfb->path,
-                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                 pool));
 
   /* Attempt to locate the copyfrom_path in the working copy first. */
   SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, pool));
@@ -2856,7 +2853,9 @@ add_file_with_history(const char *path,
 
       /* Fetch the repository file's text-base and base-props;
          svn_stream_close() automatically closes the text-base file for us. */
-
+      SVN_ERR(svn_wc__open_text_base(&textbase_file, tfb->path,
+                                     (APR_WRITE | APR_TRUNCATE | APR_CREATE),
+                                     pool));
 
       SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path, copyfrom_rev,
                              svn_stream_from_aprfile(textbase_file, pool),
