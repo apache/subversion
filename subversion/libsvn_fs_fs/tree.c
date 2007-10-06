@@ -1133,7 +1133,6 @@ static svn_error_t *
 update_ancestry(svn_fs_t *fs,
                 const svn_fs_id_t *source_id,
                 const svn_fs_id_t *target_id,
-                const char *txn_id,
                 const char *target_path,
                 int source_pred_count,
                 apr_pool_t *pool)
@@ -1494,7 +1493,7 @@ merge(svn_stringbuf_t *conflict_p,
   svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_fs_fs__dag_get_predecessor_count(&pred_count, source, pool));
-  SVN_ERR(update_ancestry(fs, source_id, target_id, txn_id, target_path,
+  SVN_ERR(update_ancestry(fs, source_id, target_id, target_path,
                           pred_count, pool));
 
   return SVN_NO_ERROR;
@@ -2306,7 +2305,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
       SVN_ERR(svn_stream_close(tb->target_stream));
 
       SVN_ERR(svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,
-                                            tb->root->txn, tb->pool));
+                                            tb->pool));
     }
 
   return SVN_NO_ERROR;
@@ -2489,7 +2488,7 @@ text_stream_closer(void *baton)
 
   /* Need to tell fs that we're done sending text */
   SVN_ERR(svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,
-                                        tb->root->txn, tb->pool));
+                                        tb->pool));
 
   return SVN_NO_ERROR;
 }

@@ -911,7 +911,6 @@ svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
 svn_error_t *
 svn_fs_fs__dag_finalize_edits(dag_node_t *file,
                               const char *checksum,
-                              const char *txn_id,
                               apr_pool_t *pool)
 {
   unsigned char digest[APR_MD5_DIGESTSIZE];
