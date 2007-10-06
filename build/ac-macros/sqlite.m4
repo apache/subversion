@@ -62,7 +62,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
     if test -z "$svn_lib_sqlite"; then
       SVN_SQLITE_CONFIG("")
       if test -z "$svn_lib_sqlite"; then
-        AC_WARN([SQLite not found - libsvn_ra_local will be disabled.])
+        AC_MSG_WARN([SQLite not found - libsvn_ra_local will be disabled.])
         SVN_DOWNLOAD_SQLITE
       fi
     fi
