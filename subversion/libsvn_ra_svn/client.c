@@ -872,7 +872,6 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  svn_ra_svn_item_t *item;
   apr_array_header_t *proplist;
   unsigned char digest[APR_MD5_DIGESTSIZE];
   const char *expected_checksum, *hex_digest;
@@ -902,6 +901,8 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   iterpool = svn_pool_create(pool);
   while (1)
     {
+      svn_ra_svn_item_t *item;
+
       svn_pool_clear(iterpool);
       SVN_ERR(svn_ra_svn_read_item(conn, iterpool, &item));
       if (item->kind != SVN_RA_SVN_STRING)
