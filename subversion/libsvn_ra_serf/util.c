@@ -852,7 +852,7 @@ handle_response(serf_request_t *request,
              but wait till we retry the request later. */
           if (! APR_STATUS_IS_EAGAIN(status))
             {
-              svn_ra_serf__request_create(ctx);
+              svn_ra_serf__priority_request_create(ctx);
             }
         }
     }
@@ -958,6 +958,21 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
   return serf_connection_request_create(handler->conn->conn,
                                         setup_request, handler);
+}
+
+serf_request_t *
+svn_ra_serf__priority_request_create(svn_ra_serf__handler_t *handler)
+{
+#if SERF_VERSION_AT_LEAST(0,1,3)
+  return serf_connection_priority_request_create(handler->conn->conn,
+                                                 setup_request, handler);
+#else
+  /* Fall back to the adding the new request at the end of the queue. While
+     this will make certain auth. protocols fail, at least basic authentication
+     will still work. */
+  return serf_connection_request_create(handler->conn->conn,
+                                        setup_request, handler);
+#endif
 }
 
 svn_error_t *
