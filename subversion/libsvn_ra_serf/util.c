@@ -670,6 +670,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
         }
       else
         {
+          ctx->done = TRUE;
           server_err->error = SVN_NO_ERROR;
         }
     }
