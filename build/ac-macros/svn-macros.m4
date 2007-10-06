@@ -32,7 +32,7 @@ EOF
 AC_DEFUN([SVN_EXTERNAL_PROJECT_SETUP], [
   do_subdir_config="yes"
   AC_ARG_ENABLE([subdir-config],
-    AC_HELP_STRING([--disable-subdir-config],
+    AS_HELP_STRING([--disable-subdir-config],
                    [do not reconfigure packages in subdirectories]),
     [if test "$enableval" = "no"; then do_subdir_config="no"; fi])
   AC_SUBST([SVN_EXTERNAL_PROJECT_SUBDIRS], [""])

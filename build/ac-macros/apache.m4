@@ -15,7 +15,7 @@ HTTPD_WANTED_MMN="$1"
 
 AC_MSG_CHECKING(for static Apache module support)
 AC_ARG_WITH(apache,
-AC_HELP_STRING([--with-apache=DIR],
+AS_HELP_STRING([--with-apache=DIR],
 	       [Build static Apache modules.  DIR is the path to the top-level
 		Apache source directory. IMPORTANT: Unless you are *absolutely*
                 certain that you want to build the modules *statically*, you

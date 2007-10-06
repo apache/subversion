@@ -29,7 +29,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
   AC_MSG_NOTICE([checking sqlite library])
 
   AC_ARG_WITH(sqlite,
-              AC_HELP_STRING([--with-sqlite=PREFIX],
+              AS_HELP_STRING([--with-sqlite=PREFIX],
                              [Use installed SQLite library.]),
   [
     if test "$withval" = "yes" ; then
