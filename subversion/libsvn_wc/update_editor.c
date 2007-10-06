@@ -2638,7 +2638,7 @@ svn_wc__locate_copyfrom(const char *copyfrom_path,
 
   if ((! dest_entry->repos) || (! dest_entry->url))
     return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
-                            _("Destination directory of add-with-history"
+                            _("Destination directory of add-with-history "
                               "is missing a URL."));
 
   svn_path_split(copyfrom_path, &copyfrom_parent, &copyfrom_file, pool);
