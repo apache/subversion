@@ -3500,7 +3500,7 @@ test_list = [ None,
               update_with_obstructing_additions,
               update_conflicted,
               mergeinfo_update_elision,
-              update_handles_copyfrom,
+              XFail(update_handles_copyfrom, svntest.main.is_ra_type_dav),
               update_accept_conflicts,
              ]
 
