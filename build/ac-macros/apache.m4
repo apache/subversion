@@ -59,8 +59,10 @@ VERSION_OKAY
 
 AC_MSG_CHECKING(for Apache module support via DSO through APXS)
 AC_ARG_WITH(apxs,
-[[  --with-apxs[=FILE]      Build shared Apache modules.  FILE is the optional
-                          pathname to the Apache apxs tool; defaults to "apxs".]],
+            [AS_HELP_STRING([[--with-apxs[=FILE]]],
+                            [Build shared Apache modules.  FILE is the optional
+                             pathname to the Apache apxs tool; defaults to
+                             "apxs".])],
 [
     if test "$BINNAME" != ""; then
       AC_MSG_ERROR(--with-apache and --with-apxs are mutually exclusive)
