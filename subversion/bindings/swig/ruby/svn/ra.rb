@@ -41,13 +41,21 @@ module Svn
         Ra.change_rev_prop(self, rev || latest_revnum, name, value)
       end
 
+      def []=(name, *args)
+        value = args.pop
+        set_prop(name, value, *args)
+        value
+      end
+
       def proplist(rev=nil)
         Ra.rev_proplist(self, rev || latest_revnum)
       end
+      alias properties proplist
 
       def prop(name, rev=nil)
         Ra.rev_prop(self, rev || latest_revnum, name)
       end
+      alias [] prop
 
       def commit_editor(log_msg, lock_tokens={}, keep_lock=false)
         callback = Proc.new do |new_revision, date, author|
