@@ -62,7 +62,7 @@ public final class Depth
      * <code>recurse</code> is <code>true</code>, or {@link #empty}
      * otherwise.
      */
-    static final int infinityOrEmpty(boolean recurse)
+    public static final int infinityOrEmpty(boolean recurse)
     {
         return (recurse ? infinity : empty);
     }
@@ -72,7 +72,7 @@ public final class Depth
      * <code>recurse</code> is <code>true</code>, or {@link #files}
      * otherwise.
      */
-    static final int infinityOrFiles(boolean recurse)
+    public static final int infinityOrFiles(boolean recurse)
     {
         return (recurse ? infinity : files);
     }
@@ -82,7 +82,7 @@ public final class Depth
      * <code>recurse</code> is <code>true</code>, or {@link
      * #immediates} otherwise.
      */
-    static final int infinityOrImmediates(boolean recurse)
+    public static final int infinityOrImmediates(boolean recurse)
     {
         return (recurse ? infinity : immediates);
     }
