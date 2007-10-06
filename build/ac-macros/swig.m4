@@ -235,7 +235,7 @@ AC_DEFUN(SVN_FIND_SWIG,
                                [how to use output level for Ruby bindings tests
                                 (default is normal)]),
     [svn_ruby_test_verbose="$withval"],
-		  [svn_ruby_test_verbose="$svn_cv_ruby_test_verbose"])
+                  [svn_ruby_test_verbose="$svn_cv_ruby_test_verbose"])
       SWIG_RB_TEST_VERBOSE="$svn_ruby_test_verbose"
       AC_MSG_RESULT([$SWIG_RB_TEST_VERBOSE])
   fi

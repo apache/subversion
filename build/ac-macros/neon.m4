@@ -30,10 +30,10 @@ AC_DEFUN(SVN_LIB_NEON,
 
   AC_ARG_WITH(neon,
               AS_HELP_STRING([--with-neon=PREFIX], 
-	      [Determine neon library configuration based on 
-	      'PREFIX/bin/neon-config'. Default is to search for neon 
-	      in a subdirectory of the top source directory and then to
-	      look for neon-config in $PATH.]),
+              [Determine neon library configuration based on 
+              'PREFIX/bin/neon-config'. Default is to search for neon 
+              in a subdirectory of the top source directory and then to
+              look for neon-config in $PATH.]),
   [
     if test "$withval" = "yes" ; then
       AC_MSG_ERROR([--with-neon requires an argument.])
