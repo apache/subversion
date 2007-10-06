@@ -2602,16 +2602,20 @@ svn_swig_rb_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                VALUE rb_callbacks,
                                apr_pool_t *pool)
 {
-  VALUE rb_auth_baton;
+  void *auth_baton = NULL;
 
-  rb_auth_baton = rb_funcall(rb_callbacks, id_auth_baton, 0);
+  if (!NIL_P(rb_callbacks)) {
+    VALUE rb_auth_baton = Qnil;
+    rb_auth_baton = rb_funcall(rb_callbacks, id_auth_baton, 0);
+    auth_baton = r2c_swig_type(rb_auth_baton,
+                               (void *)"svn_auth_baton_t *",
+                               pool);
+  }
 
   *callbacks = apr_pcalloc(pool, sizeof(**callbacks));
 
   (*callbacks)->open_tmp_file = ra_callbacks_open_tmp_file;
-  (*callbacks)->auth_baton = r2c_swig_type(rb_auth_baton,
-                                           (void *)"svn_auth_baton_t *",
-                                           pool);
+  (*callbacks)->auth_baton = auth_baton;
   (*callbacks)->get_wc_prop = ra_callbacks_get_wc_prop;
   (*callbacks)->set_wc_prop = ra_callbacks_set_wc_prop;
   (*callbacks)->push_wc_prop = ra_callbacks_push_wc_prop;

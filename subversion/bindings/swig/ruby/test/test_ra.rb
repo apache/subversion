@@ -17,6 +17,12 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal(Svn::Core.subr_version, Svn::Ra.version)
   end
 
+  def test_open_without_callback
+    assert_nothing_raised do
+      Svn::Ra::Session.open(@repos_uri)
+    end
+  end
+
   def test_session
     log = "sample log"
     log2 = "sample log2"
