@@ -23,13 +23,14 @@ Status of 1.4.6:
 
 Candidate changes:
 
-  * r26964
+  * r26964, r26968
     Fix memory leak in ra_svn implementation of svn_ra_get_file, which
     was essentially loading the entire file into memory.
     Justification:
       Small non-intrusive fix, unbounded memory leak.
     Votes:
-      +1: glasser, dlr
+      +1: glasser, dlr (r26964 only)
+      +1: hwright
 
   * r21406-21407, r21540
     Fix issue #2608: Can set directory props on the root of an FSFS
