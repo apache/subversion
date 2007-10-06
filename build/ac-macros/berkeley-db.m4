@@ -176,8 +176,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     CPPFLAGS="$SVN_APRUTIL_INCLUDES $CPPFLAGS" 
     LIBS="`$apu_config --ldflags` $svn_apu_bdb_lib $LIBS"
 
-    AC_TRY_RUN(
-      [
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>
 #define APU_WANT_DB
 #include <apu_want.h>
@@ -211,7 +210,7 @@ int main ()
   else
     exit (1);
 }
-      ],
+      ]])],
       [svn_have_berkeley_db=yes],
       [svn_have_berkeley_db=no],
       [svn_have_berkeley_db=yes]
