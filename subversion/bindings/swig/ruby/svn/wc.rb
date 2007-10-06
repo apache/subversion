@@ -80,8 +80,8 @@ module Svn
 
     module ExternalsDescription
       module_function
-      def parse(parent_dir, desc)
-        Wc.parse_externals_description3(parent_dir, desc)
+      def parse(parent_dir, desc, canonicalize_url=true)
+        Wc.parse_externals_description3(parent_dir, desc, canonicalize_url)
       end
     end
 
