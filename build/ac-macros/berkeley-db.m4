@@ -41,8 +41,8 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   dnl    - a string of the form `HEADER:LIB', indicating that we should look
   dnl      for headers in HEADER and libraries in LIB.
 
-  AC_ARG_WITH(berkeley-db,
-  [  --with-berkeley-db=PATH
+  AC_ARG_WITH(berkeley-db, [AS_HELP_STRING(
+                                           [--with-berkeley-db=PATH], [
                           The Subversion Berkeley DB based filesystem library 
                           requires Berkeley DB $db_version or newer.  If you
                           specify `--without-berkeley-db', that library will
@@ -60,7 +60,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
                           HEADER, and the library in LIB.  If you omit the
                           `=PATH' part completely, the configure script will
                           search for Berkeley DB in a number of standard
-                          places.],
+                          places.])],
   [
     if test "$withval" = "no"; then
       status=skip
