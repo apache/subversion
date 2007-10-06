@@ -331,7 +331,6 @@ svn_error_t *svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
 
 /* Signify the completion of edits to FILE made using the stream
    returned by svn_fs_fs__dag_get_edit_stream, allocating from POOL.
-   TXN_ID is the Subversion transaction under which this occurs.
 
    If CHECKSUM is non-null, it must match the checksum for FILE's
    contents (note: this is not recalculated, the recorded checksum is
@@ -340,7 +339,6 @@ svn_error_t *svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
    This operation is a no-op if no edits are present.  */
 svn_error_t *svn_fs_fs__dag_finalize_edits(dag_node_t *file,
                                            const char *checksum,
-                                           const char *txn_id,
                                            apr_pool_t *pool);
 
 
