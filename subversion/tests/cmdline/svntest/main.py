@@ -101,7 +101,10 @@ except ImportError:
   platform_with_os_wait = False
 
 # The location of our mock svneditor script.
-svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
+if sys.platform == 'win32':
+  svneditor_script = os.path.join(sys.path[0], 'svneditor.bat')
+else:
+  svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
 
 # Username and password used by the working copies
 wc_author = 'jrandom'
