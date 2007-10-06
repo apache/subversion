@@ -1,4 +1,4 @@
-dnl configure.in: Autoconfiscation for Subversion
+dnl configure.ac: Autoconfiscation for Subversion
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.58)
