@@ -235,11 +235,15 @@ module Svn
       def close_edit
         args = [self, @baton]
         Svn::Delta.editor_invoke_close_edit(*args)
+      ensure
+        Core::Pool.destroy(self)
       end
 
       def abort_edit
         args = [self, @baton]
         Svn::Delta.editor_invoke_abort_edit(*args)
+      ensure
+        Core::Pool.destroy(self)
       end
     end
 
