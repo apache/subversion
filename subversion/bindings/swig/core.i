@@ -782,6 +782,10 @@ struct apr_pool_wrapper_t
 /* Leave memory administration to ruby's GC */
 %extend apr_pool_wrapper_t
 {
+  static void destroy(VALUE object) {
+    svn_swig_rb_destroy_internal_pool(object);
+  }
+
   apr_pool_wrapper_t(apr_pool_wrapper_t *parent) {
     apr_pool_wrapper_t *self;
     apr_pool_t *parent_pool;
