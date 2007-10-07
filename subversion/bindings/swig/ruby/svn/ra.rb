@@ -32,6 +32,7 @@ module Svn
       def latest_revnum
         Ra.get_latest_revnum(self)
       end
+      alias latest_revision latest_revnum
 
       def dated_revision(time)
         Ra.get_dated_revision(self, time.to_apr_time)
