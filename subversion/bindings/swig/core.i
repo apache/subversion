@@ -609,15 +609,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #ifdef SWIGPYTHON
 %typemap(in,parse="z") const char *config_dir "";
 #endif
-#ifdef SWIGRUBY
-%typemap(in) const char *config_dir {
-  if (NIL_P($input)) {
-    $1 = "";
-  } else {
-    $1 = StringValuePtr($input);
-  }
-}
-#endif
 
 #ifdef SWIGPYTHON
 PyObject *svn_swig_py_exception_type(void);
