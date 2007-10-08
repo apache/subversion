@@ -372,9 +372,10 @@ module Svn
       include Enumerable
 
       class << self
-        def config(path)
+        def get(path=nil)
           Core.config_get_config(path)
         end
+        alias config get
 
         def read(file, must_exist=true)
           Core.config_read(file, must_exist)
