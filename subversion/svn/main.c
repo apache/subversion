@@ -63,7 +63,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"help",          'h', 0, N_("show help on a subcommand")},
   {NULL,            '?', 0, N_("show help on a subcommand")},
   {"message",       'm', 1, N_("specify log message ARG")},
-  {"quiet",         'q', 0, N_("print as little as possible")},
+  {"quiet",         'q', 0, N_("print nothing, or only summary information")},
   {"recursive",     'R', 0, N_("descend recursively, same as --depth=infinity")},
   {"non-recursive", 'N', 0, N_("obsolete; try --depth=files or --depth=immediates")},
   {"change",        'c', 1, N_
@@ -743,6 +743,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: status [PATH...]\n"
      "\n"
      "  With no args, print only locally modified items (no network access).\n"
+     "  With -q, print only summary information about locally modified items.\n"
      "  With -u, add working revision and server out-of-date information.\n"
      "  With -v, print full revision information on every item.\n"
      "\n"
