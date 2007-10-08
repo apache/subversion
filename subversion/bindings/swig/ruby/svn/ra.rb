@@ -25,7 +25,7 @@ module Svn
     class Session
       class << self
         def open(url, config=nil, callbacks=nil)
-          Ra.open2(url, callbacks, config)
+          Ra.open2(url, callbacks, config || Svn::Core::Config.get)
         end
       end
 
