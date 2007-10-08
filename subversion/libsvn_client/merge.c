@@ -3195,7 +3195,7 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
 
   iterpool = svn_pool_create(pool);
 
-  while(end_rev != SVN_INVALID_REVNUM)
+  while (end_rev != SVN_INVALID_REVNUM)
     {
       svn_revnum_t next_end_rev;
       svn_pool_clear(iterpool);
