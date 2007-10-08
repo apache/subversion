@@ -2610,14 +2610,14 @@ close_file(void *file_baton,
    *RETURN_PATH, as well as a (read-only) access_t for its parent in
    *RETURN_ACCESS.  If the file isn't found, set *RETURN_PATH to NULL.
 */
-svn_error_t *
-svn_wc__locate_copyfrom(const char *copyfrom_path,
-                        svn_revnum_t copyfrom_rev,
-                        const char *dest_dir,
-                        const svn_wc_entry_t *dest_entry,
-                        const char **return_path,
-                        svn_wc_adm_access_t **return_access,
-                        apr_pool_t *pool)
+static svn_error_t *
+locate_copyfrom(const char *copyfrom_path,
+                svn_revnum_t copyfrom_rev,
+                const char *dest_dir,
+                const svn_wc_entry_t *dest_entry,
+                const char **return_path,
+                svn_wc_adm_access_t **return_access,
+                apr_pool_t *pool)
 {
   const char *dest_fs_path, *ancestor_fs_path, *ancestor_url, *file_url;
   const char *copyfrom_parent, *copyfrom_file;
@@ -2822,9 +2822,9 @@ add_file_with_history(const char *path,
 
   /* Attempt to locate the copyfrom_path in the working copy first. */
   SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, pool));
-  err = svn_wc__locate_copyfrom(copyfrom_path, copyfrom_rev,
-                                pb->path, path_entry,
-                                &src_path, &src_access, pool);
+  err = locate_copyfrom(copyfrom_path, copyfrom_rev,
+                        pb->path, path_entry,
+                        &src_path, &src_access, pool);
   if (err && err->apr_err == SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND)
     svn_error_clear(err);
   else if (err)
