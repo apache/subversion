@@ -265,11 +265,11 @@ svn_fs_fs__txn_root(svn_fs_root_t **root_p,
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, txn, pool));
   if (txnprops)
     {
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD,
                        APR_HASH_KEY_STRING))
         flags |= SVN_FS_TXN_CHECK_OOD;
 
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
                        APR_HASH_KEY_STRING))
         flags |= SVN_FS_TXN_CHECK_LOCKS;
     }
@@ -1002,7 +1002,7 @@ fs_change_mergeinfo(svn_fs_root_t *root,
   SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, path, mergeinfo_str, pool));
 
   SVN_ERR(svn_fs_fs__change_txn_prop(txn,
-                                     SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                                     SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
                                      svn_string_create("true", pool),
                                      pool));
   return SVN_NO_ERROR;
@@ -1066,7 +1066,7 @@ fs_change_node_prop(svn_fs_root_t *root,
       SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, canon_path, value, pool));
 
       SVN_ERR(svn_fs_fs__change_txn_prop(txn,
-                                         SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                                         SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
                                          svn_string_create("true", pool),
                                          pool));
     }
