@@ -193,11 +193,3 @@ Approved changes:
       WC library bug fix.
     Votes:
       +1: dionisos, dlr, hwright
-
-  * r26964, r26968
-    Fix memory leak in ra_svn implementation of svn_ra_get_file, which
-    was essentially loading the entire file into memory.
-    Justification:
-      Small non-intrusive fix, unbounded memory leak.
-    Votes:
-      +1: hwright, dlr, glasser

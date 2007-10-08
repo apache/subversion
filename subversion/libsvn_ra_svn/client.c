@@ -948,11 +948,11 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
 {
   ra_svn_session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  svn_ra_svn_item_t *item;
   apr_array_header_t *proplist;
   unsigned char digest[APR_MD5_DIGESTSIZE];
   const char *expected_checksum, *hex_digest;
   apr_md5_ctx_t md5_context;
+  apr_pool_t *iterpool;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c(?r)bb", path,
                                rev, (props != NULL), (stream != NULL)));
@@ -974,9 +974,13 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
     apr_md5_init(&md5_context);
 
   /* Read the file's contents. */
+  iterpool = svn_pool_create(pool);
   while (1)
     {
-      SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
+      svn_ra_svn_item_t *item;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_ra_svn_read_item(conn, iterpool, &item));
       if (item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Non-string as part of file contents"));
@@ -990,6 +994,8 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
       SVN_ERR(svn_stream_write(stream, item->u.string->data,
                                &item->u.string->len));
     }
+  svn_pool_destroy(iterpool);
+
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   if (expected_checksum)
