@@ -307,9 +307,10 @@ module Svn
 
     remove_const(:Callbacks)
     class Callbacks
-      attr_accessor :auth_baton
-      def initialize(auth_baton)
-        @auth_baton = auth_baton
+      include Core::Authenticatable
+
+      def initialize(auth_baton=nil)
+        self.auth_baton = auth_baton || Core::AuthBaton.new
       end
 
       def open_tmp_file
