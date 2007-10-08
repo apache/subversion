@@ -572,27 +572,25 @@ module Svn
         Core::MergeInfo.new(info)
       end
 
-      def add_to_change_list(change_list_name, *paths)
+      def add_to_changelist(changelist_name, *paths)
         paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
-        Client.add_to_changelist(paths, change_list_name, self)
+        Client.add_to_changelist(paths, changelist_name, self)
       end
-      alias_method :add_to_changelist, :add_to_change_list
+      alias_method :add_to_changelist, :add_to_changelist
 
-      def change_list(change_list_name, root_path, &block)
-        args = [change_list_name, root_path, self]
+      def changelist(changelist_name, root_path, &block)
+        args = [changelist_name, root_path, self]
         if block
           Client.get_changelist_streamy(block, *args)
         else
           Client.get_changelist(*args)
         end
       end
-      alias_method :changelist, :change_list
 
-      def remove_from_change_list(change_list_name, *paths)
+      def remove_from_changelist(changelist_name, *paths)
         paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
-        Client.remove_from_changelist(paths, change_list_name, self)
+        Client.remove_from_changelist(paths, changelist_name, self)
       end
-      alias_method :remove_from_changelist, :remove_from_change_list
 
       private
       def init_callbacks
