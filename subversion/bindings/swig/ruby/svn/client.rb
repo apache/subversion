@@ -576,7 +576,6 @@ module Svn
         paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
         Client.add_to_changelist(paths, changelist_name, self)
       end
-      alias_method :add_to_changelist, :add_to_changelist
 
       def changelist(changelist_name, root_path, &block)
         args = [changelist_name, root_path, self]
