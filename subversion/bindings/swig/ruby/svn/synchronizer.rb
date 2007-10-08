@@ -4,7 +4,7 @@ require "cgi"
 require "svn/ra"
 
 module Svn
-  class Syncer
+  class Synchronizer
     class Error < StandardError
     end
 
