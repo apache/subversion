@@ -46,9 +46,8 @@ module Svn
       end
     end
 
-    def source_url=(url)
-      source = Ra::Session.open(url)
-      @destination[Property::FROM_URL, 0] = url
+    def source=(source)
+      @destination[Property::FROM_URL, 0] = source.repos_root
       @destination[Property::FROM_UUID, 0] = source.uuid
       @destination[Property::LAST_MERGED_REV, 0] = "0"
 
@@ -59,12 +58,13 @@ module Svn
       end
     end
 
-    def sync
+    def sync(callbacks=nil)
       last_merged_rev = @destination[Property::LAST_MERGED_REV, 0]
       raise NotInitialized.new(@destination.repos_root) if last_merged_rev.nil?
 
       last_merged_rev = Integer(last_merged_rev)
-      source = Ra::Session.open(@destination[Property::FROM_URL, 0])
+      source = Ra::Session.open(@destination[Property::FROM_URL, 0], nil,
+                                callbacks)
       (last_merged_rev + 1).upto(source.latest_revision) do |revision|
         unless @destination.latest_revision + 1 == revision
           raise ConsistencyError.new(@destination.repos_root,
