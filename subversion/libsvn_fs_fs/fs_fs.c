@@ -4853,24 +4853,24 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
   if (txnprops)
     {
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD,
                        APR_HASH_KEY_STRING))
         SVN_ERR(svn_fs_fs__change_txn_prop
-                (cb->txn, SVN_FS_PROP_TXN_CHECK_OOD,
+                (cb->txn, SVN_FS__PROP_TXN_CHECK_OOD,
                  NULL, pool));
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
                        APR_HASH_KEY_STRING))
         SVN_ERR(svn_fs_fs__change_txn_prop
-                (cb->txn, SVN_FS_PROP_TXN_CHECK_LOCKS,
+                (cb->txn, SVN_FS__PROP_TXN_CHECK_LOCKS,
                  NULL, pool));
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
                        APR_HASH_KEY_STRING))
         {
           target_mergeinfo = apr_hash_make(pool);
           SVN_ERR(get_txn_mergeinfo(target_mergeinfo, cb->txn->fs, cb->txn->id,
                                     pool));
           SVN_ERR(svn_fs_fs__change_txn_prop
-                  (cb->txn, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                  (cb->txn, SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
                    NULL, pool));
         }
     }
@@ -5664,12 +5664,12 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
      behaviors. */
   if (flags & SVN_FS_TXN_CHECK_OOD)
     SVN_ERR(svn_fs_fs__change_txn_prop
-            (*txn_p, SVN_FS_PROP_TXN_CHECK_OOD,
+            (*txn_p, SVN_FS__PROP_TXN_CHECK_OOD,
              svn_string_create("true", pool), pool));
 
   if (flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR(svn_fs_fs__change_txn_prop
-            (*txn_p, SVN_FS_PROP_TXN_CHECK_LOCKS,
+            (*txn_p, SVN_FS__PROP_TXN_CHECK_LOCKS,
              svn_string_create("true", pool), pool));
 
   return SVN_NO_ERROR;
