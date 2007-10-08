@@ -600,7 +600,11 @@ typedef struct neonprogress_baton_t
 } neonprogress_baton_t;
 
 static void
+#ifdef SVN_NEON_0_27
+ra_neon_neonprogress(void *baton, ne_off_t progress, ne_off_t total)
+#else
 ra_neon_neonprogress(void *baton, off_t progress, off_t total)
+#endif /* SVN_NEON_0_27 */
 {
   const neonprogress_baton_t *neonprogress_baton = baton;
   if (neonprogress_baton->progress_func)
