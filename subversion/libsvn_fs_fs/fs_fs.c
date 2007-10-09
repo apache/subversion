@@ -855,7 +855,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
  * SVN_ESTALE_RETRY_COUNT iterations (though, realistically, the
  * second try will succeed).  Make sure you put a break statement
  * after the close, at the end of your loop.  Immediately after your
- * loop loop, return err if err.
+ * loop, return err if err.
  *
  * You must initialize err to SVN_NO_ERROR, as these macros do not.
  */
