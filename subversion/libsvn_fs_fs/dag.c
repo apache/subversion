@@ -1036,11 +1036,11 @@ svn_fs_fs__dag_copy(dag_node_t *to_node,
 /*** Comparison. ***/
 
 svn_error_t *
-svn_fs_fs__things_different(svn_boolean_t *props_changed,
-                            svn_boolean_t *contents_changed,
-                            dag_node_t *node1,
-                            dag_node_t *node2,
-                            apr_pool_t *pool)
+svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
+                                svn_boolean_t *contents_changed,
+                                dag_node_t *node1,
+                                dag_node_t *node2,
+                                apr_pool_t *pool)
 {
   node_revision_t *noderev1, *noderev2;
 
