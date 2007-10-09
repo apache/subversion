@@ -1479,7 +1479,8 @@ def ls_url_encoded(sbox):
                                      "--password", svntest.main.wc_passwd)
 
   # Make sure ls shows it being locked.
-  expected_output = " +2 " + re.escape(svntest.main.wc_author) + " +O .+f"
+  expected_output = " +2 " + re.escape(svntest.main.wc_author) + " +O .+f|" \
+                    " +2 " + re.escape(svntest.main.wc_author) + "    .+\./"
   svntest.actions.run_and_verify_svn("List space dir",
                                      expected_output, [],
                                      "list", "-v", dirname)

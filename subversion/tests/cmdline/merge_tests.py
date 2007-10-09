@@ -43,11 +43,12 @@ def shorten_path_kludge(path):
   shorten_by = len(svntest.main.work_dir) + len(os.sep)
   return path[shorten_by:]
 
-def expected_merge_output(start_rev, additional_lines=None, end_rev=None):
+def expected_merge_output(start_rev, additional_lines=None, end_rev=None,
+                          same_URL=True):
   """Generate an (inefficient) regex representing the expected merge
   output from START_REV, ADDITIONAL_LINES (an array of strings), and
   END_REV."""
-  lines = [svntest.main.merge_notify_line(start_rev, end_rev)]
+  lines = [svntest.main.merge_notify_line(start_rev, end_rev, same_URL)]
   if isinstance(additional_lines, list):
     # Address "The Backslash Plague"
     #
@@ -61,7 +62,7 @@ def expected_merge_output(start_rev, additional_lines=None, end_rev=None):
         additional_lines[i] = additional_lines[i].replace("\\", "\\\\")
     lines.extend(additional_lines)
   else:
-    if sys.platform == 'win32'and additional_lines != None:
+    if sys.platform == 'win32' and additional_lines != None:
       additional_lines = additional_lines.replace("\\", "\\\\")
     lines.append(str(additional_lines))
   return "|".join(lines)
@@ -2357,7 +2358,8 @@ def merge_binary_with_common_ancestry(sbox):
   theta_J_url = sbox.repo_url + '/J/theta'
   theta_L_url = sbox.repo_url + '/L/theta'
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(7, 'U    theta\n'),
+                                     expected_merge_output(7, 'U    theta\n',
+                                                           None, False),
                                      [],
                                      'merge', theta_J_url, theta_L_url)
   os.chdir(saved_cwd)
@@ -8555,7 +8557,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   # Merge r5 to A_COPY/mu
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output(5,
-                                       ['U    ' + mu_path + '\n']),
+                                       ['U    ' + A_COPY_mu_path + '\n']),
                                      [],
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -8625,7 +8627,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   # Revert r5 and r6 on A_COPY/mu
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output(6,
-                                       ['G    ' + mu_path + '\n'], 5),
+                                       ['G    ' + A_COPY_mu_path + '\n'], 5),
                                      [],
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -8671,7 +8673,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   #Revert r5 on A_COPY/mu
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output(-5,
-                                       ['G    ' + mu_path + '\n']),
+                                       ['G    ' + A_COPY_mu_path + '\n']),
                                      [],
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
