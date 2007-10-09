@@ -243,8 +243,8 @@ svn_fs_fs__dag_get_predecessor_count(int *count,
 /* Some of these are helpers for functions outside this section. */
 
 /* Set *ID_P to the node-id for entry NAME in PARENT.  If no such
-   entry, set *ID_P to NULL but do not error.  The entry is allocated
-   in POOL or in the same pool as PARENT; the caller should copy if it
+   entry, set *ID_P to NULL but do not error.  The node-id is not
+   necessarily allocated in POOL; the caller should copy if it
    cares.  */
 static svn_error_t *
 dir_entry_id_from_node(const svn_fs_id_t **id_p,
