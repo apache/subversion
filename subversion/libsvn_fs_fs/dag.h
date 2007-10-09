@@ -416,11 +416,11 @@ svn_error_t *svn_fs_fs__dag_copy(dag_node_t *to_node,
    may leave us with a slight chance of a false positive, though I
    don't really see how that would happen in practice.  Nevertheless,
    it should probably be fixed.  */
-svn_error_t *svn_fs_fs__things_different(svn_boolean_t *props_changed,
-                                         svn_boolean_t *contents_changed,
-                                         dag_node_t *node1,
-                                         dag_node_t *node2,
-                                         apr_pool_t *pool);
+svn_error_t *svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
+                                             svn_boolean_t *contents_changed,
+                                             dag_node_t *node1,
+                                             dag_node_t *node2,
+                                             apr_pool_t *pool);
 
 
 /* Set *NODE_ID to the node-id of the coyproot of node NODE, or NULL

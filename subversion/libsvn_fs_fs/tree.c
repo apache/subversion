@@ -1110,8 +1110,8 @@ fs_props_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, pool));
   SVN_ERR(get_dag(&node2, root2, path2, pool));
-  SVN_ERR(svn_fs_fs__things_different(changed_p, NULL,
-                                      node1, node2, pool));
+  SVN_ERR(svn_fs_fs__dag_things_different(changed_p, NULL,
+                                          node1, node2, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2602,7 +2602,8 @@ fs_contents_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, pool));
   SVN_ERR(get_dag(&node2, root2, path2, pool));
-  SVN_ERR(svn_fs_fs__things_different(NULL, changed_p, node1, node2, pool));
+  SVN_ERR(svn_fs_fs__dag_things_different(NULL, changed_p, 
+                                          node1, node2, pool));
 
   return SVN_NO_ERROR;
 }
