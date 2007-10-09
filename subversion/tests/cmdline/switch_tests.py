@@ -1009,7 +1009,8 @@ def relocate_beyond_repos_root(sbox):
   # relocate actually changed the URI.  Escape the expected URI to
   # avoid problems from any regex meta-characters it may contain
   # (e.g. '+').
-  escaped_exp = '^URL: ' + re.escape(other_A_url) + '$'
+  escaped_exp = '^URL: ' + re.escape(other_A_url) + '$' \
+                '|Path.+|Repository.+|Revision.+|Node.+|Last.+|\n'
   svntest.actions.run_and_verify_svn(None, escaped_exp, [],
                                      'info', '-rHEAD', A_wc_dir)
 

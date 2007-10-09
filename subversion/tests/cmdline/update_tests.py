@@ -3013,11 +3013,15 @@ def mergeinfo_update_elision(sbox):
   os.chdir(svntest.main.work_dir)
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  update_line = 'U    ' + short_alpha_COPY_path + '\n'
+  if sys.platform == 'win32':
+    # Construct a properly escaped regex when dealing with
+    # '\' riddled paths on Windows.
+    update_line = update_line.replace("\\", "\\\\")
   svntest.actions.run_and_verify_svn(None,
                                      '|'.join(
                                         [svntest.main.merge_notify_line(3, 5),
-                                         'U    ' + short_alpha_COPY_path +
-                                         '\n']),
+                                         update_line]),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      short_alpha_COPY_path)
