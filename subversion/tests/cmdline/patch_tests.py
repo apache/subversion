@@ -147,6 +147,61 @@ def patch_basic(sbox):
                                        1, # check-props
                                        0) # no dry-run, outputs differ
 
+def patch_unidiff(sbox):
+  "apply a unidiff patch -- test external tool"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  os.chdir(wc_dir)
+
+  patch_file_path = os.tempnam(svntest.main.temp_dir, 'tmp')
+
+  unidiff_patch = [
+    "Index: A/D/gamma\n",
+    "===================================================================\n",
+    "--- A/D/gamma\t(revision 1)\n",
+    "+++ A/D/gamma\t(working copy)\n",
+    "@@ -1 +1 @@\n",
+    "-This is the file 'gamma'.\n",
+    "+It is the file 'gamma'.\n",
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Some more bytes\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'patching file A/D/gamma\n',
+    'patching file iota\n',
+  ]
+
+  gamma_contents = "It is the file 'gamma'.\n"
+  iota_contents = "This is the file 'iota'.\nSome more bytes\n"
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/gamma', contents=gamma_contents)
+  expected_disk.tweak('iota', contents=iota_contents)
+
+  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status.tweak('A/D/gamma', status='M ')
+  expected_status.tweak('iota', status='M ')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       None, None, None, None,
+                                       1, # check-props
+                                       0) # dry-run
 
 ########################################################################
 #Run the tests
@@ -154,6 +209,7 @@ def patch_basic(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               patch_basic,
+              patch_unidiff,
               ]
 
 if __name__ == '__main__':
