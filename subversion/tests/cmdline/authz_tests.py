@@ -578,7 +578,8 @@ def authz_log_and_tracing_test(sbox):
   # changed file in this rev. is not readable anymore, so author and date
   # should be hidden, like this:
   # r2 | (no author) | (no date) | 1 line
-  svntest.actions.run_and_verify_svn(None, ".*(no author).*(no date).*", [],
+  svntest.actions.run_and_verify_svn(None,
+                                     ".*(no author).*(no date).*|-+\n|\n", [],
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      'log', '-r', '2', '--limit', '1',
@@ -598,7 +599,8 @@ def authz_log_and_tracing_test(sbox):
 
   # while the HEAD rev of the copy is readable in /A/D, its parent in
   # /A/D/G is not, so don't spill any info there either.
-  svntest.actions.run_and_verify_svn(None, ".*(no author).*(no date).*", [],
+  svntest.actions.run_and_verify_svn(None,
+                                     ".*(no author).*(no date).*|-+\n|\n", [],
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                     'log', '-r', '2', '--limit', '1', D_url)
@@ -881,7 +883,9 @@ test_list = [ None,
               SkipUnless(authz_svnserve_anon_access_read,
                          svntest.main.is_ra_type_svn),
              ]
-
+test_list = [ None,
+              Skip(authz_log_and_tracing_test, svntest.main.is_ra_type_file)
+              ]
 if __name__ == '__main__':
   svntest.main.run_tests(test_list, serial_only = True)
   # NOTREACHED
