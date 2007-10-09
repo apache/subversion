@@ -251,7 +251,6 @@ def checkout_with_externals(sbox):
   externals_test_setup(sbox)
 
   wc_dir         = sbox.wc_dir
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
 
   # Create a working copy.
@@ -293,7 +292,6 @@ def update_receive_new_external(sbox):
   wc_dir         = sbox.wc_dir
 
   other_wc_dir   = sbox.add_wc_path('other')
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
@@ -341,9 +339,7 @@ def update_lose_external(sbox):
   wc_dir         = sbox.wc_dir
 
   other_wc_dir   = sbox.add_wc_path('other')
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -412,7 +408,6 @@ def update_change_pristine_external(sbox):
   wc_dir         = sbox.wc_dir
 
   other_wc_dir   = sbox.add_wc_path('other')
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
@@ -463,7 +458,6 @@ def update_change_modified_external(sbox):
   wc_dir         = sbox.wc_dir
 
   other_wc_dir   = sbox.add_wc_path('other')
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
@@ -522,7 +516,6 @@ def update_receive_change_under_external(sbox):
   wc_dir         = sbox.wc_dir
 
   other_wc_dir   = sbox.add_wc_path('other')
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
@@ -610,10 +603,7 @@ def modify_and_update_receive_new_external(sbox):
 
   external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
 
   # Checkout a working copy
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -656,7 +646,6 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
 
   external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-  repo_url       = sbox.repo_url
 
   # Try to set illegal externals in the original WC.
   def set_externals_for_path_expect_error(path, val, dir):
@@ -710,7 +699,6 @@ def export_with_externals(sbox):
   externals_test_setup(sbox)
 
   wc_dir         = sbox.wc_dir
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
 
   # Create a working copy.
@@ -803,10 +791,7 @@ def external_with_peg_and_op_revision(sbox):
 
   external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
 
   # Checkout a working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -853,9 +838,7 @@ def new_style_externals(sbox):
 
   external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-
   repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
 
   # Checkout a working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -956,9 +939,7 @@ def old_style_externals_ignore_peg_reg(sbox):
 
   external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-
   repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
 
   # Checkout a working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
