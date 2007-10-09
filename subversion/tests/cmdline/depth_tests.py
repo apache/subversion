@@ -109,11 +109,6 @@ def depth_empty_checkout(sbox):
   if os.path.exists(os.path.join(wc_empty, "A")):
     raise svntest.Failure("depth-empty checkout created subdir 'A'")
 
-#  escaped_exp = '^URL: ' + re.escape(other_A_url) + '$' \
-#                '|Path.+|Repository.+|Revision.+|Node.+|Last.+|\n'
-#  svntest.actions.run_and_verify_svn(None, escaped_exp, [],
-#                                     'info', '-rHEAD', A_wc_dir)
-  
   svntest.actions.run_and_verify_svn(
     "Expected depth empty for top of WC, got some other depth",
     "Depth: empty|Path.+|URL.+|Repository.+|Revision.+|Node Kind.+|" \
