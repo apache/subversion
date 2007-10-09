@@ -3192,9 +3192,11 @@ def mergeinfo_update_elision(sbox):
 
 
 #----------------------------------------------------------------------
+# If the update editor receives add_file(foo, copyfrom='blah'), it
+# should attempt to locate 'blah' in the wc, and then copy it into place.
 
 def update_handles_copyfrom(sbox):
-  "update should understand copyfrom"
+  "update should make use of copyfrom args"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3221,9 +3223,10 @@ def update_handles_copyfrom(sbox):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
 
-  # Make a local edit to rho in the backup working copy.
+  # Make a local edits to rho in the backup working copy - both text and props
   rho2_path = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   svntest.main.file_append(rho2_path, "Some new text.\n")
+  svntest.main.run_svn(None, 'propset', 'Kubla', 'Khan', rho2_path)
 
   # Now try updating our backup working copy: it should receive glub,
   # but with copyfrom args of rho@1, and thus copy the existing
@@ -3237,15 +3240,94 @@ def update_handles_copyfrom(sbox):
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\nSome new text.\n")
+                      contents="This is the file 'rho'.\nSome new text.\n",
+                      props={'Kubla' : 'Khan'})
   expected_disk.add({
-    'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n"),
+    'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n",
+                        props={'Kubla' : 'Khan', 'svn:mergeinfo' : ''})
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
-  expected_status.tweak('A/D/G/rho', wc_rev=2, status='M ')
+  expected_status.tweak('A/D/G/rho', wc_rev=2, status='MM')
   expected_status.add({
-    'A/D/G/glub' : Item(status='M ', wc_rev=2),
+    'A/D/G/glub' : Item(status='MM', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        check_props = True)
+
+#----------------------------------------------------------------------
+# if the update_editor receives add_file(copyfrom=...), and the
+# copyfrom_path simply isn't available in the working copy, it should
+# fall back to doing an RA request to fetch the file.
+
+def copyfrom_degrades_gracefully(sbox):
+  "update degrades well if copyfrom_path unavailable"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy.
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Move 'alpha' to 'glub'
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  glub_path = os.path.join(wc_dir, 'A', 'D', 'G', 'glub')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mv', alpha_path, glub_path)
+
+  # Commit that change, creating r2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Deleting'),
+    'A/D/G/glub' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/G/glub' : Item(status='  ', wc_rev=2),
+    })
+  expected_status.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # In the 2nd working copy, update just one side of the move -- so that
+  # alpha gets deleted, but glub not yet added.
+  E_path = os.path.join(wc_backup, 'A', 'B', 'E')
+  expected_output = svntest.wc.State(E_path, {
+      'alpha' : Item(status='D '),
+      })
+  expected_disk = wc.State('', {
+      'beta'  : wc.StateItem("This is the file 'beta'.\n"),
+      })
+  expected_status = svntest.wc.State(E_path, {
+    ''           : Item(status='  '),
+    'beta'     : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_update(E_path,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  # Now update the entire working copy, which should cause an
+  # add_file(glub, copyfrom_path=alpha)... except alpha is already gone.
+  # Update editor should gracefully fetch it via RA request.
+  expected_output = svntest.wc.State(wc_backup, { })
+  expected_output = wc.State(wc_backup, {
+    'A/D/G/glub' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.add({
+    'A/D/G/glub' : Item("This is the file 'alpha'.\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.remove('A/B/E/alpha')
+  expected_status.add({
+    'A/D/G/glub' : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_update(wc_backup,
                                         expected_output,
@@ -3253,6 +3335,7 @@ def update_handles_copyfrom(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
+
 
 def update_accept_conflicts(sbox):
   "update --accept automatic conflict resolution"
@@ -3504,7 +3587,8 @@ test_list = [ None,
               update_with_obstructing_additions,
               update_conflicted,
               mergeinfo_update_elision,
-              XFail(update_handles_copyfrom, svntest.main.is_ra_type_dav),
+              XFail(update_handles_copyfrom),
+              copyfrom_degrades_gracefully,
               update_accept_conflicts,
              ]
 
