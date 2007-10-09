@@ -148,6 +148,13 @@ Candidate changes:
     Votes:
       +1: malcolm, hwright
 
+  * r27056
+    Heed the --config-dir option when it is passed to svnsync.
+    Justification:
+      Otherwise, user-specified configuration is ignored.
+    Votes:
+      +1: dlr
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
