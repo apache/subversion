@@ -598,13 +598,6 @@ svn_fs_fs__dag_clone_root(dag_node_t **root_p,
 }
 
 
-/* Delete the directory entry named NAME from PARENT, allocating from
-   POOL.  PARENT must be mutable.  NAME must be a single path
-   component.  If REQUIRE_EMPTY is true and the node being deleted is
-   a directory, it must be empty.
-
-   If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
-   PARENT.  */
 svn_error_t *
 svn_fs_fs__dag_delete(dag_node_t *parent,
                       const char *name,
