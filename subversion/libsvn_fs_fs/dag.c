@@ -44,12 +44,6 @@ struct dag_node_t
   /* The filesystem this dag node came from. */
   svn_fs_t *fs;
 
-  /* The pool in which this dag_node_t was allocated.  Unlike
-     filesystem and root pools, this is not a private pool for this
-     structure!  The caller may have allocated other objects of their
-     own in it.  */
-  apr_pool_t *pool;
-
   /* The node revision ID for this dag node, allocated in POOL.  */
   svn_fs_id_t *id;
 
@@ -131,9 +125,7 @@ copy_node_revision(node_revision_t *noderev,
 }
 
 
-/* Set *NODEREV_P to the cached node-revision for NODE.  If NODE is
-   immutable, the node-revision is allocated in NODE->pool.  If NODE
-   is mutable, the node-revision is allocated in POOL.
+/* Set *NODEREV_P to the cached node-revision for NODE in POOL.
 
    If you plan to change the contents of NODE, be careful!  We're
    handing you a pointer directly to our cached node-revision, not
@@ -182,7 +174,6 @@ svn_fs_fs__dag_get_node(dag_node_t **node,
   new_node = apr_pcalloc(pool, sizeof(*new_node));
   new_node->fs = fs;
   new_node->id = svn_fs_fs__id_copy(id, pool);
-  new_node->pool = pool;
 
   /* Grab the contents so we can inspect the node's kind and created path. */
   SVN_ERR(get_node_revision(&noderev, new_node, pool));
@@ -442,7 +433,7 @@ svn_fs_fs__dag_set_proplist(dag_node_t *node,
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_fs__dag_check_mutable(node))
     {
-      svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, node->pool);
+      svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
          "Can't set proplist on *immutable* node-revision %s",
@@ -940,7 +931,6 @@ svn_fs_fs__dag_dup(dag_node_t *node,
   dag_node_t *new_node = apr_pcalloc(pool, sizeof(*new_node));
 
   new_node->fs = node->fs;
-  new_node->pool = pool;
   new_node->id = svn_fs_fs__id_copy(node->id, pool);
   new_node->kind = node->kind;
   new_node->created_path = apr_pstrdup(pool, node->created_path);
