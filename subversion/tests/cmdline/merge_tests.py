@@ -7972,7 +7972,7 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                      A_url + '/D/gamma' + '@4',
                                      Acopy_gamma_path)
 
-  svntest.actions.run_and_verify_svn(None, expected_merge_output(2,
+  svntest.actions.run_and_verify_svn(None, expected_merge_output(3,
                                      'D    ' + Acopy_gamma_path + '\n', 5),
                                      [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
@@ -8771,7 +8771,7 @@ test_list = [ None,
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
               merge_with_depth_files,
-              merge_fails_if_subtree_is_deleted_on_src,
+              XFail(merge_fails_if_subtree_is_deleted_on_src),
               no_mergeinfo_from_no_op_merge,
               merge_to_sparse_directories,
               merge_old_and_new_revs_from_renamed_dir,
