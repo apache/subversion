@@ -609,7 +609,6 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
   svn_fs_t *fs = parent->fs;
   svn_fs_dirent_t *dirent;
   svn_fs_id_t *id;
-  dag_node_t *node;
 
   /* Make sure parent is a directory. */
   if (parent->kind != svn_node_dir)
@@ -649,10 +648,6 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
   /* Stash a copy of the ID, since dirent will become invalid during
      svn_fs_fs__dag_delete_if_mutable. */
   id = svn_fs_fs__id_copy(dirent->id, pool);
-
-  /* Use the ID to get the entry's node.  */
-  SVN_ERR(svn_fs_fs__dag_get_node(&node, svn_fs_fs__dag_get_fs(parent), id,
-                                  pool));
 
   /* If mutable, remove it and any mutable children from db. */
   SVN_ERR(svn_fs_fs__dag_delete_if_mutable(parent->fs, id, pool));
