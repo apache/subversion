@@ -883,9 +883,7 @@ test_list = [ None,
               SkipUnless(authz_svnserve_anon_access_read,
                          svntest.main.is_ra_type_svn),
              ]
-test_list = [ None,
-              Skip(authz_log_and_tracing_test, svntest.main.is_ra_type_file)
-              ]
+
 if __name__ == '__main__':
   svntest.main.run_tests(test_list, serial_only = True)
   # NOTREACHED
