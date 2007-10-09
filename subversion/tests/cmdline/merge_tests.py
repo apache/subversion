@@ -8702,6 +8702,75 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                        expected_skip,
                                        None, None, None, None, None, 1)
   os.chdir(saved_cwd)
+
+def merge_old_and_new_revs_from_renamed_file(sbox):
+  "merge -rold(before rename):head renamed file"
+
+  ## See http://svn.haxx.se/dev/archive-2007-09/0706.shtml ##
+
+  # Create a WC with a single branch
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  repo_url = sbox.repo_url
+  mu_url = repo_url + '/A/mu'
+  mu_MOVED_url = repo_url + '/A/mu_MOVED'
+  mu_COPY_url = repo_url + '/A/mu_COPY'
+  mu_COPY_path = os.path.join(wc_dir, 'A', 'mu_COPY')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_MOVED_path = os.path.join(wc_dir, 'A', 'mu_MOVED')
+
+  # Copy mu to mu_COPY
+  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
+                                     [], 'cp', '-m', 'cp mu to mu_COPY',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     mu_url, mu_COPY_url)
+
+  # Make a modification to A/mu
+  svntest.main.file_write(mu_path, "This is the file 'mu' modified.\n")
+  expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Move mu to mu_MOVED
+  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 4.\n'],
+                                     [], 'mv', '-m', 'mv mu to mu_MOVED',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     mu_url, mu_MOVED_url)
+
+  # Update the working copy to get mu_MOVED
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Make a modification to mu_MOVED
+  svntest.main.file_write(mu_MOVED_path, "This is 'mu' in mu_MOVED.\n")
+  expected_output = wc.State(wc_dir, {'A/mu_MOVED' : Item(verb='Sending')})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
+  expected_status.remove('A/mu')
+  expected_status.add({
+    'A/mu_MOVED'  : Item(status='  ', wc_rev=5),
+    'A/mu_COPY'   : Item(status='  ', wc_rev=4),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Merge A/mu_MOVED to A/mu_COPY
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output(None, 'UG   '+
+                                                           mu_COPY_path +
+                                                           '\n'),
+                                     [], 'merge', '-r', '1:5',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     mu_MOVED_url,
+                                     mu_COPY_path)
+
 ########################################################################
 # Run the tests
 
@@ -8776,6 +8845,7 @@ test_list = [ None,
               merge_to_sparse_directories,
               merge_old_and_new_revs_from_renamed_dir,
               merge_with_child_having_different_rev_ranges_to_merge,
+              merge_old_and_new_revs_from_renamed_file,
              ]
 
 if __name__ == '__main__':
