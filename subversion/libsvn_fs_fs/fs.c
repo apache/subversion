@@ -29,7 +29,6 @@
 #include "svn_version.h"
 #include "fs.h"
 #include "err.h"
-#include "dag.h"
 #include "fs_fs.h"
 #include "tree.h"
 #include "lock.h"
