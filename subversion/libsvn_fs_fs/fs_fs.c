@@ -1743,10 +1743,23 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         svn_revnum_t rev,
                         apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *revision_file;
   apr_off_t root_offset;
   svn_fs_id_t *root_id;
   svn_error_t *err;
+  unsigned int hid;
+  svn_fs_id_t *cached_id;
+
+  /* Calculate an index into the revroot id cache */
+  hid = RRI_CACHE_ENTRIES_MASK(rev);
+  cached_id = ffd->rev_root_id_cache[hid];
+
+  if (cached_id && rev == svn_fs_fs__id_rev(cached_id))
+    {
+      *root_id_p = svn_fs_fs__id_copy(cached_id, pool);
+      return SVN_NO_ERROR;
+    }
 
   err = svn_io_file_open(&revision_file, svn_fs_fs__path_rev(fs, rev, pool),
                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
@@ -1765,6 +1778,15 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, root_offset, pool));
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
+
+  /* Cache it (and a pool) */
+  ffd->rev_root_id_cache[hid] = NULL;
+  if (ffd->rev_root_id_cache_pool[hid])
+    svn_pool_clear(ffd->rev_root_id_cache_pool[hid]);
+  else
+    ffd->rev_root_id_cache_pool[hid] = svn_pool_create(fs->pool);
+  ffd->rev_root_id_cache[hid] 
+      = svn_fs_fs__id_copy(root_id, ffd->rev_root_id_cache_pool[hid]);
 
   *root_id_p = root_id;
 
