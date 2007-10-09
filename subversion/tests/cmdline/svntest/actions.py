@@ -322,7 +322,8 @@ def verify_update(actual_output, wc_dir_name,
   on failure."""
 
   # Verify actual output against expected output.
-  tree.compare_trees (actual_output, output_tree)
+  if output_tree:
+    tree.compare_trees (actual_output, output_tree)
 
   # Create a tree by scanning the working copy
   actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
@@ -640,6 +641,13 @@ def run_and_verify_patch(dir, patch_path,
                      extra_skip, None, missing_skip, None)
 
   mytree = tree.build_tree_from_checkout(out, 0)
+
+  # when the expected output is a list, we want a line-by-line
+  # comparison to happen instead of a tree comparison
+  if isinstance(output_tree, type([])):
+    verify.verify_outputs(None, out, err, output_tree, error_re_string)
+    output_tree = None
+
   verify_update (mytree, dir,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
