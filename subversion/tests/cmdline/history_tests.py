@@ -21,7 +21,7 @@ import os
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -128,7 +128,7 @@ def cat_traces_renames(sbox):
 
   # svn cat -rHEAD rho --> should see 'unrelated object' error.
   svntest.actions.run_and_verify_svn("unrelated object",
-                                     None, SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'cat',  '-r', 'HEAD', rho_path)
 
 def cat_avoids_false_identities(sbox):
@@ -205,7 +205,7 @@ def cat_avoids_false_identities(sbox):
   # 'svn cat -r2 iota' should error, because the line of history
   # currently identified by /iota did not exist in r2, even though a
   # totally unrelated file of the same name did.
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'cat', '-r', '2', iota_path)
 
 

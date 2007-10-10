@@ -154,8 +154,8 @@ jstring Prompter::username()
 }
 
 /**
- * Retrieve the username from the Java object
- * @return Java string for the username or NULL
+ * Retrieve the password from the Java object
+ * @return Java string for the password or NULL
  */
 jstring Prompter::password()
 {

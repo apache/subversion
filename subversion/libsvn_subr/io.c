@@ -1215,7 +1215,7 @@ get_default_file_perms(const char *path, apr_fileperms_t *perms,
 
 /* This is a helper function for the svn_io_set_file_read* functions
    that attempts to honor the users umask when dealing with
-   permission changes. */
+   permission changes.  It is a no-op when invoked on a symlink. */
 static svn_error_t *
 io_set_file_perms(const char *path,
                   svn_boolean_t change_readwrite,
@@ -1236,7 +1236,7 @@ io_set_file_perms(const char *path,
      by getting the current perms and adding bits
      only on where read perms are granted.  If this fails
      fall through to just setting file attributes. */
-  status = apr_stat(&finfo, path_apr, APR_FINFO_PROT, pool);
+  status = apr_stat(&finfo, path_apr, APR_FINFO_PROT | APR_FINFO_LINK, pool);
   if (status)
     {
       if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
@@ -1247,6 +1247,9 @@ io_set_file_perms(const char *path,
                                   svn_path_local_style(path, pool));
       return SVN_NO_ERROR;
     }
+
+  if (finfo.filetype == APR_LNK)
+    return SVN_NO_ERROR;
 
   perms_to_set = finfo.protection;
   if (change_readwrite)
@@ -1735,7 +1738,7 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
 svn_error_t *
 svn_io_remove_dir(const char *path, apr_pool_t *pool)
 {
-  return svn_io_remove_dir2(path, FALSE, pool);
+  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
 }
 
 /*
@@ -1769,6 +1772,7 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
    This is a function to perform the equivalent of 'rm -rf'. */
 svn_error_t *
 svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
+                   svn_cancel_func_t cancel_func, void *cancel_baton,
                    apr_pool_t *pool)
 {
   apr_status_t status;
@@ -1778,6 +1782,12 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   const char *path_apr;
   int need_rewind;
+
+  /* Check for pending cancellation request.
+     If we need to bail out, do so early. */
+
+  if (cancel_func)
+    SVN_ERR((*cancel_func)(cancel_baton));
 
   /* APR doesn't like "" directories */
   if (path[0] == '\0')
@@ -1835,11 +1845,20 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
 
               if (this_entry.filetype == APR_DIR)
                 {
-                  SVN_ERR(svn_io_remove_dir2(fullpath, FALSE, subpool));
+                  /* Don't check for cancellation, the callee
+                     will immediately do so */
+                  SVN_ERR(svn_io_remove_dir2(fullpath, FALSE,
+                                             cancel_func, cancel_baton,
+                                             subpool));
                 }
               else
                 {
-                  svn_error_t *err = svn_io_remove_file(fullpath, subpool);
+                  svn_error_t *err;
+
+                  if (cancel_func)
+                    SVN_ERR((*cancel_func)(cancel_baton));
+
+                  err = svn_io_remove_file(fullpath, subpool);
                   if (err)
                     return svn_error_createf
                       (err->apr_err, err, _("Can't remove '%s'"),

@@ -27,7 +27,12 @@ class TestCase:
   several methods that need to be overridden."""
 
   def __init__(self):
-    self._result_text = ['PASS: ', 'FAIL: ', 'SKIP: ']
+    # Each element is a tuple whose second element indicates benignity:
+    # e.g., True means "can be ignored when in quiet_mode".  See also
+    # XFail.run_test().
+    self._result_text = [('PASS: ', True),
+                         ('FAIL: ', False),
+                         ('SKIP: ', True)]
     self._list_mode_text = ''
 
   def get_description(self):
@@ -151,7 +156,10 @@ class XFail(TestCase):
 
   def run_text(self, result=0):
     if self.cond_func():
-      return ['XFAIL:', 'XPASS:', self.test_case.run_text(2)][result]
+      # Tuple elements mean same as in TestCase._result_text.
+      return [('XFAIL:', True),
+              ('XPASS:', False),
+              self.test_case.run_text(2)][result]
     else:
       return self.test_case.run_text(result)
 

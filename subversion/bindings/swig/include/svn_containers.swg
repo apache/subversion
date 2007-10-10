@@ -170,6 +170,32 @@
   }
 }
 
+%typemap(out) apr_hash_t *PROPHASH
+{
+  %append_output(svn_swig_py_prophash_to_dict($1));
+}
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(in) apr_hash_t *changed_paths
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
+{
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+
+  $1 = svn_swig_py_changed_path_hash_from_dict($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+%typemap(out) apr_hash_t *changed_paths
+{
+  %append_output(svn_swig_py_changed_path_hash_to_dict($1));
+}
 #endif
 
 #ifdef SWIGRUBY
@@ -199,7 +225,8 @@
   apr_hash_t *source_props,
   apr_hash_t *hash,
   apr_hash_t *props,
-  apr_hash_t *revprop_table
+  apr_hash_t *revprop_table,
+  apr_hash_t *revprops
 };
 #endif
 
@@ -398,8 +425,8 @@
 %typemap(in) const apr_array_header_t *STRINGLIST {
     $1 = (apr_array_header_t *) svn_swig_py_strings_to_array($input,
                                                              _global_pool);
-    if ($1 == NULL)
-        SWIG_fail;
+    if (PyErr_Occurred())
+      SWIG_fail;
 }
 #endif
 #ifdef SWIGPERL
@@ -416,16 +443,17 @@
 
 /* svn_delta_path_driver() mutates its 'paths' argument (by sorting it),
    despite the fact that it is notionally an input parameter - hence, the
-   lack of 'const' in that one case. 
-   
-   svn_wc_get_update_editor3() and svn_wc_get_switch_editor3() aren't changing 
-   their 'preserved_exts' argument, but it is forwarded to 
-   svn_cstring_match_glob_list which also doesn't modify it, but does not have 
+   lack of 'const' in that one case.
+
+   svn_wc_get_update_editor3() and svn_wc_get_switch_editor3() aren't changing
+   their 'preserved_exts' argument, but it is forwarded to
+   svn_cstring_match_glob_list which also doesn't modify it, but does not have
    const in its prototype.  */
 %apply const apr_array_header_t *STRINGLIST {
   const apr_array_header_t *args,
   const apr_array_header_t *diff_options,
   apr_array_header_t *paths,
+  apr_array_header_t *revprops,
   const apr_array_header_t *targets,
   apr_array_header_t *preserved_exts
 };

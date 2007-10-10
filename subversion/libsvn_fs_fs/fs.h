@@ -77,10 +77,16 @@ extern "C" {
 #define SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT 3
 
 /* Maximum number of directories to cache dirents for.
-   This *must* be a power of 2 for DIR_CACHE_ENTRIES_INDEX
+   This *must* be a power of 2 for DIR_CACHE_ENTRIES_MASK
    to work.  */
 #define NUM_DIR_CACHE_ENTRIES 128
 #define DIR_CACHE_ENTRIES_MASK(x) ((x) & (NUM_DIR_CACHE_ENTRIES - 1))
+
+/* Maximum number of revroot ids to cache dirents for.
+   This *must* be a power of 2 for RRI_CACHE_ENTRIES_MASK
+   to work.  */
+#define NUM_RRI_CACHE_ENTRIES 64
+#define RRI_CACHE_ENTRIES_MASK(x) ((x) & (NUM_RRI_CACHE_ENTRIES - 1))
 
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
@@ -151,6 +157,10 @@ typedef struct
   apr_hash_t *dir_cache[NUM_DIR_CACHE_ENTRIES];
   apr_pool_t *dir_cache_pool[NUM_DIR_CACHE_ENTRIES];
 
+  /* A cache of revision root IDs, each in their own pool. */
+  svn_fs_id_t *rev_root_id_cache[NUM_RRI_CACHE_ENTRIES];
+  apr_pool_t *rev_root_id_cache_pool[NUM_RRI_CACHE_ENTRIES];
+
   /* The format number of this FS. */
   int format;
   /* The maximum number of files to store per directory (for sharded
@@ -187,6 +197,8 @@ typedef struct
 
 
 /*** Representation ***/
+/* If you add fields to this, check to see if you need to change
+ * svn_fs_fs__rep_copy. */
 typedef struct
 {
   /* MD5 checksum for the contents produced by this representation.
@@ -218,6 +230,8 @@ typedef struct
 
 
 /*** Node-Revision ***/
+/* If you add fields to this, check to see if you need to change
+ * copy_node_revision in dag.c. */
 typedef struct
 {
   /* node kind */

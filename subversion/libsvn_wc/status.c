@@ -823,9 +823,10 @@ get_dir_status(struct edit_baton *eb,
   /* Get this directory's entry. */
   SVN_ERR(svn_wc_entry(&dir_entry, path, adm_access, FALSE, subpool));
 
-  /* If "this dir" has "svn:externals" property set on it, store its
-     name and value in traversal_info.  Also, we want to track the
-     externals internally so we can report status more accurately. */
+  /* If "this dir" has "svn:externals" property set on it, store the
+     name and value in traversal_info, along with this directory's depth.
+     (Also, we want to track the externals internally so we can report
+     status more accurately.) */
     {
       const svn_string_t *prop_val;
       SVN_ERR(svn_wc_prop_get(&prop_val, SVN_PROP_EXTERNALS, path,
@@ -848,12 +849,16 @@ get_dir_status(struct edit_baton *eb,
                            dup_path, APR_HASH_KEY_STRING, dup_val);
               apr_hash_set(eb->traversal_info->externals_new,
                            dup_path, APR_HASH_KEY_STRING, dup_val);
+              apr_hash_set(eb->traversal_info->depths,
+                           dup_path, APR_HASH_KEY_STRING,
+                           svn_depth_to_word(dir_entry->depth));
             }
 
           /* Now, parse the thing, and copy the parsed results into
              our "global" externals hash. */
           SVN_ERR(svn_wc_parse_externals_description3(&ext_items, path,
-                                                      prop_val->data, pool));
+                                                      prop_val->data, TRUE,
+                                                      pool));
           for (i = 0; ext_items && i < ext_items->nelts; i++)
             {
               svn_wc_external_item2_t *item;
@@ -1284,8 +1289,10 @@ make_dir_baton(void **dir_baton,
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,
                                   d->path, pool));
       SVN_ERR(get_dir_status(eb, status_in_parent->entry, dir_access, NULL,
-                             ignores, svn_depth_immediates, TRUE, TRUE, TRUE,
-                             hash_stash, d->statii, NULL, NULL, pool));
+                             ignores, d->depth == svn_depth_files ?
+                             svn_depth_files : svn_depth_immediates,
+                             TRUE, TRUE, TRUE, hash_stash, d->statii, NULL,
+                             NULL, pool));
 
       /* If we found a depth here, it should govern. */
       this_dir_status = apr_hash_get(d->statii, d->path, APR_HASH_KEY_STRING);
@@ -1454,24 +1461,21 @@ handle_statii(struct edit_baton *eb,
       /* Clear the subpool. */
       svn_pool_clear(subpool);
 
-      /* Now, handle the status. */
+      /* Now, handle the status.  We don't recurse for svn_depth_immediates
+         because we already have the subdirectories' statii. */
       if (status->text_status != svn_wc_status_obstructed
           && status->text_status != svn_wc_status_missing
           && status->entry && status->entry->kind == svn_node_dir
           && (depth == svn_depth_unknown
-              || depth == svn_depth_immediates
               || depth == svn_depth_infinity))
         {
           svn_wc_adm_access_t *dir_access;
-          svn_depth_t depth_minus_one = depth;
 
           SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,
                                       key, subpool));
 
-          if (depth_minus_one == svn_depth_immediates)
-            depth_minus_one = svn_depth_empty;
           SVN_ERR(get_dir_status(eb, dir_entry, dir_access, NULL,
-                                 ignores, depth_minus_one, eb->get_all,
+                                 ignores, depth, eb->get_all,
                                  eb->no_ignore, TRUE, status_func,
                                  status_baton, eb->cancel_func,
                                  eb->cancel_baton, subpool));
@@ -1531,6 +1535,7 @@ delete_entry(const char *path,
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   const char *hash_key;
+  const svn_wc_entry_t *entry;
   svn_error_t *err;
 
   /* Note:  when something is deleted, it's okay to tweak the
@@ -1542,8 +1547,9 @@ delete_entry(const char *path,
      versioned in this working copy, it was probably deleted via this
      working copy.  No need to report such a thing. */
   /* ### use svn_wc_entry() instead? */
-  SVN_ERR(svn_io_check_path(full_path, &kind, pool));
-  if (kind == svn_node_dir)
+  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, eb->adm_access,
+                                  FALSE, pool));
+  if (entry->kind == svn_node_dir)
     {
       dir_path = full_path;
       hash_key = SVN_WC_ENTRY_THIS_DIR;
@@ -1557,6 +1563,7 @@ delete_entry(const char *path,
   err = svn_wc_adm_retrieve(&adm_access, eb->adm_access, dir_path, pool);
   if (err)
     {
+      SVN_ERR(svn_io_check_path(full_path, &kind, pool));
       if ((kind == svn_node_none) && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
         {
           /* We're probably dealing with a non-recursive, (or
@@ -1583,7 +1590,7 @@ delete_entry(const char *path,
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
   if (apr_hash_get(entries, hash_key, APR_HASH_KEY_STRING))
     SVN_ERR(tweak_statushash(db, db, TRUE, eb->adm_access,
-                             full_path, kind == svn_node_dir,
+                             full_path, entry->kind == svn_node_dir,
                              svn_wc_status_deleted, 0, revision, NULL));
 
   /* Mark the parent dir -- it lost an entry (unless that parent dir
@@ -1591,7 +1598,7 @@ delete_entry(const char *path,
      node).  */
   if (db->parent_baton && (! *eb->target))
     SVN_ERR(tweak_statushash(db->parent_baton, db, TRUE, eb->adm_access,
-                             db->path, kind == svn_node_dir,
+                             db->path, entry->kind == svn_node_dir,
                              svn_wc_status_modified, 0, SVN_INVALID_REVNUM,
                              NULL));
 
@@ -2025,6 +2032,8 @@ close_edit(void *edit_baton,
                    eb->anchor, APR_HASH_KEY_STRING, NULL);
       apr_hash_set(eb->traversal_info->externals_new,
                    eb->anchor, APR_HASH_KEY_STRING, NULL);
+      apr_hash_set(eb->traversal_info->depths,
+                   eb->anchor, APR_HASH_KEY_STRING, NULL);
     }
 
   return err;
@@ -2144,7 +2153,7 @@ svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
                                    edit_revision,
                                    anchor,
                                    target,
-                                   SVN_DEPTH_FROM_RECURSE_STATUS(recurse),
+                                   SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                                    get_all,
                                    no_ignore,
                                    ignores,
@@ -2199,7 +2208,7 @@ svn_wc_get_status_editor(const svn_delta_editor_t **editor,
   SVN_ERR(svn_wc_get_default_ignores(&ignores, config, pool));
   return svn_wc_get_status_editor3(editor, edit_baton, NULL, edit_revision,
                                    anchor, target,
-                                   SVN_DEPTH_FROM_RECURSE_STATUS(recurse),
+                                   SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                                    get_all, no_ignore, ignores,
                                    old_status_func_cb, b,
                                    cancel_func, cancel_baton,

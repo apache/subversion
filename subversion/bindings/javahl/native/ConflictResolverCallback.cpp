@@ -137,10 +137,10 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t *result,
   jstring jbasePath = JNIUtil::makeJString(desc->base_file);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
-  jstring jreposPath = JNIUtil::makeJString(desc->repos_file);
+  jstring jreposPath = JNIUtil::makeJString(desc->their_file);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
-  jstring juserPath = JNIUtil::makeJString(desc->user_file);
+  jstring juserPath = JNIUtil::makeJString(desc->my_file);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
   jstring jmergedPath = JNIUtil::makeJString(desc->merged_file);
@@ -210,10 +210,10 @@ svn_wc_conflict_result_t ConflictResolverCallback::javaResultToC(jint result)
       return svn_wc_conflict_result_resolved;
     case org_tigris_subversion_javahl_ConflictResolverCallback_Result_choose_base:
       return svn_wc_conflict_result_choose_base;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_choose_repos:
-      return svn_wc_conflict_result_choose_repos;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_choose_user:
-      return svn_wc_conflict_result_choose_user;
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_choose_theirs:
+      return svn_wc_conflict_result_choose_theirs;
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_choose_mine:
+      return svn_wc_conflict_result_choose_mine;
     case org_tigris_subversion_javahl_ConflictResolverCallback_Result_choose_merged:
       return svn_wc_conflict_result_choose_merged;
     }

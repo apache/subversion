@@ -228,7 +228,7 @@ svn_client_checkout2(svn_revnum_t *result_rev,
 {
   return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
                                        revision,
-                                       SVN_DEPTH_FROM_RECURSE(recurse),
+                                       SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                        ignore_externals, FALSE, NULL, ctx,
                                        pool);
 }
@@ -248,6 +248,6 @@ svn_client_checkout(svn_revnum_t *result_rev,
 
   return svn_client__checkout_internal(result_rev, URL, path, &peg_revision,
                                        revision,
-                                       SVN_DEPTH_FROM_RECURSE(recurse),
+                                       SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                        FALSE, FALSE, NULL, ctx, pool);
 }

@@ -1188,27 +1188,34 @@ start_report(svn_ra_serf__xml_parser_t *parser,
     {
       /* If the server didn't reply with an actual depth value, it
          isn't depth-aware, and we'll need to filter its response. */
-      if (! svn_ra_serf__find_attr(attrs, "depth"))
+      if (! svn_xml_get_attr_value("depth", attrs))
         {
           const svn_delta_editor_t *filter_editor;
           void *filter_baton;
-          svn_depth_t depth = ctx->depth;
           svn_boolean_t has_target = *(ctx->update_target) ? TRUE : FALSE;
-
-          SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, &filter_baton,
-                                                ctx->update_editor,
-                                                ctx->update_baton,
-                                                depth, has_target,
-                                                ctx->sess->pool));
-          ctx->update_editor = filter_editor;
-          ctx->update_baton = filter_baton;
+          
+          /* We can skip the depth filtering when the user requested
+             depth_files or depth_infinity because the server will
+             transmit the right stuff anyway. */
+          if ((ctx->depth != svn_depth_files)
+              && (ctx->depth != svn_depth_infinity))
+            {
+              SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
+                                                    &filter_baton,
+                                                    ctx->update_editor,
+                                                    ctx->update_baton,
+                                                    ctx->depth, has_target,
+                                                    ctx->sess->pool));
+              ctx->update_editor = filter_editor;
+              ctx->update_baton = filter_baton;
+            }
         }
     }
   else if (state == NONE && strcmp(name.name, "target-revision") == 0)
     {
       const char *rev;
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
 
       if (!rev)
         {
@@ -1226,7 +1233,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       const char *rev;
       report_info_t *info;
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
 
       if (!rev)
         {
@@ -1261,7 +1268,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       report_dir_t *dir;
       report_info_t *info;
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
 
       if (!rev)
         {
@@ -1270,7 +1277,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
              _("Missing revision attr in open-directory element"));
         }
 
-      dirname = svn_ra_serf__find_attr(attrs, "name");
+      dirname = svn_xml_get_attr_value("name", attrs);
 
       if (!dirname)
         {
@@ -1306,7 +1313,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       report_dir_t *dir;
       report_info_t *info;
 
-      dir_name = svn_ra_serf__find_attr(attrs, "name");
+      dir_name = svn_xml_get_attr_value("name", attrs);
       if (!dir_name)
         {
           return svn_error_create
@@ -1340,7 +1347,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       const char *file_name, *rev;
       report_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
 
       if (!file_name)
         {
@@ -1349,7 +1356,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
              _("Missing name attr in open-file element"));
         }
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
 
       if (!rev)
         {
@@ -1373,7 +1380,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       const char *file_name;
       report_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
 
       if (!file_name)
         {
@@ -1400,7 +1407,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       report_info_t *info;
       apr_pool_t *tmppool;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
 
       if (!file_name)
         {
@@ -1431,7 +1438,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       const char *file_name;
       report_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
 
       if (!file_name)
         {
@@ -1454,7 +1461,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       const char *file_name;
       report_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
 
       if (!file_name)
         {
@@ -1492,7 +1499,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
           info = push_state(parser, ctx, PROP);
 
-          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          full_prop_name = svn_xml_get_attr_value("name", attrs);
           if (!full_prop_name)
             {
               return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -1510,7 +1517,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info->prop_ns = apr_pstrmemdup(info->dir->pool, full_prop_name,
                                          colon - full_prop_name);
           info->prop_name = apr_pstrdup(parser->state->pool, colon);
-          info->prop_encoding = svn_ra_serf__find_attr(attrs, "encoding");
+          info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
           info->prop_val = NULL;
           info->prop_val_len = 0;
         }
@@ -1569,7 +1576,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
           info = push_state(parser, ctx, PROP);
 
-          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          full_prop_name = svn_xml_get_attr_value("name", attrs);
           if (!full_prop_name)
             {
               return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -1586,7 +1593,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info->prop_ns = apr_pstrmemdup(info->dir->pool, full_prop_name,
                                          colon - full_prop_name);
           info->prop_name = apr_pstrdup(parser->state->pool, colon);
-          info->prop_encoding = svn_ra_serf__find_attr(attrs, "encoding");
+          info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
           info->prop_val = NULL;
           info->prop_val_len = 0;
         }

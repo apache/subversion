@@ -67,12 +67,12 @@ public interface ConflictResolverCallback extends EventListener
         /**
          * User chooses the repository file.
          */
-        public static final int choose_repos = 3;
+        public static final int choose_theirs = 3;
 
         /**
          * User chooses own version of file.
          */
-        public static final int choose_user = 4;
+        public static final int choose_mine = 4;
 
         /**
          * User chooses the merged-file (which she may have manually

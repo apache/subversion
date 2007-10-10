@@ -21,7 +21,7 @@ import shutil, stat, re, os
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -44,7 +44,7 @@ def basic_checkout(sbox):
   # Checkout of a different URL into a working copy fails
   A_url = sbox.repo_url + '/A'
   svntest.actions.run_and_verify_svn("No error where some expected",
-                                      None, SVNAnyOutput,
+                                      None, svntest.verify.AnyOutput,
                                      # "Obstructed update",
                                      'co', A_url,
                                      '--username',
@@ -225,6 +225,8 @@ def basic_mkdir_url(sbox):
 
   svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
                                      ["\n", "Committed revision 2.\n"], [],
+                                     "--username", svntest.main.wc_author,
+                                     "--password", svntest.main.wc_passwd,
                                      'mkdir', '-m', 'log_msg', Y_url, Y_Z_url)
 
   expected_output = wc.State(sbox.wc_dir, {
@@ -258,11 +260,15 @@ def basic_mkdir_url_with_parents(sbox):
   svntest.actions.run_and_verify_svn("erroneous mkdir URL URL/subdir",
                                      [],
                                      ".*Try 'svn mkdir --parents' instead.*",
+                                     "--username", svntest.main.wc_author,
+                                     "--password", svntest.main.wc_passwd,
                                      'mkdir', '-m', 'log_msg',
                                      Y_Z_url)
 
   svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
                                      ["\n", "Committed revision 2.\n"], [],
+                                     "--username", svntest.main.wc_author,
+                                     "--password", svntest.main.wc_passwd,
                                      'mkdir', '-m', 'log_msg',
                                      '--parents', Y_Z_url)
 
@@ -1004,31 +1010,31 @@ def basic_delete(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
   # 'svn rm' that should fail
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', chi_path)
 
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', chi_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', rho_path)
 
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', rho_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', F_path)
 
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', F_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', sigma_path)
 
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', sigma_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', X_path)
 
   # check status has not changed
@@ -1201,7 +1207,7 @@ def basic_node_kind_change(sbox):
 
   # Try and fail to create a directory (file scheduled for deletion)
   svntest.actions.run_and_verify_svn('Cannot change node kind',
-                                     None, SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'mkdir', gamma_path)
 
   # Status is unchanged
@@ -1220,7 +1226,7 @@ def basic_node_kind_change(sbox):
 
   # Try and fail to create a directory (file deleted)
   svntest.actions.run_and_verify_svn('Cannot change node kind',
-                                     None, SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'mkdir', gamma_path)
 
   # Status is unchanged
@@ -1405,7 +1411,7 @@ def nonexistent_repository(sbox):
   # the root directory, the test could fail, and that's just too bad :-).
 
   output, errput = svntest.actions.run_and_verify_svn(
-    None, None, SVNAnyOutput,
+    None, None, svntest.verify.AnyOutput,
     'log', 'file:///nonexistent_path')
 
   for line in errput:
@@ -1479,7 +1485,7 @@ def basic_add_ignores(sbox):
   open(foo_o_path, 'w')
 
   output, err = svntest.actions.run_and_verify_svn(
-    "No output where some expected", SVNAnyOutput, [],
+    "No output where some expected", svntest.verify.AnyOutput, [],
     'add', dir_path)
 
   for line in output:
@@ -1502,7 +1508,7 @@ def basic_add_local_ignores(sbox):
   dir_path = os.path.join(wc_dir, 'dir')
   file_path = os.path.join(dir_path, 'app.lock')
 
-  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'mkdir', dir_path)
   svntest.main.run_svn(None, 'propset', 'svn:ignore', '*.lock', dir_path)
   open(file_path, 'w')
@@ -1531,7 +1537,7 @@ def basic_add_no_ignores(sbox):
   open(foo_rej_path, 'w')
 
   output, err = svntest.actions.run_and_verify_svn(
-    "No output where some expected", SVNAnyOutput, [],
+    "No output where some expected", svntest.verify.AnyOutput, [],
     'add', '--no-ignore', dir_path)
 
   for line in output:
@@ -1606,7 +1612,7 @@ def uri_syntax(sbox):
   scheme = url[:url.find(":")]
   url = scheme + "://some_nonexistent_host_with_no_trailing_slash"
   svntest.actions.run_and_verify_svn("No error where one expected",
-                                     None, SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'co', url, local_dir)
 
   # Different RA layers give different errors for failed checkouts;
@@ -1695,7 +1701,10 @@ def basic_peg_revision(sbox):
 
   svntest.main.file_append(wc_file, 'xyz\n')
   svntest.main.run_svn(None, 'add', wc_file)
-  svntest.main.run_svn(None, 'ci', '-m', 'secret log msg', wc_file)
+  svntest.main.run_svn(None,
+                       "--username", svntest.main.wc_author,
+                       "--password", svntest.main.wc_passwd,
+                       'ci', '-m', 'secret log msg', wc_file)
 
   # Without the trailing "@", expect failure.
   output, errlines = svntest.actions.run_and_verify_svn(\
@@ -1866,11 +1875,17 @@ def windows_paths_in_repos(sbox):
   chi_url = sbox.repo_url + '/c:hi'
 
   # do some manipulations on a folder containing a windows drive name.
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'log_msg',
-                                    chi_url)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'mkdir', '-m', 'log_msg',
+                                     chi_url)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', 'log_msg',
-                                    chi_url)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'rm', '-m', 'log_msg',
+                                     chi_url)
 
 def basic_rm_urls_one_repo(sbox):
   "remotely remove directories from one repository"
@@ -1882,7 +1897,10 @@ def basic_rm_urls_one_repo(sbox):
   # Test 1: remotely delete one directory
   E_url = repo_url + '/A/B/E'
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', 'log_msg',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'rm', '-m', 'log_msg',
                                      E_url)
 
   # Create expected trees and update
@@ -1904,7 +1922,10 @@ def basic_rm_urls_one_repo(sbox):
   F_url = repo_url + '/A/B/F'
   C_url = repo_url + '/A/C'
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', 'log_msg',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'rm', '-m', 'log_msg',
                                      F_url, C_url)
 
   # Create expected output tree for an update of wc_backup.
@@ -1939,7 +1960,7 @@ def basic_rm_urls_multi_repos(sbox):
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
   other_wc_dir = sbox.add_wc_path("other")
   svntest.actions.run_and_verify_svn("Unexpected error during co",
-                                     SVNAnyOutput, [], "co",
+                                     svntest.verify.AnyOutput, [], "co",
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      other_repo_url,
@@ -2117,30 +2138,40 @@ def automatic_conflict_resolution(sbox):
   # So now lambda, mu and rho are all in a "conflicted" state.  Run 'svn
   # resolved' with the respective "--accept[mine|orig|repo]" flag.
 
+  # But first, check --accept actions resolved does not accept.
+  svntest.actions.run_and_verify_svn(None,
+                                     # stdout, stderr
+                                     None,
+                                     ".*invalid 'accept' ARG",
+                                     'resolved', '--accept=postpone')
+  svntest.actions.run_and_verify_svn(None,
+                                     # stdout, stderr
+                                     None,
+                                     ".*invalid 'accept' ARG",
+                                     'resolved', '--accept=edit')
+  svntest.actions.run_and_verify_svn(None,
+                                     # stdout, stderr
+                                     None,
+                                     ".*invalid 'accept' ARG",
+                                     'resolved', '--accept=launch')
   # Run 'svn resolved --accept=NOTVALID.  Using omega for the test.
   svntest.actions.run_and_verify_svn("Resolved command", None,
-                                     "svn: 'NOTVALID' is not a valid accept value; "
-                                     "try 'left', 'right', or 'working'\n",
+                                     ".*NOTVALID' is not a valid accept value",
                                      'resolved',
                                      '--accept=NOTVALID',
                                      omega_path_backup)
 
-  # Run 'svn resolved --accept=left.  Using lambda for the test.
+  # Resolve lambda, mu, and rho with different --accept options.
   svntest.actions.run_and_verify_svn("Resolved command", None, [],
-                                     'resolved',
-                                     '--accept=left',
+                                     'resolved', '--accept=base',
                                      lambda_path_backup)
-
-  # Run 'svn resolved --accept=working.  Using mu for the test.
   svntest.actions.run_and_verify_svn("Resolved command", None, [],
                                      'resolved',
-                                     '--accept=working',
+                                     '--accept=mine',
                                      mu_path_backup)
-
-  # Run 'svn resolved --accept=right.  Using rho for the test.
   svntest.actions.run_and_verify_svn("Resolved command", None, [],
                                      'resolved',
-                                     '--accept=right',
+                                     '--accept=theirs',
                                      rho_path_backup)
 
   # Set the expected disk contents for the test

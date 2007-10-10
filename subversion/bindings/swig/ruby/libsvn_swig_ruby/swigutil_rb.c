@@ -3,7 +3,7 @@
 #define SVN_SWIG_SWIGUTIL_RB_C
 
 #ifdef WIN32
-#  include "ruby/rubyhead.swg"
+#  include "rubyhead.swg"
 #endif
 #include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
@@ -853,9 +853,9 @@ svn_swig_rb_to_depth(VALUE value)
   if (NIL_P(value)) {
     return svn_depth_infinity;
   } else if (value == Qtrue) {
-    return SVN_DEPTH_FROM_RECURSE(TRUE);
+    return SVN_DEPTH_INFINITY_OR_FILES(TRUE);
   } else if (value == Qfalse) {
-    return SVN_DEPTH_FROM_RECURSE(FALSE);
+    return SVN_DEPTH_INFINITY_OR_FILES(FALSE);
   } else if (RTEST(rb_obj_is_kind_of(value, rb_cString)) ||
              RTEST(rb_obj_is_kind_of(value, rb_cSymbol))) {
     value = rb_funcall(value, id_to_s, 0);
@@ -1097,50 +1097,52 @@ c2r_ ## type ## _dup(void *type, void *ctx)                                  \
   return rb_copied_item;                                                     \
 }
 
-#define DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, type_prefix)        \
-DEFINE_DUP_BASE(type, dup_func, type_prefix)                                 \
-static VALUE                                                                 \
-c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)                  \
-{                                                                            \
-  return c2r_ ## type ## _dup((void *)type, NULL);                           \
+#define DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, type_prefix)   \
+DEFINE_DUP_BASE(type, dup_func, type_prefix)                            \
+static VALUE                                                            \
+c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)             \
+{                                                                       \
+  void *void_type;                                                      \
+  void_type = (void *)type;                                             \
+  return c2r_ ## type ## _dup(void_type, NULL);                         \
 }
 
-#define DEFINE_DUP(type, dup_func) \
+#define DEFINE_DUP_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, const)
-#define DEFINE_DUP2(type) \
-  DEFINE_DUP(type, type ## _dup)
+#define DEFINE_DUP(type) \
+  DEFINE_DUP_WITH_FUNCTION_NAME(type, type ## _dup)
 
-#define DEFINE_DUP_NO_CONVENIENCE(type, dup_func) \
+#define DEFINE_DUP_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE(type, dup_func, const)
-#define DEFINE_DUP_NO_CONVENIENCE2(type) \
-  DEFINE_DUP_NO_CONVENIENCE(type, type ## _dup)
+#define DEFINE_DUP_NO_CONVENIENCE(type) \
+  DEFINE_DUP_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, type ## _dup)
 
-#define DEFINE_DUP_NO_CONST(type, dup_func) \
+#define DEFINE_DUP_NO_CONST_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func,)
-#define DEFINE_DUP_NO_CONST2(type) \
-  DEFINE_DUP_NO_CONST(type, type ## _dup)
+#define DEFINE_DUP_NO_CONST(type) \
+  DEFINE_DUP_NO_CONST_WITH_FUNCTION_NAME(type, type ## _dup)
 
-#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type, dup_func) \
+#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, dup_func) \
   DEFINE_DUP_BASE(type, dup_func,)
-#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE2(type) \
-  DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type, type ## _dup)
+#define DEFINE_DUP_NO_CONST_NO_CONVENIENCE(type) \
+  DEFINE_DUP_NO_CONST_NO_CONVENIENCE_WITH_FUNCTION_NAME(type, type ## _dup)
 
 
-DEFINE_DUP(wc_notify, wc_dup_notify)
-DEFINE_DUP2(txdelta_window)
-DEFINE_DUP2(info)
-DEFINE_DUP2(commit_info)
-DEFINE_DUP2(lock)
-DEFINE_DUP2(auth_ssl_server_cert_info)
-DEFINE_DUP2(wc_entry)
-DEFINE_DUP2(client_diff_summarize)
-DEFINE_DUP2(dirent)
-DEFINE_DUP_NO_CONVENIENCE2(client_commit_item3)
-DEFINE_DUP_NO_CONVENIENCE2(client_proplist_item)
-DEFINE_DUP_NO_CONVENIENCE2(wc_external_item2)
-DEFINE_DUP_NO_CONVENIENCE2(log_changed_path)
-DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
-DEFINE_DUP_NO_CONST_NO_CONVENIENCE2(merge_range)
+DEFINE_DUP_WITH_FUNCTION_NAME(wc_notify, wc_dup_notify)
+DEFINE_DUP(txdelta_window)
+DEFINE_DUP(info)
+DEFINE_DUP(commit_info)
+DEFINE_DUP(lock)
+DEFINE_DUP(auth_ssl_server_cert_info)
+DEFINE_DUP(wc_entry)
+DEFINE_DUP(client_diff_summarize)
+DEFINE_DUP(dirent)
+DEFINE_DUP_NO_CONVENIENCE(client_commit_item3)
+DEFINE_DUP_NO_CONVENIENCE(client_proplist_item)
+DEFINE_DUP_NO_CONVENIENCE(wc_external_item2)
+DEFINE_DUP_NO_CONVENIENCE(log_changed_path)
+DEFINE_DUP_NO_CONST_WITH_FUNCTION_NAME(wc_status2, wc_dup_status2)
+DEFINE_DUP_NO_CONST_NO_CONVENIENCE(merge_range)
 
 
 /* Ruby -> C */
@@ -2600,16 +2602,20 @@ svn_swig_rb_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                VALUE rb_callbacks,
                                apr_pool_t *pool)
 {
-  VALUE rb_auth_baton;
+  void *auth_baton = NULL;
 
-  rb_auth_baton = rb_funcall(rb_callbacks, id_auth_baton, 0);
+  if (!NIL_P(rb_callbacks)) {
+    VALUE rb_auth_baton = Qnil;
+    rb_auth_baton = rb_funcall(rb_callbacks, id_auth_baton, 0);
+    auth_baton = r2c_swig_type(rb_auth_baton,
+                               (void *)"svn_auth_baton_t *",
+                               pool);
+  }
 
   *callbacks = apr_pcalloc(pool, sizeof(**callbacks));
 
   (*callbacks)->open_tmp_file = ra_callbacks_open_tmp_file;
-  (*callbacks)->auth_baton = r2c_swig_type(rb_auth_baton,
-                                           (void *)"svn_auth_baton_t *",
-                                           pool);
+  (*callbacks)->auth_baton = auth_baton;
   (*callbacks)->get_wc_prop = ra_callbacks_get_wc_prop;
   (*callbacks)->set_wc_prop = ra_callbacks_set_wc_prop;
   (*callbacks)->push_wc_prop = ra_callbacks_push_wc_prop;

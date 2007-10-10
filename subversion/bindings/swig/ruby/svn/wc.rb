@@ -69,19 +69,18 @@ module Svn
       Wc.match_ignore_list(path, patterns)
     end
 
-    def set_change_list(paths, change_list_name, matching_change_list_name=nil,
+    def set_changelist(paths, changelist_name, matching_changelist_name=nil,
                         cancel_func=nil, notify_func=nil)
       paths = [paths] unless paths.is_a?(Array)
-      Wc._set_changelist(paths, change_list_name, matching_change_list_name,
+      Wc._set_changelist(paths, changelist_name, matching_changelist_name,
                          cancel_func, notify_func)
     end
-    alias_method :set_changelist, :set_change_list
     module_function :set_changelist
 
     module ExternalsDescription
       module_function
-      def parse(parent_dir, desc)
-        Wc.parse_externals_description3(parent_dir, desc)
+      def parse(parent_dir, desc, canonicalize_url=true)
+        Wc.parse_externals_description3(parent_dir, desc, canonicalize_url)
       end
     end
 
@@ -191,8 +190,10 @@ module Svn
         Wc.get_ancestry(path, self)
       end
 
-      def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil)
-        Wc.walk_entries3(path, self, callbacks, show_hidden, cancel_func)
+      def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil,
+                       depth=nil)
+        Wc.walk_entries3(path, self, callbacks, depth, show_hidden,
+                         cancel_func)
       end
 
       def mark_missing_deleted(path)
@@ -275,11 +276,11 @@ module Svn
       def process_committed(path, new_revnum, rev_date=nil, rev_author=nil,
                             wcprop_changes=[], recurse=true,
                             remove_lock=true, digest=nil,
-                            remove_change_list=false)
+                            remove_changelist=false)
         Wc.process_committed4(path, self, recurse,
                               new_revnum, rev_date,
                               rev_author, wcprop_changes,
-                              remove_lock, remove_change_list, digest)
+                              remove_lock, remove_changelist, digest)
       end
 
       def crawl_revisions(path, reporter, restore_files=true,
@@ -301,10 +302,15 @@ module Svn
                         preserved_exts=nil, conflict_func=nil)
         preserved_exts ||= []
         traversal_info ||= _traversal_info
+
+        # TODO(rb support fetch_fun): implement support for the fetch_func
+        # callback.
+        fetch_func = nil
         results = Wc.get_update_editor3(target_revision, self, target,
                                         use_commit_times, depth,
                                         allow_unver_obstruction,
-                                        notify_func, cancel_func, conflict_func, diff3_cmd,
+                                        notify_func, cancel_func, conflict_func,
+                                        fetch_func, diff3_cmd,
                                         preserved_exts, traversal_info)
         target_revision_address, editor, editor_baton = results
         editor.__send__(:target_revision_address=, target_revision_address)
@@ -319,10 +325,12 @@ module Svn
                         preserved_exts=nil)
         preserved_exts ||= []
         traversal_info ||= _traversal_info
+        conflict_func = nil
         results = Wc.get_switch_editor3(target_revision, self, target,
                                         switch_url, use_commit_times, depth,
                                         allow_unver_obstruction,
                                         notify_func, cancel_func,
+                                        conflict_func,
                                         diff3_cmd, preserved_exts,
                                         traversal_info)
         target_revision_address, editor, editor_baton = results
@@ -502,8 +510,6 @@ module Svn
     end
 
     class Entry
-      alias_method :change_list, :changelist
-
       def dup
         Wc.entry_dup(self, Svn::Core::Pool.new)
       end
@@ -594,9 +600,9 @@ module Svn
 
     class CommittedQueue
       def push(access, path, recurse=true, wcprop_changes={}, remove_lock=true,
-               remove_change_list=false, digest=nil)
+               remove_changelist=false, digest=nil)
         Wc.queue_committed(self, path, access, recurse, wcprop_changes,
-                           remove_lock, remove_change_list, digest)
+                           remove_lock, remove_changelist, digest)
         self
       end
 

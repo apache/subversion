@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -21,7 +21,7 @@ import re, os.path
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip

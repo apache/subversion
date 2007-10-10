@@ -176,11 +176,11 @@ svn_cl__propedit(apr_getopt_t *os,
           peg_revision.kind = svn_opt_revision_unspecified;
 
           /* Fetch the current property. */
-          SVN_ERR(svn_client_propget3(&props, pname_utf8, target,
+          SVN_ERR(svn_client_propget4(&props, pname_utf8, target,
                                       &peg_revision,
                                       &(opt_state->start_revision),
                                       &base_rev,
-                                      FALSE, ctx, subpool));
+                                      svn_depth_empty, ctx, subpool));
 
           /* Get the property value. */
           propval = apr_hash_get(props, target, APR_HASH_KEY_STRING);
@@ -256,7 +256,7 @@ svn_cl__propedit(apr_getopt_t *os,
 
               err = svn_client_propset3(&commit_info,
                                         pname_utf8, edited_propval, target,
-                                        FALSE, opt_state->force,
+                                        svn_depth_empty, opt_state->force,
                                         base_rev,
                                         ctx, subpool);
               if (ctx->log_msg_func3)

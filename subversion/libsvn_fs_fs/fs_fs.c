@@ -855,7 +855,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
  * SVN_ESTALE_RETRY_COUNT iterations (though, realistically, the
  * second try will succeed).  Make sure you put a break statement
  * after the close, at the end of your loop.  Immediately after your
- * loop loop, return err if err.
+ * loop, return err if err.
  *
  * You must initialize err to SVN_NO_ERROR, as these macros do not.
  */
@@ -1743,10 +1743,23 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         svn_revnum_t rev,
                         apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *revision_file;
   apr_off_t root_offset;
   svn_fs_id_t *root_id;
   svn_error_t *err;
+  unsigned int hid;
+  svn_fs_id_t *cached_id;
+
+  /* Calculate an index into the revroot id cache */
+  hid = RRI_CACHE_ENTRIES_MASK(rev);
+  cached_id = ffd->rev_root_id_cache[hid];
+
+  if (cached_id && rev == svn_fs_fs__id_rev(cached_id))
+    {
+      *root_id_p = svn_fs_fs__id_copy(cached_id, pool);
+      return SVN_NO_ERROR;
+    }
 
   err = svn_io_file_open(&revision_file, svn_fs_fs__path_rev(fs, rev, pool),
                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
@@ -1765,6 +1778,15 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, root_offset, pool));
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
+
+  /* Cache it (and a pool) */
+  ffd->rev_root_id_cache[hid] = NULL;
+  if (ffd->rev_root_id_cache_pool[hid])
+    svn_pool_clear(ffd->rev_root_id_cache_pool[hid]);
+  else
+    ffd->rev_root_id_cache_pool[hid] = svn_pool_create(fs->pool);
+  ffd->rev_root_id_cache[hid] 
+      = svn_fs_fs__id_copy(root_id, ffd->rev_root_id_cache_pool[hid]);
 
   *root_id_p = root_id;
 
@@ -3187,6 +3209,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 
       break;
     }
+  if (err)
+    return err;
 
   svn_pool_destroy(iterpool);
 
@@ -3623,7 +3647,8 @@ svn_fs_fs__purge_txn(svn_fs_t *fs,
   /* Remove the shared transaction object associated with this transaction. */
   SVN_ERR(purge_shared_txn(fs, txn_id, pool));
   /* Remove the directory associated with this transaction. */
-  return svn_io_remove_dir2(path_txn_dir(fs, txn_id, pool), FALSE, pool);
+  return svn_io_remove_dir2(path_txn_dir(fs, txn_id, pool), FALSE,
+                            NULL, NULL, pool);
 }
 
 
@@ -4850,24 +4875,24 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
   if (txnprops)
     {
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD,
                        APR_HASH_KEY_STRING))
         SVN_ERR(svn_fs_fs__change_txn_prop
-                (cb->txn, SVN_FS_PROP_TXN_CHECK_OOD,
+                (cb->txn, SVN_FS__PROP_TXN_CHECK_OOD,
                  NULL, pool));
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
                        APR_HASH_KEY_STRING))
         SVN_ERR(svn_fs_fs__change_txn_prop
-                (cb->txn, SVN_FS_PROP_TXN_CHECK_LOCKS,
+                (cb->txn, SVN_FS__PROP_TXN_CHECK_LOCKS,
                  NULL, pool));
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
                        APR_HASH_KEY_STRING))
         {
           target_mergeinfo = apr_hash_make(pool);
           SVN_ERR(get_txn_mergeinfo(target_mergeinfo, cb->txn->fs, cb->txn->id,
                                     pool));
           SVN_ERR(svn_fs_fs__change_txn_prop
-                  (cb->txn, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                  (cb->txn, SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
                    NULL, pool));
         }
     }
@@ -5398,6 +5423,9 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
   SVN_ERR(svn_io_open_unique_file2(&uuid_file, &tmp_path, uuid_path,
                                     ".tmp", svn_io_file_del_none, pool));
 
+  if (! uuid)
+    uuid = svn_uuid_generate(pool);
+
   SVN_ERR(svn_io_file_write_full(uuid_file, uuid, strlen(uuid), NULL,
                                  pool));
   SVN_ERR(svn_io_file_write_full(uuid_file, "\n", 1, NULL, pool));
@@ -5658,12 +5686,12 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
      behaviors. */
   if (flags & SVN_FS_TXN_CHECK_OOD)
     SVN_ERR(svn_fs_fs__change_txn_prop
-            (*txn_p, SVN_FS_PROP_TXN_CHECK_OOD,
+            (*txn_p, SVN_FS__PROP_TXN_CHECK_OOD,
              svn_string_create("true", pool), pool));
 
   if (flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR(svn_fs_fs__change_txn_prop
-            (*txn_p, SVN_FS_PROP_TXN_CHECK_LOCKS,
+            (*txn_p, SVN_FS__PROP_TXN_CHECK_LOCKS,
              svn_string_create("true", pool), pool));
 
   return SVN_NO_ERROR;

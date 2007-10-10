@@ -35,6 +35,7 @@
 #include "svn_string.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_md5.h"
@@ -262,6 +263,9 @@ import_file(const svn_delta_editor_t *editor,
  * DIR_BATON in EDITOR.  EDIT_PATH is the path imported as the root
  * directory, so all edits are relative to that.
  *
+ * DEPTH is the depth at this point in the descent (it may be changed
+ * for recursive calls).
+ *
  * Accumulate file paths and their batons in FILES, which must be
  * non-null.  (These are used to send postfix textdeltas later).
  *
@@ -280,7 +284,7 @@ import_dir(const svn_delta_editor_t *editor,
            void *dir_baton,
            const char *path,
            const char *edit_path,
-           svn_boolean_t nonrecursive,
+           svn_depth_t depth,
            apr_hash_t *excludes,
            svn_boolean_t no_ignore,
            svn_boolean_t ignore_unknown_node_types,
@@ -356,9 +360,7 @@ import_dir(const svn_delta_editor_t *editor,
                                                    subpool))
         continue;
 
-      /* We only import subdirectories when we're doing a regular
-         recursive import. */
-      if ((dirent->kind == svn_node_dir) && (! nonrecursive))
+      if (dirent->kind == svn_node_dir && depth >= svn_depth_immediates)
         {
           void *this_dir_baton;
 
@@ -388,22 +390,27 @@ import_dir(const svn_delta_editor_t *editor,
             }
 
           /* Recurse. */
-          SVN_ERR(import_dir(editor, this_dir_baton, this_path,
-                             this_edit_path, FALSE, excludes,
-                             no_ignore, ignore_unknown_node_types,
-                             import_ctx, ctx,
-                             subpool));
+          {
+            svn_depth_t depth_below_here = depth;
+            if (depth == svn_depth_immediates)
+              depth_below_here = svn_depth_empty;
+
+            SVN_ERR(import_dir(editor, this_dir_baton, this_path,
+                               this_edit_path, depth_below_here, excludes,
+                               no_ignore, ignore_unknown_node_types,
+                               import_ctx, ctx,
+                               subpool));
+          }
 
           /* Finally, close the sub-directory. */
           SVN_ERR(editor->close_directory(this_dir_baton, subpool));
         }
-      else if (dirent->kind == svn_node_file)
+      else if (dirent->kind == svn_node_file && depth >= svn_depth_files)
         {
-          /* Import a file. */
           SVN_ERR(import_file(editor, dir_baton, this_path,
                               this_edit_path, import_ctx, ctx, subpool));
         }
-      else
+      else if (dirent->kind != svn_node_dir && dirent->kind != svn_node_file)
         {
           if (ignore_unknown_node_types)
             {
@@ -435,6 +442,9 @@ import_dir(const svn_delta_editor_t *editor,
 
 /* Recursively import PATH to a repository using EDITOR and
  * EDIT_BATON.  PATH can be a file or directory.
+ *
+ * DEPTH is the depth at which to import PATH; it behaves as for
+ * svn_client_import3().
  *
  * NEW_ENTRIES is an ordered array of path components that must be
  * created in the repository (where the ordering direction is
@@ -470,7 +480,7 @@ import(const char *path,
        apr_array_header_t *new_entries,
        const svn_delta_editor_t *editor,
        void *edit_baton,
-       svn_boolean_t nonrecursive,
+       svn_depth_t depth,
        apr_hash_t *excludes,
        svn_boolean_t no_ignore,
        svn_boolean_t ignore_unknown_node_types,
@@ -552,7 +562,7 @@ import(const char *path,
   else if (kind == svn_node_dir)
     {
       SVN_ERR(import_dir(editor, root_baton, path, edit_path,
-                         nonrecursive, excludes, no_ignore,
+                         depth, excludes, no_ignore,
                          ignore_unknown_node_types, import_ctx, ctx, pool));
 
     }
@@ -647,7 +657,7 @@ svn_error_t *
 svn_client_import3(svn_commit_info_t **commit_info_p,
                    const char *path,
                    const char *url,
-                   svn_boolean_t nonrecursive,
+                   svn_depth_t depth,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
                    svn_client_ctx_t *ctx,
@@ -779,7 +789,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
   if ((err = import(path, new_entries, editor, edit_baton,
-                    nonrecursive, excludes, no_ignore,
+                    depth, excludes, no_ignore,
                     ignore_unknown_node_types, ctx, subpool)))
     {
       svn_error_clear(editor->abort_edit(edit_baton, subpool));
@@ -819,7 +829,8 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
                    apr_pool_t *pool)
 {
   return svn_client_import3(commit_info_p,
-                            path, url, nonrecursive,
+                            path, url,
+                            SVN_DEPTH_INFINITY_OR_FILES(! nonrecursive),
                             no_ignore, FALSE, ctx, pool);
 }
 

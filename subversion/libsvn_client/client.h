@@ -110,6 +110,17 @@ svn_error_t *svn_client__prev_log_path(const char **prev_path_p,
                                        apr_pool_t *pool);
 
 
+/* Set *COPYFROM_PATH and *COPYFROM_REV to the path and revision that
+   served as the source of the copy from which PATH_OR_URL at REVISION
+   was created, or NULL and SVN_INVALID_REVNUM (respectively) if
+   PATH_OR_URL at REVISION was not the result of a copy operation. */
+svn_error_t *svn_client__get_copy_source(const char *path_or_url,
+                                         const svn_opt_revision_t *revision,
+                                         const char **copyfrom_path,
+                                         svn_revnum_t *copyfrom_rev,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *pool);
+
 /* Set *START_URL and *START_REVISION (and maybe *END_URL
    and *END_REVISION) to the revisions and repository URLs of one
    (or two) points of interest along a particular versioned resource's
@@ -184,12 +195,17 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
 /* Set REPOS_ROOT to the URL which represents the root of the
    repository in with PATH_OR_URL (at PEG_REVISION) is versioned.  Use
-   the authentication baton cached in CTX as necessary.  Use POOL for
-   all allocations. */
+   the authentication baton cached in CTX as necessary.  
+
+   ADM_ACCESS is a working copy administrative access baton associated
+   with PATH_OR_URL (if PATH_OR_URL is a working copy path), or NULL.
+
+   Use POOL for all allocations. */
 svn_error_t *
 svn_client__get_repos_root(const char **repos_root, 
                            const char *path_or_url,
                            const svn_opt_revision_t *peg_revision,
+                           svn_wc_adm_access_t *adm_access,
                            svn_client_ctx_t *ctx, 
                            apr_pool_t *pool);
 
@@ -210,13 +226,16 @@ svn_client__path_relative_to_root(const char **rel_path,
 
 /* Return the property value for any PROPNAME set on TARGET in *PROPS,
    with WC paths of char * for keys and property values of
-   svn_string_t * for values.  Assumes that PROPS is non-NULL. */
+   svn_string_t * for values.  Assumes that PROPS is non-NULL.
+
+   Treat DEPTH as in svn_client_propget4().
+*/
 svn_error_t *
 svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
                              const char *target, svn_boolean_t pristine,
                              const svn_wc_entry_t *entry,
                              svn_wc_adm_access_t *adm_access,
-                             svn_boolean_t recurse, svn_client_ctx_t *ctx,
+                             svn_depth_t depth, svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /* Retrieve the oldest revision of the node at REL_PATH at REV since
@@ -821,6 +840,17 @@ svn_client__do_commit(const char *base_url,
    subdir, or call svn_wc_remove_from_revision_control() on an
    existing one, or both.
 
+   REQUESTED_DEPTH is the requested depth of the driving operation
+   (e.g., update, switch, etc).  If it is neither svn_depth_infinity
+   nor svn_depth_unknown, then changes to svn:externals will have no
+   effect.  If REQUESTED_DEPTH is svn_depth_unknown, then the ambient
+   depth of each working copy directory holding an svn:externals value
+   will determine whether that value is interpreted there (the ambient
+   depth must be svn_depth_infinity).  If REQUESTED_DEPTH is
+   svn_depth_infinity, then it is presumed to be expanding any
+   shallower ambient depth, so changes to svn:externals values will be
+   interpreted.
+
    Pass NOTIFY_FUNC with NOTIFY_BATON along to svn_client_checkout().
 
    ### todo: AUTH_BATON may not be so useful.  It's almost like we
@@ -838,6 +868,7 @@ svn_client__do_commit(const char *base_url,
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
+                             svn_depth_t requested_depth,
                              svn_boolean_t update_unchanged,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
@@ -849,6 +880,10 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
    IS_EXPORT is set, the external items will be exported instead of
    checked out -- they will have no administrative subdirectories.
 
+   REQUESTED_DEPTH is the requested_depth of the driving operation; it
+   behaves as for svn_client__handle_externals(), except that ambient
+   depths are presumed to be svn_depth_infinity.
+
    *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
    is required.
@@ -856,6 +891,7 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__fetch_externals(apr_hash_t *externals,
+                            svn_depth_t requested_depth,
                             svn_boolean_t is_export,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,

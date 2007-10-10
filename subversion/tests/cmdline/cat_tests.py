@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -44,7 +44,8 @@ def cat_local_directory(sbox):
   A_path = os.path.join(sbox.wc_dir, 'A')
 
   svntest.actions.run_and_verify_svn('No error where one is expected',
-                                     None, svntest.SVNAnyOutput, 'cat', A_path)
+                                     None, svntest.verify.AnyOutput,
+                                     'cat', A_path)
 
 def cat_remote_directory(sbox):
   "cat a remote directory"
@@ -53,7 +54,8 @@ def cat_remote_directory(sbox):
   A_url = sbox.repo_url + '/A'
 
   svntest.actions.run_and_verify_svn('No error where one is expected',
-                                     None, svntest.SVNAnyOutput, 'cat', A_url)
+                                     None, svntest.verify.AnyOutput,
+                                     'cat', A_url)
 
 def cat_base(sbox):
   "cat a file at revision BASE"
@@ -81,8 +83,8 @@ def cat_nonexistent_file(sbox):
   bogus_path = os.path.join(wc_dir, 'A', 'bogus')
 
   svntest.actions.run_and_verify_svn('No error where one is expected',
-                                     None, svntest.SVNAnyOutput, 'cat',
-                                     bogus_path)
+                                     None, svntest.verify.AnyOutput,
+                                     'cat', bogus_path)
 
 def cat_skip_uncattable(sbox):
   "cat should skip uncattable resources"

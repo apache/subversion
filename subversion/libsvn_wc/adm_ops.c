@@ -1015,10 +1015,8 @@ erase_unversioned_from_wc(const char *path,
     {
       /* Then maybe it was a directory? */
       svn_error_clear(err);
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
 
-      err = svn_io_remove_dir2(path, FALSE, pool);
+      err = svn_io_remove_dir2(path, FALSE, cancel_func, cancel_baton, pool);
 
       if (err)
         {
@@ -1032,12 +1030,8 @@ erase_unversioned_from_wc(const char *path,
           if (kind == svn_node_file)
             SVN_ERR(svn_io_remove_file(path, pool));
           else if (kind == svn_node_dir)
-            {
-              if (cancel_func)
-                SVN_ERR(cancel_func(cancel_baton));
-
-              SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
-            }
+            SVN_ERR(svn_io_remove_dir2(path, FALSE,
+                                       cancel_func, cancel_baton, pool));
           else if (kind == svn_node_none)
             return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                      _("'%s' does not exist"),
@@ -1446,7 +1440,7 @@ svn_wc_add2(const char *path,
         {
           /* ### todo: At some point, we obviously don't want to block
              replacements where the node kind changes.  When this
-             happens, svn_wc_revert2() needs to learn how to revert
+             happens, svn_wc_revert3() needs to learn how to revert
              this situation.  At present we are using a specific node-change
              error so that clients can detect it. */
           return svn_error_createf
@@ -1530,13 +1524,13 @@ svn_wc_add2(const char *path,
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
-      /* ### TODO(sd): Both the calls to svn_wc_ensure_adm3() below pass
-         ### svn_depth_infinity.  I think this is reasonable, because
-         ### we don't have any other source of depth information in
-         ### the current context, and if svn_wc_ensure_adm3() *does*
-         ### create a new admin directory, it ought to default to
-         ### svn_depth_infinity.  However, if 'svn add' ever takes
-         ### a depth parameter, then this would need to change. */
+      /* Note that both calls to svn_wc_ensure_adm3() below pass
+         svn_depth_infinity.  Even if 'svn add' were invoked with some
+         other depth, we'd want to create the adm area with
+         svn_depth_infinity, because when the user passes add a depth,
+         that's just a way of telling Subversion what items to add,
+         not a way of telling Subversion what depth the resultant
+         newly-versioned directory should have. */
 
       if (! copyfrom_url)
         {
@@ -1917,6 +1911,19 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           SVN_WC__ENTRY_MODIFY_COPYFROM_URL |
           SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
       tmp_entry.copied = FALSE;
+
+      /* Reset the checksum if this is a replace-with-history. */
+      if (entry->kind == svn_node_file && entry->copyfrom_url)
+        {
+          const char *base_path;
+          unsigned char digest[APR_MD5_DIGESTSIZE];
+
+          base_path = svn_wc__text_revert_path(fullpath, FALSE, pool);
+          SVN_ERR(svn_io_file_checksum(digest, base_path, pool));
+          tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
+          flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+        }
+
       /* Set this to the empty string, because NULL values will disappear
          in the XML log file. */
       tmp_entry.copyfrom_url = "";
@@ -1946,9 +1953,9 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_revert2(const char *path,
+svn_wc_revert3(const char *path,
                svn_wc_adm_access_t *parent_access,
-               svn_boolean_t recursive,
+               svn_depth_t depth,
                svn_boolean_t use_commit_times,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
@@ -2063,9 +2070,15 @@ svn_wc_revert2(const char *path,
           parents_entry = apr_hash_get(entries, basey, APR_HASH_KEY_STRING);
           if (parents_entry)
             was_deleted = parents_entry->deleted;
-          if (kind == svn_node_none)
+          if (kind == svn_node_none
+              || svn_wc__adm_missing(parent_access, path))
             {
-              /* Schedule add but missing, just remove the entry */
+              /* Schedule add but missing, just remove the entry
+                 or it's missing an adm area in which case
+                 svn_wc_adm_probe_retrieve() returned the parent's
+                 adm_access, for which we definitely can't use the 'else'
+                 code path (as it will remove the parent from version
+                 control... (See issue 2425) */
               svn_wc__entry_remove(entries, basey);
               SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
             }
@@ -2082,7 +2095,7 @@ svn_wc_revert2(const char *path,
 
       /* Recursivity is taken care of by svn_wc_remove_from_revision_control,
          and we've definitely reverted PATH at this point. */
-      recursive = FALSE;
+      depth = svn_depth_empty;
       reverted = TRUE;
 
       /* If the removed item was *also* in a 'deleted' state, make
@@ -2143,7 +2156,7 @@ svn_wc_revert2(const char *path,
 
           /* Force recursion on replaced directories. */
           if (entry->schedule == svn_wc_schedule_replace)
-            recursive = TRUE;
+            depth = svn_depth_infinity;
           break;
 
         default:
@@ -2159,7 +2172,7 @@ svn_wc_revert2(const char *path,
                    pool);
 
   /* Finally, recurse if requested. */
-  if (recursive && (entry->kind == svn_node_dir))
+  if (entry->kind == svn_node_dir && depth > svn_depth_empty)
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
@@ -2171,6 +2184,10 @@ svn_wc_revert2(const char *path,
           const void *key;
           const char *keystring;
           const char *full_entry_path;
+          svn_depth_t depth_under_here = depth;
+
+          if (depth == svn_depth_files || depth == svn_depth_immediates)
+            depth_under_here = svn_depth_empty;
 
           svn_pool_clear(subpool);
 
@@ -2186,8 +2203,8 @@ svn_wc_revert2(const char *path,
           full_entry_path = svn_path_join(path, keystring, subpool);
 
           /* Revert the entry. */
-          SVN_ERR(svn_wc_revert2(full_entry_path, dir_access, TRUE,
-                                 use_commit_times,
+          SVN_ERR(svn_wc_revert3(full_entry_path, dir_access,
+                                 depth_under_here, use_commit_times,
                                  cancel_func, cancel_baton,
                                  notify_func, notify_baton, subpool));
         }
@@ -2197,6 +2214,30 @@ svn_wc_revert2(const char *path,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_wc_revert2(const char *path,
+               svn_wc_adm_access_t *parent_access,
+               svn_boolean_t recursive,
+               svn_boolean_t use_commit_times,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool)
+{
+  return svn_wc_revert3(path,
+                        parent_access,
+                        recursive ? svn_depth_infinity : svn_depth_empty,
+                        use_commit_times,
+                        cancel_func,
+                        cancel_baton,
+                        notify_func,
+                        notify_baton,
+                        pool);
+}
+
 
 svn_error_t *
 svn_wc_revert(const char *path,
@@ -2505,9 +2546,12 @@ attempt_deletion(const char *parent_dir,
 
 /* Conflict resolution involves removing the conflict files, if they exist,
    and clearing the conflict filenames from the entry.  The latter needs to
-   be done whether or not the conflict files exist.  If @a accept is anything
-   but svn_accept_default, automatically resolve the
-   conflict with the respective temporary file contents.
+   be done whether or not the conflict files exist.  If @a conflict_result
+   is svn_wc_conflict_result_choose_base, resolve the conflict with the old
+   file contents; if svn_wc_conflict_result_choose_user, use the original
+   working contents; if svn_wc_conflict_result_choose_theirs, the new
+   contents; and if svn_wc_conflict_result_choose_merged, don't change the
+   contents at all, just remove the conflict status (i.e. pre-1.5 behavior).
 
    @since 1.5 Automatic Conflict Resolution (Issue 2784)
 
@@ -2522,7 +2566,7 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_accept_t accept_which,
+                          svn_wc_conflict_result_t conflict_result,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           apr_pool_t *pool)
@@ -2534,23 +2578,23 @@ resolve_conflict_on_entry(const char *path,
 
   /* Handle automatic conflict resolution before the temporary files are
    * deleted, if necessary. */
-  switch (accept_which)
+  switch (conflict_result)
     {
-      case svn_accept_left:
-        auto_resolve_src = entry->conflict_old;
-        break;
-      case svn_accept_working:
-        auto_resolve_src = entry->conflict_wrk;
-        break;
-      case svn_accept_right:
-        auto_resolve_src = entry->conflict_new;
-        break;
-      case svn_accept_none:
-        auto_resolve_src = NULL;
-        break;
-      case svn_accept_invalid:
-        return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                _("Invalid 'accept' argument"));
+    case svn_wc_conflict_result_choose_base:
+      auto_resolve_src = entry->conflict_old;
+      break;
+    case svn_wc_conflict_result_choose_mine:
+      auto_resolve_src = entry->conflict_wrk;
+      break;
+    case svn_wc_conflict_result_choose_theirs:
+      auto_resolve_src = entry->conflict_new;
+      break;
+    case svn_wc_conflict_result_choose_merged:
+      auto_resolve_src = NULL;
+      break;
+    default:
+      return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                              _("Invalid 'conflict_result' argument"));
     }
 
     if (auto_resolve_src)
@@ -2634,7 +2678,7 @@ struct resolve_callback_baton
   /* TRUE if property conflicts are to be resolved. */
   svn_boolean_t resolve_props;
   /* The type of automatic conflict resolution to perform */
-  svn_accept_t accept_;
+  svn_wc_conflict_result_t conflict_result;
   /* An access baton for the tree, with write access */
   svn_wc_adm_access_t *adm_access;
   /* Notification function and baton */
@@ -2669,7 +2713,7 @@ resolve_found_entry_callback(const char *path,
 
   return resolve_conflict_on_entry(path, entry, adm_access, base_name,
                                    baton->resolve_text, baton->resolve_props,
-                                   baton->accept_, baton->notify_func,
+                                   baton->conflict_result, baton->notify_func,
                                    baton->notify_baton, pool);
 }
 
@@ -2717,7 +2761,8 @@ svn_wc_resolved_conflict2(const char *path,
                           apr_pool_t *pool)
 {
   return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
-                                   resolve_props, recurse, svn_accept_none,
+                                   resolve_props, recurse,
+                                   svn_wc_conflict_result_choose_merged,
                                    notify_func, notify_baton, cancel_func,
                                    cancel_baton, pool);
 }
@@ -2727,8 +2772,8 @@ svn_wc_resolved_conflict3(const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_boolean_t recurse,
-                          svn_accept_t accept_,
+                          svn_depth_t depth,
+                          svn_wc_conflict_result_t conflict_result,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           svn_cancel_func_t cancel_func,
@@ -2742,9 +2787,9 @@ svn_wc_resolved_conflict3(const char *path,
   baton->adm_access = adm_access;
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
-  baton->accept_ = accept_;
+  baton->conflict_result = conflict_result;
 
-  if (! recurse)
+  if (depth == svn_depth_empty)
     {
       const svn_wc_entry_t *entry;
       SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
@@ -2754,7 +2799,7 @@ svn_wc_resolved_conflict3(const char *path,
   else
     {
       SVN_ERR(svn_wc_walk_entries3(path, adm_access,
-                                   &resolve_walk_callbacks, baton,
+                                   &resolve_walk_callbacks, baton, depth,
                                    FALSE, cancel_func, cancel_baton, pool));
 
     }
@@ -2875,6 +2920,50 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
               notify_func(notify_baton, notify, iterpool);
             }
           continue;
+        }
+
+      /* Is path a directory?  Skip it.
+
+         ### TODO(sussman): we may want to allow directories to be
+             members of changelists one day, but we'll have to make
+             them take --depth arguments or something, to Do It Right.
+      */
+      if (entry->kind == svn_node_dir)
+        {
+          if (notify_func)
+            {
+              svn_error_t *unversioned_err =
+                  svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
+                                    _("'%s' is a directory, and thus cannot"
+                                      " be a member of a changelist."),
+                                    path);
+              notify = svn_wc_create_notify(path,
+                                            svn_wc_notify_changelist_failed,
+                                            iterpool);
+              notify->err = unversioned_err;
+              notify_func(notify_baton, notify, iterpool);
+            }
+          continue;
+        }
+
+      /* If the path is already a member of a changelist, warn the
+         user about this, but still allow the reassignment to happen.
+      */
+      if (entry->changelist && changelist)
+        {
+          if (notify_func)
+            {
+              svn_error_t *unversioned_err =
+                  svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
+                                    _("'%s' is already a member of"
+                                      " changelist '%s'."),
+                                    path, entry->changelist);
+              notify = svn_wc_create_notify(path,
+                                            svn_wc_notify_changelist_moved,
+                                            iterpool);
+              notify->err = unversioned_err;
+              notify_func(notify_baton, notify, iterpool);
+            }
         }
 
       /* Possibly enforce matching with an existing changelist. */

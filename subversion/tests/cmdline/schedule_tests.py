@@ -22,7 +22,6 @@ import os
 
 # Our testing module
 import svntest
-from svntest import SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -435,8 +434,8 @@ def unschedule_missing_added(sbox):
   svntest.main.safe_rmtree(dir2_path)
 
   # Unschedule the additions, using 'svn rm' and 'svn revert'.
-  svntest.main.run_svn(SVNAnyOutput, 'rm', file1_path)
-  svntest.main.run_svn(SVNAnyOutput, 'rm', dir1_path)
+  svntest.main.run_svn(svntest.verify.AnyOutput, 'rm', file1_path)
+  svntest.main.run_svn(svntest.verify.AnyOutput, 'rm', dir1_path)
   svntest.main.run_svn(None, 'revert', file2_path, dir2_path)
 
   # 'svn st' should now show absolutely zero local mods.
@@ -501,7 +500,7 @@ def revert_inside_newly_added_dir(sbox):
   # Now change into the newly added directory, revert and make sure
   # an error is output.
   os.chdir('foo')
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'revert', '.')
 
 #----------------------------------------------------------------------
@@ -528,6 +527,8 @@ def status_add_deleted_directory(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', A_path)
   svntest.main.safe_rmtree(A_path)
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', A_path)
 
@@ -542,6 +543,8 @@ def status_add_deleted_directory(sbox):
   # Update will *not* remove the entry for A despite it being marked
   # deleted.
   svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'up', wc_dir)
   expected_status.tweak('', 'iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -567,12 +570,6 @@ def add_recursive_already_versioned(sbox):
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
   svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.")
 
-  saved_wd = os.getcwd()
-
-  os.chdir(wc_dir)
-  svntest.main.run_svn(None, 'add', '--force', '.')
-  os.chdir(saved_wd)
-
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -581,7 +578,22 @@ def add_recursive_already_versioned(sbox):
     'A/D/G/epsilon' : Item(status='A ', wc_rev=0),
     })
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  # Perform the add with the --force flag, and check the status.
+  ### TODO:  This part won't work -- you have to be inside the working copy
+  ### or else Subversion will think you're trying to add the working copy
+  ### to its parent directory, and will (possibly, if the parent directory
+  ### isn't versioned) fail.
+  #svntest.main.run_svn(None, 'add', '--force', wc_dir)
+  #svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Now revert, and do the adds again from inside the working copy.
+  svntest.main.run_svn(None, 'revert', '--recursive', wc_dir)
+  saved_wd = os.getcwd()
+  os.chdir(wc_dir)
+  svntest.main.run_svn(None, 'add', '--force', '.')
+  os.chdir(saved_wd)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 #----------------------------------------------------------------------
 # Regression test for the case where "svn mkdir" outside a working copy
@@ -594,7 +606,8 @@ def fail_add_directory(sbox):
   os.makedirs(sbox.wc_dir)
 
   os.chdir(sbox.wc_dir)
-  svntest.actions.run_and_verify_svn('Failed mkdir', None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn('Failed mkdir',
+                                     None, svntest.verify.AnyOutput,
                                      'mkdir', 'A')
   if os.path.exists('A'):
     raise svntest.Failure('svn mkdir created an unversioned directory')
@@ -613,7 +626,7 @@ def delete_non_existent(sbox):
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', '--force', 'non-existent')
 
 ########################################################################

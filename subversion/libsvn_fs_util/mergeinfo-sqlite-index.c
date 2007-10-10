@@ -30,7 +30,7 @@
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 
-#include "private/svn_compat.h"
+#include "private/svn_dep_compat.h"
 #include "private/svn_fs_mergeinfo.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
@@ -340,7 +340,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
 
 
 /* Index the mergeinfo for each path in MERGEINFO_FOR_PATHS (a
-   mapping of const char * -> to apr_hash_t *). */
+   mapping of const char * -> to svn_string_t *). */
 static svn_error_t *
 index_txn_mergeinfo(sqlite3 *db,
                     svn_revnum_t new_rev,
@@ -672,7 +672,8 @@ get_mergeinfo_for_children(sqlite3 *db,
   SQLITE_ERR(sqlite3_prepare(db,
                              "SELECT MAX(revision), path "
                              "FROM mergeinfo_changed "
-                             "WHERE path LIKE ? AND revision <= ?;",
+                             "WHERE path LIKE ? AND revision <= ? "
+                             "GROUP BY path;",
                              -1, &stmt, NULL), db);
 
   like_path = apr_psprintf(pool, "%s/%%", path);

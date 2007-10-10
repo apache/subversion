@@ -22,7 +22,7 @@ import sys, re, os, time
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -144,9 +144,8 @@ def checkout_with_obstructions(sbox):
   make_local_tree(sbox, False, False)
 
   svntest.actions.run_and_verify_svn("No error where some expected",
-                                     None, SVNAnyOutput, "co",
-                                     sbox.repo_url,
-                                     sbox.wc_dir)
+                                     None, svntest.verify.AnyOutput,
+                                     "co", sbox.repo_url, sbox.wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -163,9 +162,10 @@ def forced_checkout_of_file_with_dir_obstructions(sbox):
   # Checkout the standard greek repos into a directory that has a dir named
   # "iota" obstructing the file "iota" in the repos.  This should fail.
   sout, serr = svntest.actions.run_and_verify_svn("Expected error during co",
-                                                  None, SVNAnyOutput, "co",
-                                                  "--force", sbox.repo_url,
-                                                  other_wc)
+                                                  None,
+                                                  svntest.verify.AnyOutput,
+                                                  "co", "--force",
+                                                  sbox.repo_url, other_wc)
 
   test_stderr(".*Failed to add file.*a non-file object of the same name " \
               "already exists", serr)
@@ -185,9 +185,10 @@ def forced_checkout_of_dir_with_file_obstructions(sbox):
   # Checkout the standard greek repos into a directory that has a file named
   # "A" obstructing the dir "A" in the repos.  This should fail.
   sout, serr = svntest.actions.run_and_verify_svn("Expected error during co",
-                                                  None, SVNAnyOutput, "co",
-                                                  "--force", sbox.repo_url,
-                                                  other_wc)
+                                                  None,
+                                                  svntest.verify.AnyOutput,
+                                                  "co", "--force",
+                                                  sbox.repo_url, other_wc)
 
   test_stderr(".*Failed to add directory.*a non-directory object of the " \
               "same name already exists", serr)
@@ -273,16 +274,17 @@ def forced_checkout_with_versioned_obstruction(sbox):
 
   # Checkout "A/" from the other repos.
   svntest.actions.run_and_verify_svn("Unexpected error during co",
-                                     SVNAnyOutput, [], "co",
-                                     other_repo_url + "/A",
+                                     svntest.verify.AnyOutput, [],
+                                     "co", other_repo_url + "/A",
                                      os.path.join(other_wc_dir, "A"))
 
   # Checkout the first repos into "other/A".  This should fail since the
   # obstructing versioned directory points to a different URL.
   sout, serr = svntest.actions.run_and_verify_svn("Expected error during co",
-                                                  None, SVNAnyOutput, "co",
-                                                  "--force", sbox.repo_url,
-                                                  other_wc_dir)
+                                                  None,
+                                                  svntest.verify.AnyOutput,
+                                                  "co", "--force",
+                                                  sbox.repo_url, other_wc_dir)
 
   test_stderr("svn: Failed to add directory '.*A': a versioned directory " \
               "of the same name already exists", serr)
@@ -404,7 +406,9 @@ def checkout_peg_rev(sbox):
   svntest.main.file_append(mu_path, 'appended mu text')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                    'ci', '-m', 'changed file mu', wc_dir)
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'ci', '-m', 'changed file mu', wc_dir)
 
   # now checkout the repo@1 in another folder, this should create our initial
   # wc without the change in mu.
@@ -442,7 +446,9 @@ def checkout_peg_rev_date(sbox):
   svntest.main.file_append(mu_path, 'appended mu text')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                    'ci', '-m', 'changed file mu', wc_dir)
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'ci', '-m', 'changed file mu', wc_dir)
 
   # now checkout the repo@current_time in another folder, this should create our
   # initial wc without the change in mu.
@@ -676,7 +682,7 @@ def co_with_obstructing_local_adds(sbox):
 
   # Try to co M's Parent.
   sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
-                                                  [], SVNAnyOutput,
+                                                  [], svntest.verify.AnyOutput,
                                                   'co', sbox.repo_url + '/A',
                                                   A_path)
 
@@ -685,7 +691,7 @@ def co_with_obstructing_local_adds(sbox):
 
   # --force shouldn't help either.
   sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
-                                                  [], SVNAnyOutput,
+                                                  [], svntest.verify.AnyOutput,
                                                   'co', sbox.repo_url + '/A',
                                                   A_path, '--force')
 
@@ -695,7 +701,7 @@ def co_with_obstructing_local_adds(sbox):
   # Try to co omicron's parent, non-recusively so as not to
   # try and update M first.
   sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
-                                                  [], SVNAnyOutput,
+                                                  [], svntest.verify.AnyOutput,
                                                   'co', sbox.repo_url,
                                                   wc_dir, '-N')
 
@@ -704,7 +710,7 @@ def co_with_obstructing_local_adds(sbox):
 
   # Again, --force shouldn't matter.
   sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
-                                                  [], SVNAnyOutput,
+                                                  [], svntest.verify.AnyOutput,
                                                   'co', sbox.repo_url,
                                                   wc_dir, '-N', '--force')
 

@@ -609,6 +609,20 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
                                  apr_pool_t *pool);
 
 /*
+ * Handler that retrieves the embedded XML multistatus response from the
+ * the @a RESPONSE body associated with a @a REQUEST. *DONE is set to TRUE.
+ *
+ * The @a BATON should be of type svn_ra_serf__simple_request_context_t.
+ * 
+ * All temporary allocations will be made in a @a pool.
+ */
+apr_status_t
+svn_ra_serf__handle_multistatus_only(serf_request_t *request,
+                                     serf_bucket_t *response,
+                                     void *baton,
+                                     apr_pool_t *pool);
+
+/*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
  *
@@ -670,15 +684,6 @@ svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
 svn_ra_serf__dav_props_t
 svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
                        const char *name);
-
-/*
- * Look for @a attr_name in the @a attrs array and return its value.
- *
- * Returns NULL if no matching name is found.
- */
-const char *
-svn_ra_serf__find_attr(const char **attrs,
-                       const char *attr_name);
 
 /*
  * Expand the string represented by @a cur with a current size of @a
@@ -965,8 +970,8 @@ svn_ra_serf__get_log(svn_ra_session_t *session,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_boolean_t include_merged_revisions,
-                     svn_boolean_t omit_log_text,
-                     svn_log_message_receiver2_t receiver,
+                     apr_array_header_t *revprops,
+                     svn_log_entry_receiver_t receiver,
                      void *receiver_baton,
                      apr_pool_t *pool);
 

@@ -869,8 +869,8 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
          props needs to be made (it'll just see no file, and do nothing).
          So manufacture an empty propfile and force it to be written out. */
 
-      SVN_ERR(svn_wc__prop_path(&dst_bprop, path,
-                                entry->kind, svn_wc__props_revert, TRUE, pool));
+      SVN_ERR(svn_wc__prop_path(&dst_bprop, path, entry->kind,
+                                svn_wc__props_revert, TRUE, pool));
 
       SVN_ERR(save_prop_file(dst_bprop, apr_hash_make(pool), TRUE, pool));
 
@@ -1195,25 +1195,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
   svn_string_t *working_val
     = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
 
-  if (base_val)
-    {
-       if (working_val)
-         {
-           if (svn_string_compare(working_val, new_val))
-             set_prop_merge_state(state, svn_wc_notify_state_merged);
-           else
-             *conflict = svn_string_createf
-               (pool, _("Trying to create property '%s' with value '%s',\n"
-                        "but it already exists."),
-                propname, new_val->data);
-         }
-       else
-          *conflict = svn_string_createf
-            (pool, _("Trying to create property '%s' with value '%s',\n"
-                     "but it has been locally deleted."),
-             propname, new_val->data);
-    }
-  else if (working_val)
+  if (working_val)
     {
       /* the property already exists in working_props... */
 
@@ -1240,6 +1222,13 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                  "'%s',\nbut property already exists with value '%s'."),
                propname, new_val->data, working_val->data);
         }
+    }
+  else if (base_val)
+    {
+      *conflict = svn_string_createf
+        (pool, _("Trying to create property '%s' with value '%s',\n"
+                 "but it has been locally deleted."),
+         propname, new_val->data);
     }
   else  /* property doesn't yet exist in working_props...  */
     /* so just set it */
@@ -1375,7 +1364,8 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                     *conflict = svn_string_createf
                       (pool,
                        _("Trying to change property '%s' from '%s' to '%s',\n"
-                         "but property has been locally added with value '%s'"),
+                         "but property has been locally added with "
+                         "value '%s'"),
                        propname, old_val->data, new_val->data,
                        working_val->data);
                 }
@@ -2211,7 +2201,8 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
     {
       new_value = svn_stringbuf_create_from_string(propval, pool);
       svn_stringbuf_strip_whitespace(new_value);
-      SVN_ERR(validate_eol_prop_against_file(path, getter, getter_baton, pool));
+      SVN_ERR(validate_eol_prop_against_file(path, getter, getter_baton,
+                                             pool));
     }
   else if (!skip_some_checks && (strcmp(propname, SVN_PROP_MIME_TYPE) == 0))
     {
@@ -2241,7 +2232,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
              we're not interested in the parsed result, only in
              whether or the parsing errored. */
           SVN_ERR(svn_wc_parse_externals_description3
-                  (NULL, path, propval->data, pool));
+                  (NULL, path, propval->data, TRUE, pool));
         }
     }
   else if (strcmp(propname, SVN_PROP_KEYWORDS) == 0)
@@ -2714,6 +2705,7 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
  *
  *   -r N
  *   -rN
+ *
  * in the LINE_PARTS array and update the revision field in ITEM with
  * the revision if the revision is found.  Set REV_IDX to the index in
  * LINE_PARTS where the revision specification starts.  Remove from
@@ -2809,6 +2801,7 @@ svn_error_t *
 svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                     const char *parent_directory,
                                     const char *desc,
+                                    svn_boolean_t canonicalize_url,
                                     apr_pool_t *pool)
 {
   apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
@@ -2895,18 +2888,18 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
       item->target_dir = svn_path_canonicalize
         (svn_path_internal_style(item->target_dir, pool), pool);
-      {
-        if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
-            || svn_path_is_backpath_present(item->target_dir))
-          return svn_error_createf
-            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
-             _("Invalid %s property on '%s': "
-               "target involves '.' or '..' or is an absolute path"),
-             SVN_PROP_EXTERNALS,
-             parent_directory_display);
-      }
 
-      item->url = svn_path_canonicalize(item->url, pool);
+      if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
+          || svn_path_is_backpath_present(item->target_dir))
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           _("Invalid %s property on '%s': "
+             "target involves '.' or '..' or is an absolute path"),
+           SVN_PROP_EXTERNALS,
+           parent_directory_display);
+
+      if (canonicalize_url)
+          item->url = svn_path_canonicalize(item->url, pool);
 
       if (externals_p)
         APR_ARRAY_PUSH(*externals_p, svn_wc_external_item2_t *) = item;
@@ -2926,7 +2919,8 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
   int i;
 
   SVN_ERR(svn_wc_parse_externals_description3(externals_p ? &list : NULL,
-                                              parent_directory, desc, subpool));
+                                              parent_directory, desc,
+                                              TRUE, subpool));
 
   if (externals_p)
     {

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -21,8 +21,7 @@ import os, re, time
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
-
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -251,8 +250,14 @@ def status_with_new_files_pending(sbox):
 
   svntest.main.file_append('newfile', 'this is a new file')
   svntest.main.run_svn(None, 'add', 'newfile')
-  svntest.main.run_svn(None, 'ci', '-m', 'logmsg')
-  svntest.main.run_svn(None, 'up', '-r', '1')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'logmsg')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', '-r', '1')
 
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'status', '-u')
@@ -289,7 +294,7 @@ def status_for_unignored_file(sbox):
   os.remove('proptmp')
 
   # status on the directory with --no-ignore
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
         ['I      newdir\n',
          'I      newfile\n',
          ' M     .\n'])
@@ -299,7 +304,7 @@ def status_for_unignored_file(sbox):
                                      'status', '--no-ignore', '.')
 
   # status specifying the file explicitly on the command line
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
         ['I      newdir\n',
          'I      newfile\n'])
   svntest.actions.run_and_verify_svn(None,
@@ -345,6 +350,8 @@ def status_nonrecursive_update_different_cwd(sbox):
   K_path = os.path.join(wc_dir, 'A', 'C', 'K' )
 
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 2', J_url)
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -362,6 +369,8 @@ def status_nonrecursive_update_different_cwd(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      expected_output,
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'status', '-v', '-N', '-u', 'C')
 
   expected_output = [
@@ -374,6 +383,8 @@ def status_nonrecursive_update_different_cwd(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      expected_output,
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'status', '-v', '-N', '-u', '.')
 
 
@@ -418,15 +429,24 @@ def status_file_needs_update(sbox):
   os.chdir(wc_dir)
   svntest.main.file_append('crontab.root', 'New file crontab.root.\n')
   svntest.main.run_svn(None, 'add', 'crontab.root')
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg')
   os.chdir(was_cwd)
   os.chdir(other_wc)
-  svntest.main.run_svn(None, 'up')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up')
 
   os.chdir(was_cwd)
   os.chdir(wc_dir)
   svntest.main.file_append('crontab.root', 'New line in crontab.root.\n')
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg')
 
   # The `svntest.actions.run_and_verify_*_status' routines all pass
   # the -v flag, which we don't want, as this bug never appeared when
@@ -481,7 +501,10 @@ def status_uninvited_parent_directory(sbox):
   os.chdir(wc_dir)
   svntest.main.file_append('newfile', 'New file.\n')
   svntest.main.run_svn(None, 'add', 'newfile')
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg')
 
   os.chdir(was_cwd)
   os.chdir(other_wc)
@@ -511,14 +534,20 @@ def status_on_forward_deletion(sbox):
   top_url = sbox.repo_url
   A_url = top_url + '/A'
 
-  svntest.main.run_svn(None, 'rm', '-m', 'Remove A.', A_url)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'rm', '-m', 'Remove A.', A_url)
 
   svntest.main.safe_rmtree(wc_dir)
   os.mkdir(wc_dir)
 
   os.chdir(wc_dir)
 
-  svntest.main.run_svn(None, 'co', '-r1', top_url + "@1", 'wc')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'co', '-r1', top_url + "@1", 'wc')
   # If the bug is present, this will error with
   #
   #    subversion/libsvn_wc/lock.c:513: (apr_err=155005)
@@ -538,7 +567,10 @@ def status_on_forward_deletion(sbox):
   # (Dang!  Hope a user never has to see that :-) ).
   #
   svntest.main.safe_rmtree('wc')
-  svntest.main.run_svn(None, 'co', '-r1', A_url + "@1", 'wc')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'co', '-r1', A_url + "@1", 'wc')
   svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
 
 #----------------------------------------------------------------------
@@ -723,15 +755,27 @@ def status_on_partially_nonrecursive_wc(sbox):
   # whatever change it was that happened between r213 and HEAD in the
   # reproduction recipe.  For us, it's r2.
   svntest.main.file_append(rho, 'Whan that Aprille with his shoores soote\n')
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg', rho)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg', rho)
 
   # Make the working copy weird in the right way, then try status -u.
   D_wc = sbox.add_wc_path('D')
-  svntest.main.run_svn(None, 'co', '-r1', '-N', D_url, D_wc)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'co', '-r1', '-N', D_url, D_wc)
 
   os.chdir(D_wc)
-  svntest.main.run_svn(None, 'up', '-r1', 'H')
-  svntest.main.run_svn(None, 'st', '-u')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', '-r1', 'H')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'st', '-u')
 
 
 def missing_dir_in_anchor(sbox):
@@ -817,7 +861,7 @@ def status_ignored_dir(sbox):
   new_dir = os.path.join(wc_dir, "dir.o")
   new_dir_url = sbox.repo_url + "/dir.o"
 
-  svntest.actions.run_and_verify_svn("Create dir", "Committed revision 2.", [],
+  svntest.actions.run_and_verify_svn("Create dir", "\n|Committed revision 2.", [],
                                      'mkdir', new_dir_url, '-m', 'msg',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd)
@@ -853,10 +897,10 @@ def status_missing_dir(sbox):
   # ok, blow away the A/D/G directory
   svntest.main.safe_rmtree(a_d_g)
 
-  expected = svntest.actions.UnorderedOutput(["!      " + a_d_g + "\n"])
+  expected = svntest.verify.UnorderedOutput(["!      " + a_d_g + "\n"])
   svntest.actions.run_and_verify_svn(None, expected, [], "status", wc_dir)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
          ["       *            " + os.path.join(a_d_g, "pi") + "\n",
           "       *            " + os.path.join(a_d_g, "rho") + "\n",
           "       *            " + os.path.join(a_d_g, "tau") + "\n",
@@ -879,10 +923,15 @@ def status_add_plus_conflict(sbox):
   trunk_url  = sbox.repo_url + '/trunk'
 
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 2',
                                      branch_url, trunk_url)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'update', wc_dir)
 
   branch_file = os.path.join(wc_dir, 'branch', 'file')
 
@@ -890,28 +939,43 @@ def status_add_plus_conflict(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'add', branch_file)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'commit',
                                      branch_file, '-m', 'rev 3')
 
   svntest.main.file_write(branch_file, "line 1\nline3\n", 'wb')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'commit',
                                      branch_file, '-m', 'rev 4')
 
   svntest.main.file_write(branch_file, "line 1\nline2\n", 'wb')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'commit',
                                      branch_file, '-m', 'rev 5')
 
   trunk_dir = os.path.join(wc_dir, 'trunk')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'merge',
                                      branch_url, '-r', '2:3', trunk_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'merge',
                                      branch_url, '-r', '4:5', trunk_dir)
 
-  expected_output = svntest.actions.UnorderedOutput([
+  expected_output = svntest.verify.UnorderedOutput([
     "?      " + os.path.join(wc_dir, "trunk", "file.merge-left.r4") + "\n",
     "?      " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
     "?      " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
@@ -1002,7 +1066,7 @@ def status_update_with_incoming_props(sbox):
 
   # Can't use run_and_verify_status here because the out-of-date
   # information in the status output isn't copied in the status tree.
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
          ["       *        1   " + A_path + "\n",
           "       *        1   " + wc_dir + "\n",
           "Status against revision:      2\n" ])
@@ -1013,7 +1077,7 @@ def status_update_with_incoming_props(sbox):
                                      "status", "-u",
                                      wc_dir)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
          ["                1        1 jrandom      " +
           os.path.join(wc_dir, "iota") + "\n",
           "       *        1        1 jrandom      " + A_path + "\n",
@@ -1139,7 +1203,7 @@ def status_update_verbose_with_incoming_props(sbox):
   # Can't use run_and_verify_status here because the out-of-date
   # information in the status output isn't copied in the status tree.
   common = "        1        1 jrandom      "
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
          ["        " + common + os.path.join(E_path, 'alpha') + "\n",
           "        " + common + os.path.join(E_path, 'beta') + "\n",
           "       *" + common + os.path.join(E_path) + "\n",
@@ -1275,7 +1339,7 @@ def status_depth_local(sbox):
   # for all the possible types of depth, check the status
 
   # depth=empty
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   [" M     %s\n" % A_path])
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -1283,7 +1347,7 @@ def status_depth_local(sbox):
                                      "status", "--depth=empty", A_path)
 
   # depth=files
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   [" M     %s\n" % A_path,
                    "M      %s\n" % mu_path])
 
@@ -1293,7 +1357,7 @@ def status_depth_local(sbox):
                                      "status", "--depth=files", A_path)
 
   # depth=immediates
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   [" M     %s\n" % A_path,
                    " M     %s\n" % D_path,
                    "M      %s\n" % mu_path])
@@ -1304,7 +1368,7 @@ def status_depth_local(sbox):
                                      "status", "--depth=immediates", A_path)
 
   # depth=infinity (the default)
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   [" M     %s\n" % A_path,
                    " M     %s\n" % D_path,
                    "M      %s\n" % mu_path,
@@ -1339,7 +1403,7 @@ def status_depth_update(sbox):
   # for all the possible types of depth, check the status
 
   # depth=empty
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ["       *        1   %s\n" % A_path,
                    "Status against revision:      3\n"])
 
@@ -1349,7 +1413,7 @@ def status_depth_update(sbox):
                                      "status", "-u", "--depth=empty", A_path)
 
   # depth=files
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ["       *        1   %s\n" % mu_path,
                    "       *        1   %s\n" % A_path,
                    "Status against revision:      3\n"])
@@ -1361,7 +1425,7 @@ def status_depth_update(sbox):
                                      A_path)
 
   # depth=immediates
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ["       *        1   %s\n" % A_path,
                    "       *        1   %s\n" % D_path,
                    "       *        1   %s\n" % mu_path,
@@ -1374,7 +1438,7 @@ def status_depth_update(sbox):
                                      A_path)
 
   # depth=infinity (the default)
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ["       *        1   %s\n" % A_path,
                    "       *        1   %s\n" % D_path,
                    "       *        1   %s\n" % mu_path,
@@ -1408,7 +1472,7 @@ def status_dash_u_deleted_directories(sbox):
   os.chdir(A_path)
 
   # check status -u of B
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
          ["D               1   %s\n" % "B",
           "D               1   %s\n" % os.path.join("B", "lambda"),
           "D               1   %s\n" % os.path.join("B", "E"),
@@ -1423,7 +1487,7 @@ def status_dash_u_deleted_directories(sbox):
 
   # again, but now from inside B, should give the same output
   os.chdir("B")
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
          ["D               1   %s\n" % ".",
           "D               1   %s\n" % "lambda",
           "D               1   %s\n" % "E",
@@ -1437,7 +1501,7 @@ def status_dash_u_deleted_directories(sbox):
                                      "status", "-u", ".")
 
   # check status -u of B/E
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
          ["D               1   %s\n" % os.path.join("B", "E"),
           "D               1   %s\n" % os.path.join("B", "E", "alpha"),
           "D               1   %s\n" % os.path.join("B", "E", "beta"),
@@ -1479,7 +1543,7 @@ def status_dash_u_type_change(sbox):
   svntest.main.safe_rmtree('A')
   os.mkdir('A')
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
          ["~               1   iota\n",
           "~              ?    A\n",
           "Status against revision:      1\n" ])

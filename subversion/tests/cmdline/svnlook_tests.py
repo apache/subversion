@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -239,10 +239,16 @@ def test_print_property_diffs(sbox):
 
   # commit the change
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg', iota_path)
 
   # Grab the diff
   expected_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                            '--username',
+                                                            svntest.main.wc_author,
+                                                            '--password',
+                                                            svntest.main.wc_passwd,
                                                             'diff',
                                                             '-r', 'PREV',
                                                             iota_path)
@@ -259,7 +265,7 @@ def test_print_property_diffs(sbox):
   for i in xrange(len(expected_output)):
     expected_output[i] = expected_output[i].replace(iota_path, 'iota')
 
-  svntest.actions.compare_and_display_lines('', '', expected_output, output)
+  svntest.verify.compare_and_display_lines('', '', expected_output, output)
 
 #----------------------------------------------------------------------
 # Check that svnlook info repairs allows inconsistent line endings in logs.
@@ -406,9 +412,15 @@ def limit_history(sbox):
   "history --limit"
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-m', 'log msg',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'mv', '-m', 'log msg',
                                      repo_url + "/iota", repo_url + "/iota2")
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-m', 'log msg',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'mv', '-m', 'log msg',
                                      repo_url + "/A/mu", repo_url + "/iota")
   history = run_svnlook("history", "--limit=1", sbox.repo_dir)
   # Ignore the two lines of header, and verify expected number of items.

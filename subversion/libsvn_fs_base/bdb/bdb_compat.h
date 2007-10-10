@@ -95,6 +95,25 @@ extern "C" {
 #define SVN_BDB_PATH_UTF8 (0)
 #endif
 
+/* In BDB 4.6, the cursor routines were renamed, and the old names
+   deprecated. */
+#if SVN_BDB_VERSION_AT_LEAST(4,6)
+#define svn_bdb_dbc_close(c)         ((c)->close(c))
+#define svn_bdb_dbc_count(c,r,f)     ((c)->count(c,r,f))
+#define svn_bdb_dbc_del(c,f)         ((c)->del(c,f))
+#define svn_bdb_dbc_dup(c,p,f)       ((c)->dup(c,p,f))
+#define svn_bdb_dbc_get(c,k,d,f)     ((c)->get(c,k,d,f))
+#define svn_bdb_dbc_pget(c,k,p,d,f)  ((c)->pget(c,k,p,d,f))
+#define svn_bdb_dbc_put(c,k,d,f)     ((c)->put(c,k,d,f))
+#else
+#define svn_bdb_dbc_close(c)         ((c)->c_close(c))
+#define svn_bdb_dbc_count(c,r,f)     ((c)->c_count(c,r,f))
+#define svn_bdb_dbc_del(c,f)         ((c)->c_del(c,f))
+#define svn_bdb_dbc_dup(c,p,f)       ((c)->c_dup(c,p,f))
+#define svn_bdb_dbc_get(c,k,d,f)     ((c)->c_get(c,k,d,f))
+#define svn_bdb_dbc_pget(c,k,p,d,f)  ((c)->c_pget(c,k,p,d,f))
+#define svn_bdb_dbc_put(c,k,d,f)     ((c)->c_put(c,k,d,f))
+#endif
 
 /* Before calling db_create, we must check that the version of the BDB
    libraries we're linking with is the same as the one we compiled

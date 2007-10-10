@@ -1405,7 +1405,7 @@ svn_repos_begin_report(void **report_baton,
                                  s_operand,
                                  switch_path,
                                  text_deltas,
-                                 SVN_DEPTH_FROM_RECURSE(recurse),
+                                 SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                  ignore_ancestry,
                                  FALSE, /* don't send copyfrom args */
                                  editor,

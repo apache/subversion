@@ -26,7 +26,7 @@ extern "C" {
 
 /* A transaction property which maps to a skel form of apr_hash_t
    (target wc path char * -> actual mergeinfo). */
-#define SVN_FS_PROP_TXN_MERGEINFO     SVN_PROP_PREFIX "txn-mergeinfo"
+#define SVN_FS__PROP_TXN_MERGEINFO     SVN_PROP_PREFIX "txn-mergeinfo"
 
 
 

@@ -2035,16 +2035,25 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
         {
           const svn_delta_editor_t *filter_editor;
           void *filter_baton;
-          svn_depth_t depth = rb->depth;
           svn_boolean_t has_target = *(rb->target) ? TRUE : FALSE;
 
-          SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, &filter_baton,
-                                                rb->editor, rb->edit_baton,
-                                                depth, has_target, rb->pool));
-          rb->editor = filter_editor;
-          rb->edit_baton = filter_baton;
+          /* We can skip the depth filtering when the user requested
+             depth_files or depth_infinity because the server will
+             transmit the right stuff anyway. */
+          if ((rb->depth != svn_depth_files)
+              && (rb->depth != svn_depth_infinity))
+            {
+              SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
+                                                    &filter_baton,
+                                                    rb->editor, 
+                                                    rb->edit_baton,
+                                                    rb->depth, 
+                                                    has_target, 
+                                                    rb->pool));
+              rb->editor = filter_editor;
+              rb->edit_baton = filter_baton;
+            }
         }
-
       break;
 
     case ELEM_target_revision:

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -21,7 +21,6 @@ import string, sys, os, re
 
 # Our testing module
 import svntest
-from svntest import SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -461,8 +460,10 @@ def nested_dir_replacements(sbox):
 
   # Delete and re-add A/D (a replacement), and A/D/H (another replace).
   svntest.main.run_svn(None, 'rm', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D', 'H'))
+  svntest.main.run_svn(None, 'add', '--depth=empty',
+                       os.path.join(wc_dir, 'A', 'D'))
+  svntest.main.run_svn(None, 'add', '--depth=empty',
+                       os.path.join(wc_dir, 'A', 'D', 'H'))
 
   # For kicks, add new file A/D/bloo.
   svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi")
@@ -843,6 +844,8 @@ fp.close()"""
 
   # Commit, no output expected.
   svntest.actions.run_and_verify_svn(None, [], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '--quiet',
                                      '-m', 'log msg', wc_dir)
 
@@ -859,9 +862,9 @@ fp.close()"""
   actual_data = fp.readlines()
   fp.close()
   os.unlink(logfilename)
-  svntest.actions.compare_and_display_lines('wrong hook logfile content',
-                                            'STDERR',
-                                            expected_data, actual_data)
+  svntest.verify.compare_and_display_lines('wrong hook logfile content',
+                                           'STDERR',
+                                           expected_data, actual_data)
 
 #----------------------------------------------------------------------
 
@@ -1064,7 +1067,7 @@ def commit_uri_unsafe(sbox):
               nasty_path, # not xml-safe
               ]
   for item in add_list:
-    svntest.main.run_svn(None, 'add', '--non-recursive', item)
+    svntest.main.run_svn(None, 'add', '--depth=empty', item)
 
   expected_output = svntest.wc.State(wc_dir, {
     '#hash#' : Item(verb='Adding'),
@@ -1185,7 +1188,9 @@ def commit_rmd_and_deleted_file(sbox):
 
   # Commit, hoping to see no errors
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     SVNAnyOutput, [],
+                                     svntest.verify.AnyOutput, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'commit', '-m', 'logmsg', mu_path)
 
 #----------------------------------------------------------------------
@@ -1251,7 +1256,7 @@ def commit_from_long_dir(sbox):
   wc_dir = sbox.wc_dir
 
   was_dir = os.getcwd()
-  abs_wc_dir = os.path.join(was_dir, wc_dir)
+  abs_wc_dir = os.path.realpath(os.path.join(was_dir, wc_dir))
 
   # something to commit
   svntest.main.file_append(os.path.join(wc_dir, 'iota'), "modified iota")
@@ -1378,19 +1383,23 @@ def failed_commit(sbox):
 
   # Commit both working copies. The second commit should fail.
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     SVNAnyOutput, [],
+                                     svntest.verify.AnyOutput, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'commit', '-m', 'log', wc_dir)
 
   svntest.actions.run_and_verify_svn("Output on stderr expected",
-                                     None, SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'commit', '-m', 'log', other_wc_dir)
 
   # Now list the txns in the repo. The list should be empty.
   output, errput = svntest.main.run_svnadmin('lstxns', sbox.repo_dir)
-  svntest.actions.compare_and_display_lines(
+  svntest.verify.compare_and_display_lines(
     "Error running 'svnadmin lstxns'.",
     'STDERR', [], errput)
-  svntest.actions.compare_and_display_lines(
+  svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin lstxns' is unexpected.",
     'STDOUT', [], output)
 
@@ -1411,7 +1420,7 @@ def commit_multiple_wc(sbox):
   wc2_dir = os.path.join(wc_dir, 'A', 'wc2')
   url = sbox.repo_url
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     SVNAnyOutput, [],
+                                     svntest.verify.AnyOutput, [],
                                      'checkout',
                                      '--username',
                                      svntest.main.wc_author,
@@ -1435,7 +1444,7 @@ def commit_multiple_wc(sbox):
 
   # Commit should fail, even though one target is a "child" of the other.
   svntest.actions.run_and_verify_svn("Unexpectedly not locked",
-                                     None, SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'commit', '-m', 'log',
                                      wc_dir, wc2_dir)
 
@@ -1450,6 +1459,10 @@ def commit_nonrecursive(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  ### Note: the original recipes used 'add -N'.  These days, we use
+  ### --depth={empty,files}, and both the code and the comments below
+  ### have been adjusted to reflect this.
+
   #####################################################
   ### Issue #1195:
   ###
@@ -1462,7 +1475,7 @@ def commit_nonrecursive(sbox):
   ###    dir1/dir2
   ###    dir1/dir2/file4
   ###
-  ### 2. run 'svn add -N <all of the above>'
+  ### 2. run 'svn add --depth=empty <all of the above>'
   ###
   ### 3. run 'svn ci -N <all of the above>'
   ###
@@ -1486,8 +1499,8 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                     'add', '-N',
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'add', '--depth=empty',
                                      os.path.join(wc_dir, file1_path),
                                      os.path.join(wc_dir, dir1_path),
                                      os.path.join(wc_dir, file2_path),
@@ -1546,9 +1559,12 @@ def commit_nonrecursive(sbox):
   ###       dirA/dirB/fileC
   ###       dirA/dirB/nocommit
   ###
-  ###    2. run 'svn add -N <all of the above>'
+  ###    2. run 'svn add --depth=empty <all of the above>'
   ###
   ###    3. run 'svn ci -N <all but nocommit>'
+  ###
+  ###    (In this recipe, 'add -N' has been changed to 'add --depth...',
+  ###     but 'ci -N' has been left as-is, for reasons explained below.)
   ###
   ### Issue #1239 claimed a two-part bug: that step 3 would try to
   ### commit the file `nocommit' when it shouldn't, and that it would
@@ -1607,8 +1623,8 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, nope_2_path), 'nope_2')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
-                                     'add', '-N',
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'add', '--depth=empty',
                                      os.path.join(wc_dir, dirA_path),
                                      os.path.join(wc_dir, fileA_path),
                                      os.path.join(wc_dir, fileB_path),
@@ -1766,12 +1782,12 @@ def from_wc_top_with_bad_editor(sbox):
   wc_dir = sbox.wc_dir
 
   svntest.actions.run_and_verify_svn("Unexpected failure from propset.",
-                                     SVNAnyOutput, [],
+                                     svntest.verify.AnyOutput, [],
                                      'pset', 'fish', 'food', wc_dir)
   os.chdir(wc_dir)
   out, err = svntest.actions.run_and_verify_svn(
     "Commit succeeded when should have failed.",
-    None, SVNAnyOutput,
+    None, svntest.verify.AnyOutput,
     'ci', '--editor-cmd', 'no_such-editor')
 
   err = string.join(map(string.strip, err), ' ')
@@ -1789,7 +1805,8 @@ def mods_in_schedule_delete(sbox):
 
   # Schedule a delete, then put in local mods
   C_path = os.path.join(wc_dir, 'A', 'C')
-  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [], 'rm', C_path)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'rm', C_path)
   foo_path = os.path.join(C_path, 'foo')
   foo_contents = 'zig\nzag\n'
   svntest.main.file_append(foo_path, foo_contents)
@@ -1844,12 +1861,25 @@ def tab_test(sbox):
   match_bad_tab_path(tab_dir, errlines)
 
   # mkdir URL
-  outlines, errlines = svntest.main.run_svn(1, 'mkdir', '-m', 'msg', tab_url)
+  outlines, errlines = svntest.main.run_svn(1,
+                                            '--username',
+                                            svntest.main.wc_author,
+                                            '--password',
+                                            svntest.main.wc_passwd,
+                                            'mkdir', '-m', 'msg', tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
   # copy URL
-  svntest.main.run_svn(1, 'mkdir', '-m', 'msg', source_url)
-  outlines, errlines = svntest.main.run_svn(1, 'copy', '-m', 'msg',
+  svntest.main.run_svn(1,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'mkdir', '-m', 'msg', source_url)
+  outlines, errlines = svntest.main.run_svn(1,
+                                            '--username',
+                                            svntest.main.wc_author,
+                                            '--password',
+                                            svntest.main.wc_passwd,
+                                            'copy', '-m', 'msg',
                                             source_url, tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
@@ -1953,6 +1983,8 @@ def post_commit_hook_test(sbox):
                     ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg', iota_path)
 
 #----------------------------------------------------------------------
@@ -2011,6 +2043,8 @@ def commit_inconsistent_eol(sbox):
   expected_err = ".*iota.*"
 
   svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'commit', '-m', 'log message',
                                      wc_dir)
 
@@ -2022,15 +2056,21 @@ def mkdir_with_revprop(sbox):
   remote_dir = sbox.repo_url + "/dir"
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'bug=42', remote_dir)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '42', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
@@ -2040,18 +2080,26 @@ def delete_with_revprop(sbox):
   sbox.build()
   remote_dir = sbox.repo_url + "/dir"
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      remote_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'delete', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'bug=52', remote_dir)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 3:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 3, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '52', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 3, sbox.repo_url)
 
 
@@ -2080,13 +2128,17 @@ def commit_with_revprop(sbox):
                                         '--with-revprop', 'bug=62',
                                         omega_path, gloo_path)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '62', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
@@ -2100,16 +2152,22 @@ def import_with_revprop(sbox):
   svntest.main.file_write(local_file, "xxxx")
 
   svntest.actions.run_and_verify_svn(None, None, [], 'import', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'bug=72', local_dir,
                                      sbox.repo_url)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '72', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
@@ -2120,19 +2178,27 @@ def copy_R2R_with_revprop(sbox):
   remote_dir1 = sbox.repo_url + "/dir1"
   remote_dir2 = sbox.repo_url + "/dir2"
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      remote_dir1)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'bug=82', remote_dir1,
                                      remote_dir2)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 3:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 3, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '82', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 3, sbox.repo_url)
 
 
@@ -2142,19 +2208,28 @@ def copy_WC2R_with_revprop(sbox):
   sbox.build()
   remote_dir = sbox.repo_url + "/dir"
   local_dir = os.path.join(sbox.wc_dir, 'folder')
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', local_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'mkdir', local_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'bug=92', local_dir,
                                      remote_dir)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '92', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
@@ -2165,19 +2240,27 @@ def move_R2R_with_revprop(sbox):
   remote_dir1 = sbox.repo_url + "/dir1"
   remote_dir2 = sbox.repo_url + "/dir2"
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      remote_dir1)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'move', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'bug=102', remote_dir1,
                                      remote_dir2)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 3:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 3, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '102', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 3, sbox.repo_url)
 
 
@@ -2188,16 +2271,22 @@ def propedit_with_revprop(sbox):
   svntest.main.use_editor('append_foo')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'propedit', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'bug=112', 'prop',
                                      sbox.repo_url)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '112', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
@@ -2208,18 +2297,26 @@ def set_multiple_props_with_revprop(sbox):
   remote_dir = sbox.repo_url + "/dir"
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'bug=32',
                                      '--with-revprop', 'ref=22', remote_dir)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n', '  ref\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '32', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '22', [], 'propget', 'ref',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
@@ -2230,18 +2327,26 @@ def use_empty_value_in_revprop_pair(sbox):
   remote_dir = sbox.repo_url + "/dir"
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'bug=',
                                      '--with-revprop', 'ref=', remote_dir)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n', '  ref\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '', [], 'propget', 'ref',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
@@ -2251,18 +2356,26 @@ def no_equals_in_revprop_pair(sbox):
   sbox.build()
   remote_dir = sbox.repo_url + "/dir"
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'bug',
                                      '--with-revprop', 'ref', remote_dir)
 
-  expected = svntest.actions.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                   ['Unversioned properties on revision 2:\n',
                    '  svn:author\n','  svn:date\n',  '  svn:log\n',
                    '  bug\n', '  ref\n'])
   svntest.actions.run_and_verify_svn(None, expected, [], 'proplist',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '', [], 'propget', 'bug',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
   svntest.actions.run_and_verify_svn(None, '', [], 'propget', 'ref',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
@@ -2274,17 +2387,27 @@ def set_invalid_revprops(sbox):
   # Try to set svn: revprops.
   expected = '.*Standard properties can\'t.*'
   svntest.actions.run_and_verify_svn(None, [], expected, 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'svn:author=42', remote_dir)
   svntest.actions.run_and_verify_svn(None, [], expected, 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'svn:log=42', remote_dir)
   svntest.actions.run_and_verify_svn(None, [], expected, 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'svn:date=42', remote_dir)
   svntest.actions.run_and_verify_svn(None, [], expected, 'mkdir', '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '--with-revprop', 'svn:foo=bar', remote_dir)
 
   # Empty revprop pair.
   svntest.actions.run_and_verify_svn(None, [],
                                      'svn: Revision property pair is empty',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'msg',
 				     '--with-revprop', '',
                                      remote_dir)
@@ -2314,12 +2437,17 @@ sys.exit(1)"""
   svntest.main.file_append(iota_path, "More stuff in iota")
 
   # Commit, expect error code 1
-  actual_stdout, actual_stderr = svntest.main.run_svn(1, 'ci', '--quiet',
+  actual_stdout, actual_stderr = svntest.main.run_svn(1,
+                                                      '--username',
+                                                      svntest.main.wc_author,
+                                                      '--password',
+                                                      svntest.main.wc_passwd,
+                                                      'ci', '--quiet',
                                                       '-m', 'log msg', wc_dir)
 
   # No stdout expected
-  svntest.actions.compare_and_display_lines('Start-commit hook test',
-                                            'STDOUT', [], actual_stdout)
+  svntest.verify.compare_and_display_lines('Start-commit hook test',
+                                           'STDOUT', [], actual_stdout)
 
   # Compare only the last two lines of stderr since the preceding ones
   # contain source code file and line numbers.
@@ -2328,9 +2456,9 @@ sys.exit(1)"""
   expected_stderr = [ "svn: " + hook_failure_message('start-commit'),
                       "Start-commit hook failed\n"
                     ]
-  svntest.actions.compare_and_display_lines('Start-commit hook test',
-                                            'STDERR',
-                                            expected_stderr, actual_stderr)
+  svntest.verify.compare_and_display_lines('Start-commit hook test',
+                                           'STDERR',
+                                           expected_stderr, actual_stderr)
 
 #----------------------------------------------------------------------
 
@@ -2357,12 +2485,17 @@ sys.exit(1)"""
   svntest.main.file_append(iota_path, "More stuff in iota")
 
   # Commit, expect error code 1
-  actual_stdout, actual_stderr = svntest.main.run_svn(1, 'ci', '--quiet',
+  actual_stdout, actual_stderr = svntest.main.run_svn(1,
+                                                      '--username',
+                                                      svntest.main.wc_author,
+                                                      '--password',
+                                                      svntest.main.wc_passwd,
+                                                      'ci', '--quiet',
                                                       '-m', 'log msg', wc_dir)
 
   # No stdout expected
-  svntest.actions.compare_and_display_lines('Pre-commit hook test',
-                                            'STDOUT', [], actual_stdout)
+  svntest.verify.compare_and_display_lines('Pre-commit hook test',
+                                           'STDOUT', [], actual_stdout)
 
   # Compare only the last two lines of stderr since the preceding ones
   # contain source code file and line numbers.
@@ -2371,9 +2504,9 @@ sys.exit(1)"""
   expected_stderr = [ "svn: " + hook_failure_message('pre-commit'),
                       "Pre-commit hook failed\n"
                     ]
-  svntest.actions.compare_and_display_lines('Pre-commit hook test',
-                                            'STDERR',
-                                            expected_stderr, actual_stderr)
+  svntest.verify.compare_and_display_lines('Pre-commit hook test',
+                                           'STDERR',
+                                           expected_stderr, actual_stderr)
 
 #----------------------------------------------------------------------
 
@@ -2391,28 +2524,36 @@ def versioned_log_message(sbox):
   svntest.main.file_append(iota_path, "2")
 
   # try to check in a change using a versioned file as your log entry.
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-F', log_path)
 
   # force it.  should not produce any errors.
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-F', log_path, '--force-log')
 
   svntest.main.file_append(mu_path, "2")
 
   # try the same thing, but specifying the file to commit explicitly.
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-F', log_path, mu_path)
 
   # force it...  should succeed.
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci',
                                      '-F', log_path,
                                      '--force-log', mu_path)
 
 #----------------------------------------------------------------------
 
-def changelist(sbox):
+def changelist_near_conflict(sbox):
   "'svn commit --changelist=foo' above a conflict"
 
   sbox.build()
@@ -2445,6 +2586,25 @@ def changelist(sbox):
                                         None, None, None, None, None,
                                         "--changelist=" + changelist_name,
                                         "-m", "msg", wc_dir)
+
+
+#----------------------------------------------------------------------
+
+def no_such_changelist(sbox):
+  "'svn commit --changelist=not-found' should warn"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Attempt to commit a non-existent changelist.
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_svn("Attempt to commit a changelist with no "
+                                     "relevant paths should warn",
+                                     None, ".*Unknown changelist 'not-found'",
+                                     "commit", "--changelist=not-found",
+                                     "-m", "msg", wc_dir)
+                                        
 
 ########################################################################
 # Run the tests
@@ -2504,7 +2664,8 @@ test_list = [ None,
               start_commit_hook_test,
               pre_commit_hook_test,
               versioned_log_message,
-              changelist,
+              changelist_near_conflict,
+              no_such_changelist,
              ]
 
 if __name__ == '__main__':
