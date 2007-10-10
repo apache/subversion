@@ -35,7 +35,7 @@ public interface ProgressListener extends EventListener
      * Implement this API to receive progress events for Subversion
      * operations.
      *
-     * @param info everything to know about this event
+     * @param event everything to know about this event
      */
     public void onProgress(ProgressEvent event);
 }

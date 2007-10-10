@@ -37,9 +37,9 @@ public interface ConflictResolverCallback extends EventListener
      *
      * @param descrip A description of the conflict.
      * @return The result of any conflict resolution, from the {@link
-     * #Result} enum.
+     * .Result} enum.
      * @throws SubversionException If an error occurs.
-     * @see ConflictResolverCallback.Result
+     * @see .Result
      */
     public int resolve(ConflictDescriptor descrip)
         throws SubversionException;
