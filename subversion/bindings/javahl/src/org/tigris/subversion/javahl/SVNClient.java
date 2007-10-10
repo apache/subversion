@@ -514,7 +514,7 @@ public class SVNClient implements SVNClientInterface
     public void revert(String path, boolean recurse)
             throws ClientException
     {
-        revert(path, Depth.infinityOrFiles(recurse));
+        revert(path, Depth.infinityOrEmpty(recurse));
     }
 
     /**
@@ -551,7 +551,7 @@ public class SVNClient implements SVNClientInterface
     public void add(String path, boolean recurse, boolean force)
             throws ClientException
     {
-        add(path, Depth.infinityOrFiles(recurse), force, false, false);
+        add(path, Depth.infinityOrEmpty(recurse), force, false, false);
     }
 
     /**
@@ -1864,7 +1864,7 @@ public class SVNClient implements SVNClientInterface
                        boolean noUnlock)
             throws ClientException
     {
-        return commit(path, message, Depth.infinityOrFiles(recurse), noUnlock,
+        return commit(path, message, Depth.infinityOrEmpty(recurse), noUnlock,
                       false, null);
     }
 
