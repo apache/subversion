@@ -72,10 +72,10 @@
    Smaller values will limit your overall memory consumption, but can
    drastically hurt throughput by necessitating more write operations
    to the database (which also generates more log-files).  */
-#define SVN_FS_WRITE_BUFFER_SIZE          512000
+#define WRITE_BUFFER_SIZE          512000
 
 /* The maximum number of cache items to maintain in the node cache. */
-#define SVN_FS_NODE_CACHE_MAX_KEYS        32
+#define NODE_CACHE_MAX_KEYS        32
 
 
 
@@ -189,7 +189,7 @@ dag_node_cache_set(svn_fs_root_t *root,
   item = apr_hash_get(frd->node_cache, path, APR_HASH_KEY_STRING);
 
   /* Otherwise, if the cache is full, reuse the tail of the LRU list. */
-  if (!item && apr_hash_count(frd->node_cache) == SVN_FS_NODE_CACHE_MAX_KEYS)
+  if (!item && apr_hash_count(frd->node_cache) == NODE_CACHE_MAX_KEYS)
     item = frd->node_list.prev;
 
   if (item)
@@ -2279,7 +2279,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
 
   /* Check to see if we need to purge the portion of the contents that
      have been written thus far. */
-  if ((! window) || (tb->target_string->len > SVN_FS_WRITE_BUFFER_SIZE))
+  if ((! window) || (tb->target_string->len > WRITE_BUFFER_SIZE))
     {
       apr_size_t len = tb->target_string->len;
       SVN_ERR(svn_stream_write(tb->target_stream,
