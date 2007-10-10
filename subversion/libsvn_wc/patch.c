@@ -22,6 +22,8 @@
 
 /*** Includes. ***/
 
+#include <assert.h>
+
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_config.h"
@@ -435,18 +437,31 @@ svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
 
 svn_error_t *
 svn_wc_apply_unidiff(const char *patch_path,
+                     svn_boolean_t force,
+                     svn_boolean_t dry_run,
                      apr_file_t *outfile,
                      apr_file_t *errfile,
                      apr_hash_t *config,
                      apr_pool_t *pool)
 {
   const char *patch_cmd = NULL;
-  const char *patch_cmd_args[3];
+  const char **patch_cmd_args;
   const char *patch_cmd_tmp = NULL;
   int exitcode = 0;
   apr_exit_why_e exitwhy = 0;
   svn_boolean_t patch_bin_guess = TRUE; 
   apr_file_t *patchfile;
+  int nargs = 3; /* the command, the prefix arg and NULL at least */
+  int i = 0;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  if (force)
+    ++nargs;
+
+  if (dry_run)
+    ++nargs;
+
+  patch_cmd_args = apr_palloc(subpool, nargs * sizeof(char *));
 
   if (config)
     {
@@ -455,35 +470,39 @@ svn_wc_apply_unidiff(const char *patch_path,
                                        APR_HASH_KEY_STRING);
       svn_config_get(cfg, &patch_cmd_tmp, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_PATCH_CMD, NULL);
-      
     }
 
-  if (patch_cmd_tmp) 
+  if (patch_cmd_tmp)
     {
       patch_bin_guess = FALSE;
       SVN_ERR(svn_path_cstring_to_utf8(&patch_cmd, patch_cmd_tmp,
-                                       pool));
-      patch_cmd_args[0] = patch_cmd;
-      patch_cmd_args[1] = NULL;
-      patch_cmd_args[2] = NULL;
+                                       subpool));
     }
   else
-    {
-      patch_cmd = apr_psprintf(pool, "patch");
-      patch_cmd_args[0] = patch_cmd;
-      patch_cmd_args[1] = "-p0"; /* TODO: make it smarter in detecting CWD */
-      patch_cmd_args[2] = NULL;
-    }
+    patch_cmd = "patch";
+
+  patch_cmd_args[i++] = patch_cmd;
+  patch_cmd_args[i++] = "-p0"; /* TODO: make it smarter in detecting CWD */
+
+  if (force)
+    patch_cmd_args[i++] = "--force";
+
+  if (dry_run)
+    patch_cmd_args[i++] = "--dry-run";
+
+  patch_cmd_args[i++] = NULL;
+
+  assert(i == nargs);
 
   /* We want to feed the external program's stdin with the patch itself. */
   SVN_ERR(svn_io_file_open(&patchfile, patch_path,
-                           APR_READ, APR_OS_DEFAULT, pool));
+                           APR_READ, APR_OS_DEFAULT, subpool));
 
   /* Now run the external program.  The parent process should close
    * opened pipes/files. */
   SVN_ERR(svn_io_run_cmd(".", patch_cmd, patch_cmd_args,
                          &exitcode, &exitwhy, TRUE, patchfile, outfile,
-                         errfile, pool));
+                         errfile, subpool));
 
   /* This is where we have to make the assumption that if the exitcode
    * isn't 0 nor 1 then the external program got into trouble or wasn't
@@ -509,9 +528,11 @@ svn_wc_apply_unidiff(const char *patch_path,
         return svn_error_createf
                 (SVN_ERR_EXTERNAL_PROGRAM, NULL,
                  _("'%s' returned error exitcode %d"),
-                 svn_path_local_style(patch_cmd, pool),
+                 svn_path_local_style(patch_cmd, subpool),
                  exitcode);
     }
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

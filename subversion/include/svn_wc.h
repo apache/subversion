@@ -4589,9 +4589,15 @@ svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
  * program.  If missing or @a config is @c NULL, the function tries to
  * execute 'patch' literally, which should work on most *NIX systems at
  * least.  This involves searching into $PATH.  The external program is
- * given the patch file via its stdin pipe. */
+ * given the patch file via its stdin pipe.
+ *
+ * The program is passed '--force' or '--dry-run' argument respectively
+ * when @a force or @a dry_run is set.
+ */
 svn_error_t *
 svn_wc_apply_unidiff(const char *patch_path,
+                     svn_boolean_t force,
+                     svn_boolean_t dry_run,
                      apr_file_t *outfile,
                      apr_file_t *errfile,
                      apr_hash_t *config,
