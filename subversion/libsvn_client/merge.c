@@ -134,9 +134,6 @@ struct merge_cmd_baton {
   svn_boolean_t target_missing_child; /* Whether working copy target of the
                                          merge is missing any immediate
                                          children. */
-  svn_boolean_t existing_mergeinfo;   /* Whether working copy target of the
-                                         merge has any prexisting mergeinfo at
-                                         the start of the merge. */
   svn_boolean_t operative_merge;      /* Whether any changes were actually
                                          made as a result of this merge. */
   const char *added_path;             /* Set to the dir path whenever the
@@ -3427,7 +3424,6 @@ svn_client_merge3(const char *source1,
   merge_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool) : NULL);
   merge_cmd_baton.conflicted_paths = NULL;
   merge_cmd_baton.ctx = ctx;
-  merge_cmd_baton.existing_mergeinfo = FALSE;
   merge_cmd_baton.pool = pool;
   merge_cmd_baton.operative_merge = FALSE;
   merge_cmd_baton.target_has_dummy_merge_range = FALSE;
@@ -3657,7 +3653,6 @@ svn_client_merge_peg3(const char *source,
   merge_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool) : NULL);
   merge_cmd_baton.conflicted_paths = NULL;
   merge_cmd_baton.ctx = ctx;
-  merge_cmd_baton.existing_mergeinfo = FALSE;
   merge_cmd_baton.pool = pool;
   merge_cmd_baton.operative_merge = FALSE;
   merge_cmd_baton.target_has_dummy_merge_range = FALSE;
