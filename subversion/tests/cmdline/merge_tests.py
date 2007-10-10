@@ -8477,7 +8477,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   #Merge r6:3 from 'A' to 'A_COPY, This should leave line number 17
   #undisturbed in A_COPY/mu, rest should be reverted.
 
-  # Create a WC with a single branch
+  # Create a WC
   sbox.build()
   wc_dir = sbox.wc_dir
   A_path = os.path.join(wc_dir, 'A')
@@ -8708,7 +8708,7 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
 
   ## See http://svn.haxx.se/dev/archive-2007-09/0706.shtml ##
 
-  # Create a WC with a single branch
+  # Create a WC
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -8778,7 +8778,7 @@ def merge_with_auto_rev_range_detection(sbox):
   # Merge using '-g' option causes merge failure post r26803.
   ## See Also http://svn.haxx.se/dev/archive-2007-09/0735.shtml ##
 
-  # Create a WC with a single branch
+  # Create a WC
   sbox.build()
   wc_dir = sbox.wc_dir
 
