@@ -253,8 +253,8 @@ svn_diff__normalize_buffer(char **tgt,
      so we can possibly just return the remainder of the buffer */
 #define SKIP             \
   do {                   \
-    if (buf == curp)     \
-      start = ++buf;     \
+    if (start == curp)   \
+       ++start;          \
     last_skipped = TRUE; \
   } while (0)
 
@@ -364,12 +364,12 @@ svn_diff__normalize_buffer(char **tgt,
    * * If there's no eol and we are in whitespace, we want to ignore
    *   whitespace unconditionally. */
 
-  if (start == buf)
+  if (*tgt == tgt_newend)
     {
       /* we haven't copied any data in to *tgt and our chunk consists
          only of one block of (already normalized) data.
          Just return the block. */
-      *tgt = (char *)buf;
+      *tgt = (char *)start;
       *lengthp = include_len;
     }
   else
