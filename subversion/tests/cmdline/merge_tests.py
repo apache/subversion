@@ -8771,6 +8771,139 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
                                      mu_MOVED_url,
                                      mu_COPY_path)
 
+
+def merge_with_auto_rev_range_detection(sbox):
+  "merge with auto detection of revision ranges"
+
+  # Merge using '-g' option causes merge failure post r26803.
+  ## See Also http://svn.haxx.se/dev/archive-2007-09/0735.shtml ##
+
+  # Create a WC with a single branch
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  repo_url = sbox.repo_url
+  A_url = repo_url + '/A'
+  A_COPY_url = repo_url + '/A_COPY'
+  B1_path = os.path.join(wc_dir, 'A', 'B1')
+  B1_mu_path = os.path.join(wc_dir, 'A', 'B1', 'mu')
+  A_COPY_path = os.path.join(wc_dir, 'A_COPY')
+
+  # Create B1 inside A
+  svntest.actions.run_and_verify_svn(None, ["A         " + B1_path + "\n"],
+                                     [], 'mkdir',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     B1_path)
+
+  # Add a file mu inside B1
+  svntest.main.file_write(B1_mu_path, "This is the file 'mu'.\n")
+  svntest.actions.run_and_verify_svn(None, ["A         " + B1_mu_path + "\n"],
+                                     [], 'add', B1_mu_path)
+
+  # Commit B1 and B1/mu
+  expected_output = wc.State(wc_dir, {
+    'A/B1'      : Item(verb='Adding'),
+    'A/B1/mu'   : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B1'      : Item(status='  ', wc_rev=2),
+    'A/B1/mu'   : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Copy A to A_COPY
+  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
+                                     [], 'cp', '-m', 'cp A to A_COPY',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     A_url, A_COPY_url)
+
+  # Make a modification to A/B1/mu
+  svntest.main.file_write(B1_mu_path, "This is the file 'mu' modified.\n")
+  expected_output = wc.State(wc_dir, {'A/B1/mu' : Item(verb='Sending')})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B1'      : Item(status='  ', wc_rev=2),
+    'A/B1/mu'   : Item(status='  ', wc_rev=4),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Update the working copy to get A_COPY
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  short_A_COPY = shorten_path_kludge(A_COPY_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge /A to /A_COPY
+  expected_output = wc.State(short_A_COPY, {
+    'B1/mu' : Item(status='U '),
+    })
+  expected_status = wc.State(short_A_COPY, {
+    ''         : Item(status=' M', wc_rev=4),
+    'mu'       : Item(status='  ', wc_rev=4),
+    'C'        : Item(status='  ', wc_rev=4),
+    'D'        : Item(status='  ', wc_rev=4),
+    'B'        : Item(status='  ', wc_rev=4),
+    'B/lambda' : Item(status='  ', wc_rev=4),
+    'B/E'      : Item(status='  ', wc_rev=4),
+    'B/E/alpha': Item(status='  ', wc_rev=4),
+    'B/E/beta' : Item(status='  ', wc_rev=4),
+    'B/F'      : Item(status='  ', wc_rev=4),
+    'B1'       : Item(status='  ', wc_rev=4),
+    'B1/mu'    : Item(status='M ', wc_rev=4),
+    'D/gamma'  : Item(status='  ', wc_rev=4),
+    'D/G'      : Item(status='  ', wc_rev=4),
+    'D/G/pi'   : Item(status='  ', wc_rev=4),
+    'D/G/rho'  : Item(status='  ', wc_rev=4),
+    'D/G/tau'  : Item(status='  ', wc_rev=4),
+    'D/H'      : Item(status='  ', wc_rev=4),
+    'D/H/chi'  : Item(status='  ', wc_rev=4),
+    'D/H/omega': Item(status='  ', wc_rev=4),
+    'D/H/psi'  : Item(status='  ', wc_rev=4),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:1-4'}),
+    'mu'       : Item("This is the file 'mu'.\n"),
+    'C'        : Item(),
+    'D'        : Item(),
+    'B'        : Item(),
+    'B/lambda' : Item("This is the file 'lambda'.\n"),
+    'B/E'      : Item(),
+    'B/E/alpha': Item("This is the file 'alpha'.\n"),
+    'B/E/beta' : Item("This is the file 'beta'.\n"),
+    'B/F'      : Item(),
+    'B1'       : Item(),
+    'B1/mu'    : Item("This is the file 'mu' modified.\n"),
+    'D/gamma'  : Item("This is the file 'gamma'.\n"),
+    'D/G'      : Item(),
+    'D/G/pi'   : Item("This is the file 'pi'.\n"),
+    'D/G/rho'  : Item("This is the file 'rho'.\n"),
+    'D/G/tau'  : Item("This is the file 'tau'.\n"),
+    'D/H'      : Item(),
+    'D/H/chi'  : Item("This is the file 'chi'.\n"),
+    'D/H/omega': Item("This is the file 'omega'.\n"),
+    'D/H/psi'  : Item("This is the file 'psi'.\n"),
+    })
+  expected_skip = wc.State(short_A_COPY, {})
+  svntest.actions.run_and_verify_merge(short_A_COPY, None, None,
+                                       A_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, '-g')
+  os.chdir(saved_cwd)
+
+
 ########################################################################
 # Run the tests
 
@@ -8846,6 +8979,7 @@ test_list = [ None,
               merge_old_and_new_revs_from_renamed_dir,
               merge_with_child_having_different_rev_ranges_to_merge,
               merge_old_and_new_revs_from_renamed_file,
+              merge_with_auto_rev_range_detection,
              ]
 
 if __name__ == '__main__':
