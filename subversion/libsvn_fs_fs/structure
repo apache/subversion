@@ -359,6 +359,10 @@ follows:
     "-1" if entries have been changed and are contained in a
     "contents" file in the node-rev subdirectory.
 
+  * For the directory node-rev representing the root of the
+    transaction, the "is-fresh-txn-root" field indicates that it has
+    not been made mutable yet (see Issue #2608).
+
   * For file node-revs, the "text" field may have the value "-1
     <offset> <length> <size> <digest>" if the text representation is
     within the prototype rev file.
