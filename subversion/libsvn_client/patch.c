@@ -1775,7 +1775,8 @@ svn_client_patch(const char *patch_path,
     }
 
   /* Now proceed with the unidiff bytes. */
-  SVN_ERR(svn_wc_apply_unidiff(patch_path, outfile, errfile, ctx->config, pool));
+  SVN_ERR(svn_wc_apply_unidiff(patch_path, force, dry_run,
+                               outfile, errfile, ctx->config, pool));
 
   return SVN_NO_ERROR;
 }
