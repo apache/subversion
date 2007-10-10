@@ -3382,7 +3382,7 @@ test_list = [ None,
               diff_ignore_eolstyle,
               diff_in_renamed_folder,
               diff_with_depth,
-              XFail(diff_ignore_eolstyle_empty_lines),
+              diff_ignore_eolstyle_empty_lines,
               ]
 
 if __name__ == '__main__':
