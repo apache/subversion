@@ -886,6 +886,15 @@ static svn_error_t *svn_ra_neon__reparent(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *svn_ra_neon__get_session_url(svn_ra_session_t *session,
+                                                 const char **url,
+                                                 apr_pool_t *pool)
+{
+  svn_ra_neon__session_t *ras = session->priv;
+  *url = apr_pstrmemdup(pool, ras->url->data, ras->url->len);
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *svn_ra_neon__get_repos_root(svn_ra_session_t *session,
                                                 const char **url,
                                                 apr_pool_t *pool)
@@ -965,6 +974,7 @@ static const svn_ra__vtable_t neon_vtable = {
   ra_neon_get_schemes,
   svn_ra_neon__open,
   svn_ra_neon__reparent,
+  svn_ra_neon__get_session_url,
   svn_ra_neon__get_latest_revnum,
   svn_ra_neon__get_dated_revision,
   svn_ra_neon__change_rev_prop,
