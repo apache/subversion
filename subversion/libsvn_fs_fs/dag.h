@@ -21,6 +21,8 @@
 #include "svn_fs.h"
 #include "svn_delta.h"
 
+#include "fs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -52,8 +54,6 @@ extern "C" {
 
 
 /* Generic DAG node stuff.  */
-
-typedef struct dag_node_t dag_node_t;
 
 
 /* Fill *NODE with a dag_node_t representing node revision ID in FS,
