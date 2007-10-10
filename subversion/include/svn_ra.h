@@ -1291,10 +1291,6 @@ svn_error_t *svn_ra_get_repos_root(svn_ra_session_t *session,
  *
  * Use @a pool for all allocations.
  *
- * @note This functionality is not available in pre-1.1 servers.  If the
- * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
- * returned.
- *
  * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
