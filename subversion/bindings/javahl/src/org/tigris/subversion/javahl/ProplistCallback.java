@@ -28,8 +28,8 @@ public interface ProplistCallback
 {
     /**
      * the method will be called for every line in a file.
-     * @param path      the path.
-     * @param props     the properties on the path.
+     * @param path        the path.
+     * @param properties  the properties on the path.
      */
     public void singlePath(String path, Map properties);
 }

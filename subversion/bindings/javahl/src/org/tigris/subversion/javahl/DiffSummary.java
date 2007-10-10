@@ -22,7 +22,7 @@ import java.util.EventObject;
 
 /**
  * The event passed to the {@link
- * DiffSummarizer.summarize(DiffSummary)} API in response to path
+ * DiffSummaryReceiver#onSummary(DiffSummary)} API in response to path
  * differences reported by {@link SVNClientInterface#diffSummarize}.
  *
  * @since 1.5

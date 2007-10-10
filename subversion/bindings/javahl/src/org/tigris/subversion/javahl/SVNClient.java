@@ -93,9 +93,9 @@ public class SVNClient implements SVNClientInterface
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
-     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">Instructions</a>
-     * on changing this as a work-around for the behavior of ASP.Net
-     * on Windows.
+     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">
+     * Instructions on changing this as a work-around for the behavior of
+     * ASP.Net on Windows.</a>
      * @since 1.3
      */
     public native String getAdminDirectoryName();
@@ -184,7 +184,6 @@ public class SVNClient implements SVNClientInterface
      * @param getAll    get status for uninteresting (unchanged) files.
      * @param noIgnore  get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
-     * @return Array of Status entries.
      * @since 1.5
      */
     public native void status(String path, int depth, boolean onServer,
@@ -370,7 +369,6 @@ public class SVNClient implements SVNClientInterface
      * @param omitLogText   supress log message text.
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
-     * @return array of LogMessages
      * @since 1.5
      */
     public native void logMessages(String path,
@@ -460,7 +458,7 @@ public class SVNClient implements SVNClientInterface
     public native void notification2(Notify2 notify);
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#setConflictResolver(ConflictResolverCallback)
+     * @see SVNClientInterface#setConflictResolver(ConflictResolverCallback)
      * @since 1.5
      */
     public native void setConflictResolver(ConflictResolverCallback listener);
@@ -646,7 +644,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean)
+     * @see SVNClientInterface#commit(String[], String, boolean)
      */
     public long commit(String[] path, String message, boolean recurse)
             throws ClientException
@@ -655,7 +653,7 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, int, boolean, boolean, String)
+     * @see SVNClientInterface#commit(String[], String, int, boolean, boolean, String)
      * @since 1.5
      */
     public native long commit(String[] path, String message, int depth,
@@ -666,7 +664,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * Copy versioned paths with the history preserved.
      *
-     * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
+     * @see SVNClientInterface#copy(CopySource[], String, String, boolean, boolean, boolean)
      * @since 1.5
      */
     public native void copy(CopySource[] sources, String destPath,
@@ -706,7 +704,7 @@ public class SVNClient implements SVNClientInterface
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
      * @throws ClientException If the move operation fails.
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
+     * @see SVNClientInterface#move(String[], String, String, boolean, boolean, boolean, boolean)
      * @since 1.5
      */
     public native void move(String[] srcPaths, String destPath, String message,
@@ -716,7 +714,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use move() without a Revision parameter.
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
+     * @see SVNClientInterface#move(String[], String, String, boolean, boolean, boolean, boolean)
      * @since 1.2
      */
     public void move(String srcPath, String destPath, String message,
@@ -782,14 +780,14 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, int)
+     * @see SVNClientInterface#resolved(String, int, int)
      * @since 1.5
      */
     public native void resolved(String path, int depth, int conflictResult)
         throws SubversionException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, boolean)
+     * @see SVNClientInterface#resolved(String, boolean)
      */
     public void resolved(String path, boolean recurse)
         throws ClientException
@@ -873,7 +871,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.doSwitch(String, String, Revision, int, boolean, boolean)
+     * @see SVNClientInterface#doSwitch(String, String, Revision, int, boolean, boolean)
      * @since 1.5
      */
     public native long doSwitch(String path, String url, Revision revision,
@@ -934,7 +932,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
+     * @see SVNClientInterface#suggestMergeSources(String, Revision)
      */
     public native String[] suggestMergeSources(String path, 
                                                Revision pegRevision)
@@ -1084,14 +1082,14 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
-     * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(String, Revision)
+     * @see SVNClientInterface#getMergeInfo(String, Revision)
      * @since 1.5
      */
     public native MergeInfo getMergeInfo(String path, Revision pegRevision)
             throws SubversionException;
 
     /**
-     * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getAvailableMerges(String, Revision, String)
+     * @see SVNClientInterface#getAvailableMerges(String, Revision, String)
      * @since 1.5
      */
     public native RevisionRange[] getAvailableMerges(String path,
@@ -1246,7 +1244,7 @@ public class SVNClient implements SVNClientInterface
      * @param pegRevision Revision at which to interpret
      * <code>target</code>.  If {@link RevisionKind#unspecified} or
      * <code>null</code>, behave identically to {@link
-     * diffSummarize(String, Revision, String, Revision, boolean,
+     * #diffSummarize(String, Revision, String, Revision, int,
      * boolean, DiffSummaryReceiver)}, using <code>path</code> for
      * both of that method's targets.
      * @param startRevision Beginning of range for comparsion of
@@ -1748,7 +1746,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.setConfigDirectory(String)
+     * @see SVNClientInterface#setConfigDirectory(String)
      */
     public native void setConfigDirectory(String configDir)
             throws ClientException;
@@ -1859,7 +1857,7 @@ public class SVNClient implements SVNClientInterface
     public static native int versionMicro();
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean)
+     * @see SVNClientInterface#commit(String[], String, boolean, boolean)
      * @since 1.2
      */
     public long commit(String[] path, String message, boolean recurse,
@@ -1894,7 +1892,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.info2(String, Revision, Revision, int, InfoCallback)
+     * @see SVNClientInterface#info2(String, Revision, Revision, int, InfoCallback)
      * @since 1.5
      */
     public Info2[] info2(String pathOrUrl, Revision revision,
@@ -1914,7 +1912,6 @@ public class SVNClient implements SVNClientInterface
      * @param pegRevision   the revision to interpret pathOrUrl
      * @param depth         the depth to recurse
      * @param callback      a callback to receive the infos retreived
-     * @return              the information objects
      * @since 1.5
      */
     public native void info2(String pathOrUrl, Revision revision,
