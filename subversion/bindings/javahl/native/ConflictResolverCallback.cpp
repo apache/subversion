@@ -208,13 +208,13 @@ svn_wc_conflict_result_t ConflictResolverCallback::javaResultToC(jint result)
       return svn_wc_conflict_result_conflicted;
     case org_tigris_subversion_javahl_ConflictResolverCallback_Result_resolved:
       return svn_wc_conflict_result_resolved;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_choose_base:
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_chooseBase:
       return svn_wc_conflict_result_choose_base;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_choose_theirs:
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_chooseTheirs:
       return svn_wc_conflict_result_choose_theirs;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_choose_mine:
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_chooseMine:
       return svn_wc_conflict_result_choose_mine;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_choose_merged:
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_chooseMerged:
       return svn_wc_conflict_result_choose_merged;
     }
 }
