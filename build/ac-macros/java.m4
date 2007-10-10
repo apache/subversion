@@ -35,6 +35,7 @@ AC_DEFUN(SVN_FIND_JDK,
 
   JDK=none
   JAVA_BIN=none
+  JAVADOC=none
   JAVAC=none
   JAVAH=none
   JAR=none
@@ -92,6 +93,7 @@ AC_DEFUN(SVN_FIND_JDK,
     JAVA="$JAVA_BIN/java"
     JAVAC="$JAVA_BIN/javac"
     JAVAH="$JAVA_BIN/javah"
+    JAVADOC="$JAVA_BIN/javadoc"
     JAR="$JAVA_BIN/jar"
 
     dnl Prefer Jikes (for speed) if available.
@@ -152,6 +154,7 @@ AC_DEFUN(SVN_FIND_JDK,
   AC_SUBST(JAVA)
   AC_SUBST(JAVAC)
   AC_SUBST(JAVAC_FLAGS)
+  AC_SUBST(JAVADOC)
   AC_SUBST(JAVAH)
   AC_SUBST(JAR)
   AC_SUBST(JNI_INCLUDES)
