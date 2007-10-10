@@ -8903,6 +8903,109 @@ def merge_with_auto_rev_range_detection(sbox):
                                        1, 1, '-g')
   os.chdir(saved_cwd)
 
+def mergeinfo_recording_in_skipped_merge(sbox):
+  "mergeinfo recording in skipped merge"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2829. ##
+
+  # Create a WC with a single branch
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox, True, 1)
+
+  # Some paths we'll care about
+  repo_url = sbox.repo_url
+  A_url = repo_url + '/A'
+  A_COPY_path = os.path.join(wc_dir, 'A_COPY')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  A_COPY_B_E_path = os.path.join(wc_dir, 'A_COPY', 'B', 'E')
+  A_COPY_alpha_path = os.path.join(wc_dir, 'A_COPY', 'B', 'E', 'alpha')
+  A_COPY_beta_path = os.path.join(wc_dir, 'A_COPY', 'B', 'E', 'beta')
+
+  # Make a modification to A/mu
+  svntest.main.file_write(mu_path, "This is the file 'mu' modified.\n")
+  expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
+  wc_status.add({'A/mu'     : Item(status='  ', wc_rev=3)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Make a modification to A/B/E/alpha
+  svntest.main.file_write(alpha_path, "This is the file 'alpha' modified.\n")
+  expected_output = wc.State(wc_dir, {'A/B/E/alpha' : Item(verb='Sending')})
+  wc_status.add({'A/B/E/alpha'     : Item(status='  ', wc_rev=4)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Delete A_COPY/B/E
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     A_COPY_B_E_path)
+
+  short_A_COPY = shorten_path_kludge(A_COPY_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge /A to /A_COPY ie., r1 to r4
+  expected_output = wc.State(short_A_COPY, {
+    'mu' : Item(status='U '),
+    })
+  expected_status = wc.State(short_A_COPY, {
+    ''         : Item(status=' M', wc_rev=2),
+    'mu'       : Item(status='M ', wc_rev=2),
+    'B'        : Item(status='  ', wc_rev=2),
+    'B/lambda' : Item(status='  ', wc_rev=2),
+    'B/F'      : Item(status='  ', wc_rev=2),
+    'B/E'      : Item(status='D ', wc_rev=2),
+    'B/E/alpha': Item(status='D ', wc_rev=2),
+    'B/E/beta' : Item(status='D ', wc_rev=2),
+    'C'        : Item(status='  ', wc_rev=2),
+    'D'        : Item(status='  ', wc_rev=2),
+    'D/gamma'  : Item(status='  ', wc_rev=2),
+    'D/G'      : Item(status='  ', wc_rev=2),
+    'D/G/pi'   : Item(status='  ', wc_rev=2),
+    'D/G/rho'  : Item(status='  ', wc_rev=2),
+    'D/G/tau'  : Item(status='  ', wc_rev=2),
+    'D/H'      : Item(status='  ', wc_rev=2),
+    'D/H/chi'  : Item(status='  ', wc_rev=2),
+    'D/H/omega': Item(status='  ', wc_rev=2),
+    'D/H/psi'  : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:1-4'}),
+    'mu'       : Item("This is the file 'mu' modified.\n"),
+    'C'        : Item(),
+    'D'        : Item(),
+    'B'        : Item(props={SVN_PROP_MERGE_INFO : '/A:1'}),
+    'B/lambda' : Item(contents="This is the file 'lambda'.\n",
+                      props={SVN_PROP_MERGE_INFO : '/A/B/lambda:1-4'}),
+    'B/F'      : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:1-4'}),
+    'D/gamma'  : Item("This is the file 'gamma'.\n"),
+    'D/G'      : Item(),
+    'D/G/pi'   : Item("This is the file 'pi'.\n"),
+    'D/G/rho'  : Item("This is the file 'rho'.\n"),
+    'D/G/tau'  : Item("This is the file 'tau'.\n"),
+    'D/H'      : Item(),
+    'D/H/chi'  : Item("This is the file 'chi'.\n"),
+    'D/H/omega': Item("This is the file 'omega'.\n"),
+    'D/H/psi'  : Item("This is the file 'psi'.\n"),
+    })
+  expected_skip = wc.State(short_A_COPY, {
+    'B/E/alpha' : Item(),
+    })
+  svntest.actions.run_and_verify_merge(short_A_COPY, None, None,
+                                       A_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, '-g')
+
+  os.chdir(saved_cwd)
 
 ########################################################################
 # Run the tests
@@ -8980,6 +9083,7 @@ test_list = [ None,
               merge_with_child_having_different_rev_ranges_to_merge,
               merge_old_and_new_revs_from_renamed_file,
               merge_with_auto_rev_range_detection,
+              XFail(mergeinfo_recording_in_skipped_merge),
              ]
 
 if __name__ == '__main__':
