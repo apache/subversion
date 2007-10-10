@@ -58,6 +58,9 @@ typedef struct svn_ra__vtable_t {
   svn_error_t *(*reparent)(svn_ra_session_t *session,
                            const char *url,
                            apr_pool_t *pool);
+  svn_error_t *(*get_session_url)(svn_ra_session_t *session,
+                                  const char **url,
+                                  apr_pool_t *pool);
   svn_error_t *(*get_latest_revnum)(svn_ra_session_t *session,
                                     svn_revnum_t *latest_revnum,
                                     apr_pool_t *pool);

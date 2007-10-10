@@ -521,6 +521,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   sess = apr_palloc(pool, sizeof(*sess));
   sess->pool = pool;
   sess->is_tunneled = (tunnel_argv != NULL);
+  sess->url = apr_pstrdup(pool, url);
   sess->user = uri->user;
   sess->hostname = uri->hostname;
   sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
@@ -659,7 +660,11 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "reparent", "c", url));
   err = handle_auth_request(sess, pool);
   if (! err)
-    return svn_ra_svn_read_cmd_response(conn, pool, "");
+    {
+      SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+      sess->url = apr_pstrdup(pool, url);
+      return SVN_NO_ERROR;
+    }
   else if (err->apr_err != SVN_ERR_RA_SVN_UNKNOWN_CMD)
     return err;
 
@@ -684,6 +689,14 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   ra_session->priv = new_sess;
   svn_pool_destroy(sess->pool);
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *ra_svn_get_session_url(svn_ra_session_t *session,
+                                           const char **url, apr_pool_t *pool)
+{
+  svn_ra_svn__session_baton_t *sess = session->priv;
+  *url = apr_pstrdup(pool, sess->url);
   return SVN_NO_ERROR;
 }
 
@@ -2076,6 +2089,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_schemes,
   ra_svn_open,
   ra_svn_reparent,
+  ra_svn_get_session_url,
   ra_svn_get_latest_rev,
   ra_svn_get_dated_rev,
   ra_svn_change_rev_prop,

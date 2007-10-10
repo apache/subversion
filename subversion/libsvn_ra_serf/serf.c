@@ -221,6 +221,16 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
+svn_ra_serf__get_session_url(svn_ra_session_t *ra_session,
+                             const char **url,
+                             apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+  *url = apr_pstrdup(pool, session->repos_url_str);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
                                svn_revnum_t *latest_revnum,
                                apr_pool_t *pool)
@@ -726,6 +736,7 @@ static const svn_ra__vtable_t serf_vtable = {
   ra_serf_get_schemes,
   svn_ra_serf__open,
   svn_ra_serf__reparent,
+  svn_ra_serf__get_session_url,
   svn_ra_serf__get_latest_revnum,
   svn_ra_serf__get_dated_revision,
   svn_ra_serf__change_rev_prop,

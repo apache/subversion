@@ -508,6 +508,13 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *session,
   return session->vtable->reparent(session, url, pool);
 }
 
+svn_error_t *svn_ra_get_session_url(svn_ra_session_t *session,
+                                    const char **url,
+                                    apr_pool_t *pool)
+{
+  return session->vtable->get_session_url(session, url, pool);
+}
+
 svn_error_t *svn_ra_get_latest_revnum(svn_ra_session_t *session,
                                       svn_revnum_t *latest_revnum,
                                       apr_pool_t *pool)
