@@ -77,10 +77,6 @@ struct patch_cmd_baton {
    * dry_run mode. */
   apr_hash_t *dry_run_deletions;
 
-  /* The list of paths of schedule-delete entries.  See is_removal_safe
-   * docstring. */
-  apr_hash_t *deletions;
-
   apr_pool_t *pool;
 };
 
@@ -96,19 +92,6 @@ dry_run_deleted_p(struct patch_cmd_baton *patch_b, const char *wcpath)
                        APR_HASH_KEY_STRING) != NULL);
 }
 
-/* Helper function.  When PATH is found in the deletions hash, it is
- * assumed the file can be removed from disk.  When patching -- i.e.
- * reading serialiazed Editor Commands --, a move operation is either
- * represented with an add-file with copy-path and a delete-entry, or
- * the other way around.  When the latter, we need to defer the file
- * on-disk removal (use of the keep-local feature) so that the add-file
- * command succeeds at copying since it needs the source. */
-static APR_INLINE svn_boolean_t
-is_removal_safe(struct patch_cmd_baton *patch_b, const char *path)
-{
-  return apr_hash_get(patch_b->deletions, path,
-                      APR_HASH_KEY_STRING) != NULL;
-}
 
 
 /* A svn_wc_diff_callbacks3_t function.  Used for both file and directory
@@ -400,12 +383,6 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                                      patch_b->ctx->cancel_baton,
                                      NULL, NULL, /* no notification */
                                      subpool));
-
-                if (is_removal_safe(patch_b, copyfrom_path))
-                  svn_io_remove_file(copyfrom_path, subpool);
-                else
-                  apr_hash_set(patch_b->deletions, copyfrom_path,
-                               APR_HASH_KEY_STRING, copyfrom_path);
               }
             else /* schedule-add */
               {
@@ -514,7 +491,6 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   svn_wc_adm_access_t *parent_access;
   const char *parent_path;
   svn_error_t *err;
-  svn_boolean_t keep_local = TRUE;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -535,20 +511,10 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       svn_path_split(mine, &parent_path, NULL, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                   subpool));
-      
-      if (is_removal_safe(patch_b, mine))
-        keep_local = FALSE;
-      else
-        {
-          const char *file_copy = apr_pstrdup(patch_b->pool, mine);
-          apr_hash_set(patch_b->deletions, file_copy,
-                       APR_HASH_KEY_STRING, file_copy);
-        }
-        
       /* Passing NULL for the notify_func and notify_baton because
          delete_entry() will do it for us. */
       err = svn_client__wc_delete(mine, parent_access, patch_b->force,
-                                  patch_b->dry_run, keep_local, NULL, NULL,
+                                  patch_b->dry_run, FALSE, NULL, NULL,
                                   patch_b->ctx, subpool);
       if (err && state)
         {
@@ -1758,7 +1724,6 @@ svn_client_patch(const char *patch_path,
       patch_cmd_baton.ctx = ctx;
       patch_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool)
                                             : NULL);
-      patch_cmd_baton.deletions = apr_hash_make(pool);
       patch_cmd_baton.pool = pool;
 
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, wc_path,
