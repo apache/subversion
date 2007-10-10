@@ -93,14 +93,6 @@ typedef struct dag_node_cache_t
   apr_pool_t *pool;               /* Pool in which node is allocated */
 } dag_node_cache_t;
 
-
-typedef enum root_kind_t {
-  unspecified_root = 0,
-  revision_root,
-  transaction_root
-} root_kind_t;
-
-
 typedef struct
 {
   /* For revision roots, this is a dag node for the revision's root
