@@ -149,6 +149,24 @@ typedef struct
   apr_pool_t *common_pool;
 } fs_fs_shared_data_t;
 
+typedef struct dag_node_t dag_node_t;
+
+/* Structure for DAG-node cache.  Cache items are arranged in a
+   circular LRU list with a dummy entry, and also indexed with a hash
+   table.  Transaction nodes are cached within the individual txn
+   roots; revision nodes are cached together within the FS object. */
+typedef struct dag_node_cache_t
+{
+  const char *key;                /* Lookup key for cached node: path
+                                     for txns; rev catenated with path
+                                     for revs */
+  dag_node_t *node;               /* Cached node */
+  struct dag_node_cache_t *prev;  /* Next node in LRU list */
+  struct dag_node_cache_t *next;  /* Previous node in LRU list */
+  apr_pool_t *pool;               /* Pool in which node is allocated */
+} dag_node_cache_t;
+
+
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
 typedef struct
 {
@@ -169,6 +187,10 @@ typedef struct
 
   /* The uuid of this FS. */
   const char *uuid;
+
+  /* DAG node cache for immutable nodes */
+  dag_node_cache_t rev_node_list;
+  apr_hash_t *rev_node_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
