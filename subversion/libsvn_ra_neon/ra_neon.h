@@ -977,6 +977,8 @@ svn_ra_neon__get_lock(svn_ra_session_t *session,
                       const char *path,
                       apr_pool_t *pool);
 
+/*
+ * Implements the replay RA layer function. */
 svn_error_t *
 svn_ra_neon__replay(svn_ra_session_t *session,
                     svn_revnum_t revision,
