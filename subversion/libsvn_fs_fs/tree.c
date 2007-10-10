@@ -232,6 +232,8 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
   const char *key;
   dag_node_cache_t *item;
 
+  assert(root->is_txn_root);
+
   for (item = frd->node_list.next; item != &frd->node_list; item = item->next)
     {
       key = item->path;
