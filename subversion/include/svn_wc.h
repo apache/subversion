@@ -763,6 +763,10 @@ typedef enum svn_wc_notify_action_t
   /** Failed to update a path's changelist association. @since New in 1.5. */
   svn_wc_notify_changelist_failed,
 
+  /** Warn user that a path has moved from one changelist to another.
+      @since New in 1.5. */
+  svn_wc_notify_changelist_moved,
+
   /** A merge operation (to path) has begun.  See @c merge_range in
       @c svn_wc_notify_t.  @since New in 1.5   */
   svn_wc_notify_merge_begin,
@@ -4397,6 +4401,10 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * For each path in @a paths, set its entry's 'changelist' attribute
  * to @a changelist.  (If @a changelist is NULL, then path is no
  * longer a member of any changelist).
+ *
+ * NOTE:  for now, directories are NOT allowed to be associated with
+ * changelists;  there is confusion about whether they should/do
+ * behave as depth-0 or depth-infinity objects.
  *
  * If @a matching_changelist is not NULL, then enforce that each
  * path's existing entry->changelist field matches @a
