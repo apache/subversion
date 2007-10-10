@@ -2922,8 +2922,49 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
           continue;
         }
 
-      /* ### TODO (issue #2947): Add warning when a path is moved from
-         ### one changelist to another. */
+      /* Is path a directory?  Skip it.
+
+         ### TODO(sussman): we may want to allow directories to be
+             members of changelists one day, but we'll have to make
+             them take --depth arguments or something, to Do It Right.
+      */
+      if (entry->kind == svn_node_dir)
+        {
+          if (notify_func)
+            {
+              svn_error_t *unversioned_err =
+                  svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
+                                    _("'%s' is a directory, and thus cannot"
+                                      " be a member of a changelist."),
+                                    path);
+              notify = svn_wc_create_notify(path,
+                                            svn_wc_notify_changelist_failed,
+                                            iterpool);
+              notify->err = unversioned_err;
+              notify_func(notify_baton, notify, iterpool);
+            }
+          continue;
+        }
+
+      /* If the path is already a member of a changelist, warn the
+         user about this, but still allow the reassignment to happen.
+      */
+      if (entry->changelist)
+        {
+          if (notify_func)
+            {
+              svn_error_t *unversioned_err =
+                  svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
+                                    _("'%s' is already a member of"
+                                      " changelist '%s'."),
+                                    path, entry->changelist);
+              notify = svn_wc_create_notify(path,
+                                            svn_wc_notify_changelist_moved,
+                                            iterpool);
+              notify->err = unversioned_err;
+              notify_func(notify_baton, notify, iterpool);
+            }
+        }
 
       /* Possibly enforce matching with an existing changelist. */
       if (matching_changelist != NULL)
