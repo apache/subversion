@@ -931,12 +931,12 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, int)
      * @since 1.5
      */
-    public void resolved(String path, int depth)
+    public void resolved(String path, int depth, int conflictResult)
         throws SubversionException
     {
         synchronized (clazz)
         {
-            worker.resolved(path, depth);
+            worker.resolved(path, depth, conflictResult);
         }
     }
 

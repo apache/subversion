@@ -484,7 +484,8 @@ void SVNClient::cleanup(const char *path)
     SVN_JNI_ERR(svn_client_cleanup(intPath.c_str(), ctx, requestPool.pool()),);
 }
 
-void SVNClient::resolved(const char *path, svn_depth_t depth)
+void SVNClient::resolved(const char *path, svn_depth_t depth,
+                         svn_wc_conflict_result_t result)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -494,8 +495,7 @@ void SVNClient::resolved(const char *path, svn_depth_t depth)
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_resolved2(intPath.c_str(), depth,
-                                     svn_wc_conflict_result_choose_merged,
+    SVN_JNI_ERR(svn_client_resolved2(intPath.c_str(), depth, result,
                                      ctx, requestPool.pool()), );
 }
 
