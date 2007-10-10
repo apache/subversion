@@ -261,6 +261,7 @@ PERL = @PERL@
 JDK = @JDK@
 JAVA = @JAVA@
 JAVAC = @JAVAC@
+JAVADOC = @JAVADOC@
 JAVAC_FLAGS = @JAVAC_FLAGS@
 JAVAH = @JAVAH@
 JAR = @JAR@
@@ -495,14 +496,20 @@ external-extraclean:
 # DOCUMENTATION RULES
 
 # Every single document in every format.
-doc: doc-misc-docs doc-api
+doc: doc-misc-docs doc-api doc-javahl
 
 # Generate API documentation for the C libraries.
-### This could also generate JavaDoc for JavaHL, POD for swig-perl, etc.
+### This could also generate POD for swig-perl, etc.
 doc-api:
 	( cd $(top_srcdir) && \
 	  sed "s,\(OUTPUT_DIRECTORY *= *\),\1$(abs_builddir)/," \
 	  doc/doxygen.conf | doxygen - )
+
+# Generate API documentation for the JavaHL package.
+doc-javahl:
+	$(JAVADOC) -d $(top_srcdir)/doc/javadoc \
+	  -sourcepath $(top_srcdir)/subversion/bindings/javahl/src \
+	  org.tigris.subversion.javahl
 
 # Build all types of a certain doc.
 doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
@@ -523,6 +530,7 @@ doc-misc-docs-ps:
 doc-clean:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) clean
 	rm -rf $(top_srcdir)/doc/doxygen
+	rm -rf $(top_srcdir)/doc/javadoc
 
 # Converting from the .rnc XML shcemas to various other schema formats.
 SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd $(SCHEMA_DIR)/info.dtd \
