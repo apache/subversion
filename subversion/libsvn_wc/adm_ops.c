@@ -2949,7 +2949,7 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
       /* If the path is already a member of a changelist, warn the
          user about this, but still allow the reassignment to happen.
       */
-      if (entry->changelist)
+      if (entry->changelist && changelist)
         {
           if (notify_func)
             {
