@@ -27,10 +27,9 @@ import java.util.Iterator;
 import java.util.Date;
 
 /**
- * This is the main interface class.  All subversion commandline client
- * svn and svnversion operation are implemented in this class.  This
- * class is not threadsafe.  If you need threadsafe access, use
- * SVNClientSynchronized.
+ * This is the main client class.  All Subversion client APIs are
+ * implemented in this class.  This class is not threadsafe; if you
+ * need threadsafe access, use SVNClientSynchronized.
  */
 public class SVNClient implements SVNClientInterface
 {
