@@ -786,7 +786,7 @@ public class SVNClient implements SVNClientInterface
      * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, int)
      * @since 1.5
      */
-    public native void resolved(String path, int depth)
+    public native void resolved(String path, int depth, int conflictResult)
         throws SubversionException;
 
     /**
@@ -797,7 +797,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            resolved(path, Depth.infinityOrEmpty(recurse));
+            resolved(path, Depth.infinityOrEmpty(recurse),
+                     ConflictResolverCallback.Result.choose_merged);
         }
         catch (SubversionException e)
         {

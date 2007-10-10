@@ -651,10 +651,12 @@ public interface SVNClientInterface
      * Removes the <i>conflicted</i> state on a WC path (or tree).
      * @param path The path to resolve.
      * @param depth How deep to recurse into child paths.
+     * @param conflictResult Which version to choose in the event of a
+     *                       conflict.
      * @throws SubversionException If an error occurs.
      * @since 1.5
      */
-    void resolved(String path, int depth)
+    void resolved(String path, int depth, int conflictResult)
         throws SubversionException;
 
     /**
