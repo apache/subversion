@@ -50,7 +50,6 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_utf.h"
-#include "private/svn_client_private.h"
 #include "svn_private_config.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
