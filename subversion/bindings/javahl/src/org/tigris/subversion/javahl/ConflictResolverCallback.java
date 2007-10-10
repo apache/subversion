@@ -62,22 +62,22 @@ public interface ConflictResolverCallback extends EventListener
         /**
          * User chooses the base file.
          */
-        public static final int choose_base = 2;
+        public static final int chooseBase = 2;
 
         /**
          * User chooses the repository file.
          */
-        public static final int choose_theirs = 3;
+        public static final int chooseTheirs = 3;
 
         /**
          * User chooses own version of file.
          */
-        public static final int choose_mine = 4;
+        public static final int chooseMine = 4;
 
         /**
          * User chooses the merged-file (which she may have manually
          * edited).
          */
-        public static final int choose_merged = 5;
+        public static final int chooseMerged = 5;
     }
 }
