@@ -56,10 +56,10 @@ public interface SVNClientInterface
     public boolean isAdminDirectory(String name);
 
     /**
-      * Returns the last destination path submitted.
-      * @deprecated
-      * @return path in Subversion format.
-      */
+     * Returns the last destination path submitted.
+     * @deprecated
+     * @return path in Subversion format.
+     */
     String getLastPath();
 
     /**
