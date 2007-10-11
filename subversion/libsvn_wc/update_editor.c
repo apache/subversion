@@ -3018,7 +3018,7 @@ add_file_with_history(const char *path,
       *file_baton = tfb;
       return SVN_NO_ERROR;
     }
- 
+
   /* Initialize the text-bases for the new file baton, the same way
      apply_textdelta() does. */
   tfb->text_base_path = svn_wc__text_base_path(tfb->path, FALSE, tfb->pool);
@@ -3107,15 +3107,23 @@ add_file_with_history(const char *path,
 
       if (props_changed)
         {
-          const char *src_working_props, *dst_working_props;
-          SVN_ERR(svn_wc__prop_path(&src_working_props, src_path,
-                                    svn_node_file, svn_wc__props_working,
-                                    FALSE, pool));
-          SVN_ERR(svn_wc__prop_path(&dst_working_props, tfb->path,
-                                    svn_node_file, svn_wc__props_working,
-                                    FALSE, pool));
-          SVN_ERR(svn_io_copy_file(src_working_props, dst_working_props,
-                                   TRUE, pool));
+          /* Apparently just copying the working-props file over
+             isn't a guaranteed-correct way to migrate the local
+             propchanges.  So we'll do it programmatically.  */
+          int i;
+          apr_array_header_t *propchanges;
+          apr_pool_t *iterpool = svn_pool_create(pool);
+
+          SVN_ERR(svn_wc_get_prop_diffs(&propchanges, NULL, src_path,
+                                        src_access, pool));
+          for (i = 0; i < propchanges->nelts; i++)
+            {
+              const svn_prop_t *change = &APR_ARRAY_IDX(propchanges,
+                                                        i, svn_prop_t);
+              SVN_ERR(svn_wc_prop_set2(change->name, change->value,
+                                       tfb->path, adm_access, FALSE, iterpool));
+              svn_pool_clear(iterpool);
+            }
         }
     }
 
@@ -3126,13 +3134,13 @@ add_file_with_history(const char *path,
      apply_textdelta(), which means re-opening the file. */
   SVN_ERR(open_file(path, parent_baton, SVN_INVALID_REVNUM, pool, &fb));
   tfb = (struct file_baton *)fb;
-  
+
   if (tfb->ambient_depth == svn_depth_exclude)
     {
       *file_baton = tfb;
       return SVN_NO_ERROR;
     }
- 
+
   /* We don't want this trailing open_file()/close_file() combo to be
      signaled to the client's output, however.  The general policy is
      to call the notification callback only -once- per file. */
