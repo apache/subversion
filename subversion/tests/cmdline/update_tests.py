@@ -3335,6 +3335,83 @@ def copyfrom_degrades_gracefully(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
+# If the update editor receives add_file(foo, copyfrom='blah'), it
+# should attempt to locate 'blah' in the wc, and then copy it into
+# place.  Furthermore, the new file should be able to receive
+# subsequent txdeltas coming from the server.
+
+def update_handles_copyfrom_with_txdeltas(sbox):
+  "update uses copyfrom & accepts further txdeltas"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy.
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Copy 'rho' to 'glub'
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  glub_path = os.path.join(wc_dir, 'A', 'D', 'G', 'glub')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', rho_path, glub_path)
+
+  # Commit that change, creating r2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/glub' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/G/glub' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Make additional edits to glub...
+  svntest.main.file_append(glub_path, "Some new text.\n")
+  svntest.main.run_svn(None, 'propset', 'Kubla', 'Khan', glub_path)
+
+  # Commit the changes, creating r3.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/glub' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/G/glub' : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Now try updating our backup working copy: it should receive glub,
+  # but with copyfrom args of rho@1, and thus copy the existing rho to
+  # glub.  Furthermore, it should then apply the extra r3 edits to the
+  # copied file.
+
+  expected_output = svntest.wc.State(wc_backup, { })
+  expected_output = wc.State(wc_backup, {
+    'A/D/G/glub' : Item(status='A '),  ### perhaps update should show 'A +' ??
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n",
+                        props={'Kubla' : 'Khan', 'svn:mergeinfo' : ''})
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
+  expected_status.add({
+    'A/D/G/glub' : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        check_props = True)
+
+
+#----------------------------------------------------------------------
 
 
 def update_accept_conflicts(sbox):
@@ -3589,6 +3666,7 @@ test_list = [ None,
               mergeinfo_update_elision,
               update_handles_copyfrom,
               copyfrom_degrades_gracefully,
+              update_handles_copyfrom_with_txdeltas,
               update_accept_conflicts,
              ]
 
