@@ -76,7 +76,7 @@ releases, by only adding new functions.  A program written to the 1.0,
 However, a program written for 1.5 cannot necessarily compile or run
 against older libraries.</p>
 
-<div class="h3" id="wc-format-change" title="wc-format-change">
+<div class="h3" id="wc-and-repos-format-change" title="wc-format-change">
 <h3>Working Copy and Repository Format Changes</h3>
 
 <p>XXX: 1.5 currently uses the same SVN_WC__VERSION (8) as 1.4.x.
@@ -102,7 +102,15 @@ Subversion clients.  If you are using several versions of Subversion
 on your machine, you need to be careful about which version you use in
 which working copy, to avoid accidentally upgrading the working copy
 format.  This "auto upgrade" feature, however, does <em>not</em> occur
-with the new repository format.  </p>
+with the new repository format.</p>
+
+<p>If you do accidentally upgrade a 1.4 (only) working copy, you can
+use <a
+href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
+>this script</a> to downgrade it back 1.4.  See <a
+href="http://subversion.tigris.org/faq.html#working-copy-format-change"
+>the FAQ</a> for details, and run the script with the
+<code>--help</code> option for usage instructions.</p>
 
 </div>  <!-- wc-format-change -->
 
